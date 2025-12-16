@@ -1,0 +1,9 @@
+{
+  "name": "Calculator",
+  "description": "Simple calculator with basic arithmetic operations",
+  "draft": false,
+  "example": true,
+  "icon": "calculator",
+  "sectionId": "examples",
+  "order": 100
+}

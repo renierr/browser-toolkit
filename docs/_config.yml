@@ -1,0 +1,15 @@
+title: Vanilla Toolkit Docs
+description: Documentation for the Vanilla Toolkit template
+theme: jekyll-theme-midnight
+
+url: "https://renierr.github.io"
+baseurl: "/vanilla-toolkit-base"
+
+markdown: kramdown
+highlighter: rouge
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default

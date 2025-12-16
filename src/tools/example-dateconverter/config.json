@@ -1,0 +1,7 @@
+{
+  "name": "Date Converter",
+  "description": "Convert between formats like ISO, UTC, and timestamps",
+  "icon": "ruler",
+  "draft": true,
+  "example": true
+}

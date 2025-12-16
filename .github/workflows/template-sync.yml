@@ -1,0 +1,25 @@
+name: Sync with Template
+
+on:
+  schedule:
+    - cron: '0 0 1 * *'  # Runs monthly at midnight on the 1st (adjust as needed, e.g., weekly: '0 0 * * MON')
+  workflow_dispatch:     # Allows manual trigger from GitHub UI
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Template Sync
+        uses: AndreasAugustin/actions-template-sync@v2
+        with:
+          source_repo_path: renierr/vanilla-toolkit-base  # Your template: owner/repo
+          upstream_branch: main                           # Or whatever branch (default: repo's default)
+          pr_title: "[Template Sync] Update from vanilla-toolkit-base"
+          pr_labels: template-sync,automated

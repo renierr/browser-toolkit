@@ -1,0 +1,25 @@
+{
+  "name": "vanilla-toolkit-base",
+  "description": "Minimalist Toolkit Base – Vite + TypeScript + Tailwind, no Framework",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview --port 5000",
+    "format": "prettier --write \"src/**/*.{js,ts,html,css,json,md}\"",
+    "format:check": "prettier --check \"src/**/*.{js,ts,html,css,json,md}\""
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "prettier": "^3.7.4",
+    "tailwindcss": "^4.1.18",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.0",
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "lucide": "^0.561.0"
+  }
+}

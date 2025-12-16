@@ -1,0 +1,34 @@
+# Prevents the sync workflow from overwriting itself in downstream repos
+.github/workflows/template-sync.yml
+.github/.templatesyncignore
+
+# Tooling scripts are project-specific
+src/tools/**
+
+# Site config is customized per project
+src/config/site.config.ts
+
+# Allows downstream projects to maintain their own documentation
+README.md
+
+# Lets consumers manage their own ignored files
+.gitignore
+
+# Consumers may have different dependencies or lockfile versions
+package-lock.json
+
+# Documentation may be project-specific
+docs/**
+
+# Favicons are project-specific branding
+public/favicon.*
+public/favicon-*.*
+
+# Manifest files are project-specific
+public/manifest.json
+
+# Other files may be project-specific. Especially the hooks
+src/main.ts
+src/*.custom.d.ts
+src/css/custom.css
+

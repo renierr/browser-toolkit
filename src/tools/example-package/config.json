@@ -1,0 +1,9 @@
+{
+  "name": "Package Example",
+  "description": "Example to use the package.json with pnpm-workspace",
+  "icon": "ruler",
+  "draft": false,
+  "example": true,
+  "sectionId": "examples",
+  "order": 5
+}
