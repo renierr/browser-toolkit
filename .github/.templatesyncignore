@@ -10,6 +10,7 @@ src/config/site.config.ts
 
 # Allows downstream projects to maintain their own documentation
 README.md
+THIRD_PARTY_LICENSES.md
 
 # Lets consumers manage their own ignored files
 .gitignore
@@ -27,8 +28,13 @@ public/favicon-*.*
 # Manifest files are project-specific
 public/manifest.json
 
+# allow downstream projects to customize their own prettier config
+.prettierrc
+.prettierignore
+
 # Other files may be project-specific. Especially the hooks
 src/main.ts
 src/*.custom.d.ts
 src/css/custom.css
+
 
