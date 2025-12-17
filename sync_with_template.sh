@@ -82,12 +82,11 @@ Template commit: ${UPSTREAM_HEAD}"
         echo "Incremental changes committed."
     else
         echo "No net changes from template. Nothing committed."
-        # Uncomment below if you want a marker commit even when up-to-date:
-        # git commit --allow-empty -m "${SYNC_COMMIT_PREFIX}${UPSTREAM_HEAD}
-        #
-        #No new changes (up-to-date check).
-        #Template commit: ${UPSTREAM_HEAD}"
-        # echo "Marker commit created for up-to-date sync."
+         git commit --allow-empty -m "${SYNC_COMMIT_PREFIX}${UPSTREAM_HEAD}
+
+        No new changes (up-to-date check).
+        Template commit: ${UPSTREAM_HEAD}"
+         echo "Marker commit created for up-to-date sync."
     fi
 fi
 
