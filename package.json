@@ -8,10 +8,12 @@
     "build": "tsc && vite build",
     "preview": "vite preview --port 5000",
     "format": "prettier --write \"src/**/*.{js,ts,html,css,json,md}\"",
-    "format:check": "prettier --check \"src/**/*.{js,ts,html,css,json,md}\""
+    "format:check": "prettier --check \"src/**/*.{js,ts,html,css,json,md}\"",
+    "pdfjs:update": "node scripts/setup-pdfjs.js"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "extract-zip": "^2.0.1",
     "prettier": "^3.7.4",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.9.3",
