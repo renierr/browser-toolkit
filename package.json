@@ -1,6 +1,6 @@
 {
-  "name": "vanilla-toolkit-base",
-  "description": "Minimalist Toolkit Base – Vite + TypeScript + Tailwind, no Framework",
+  "name": "browser-toolkit",
+  "description": "Collection of Tools in Browser only",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
