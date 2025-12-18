@@ -1,0 +1,13 @@
+
+<div id="pdf-edit-tool-card" class="max-w-md mx-auto bg-card p-8 rounded-xl shadow-lg border border-card">
+  <h2 class="text-2xl font-bold mb-4 text-heading">PDF Editor</h2>
+  <label for="pdf-file" class="block mb-2">Select or drop a PDF file:</label>
+  <div id="pdf-dropzone"
+    class="flex items-center justify-center border-2 border-dashed border-primary rounded-lg h-32 mb-4 cursor-pointer bg-gray-50 dark:bg-gray-800 dark:border-gray-500 transition-colors"
+  >
+    <span class="text-gray-500 dark:text-gray-300">Drag & drop PDF here or click to select</span>
+  </div>
+  <input type="file" id="pdf-file" accept="application/pdf" class="hidden" />
+</div>
+
+<iframe id="pdf-viewer-iframe" class="w-full h-96 hidden" style="border:0;"></iframe>

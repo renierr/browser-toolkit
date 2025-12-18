@@ -1,0 +1,64 @@
+<!doctype html>
+<html dir="ltr" lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="google" content="notranslate" />
+  <title>PDF.js page viewer</title>
+  <style>
+      body {
+          background-color: #808080;
+          margin: 0;
+          padding: 0;
+      }
+  </style>
+</head>
+
+<body tabindex="1">
+<div class="toolbar">
+  <label for="fileInput" title="Open local PDF" style="display:flex;align-items:center;gap:6px;cursor:pointer">
+    <input id="fileInput" type="file" accept="application/pdf"/>
+    <button id="openFileBtn">Open</button>
+  </label>
+
+  <input id="urlInput" type="text" placeholder="Load PDF from URL (add `?file=` to address or paste here)" />
+  <button id="loadUrlBtn" title="Load URL">Load</button>
+
+  <div style="width:1px;height:28px;background:#ddd;margin:0 8px"></div>
+
+  <button id="prevBtn" title="Previous page">&larr;</button>
+  <input id="pageNum" type="number" min="1" style="width:64px;padding:6px" />
+  <span id="pageCount" class="status">/ 0</span>
+  <button id="nextBtn" title="Next page">&rarr;</button>
+
+  <div style="width:1px;height:28px;background:#ddd;margin:0 8px"></div>
+
+  <button id="zoomOutBtn">-</button>
+  <span id="zoomVal">100%</span>
+  <button id="zoomInBtn">+</button>
+  <button id="fitWidthBtn" title="Fit width">Fit Width</button>
+  <button id="fitPageBtn" title="Fit page">Fit Page</button>
+
+  <div class="spacer"></div>
+
+  <button id="rotateBtn" title="Rotate 90°">Rotate</button>
+  <button id="printBtn" title="Print">Print</button>
+  <button id="downloadBtn" title="Download">Download</button>
+  <button id="toggleThumbBtn" title="Toggle thumbnails">Thumbnails</button>
+</div>
+
+<div id="app">
+  <aside id="sidebar">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <strong>Pages</strong>
+    </div>
+    <div id="thumbnails"></div>
+  </aside>
+
+  <main id="viewerArea">
+    <div id="pageContainer" class="pdfViewer singlePageView"></div>
+  </main>
+</div>
+<script src="../js/pdf-viewer.ts" type="module"></script>
+</body>
+</html>
