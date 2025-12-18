@@ -1,24 +1,23 @@
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfViewerUrl from '../../pages/pdf-viewer.html?url';
 
 // Use Vite's asset handling to resolve the worker path
 import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
-const showPdfViewerFrame = (blobUrl: string, file: File ) => {
+const viewerUrl = '/pdfjs/web/viewer.html';
+
+const showPdfViewerFrame = (blobUrl: string ) => {
   const iframe = document.getElementById('pdf-viewer-iframe') as HTMLIFrameElement | null;
-  if (iframe) {
-    iframe.classList.remove('hidden');
-    const sendPdfToIframe = () => {
-      if (iframe.contentWindow) {
-        iframe.contentWindow.postMessage({ type: 'load-pdf', url: blobUrl, name: file.name }, '*');
-      }
-    };
-    iframe.addEventListener('load', sendPdfToIframe, { once: true });
-    iframe.src = pdfViewerUrl;
+  if (!iframe) {
+    showMessage('Failed to load PDF viewer (iFrame no present).', { type: 'alert' });
+    return
   }
+
+  iframe.classList.remove('hidden');
+  iframe.src = `${viewerUrl}?file=${encodeURIComponent(blobUrl)}#page=1`;
+
 };
 
 const toggleToolCard = (show: boolean) => {
@@ -40,7 +39,7 @@ export default function init() {
     // create blob URL and post to iframe viewer
     const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
     const blobUrl = URL.createObjectURL(blob);
-    showPdfViewerFrame(blobUrl, file);
+    showPdfViewerFrame(blobUrl);
     toggleToolCard(false);
     hideProgress();
     showMessage(`PDF ${file.name} loaded.`, { timeoutMs: 5000 });
