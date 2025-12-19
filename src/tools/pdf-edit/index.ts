@@ -1,4 +1,5 @@
-import { openPdfInViewerFrame, setupFileDropzone } from '../../js/file-utils.ts';
+import { setupFileDropzone } from '../../js/file-utils.ts';
+import { openPdfInViewerFrame } from '../../js/pdf-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import * as pdfjsLib from 'pdfjs-dist';
 
