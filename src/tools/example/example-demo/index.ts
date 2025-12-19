@@ -1,4 +1,4 @@
-import { showMessage, showProgress } from '../../js/ui.ts';
+import { showMessage, showProgress } from '../../../js/ui.ts';
 
 export default function init() {
   const btnProgress = document.getElementById('demo-progress') as HTMLButtonElement | null;

@@ -1,5 +1,5 @@
 import isOdd from 'is-odd';
-import { showMessage } from '../../js/ui.ts';
+import { showMessage } from '../../../js/ui.ts';
 
 export default function init() {
   const form = document.getElementById('even-odd-form') as HTMLFormElement | null;

@@ -1,4 +1,4 @@
-import { getRegisteredToolIconIds, renderToolIconSvg } from '../../js/tool-icons';
+import { getRegisteredToolIconIds, renderToolIconSvg } from '../../../js/tool-icons.ts';
 
 export default function init() {
   const root = document.getElementById('icon-gallery');

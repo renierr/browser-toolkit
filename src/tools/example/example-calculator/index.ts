@@ -1,4 +1,4 @@
-import { showMessage } from '../../js/ui.ts';
+import { showMessage } from '../../../js/ui.ts';
 
 type Op =
   | '+'
