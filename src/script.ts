@@ -10,40 +10,55 @@ document.title = siteContext.config.title;
 const metaDesc = document.querySelector('meta[name="description"]');
 if (metaDesc) metaDesc.setAttribute('content', siteContext.config.description || '');
 
-// Load all tools dynamically
-const descModules = import.meta.glob('./tools/*/config.json', { eager: true });
-const htmlModules = import.meta.glob('./tools/*/template.html', {
+const descModules = import.meta.glob('@tools/**/config.json', { eager: true });
+const htmlModules = import.meta.glob('@tools/**/template.html', {
   query: '?raw',
   import: 'default',
-  eager: true,
 });
-const scriptModules = import.meta.glob('./tools/*/index.ts', { eager: true });
+const scriptModules = import.meta.glob('@tools/**/index.ts');
+let tools: Tool[] = [];
 
-const tools: Tool[] = [];
+async function buildToolsList(): Promise<Tool[]> {
+  const result: Tool[] = [];
 
-for (const path in descModules) {
-  const folder = path.match(/\.\/tools\/([^/]+)\//)![1];
+  for (const pathKey in descModules) {
+    const match = pathKey.match(/(.+)\/([^/]+)\/config\.json$/);
+    if (!match) {
+      console.warn('\\[script\\] unexpected module key, skipping:', pathKey);
+      continue;
+    }
+    const prefix = match[1]; // dynamic part from glob (e.g. "@tools" or "/src/tools")
+    const folder = match[2];
 
-  const rawDesc = (descModules[path] as { default?: unknown }).default;
-  const toolConfig = parseToolConfig(rawDesc, folder, { strict: isDev, sourceId: path });
+    const rawDesc = (descModules[pathKey] as { default?: unknown }).default;
+    const toolConfig = parseToolConfig(rawDesc, folder, { strict: isDev, sourceId: pathKey });
 
-  if (!siteContext.config.showExamples && toolConfig.example) continue;
-  if (toolConfig.draft && !isDev) continue;
-  const html =
-    (htmlModules[`./tools/${folder}/template.html`] as string) ||
-    '<p>No content found, provide a template.html file for your tool</p>';
+    // skip example tools early — do not import their template/script
+    if (!siteContext.config.showExamples && toolConfig.example) continue;
+    if (toolConfig.draft && !isDev) continue;
 
-  const mod = scriptModules[`./tools/${folder}/index.ts`] as ToolModule | undefined;
-  const initScript = mod?.default ?? mod?.init;
+    // only now load the heavier assets if present
+    const htmlKey = Object.keys(htmlModules).find((k) => k === `${prefix}/${folder}/template.html`);
+    let html = `<p>No content found, provide a template.html file for your tool <strong>${folder}</strong></p>`;
+    if (htmlKey) {
+      const importerOrValue = (htmlModules as any)[htmlKey];
+      const loaded =
+        typeof importerOrValue === 'function' ? await importerOrValue() : importerOrValue;
+      html = (loaded as any).default ?? (loaded as any);
+    }
 
-  tools.push(
-    buildTool({
-      folder,
-      html,
-      initScript,
-      config: toolConfig,
-    })
-  );
+    const scriptKey = Object.keys(scriptModules).find((k) => k === `${prefix}/${folder}/index.ts`);
+    let initScript: ToolModule['default'] | undefined;
+    if (scriptKey) {
+      const importerOrValue = (scriptModules as any)[scriptKey];
+      const mod = typeof importerOrValue === 'function' ? await importerOrValue() : importerOrValue;
+      initScript = mod.default ?? mod.init;
+    }
+
+    result.push(buildTool({ folder, html, initScript, config: toolConfig }));
+  }
+
+  return result;
 }
 
 function getSectionMeta(sectionId: string | undefined) {
@@ -207,6 +222,8 @@ function invokeOptionalMain(ctx: CustomMainContext): Promise<void> | void {
 }
 
 async function boot() {
+  tools = await buildToolsList();
+
   await invokeOptionalMain({
     tools,
   } as CustomMainContext);
