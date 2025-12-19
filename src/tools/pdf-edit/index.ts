@@ -1,4 +1,4 @@
-import { setupFileDropzone } from '../../js/file-utils.ts';
+import { openPdfInViewerFrame, setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -6,17 +6,14 @@ import * as pdfjsLib from 'pdfjs-dist';
 import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
-const viewerUrl = '/pdfjs/web/viewer.html';
-
 const showPdfViewerFrame = (blobUrl: string ) => {
   const iframe = document.getElementById('pdf-viewer-iframe') as HTMLIFrameElement | null;
   if (!iframe) {
     showMessage('Failed to load PDF viewer (iFrame no present).', { type: 'alert' });
     return
   }
-
   iframe.classList.remove('hidden');
-  iframe.src = `${viewerUrl}?file=${encodeURIComponent(blobUrl)}#page=1`;
+  openPdfInViewerFrame(iframe, blobUrl);
 
 };
 
