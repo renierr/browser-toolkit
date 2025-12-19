@@ -1,8 +1,4 @@
-@import "tailwindcss";
-
-@custom-variant dark (&:where(.dark, .dark *));
-
-@layer utilities {
+@layer components {
   .dropzone-active {
     @apply border-blue-600 bg-indigo-100 transition-colors;
   }
