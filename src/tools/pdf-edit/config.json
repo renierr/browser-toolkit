@@ -1,7 +1,7 @@
 {
   "name": "PDF Editor",
   "description": "Use PDFjs to edit and sign PDF files",
-  "icon": "pdf",
+  "icon": "file-pen-line",
   "draft": false,
   "example": false,
   "sectionId": "pdf",
