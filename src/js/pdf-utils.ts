@@ -52,3 +52,37 @@ export const setPdfViewerOptions = (viewerWindow: Window, options: {}) => {
     console.warn('PDFViewerApplicationOptions not found in PDF viewer window. Can not set any options');
   }
 };
+
+
+type PdfViewerHandler = (viewerWindow: Window, evt?: Event) => void;
+const pdfViewerHandlers = new Set<PdfViewerHandler>();
+
+export function onPdfViewerLoaded(fn: PdfViewerHandler): () => void {
+  pdfViewerHandlers.add(fn);
+  return () => {
+    pdfViewerHandlers.delete(fn);
+  };
+}
+
+export function offPdfViewerLoaded(fn: PdfViewerHandler): boolean {
+  return pdfViewerHandlers.delete(fn);
+}
+
+export function setupGlobalWebViewerDelegate() {
+  const marker = '__webviewer_delegate_installed' as any;
+  if ((window as any)[marker]) return;
+  (window as any)[marker] = true;
+
+  document.addEventListener('webviewerloaded', (evt: any) => {
+    const viewerWin = evt?.detail?.source ?? null;
+    if (!viewerWin) return;
+
+    for (const h of Array.from(pdfViewerHandlers)) {
+      try {
+        h(viewerWin, evt);
+      } catch (err) {
+        console.error('webviewer handler failed', err);
+      }
+    }
+  });
+}
