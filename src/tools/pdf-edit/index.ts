@@ -8,12 +8,13 @@ import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
 
 const showPdfViewerFrame = (blobUrl: string ) => {
+  const pdfViewerContainer = document.getElementById('pdf-viewer-container');
   const iframe = document.getElementById('pdf-viewer-iframe') as HTMLIFrameElement | null;
   if (!iframe) {
     showMessage('Failed to load PDF viewer (iFrame no present).', { type: 'alert' });
     return
   }
-  iframe.classList.remove('hidden');
+  pdfViewerContainer?.classList.remove('hidden');
   openPdfInViewerFrame(iframe, blobUrl);
 
 };
@@ -28,8 +29,20 @@ const toggleToolCard = (show: boolean) => {
   }
 };
 
-export default function init() {
+// toggle maximize / fullscreen with fallback to CSS class
+const toggleIframeMaximize = async () => {
+  const iframe = document.getElementById('pdf-viewer-iframe') as HTMLIFrameElement | null;
+  const btn = document.getElementById('pdf-maximize-btn') as HTMLButtonElement | null;
+  if (!iframe) return;
 
+  iframe.classList.toggle('pdf-maximized');
+  document.body.classList.toggle('no-scroll');
+  const isMax =
+    document.fullscreenElement === iframe || iframe.classList.contains('pdf-maximized');
+  if (btn) btn.textContent = isMax ? '⤡' : '⤢';
+};
+
+export default function init() {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (file) => {
     showProgress('Load PDF file...');
     const arrayBuffer = await file.arrayBuffer();
@@ -42,4 +55,13 @@ export default function init() {
     hideProgress();
     showMessage(`PDF ${file.name} loaded.`, { timeoutMs: 5000 });
   });
+
+
+  const maxBtn = document.getElementById('pdf-maximize-btn') as HTMLButtonElement | null;
+  if (maxBtn) {
+    maxBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleIframeMaximize();
+    });
+  }
 }

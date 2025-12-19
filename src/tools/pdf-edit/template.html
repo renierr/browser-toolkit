@@ -1,5 +1,5 @@
 
-<div id="pdf-edit-tool-card" class="max-w-md mx-auto bg-card p-8 rounded-xl shadow-lg border border-card">
+<div id="pdf-edit-tool-card" class="w-full max-w-md mx-auto bg-card p-8 rounded-xl shadow-lg border border-card">
   <h2 class="text-2xl font-bold mb-4 text-heading">PDF Editor</h2>
   <label for="pdf-file" class="block mb-2">Select or drop a PDF file:</label>
   <div id="pdf-dropzone"
@@ -10,4 +10,9 @@
   <input type="file" id="pdf-file" accept="application/pdf" class="hidden" />
 </div>
 
-<iframe id="pdf-viewer-iframe" src="/pdfjs/web/viewer.html" class="w-full h-screen hidden" style="border:0;"></iframe>
+<div id="pdf-viewer-container" class="hidden w-full flex-1 min-h-0 flex flex-col h-full">
+  <button id="pdf-maximize-btn" class="z-50 fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 p-2 rounded shadow border" title="Maximize PDF">⤢</button>
+
+  <iframe id="pdf-viewer-iframe" src="/pdfjs/web/viewer.html" class="flex-1 w-full h-0 min-h-0" style="border:0;"></iframe>
+</div>
+

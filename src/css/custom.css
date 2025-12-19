@@ -14,3 +14,13 @@
 
     }
 }
+
+.pdf-maximized {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100dvw !important;
+  height: 100dvh !important;
+  z-index: 10 !important;
+  border: 0 !important;
+}
