@@ -1,14 +1,13 @@
-@layer components {
+@reference "./style.css";
+
+@layer utilities {
   .dropzone-active {
-    @apply border-blue-600 bg-indigo-100 transition-colors;
+    @apply border border-blue-600 bg-indigo-100 transition-colors;
   }
 
-  .dark {
-    .dropzone-active {
-      @apply border-blue-400 bg-slate-800;
-    }
-
-    }
+  .dark .dropzone-active {
+    @apply border border-blue-400 bg-slate-600;
+  }
 }
 
 .pdf-maximized {
