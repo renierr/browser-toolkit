@@ -1,5 +1,26 @@
-import { createElement } from 'lucide';
-import * as Lucide from 'lucide';
+import { createElement, createIcons, icons as LucideIcons } from 'lucide';
+
+// copy from lucide because of wired naming change for icons - we like to use the same for html replacement and icons
+const toPascalCase = (name: string) =>
+  name.replace(/(\w)(\w*)(_|-|\s*)/g, (_, g1, g2) => g1.toUpperCase() + g2.toLowerCase());
+
+export const toLucideId = (name: string): string => {
+  if (!name) return '';
+
+  return (
+    name
+      // split lower->Upper (fooBar -> foo-Bar)
+      .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+      // split acronym->Word (XMLHttp -> XML-Http)
+      .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
+      // replace any non-alphanumeric run with a single hyphen
+      .replace(/[^A-Za-z0-9]+/g, '-')
+      // collapse multiple hyphens, trim edges, and lowercase
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
+      .toLowerCase()
+  );
+};
 
 const DEFAULT_ICON_ID = 'wrench';
 
@@ -13,10 +34,6 @@ type LucideIcon = Parameters<typeof createElement>[0];
 type IconRegistry = Record<string, LucideIcon>;
 const ICONS: IconRegistry = Object.create(null);
 
-function normalizeIconId(id: string): string {
-  return id.trim().toLowerCase();
-}
-
 /**
  * Register additional icons (or override existing IDs).
  *
@@ -27,7 +44,7 @@ function normalizeIconId(id: string): string {
  */
 export function registerToolIcons(extra: IconRegistry): void {
   for (const [id, icon] of Object.entries(extra)) {
-    ICONS[normalizeIconId(id)] = icon;
+    ICONS[id] = icon;
   }
 }
 /**
@@ -35,66 +52,17 @@ export function registerToolIcons(extra: IconRegistry): void {
  * The list is sorted for stable display in demos and docs.
  */
 export function getRegisteredToolIconIds(): string[] {
-  return Object.keys(ICONS).sort((a, b) => a.localeCompare(b));
+  return Object.keys(ICONS)
+    .map((id) => toLucideId(id))
+    .sort((a, b) => a.localeCompare(b));
 }
 
-// Register built-in template icons
-registerToolIcons({
-  // General / tools
-  wrench: Lucide.Wrench,
-  settings: Lucide.Settings,
-  sliders: Lucide.SlidersHorizontal,
-  hammer: Lucide.Hammer,
-  ruler: Lucide.Ruler,
-
-  // Data / text
-  calculator: Lucide.Calculator,
-  clipboard: Lucide.Clipboard,
-  copy: Lucide.Copy,
-  scantext: Lucide.ScanText,
-  filetext: Lucide.FileText,
-  filejson: Lucide.FileJson,
-  filecode: Lucide.FileCode2,
-  folder: Lucide.Folder,
-
-  // UI / navigation
-  search: Lucide.Search,
-  filter: Lucide.Filter,
-  list: Lucide.List,
-  grid: Lucide.Grid3X3,
-
-  // IO / sharing
-  download: Lucide.Download,
-  upload: Lucide.Upload,
-  share: Lucide.Share2,
-  link: Lucide.Link,
-
-  // Security
-  shield: Lucide.Shield,
-  lock: Lucide.Lock,
-  key: Lucide.KeyRound,
-
-  // Status / info
-  info: Lucide.Info,
-  help: Lucide.HelpCircle,
-  warning: Lucide.AlertTriangle,
-  success: Lucide.CheckCircle2,
-  error: Lucide.XCircle,
-
-  // Fun / highlight
-  sparkles: Lucide.Sparkles,
-
-  // Files / images
-  image: Lucide.Image,
-  file: Lucide.File,
-  fileimage: Lucide.FileImage,
-  fileadd: Lucide.FilePlus2,
-  filedownload: Lucide.FileDown,
-});
+// Register all lucide icons by default
+registerToolIcons(LucideIcons);
 
 export function renderToolIconSvg(iconId?: string, className = 'w-6 h-6'): string {
-  const normalized = iconId ? normalizeIconId(iconId) : '';
-  const picked = ICONS[normalized] ?? ICONS[DEFAULT_ICON_ID];
+  const pascalCase = iconId ? toPascalCase(iconId) : '';
+  const picked = ICONS[pascalCase] ?? ICONS[DEFAULT_ICON_ID];
 
   // If even the default icon is not registered, render nothing.
   if (!picked) return '';
@@ -107,3 +75,45 @@ export function renderToolIconSvg(iconId?: string, className = 'w-6 h-6'): strin
 
   return new XMLSerializer().serializeToString(svgEl);
 }
+
+/* Observe DOM changes and re-run createIcons when new elements with `data-lucide` are added. */
+let lastCreateIconsAt = 0;
+const iconObserver = new MutationObserver((mutations) => {
+  if (Date.now() - lastCreateIconsAt < 200) return; // debounce if called multiple times in short timespan
+
+  for (const m of mutations) {
+    if (m.addedNodes.length === 0) continue;
+
+    // Quick check: any added node or its descendants contain the `data-lucide` attribute?
+    const found = Array.from(m.addedNodes).some((node) => {
+      if (!(node instanceof Element)) return false;
+      if (node.matches('[data-lucide]')) return true;
+      return node.querySelector('[data-lucide]') !== null;
+    });
+
+    if (found) {
+      iconObserver.disconnect();
+      try {
+        createIcons({ icons: ICONS, attrs: { class: 'icon' } });
+      } finally {
+        // re-start observing if body still exists
+        if (document.body) {
+          iconObserver.observe(document.body, { childList: true, subtree: true });
+        }
+      }
+
+      break;
+    }
+  }
+});
+
+export const setupLucideCreateIcons = () => {
+  // Observe the whole document body for added nodes (subtree)
+  if (document.body) {
+    iconObserver.observe(document.body, { childList: true, subtree: true });
+    window.addEventListener('beforeunload', () => iconObserver.disconnect(), { once: true });
+  }
+
+  // initial run
+  createIcons({ icons: ICONS });
+};

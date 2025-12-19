@@ -1,7 +1,7 @@
 {
   "name": "Icon Gallery",
   "description": "Shows all built-in Lucide icon ids supported by the template.",
-  "icon": "fileimage",
+  "icon": "file-image",
   "example": true,
   "draft": false,
   "sectionId": "examples",

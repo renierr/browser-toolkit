@@ -16,9 +16,9 @@ function classesForType(type: MessageType) {
 function iconIdForMessageType(type: MessageType): string {
   switch (type) {
     case 'alert':
-      return 'error';
+      return 'x-circle';
     case 'warning':
-      return 'warning';
+      return 'alert-triangle';
     case 'info':
     default:
       return 'info';

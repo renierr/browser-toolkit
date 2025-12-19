@@ -268,19 +268,15 @@ See types in `src/config/site.config.ts` for possible values.
 ## Tool Icons (Lucide)
 
 Each tool can optionally define an icon in its `config.json`.
-Only a set of predefined icons is supported.
+
+Use the icon id syntax from lucide (lower case with dashes)
 
 If `icon` is missing or unknown, a default icon is used.
 
 ### Available icon ids
 
-Use one of the following (case-insensitive):
-
-wrench, settings, sliders, hammer, ruler, calculator, clipboard, copy, 
-scantext, filetext, filejson, filecode, folder, search, filter, list, 
-grid, download, upload, share, link, shield, lock, key, info, help, 
-warning, success, error, sparkles, image, file, fileimage, fileadd, 
-filedownload
+per default all lucide icons are included.
+You can add additional icons registering them at startup (see `src/main.ts`).
 
 ### Register custom icons (derived projects)
 
@@ -288,7 +284,7 @@ This template exposes an icon registry so derived projects can add (or override)
 
 1) Import `registerToolIcons` in your entry file (e.g. `src/script.ts`).
 
-2) Import any additional icons you want from `lucide`.
+2) Import any additional icons you want from `lucide` or any other source follwing the syntax.
 
 3) Register them at once during startup (see `main.ts` hook above).
 
@@ -298,7 +294,7 @@ import { registerToolIcons } from
 import { ArrowLeft } from '@lucide/icons';
     
 registerToolIcons({
-    arrowleft: ArrowLeft,
+    ArrowLeft: ArrowLeft,
     // add more icons here
 });
 ```
@@ -309,12 +305,11 @@ Now you can reference your new icon IDs from any tool `config.json`:
 { 
   "name": "My Tool", 
   "description": "Does something useful", 
-  "icon": "brain"
+  "icon": "arrow-left"
 }
 ```
 
 Notes:
-- IDs are normalized (trimmed + lowercased), so `Brain`, `brain`, and `  BRAIN  ` all match.
 - If an ID is unknown, the renderer falls back to a default icon.
 - If you register an existing ID, it will override the built-in icon for that ID.
 

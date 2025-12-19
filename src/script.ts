@@ -4,6 +4,7 @@ import type { CustomMainContext, CustomMainModule, Tool, ToolModule } from './js
 import { siteContext } from './config';
 import { renderLayout, renderTool, renderToolCard } from './js/render.ts';
 import { buildTool, parseToolConfig } from './js/tool-config.ts';
+import { setupLucideCreateIcons } from './js/tool-icons.ts';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -235,6 +236,7 @@ async function boot() {
   }
 
   initScrollToTop();
+  setupLucideCreateIcons();
 
   // Hash routing only after DOM is ready (prevents early render issues)
   window.addEventListener('hashchange', router);
