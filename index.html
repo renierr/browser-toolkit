@@ -13,9 +13,9 @@
         const useDark = saved === 'dark' || (saved === null && prefersDark);
 
         if (useDark) {
-          document.documentElement.classList.add('dark');
+          document.documentElement.setAttribute('data-theme', 'dark');
         } else {
-          document.documentElement.classList.remove('dark');
+          document.documentElement.removeAttribute('data-theme');
         }
       })();
     </script>
@@ -34,7 +34,7 @@
     <!-- Global progress overlay -->
     <div
       id="ui-progress"
-      class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
+      class="invisible fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
       aria-hidden="true"
     >
       <div class="relative w-full max-w-md rounded-2xl border border-card bg-card shadow-xl p-6">
