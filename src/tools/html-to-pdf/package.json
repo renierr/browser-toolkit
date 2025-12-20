@@ -1,0 +1,6 @@
+{
+  "name": "html-to-pdf-package",
+  "dependencies": {
+    "quill": "^2.0.3"
+  }
+}

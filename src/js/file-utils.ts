@@ -27,3 +27,47 @@ export function setupFileDropzone(dropzoneId: string, inputId: string, onFile: (
 }
 
 
+export async function downloadFile(
+  source: string | Uint8Array | ArrayBuffer | Blob,
+  filename?: string,
+  mimeType = 'application/octet-stream'
+): Promise<void> {
+  const trigger = (url: string, name: string) => {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  const guessNameFromUrl = (url: string) => {
+    try {
+      const p = new URL(url).pathname;
+      const last = p.split('/').pop();
+      return last || 'download';
+    } catch {
+      return 'download';
+    }
+  };
+
+  if (typeof source === 'string') {
+    const name = filename || guessNameFromUrl(source);
+    trigger(source, name);
+    return;
+  }
+
+  let blob;
+  if (source instanceof Blob) {
+    blob = source;
+  } else {
+    blob = new Blob([source as ArrayBuffer], { type: mimeType });
+  }
+
+  const url = URL.createObjectURL(blob);
+  try {
+    trigger(url, filename || 'download');
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
