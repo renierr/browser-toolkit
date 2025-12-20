@@ -7,6 +7,6 @@ export default function main(ctx: CustomMainContext) {
   setupGlobalWebViewerDelegate();
   // prevent the pdf web viewer from opening the default pdf
   onPdfViewerLoaded((viewerWindow) => {
-    setPdfViewerOptions(viewerWindow, { defaultUrl: '' });
+    setPdfViewerOptions(viewerWindow, { defaultUrl: '', enableSignatureEditor: true });
   });
 }
