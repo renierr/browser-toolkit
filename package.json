@@ -24,6 +24,7 @@
   "license": "MIT",
   "dependencies": {
     "lucide": "^0.561.0",
-    "pdfjs-dist": "^5.4.449"
+    "pdfjs-dist": "^5.4.449",
+    "jspdf": "^3.0.4"
   }
 }
