@@ -24,6 +24,9 @@ importers:
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
+      daisyui:
+        specifier: ^5.5.14
+        version: 5.5.14
       extract-zip:
         specifier: ^2.0.1
         version: 2.0.1
@@ -1224,6 +1227,9 @@ packages:
 
   css-line-break@2.1.0:
     resolution: {integrity: sha512-FHcKFCZcAha3LwfVBhCQbW2nCNbkZXn7KVUJcsT5/P8YmfsVja0FMPJr0B903j/E69HUphKiV9iQArX8SDYA4w==}
+
+  daisyui@5.5.14:
+    resolution: {integrity: sha512-L47rvw7I7hK68TA97VB8Ee0woHew+/ohR6Lx6Ah/krfISOqcG4My7poNpX5Mo5/ytMxiR40fEaz6njzDi7cuSg==}
 
   data-view-buffer@1.0.2:
     resolution: {integrity: sha512-EmKO5V3OLXh1rtK2wgXRansaK1/mtVdTUEiEI0W8RkvgT05kfxaH29PliLnpLP73yYO6142Q72QNa8Wx/A5CqQ==}
@@ -3510,6 +3516,8 @@ snapshots:
     dependencies:
       utrie: 1.0.2
     optional: true
+
+  daisyui@5.5.14: {}
 
   data-view-buffer@1.0.2:
     dependencies:

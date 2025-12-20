@@ -8,3 +8,30 @@ svg.icon {
     height: 1em;
     width: 1em;
 }
+
+@layer utilities {
+    .dropzone-active {
+        @apply border border-blue-600 bg-indigo-100 transition-colors;
+    }
+
+    html[data-theme="dark"] .dropzone-active {
+        @apply border border-blue-400 bg-slate-600;
+    }
+}
+
+.pdf-maximized {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100dvw !important;
+    height: 100dvh !important;
+    z-index: 10 !important;
+    border: 0 !important;
+}
+body.no-scroll {
+    overflow: hidden;
+    overscroll-behavior: none; /* Specifically kills pull-to-refresh */
+    position: fixed;           /* Total lock for mobile Chrome */
+    width: 100%;
+}
+
