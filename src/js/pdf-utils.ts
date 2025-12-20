@@ -49,10 +49,11 @@ export const setPdfViewerOptions = (viewerWindow: Window, options: {}) => {
   if (win?.PDFViewerApplicationOptions) {
     win?.PDFViewerApplicationOptions.setAll(options);
   } else {
-    console.warn('PDFViewerApplicationOptions not found in PDF viewer window. Can not set any options');
+    console.warn(
+      'PDFViewerApplicationOptions not found in PDF viewer window. Can not set any options'
+    );
   }
 };
-
 
 type PdfViewerHandler = (viewerWindow: Window, evt?: Event) => void;
 const pdfViewerHandlers = new Set<PdfViewerHandler>();
@@ -86,3 +87,44 @@ export function setupGlobalWebViewerDelegate() {
     }
   });
 }
+export const injectMaximizeToViewerFrame = (iframe: HTMLIFrameElement) => {
+  const contentWindow = iframe.contentWindow;
+  if (!contentWindow) return;
+
+  const doc = contentWindow.document;
+  const separatorHTML = `<div id="editorModeSeparator" class="verticalToolbarSeparator"></div>`;
+  const rightToolbar = doc.getElementById('toolbarViewerRight');
+  if (!rightToolbar) return;
+
+  const style = doc.createElement('style');
+  style.textContent = `#pdfViewerMaximizeBtn::before { display: none !important; }`;
+  (doc.head || doc.documentElement).appendChild(style);
+
+  rightToolbar.insertAdjacentHTML('beforeend', separatorHTML);
+  const btn = doc.createElement('button');
+  btn.id = 'pdfViewerMaximizeBtn';
+  btn.className = 'toolbarButton pdf-inline-maximize-btn';
+  btn.type = 'button';
+  btn.title = 'Toggle maximize';
+  btn.textContent = '⤢';
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    iframe.classList.toggle('pdf-maximized');
+
+    const isMax = iframe.classList.contains('pdf-maximized');
+    if (btn) btn.textContent = isMax ? '⤡' : '⤢';
+
+    if (isMax) {
+      document.body.classList.add('no-scroll');
+    } else {
+      document.body.classList.remove('no-scroll');
+    }
+
+    try {
+      contentWindow.parent.postMessage({ type: 'pdf-toggle-maximize' }, window.location.origin);
+    } catch {
+      contentWindow.parent.postMessage({ type: 'pdf-toggle-maximize' }, '*');
+    }
+  });
+  rightToolbar.appendChild(btn);
+};
