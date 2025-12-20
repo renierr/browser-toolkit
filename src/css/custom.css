@@ -19,3 +19,10 @@
   z-index: 10 !important;
   border: 0 !important;
 }
+body.no-scroll {
+  overflow: hidden;
+  overscroll-behavior: none; /* Specifically kills pull-to-refresh */
+  position: fixed;           /* Total lock for mobile Chrome */
+  width: 100%;
+}
+
