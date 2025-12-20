@@ -1,41 +1,16 @@
-<div class="max-w-md mx-auto bg-card p-8 rounded-xl shadow-lg border border-card">
+<div class="max-w-md mx-auto bg-base-100 p-8 rounded-xl shadow-lg border">
   <h2 class="text-2xl font-bold mb-4 text-heading">UI Utils Demo</h2>
 
   <p class="text-card-desc mb-6">This tool will show some Progress-Overlay and Message-Toasts.</p>
 
   <div class="grid grid-cols-1 gap-3">
-    <button
-      id="demo-progress"
-      class="bg-btn-primary hover:bg-btn-primary text-white font-bold py-3 px-4 rounded-lg transition"
-    >
-      Show Progress (5s)
-    </button>
+    <button id="demo-progress" class="btn btn-primary">Show Progress (5s)</button>
 
     <div class="grid grid-cols-3 gap-2">
-      <button
-        id="demo-info"
-        class="bg-white/5 hover:bg-white/10 border border-white/10 text-page font-semibold py-3 rounded-lg transition"
-      >
-        Info
-      </button>
-      <button
-        id="demo-warning"
-        class="bg-white/5 hover:bg-white/10 border border-white/10 text-page font-semibold py-3 rounded-lg transition"
-      >
-        Warning
-      </button>
-      <button
-        id="demo-alert"
-        class="bg-white/5 hover:bg-white/10 border border-white/10 text-page font-semibold py-3 rounded-lg transition"
-      >
-        Alert
-      </button>
+      <button id="demo-info" class="btn btn-outline">Info</button>
+      <button id="demo-warning" class="btn btn-outline">Warning</button>
+      <button id="demo-alert" class="btn btn-outline">Alert</button>
     </div>
-    <button
-      id="demo-info-close"
-      class="bg-white/5 hover:bg-white/10 border border-white/10 text-page font-semibold py-3 rounded-lg transition"
-    >
-      Info (will close itself after 3s)
-    </button>
+    <button id="demo-info-close" class="btn btn-ghost">Info (will close itself after 3s)</button>
   </div>
 </div>

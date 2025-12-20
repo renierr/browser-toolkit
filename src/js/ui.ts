@@ -2,17 +2,6 @@ import { renderToolIconSvg } from './tool-icons.ts';
 
 export type MessageType = 'info' | 'warning' | 'alert';
 
-function classesForType(type: MessageType) {
-  switch (type) {
-    case 'alert':
-      return { wrap: 'msg-wrap-alert', badge: 'msg-badge-alert' };
-    case 'warning':
-      return { wrap: 'msg-wrap-warning', badge: 'msg-badge-warning' };
-    case 'info':
-    default:
-      return { wrap: 'msg-wrap-info', badge: 'msg-badge-info' };
-  }
-}
 function iconIdForMessageType(type: MessageType): string {
   switch (type) {
     case 'alert':
@@ -143,19 +132,18 @@ export function showMessage(message: string, options: MessageOptions = { type: '
   if (!host) return;
 
   const msgType = options?.type || 'info';
-  const c = classesForType(msgType);
 
   const item = document.createElement('div');
-  item.className =
-    'pointer-events-auto w-full max-w-xl rounded-xl border shadow-lg backdrop-blur px-4 py-3 flex gap-3 items-start ' +
-    c.wrap;
+  // daisyUI alert component with type styles
+  const alertTypeClass =
+    msgType === 'alert' ? 'alert-error' : msgType === 'warning' ? 'alert-warning' : 'alert-info';
+  item.className = `alert ${alertTypeClass} shadow-lg rounded-xl px-4 py-3 flex gap-3 items-start`;
 
   item.setAttribute('role', msgType === 'info' ? 'status' : 'alert');
 
   const badge = document.createElement('span');
   badge.className =
-    'inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold whitespace-nowrap ' +
-    c.badge;
+    'inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold whitespace-nowrap';
 
   const badgeIcon = document.createElement('span');
   badgeIcon.className = 'inline-flex items-center';
@@ -173,8 +161,7 @@ export function showMessage(message: string, options: MessageOptions = { type: '
 
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
-  closeBtn.className =
-    'ml-2 inline-flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition';
+  closeBtn.className = 'btn btn-ghost btn-sm btn-square ml-2';
   closeBtn.setAttribute('aria-label', 'Close message');
   closeBtn.innerHTML = '&#10005;';
 

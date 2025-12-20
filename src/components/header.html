@@ -1,7 +1,7 @@
-<header class="w-full max-h-[25vh] overflow-auto bg-header text-header shadow-lg border-b border-header">
-  <div class="container mx-auto px-6 py-3 flex items-center justify-between">
-    <div class="flex items-center gap-4 min-w-0">
-      <a href="#" class="shrink-0 inline-flex items-center" aria-label="{{ config.title }}">
+<header class="navbar bg-base-200 text-base-content shadow-lg border-b">
+  <div class="container mx-auto px-6">
+    <div class="flex-1">
+      <a href="#" class="inline-flex items-center" aria-label="{{ config.title }}">
         <img
           src="{{ config.logoPath }}"
           alt="{{ config.logoAlt }}"
@@ -9,21 +9,24 @@
           loading="eager"
           decoding="async"
         />
+        <div class="ml-3">
+          <h1 id="header-title" class="text-2xl font-extrabold leading-tight">
+            {{ config.title }}
+          </h1>
+          <p id="header-description" class="text-sm opacity-70">{{ config.description }}</p>
+        </div>
       </a>
-
-      <div class="min-w-0">
-        <h1 id="header-title" class="text-3xl font-extrabold">{{ config.title }}</h1>
-        <p id="header-description" class="text-subtitle text-lg mt-1">{{ config.description }}</p>
-      </div>
     </div>
 
-    <button
-      id="theme-toggle"
-      aria-label="Toggle dark mode"
-      class="ml-4 px-4 py-2 rounded-lg bg-btn text-btn hover:bg-btn border border-btn transition-all flex items-center gap-2 font-medium"
-    >
-      <span id="theme-toggle-icon" class="text-lg">🌙</span>
-      <span class="hidden md:inline text-sm">Theme</span>
-    </button>
+    <div class="flex-none">
+      <button
+        id="theme-toggle"
+        aria-label="Toggle theme"
+        class="ml-4 btn btn-ghost btn-sm flex items-center gap-2"
+      >
+        <span id="theme-toggle-icon" class="text-lg">🌙</span>
+        <span class="hidden md:inline text-sm">Theme</span>
+      </button>
+    </div>
   </div>
 </header>

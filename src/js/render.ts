@@ -52,17 +52,17 @@ export function renderTool(tool: Tool | undefined) {
 
 export function renderToolCard(tool: Tool) {
   return `
-    <a href="#${tool.path}" class="block p-6 bg-card rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${
+    <a href="#${tool.path}" class="block p-6 bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${
       tool.draft ? 'border-l-draft' : 'border-l-primary'
-    } border-t border-r border-b border-card">
+    } border">
       <div class="flex justify-between items-start gap-4">
         <div class="flex items-start gap-4 min-w-0">
-          <div class="shrink-0 text-card-title/90">
+          <div class="shrink-0 text-muted">
             ${renderToolIconSvg(tool.icon, 'w-6 h-6')}
           </div>
           <div class="flex-1 min-w-0">
-            <h3 class="text-xl font-bold text-card-title">${tool.name}</h3>
-            <p class="text-card-desc mt-2 text-sm">${tool.description}</p>
+            <h3 class="text-xl font-bold text-heading">${tool.name}</h3>
+            <p class="text-muted mt-2 text-sm">${tool.description}</p>
           </div>
         </div>
         ${

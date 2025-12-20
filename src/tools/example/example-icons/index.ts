@@ -15,11 +15,11 @@ export default function init() {
     .map((id) => {
       const svg = renderToolIconSvg(id, 'w-6 h-6');
       return `
-      <div class="rounded-xl border border-card bg-card p-3 flex items-center gap-3">
-        <div class="shrink-0 text-card-title/90">${svg}</div>
+      <div class="rounded-xl border p-3 bg-base-100 flex items-center gap-3">
+        <div class="shrink-0 text-muted">${svg}</div>
         <div class="min-w-0">
-          <div class="text-xs text-card-desc">id</div>
-          <div class="text-sm font-semibold text-card-title truncate">${id}</div>
+          <div class="text-xs text-muted">id</div>
+          <div class="text-sm font-semibold text-heading truncate">${id}</div>
         </div>
       </div>
     `;

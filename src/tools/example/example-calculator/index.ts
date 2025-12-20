@@ -66,17 +66,16 @@ export default function init() {
     historyEl.innerHTML = '';
     for (const item of history) {
       const li = document.createElement('li');
-      li.className =
-        'flex items-center justify-between gap-3 p-3 rounded-lg border border-input bg-input';
+      li.className = 'flex items-center justify-between gap-3 p-3 rounded-lg border bg-base-100';
 
       const left = document.createElement('div');
-      left.className = 'text-input';
+      left.className = 'text-muted';
       left.textContent = item.label;
 
       const right = document.createElement('button');
       right.type = 'button';
       right.className =
-        'font-mono text-heading px-2 py-1 rounded-md border border-input hover:opacity-90 transition';
+        'font-mono text-heading px-2 py-1 rounded-md border hover:opacity-90 transition';
       right.textContent = format(item.value);
       right.title = 'Use result as A';
       right.setAttribute('aria-label', 'Use result as A');
@@ -104,7 +103,6 @@ export default function init() {
     let res: number = NaN;
     let label = '';
 
-    // ... existing code ...
     switch (op) {
       case '+':
         res = a + b;
@@ -253,7 +251,6 @@ export default function init() {
     const action = t.getAttribute('data-action');
     if (!action) return;
 
-    // ... existing code ...
     if (action === 'swap') swap();
     else if (action === 'clear') clearAll();
     else if (action === 'negateA') negate('A');
