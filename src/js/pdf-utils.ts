@@ -97,7 +97,15 @@ export const injectMaximizeToViewerFrame = (iframe: HTMLIFrameElement) => {
   if (!rightToolbar) return;
 
   const style = doc.createElement('style');
-  style.textContent = `#pdfViewerMaximizeBtn::before { display: none !important; }`;
+  style.textContent = `
+  #pdfViewerMaximizeBtn::before { 
+    display: none !important; 
+  }
+  #addSignatureDrawContainer {
+    touch-action: none;
+    user-select: none; 
+  }
+  `;
   (doc.head || doc.documentElement).appendChild(style);
 
   rightToolbar.insertAdjacentHTML('beforeend', separatorHTML);
