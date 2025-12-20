@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-@custom-variant dark (&:where([data-theme=night], [data-theme=night] *));
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 svg.icon {
     display: inline-block;
