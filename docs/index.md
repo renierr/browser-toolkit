@@ -49,7 +49,9 @@ Optional fields you can add later:
 ### 2) Add `template.html`
 
 This is the tool’s UI. Keep it small and composable (cards, inputs, buttons).
-Use Tailwind classes for styling and `dark:` variants for dark mode.
+- Prefer semantic HTML (`label`, `input`, `button`)—it improves accessibility quickly.
+- Prefer using daisyUI component classes together with Tailwind utility classes for consistent UI patterns.
+- Avoid heavy use of Tailwind's `dark:` prefix — prefer daisyUI themes or CSS variables for theme-aware styling (examples below).
 
 Practical tips:
 - Give your tool a single root container so it’s easy to render/replace.
@@ -342,48 +344,66 @@ Example (Template → Result):
 
 ## Dark/Light Mode
 
-All tools automatically support light and dark mode via **Tailwind CSS class strategy**.
+This project works with Tailwind's class strategy but also supports daisyUI's theme system. In practice prefer daisyUI theme tokens and components instead of sprinkling many `dark:` utilities across your templates.
 
-The theme is controlled by the `dark` class on `<html>`:
+Why prefer daisyUI tokens?
+- daisyUI exposes semantic tokens (e.g. `bg-base-100`, `text-base-content`, `border-base-300`) that automatically adapt to the active theme.
+- You get ready-made components (`btn`, `card`, `input`, `form-control`, etc.) and consistent spacing/colors with minimal classes.
+- Theme switching is handled via the `data-theme` attribute on `<html>` (or `document.documentElement`), which is simpler than toggling many `dark:` variants.
 
-- **Light mode**: `<html>` (no class)
-- **Dark mode**: `<html class="dark">`
-
-Users can toggle via the theme button in the header. The preference is saved in localStorage.
-
-### Configure Dark Mode in Your Tool Templates
-
-Use Tailwind's `dark:` prefix for dark mode styles:
+Quick daisyUI examples (concise):
 
 ```html
-<!-- Light: white bg, Dark: slate-800 bg -->
-<div class="bg-white dark:bg-slate-800">
-    <!-- Light: gray-900 text, Dark: white text -->
-    <p class="text-gray-900 dark:text-white">Content</p>
+<!-- Card -->
+<div class="card bg-base-100 shadow-md p-4">
+  <h3 class="text-lg font-semibold">Card title</h3>
+  <p class="text-sm text-base-content/70">Card content</p>
+</div>
+
+<!-- Button -->
+<button class="btn btn-primary">Save</button>
+
+<!-- Input -->
+<div class="form-control">
+  <label class="label"><span class="label-text">Name</span></label>
+  <input class="input input-bordered" type="text" />
 </div>
 ```
 
-**Common Color Pairs:**
-| Light | Dark | Use Case |
-|-------|------|----------|
-| `bg-white` | `dark:bg-slate-800` | Cards, panels |
-| `bg-gray-50` | `dark:bg-slate-900` | Backgrounds |
-| `text-gray-900` | `dark:text-white` | Headings, main text |
-| `text-gray-600` | `dark:text-slate-300` | Secondary text |
-| `border-gray-200` | `dark:border-slate-700` | Borders |
-| `bg-blue-600` | `dark:bg-blue-500` | Buttons, accents |
+Theme-aware tokens (preferred replacements for common pairs):
+- Use `bg-base-100` instead of `bg-white` / `dark:bg-slate-800`.
+- Use `text-base-content` instead of `text-gray-900` / `dark:text-white`.
+- Use `border-base-300` instead of `border-gray-200` / `dark:border-slate-700`.
+- Use `btn`, `btn-primary`, `btn-outline` for buttons instead of crafting many color utilities.
 
-**Focus & Hover States:**
+Toggling theme (simple script):
+
+```js
+// set theme to 'dark' or 'light' (or any daisyUI theme name)
+document.documentElement.setAttribute('data-theme', 'dark');
+// read current theme
+const theme = document.documentElement.getAttribute('data-theme');
+```
+
+When to still use `dark:`
+- For very small, local overrides where a single property needs a different value in dark mode.
+- For legacy templates that already rely on `dark:` variants and where migration isn't worth the effort.
+
+Rule of thumb:
+- Prefer daisyUI tokens and components for most UI work.
+- Use `dark:` sparingly for edge-case, one-off style changes.
+
+### Focus & Hover States with daisyUI
+Most components include sensible focus/hover styles. If you need custom behavior, combine tokens with Tailwind utilities:
 
 ```html
-<input class="focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400">
-<button class="hover:bg-blue-700 dark:hover:bg-blue-600">Click</button>
+<input class="input input-bordered focus:ring-2 focus:ring-primary/60" aria-label="Example input" />
+<button class="btn btn-primary hover:brightness-90">Action</button>
 ```
 
 ### Custom styles
-To avoid merge conflicts with the template repository, an empty custom.css file is included in the index HTML.
+Add your own custom styles to `src/css/styles.css` below the marker comment to avoid conflicts with the template styles on merge. 
 
-Use this file to add/override any custom styles for your tool templates.
 
 ---
 

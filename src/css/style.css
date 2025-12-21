@@ -9,6 +9,11 @@ svg.icon {
     width: 1em;
 }
 
+/*
+marker: all above this line should be left as is, template may add/change it
+to minimise merge conflicts add your project stuff below this line
+*/
+
 @layer utilities {
     .dropzone-active {
         @apply border border-blue-600 bg-indigo-100 transition-colors;
