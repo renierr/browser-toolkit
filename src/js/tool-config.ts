@@ -12,6 +12,9 @@ export type ToolConfig = {
 
   order: number;
   sectionId?: string;
+
+  hideHeader?: boolean;
+  hideFooter?: boolean;
 };
 
 type BuildToolParams = {
@@ -112,6 +115,18 @@ export function parseToolConfig(
   if (raw.sectionId !== undefined && typeof raw.sectionId !== 'string') {
     failOrSkip(`${ctx}: Field "sectionId" must be a string, got ${typeOf(raw.sectionId)}.`, strict);
   }
+  if (raw.hideHeader !== undefined && typeof raw.hideHeader !== 'boolean') {
+    failOrSkip(
+      `${ctx}: Field "hideHeader" must be a boolean, got ${typeOf(raw.hideHeader)}.`,
+      strict
+    );
+  }
+  if (raw.hideFooter !== undefined && typeof raw.hideFooter !== 'boolean') {
+    failOrSkip(
+      `${ctx}: Field "hideFooter" must be a boolean, got ${typeOf(raw.hideFooter)}.`,
+      strict
+    );
+  }
 
   const name = asString(raw.name)?.trim() || fallbackName;
   const description = asString(raw.description)?.trim() || DEFAULTS.description;
@@ -127,6 +142,8 @@ export function parseToolConfig(
     icon: asString(raw.icon),
     order: asNumber(raw.order) ?? DEFAULTS.order,
     sectionId,
+    hideHeader: asBool(raw.hideHeader),
+    hideFooter: asBool(raw.hideFooter),
   };
 }
 
@@ -142,5 +159,7 @@ export function buildTool({ folder, html, initScript, config }: BuildToolParams)
     icon: config.icon,
     order: config.order,
     sectionId: config.sectionId,
+    hideHeader: config.hideHeader,
+    hideFooter: config.hideFooter,
   };
 }

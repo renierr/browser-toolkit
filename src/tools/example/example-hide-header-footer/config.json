@@ -1,0 +1,11 @@
+{
+  "name": "Hide Header & Footer",
+  "description": "Example showing hideHeader and hideFooter flags (both enabled)",
+  "icon": "sparkles",
+  "draft": false,
+  "example": true,
+  "sectionId": "examples",
+  "order": 2,
+  "hideFooter": true,
+  "hideHeader": true
+}

@@ -30,6 +30,9 @@ export interface Tool {
   icon?: string;
   order: number;
   sectionId?: string;
+
+  hideHeader?: boolean;
+  hideFooter?: boolean;
 }
 
 export type CustomMainContext = {

@@ -12,9 +12,11 @@ const footerFinal = replacePlaceholders(footerHtml, siteContext);
 
 let currentToolCleanup: (() => void) | undefined;
 
-export function renderLayout(content: string) {
+export function renderLayout(content: string, hideHeader?: boolean, hideFooter?: boolean) {
   const app = document.getElementById('app')!;
-  app.innerHTML = headerFinal + replacePlaceholders(content, siteContext) + footerFinal;
+  const header = hideHeader ? '' : headerFinal;
+  const footer = hideFooter ? '' : footerFinal;
+  app.innerHTML = header + replacePlaceholders(content, siteContext) + footer;
   setupThemeToggle();
 }
 
@@ -26,7 +28,7 @@ export function renderTool(tool: Tool | undefined) {
     currentToolCleanup = undefined;
   }
 
-  renderLayout(toolPageHtml);
+  renderLayout(toolPageHtml, tool?.hideHeader, tool?.hideFooter);
 
   const noToolHtml = `
     <h2 class="text-2xl text-heading">Tool not found</h2>
