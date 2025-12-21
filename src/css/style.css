@@ -14,6 +14,17 @@ marker: all above this line should be left as is, template may add/change it
 to minimise merge conflicts add your project stuff below this line
 */
 
+@plugin "daisyui/theme" {
+    name: "light";
+    default: true;
+    --color-secondary: teal;
+}
+
+@plugin "daisyui/theme" {
+    name: "dark";
+    --color-secondary: teal;
+}
+
 @layer utilities {
     .dropzone-active {
         @apply border border-blue-600 bg-indigo-100 transition-colors;
