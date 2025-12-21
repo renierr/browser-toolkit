@@ -66,7 +66,8 @@ export default function init() {
     historyEl.innerHTML = '';
     for (const item of history) {
       const li = document.createElement('li');
-      li.className = 'flex items-center justify-between gap-3 p-3 rounded-lg border bg-base-100';
+      li.className =
+        'menu-item flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-base-200';
 
       const left = document.createElement('div');
       left.className = 'text-muted';
@@ -74,8 +75,7 @@ export default function init() {
 
       const right = document.createElement('button');
       right.type = 'button';
-      right.className =
-        'font-mono text-heading px-2 py-1 rounded-md border hover:opacity-90 transition';
+      right.className = 'btn btn-ghost btn-sm font-mono';
       right.textContent = format(item.value);
       right.title = 'Use result as A';
       right.setAttribute('aria-label', 'Use result as A');
@@ -219,7 +219,7 @@ export default function init() {
       return;
     }
     el.value = String(-n);
-    showMessage(`${which} negated.`);
+    showMessage(`${which} negated.`, { timeoutMs: 2000 });
   };
 
   const clearHistory = () => {

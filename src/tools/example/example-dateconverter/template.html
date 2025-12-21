@@ -1,22 +1,24 @@
 <section class="mx-auto w-full max-w-lg">
-  <div class="bg-base-100 border rounded-2xl shadow-lg">
-    <header class="px-6 pt-6 pb-4 border-b">
-      <h2 class="text-2xl font-bold text-heading">Date Converter</h2>
-      <p class="mt-1 text-sm text-muted">Choose a date, then convert it.</p>
-    </header>
+  <div class="card bg-base-100 border rounded-2xl shadow-lg">
+    <div class="card-body px-6 py-6">
+      <header class="pb-4 border-b">
+        <h2 class="text-2xl font-bold text-heading">Date Converter</h2>
+        <p class="mt-1 text-sm text-muted">Choose a date, then convert it.</p>
+      </header>
 
-    <div class="px-6 py-6">
-      <label for="input-date" class="block text-sm font-medium text-heading">Enter date</label>
+      <div class="pt-4">
+        <label for="input-date" class="block text-sm font-medium text-heading">Enter date</label>
 
-      <div class="mt-2 grid grid-cols-[1fr_auto] gap-3 items-center">
-        <input id="input-date" type="date" class="input input-bordered h-11 w-full" />
+        <div class="mt-2 grid grid-cols-[1fr_auto] gap-3 items-center">
+          <input id="input-date" type="date" class="input input-bordered h-11 w-full" />
 
-        <button id="convert-btn" class="btn btn-primary h-11">Convert</button>
-      </div>
+          <button id="convert-btn" class="btn btn-primary h-11">Convert</button>
+        </div>
 
-      <div class="mt-6 rounded-xl border bg-base-200 p-4">
-        <p class="text-xs font-semibold tracking-wide uppercase text-muted">Output</p>
-        <p id="output" class="mt-2 text-heading wrap-break-word font-mono text-base">—</p>
+        <div class="mt-6 rounded-xl border bg-base-200 p-4">
+          <p class="text-xs font-semibold tracking-wide uppercase text-muted">Output</p>
+          <p id="output" class="mt-2 text-heading wrap-break-word font-mono text-base">—</p>
+        </div>
       </div>
     </div>
   </div>
