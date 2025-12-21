@@ -54,24 +54,28 @@ export function renderTool(tool: Tool | undefined) {
 
 export function renderToolCard(tool: Tool) {
   return `
-    <a href="#${tool.path}" class="block p-6 bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${
-      tool.draft ? 'border-l-draft' : 'border-l-primary'
-    } border">
-      <div class="flex justify-between items-start gap-4">
-        <div class="flex items-start gap-4 min-w-0">
+    <a
+      href="#${tool.path}"
+      aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
+      class="card card-compact bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${
+        tool.draft ? 'border-l-yellow-400' : 'border-l-primary'
+      } border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${
+        tool.draft ? 'focus:ring-yellow-300' : 'focus:ring-secondary'
+      }"
+    >
+      <div class="card-body p-4">
+        <div class="flex items-start gap-4">
           <div class="shrink-0 text-muted">
             ${renderToolIconSvg(tool.icon, 'w-6 h-6')}
           </div>
+
           <div class="flex-1 min-w-0">
-            <h3 class="text-xl font-bold text-heading">${tool.name}</h3>
-            <p class="text-muted mt-2 text-sm">${tool.description}</p>
+            <h3 class="card-title text-xl font-bold text-heading truncate">${tool.name}</h3>
+            <p class="text-muted mt-2 text-sm truncate">${tool.description}</p>
           </div>
+
+          ${tool.draft ? '<div class="badge badge-warning font-semibold">DRAFT</div>' : ''}
         </div>
-        ${
-          tool.draft
-            ? '<span class="text-xs bg-draft text-draft px-3 py-1 rounded-full font-medium whitespace-nowrap">DRAFT</span>'
-            : ''
-        }
       </div>
     </a>
   `;

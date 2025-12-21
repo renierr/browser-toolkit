@@ -61,19 +61,24 @@ export function getRegisteredToolIconIds(): string[] {
 registerToolIcons(LucideIcons);
 
 export function renderToolIconSvg(iconId?: string, className = 'w-6 h-6'): string {
+  const svgEl = iconSvgElement(iconId, className);
+  if (!svgEl) return '';
+
+  return new XMLSerializer().serializeToString(svgEl);
+}
+
+export function iconSvgElement(iconId?: string, className = 'w-6 h-6'): SVGElement | null {
   const pascalCase = iconId ? toPascalCase(iconId) : '';
   const picked = ICONS[pascalCase] ?? ICONS[DEFAULT_ICON_ID];
 
   // If even the default icon is not registered, render nothing.
-  if (!picked) return '';
+  if (!picked) return null;
 
-  const svgEl = createElement(picked, {
+  return createElement(picked, {
     class: className,
     'aria-hidden': 'true',
     focusable: 'false',
   });
-
-  return new XMLSerializer().serializeToString(svgEl);
 }
 
 /* Observe DOM changes and re-run createIcons when new elements with `data-lucide` are added. */

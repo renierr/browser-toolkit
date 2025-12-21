@@ -1,4 +1,4 @@
-import { renderToolIconSvg } from './tool-icons.ts';
+import { iconSvgElement } from './tool-icons.ts';
 
 export type MessageType = 'info' | 'warning' | 'alert';
 
@@ -16,9 +16,11 @@ function iconIdForMessageType(type: MessageType): string {
 
 type MessageOptions = {
   /**
-   * Message type (optional). Default: info
+   * Message type (optional). Default: info (with icon and no text shown)
    */
   type?: MessageType;
+  hideTypeIcon?: boolean;
+  hideTypeText?: boolean;
   /**
    * Auto-close after N ms (optional). Example: 5000
    */
@@ -78,7 +80,7 @@ export function showProgress(message: string, options: ShowProgressOptions = { v
   textEl.textContent = (message ?? 'Working…').toString();
 
   // Toggle visibility
-  el.classList.toggle('hidden', !visible);
+  el.classList.toggle('invisible', !visible);
   el.setAttribute('aria-hidden', visible ? 'false' : 'true');
 
   // Wire close button once
@@ -127,41 +129,31 @@ export function hideProgress() {
   showProgress('', { visible: false });
 }
 
-export function showMessage(message: string, options: MessageOptions = { type: 'info' }) {
+export function showMessage(message: string, opts: MessageOptions = { type: 'info' }) {
   const host = document.getElementById('ui-messages');
   if (!host) return;
 
+  const options = { type: 'info', hideTypeText: true, ...opts } as MessageOptions;
   const msgType = options?.type || 'info';
 
   const item = document.createElement('div');
   // daisyUI alert component with type styles
   const alertTypeClass =
     msgType === 'alert' ? 'alert-error' : msgType === 'warning' ? 'alert-warning' : 'alert-info';
-  item.className = `alert ${alertTypeClass} shadow-lg rounded-xl px-4 py-3 flex gap-3 items-start`;
-
+  item.className = `alert ${alertTypeClass}`;
   item.setAttribute('role', msgType === 'info' ? 'status' : 'alert');
 
-  const badge = document.createElement('span');
-  badge.className =
-    'inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-xs font-semibold whitespace-nowrap';
-
-  const badgeIcon = document.createElement('span');
-  badgeIcon.className = 'inline-flex items-center';
-  badgeIcon.innerHTML = renderToolIconSvg(iconIdForMessageType(msgType), 'w-4 h-4');
-
+  const badgeIcon = iconSvgElement(iconIdForMessageType(msgType), 'w-4 h-4');
   const badgeLabel = document.createElement('span');
   badgeLabel.textContent = msgType.toUpperCase();
 
-  badge.appendChild(badgeIcon);
-  badge.appendChild(badgeLabel);
-
   const text = document.createElement('div');
-  text.className = 'flex-1 text-sm leading-relaxed';
+  text.className = '';
   text.textContent = (message ?? '').toString();
 
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
-  closeBtn.className = 'btn btn-ghost btn-sm btn-square ml-2';
+  closeBtn.className = 'btn btn-ghost btn-sm';
   closeBtn.setAttribute('aria-label', 'Close message');
   closeBtn.innerHTML = '&#10005;';
 
@@ -176,7 +168,8 @@ export function showMessage(message: string, options: MessageOptions = { type: '
   };
   closeBtn.addEventListener('click', close);
 
-  item.appendChild(badge);
+  if (badgeIcon && !options.hideTypeIcon) item.appendChild(badgeIcon);
+  if (!options.hideTypeText) item.appendChild(badgeLabel);
   item.appendChild(text);
   item.appendChild(closeBtn);
 
