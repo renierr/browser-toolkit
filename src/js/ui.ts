@@ -136,6 +136,9 @@ export function showMessage(message: string, opts: MessageOptions = { type: 'inf
   const options = { type: 'info', hideTypeText: true, ...opts } as MessageOptions;
   const msgType = options?.type || 'info';
 
+  // info messages have auto close default to 30 seconds if not set from outside
+  if (msgType === 'info' && options.timeoutMs === undefined) options.timeoutMs = 30000;
+
   const item = document.createElement('div');
   // daisyUI alert component with type styles
   const alertTypeClass =
@@ -158,12 +161,26 @@ export function showMessage(message: string, opts: MessageOptions = { type: 'inf
   closeBtn.innerHTML = '&#10005;';
 
   let autoCloseTimer: number | null = null;
+  let countdownInterval: number | null = null;
+  let countdownEl: HTMLSpanElement | null = null;
+  let remainingMs: number | null = null;
+  let pauseTimers: (() => void) | null = null;
+  let resumeTimers: (() => void) | null = null;
 
   const close = () => {
     if (autoCloseTimer !== null) {
       window.clearTimeout(autoCloseTimer);
       autoCloseTimer = null;
     }
+    if (countdownInterval !== null) {
+      window.clearInterval(countdownInterval);
+      countdownInterval = null;
+    }
+    // clear paused state
+    remainingMs = null;
+    // remove hover listeners if wired
+    if (pauseTimers) item.removeEventListener('mouseenter', pauseTimers);
+    if (resumeTimers) item.removeEventListener('mouseleave', resumeTimers);
     item.remove();
   };
   closeBtn.addEventListener('click', close);
@@ -181,6 +198,74 @@ export function showMessage(message: string, opts: MessageOptions = { type: 'inf
     Number.isFinite(options.timeoutMs) &&
     options.timeoutMs > 0
   ) {
+    // Add a small countdown indicator (seconds left)
+    countdownEl = document.createElement('span');
+    countdownEl.className = 'ml-2 text-xs opacity-75';
+    countdownEl.setAttribute('aria-live', 'polite');
+
+    // Append countdown next to the message text
+    text.appendChild(countdownEl);
+
+    // Visual pause indicator (hidden by default)
+    const pauseIndicatorEl = document.createElement('span');
+    pauseIndicatorEl.className = 'ml-2 text-xs italic opacity-75 hidden';
+    pauseIndicatorEl.textContent = 'Paused';
+    text.appendChild(pauseIndicatorEl);
+
+    let endTime = Date.now() + options.timeoutMs;
+    const updateCountdown = () => {
+      const remainingMs = endTime - Date.now();
+      if (remainingMs <= 0) {
+        countdownEl!.textContent = '(0s)';
+        if (countdownInterval !== null) {
+          window.clearInterval(countdownInterval);
+          countdownInterval = null;
+        }
+        if (pauseIndicatorEl) pauseIndicatorEl.classList.add('hidden');
+        return;
+      }
+      const secs = Math.ceil(remainingMs / 1000);
+      countdownEl!.textContent = `(${secs}s)`;
+    };
+
+    // Pause/resume helpers for hover behavior
+    pauseTimers = () => {
+      // compute remaining time and clear running timers
+      const now = Date.now();
+      remainingMs = Math.max(0, endTime - now);
+      if (autoCloseTimer !== null) {
+        window.clearTimeout(autoCloseTimer);
+        autoCloseTimer = null;
+      }
+      if (countdownInterval !== null) {
+        window.clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      // show visual pause indicator
+      if (pauseIndicatorEl) pauseIndicatorEl.classList.remove('hidden');
+    };
+
+    resumeTimers = () => {
+      if (remainingMs === null || remainingMs <= 0) return;
+      endTime = Date.now() + remainingMs;
+      // start countdown and auto-close with remainingMs
+      updateCountdown();
+      countdownInterval = window.setInterval(updateCountdown, 500);
+      autoCloseTimer = window.setTimeout(() => {
+        close();
+      }, remainingMs);
+      remainingMs = null;
+      if (pauseIndicatorEl) pauseIndicatorEl.classList.add('hidden');
+    };
+
+    // Wire pause on hover for this message item
+    if (pauseTimers) item.addEventListener('mouseenter', pauseTimers);
+    if (resumeTimers) item.addEventListener('mouseleave', resumeTimers);
+
+    // Initial update and interval
+    updateCountdown();
+    countdownInterval = window.setInterval(updateCountdown, 500);
+
     autoCloseTimer = window.setTimeout(() => {
       close();
     }, options.timeoutMs);
