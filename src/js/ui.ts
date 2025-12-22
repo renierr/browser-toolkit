@@ -273,3 +273,5 @@ export function showMessage(message: string, opts: MessageOptions = { type: 'inf
 
   return { close };
 }
+
+export const yieldToUI = () => new Promise((r) => setTimeout(r, 0));
