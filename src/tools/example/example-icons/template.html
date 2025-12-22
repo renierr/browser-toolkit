@@ -1,13 +1,20 @@
 <section class="space-y-4">
   <div class="space-y-1">
     <h2 class="text-2xl font-bold text-heading">Icon Gallery</h2>
-    <p class="text-muted">
+    <p>
       This page renders all currently registered icon IDs (including icons registered by derived
       projects).
     </p>
-    <div id="icon-count" class="text-xs text-muted"></div>
+    <div id="icon-count" class="text-xs text-base-content/50"></div>
   </div>
 
+  <input
+    type="color"
+    id="icon-color"
+    class="w-16 h-8 p-0 border-0"
+    aria-label="Icon Color Picker"
+    value=""
+  />
   <div
     id="icon-gallery"
     class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"

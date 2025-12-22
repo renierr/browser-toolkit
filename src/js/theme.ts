@@ -1,3 +1,5 @@
+export const isDarkMode = () => document.documentElement.getAttribute('data-theme') === 'dark';
+
 export function setTheme(mode: string) {
   // daisyUI uses data-theme attribute on html element
   if (mode) {
