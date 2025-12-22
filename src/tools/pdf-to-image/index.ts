@@ -1,13 +1,11 @@
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
-import * as pdfjsLib from 'pdfjs-dist';
-import { PDFDocument } from '@cantoo/pdf-lib';
 
-// Use Vite's asset handling to resolve the worker path
-import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
-
+// dynamic importing of large pdf libs to reduce chunk size and loading time
+const pdfjsLib = await import('pdfjs-dist');
+const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
+const { PDFDocument } = await import('@cantoo/pdf-lib');
 
 export default function init() {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (file) => {

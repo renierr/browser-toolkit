@@ -1,12 +1,11 @@
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import { injectMaximizeToViewerFrame, openPdfInViewerFrame } from '../../js/pdf-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
-import * as pdfjsLib from 'pdfjs-dist';
 
-// Use Vite's asset handling to resolve the worker path
-import workerSrc from 'pdfjs-dist/build/pdf.worker.mjs?url';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+// dynamic importing of large pdf libs to reduce chunk size and loading time
+const pdfjsLib = await import('pdfjs-dist');
+const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
+pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
 
 const showPdfViewerFrame = (blobUrl: string) => {
   const pdfViewerContainer = document.getElementById('pdf-viewer-container');
