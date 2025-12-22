@@ -64,14 +64,14 @@ export function renderToolCard(tool: Tool) {
       }"
     >
       <div class="card-body p-4">
-        <div class="flex items-start gap-4">
-          <div class="shrink-0 text-muted">
+        <div class="flex flex-col items-center sm:flex-row sm:items-start gap-4">
+          <div class="shrink-0">
             ${renderToolIconSvg(tool.icon, 'w-6 h-6')}
           </div>
 
-          <div class="flex-1 min-w-0">
-            <h3 class="card-title text-xl font-bold text-heading truncate">${tool.name}</h3>
-            <p class="text-muted mt-2 text-sm truncate">${tool.description}</p>
+          <div class="flex-1 min-w-0 text-center sm:text-left">
+            <h3 class="text-xl font-bold text-heading truncate">${tool.name}</h3>
+            <p class="text-muted mt-2 text-sm">${tool.description}</p>
           </div>
 
           ${tool.draft ? '<div class="badge badge-warning font-semibold">DRAFT</div>' : ''}

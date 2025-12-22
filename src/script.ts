@@ -130,7 +130,7 @@ function renderOverview() {
       .map((key) => {
         const section = sectionMap.get(key)!;
         const headerHtml = `
-          <div class="md:col-span-2 lg:col-span-3">
+          <div class="md:col-span-2 lg:col-span-3 xl:col-span-4">
             <div class="mb-4">
               <h3 class="text-2xl font-bold text-heading">${section.meta.title}</h3>
               ${
