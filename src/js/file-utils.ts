@@ -26,6 +26,47 @@ export function setupFileDropzone(dropzoneId: string, inputId: string, onFile: (
   });
 }
 
+export function toUint8Array(data: ArrayBuffer | ArrayBufferView | SharedArrayBuffer): Uint8Array {
+  if (data instanceof Uint8Array) return data;
+  if (ArrayBuffer.isView(data)) {
+    const view = data as ArrayBufferView;
+    return new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+  }
+  return new Uint8Array(data as ArrayBuffer);
+}
+
+export type DownloadBuffer = {
+  data: ArrayBuffer | ArrayBufferView | SharedArrayBuffer;
+  name: string;
+};
+export async function downloadAsZip(files: DownloadBuffer[], zipFilename: string): Promise<void> {
+  // Each file.data is converted to Uint8Array to avoid ArrayBuffer vs SharedArrayBuffer issues.
+  if (!files || files.length === 0) return;
+
+  // If there's only one file, just download it directly (useful fallback)
+  if (files.length === 1) {
+    const f = files[0];
+    await downloadFile(new Uint8Array(f.data as any), f.name);
+    return;
+  }
+
+  try {
+    const JSZip = (await import('jszip')).default;
+    const zip = new JSZip();
+    for (const f of files) {
+      const bytes = toUint8Array(f.data);
+      zip.file(f.name, bytes);
+    }
+    const blob = await zip.generateAsync({ type: 'blob' });
+    await downloadFile(blob, zipFilename, 'application/zip');
+  } catch (e) {
+    // If jszip isn't available, throw a clear error so callers know why ZIP failed.
+    throw new Error(
+      'downloadAsZip requires the "jszip" package to be installed.'
+    );
+  }
+}
+
 
 export async function downloadFile(
   source: string | Uint8Array | ArrayBuffer | Blob,
