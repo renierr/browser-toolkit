@@ -132,12 +132,9 @@ export async function extractImages(files : FileList) {
       showMessage('The PDF file(s) do not contain any images to extract.', { type: 'alert' });
       return;
     }
-    const zipFiles : DownloadBuffer[] = allImages.map((img) => ({
-      name: img.name,
-      data: img.data,
-    }));
-    await downloadAsZip(zipFiles, 'images.zip');
-    showMessage(`${allImages.length} image(s) extracted and downloaded as ZIP.`, { timeoutMs: 15000 });
+
+    renderImages(allImages);
+    showMessage(`${allImages.length} image(s) extracted.`, { timeoutMs: 15000 });
   } catch (error) {
     console.error('Error extracting images:', error);
     showMessage(
@@ -146,4 +143,121 @@ export async function extractImages(files : FileList) {
   } finally {
     hideProgress();
   }
+}
+
+function createImageURL(data: Uint8Array) {
+  return URL.createObjectURL(new Blob([new Uint8Array(data)], { type: 'image/png' }));
+}
+
+function renderImages(
+  images: Array<{ name: string; data: Uint8Array; width: number; height: number }>
+) {
+  const container = document.getElementById('image-container');
+  if (!container) return;
+
+  // revoke previous object URLs
+  container.querySelectorAll('img[data-url]').forEach((img) => {
+    const u = (img as HTMLImageElement).dataset.url;
+    if (u) {
+      try {
+        URL.revokeObjectURL(u);
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  container.innerHTML = '';
+
+  // header area with Download All button aligned to the right
+  const header = document.createElement('div');
+  header.className = 'flex items-center justify-end mb-2';
+
+  const downloadAllBtn = document.createElement('button');
+  downloadAllBtn.id = 'pdf-download-all';
+  downloadAllBtn.className = 'btn btn-primary';
+  downloadAllBtn.textContent = `Download all (${images.length})`;
+  header.appendChild(downloadAllBtn);
+
+  container.appendChild(header);
+
+  const grid = document.createElement('div');
+  grid.className = 'grid grid-cols sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4';
+
+  images.forEach((img) => {
+    const url = createImageURL(img.data);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'relative cursor-pointer overflow-hidden rounded';
+
+    const thumb = document.createElement('img');
+    thumb.src = url;
+    thumb.alt = img.name;
+    thumb.dataset.url = url;
+    thumb.className = 'object-cover w-full h-32 rounded shadow-sm';
+    thumb.title = img.name;
+
+    thumb.addEventListener('click', () => openLightbox(url, img.name));
+
+    // per-image download button
+    const downloadBtn = document.createElement('a');
+    downloadBtn.href = url;
+    downloadBtn.download = img.name;
+    downloadBtn.className = 'absolute top-1 right-1 btn btn-sm';
+    downloadBtn.textContent = 'Download';
+    downloadBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // allow default download behavior
+    });
+
+    wrapper.appendChild(thumb);
+    wrapper.appendChild(downloadBtn);
+    grid.appendChild(wrapper);
+  });
+
+  container.appendChild(grid);
+
+  // attach click handler to Download All button
+  downloadAllBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (images.length === 0) return;
+
+    downloadAllBtn.disabled = true;
+    const originalText = downloadAllBtn.textContent;
+    downloadAllBtn.textContent = 'Preparing ZIP...';
+    showProgress('Preparing ZIP archive...');
+    try {
+      const zipFiles: DownloadBuffer[] = images.map((img) => ({
+        name: img.name,
+        data: img.data,
+      }));
+      await downloadAsZip(zipFiles, 'images.zip');
+      showMessage(`${images.length} image(s) downloaded as ZIP.`, { timeoutMs: 15000 });
+    } catch (err) {
+      console.error('Error creating ZIP:', err);
+      showMessage('Failed to create ZIP file.', { type: 'alert' });
+    } finally {
+      downloadAllBtn.disabled = false;
+      downloadAllBtn.textContent = originalText;
+      hideProgress();
+    }
+  });
+}
+
+function openLightbox(url: string, name?: string) {
+  // avoid duplicate lightbox
+  if (document.getElementById('pdf-image-lightbox')) return;
+  const overlay = document.createElement('div');
+  overlay.id = 'pdf-image-lightbox';
+  overlay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4';
+  overlay.innerHTML = `
+    <div class="relative">
+      <img src="${url}" alt="${name ?? ''}" class="max-h-[90vh] max-w-[90vw] rounded shadow-lg" />
+      <button class="absolute top-2 right-14 btn btn-sm" id="pdf-image-lightbox-close">Close</button>
+    </div>
+  `;
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
+  document.getElementById('image-container')?.appendChild(overlay);
+  document.getElementById('pdf-image-lightbox-close')?.addEventListener('click', () => overlay.remove());
 }
