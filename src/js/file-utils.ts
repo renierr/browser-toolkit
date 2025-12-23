@@ -1,8 +1,55 @@
 // Sets up drag-and-drop and click-to-select for a file input and dropzone
-export function setupFileDropzone(dropzoneId: string, inputId: string, onFile: (files: FileList) => void) {
+export function setupFileDropzone(
+  dropzoneId: string,
+  inputId: string,
+  onFile: (files: FileList) => void
+) {
   const dropzone = document.getElementById(dropzoneId);
   const fileInput = document.getElementById(inputId) as HTMLInputElement | null;
   if (!dropzone || !fileInput) return;
+
+  const accept = fileInput.accept;
+
+  const matchesAccept = (file: File, acceptString: string | null): boolean => {
+    if (!acceptString) return true;
+    const tokens = acceptString
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean);
+    const name = file.name.toLowerCase();
+    const type = (file.type || '').toLowerCase();
+
+    for (const tok of tokens) {
+      if (tok.startsWith('.')) {
+        if (name.endsWith(tok)) return true;
+      } else if (tok.endsWith('/*')) {
+        const prefix = tok.split('/')[0];
+        if (type.startsWith(prefix + '/')) return true;
+      } else {
+        if (tok === type) return true;
+      }
+    }
+    return false;
+  };
+
+  const deliverAccepted = (files: FileList) => {
+    const accepted: File[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files.item(i)!;
+      if (matchesAccept(f, accept)) accepted.push(f);
+    }
+    if (accepted.length === 0) return;
+    const dt = new DataTransfer();
+    for (const f of accepted) dt.items.add(f);
+    onFile(dt.files);
+
+    // Clear the file input so the same files can be selected/dropped again
+    try {
+      fileInput.value = '';
+    } catch {
+      /* ignore */
+    }
+  };
 
   dropzone.addEventListener('click', () => fileInput.click());
   dropzone.addEventListener('dragover', (e) => {
@@ -15,13 +62,11 @@ export function setupFileDropzone(dropzoneId: string, inputId: string, onFile: (
   dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropzone.classList.remove('dropzone-active');
-    const files = (e.dataTransfer?.files || new FileList());
-    if (files.length) {
-      onFile(files);
-    }
+    const files = e.dataTransfer?.files;
+    if (files && files.length) deliverAccepted(files);
   });
   fileInput.addEventListener('change', () => {
-    if (fileInput.files) onFile(fileInput.files);
+    if (fileInput.files && fileInput.files.length) deliverAccepted(fileInput.files);
   });
 }
 
