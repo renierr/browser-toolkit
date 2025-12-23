@@ -7,13 +7,14 @@ const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
 const { PDFDocument } = await import('@cantoo/pdf-lib');
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
-  setupFileDropzone('pdf-dropzone', 'pdf-file', async (file) => {
+  setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
     showProgress('Load PDF file...');
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const name = await flattenAsImage(arrayBuffer, file.name);
-      showMessage(`PDF ${file.name} converted to ${name} and downloaded.`);
+      const arrayBuffer = await files[0].arrayBuffer();
+      const name = await flattenAsImage(arrayBuffer, files[0].name);
+      showMessage(`PDF ${files[0].name} converted to ${name} and downloaded.`);
     } finally {
       hideProgress();
     }

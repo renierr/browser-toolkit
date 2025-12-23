@@ -29,10 +29,11 @@ const toggleToolCard = (show: boolean) => {
   }
 };
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
-  setupFileDropzone('pdf-dropzone', 'pdf-file', async (file) => {
+  setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
     showProgress('Load PDF file...');
-    const arrayBuffer = await file.arrayBuffer();
+    const arrayBuffer = await files[0].arrayBuffer();
 
     // create blob URL and post to iframe viewer
     const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
@@ -40,6 +41,6 @@ export default function init() {
     showPdfViewerFrame(blobUrl);
     toggleToolCard(false);
     hideProgress();
-    showMessage(`PDF ${file.name} loaded.`, { timeoutMs: 5000 });
+    showMessage(`PDF ${files[0].name} loaded.`, { timeoutMs: 5000 });
   });
 }

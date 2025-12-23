@@ -1241,6 +1241,7 @@ function mountHtmlToPdfTool() {
   document.getElementById('load-content')?.addEventListener('click', loadContent);
 }
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   mountHtmlToPdfTool();
 }

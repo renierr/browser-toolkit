@@ -1,5 +1,5 @@
 // Sets up drag-and-drop and click-to-select for a file input and dropzone
-export function setupFileDropzone(dropzoneId: string, inputId: string, onFile: (file: File) => void) {
+export function setupFileDropzone(dropzoneId: string, inputId: string, onFile: (files: FileList) => void) {
   const dropzone = document.getElementById(dropzoneId);
   const fileInput = document.getElementById(inputId) as HTMLInputElement | null;
   if (!dropzone || !fileInput) return;
@@ -15,14 +15,13 @@ export function setupFileDropzone(dropzoneId: string, inputId: string, onFile: (
   dropzone.addEventListener('drop', (e) => {
     e.preventDefault();
     dropzone.classList.remove('dropzone-active');
-    const files = (e.dataTransfer?.files || []);
+    const files = (e.dataTransfer?.files || new FileList());
     if (files.length) {
-      onFile(files[0]);
+      onFile(files);
     }
   });
   fileInput.addEventListener('change', () => {
-    const file = fileInput.files?.[0];
-    if (file) onFile(file);
+    if (fileInput.files) onFile(fileInput.files);
   });
 }
 

@@ -6,9 +6,10 @@ const pdfjsLib = await import('pdfjs-dist');
 const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
-  setupFileDropzone('pdf-dropzone', 'pdf-file', async (file) => {
-    await extractImages([file]);
+  setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
+    await extractImages(files);
   });
 }
 
@@ -106,7 +107,7 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
   return images;
 }
 
-export async function extractImages(files : File[]) {
+export async function extractImages(files : FileList) {
   showProgress('Reading PDF file(s) ...');
 
   try {
@@ -136,7 +137,7 @@ export async function extractImages(files : File[]) {
       data: img.data,
     }));
     await downloadAsZip(zipFiles, 'images.zip');
-    showMessage(`${allImages.length} image(s) extracted and downloaded as ZIP.`, { timeoutMs: 5000 });
+    showMessage(`${allImages.length} image(s) extracted and downloaded as ZIP.`, { timeoutMs: 15000 });
   } catch (error) {
     console.error('Error extracting images:', error);
     showMessage(
