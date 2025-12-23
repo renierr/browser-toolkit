@@ -1,0 +1,9 @@
+{
+  "name": "Extract images",
+  "description": "Extract Images embedded inside a PDF",
+  "icon": "file-pen-line",
+  "draft": false,
+  "example": false,
+  "sectionId": "pdf",
+  "order": 4
+}
