@@ -7,6 +7,7 @@ import {
   type PluginRegistry,
   type DocumentManagerPlugin,
   ZoomMode,
+  EmbedPdfContainer,
 } from '@embedpdf/snippet';
 
 // dynamic importing of large pdf libs to reduce chunk size and loading time
@@ -30,19 +31,25 @@ const getDocManager = async (registry: PluginRegistry) => {
     ?.provides();
 };
 
+const VIEWER_PROP = '__embedpdfViewer__';
+
 const showPdfViewer = async (files: FileList) => {
   const container = document.getElementById('pdf-viewer-container');
   if (container) {
 
-    // make absolute (works whether vite emits `/assets/...` or a relative path)
-    const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
-    const viewer = EmbedPDF.init({
-      type: 'container',
-      target: container,
-      wasmUrl: absolutePdfiumWasmUrl,
-      theme: { preference: isDarkMode() ? 'dark' : 'system' },
-      zoom: { defaultZoomLevel: ZoomMode.FitWidth },
-    });
+    let viewer: EmbedPdfContainer | undefined = (container as any)[VIEWER_PROP];
+    if (!viewer) {
+      // make absolute (works whether vite emits `/assets/...` or a relative path)
+      const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
+      viewer = EmbedPDF.init({
+        type: 'container',
+        target: container,
+        wasmUrl: absolutePdfiumWasmUrl,
+        theme: { preference: isDarkMode() ? 'dark' : 'light' },
+        zoom: { defaultZoomLevel: ZoomMode.FitWidth },
+      });
+      (container as any)[VIEWER_PROP] = viewer;
+    }
 
     const registry = await viewer?.registry;
     if (!registry) {
@@ -56,6 +63,20 @@ const showPdfViewer = async (files: FileList) => {
       return false;
     }
     container.classList.remove('hidden');
+
+    // if last doc closes show file upload and hide viewer
+    const DOC_CLOSED_FLAG = '__onDocClosedRegistered';
+    if (!(container as any)[DOC_CLOSED_FLAG]) {
+      docManager.onDocumentClosed(() => {
+        const docCount = docManager.getDocumentCount();
+        if (docCount <= 0) {
+          container.classList.add('hidden');
+          toggleToolCard(true);
+          console.log('last doc closed, show file upload');
+        }
+      });
+      (container as any)[DOC_CLOSED_FLAG] = true;
+    }
 
     await Promise.all(
       Array.from(files).map(async (f) => {
