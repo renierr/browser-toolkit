@@ -33,6 +33,7 @@ const getDocManager = async (registry: PluginRegistry) => {
 const showPdfViewer = async (files: FileList) => {
   const container = document.getElementById('pdf-viewer-container');
   if (container) {
+
     // make absolute (works whether vite emits `/assets/...` or a relative path)
     const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
     const viewer = EmbedPDF.init({
@@ -54,6 +55,7 @@ const showPdfViewer = async (files: FileList) => {
       showMessage('Failed to load PDF viewer (document manager not present).', { type: 'alert' });
       return false;
     }
+    container.classList.remove('hidden');
 
     await Promise.all(
       Array.from(files).map(async (f) => {
@@ -61,11 +63,16 @@ const showPdfViewer = async (files: FileList) => {
         return docManager.openDocumentBuffer({ buffer, name: f.name });
       })
     );
+    setTimeout(() => scrollTopOfViewer(container));
   } else {
     showMessage('Failed to load PDF viewer (container element not present).', { type: 'alert' });
     return false;
   }
   return true;
+};
+
+const scrollTopOfViewer = (viewerEl: HTMLElement) => {
+  viewerEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 // noinspection JSUnusedGlobalSymbols
