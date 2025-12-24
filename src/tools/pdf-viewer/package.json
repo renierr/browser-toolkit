@@ -1,0 +1,6 @@
+{
+  "name": "pdf-embedpdf-package",
+  "dependencies": {
+    "@embedpdf/snippet": "^2.0.1"
+  }
+}

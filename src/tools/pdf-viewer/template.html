@@ -1,0 +1,22 @@
+<div id="pdf-edit-tool-card" class="card w-full max-w-md mx-auto bg-base-100 p-6 rounded-xl shadow-lg border">
+  <div class="card-body">
+    <h2 class="card-title text-heading">PDF Viewer</h2>
+    <p class="text-sm text-muted">Use Empedpdf to view and annotate PDF files</p>
+
+    <div id="pdf-dropzone" role="button" tabindex="0"
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg h-32 cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3"
+    >
+      <div class="text-center">
+        <span class="text-sm text-gray-500 dark:text-gray-300">Drag & drop PDF here or click</span>
+        <div class="mt-2">
+          <label class="btn btn-sm btn-outline">Select PDF</label>
+        </div>
+      </div>
+    </div>
+    <input type="file" id="pdf-file" accept="application/pdf" class="hidden" />
+  </div>
+</div>
+
+
+<div id="pdf-viewer-container" class="w-full h-screen">
+</div>
