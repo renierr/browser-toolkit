@@ -1,6 +1,7 @@
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
-//import EmbedPDF from '@embedpdf/snippet';
+import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
+import { isDarkMode } from '../../js/theme.ts';
 
 // dynamic importing of large pdf libs to reduce chunk size and loading time
 const pdfjsLib = await import('pdfjs-dist');
@@ -31,11 +32,14 @@ export default function init() {
 
     const container = document.getElementById('pdf-viewer-container');
     if (container) {
+      // make absolute (works whether vite emits `/assets/...` or a relative path)
+      const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
       EmbedPDF.init({
         type: 'container',
         target: container,
+        wasmUrl: absolutePdfiumWasmUrl,
         src: blobUrl,
-        theme: { preference: 'system' },
+        theme: { preference: isDarkMode() ? 'dark' : 'system' },
       });
     } else {
       showMessage('Failed to load PDF viewer (container element not present).', { type: 'alert' });
