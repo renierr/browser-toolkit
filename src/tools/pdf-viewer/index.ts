@@ -63,7 +63,7 @@ const showPdfViewer = async (files: FileList) => {
       showMessage('Failed to load PDF viewer (document manager not present).', { type: 'alert' });
       return false;
     }
-    container.classList.remove('hidden');
+    docManager.closeAllDocuments();
 
     // if last doc closes show file upload and hide viewer
     const DOC_CLOSED_FLAG = '__onDocClosedRegistered';
@@ -85,6 +85,7 @@ const showPdfViewer = async (files: FileList) => {
         return docManager.openDocumentBuffer({ buffer, name: f.name });
       })
     );
+    container.classList.remove('hidden');
     setTimeout(() => scrollTopOfViewer(container));
   } else {
     showMessage('Failed to load PDF viewer (container element not present).', { type: 'alert' });
