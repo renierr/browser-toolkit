@@ -15,8 +15,14 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       manifest: false, // we provide our own manifest.json
+      devOptions: {
+        enabled: false, // prevent dev-server SW injection
+      },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
+        navigateFallbackDenylist: [/\.html($|\?)/],
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],
@@ -30,6 +36,10 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        pdf: path.resolve(__dirname, 'pdf.html'),
+      },
       output: {
         manualChunks(id: string) {
           if (id.includes('pdfjs-dist')) return 'vendor-pdfjs';

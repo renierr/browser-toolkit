@@ -1,7 +1,7 @@
 {
-  "name": "Vanilla Toolkit",
-  "short_name": "VanillaKit",
-  "description": "Collection of useful vanilla JavaScript tools – no framework, easily extendable",
+  "name": "Browser Toolkit",
+  "short_name": "BrowserToolKit",
+  "description": "Collection of useful JavaScript tools – no framework, easily extendable",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -24,5 +24,21 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/pdf.html",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": ["application/pdf", "image/*"]
+        }
+      ]
+    }
+  }
 }
