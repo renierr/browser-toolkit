@@ -117,3 +117,23 @@ window.addEventListener('load', () => {
     handleSharedKeys().catch((e) => console.error('Failed to load shared files', e));
   });
 });
+
+import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
+import {
+  default as EmbedPDF,
+  ZoomMode,
+} from '@embedpdf/snippet';
+
+const viewerContainer = document.getElementById('pdf-viewer');
+if (viewerContainer) {
+  const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
+  EmbedPDF.init({
+    type: 'container',
+    target: viewerContainer,
+    wasmUrl: absolutePdfiumWasmUrl,
+    src: '/empty.pdf',
+    theme: { preference: 'dark' },
+    zoom: { defaultZoomLevel: ZoomMode.FitWidth },
+  });
+}
+

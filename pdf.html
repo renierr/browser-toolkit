@@ -4,9 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>PDF Viewer</title>
+  <style>
+    html, body { overscroll-behavior: none; }
+    body {
+        margin: 0;
+        padding: 0;
+    }
+    #pdf-viewer {
+        height: 100dvh;
+    }
+
+  </style>
+
 </head>
 <body>
-  <div id="viewer-container" class=""></div>
+  <div id="pdf-viewer" class=""></div>
   <script type="module" src="./src/pdf-viewer.ts"></script>
 </body>
 </html>
