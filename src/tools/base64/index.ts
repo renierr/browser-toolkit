@@ -1,5 +1,6 @@
 import { showMessage } from '../../js/ui.ts';
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const inputText = document.getElementById('input-text') as HTMLTextAreaElement;
   const outputText = document.getElementById('output-text') as HTMLTextAreaElement;
