@@ -1,13 +1,6 @@
 import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
-import {
-  default as EmbedPDF,
-  ZoomMode,
-  type PluginRegistry,
-  type DocumentManagerPlugin,
-  type EmbedPdfContainer,
-  type UIPlugin,
-  type CommandsPlugin,
-} from '@embedpdf/snippet';
+import { default as EmbedPDF, type EmbedPdfContainer, ZoomMode, } from '@embedpdf/snippet';
+import { getDocManager, getViewerCommands, getViewerUi } from './js/embedpdf-utils.ts';
 
 function openDbClient(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -60,24 +53,6 @@ async function cleanupOldFiles(): Promise<void> {
   } catch (e) {
     console.warn('Cleanup failed', e);
   }
-}
-
-const getDocManager = async (registry: PluginRegistry) => {
-  return registry
-    ?.getPlugin<InstanceType<typeof DocumentManagerPlugin>>('document-manager')
-    ?.provides();
-};
-
-const getViewerUi = async (registry: PluginRegistry) => {
-  return registry
-    ?.getPlugin<InstanceType<typeof UIPlugin>>('ui')
-    ?.provides();
-}
-
-const getViewerCommands = async (registry: PluginRegistry) => {
-  return registry
-    ?.getPlugin<InstanceType<typeof CommandsPlugin>>('commands')
-    ?.provides();
 }
 
 let viewerInstance: EmbedPdfContainer | undefined;

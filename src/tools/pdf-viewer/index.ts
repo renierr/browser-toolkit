@@ -4,11 +4,10 @@ import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
 import { isDarkMode } from '../../js/theme.ts';
 import {
   default as EmbedPDF,
-  type PluginRegistry,
-  type DocumentManagerPlugin,
   ZoomMode,
   EmbedPdfContainer,
 } from '@embedpdf/snippet';
+import { getDocManager } from '../../js/embedpdf-utils.ts';
 
 // dynamic importing of large pdf libs to reduce chunk size and loading time
 const pdfjsLib = await import('pdfjs-dist');
@@ -23,12 +22,6 @@ const toggleToolCard = (show: boolean) => {
   } else {
     toolCardElement.classList.add('hidden');
   }
-};
-
-const getDocManager = async (registry: PluginRegistry) => {
-  return registry
-    ?.getPlugin<InstanceType<typeof DocumentManagerPlugin>>('document-manager')
-    ?.provides();
 };
 
 const VIEWER_PROP = '__embedpdfViewer__';
