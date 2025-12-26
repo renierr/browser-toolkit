@@ -26,7 +26,6 @@ function openDb() {
 }
 
 async function idbPut(key, value) {
-  swLog('idbPut', key, value);
   const db = await openDb();
   return new Promise((res, rej) => {
     const tx = db.transaction('files', 'readwrite');
@@ -53,9 +52,10 @@ self.addEventListener('fetch', (event) => {
             keys.push(key);
           }
           const text = encodeURIComponent(form.get('text') || '');
-          const dest = `/pdf.html?shared=12&keys=${keys.join(',')}&text=${text}`;
+          const dest = `/pdf.html?shared=1&keys=${keys.join(',')}&text=${text}`;
           return Response.redirect(dest, 303);
         } catch (err) {
+          console.error('SW: Share processing failed', err);
           return new Response('Share processing failed', { status: 500 });
         }
       })()

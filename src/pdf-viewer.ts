@@ -1,3 +1,12 @@
+import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
+import {
+  default as EmbedPDF,
+  ZoomMode,
+  type PluginRegistry,
+  type DocumentManagerPlugin,
+  type EmbedPdfContainer,
+} from '@embedpdf/snippet';
+
 function openDbClient(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('shared-db', 1);
@@ -10,7 +19,7 @@ function openDbClient(): Promise<IDBDatabase> {
   });
 }
 
-async function idbGetClient(key: string): Promise<Blob | undefined> {
+async function idbGetClient(key: string): Promise<File | Blob | undefined> {
   const db = await openDbClient();
   return new Promise((res, rej) => {
     const tx = db.transaction('files', 'readonly');
@@ -20,6 +29,60 @@ async function idbGetClient(key: string): Promise<Blob | undefined> {
   });
 }
 
+async function cleanupOldFiles(): Promise<void> {
+  try {
+    const db = await openDbClient();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      const req = store.getAllKeys();
+      
+      req.onsuccess = () => {
+        const keys = req.result as string[];
+        const now = Date.now();
+        const MAX_AGE = 60 * 60 * 1000; // 1 hour
+        
+        for (const key of keys) {
+          const parts = key.split('-');
+          const timestamp = parseInt(parts[0], 10);
+          
+          if (!isNaN(timestamp) && (now - timestamp > MAX_AGE)) {
+            store.delete(key);
+          }
+        }
+        resolve();
+      };
+      
+      req.onerror = () => reject(req.error);
+    });
+  } catch (e) {
+    console.warn('Cleanup failed', e);
+  }
+}
+
+const getDocManager = async (registry: PluginRegistry) => {
+  return registry
+    ?.getPlugin<InstanceType<typeof DocumentManagerPlugin>>('document-manager')
+    ?.provides();
+};
+
+let viewerInstance: EmbedPdfContainer | undefined;
+
+async function initViewer() {
+  const viewerContainer = document.getElementById('pdf-viewer');
+  if (viewerContainer) {
+    const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
+    viewerInstance = EmbedPDF.init({
+      type: 'container',
+      target: viewerContainer,
+      wasmUrl: absolutePdfiumWasmUrl,
+      src: '/empty.pdf',
+      theme: { preference: 'dark' },
+      zoom: { defaultZoomLevel: ZoomMode.FitWidth },
+    });
+  }
+}
+
 function getSharedUrl(): string | null {
   const params = new URLSearchParams(location.search);
   const url = params.get('url');
@@ -27,32 +90,43 @@ function getSharedUrl(): string | null {
   return params.get('text');
 }
 
-async function handleSharedKeys() {
+async function handleSharedContent() {
+  if (!viewerInstance) return;
+  const registry = await viewerInstance.registry;
+  if (!registry) return;
+  const docManager = await getDocManager(registry);
+  if (!docManager) return;
+
+  // Handle shared files from Service Worker
   const params = new URLSearchParams(location.search);
-  if (!params.get('shared')) return;
-  const keysParam = params.get('keys');
-  if (!keysParam) return;
-  const keys = keysParam.split(',').filter(Boolean);
-  const blobs: Blob[] = [];
-  for (const key of keys) {
-    const blob = await idbGetClient(key);
-    if (blob) blobs.push(blob);
+  if (params.get('shared')) {
+    const keysParam = params.get('keys');
+    if (keysParam) {
+      const keys = keysParam.split(',').filter(Boolean);
+      for (const key of keys) {
+        try {
+          const fileOrBlob = await idbGetClient(key);
+          if (fileOrBlob) {
+            const buffer = await fileOrBlob.arrayBuffer();
+            const name = (fileOrBlob as File).name || 'Shared PDF';
+            await docManager.openDocumentBuffer({ buffer, name });
+          }
+        } catch (e) {
+          console.error(`Failed to load shared file with key ${key}`, e);
+        }
+      }
+    }
   }
 
-  const viewer = document.getElementById('viewer-container') as HTMLIFrameElement | null;
-  // TODO feed the viewer with shared blobs
-  if (viewer && blobs.length) {
-    const url = URL.createObjectURL(blobs[0]);
-    console.log('shared url:', url);
-//    viewer.src = url;
-    // revoke later if appropriate
-    // setTimeout(() => URL.revokeObjectURL(url), 60_000);
-  }
-
-  // fallback: if a shared url param exists, use existing logic
+  // Handle shared URL (fallback or direct link)
   const sharedUrl = getSharedUrl();
   if (sharedUrl) {
-    console.log('shared url (fallback):', sharedUrl);
+    try {
+        new URL(sharedUrl);
+        console.log('Loading shared URL:', sharedUrl);
+    } catch (e) {
+        // Not a URL
+    }
   }
 }
 
@@ -69,7 +143,6 @@ async function registerServiceWorker(): Promise<void> {
       scope: scopeDir,
     });
 
-    // If a waiting worker exists, ask it to skipWaiting so it can activate immediately.
     if (reg.waiting) {
       try {
         reg.waiting.postMessage({ type: 'SKIP_WAITING' });
@@ -78,7 +151,6 @@ async function registerServiceWorker(): Promise<void> {
       }
     }
 
-    // If this page is inside the worker's scope, wait for it to control the page.
     const pageControllable = location.pathname.startsWith(scopeDir);
     if (pageControllable) {
       await new Promise<void>((resolve) => {
@@ -87,7 +159,6 @@ async function registerServiceWorker(): Promise<void> {
           navigator.serviceWorker.removeEventListener('controllerchange', onController);
           resolve();
         };
-        // 10s safety timeout
         const timeout = setTimeout(() => {
           navigator.serviceWorker.removeEventListener('controllerchange', onController);
           resolve();
@@ -98,7 +169,6 @@ async function registerServiceWorker(): Promise<void> {
         });
       });
     } else {
-      // Page is outside SW scope: that's fine — SW can still store files and redirect to this page.
       console.warn('Page not inside SW scope. SW registered with scope:', scopeDir);
     }
 
@@ -113,27 +183,15 @@ async function registerServiceWorker(): Promise<void> {
 }
 
 window.addEventListener('load', () => {
-  registerServiceWorker().finally(() => {
-    handleSharedKeys().catch((e) => console.error('Failed to load shared files', e));
-  });
+  // Register SW for future shares, but don't block viewer init
+  registerServiceWorker().catch((e) => console.error('SW registration failed', e));
+  
+  // Cleanup old files in background
+  cleanupOldFiles().catch((e) => console.warn('Cleanup failed', e));
+
+  // Initialize viewer immediately
+  initViewer().then(() => {
+    // Check for shared content once viewer is ready
+    return handleSharedContent();
+  }).catch((e) => console.error('Failed to initialize viewer', e));
 });
-
-import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
-import {
-  default as EmbedPDF,
-  ZoomMode,
-} from '@embedpdf/snippet';
-
-const viewerContainer = document.getElementById('pdf-viewer');
-if (viewerContainer) {
-  const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
-  EmbedPDF.init({
-    type: 'container',
-    target: viewerContainer,
-    wasmUrl: absolutePdfiumWasmUrl,
-    src: '/empty.pdf',
-    theme: { preference: 'dark' },
-    zoom: { defaultZoomLevel: ZoomMode.FitWidth },
-  });
-}
-
