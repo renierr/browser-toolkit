@@ -25,6 +25,23 @@ export default defineConfig({
         clientsClaim: true,
         importScripts: ['/sw-share-target.js'],
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.endsWith('.mjs') ||
+              url.pathname.includes('/pdfjs/') ||
+              url.pathname.endsWith('.bcmap') ||
+              url.pathname.endsWith('.pfb') ||
+              url.pathname.endsWith('.ttf'),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'dynamic-files',
+              expiration: {
+                maxEntries: 500,
+              },
+            },
+          },
+        ],
       },
     }),
   ],
