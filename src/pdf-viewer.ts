@@ -5,6 +5,8 @@ import {
   type PluginRegistry,
   type DocumentManagerPlugin,
   type EmbedPdfContainer,
+  type UIPlugin,
+  type CommandsPlugin,
 } from '@embedpdf/snippet';
 
 function openDbClient(): Promise<IDBDatabase> {
@@ -36,23 +38,23 @@ async function cleanupOldFiles(): Promise<void> {
       const tx = db.transaction('files', 'readwrite');
       const store = tx.objectStore('files');
       const req = store.getAllKeys();
-      
+
       req.onsuccess = () => {
         const keys = req.result as string[];
         const now = Date.now();
         const MAX_AGE = 60 * 60 * 1000; // 1 hour
-        
+
         for (const key of keys) {
           const parts = key.split('-');
           const timestamp = parseInt(parts[0], 10);
-          
+
           if (!isNaN(timestamp) && (now - timestamp > MAX_AGE)) {
             store.delete(key);
           }
         }
         resolve();
       };
-      
+
       req.onerror = () => reject(req.error);
     });
   } catch (e) {
@@ -65,6 +67,18 @@ const getDocManager = async (registry: PluginRegistry) => {
     ?.getPlugin<InstanceType<typeof DocumentManagerPlugin>>('document-manager')
     ?.provides();
 };
+
+const getViewerUi = async (registry: PluginRegistry) => {
+  return registry
+    ?.getPlugin<InstanceType<typeof UIPlugin>>('ui')
+    ?.provides();
+}
+
+const getViewerCommands = async (registry: PluginRegistry) => {
+  return registry
+    ?.getPlugin<InstanceType<typeof CommandsPlugin>>('commands')
+    ?.provides();
+}
 
 let viewerInstance: EmbedPdfContainer | undefined;
 
@@ -80,6 +94,72 @@ async function initViewer() {
       theme: { preference: 'dark' },
       zoom: { defaultZoomLevel: ZoomMode.FitWidth },
     });
+
+    if (viewerInstance) {
+      const registry = await viewerInstance.registry;
+      if (registry) {
+        const ui = await getViewerUi(registry);
+        const commands = await getViewerCommands(registry);
+
+        if (commands && ui) {
+          // Register Home Icon (Lucide Home)
+          viewerInstance.registerIcon('icon-home', {
+            viewBox: '0 0 24 24',
+            paths: [
+              {
+                d: 'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+                stroke: 'currentColor',
+                fill: 'none',
+                strokeWidth: '2',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round'
+              },
+              {
+                d: 'M9 22V12h6v10',
+                stroke: 'currentColor',
+                fill: 'none',
+                strokeWidth: '2',
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round'
+              }
+            ]
+          });
+
+          commands.registerCommand({
+            id: 'app.go-home',
+            label: 'Home',
+            icon: 'icon-home',
+            action: () => {
+              window.location.href = '/index.html';
+            }
+          });
+
+          const schema = ui.getSchema();
+          const toolbar = schema.toolbars['main-toolbar'];
+          if (toolbar) {
+            const items = JSON.parse(JSON.stringify(toolbar.items));
+            const leftGroup = items.find((item: any) => item.id === 'left-group');
+
+            const homeButton = {
+              type: 'command-button',
+              id: 'home-button',
+              commandId: 'app.go-home',
+              variant: 'icon'
+            };
+
+            if (leftGroup) {
+              leftGroup.items.unshift(homeButton);
+            } else {
+              items.unshift(homeButton);
+            }
+
+            ui.mergeSchema({
+              toolbars: { 'main-toolbar': { ...toolbar, items } }
+            });
+          }
+        }
+      }
+    }
   }
 }
 
@@ -109,7 +189,7 @@ async function handleSharedContent() {
           if (fileOrBlob) {
             const buffer = await fileOrBlob.arrayBuffer();
             const name = (fileOrBlob as File).name || 'Shared PDF';
-            await docManager.openDocumentBuffer({ buffer, name });
+            docManager.openDocumentBuffer({ buffer, name });
           }
         } catch (e) {
           console.error(`Failed to load shared file with key ${key}`, e);
