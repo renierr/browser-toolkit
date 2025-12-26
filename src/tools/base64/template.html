@@ -1,0 +1,56 @@
+<div class="card bg-base-100 max-w-4xl mx-auto rounded-xl shadow-lg border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl mb-4">Base64 Encoder / Decoder</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Input Section -->
+      <div class="form-control w-full">
+        <label class="label">
+          <span class="label-text font-semibold">Input</span>
+        </label>
+        <textarea id="input-text" class="textarea textarea-bordered h-64 font-mono text-sm"
+                  placeholder="Type or paste content here..."></textarea>
+        <div class="label">
+          <span class="label-text-alt" id="input-stats">0 chars</span>
+        </div>
+      </div>
+
+      <!-- Output Section -->
+      <div class="form-control w-full">
+        <label class="label">
+          <span class="label-text font-semibold">Output</span>
+        </label>
+        <textarea id="output-text" class="textarea textarea-bordered h-64 font-mono text-sm bg-base-200" readonly
+                  placeholder="Result will appear here..."></textarea>
+        <div class="label">
+          <span class="label-text-alt" id="output-stats">0 chars</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card-actions justify-center mt-6 gap-4">
+      <button id="btn-encode" class="btn btn-primary">
+        Encode
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="lucide lucide-arrow-right">
+          <path d="M5 12h14" />
+          <path d="m12 5 7 7-7 7" />
+        </svg>
+      </button>
+      <button id="btn-decode" class="btn btn-secondary">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+             class="lucide lucide-arrow-left">
+          <path d="m12 19-7-7 7-7" />
+          <path d="M19 12H5" />
+        </svg>
+        Decode
+      </button>
+      <button id="btn-clear" class="btn btn-ghost">Clear</button>
+      <button id="btn-copy" class="btn btn-outline">Copy Output</button>
+    </div>
+
+  </div>
+</div>
