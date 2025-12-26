@@ -25,6 +25,19 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshot.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    },
+    {
+      "src": "/screenshot.png",
+      "sizes": "1280x720",
+      "type": "image/png"
+    }
+  ],
   "share_target": {
     "action": "/pdf.html",
     "method": "POST",
@@ -36,7 +49,7 @@
       "files": [
         {
           "name": "files",
-          "accept": ["application/pdf", "image/*"]
+          "accept": ["application/pdf"]
         }
       ]
     }
