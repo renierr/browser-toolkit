@@ -1,17 +1,3 @@
-self.addEventListener('message', (e) => {
-  if (e.data && e.data.type === 'SKIP_WAITING') {
-    try {
-      self.skipWaiting();
-    } catch (err) {
-      /* ignore */
-    }
-  }
-});
-
-self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
 // minimal IndexedDB helper (used only in SW)
 function openDb() {
   return new Promise((resolve, reject) => {

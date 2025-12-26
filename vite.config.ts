@@ -16,13 +16,14 @@ export default defineConfig({
       injectRegister: 'auto',
       manifest: false, // we provide our own manifest.json
       devOptions: {
-        enabled: false, // prevent dev-server SW injection
+        enabled: true,
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
+        importScripts: ['/sw-share-target.js'],
       },
     }),
   ],

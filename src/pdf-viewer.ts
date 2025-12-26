@@ -130,62 +130,7 @@ async function handleSharedContent() {
   }
 }
 
-async function registerServiceWorker(): Promise<void> {
-  if (!('serviceWorker' in navigator)) return;
-  if (!(location.protocol === 'https:' || location.hostname === 'localhost')) return;
-
-  const swUrl = '/sw-share-target.js';
-  const scopeDir = '/';
-
-  try {
-    const reg = await navigator.serviceWorker.register(swUrl, {
-      type: 'module',
-      scope: scopeDir,
-    });
-
-    if (reg.waiting) {
-      try {
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-      } catch (e) {
-        /* ignore */
-      }
-    }
-
-    const pageControllable = location.pathname.startsWith(scopeDir);
-    if (pageControllable) {
-      await new Promise<void>((resolve) => {
-        if (navigator.serviceWorker.controller) return resolve();
-        const onController = () => {
-          navigator.serviceWorker.removeEventListener('controllerchange', onController);
-          resolve();
-        };
-        const timeout = setTimeout(() => {
-          navigator.serviceWorker.removeEventListener('controllerchange', onController);
-          resolve();
-        }, 10000);
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          clearTimeout(timeout);
-          onController();
-        });
-      });
-    } else {
-      console.warn('Page not inside SW scope. SW registered with scope:', scopeDir);
-    }
-
-    if (navigator.serviceWorker.controller) {
-      console.log('Service worker is controlling the page.');
-    } else {
-      console.warn('Service worker did not take control within timeout.');
-    }
-  } catch (err) {
-    console.error('SW registration failed', err);
-  }
-}
-
 window.addEventListener('load', () => {
-  // Register SW for future shares, but don't block viewer init
-  registerServiceWorker().catch((e) => console.error('SW registration failed', e));
-  
   // Cleanup old files in background
   cleanupOldFiles().catch((e) => console.warn('Cleanup failed', e));
 
