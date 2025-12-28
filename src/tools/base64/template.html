@@ -2,35 +2,39 @@
   <div class="card-body">
     <h2 class="card-title text-2xl mb-4">Base64 Encoder / Decoder</h2>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:min-w-3xl">
       <!-- Input Section -->
-      <div class="form-control w-full">
-        <label class="label">
+      <div class="form-control w-full lg:flex-row lg:gap-4">
+        <label class="label lg:items-start lg:pt-3 lg:w-20 shrink-0">
           <span class="label-text font-semibold">Input</span>
         </label>
-        <textarea id="input-text" class="textarea textarea-bordered h-64 font-mono text-sm"
-                  placeholder="Type or paste content here..."></textarea>
-        <div class="label">
-          <span class="label-text-alt" id="input-stats">0 chars</span>
+        <div class="flex-1">
+          <textarea id="input-text" class="textarea textarea-bordered h-64 font-mono text-sm w-full"
+                    placeholder="Type or paste content here..."></textarea>
+          <div class="label">
+            <span class="label-text-alt" id="input-stats">0 chars</span>
+          </div>
         </div>
       </div>
 
       <!-- Output Section -->
-      <div class="form-control w-full">
-        <label class="label">
+      <div class="form-control w-full lg:flex-row lg:gap-4">
+        <label class="label lg:items-start lg:pt-3 lg:w-20 shrink-0">
           <span class="label-text font-semibold">Output</span>
         </label>
-        <textarea id="output-text" class="textarea textarea-bordered h-64 font-mono text-sm bg-base-200" readonly
-                  placeholder="Result will appear here..."></textarea>
-        <div class="label">
-          <span class="label-text-alt" id="output-stats">0 chars</span>
+        <div class="flex-1">
+          <textarea id="output-text" class="textarea textarea-bordered h-64 font-mono text-sm bg-base-200 w-full" readonly
+                    placeholder="Result will appear here..."></textarea>
+          <div class="label">
+            <span class="label-text-alt" id="output-stats">0 chars</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Actions -->
-    <div class="card-actions justify-center mt-6 gap-4">
-      <button id="btn-encode" class="btn btn-primary">
+    <div class="flex flex-col sm:flex-row justify-center mt-6 gap-4">
+      <button id="btn-encode" class="btn btn-primary w-full sm:w-auto">
         Encode
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -39,7 +43,7 @@
           <path d="m12 5 7 7-7 7" />
         </svg>
       </button>
-      <button id="btn-decode" class="btn btn-secondary">
+      <button id="btn-decode" class="btn btn-secondary w-full sm:w-auto">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
              class="lucide lucide-arrow-left">
@@ -48,8 +52,8 @@
         </svg>
         Decode
       </button>
-      <button id="btn-clear" class="btn btn-ghost">Clear</button>
-      <button id="btn-copy" class="btn btn-outline">Copy Output</button>
+      <button id="btn-clear" class="btn btn-ghost w-full sm:w-auto">Clear</button>
+      <button id="btn-copy" class="btn btn-outline w-full sm:w-auto">Copy Output</button>
     </div>
 
   </div>
