@@ -1,7 +1,7 @@
 {
   "name": "Extract images",
   "description": "Extract Images embedded inside a PDF",
-  "icon": "file-pen-line",
+  "icon": "image-down",
   "draft": false,
   "example": false,
   "sectionId": "pdf",

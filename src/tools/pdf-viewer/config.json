@@ -1,7 +1,7 @@
 {
   "name": "PDF Viewer",
   "description": "Use Empedpdf to view and annotate PDF files",
-  "icon": "file-pen-line",
+  "icon": "file-pen",
   "draft": false,
   "example": false,
   "sectionId": "pdf",

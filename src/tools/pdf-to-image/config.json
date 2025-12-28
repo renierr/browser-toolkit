@@ -1,7 +1,7 @@
 {
   "name": "Flatten PDF as Image",
   "description": "Take a PDF and flatten it to a series of images.",
-  "icon": "file-pen-line",
+  "icon": "scan-text",
   "draft": false,
   "example": false,
   "sectionId": "pdf",
