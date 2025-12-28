@@ -23,7 +23,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
-        importScripts: ['/sw-share-target.js'],
+        importScripts: ['./sw-share-target.js'],
         maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
         runtimeCaching: [
           {

@@ -4,7 +4,7 @@ import type { SiteConfig } from './types';
 export const siteConfig = {
   title: 'Browser Tools',
   description: 'Collection of useful tools running only in Browser - with offline support',
-  logoPath: '/favicon.svg',
+  logoPath: './favicon.svg',
   logoAlt: 'Browser Tools',
   footerText: '© 2025 <span class="font-semibold text-brand">Browser Tools</span>',
   showExamples: false,
