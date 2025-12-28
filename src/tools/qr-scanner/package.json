@@ -1,0 +1,7 @@
+{
+  "name": "qr-scanner-tool",
+  "version": "1.0.0",
+  "dependencies": {
+    "jsqr": "^1.4.0"
+  }
+}

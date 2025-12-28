@@ -1,0 +1,7 @@
+{
+  "name": "QR Scanner",
+  "description": "Scan QR codes using your camera or an image file. Works offline.",
+  "icon": "qr-code",
+  "sectionId": "general",
+  "order": 10
+}

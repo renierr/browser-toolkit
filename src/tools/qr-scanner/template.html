@@ -1,0 +1,45 @@
+<div class="flex flex-col gap-6 max-w-2xl mx-auto">
+  <div class="card bg-base-100 shadow-md p-6">
+    <h2 class="text-xl font-bold mb-4">Scan QR Code</h2>
+
+    <div class="flex flex-col gap-4">
+      <div id="video-container" class="relative overflow-hidden rounded-lg bg-black aspect-square max-w-md mx-auto hidden">
+        <video id="qr-video" class="w-full h-full object-cover"></video>
+        <div class="absolute inset-0 border-2 border-primary/50 pointer-events-none"></div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 justify-center">
+        <button id="start-camera" class="btn btn-primary">
+          <i data-lucide="camera" class="w-4 h-4 mr-2"></i>
+          Start Camera
+        </button>
+        <button id="stop-camera" class="btn btn-outline hidden">
+          <i data-lucide="camera-off" class="w-4 h-4 mr-2"></i>
+          Stop Camera
+        </button>
+        <label class="btn btn-outline">
+          <i data-lucide="upload" class="w-4 h-4 mr-2"></i>
+          Upload Image
+          <input type="file" id="qr-input" accept="image/*" class="hidden" />
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div id="result-card" class="card bg-base-100 shadow-md p-6 hidden">
+    <h3 class="text-lg font-semibold mb-2">Result</h3>
+    <div class="bg-base-200 p-4 rounded break-all font-mono" id="qr-result"></div>
+    <div class="mt-4 flex gap-2">
+      <button id="copy-result" class="btn btn-sm btn-ghost">
+        <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+        Copy
+      </button>
+      <a id="open-link" href="#" target="_blank" class="btn btn-sm btn-primary hidden">
+        <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
+        Open Link
+      </a>
+    </div>
+  </div>
+
+  <canvas id="qr-canvas" class="hidden"></canvas>
+</div>
