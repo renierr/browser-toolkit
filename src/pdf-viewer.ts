@@ -132,7 +132,20 @@ async function handleSharedContent() {
   const docManager = await getDocManager(registry);
   if (!docManager) return;
 
-  // Handle shared files from Service Worker
+  // 1. Handle Launch Handler API (file_handlers)
+  if ('launchQueue' in window) {
+    (window as any).launchQueue.setConsumer(async (launchParams: any) => {
+      if (launchParams.files && launchParams.files.length > 0) {
+        for (const fileHandle of launchParams.files) {
+          const file = await fileHandle.getFile();
+          const buffer = await file.arrayBuffer();
+          docManager.openDocumentBuffer({ buffer, name: file.name });
+        }
+      }
+    });
+  }
+
+  // 2. Handle shared files from Service Worker (share_target)
   const params = new URLSearchParams(location.search);
   if (params.get('shared')) {
     const keysParam = params.get('keys');
@@ -153,7 +166,7 @@ async function handleSharedContent() {
     }
   }
 
-  // Handle shared URL (fallback or direct link)
+  // 3. Handle shared URL (fallback or direct link)
   const sharedUrl = getSharedUrl();
   if (sharedUrl) {
     try {
