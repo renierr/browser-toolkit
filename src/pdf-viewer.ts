@@ -66,7 +66,6 @@ async function initViewer() {
       type: 'container',
       target: viewerContainer,
       wasmUrl: absolutePdfiumWasmUrl,
-      src: '/empty.pdf',
       theme: { preference: 'dark' },
       zoom: { defaultZoomLevel: ZoomMode.FitWidth },
     });

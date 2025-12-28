@@ -38,7 +38,6 @@ const showPdfViewer = async (files: FileList) => {
         type: 'container',
         target: container,
         wasmUrl: absolutePdfiumWasmUrl,
-        src: '/empty.pdf',
         theme: { preference: isDarkMode() ? 'dark' : 'light' },
         zoom: { defaultZoomLevel: ZoomMode.FitWidth },
       });
