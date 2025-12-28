@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "vite",
     "clean": "rimraf dist node_modules/.vite",
-    "prebuild": "npm run clean",
+    "prebuild": "pnpm run clean",
     "build": "tsc && vite build",
     "preview": "vite preview --port 5000",
-    "build:preview": "npm run build && npm run preview",
+    "build:preview": "pnpm run build && pnpm run preview",
     "format": "prettier --write \"src/**/*.{js,ts,html,css,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,ts,html,css,json,md}\"",
     "pdfjs:update": "node scripts/setup-pdfjs.js"
