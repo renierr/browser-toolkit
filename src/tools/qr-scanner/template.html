@@ -27,7 +27,10 @@
   </div>
 
   <div id="result-card" class="card bg-base-100 shadow-md p-6 hidden">
-    <h3 class="text-lg font-semibold mb-2">Result</h3>
+    <div class="flex justify-between items-center mb-2">
+      <h3 class="text-lg font-semibold">Result</h3>
+      <span id="qr-format" class="badge badge-ghost badge-sm"></span>
+    </div>
     <div class="bg-base-200 p-4 rounded break-all font-mono" id="qr-result"></div>
     <div class="mt-4 flex gap-2">
       <button id="copy-result" class="btn btn-sm btn-ghost">

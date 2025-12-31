@@ -12,24 +12,44 @@ export default function init() {
   const fileInput = document.getElementById('qr-input') as HTMLInputElement;
   const resultCard = document.getElementById('result-card');
   const resultText = document.getElementById('qr-result');
+  const formatText = document.getElementById('qr-format');
   const copyBtn = document.getElementById('copy-result');
   const openLinkBtn = document.getElementById('open-link') as HTMLAnchorElement;
 
   let stream: MediaStream | null = null;
   let animationFrameId: number | null = null;
   let lastScanTime = 0;
-  const SCAN_INTERVAL = 200; // Scan every 200ms
+  const SCAN_INTERVAL = 200;
 
-  // Initialize detector once
   let detector: any = null;
-  if ('BarcodeDetector' in window) {
-    try {
-      // @ts-ignore
-      detector = new BarcodeDetector({ formats: ['qr_code'] });
-    } catch (e) {
-      console.warn('BarcodeDetector initialization failed', e);
+
+  const initDetector = async () => {
+    // BarcodeDetector requires HTTPS or localhost
+    if (!window.isSecureContext) {
+      console.warn('BarcodeDetector requires a secure context (HTTPS or localhost)');
+      return;
     }
-  }
+
+    if ('BarcodeDetector' in window) {
+      try {
+        // @ts-ignore
+        const supported = await BarcodeDetector.getSupportedFormats();
+        if (supported && supported.length > 0) {
+          console.info('Native BarcodeDetector supported formats:', supported);
+          // @ts-ignore
+          detector = new BarcodeDetector({ formats: supported });
+        } else {
+          console.warn('BarcodeDetector found but no formats supported by this device.');
+        }
+      } catch (e) {
+        console.error('BarcodeDetector initialization failed:', e);
+      }
+    } else {
+      console.info('BarcodeDetector API not found in this browser.');
+    }
+  };
+
+  initDetector();
 
   const stopCamera = () => {
     if (stream) {
@@ -45,8 +65,9 @@ export default function init() {
     startBtn?.classList.remove('hidden');
   };
 
-  const setResult = (data: string) => {
+  const setResult = (data: string, format: string = 'qr_code') => {
     if (resultText) resultText.textContent = data;
+    if (formatText) formatText.textContent = format.toUpperCase().replace('_', ' ');
     resultCard?.classList.remove('hidden');
 
     if (data.startsWith('http://') || data.startsWith('https://')) {
@@ -59,40 +80,36 @@ export default function init() {
 
   const tick = async (time: number) => {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
-      // Throttle scanning
       if (time - lastScanTime >= SCAN_INTERVAL) {
         lastScanTime = time;
-        let qrData: string | null = null;
+        let result: { data: string, format: string } | null = null;
 
         if (detector) {
           try {
             const barcodes = await detector.detect(video);
             if (barcodes.length > 0) {
-              qrData = barcodes[0].rawValue;
+              result = { data: barcodes[0].rawValue, format: barcodes[0].format };
             }
           } catch (e) {
-            console.warn('BarcodeDetector failed, falling back to jsQR', e);
+            console.warn('BarcodeDetector detection failed', e);
           }
         }
 
-        if (!qrData) {
-          // Downscale for jsQR to save resources (max 640px)
+        if (!result) {
+          // Fallback to jsQR (QR only)
           const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
           canvasElement.width = video.videoWidth * scale;
           canvasElement.height = video.videoHeight * scale;
-
           canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
           const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'dontInvert',
-          });
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
           if (code) {
-            qrData = code.data;
+            result = { data: code.data, format: 'qr_code' };
           }
         }
 
-        if (qrData) {
-          setResult(qrData);
+        if (result) {
+          setResult(result.data, result.format);
           stopCamera();
           return;
         }
@@ -103,7 +120,13 @@ export default function init() {
 
   startBtn?.addEventListener('click', async () => {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
       video.srcObject = stream;
       video.setAttribute('playsinline', 'true');
       video.play();
@@ -113,7 +136,7 @@ export default function init() {
       animationFrameId = requestAnimationFrame(tick);
     } catch (err) {
       console.error('Error accessing camera:', err);
-      showMessage('Could not access camera. Please ensure you have given permission.', { type: 'alert' });
+      showMessage('Could not access camera.', { type: 'alert' });
     }
   });
 
@@ -127,20 +150,20 @@ export default function init() {
     reader.onload = (event) => {
       const img = new Image();
       img.onload = async () => {
-        let qrData: string | null = null;
+        let result: { data: string, format: string } | null = null;
 
         if (detector) {
           try {
             const barcodes = await detector.detect(img);
             if (barcodes.length > 0) {
-              qrData = barcodes[0].rawValue;
+              result = { data: barcodes[0].rawValue, format: barcodes[0].format };
             }
           } catch (e) {
-            console.warn('BarcodeDetector failed, falling back to jsQR', e);
+            console.warn('BarcodeDetector failed', e);
           }
         }
 
-        if (!qrData && canvas) {
+        if (!result && canvas) {
           const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
           canvasElement.width = img.width * scale;
           canvasElement.height = img.height * scale;
@@ -148,14 +171,14 @@ export default function init() {
           const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height);
           if (code) {
-            qrData = code.data;
+            result = { data: code.data, format: 'qr_code' };
           }
         }
 
-        if (qrData) {
-          setResult(qrData);
+        if (result) {
+          setResult(result.data, result.format);
         } else {
-          showMessage('No QR code found in image.', { type: 'alert' });
+          showMessage('No barcode found.', { type: 'alert' });
         }
       };
       img.src = event.target?.result as string;
