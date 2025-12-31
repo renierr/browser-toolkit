@@ -17,6 +17,19 @@ export default function init() {
 
   let stream: MediaStream | null = null;
   let animationFrameId: number | null = null;
+  let lastScanTime = 0;
+  const SCAN_INTERVAL = 200; // Scan every 200ms
+
+  // Initialize detector once
+  let detector: any = null;
+  if ('BarcodeDetector' in window) {
+    try {
+      // @ts-ignore
+      detector = new BarcodeDetector({ formats: ['qr_code'] });
+    } catch (e) {
+      console.warn('BarcodeDetector initialization failed', e);
+    }
+  }
 
   const stopCamera = () => {
     if (stream) {
@@ -44,43 +57,45 @@ export default function init() {
     }
   };
 
-  const tick = async () => {
+  const tick = async (time: number) => {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
-      let qrData: string | null = null;
+      // Throttle scanning
+      if (time - lastScanTime >= SCAN_INTERVAL) {
+        lastScanTime = time;
+        let qrData: string | null = null;
 
-      // Try native BarcodeDetector API first
-      if ('BarcodeDetector' in window) {
-        try {
-          // @ts-ignore
-          const detector = new BarcodeDetector({ formats: ['qr_code'] });
-          // @ts-ignore
-          const barcodes = await detector.detect(video);
-          if (barcodes.length > 0) {
-            qrData = barcodes[0].rawValue;
+        if (detector) {
+          try {
+            const barcodes = await detector.detect(video);
+            if (barcodes.length > 0) {
+              qrData = barcodes[0].rawValue;
+            }
+          } catch (e) {
+            console.warn('BarcodeDetector failed, falling back to jsQR', e);
           }
-        } catch (e) {
-          console.warn('BarcodeDetector failed, falling back to jsQR', e);
         }
-      }
 
-      // Fallback to jsQR
-      if (!qrData) {
-        canvasElement.height = video.videoHeight;
-        canvasElement.width = video.videoWidth;
-        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height, {
-          inversionAttempts: 'dontInvert',
-        });
-        if (code) {
-          qrData = code.data;
+        if (!qrData) {
+          // Downscale for jsQR to save resources (max 640px)
+          const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+          canvasElement.width = video.videoWidth * scale;
+          canvasElement.height = video.videoHeight * scale;
+
+          canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+          const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'dontInvert',
+          });
+          if (code) {
+            qrData = code.data;
+          }
         }
-      }
 
-      if (qrData) {
-        setResult(qrData);
-        stopCamera();
-        return;
+        if (qrData) {
+          setResult(qrData);
+          stopCamera();
+          return;
+        }
       }
     }
     animationFrameId = requestAnimationFrame(tick);
@@ -114,11 +129,8 @@ export default function init() {
       img.onload = async () => {
         let qrData: string | null = null;
 
-        if ('BarcodeDetector' in window) {
+        if (detector) {
           try {
-            // @ts-ignore
-            const detector = new BarcodeDetector({ formats: ['qr_code'] });
-            // @ts-ignore
             const barcodes = await detector.detect(img);
             if (barcodes.length > 0) {
               qrData = barcodes[0].rawValue;
@@ -129,9 +141,10 @@ export default function init() {
         }
 
         if (!qrData && canvas) {
-          canvasElement.width = img.width;
-          canvasElement.height = img.height;
-          canvas.drawImage(img, 0, 0);
+          const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
+          canvasElement.width = img.width * scale;
+          canvasElement.height = img.height * scale;
+          canvas.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
           const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height);
           if (code) {
