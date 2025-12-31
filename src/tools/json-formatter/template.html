@@ -1,0 +1,36 @@
+<div class="flex flex-col gap-4 h-full">
+  <div class="flex flex-wrap gap-2 items-center justify-between">
+    <div class="flex gap-2">
+      <button id="btn-format" class="btn btn-primary btn-sm">Format</button>
+      <button id="btn-minify" class="btn btn-outline btn-sm">Minify</button>
+      <button id="btn-clear" class="btn btn-ghost btn-sm">Clear All</button>
+    </div>
+    <div class="flex gap-2">
+      <button id="btn-copy" class="btn btn-secondary btn-sm">Copy Output</button>
+    </div>
+  </div>
+
+  <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[400px]">
+    <div class="flex flex-col gap-2">
+      <label class="text-xs font-bold uppercase opacity-50">Input</label>
+      <textarea
+        id="json-input"
+        class="textarea textarea-bordered font-mono w-full flex-1 resize-none focus:outline-none"
+        placeholder='Paste your JSON here...'
+        spellcheck="false"
+      ></textarea>
+    </div>
+
+    <div class="flex flex-col gap-2">
+      <label class="text-xs font-bold uppercase opacity-50">Output</label>
+      <textarea
+        id="json-output"
+        class="textarea textarea-bordered font-mono w-full flex-1 resize-none focus:outline-none bg-base-200"
+        placeholder="Formatted output will appear here..."
+        readonly
+        spellcheck="false"
+      ></textarea>
+    </div>
+  </div>
+
+</div>

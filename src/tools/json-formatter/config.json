@@ -1,0 +1,7 @@
+{
+  "name": "JSON Formatter",
+  "description": "Format, minify and validate JSON strings.",
+  "icon": "braces",
+  "sectionId": "utilities",
+  "order": 10
+}

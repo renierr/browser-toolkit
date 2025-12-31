@@ -17,5 +17,9 @@ export const siteConfig = {
       title: 'PDF Tools',
       description: 'PDF-Tools, Viewers and Editors - 100% offline.',
     },
+    utilities: {
+      title: 'Utilities',
+      description: 'useful tools for coding and development.',
+    },
   },
 } satisfies SiteConfig;
