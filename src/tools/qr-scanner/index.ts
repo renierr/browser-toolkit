@@ -10,6 +10,8 @@ export default function init() {
   const startBtn = document.getElementById('start-camera');
   const stopBtn = document.getElementById('stop-camera');
   const fileInput = document.getElementById('qr-input') as HTMLInputElement;
+  const pasteBtn = document.getElementById('paste-btn');
+  const pasteTarget = document.getElementById('paste-target');
   const resultCard = document.getElementById('result-card');
   const resultText = document.getElementById('qr-result');
   const formatText = document.getElementById('qr-format');
@@ -24,28 +26,18 @@ export default function init() {
   let detector: any = null;
 
   const initDetector = async () => {
-    // BarcodeDetector requires HTTPS or localhost
-    if (!window.isSecureContext) {
-      console.warn('BarcodeDetector requires a secure context (HTTPS or localhost)');
-      return;
-    }
-
+    if (!window.isSecureContext) return;
     if ('BarcodeDetector' in window) {
       try {
         // @ts-ignore
         const supported = await BarcodeDetector.getSupportedFormats();
         if (supported && supported.length > 0) {
-          console.info('Native BarcodeDetector supported formats:', supported);
           // @ts-ignore
           detector = new BarcodeDetector({ formats: supported });
-        } else {
-          console.warn('BarcodeDetector found but no formats supported by this device.');
         }
       } catch (e) {
         console.error('BarcodeDetector initialization failed:', e);
       }
-    } else {
-      console.info('BarcodeDetector API not found in this browser.');
     }
   };
 
@@ -113,6 +105,25 @@ export default function init() {
     };
   };
 
+  const processClipboardItems = (items: DataTransferItemList) => {
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const blob = items[i].getAsFile();
+        if (!blob) continue;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          scanImage(img);
+          img.src = event.target?.result as string;
+        };
+        reader.readAsDataURL(blob);
+        return true;
+      }
+    }
+    return false;
+  };
+
   const tick = async (time: number) => {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
       if (time - lastScanTime >= SCAN_INTERVAL) {
@@ -131,7 +142,6 @@ export default function init() {
         }
 
         if (!result) {
-          // Fallback to jsQR (QR only)
           const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
           canvasElement.width = video.videoWidth * scale;
           canvasElement.height = video.videoHeight * scale;
@@ -190,28 +200,52 @@ export default function init() {
     reader.readAsDataURL(file);
   });
 
+  pasteBtn?.addEventListener('click', async () => {
+    try {
+      // Try Clipboard API first (modern browsers)
+      if (navigator.clipboard && navigator.clipboard.read) {
+        const items = await navigator.clipboard.read();
+        for (const item of items) {
+          const imageTypes = item.types.filter(type => type.startsWith('image/'));
+          if (imageTypes.length > 0) {
+            const blob = await item.getType(imageTypes[0]);
+            const reader = new FileReader();
+            reader.onload = (event) => {
+              const img = new Image();
+              scanImage(img);
+              img.src = event.target?.result as string;
+            };
+            reader.readAsDataURL(blob);
+            return;
+          }
+        }
+        showMessage('No image found in clipboard.', { type: 'info' });
+      } else {
+        // Fallback: show paste target for mobile/older browsers
+        pasteTarget?.classList.toggle('hidden');
+        if (!pasteTarget?.classList.contains('hidden')) {
+          (pasteTarget as HTMLElement).focus();
+        }
+      }
+    } catch (err) {
+      console.warn('Clipboard API failed, showing paste target', err);
+      pasteTarget?.classList.toggle('hidden');
+      if (!pasteTarget?.classList.contains('hidden')) {
+        (pasteTarget as HTMLElement).focus();
+      }
+    }
+  });
+
   const handlePaste = (e: ClipboardEvent) => {
     const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].type.indexOf('image') !== -1) {
-        const blob = items[i].getAsFile();
-        if (!blob) continue;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const img = new Image();
-          scanImage(img);
-          img.src = event.target?.result as string;
-        };
-        reader.readAsDataURL(blob);
-        break;
-      }
+    if (items && processClipboardItems(items)) {
+      pasteTarget?.classList.add('hidden');
+      if (pasteTarget) pasteTarget.textContent = 'Tap here and paste image';
     }
   };
 
   window.addEventListener('paste', handlePaste);
+  pasteTarget?.addEventListener('paste', handlePaste);
 
   copyBtn?.addEventListener('click', () => {
     if (resultText?.textContent) {

@@ -22,7 +22,16 @@
           Upload Image
           <input type="file" id="qr-input" accept="image/*" class="hidden" />
         </label>
+        <button id="paste-btn" class="btn btn-outline">
+          <i data-lucide="clipboard" class="w-4 h-4 mr-2"></i>
+          Paste Image
+        </button>
       </div>
+
+      <div id="paste-target" contenteditable="true" class="hidden mt-2 p-4 border-2 border-dashed border-base-300 rounded-lg text-center text-sm opacity-70 focus:outline-none focus:border-primary">
+        Tap here and paste image
+      </div>
+
       <p class="text-center text-xs opacity-50">Tip: You can also paste an image from your clipboard (Ctrl+V)</p>
     </div>
   </div>
