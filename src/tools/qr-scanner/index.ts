@@ -78,6 +78,41 @@ export default function init() {
     }
   };
 
+  const scanImage = (img: HTMLImageElement) => {
+    img.onload = async () => {
+      let result: { data: string, format: string } | null = null;
+
+      if (detector) {
+        try {
+          const barcodes = await detector.detect(img);
+          if (barcodes.length > 0) {
+            result = { data: barcodes[0].rawValue, format: barcodes[0].format };
+          }
+        } catch (e) {
+          console.warn('BarcodeDetector failed', e);
+        }
+      }
+
+      if (!result && canvas) {
+        const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
+        canvasElement.width = img.width * scale;
+        canvasElement.height = img.height * scale;
+        canvas.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
+        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        const code = jsQR(imageData.data, imageData.width, imageData.height);
+        if (code) {
+          result = { data: code.data, format: 'qr_code' };
+        }
+      }
+
+      if (result) {
+        setResult(result.data, result.format);
+      } else {
+        showMessage('No barcode found.', { type: 'alert' });
+      }
+    };
+  };
+
   const tick = async (time: number) => {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
       if (time - lastScanTime >= SCAN_INTERVAL) {
@@ -149,42 +184,34 @@ export default function init() {
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
-      img.onload = async () => {
-        let result: { data: string, format: string } | null = null;
-
-        if (detector) {
-          try {
-            const barcodes = await detector.detect(img);
-            if (barcodes.length > 0) {
-              result = { data: barcodes[0].rawValue, format: barcodes[0].format };
-            }
-          } catch (e) {
-            console.warn('BarcodeDetector failed', e);
-          }
-        }
-
-        if (!result && canvas) {
-          const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
-          canvasElement.width = img.width * scale;
-          canvasElement.height = img.height * scale;
-          canvas.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
-          const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height);
-          if (code) {
-            result = { data: code.data, format: 'qr_code' };
-          }
-        }
-
-        if (result) {
-          setResult(result.data, result.format);
-        } else {
-          showMessage('No barcode found.', { type: 'alert' });
-        }
-      };
+      scanImage(img);
       img.src = event.target?.result as string;
     };
     reader.readAsDataURL(file);
   });
+
+  const handlePaste = (e: ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const blob = items[i].getAsFile();
+        if (!blob) continue;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          scanImage(img);
+          img.src = event.target?.result as string;
+        };
+        reader.readAsDataURL(blob);
+        break;
+      }
+    }
+  };
+
+  window.addEventListener('paste', handlePaste);
 
   copyBtn?.addEventListener('click', () => {
     if (resultText?.textContent) {
@@ -194,5 +221,6 @@ export default function init() {
 
   return () => {
     stopCamera();
+    window.removeEventListener('paste', handlePaste);
   };
 }
