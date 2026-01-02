@@ -85,7 +85,7 @@ async function initViewer() {
             label: 'Home',
             icon: 'icon-home',
             action: () => {
-              window.location.href = '/index.html';
+              window.location.href = './index.html';
             }
           });
 
