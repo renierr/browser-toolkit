@@ -1,6 +1,6 @@
-import { showProgress, hideProgress, showMessage } from '../../js/ui';
-import { iconSvgElement } from '../../js/tool-icons';
+import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui';
 import { PDFDocument } from '@cantoo/pdf-lib';
+import { setupFileDropzone } from '../../js/file-utils.ts';
 
 interface ImageItem {
   id: string;
@@ -10,21 +10,14 @@ interface ImageItem {
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
-  const dropZone = document.getElementById('drop-zone') as HTMLDivElement;
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
   const imageList = document.getElementById('image-list') as HTMLDivElement;
   const actions = document.getElementById('actions') as HTMLDivElement;
   const generateBtn = document.getElementById('generate-btn') as HTMLButtonElement;
   const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
-  const dropIcon = document.getElementById('drop-icon') as HTMLDivElement;
-  const generateIcon = document.getElementById('generate-icon') as HTMLSpanElement;
 
   let images: ImageItem[] = [];
   let draggedItem: HTMLElement | null = null;
-
-  // Icons
-  if (dropIcon) dropIcon.appendChild(iconSvgElement('upload-cloud', 'w-full h-full'));
-  if (generateIcon) generateIcon.appendChild(iconSvgElement('file-text', 'w-4 h-4 mr-2'));
 
   const renderImages = () => {
     imageList.innerHTML = '';
@@ -36,7 +29,7 @@ export default function init() {
       card.dataset.id = item.id;
 
       card.innerHTML = `
-        <img src="${item.previewUrl}" class="w-full h-full object-cover pointer-events-none" />
+        <img src="${item.previewUrl}" alt="Preview ${index + 1}" class="w-full h-full object-cover pointer-events-none" />
         <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
            <button class="btn btn-circle btn-error btn-sm remove-btn" data-id="${item.id}">
              &#10005;
@@ -111,25 +104,8 @@ export default function init() {
     renderImages();
   };
 
-  dropZone.addEventListener('click', () => fileInput.click());
-
-  dropZone.addEventListener('dragover', (e) => {
-    e.preventDefault();
-    dropZone.classList.add('border-primary', 'bg-primary/5');
-  });
-
-  dropZone.addEventListener('dragleave', () => {
-    dropZone.classList.remove('border-primary', 'bg-primary/5');
-  });
-
-  dropZone.addEventListener('drop', (e) => {
-    e.preventDefault();
-    dropZone.classList.remove('border-primary', 'bg-primary/5');
-    handleFiles(e.dataTransfer?.files || null);
-  });
-
-  fileInput.addEventListener('change', () => {
-    handleFiles(fileInput.files);
+  setupFileDropzone('drop-zone', 'file-input', async (files) => {
+    handleFiles(files);
     fileInput.value = '';
   });
 
@@ -161,6 +137,9 @@ export default function init() {
       const pdfDoc = await PDFDocument.create();
 
       for (const item of images) {
+        showProgress('Processing image ' + item.file.name + '...');
+        await yieldToUI();
+
         const imageBytes = await item.file.arrayBuffer();
         let image;
 
@@ -170,40 +149,31 @@ export default function init() {
           } else if (item.file.type === 'image/png') {
             image = await pdfDoc.embedPng(imageBytes);
           } else {
-            throw new Error('Unsupported format for direct embedding');
+            image = await fallbackImageHandling(pdfDoc, item);
           }
         } catch (e) {
-          // Fallback for WebP or other formats: use Canvas to convert to JPEG
-          const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-            const i = new Image();
-            i.onload = () => resolve(i);
-            i.onerror = reject;
-            i.src = item.previewUrl;
-          });
-
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) throw new Error('Could not get canvas context');
-          ctx.drawImage(img, 0, 0);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-          const response = await fetch(dataUrl);
-          const blob = await response.arrayBuffer();
-          image = await pdfDoc.embedJpg(blob);
+          image = await fallbackImageHandling(pdfDoc, item);
         }
 
-        const page = pdfDoc.addPage([image.width, image.height]);
-        page.drawImage(image, {
-          x: 0,
-          y: 0,
-          width: image.width,
-          height: image.height,
-        });
+        if (image) {
+          const page = pdfDoc.addPage([image.width, image.height]);
+          page.drawImage(image, {
+            x: 0,
+            y: 0,
+            width: image.width,
+            height: image.height,
+          });
+        } else {
+          console.warn('Failed to embed image', item.file.name);
+          showMessage('Failed to embed image ' + item.file.name, {
+            type: 'warning',
+            timeoutMs: 10000,
+          });
+        }
       }
 
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
 
       const a = document.createElement('a');
@@ -225,3 +195,24 @@ export default function init() {
     images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
   };
 }
+
+const fallbackImageHandling = async (pdfDoc: PDFDocument, item: ImageItem) => {
+  // Fallback for WebP or other formats: use Canvas to convert to JPEG
+  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = item.previewUrl;
+  });
+
+  const canvas = document.createElement('canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Could not get canvas context');
+  ctx.drawImage(img, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+  const response = await fetch(dataUrl);
+  const blob = await response.arrayBuffer();
+  return await pdfDoc.embedJpg(blob);
+};
