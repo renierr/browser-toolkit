@@ -23,6 +23,32 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+/**
+ * Simple markdown-like formatter
+ */
+function formatMarkdown(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    // Headings (ordered from longest to shortest to avoid partial matches)
+    .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mt-2">$1</h3>')
+    .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-3">$1</h2>')
+    .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-4">$1</h1>')
+    // Bold: **text**
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    // Italic: *text*
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    // Code: `text`
+    .replace(/`(.*?)`/g, '<code class="bg-base-200 px-1 rounded">$1</code>')
+    // Lists: - item
+    .replace(/^\s*-\s+(.*)$/gm, '<li class="ml-4">$1</li>')
+    // Wrap lists in ul
+    .replace(/(<li.*<\/li>)/s, '<ul class="list-disc my-2">$1</ul>')
+    // Newlines to br
+    .replace(/\n/g, '<br>');
+}
+
 // noinspection JSUnusedGlobalSymbols
 export default async function init() {
   const db = await openDB();
@@ -63,7 +89,9 @@ export default async function init() {
       <div class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
         <div class="card-body p-4">
           <div class="flex justify-between items-start gap-4">
-            <p class="whitespace-pre-wrap wrap-break-word flex-1">${escapeHtml(note.content)}</p>
+            <div class="prose prose-sm max-w-none flex-1 text-base-content">
+              ${formatMarkdown(note.content)}
+            </div>
             <div class="flex gap-1">
               <button class="btn btn-ghost btn-xs edit-btn" data-id="${note.id}">
                 <i data-lucide="pencil" class="w-4 h-4"></i>
@@ -79,12 +107,6 @@ export default async function init() {
         </div>
       </div>
     `).join('');
-  }
-
-  function escapeHtml(text: string) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
   }
 
   async function saveNote() {
