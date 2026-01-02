@@ -1,0 +1,28 @@
+<div class="flex flex-col gap-6 max-w-6xl mx-auto p-4">
+  <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-xl shadow-sm border">
+    <div class="form-control w-full">
+      <label class="label block"><span class="label-text font-bold" id="form-title">New Note</span></label>
+      <textarea id="note-input" class="textarea textarea-bordered h-48 text-lg w-full" placeholder="Write something..."></textarea>
+    </div>
+    <div class="flex justify-end gap-2">
+      <button id="cancel-edit-btn" class="btn btn-ghost hidden">Cancel</button>
+      <button id="add-note-btn" class="btn btn-primary">Add Note</button>
+    </div>
+  </div>
+
+  <div class="flex flex-col md:flex-row gap-4 items-center justify-between">
+    <div class="relative w-full md:w-72">
+      <input id="search-input" type="text" placeholder="Search notes..." class="input input-bordered w-full pl-10" />
+      <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-50">
+        <i data-lucide="search" class="w-4 h-4"></i>
+      </span>
+    </div>
+    <div class="text-sm opacity-70">
+      Sorted by date (newest first)
+    </div>
+  </div>
+
+  <div id="notes-container" class="grid gap-4">
+    <!-- Notes will be rendered here -->
+  </div>
+</div>

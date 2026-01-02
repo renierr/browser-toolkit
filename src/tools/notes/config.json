@@ -1,0 +1,7 @@
+{
+  "name": "Notes",
+  "description": "Offline-first note taking tool with search and date ordering.",
+  "icon": "notebook-pen",
+  "sectionId": "general",
+  "order": 10
+}
