@@ -30,11 +30,9 @@ export default function init() {
 
       card.innerHTML = `
         <img src="${item.previewUrl}" alt="Preview ${index + 1}" class="w-full h-full object-cover pointer-events-none" />
-        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-           <button class="btn btn-circle btn-error btn-sm remove-btn" data-id="${item.id}">
-             &#10005;
-           </button>
-        </div>
+        <button class="btn btn-circle btn-error btn-xs remove-btn absolute top-1 right-1 shadow-sm z-10" data-id="${item.id}">
+          &#10005;
+        </button>
         <div class="absolute bottom-1 left-1 bg-base-100/80 px-1.5 rounded text-[10px] font-bold">
           ${index + 1}
         </div>
