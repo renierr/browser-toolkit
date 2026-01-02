@@ -6,6 +6,7 @@ import { siteContext } from '../config';
 import type { Tool } from './types.ts';
 import { replacePlaceholders } from './utils.ts';
 import { renderToolIconSvg } from './tool-icons.ts';
+import { isFavorite } from './favorites.ts';
 
 const headerFinal = replacePlaceholders(headerHtml, siteContext);
 const footerFinal = replacePlaceholders(footerHtml, siteContext);
@@ -53,30 +54,43 @@ export function renderTool(tool: Tool | undefined) {
 }
 
 export function renderToolCard(tool: Tool) {
+  const active = isFavorite(tool.path);
   return `
-    <a
-      href="#${tool.path}"
-      aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
-      class="card card-compact bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${
-        tool.draft ? 'border-l-yellow-400' : 'border-l-primary'
-      } border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${
-        tool.draft ? 'focus:ring-yellow-300' : 'focus:ring-secondary'
-      }"
-    >
-      <div class="card-body p-4">
-        <div class="flex flex-col items-center sm:flex-row sm:items-start gap-4">
-          <div class="shrink-0">
-            ${renderToolIconSvg(tool.icon, 'w-6 h-6')}
-          </div>
+    <div class="relative group">
+      <a
+        href="#${tool.path}"
+        aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
+        class="card card-compact bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${
+          tool.draft ? 'border-l-yellow-400' : 'border-l-primary'
+        } border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${
+          tool.draft ? 'focus:ring-yellow-300' : 'focus:ring-secondary'
+        } h-full"
+      >
+        <div class="card-body p-4">
+          <div class="flex flex-col items-center sm:flex-row sm:items-start gap-4">
+            <div class="shrink-0">
+              ${renderToolIconSvg(tool.icon, 'w-6 h-6')}
+            </div>
 
-          <div class="flex-1 min-w-0 text-center sm:text-left">
-            <h3 class="text-xl font-bold text-heading truncate">${tool.name}</h3>
-            <p class="text-muted mt-2 text-sm">${tool.description}</p>
-          </div>
+            <div class="flex-1 min-w-0 text-center sm:text-left">
+              <h3 class="text-xl font-bold text-heading truncate">${tool.name}</h3>
+              <p class="text-muted mt-2 text-sm">${tool.description}</p>
+            </div>
 
-          ${tool.draft ? '<div class="badge badge-warning font-semibold">DRAFT</div>' : ''}
+            ${tool.draft ? '<div class="badge badge-warning font-semibold">DRAFT</div>' : ''}
+          </div>
         </div>
-      </div>
-    </a>
+      </a>
+      <button
+        data-favorite="${tool.path}"
+        class="absolute -top-3 -right-1 p-2 rounded-full bg-card/50 hover:bg-card text-heading transition-all z-2 focus:opacity-100 focus:ring-2 focus:ring-primary outline-none ${
+          active ? 'text-yellow-500 opacity-100' : 'text-muted opacity-100'
+        }"
+        aria-label="${active ? 'Remove from favorites' : 'Add to favorites'}"
+        title="${active ? 'Remove from favorites' : 'Add to favorites'}"
+      >
+        <i data-lucide="star" class="w-4 h-4 ${active ? 'fill-current' : ''}"></i>
+      </button>
+    </div>
   `;
 }

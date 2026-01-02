@@ -5,6 +5,7 @@ import { siteContext } from './config';
 import { renderLayout, renderTool, renderToolCard } from './js/render.ts';
 import { buildTool, parseToolConfig } from './js/tool-config.ts';
 import { setupLucideCreateIcons } from './js/tool-icons.ts';
+import { getFavorites, toggleFavorite } from './js/favorites.ts';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -102,6 +103,22 @@ function renderOverview() {
       return a.name.localeCompare(b.name);
     });
 
+    // Favorites section
+    const favorites = getFavorites();
+    const favoriteTools = sorted.filter((t) => favorites.includes(t.path));
+    let favoritesHtml = '';
+    if (favoriteTools.length > 0 && !term) {
+      favoritesHtml = `
+        <div class="md:col-span-2 lg:col-span-3 xl:col-span-4">
+          <div class="mb-4">
+            <h3 class="text-2xl font-bold text-heading">Favorites</h3>
+          </div>
+        </div>
+        ${favoriteTools.map(renderToolCard).join('')}
+        <div class="md:col-span-2 lg:col-span-3 xl:col-span-4 border-b border-card my-4"></div>
+      `;
+    }
+
     // Group by sectionId
     const sectionMap = new Map<
       string,
@@ -126,7 +143,7 @@ function renderOverview() {
       ...encountered.filter((k) => !configuredOrder.includes(k)),
     ];
 
-    grid.innerHTML = keysInOrder
+    grid.innerHTML = favoritesHtml + keysInOrder
       .map((key) => {
         const section = sectionMap.get(key)!;
         const headerHtml = `
@@ -146,6 +163,17 @@ function renderOverview() {
         return headerHtml + cardsHtml;
       })
       .join('');
+
+    // Attach favorite listeners
+    grid.querySelectorAll('[data-favorite]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const path = (btn as HTMLElement).dataset.favorite!;
+        toggleFavorite(path);
+        filterAndRender();
+      });
+    });
   }
 
   searchInput?.addEventListener('input', filterAndRender);
