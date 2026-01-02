@@ -1,0 +1,27 @@
+<div class="card bg-base-100 shadow-xl border border-base-300">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">Images to PDF</h2>
+    <p class="text-base-content/70 mb-6">Select or drag and drop images to create a PDF. You can reorder them before generating the file.</p>
+
+    <div id="drop-zone" class="border-2 border-dashed border-base-300 rounded-xl p-8 text-center hover:border-primary transition-colors cursor-pointer mb-6">
+      <div class="flex flex-col items-center gap-2">
+        <div id="drop-icon" class="w-12 h-12 text-base-content/30"></div>
+        <p class="text-lg font-medium">Click or drag images here</p>
+        <p class="text-sm text-base-content/50 text-balance">Supports PNG, JPEG, WebP</p>
+      </div>
+      <input type="file" id="file-input" class="hidden" accept="image/*" multiple />
+    </div>
+
+    <div id="image-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+      <!-- Images will be added here -->
+    </div>
+
+    <div id="actions" class="card-actions justify-end hidden">
+      <button id="clear-btn" class="btn btn-ghost">Clear All</button>
+      <button id="generate-btn" class="btn btn-primary">
+        <span id="generate-icon"></span>
+        Create PDF
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,7 @@
+{
+  "name": "Images to PDF",
+  "description": "Convert multiple images into a single PDF document.",
+  "icon": "file-image",
+  "sectionId": "pdf",
+  "order": 10
+}
