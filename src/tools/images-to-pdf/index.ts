@@ -1,6 +1,6 @@
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui';
 import { PDFDocument } from '@cantoo/pdf-lib';
-import { setupFileDropzone } from '../../js/file-utils.ts';
+import { downloadFile, setupFileDropzone } from '../../js/file-utils.ts';
 
 interface ImageItem {
   id: string;
@@ -171,16 +171,9 @@ export default function init() {
       }
 
       const pdfBytes = await pdfDoc.save();
-      const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
+      await downloadFile(pdfBytes, `images-${Date.now()}.pdf`, 'application/pdf');
 
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `images-${Date.now()}.pdf`;
-      a.click();
-
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      showMessage('PDF created successfully!', { type: 'info' });
+      showMessage('PDF created successfully!', { type: 'info', timeoutMs: 5000 });
     } catch (error) {
       console.error('Failed to generate PDF', error);
       showMessage('Failed to generate PDF. Please try again.', { type: 'alert' });
