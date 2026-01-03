@@ -24,7 +24,7 @@ export default function init() {
     images.forEach((item, index) => {
       const card = document.createElement('div');
       card.className =
-        'relative group aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 cursor-move';
+        'relative group aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 cursor-move touch-none';
       card.dataset.id = item.id;
 
       card.innerHTML = `
@@ -49,7 +49,11 @@ export default function init() {
     chosenClass: 'scale-95',
     dragClass: 'ring-2',
     onEnd: (evt) => {
-      if (evt.oldIndex !== undefined && evt.newIndex !== undefined && evt.oldIndex !== evt.newIndex) {
+      if (
+        evt.oldIndex !== undefined &&
+        evt.newIndex !== undefined &&
+        evt.oldIndex !== evt.newIndex
+      ) {
         const [movedItem] = images.splice(evt.oldIndex, 1);
         images.splice(evt.newIndex, 0, movedItem);
         renderImages();
