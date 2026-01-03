@@ -77,14 +77,16 @@ export default function init() {
     }
   }
 
-  function notify() {
+  function notify(orgTimerVal: number = 0) {
+    const minute = Math.floor(orgTimerVal / 60);
+    const timeoutText = `Your ${minute ? minute + ' minute' : ''} countdown has ended.`
     if (Notification.permission === 'granted') {
       new Notification('Timer Finished!', {
-        body: 'Your countdown has ended.',
+        body: timeoutText,
         icon: './favicon.png',
       });
     } else {
-      alert('Timer Finished!');
+      alert(timeoutText);
     }
   }
 
@@ -115,6 +117,8 @@ export default function init() {
     startStopBtn.classList.add('btn-warning');
     status.textContent = 'Running...';
 
+    const orgTimerVal = isResuming ? 0 : timeLeft;
+
     timerId = window.setInterval(() => {
       const now = Date.now();
       if (endTime) {
@@ -127,7 +131,7 @@ export default function init() {
         timeLeft = 0;
         updateDisplay();
         stopTimer(true);
-        notify();
+        notify(orgTimerVal);
       } else {
         updateDisplay();
         saveState();
