@@ -1,0 +1,35 @@
+<div class="flex flex-col items-center gap-8 p-4 max-w-lg mx-auto">
+    <p>Countdown Timer with Presets and Notifications.</p>
+    <div class="text-center">
+        <div class="text-5xl font-mono tabular-nums" id="timer-display">00:00</div>
+        <div class="mt-2 text-base-content/60" id="timer-status">Ready</div>
+    </div>
+
+    <div class="grid grid-cols-4 gap-2 w-full">
+        <button class="btn btn-outline btn-sm preset-btn" data-seconds="60">1m</button>
+        <button class="btn btn-outline btn-sm preset-btn" data-seconds="300">5m</button>
+        <button class="btn btn-outline btn-sm preset-btn" data-seconds="600">10m</button>
+        <button class="btn btn-outline btn-sm preset-btn" data-seconds="1500">25m</button>
+    </div>
+
+    <div class="flex flex-col gap-4 w-full">
+        <div class="form-control">
+            <label class="label">
+                <span class="label-text">Custom Minutes</span>
+            </label>
+            <div class="join">
+                <input type="number" id="custom-minutes" placeholder="5" class="input input-bordered join-item w-full" min="1" max="1440" />
+                <button id="set-custom" class="btn btn-secondary join-item">Set</button>
+            </div>
+        </div>
+
+        <div class="flex gap-2">
+            <button id="start-stop-btn" class="btn btn-primary flex-1">Start</button>
+            <button id="reset-btn" class="btn btn-ghost">Reset</button>
+        </div>
+    </div>
+
+    <div id="notification-status" class="text-xs text-base-content/50">
+        Notifications: <span id="notif-permission">Checking...</span>
+    </div>
+</div>

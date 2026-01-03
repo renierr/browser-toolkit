@@ -1,0 +1,7 @@
+{
+  "name": "Timer",
+  "description": "Simple countdown timer with presets and notifications.",
+  "icon": "timer",
+  "sectionId": "general",
+  "order": 10
+}
