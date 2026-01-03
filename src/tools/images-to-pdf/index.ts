@@ -1,6 +1,7 @@
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui';
 import { PDFDocument } from '@cantoo/pdf-lib';
 import { downloadFile, setupFileDropzone } from '../../js/file-utils.ts';
+import Sortable from 'sortablejs';
 
 interface ImageItem {
   id: string;
@@ -17,15 +18,13 @@ export default function init() {
   const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
 
   let images: ImageItem[] = [];
-  let draggedItem: HTMLElement | null = null;
 
   const renderImages = () => {
     imageList.innerHTML = '';
     images.forEach((item, index) => {
       const card = document.createElement('div');
       card.className =
-        'relative group aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 cursor-move transition-all';
-      card.draggable = true;
+        'relative group aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 cursor-move';
       card.dataset.id = item.id;
 
       card.innerHTML = `
@@ -37,55 +36,26 @@ export default function init() {
           ${index + 1}
         </div>
       `;
-
-      card.addEventListener('dragstart', (e) => {
-        draggedItem = card;
-        card.classList.add('opacity-50', 'scale-95');
-        if (e.dataTransfer) {
-          e.dataTransfer.effectAllowed = 'move';
-        }
-      });
-
-      card.addEventListener('dragend', () => {
-        draggedItem = null;
-        card.classList.remove('opacity-50', 'scale-95');
-        document.querySelectorAll('.drag-over').forEach((el) => {
-          el.classList.remove('drag-over', 'border-primary', 'ring-2', 'ring-primary');
-        });
-      });
-
-      card.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        if (draggedItem && draggedItem !== card) {
-          card.classList.add('drag-over', 'border-primary', 'ring-2', 'ring-primary');
-        }
-      });
-
-      card.addEventListener('dragleave', () => {
-        card.classList.remove('drag-over', 'border-primary', 'ring-2', 'ring-primary');
-      });
-
-      card.addEventListener('drop', (e) => {
-        e.preventDefault();
-        card.classList.remove('drag-over', 'border-primary', 'ring-2', 'ring-primary');
-        if (draggedItem && draggedItem !== card) {
-          const fromId = draggedItem.dataset.id;
-          const toId = card.dataset.id;
-
-          const fromIndex = images.findIndex((img) => img.id === fromId);
-          const toIndex = images.findIndex((img) => img.id === toId);
-
-          const [moved] = images.splice(fromIndex, 1);
-          images.splice(toIndex, 0, moved);
-          renderImages();
-        }
-      });
-
       imageList.appendChild(card);
     });
 
     actions.classList.toggle('hidden', images.length === 0);
   };
+
+  // noinspection JSUnusedGlobalSymbols
+  const sortable = Sortable.create(imageList, {
+    animation: 150,
+    ghostClass: 'opacity-20',
+    chosenClass: 'scale-95',
+    dragClass: 'ring-2',
+    onEnd: (evt) => {
+      if (evt.oldIndex !== undefined && evt.newIndex !== undefined && evt.oldIndex !== evt.newIndex) {
+        const [movedItem] = images.splice(evt.oldIndex, 1);
+        images.splice(evt.newIndex, 0, movedItem);
+        renderImages();
+      }
+    },
+  });
 
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
@@ -183,6 +153,7 @@ export default function init() {
   });
 
   return () => {
+    sortable.destroy();
     images.forEach((img) => URL.revokeObjectURL(img.previewUrl));
   };
 }
