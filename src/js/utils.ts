@@ -54,3 +54,11 @@ export const replacePlaceholders = (templateHtml: string, context: any): string 
   });
   return output;
 };
+
+export const html = (strings: TemplateStringsArray, ...values: any[]) => {
+  return strings.reduce((acc, str, i) => {
+    const v = values[i];
+    const value = Array.isArray(v) ? v.join('') : (v ?? '');
+    return acc + str + (value === false ? '' : value);
+  }, '');
+};
