@@ -1,5 +1,5 @@
 import overviewHtml from './pages/overview.html?raw';
-import { fuzzyScore, isDev } from './js/utils.ts';
+import { fuzzyScore, html, isDev } from './js/utils.ts';
 import type { CustomMainContext, CustomMainModule, Tool, ToolModule } from './js/types';
 import { siteContext } from './config';
 import { renderLayout, renderTool, renderToolCard } from './js/render.ts';
@@ -108,13 +108,13 @@ function renderOverview() {
     const favoriteTools = sorted.filter((t) => favorites.includes(t.path));
     let favoritesHtml = '';
     if (favoriteTools.length > 0 && !term) {
-      favoritesHtml = `
+      favoritesHtml = html`
         <div class="md:col-span-2 lg:col-span-3 xl:col-span-4">
           <div class="mb-4">
             <h3 class="text-2xl font-bold text-heading">Favorites</h3>
           </div>
         </div>
-        ${favoriteTools.map(renderToolCard).join('')}
+        ${favoriteTools.map(renderToolCard)}
         <div class="md:col-span-2 lg:col-span-3 xl:col-span-4 border-b border-card my-4"></div>
       `;
     }
@@ -143,26 +143,26 @@ function renderOverview() {
       ...encountered.filter((k) => !configuredOrder.includes(k)),
     ];
 
-    grid.innerHTML = favoritesHtml + keysInOrder
-      .map((key) => {
-        const section = sectionMap.get(key)!;
-        const headerHtml = `
-          <div class="md:col-span-2 lg:col-span-3 xl:col-span-4">
-            <div class="mb-4">
-              <h3 class="text-2xl font-bold text-heading">${section.meta.title}</h3>
-              ${
-                section.meta.description
+    grid.innerHTML =
+      favoritesHtml +
+      keysInOrder
+        .map((key) => {
+          const section = sectionMap.get(key)!;
+          const headerHtml = html`
+            <div class="md:col-span-2 lg:col-span-3 xl:col-span-4">
+              <div class="mb-4">
+                <h3 class="text-2xl font-bold text-heading">${section.meta.title}</h3>
+                ${section.meta.description
                   ? `<p class="text-sm text-muted mt-1">${section.meta.description}</p>`
-                  : ''
-              }
+                  : ''}
+              </div>
             </div>
-          </div>
-        `;
+          `;
 
-        const cardsHtml = section.items.map(renderToolCard).join('');
-        return headerHtml + cardsHtml;
-      })
-      .join('');
+          const cardsHtml = section.items.map(renderToolCard).join('');
+          return headerHtml + cardsHtml;
+        })
+        .join('');
 
     // Attach favorite listeners
     grid.querySelectorAll('[data-favorite]').forEach((btn) => {
