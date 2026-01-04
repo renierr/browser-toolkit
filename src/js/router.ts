@@ -37,7 +37,7 @@ class Router {
   /**
    * Returns the payload and clears it.
    */
-  public consumePayload(): any {
+  private consumePayload(): any {
     const p = this.payload;
     this.payload = null;
     return p;
@@ -45,7 +45,7 @@ class Router {
 
   private handleHashChange() {
     this.currentPath = window.location.hash.slice(1) || null;
-    this.listeners.forEach((l) => l(this.currentPath, this.payload));
+    this.listeners.forEach((l) => l(this.currentPath, this.consumePayload()));
   }
 }
 

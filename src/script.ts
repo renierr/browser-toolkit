@@ -217,10 +217,10 @@ function initScrollToTop() {
 }
 
 // === Routing ===
-function handleRoute(path: string | null) {
+function handleRoute(path: string | null, payload?: any) {
   if (path) {
     const tool = tools.find((t) => t.path === path);
-    renderTool(tool);
+    renderTool(tool, payload);
   } else {
     renderOverview();
   }

@@ -22,7 +22,7 @@ export function renderLayout(content: string, hideHeader?: boolean, hideFooter?:
   setupThemeToggle();
 }
 
-export function renderTool(tool: Tool | undefined) {
+export function renderTool(tool: Tool | undefined, payload?: any) {
   // Cleanup previous tool listeners/effects before replacing DOM
   try {
     currentToolCleanup?.();
@@ -48,7 +48,6 @@ export function renderTool(tool: Tool | undefined) {
   }
 
   // call Tool-specific script (if exist) with payload
-  const payload = router.consumePayload();
   const maybeCleanup = tool?.script?.(payload);
   if (typeof maybeCleanup === 'function') {
     currentToolCleanup = maybeCleanup;
