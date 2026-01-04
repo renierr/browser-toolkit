@@ -7,6 +7,7 @@ import type { Tool } from './types.ts';
 import { html, replacePlaceholders } from './utils.ts';
 import { renderToolIconSvg } from './tool-icons.ts';
 import { isFavorite } from './favorites.ts';
+import router from './router.ts';
 
 const headerFinal = replacePlaceholders(headerHtml, siteContext);
 const footerFinal = replacePlaceholders(footerHtml, siteContext);
@@ -42,12 +43,13 @@ export function renderTool(tool: Tool | undefined) {
   if (backBtn) {
     backBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      location.hash = '';
+      router.goOverview();
     });
   }
 
-  // call Tool-specific script (if exist)
-  const maybeCleanup = tool?.script?.();
+  // call Tool-specific script (if exist) with payload
+  const payload = router.consumePayload();
+  const maybeCleanup = tool?.script?.(payload);
   if (typeof maybeCleanup === 'function') {
     currentToolCleanup = maybeCleanup;
   }

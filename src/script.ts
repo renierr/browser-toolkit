@@ -6,6 +6,7 @@ import { renderLayout, renderTool, renderToolCard } from './js/render.ts';
 import { buildTool, parseToolConfig } from './js/tool-config.ts';
 import { setupLucideCreateIcons } from './js/tool-icons.ts';
 import { getFavorites, toggleFavorite } from './js/favorites.ts';
+import router from './js/router.ts';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -26,7 +27,7 @@ async function buildToolsList(): Promise<Tool[]> {
   for (const pathKey in descModules) {
     const match = pathKey.match(/(.+)\/([^/]+)\/config\.json$/);
     if (!match) {
-      console.warn('\\[script\\] unexpected module key, skipping:', pathKey);
+      console.warn('[script] unexpected module key, skipping:', pathKey);
       continue;
     }
     const prefix = match[1]; // dynamic part from glob (e.g. "@tools" or "/src/tools")
@@ -215,11 +216,10 @@ function initScrollToTop() {
   update(); // initial state
 }
 
-// === Routing with hash ===
-function router() {
-  const hash = location.hash.slice(1); // without #
-  if (hash) {
-    const tool = tools.find((t) => t.path === hash);
+// === Routing ===
+function handleRoute(path: string | null) {
+  if (path) {
+    const tool = tools.find((t) => t.path === path);
     renderTool(tool);
   } else {
     renderOverview();
@@ -266,11 +266,11 @@ async function boot() {
   initScrollToTop();
   setupLucideCreateIcons();
 
-  // Hash routing only after DOM is ready (prevents early render issues)
-  window.addEventListener('hashchange', router);
+  // Subscribe to router changes
+  router.subscribe(handleRoute);
 
   // Initial route
-  router();
+  handleRoute(router.getCurrentPath());
 }
 
 void boot();
