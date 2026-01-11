@@ -35,8 +35,10 @@ export default function init() {
   let originalPdfBytes: ArrayBuffer | null = null;
   let originalFileName = 'document.pdf';
 
+  const generateId = () => crypto.randomUUID();
+
   const pushHistory = () => {
-    history.push(pages.map(p => ({ ...p })));
+    history.push(pages.map((p) => ({ ...p })));
     if (history.length > 20) history.shift();
   };
 
@@ -64,7 +66,7 @@ export default function init() {
       card.innerHTML = `
         <img src="${page.thumbnailUrl}" class="w-full h-full object-contain pointer-events-none bg-white" alt="Page ${index + 1}" />
         <div class="absolute top-2 left-2 z-10">
-          <input type="checkbox" class="checkbox checkbox-primary checkbox-sm page-checkbox shadow-sm bg-base-100 border-base-content/30" ${page.selected ? 'checked' : ''} data-id="${page.id}" />
+          <input type="checkbox" class="checkbox checkbox-primary checkbox-sm page-checkbox shadow-sm bg-base-100 border-base-content/30 pointer-events-none" ${page.selected ? 'checked' : ''} />
         </div>
         <div class="absolute bottom-2 right-2 bg-base-300/90 px-1.5 rounded text-[10px] font-bold z-10">
           ${index + 1}
@@ -72,16 +74,8 @@ export default function init() {
         <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"></div>
       `;
 
-      card.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).classList.contains('page-checkbox')) return;
+      card.addEventListener('click', () => {
         page.selected = !page.selected;
-        updateUI();
-      });
-
-      const checkbox = card.querySelector('.page-checkbox') as HTMLInputElement;
-      checkbox.addEventListener('change', (e) => {
-        e.stopPropagation();
-        page.selected = checkbox.checked;
         updateUI();
       });
 
@@ -115,7 +109,7 @@ export default function init() {
     try {
       originalFileName = files[0].name;
       originalPdfBytes = await files[0].arrayBuffer();
-      // Use a copy for pdfjsLib to prevent detaching the original buffer when transferred to worker
+      // Use a copy for pdfjsLib to prevent detaching the original buffer
       const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(originalPdfBytes.slice(0)) });
       const pdf = await loadingTask.promise;
 
@@ -134,7 +128,7 @@ export default function init() {
         await page.render({ canvasContext: context, viewport, canvas }).promise;
 
         pages.push({
-          id: Math.random().toString(36).substring(2, 9),
+          id: generateId(),
           originalIndex: i - 1,
           thumbnailUrl: canvas.toDataURL('image/jpeg', 0.8),
           selected: false,
@@ -165,7 +159,7 @@ export default function init() {
     pages.forEach((p) => {
       newPages.push(p);
       if (p.selected) {
-        newPages.push({ ...p, id: Math.random().toString(36).substring(2, 9), selected: false });
+        newPages.push({ ...p, id: generateId(), selected: false });
       }
     });
     pages = newPages;
@@ -189,7 +183,8 @@ export default function init() {
       dropzone.classList.remove('hidden');
       actions.classList.add('hidden');
       pageList.innerHTML = '';
-      (document.getElementById('pdf-file') as HTMLInputElement).value = '';
+      const fileInput = document.getElementById('pdf-file') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
     }
   });
 
