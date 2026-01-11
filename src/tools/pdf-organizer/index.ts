@@ -33,6 +33,7 @@ export default function init() {
   let pages: PageItem[] = [];
   let history: PageItem[][] = [];
   let originalPdfBytes: ArrayBuffer | null = null;
+  let originalFileName = 'document.pdf';
 
   const pushHistory = () => {
     history.push(pages.map(p => ({ ...p })));
@@ -112,6 +113,7 @@ export default function init() {
     showProgress('Loading PDF...');
 
     try {
+      originalFileName = files[0].name;
       originalPdfBytes = await files[0].arrayBuffer();
       // Use a copy for pdfjsLib to prevent detaching the original buffer when transferred to worker
       const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(originalPdfBytes.slice(0)) });
@@ -183,6 +185,7 @@ export default function init() {
       pages = [];
       history = [];
       originalPdfBytes = null;
+      originalFileName = 'document.pdf';
       dropzone.classList.remove('hidden');
       actions.classList.add('hidden');
       pageList.innerHTML = '';
@@ -217,7 +220,8 @@ export default function init() {
       }
 
       const pdfBytes = await outDoc.save();
-      await downloadFile(pdfBytes, `organized-${Date.now()}.pdf`, 'application/pdf');
+      const fileName = originalFileName.replace(/\.pdf$/i, '') + '_organized.pdf';
+      await downloadFile(pdfBytes, fileName, 'application/pdf');
       showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
     } catch (err) {
       console.error(err);
