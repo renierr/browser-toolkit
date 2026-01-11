@@ -23,9 +23,15 @@
       <button id="duplicate-selected-btn" class="btn btn-sm btn-outline" disabled title="Duplicate selected pages">
         <i data-lucide="copy" class="w-4 h-4"></i>
       </button>
+      <button id="undo-btn" class="btn btn-sm btn-outline" disabled title="Undo last action">
+        <i data-lucide="undo" class="w-4 h-4"></i>
+      </button>
     </div>
     <div class="flex items-center gap-2">
       <span id="selection-count" class="text-sm font-medium opacity-70">0 pages selected</span>
+      <button id="start-over-btn" class="btn btn-sm btn-ghost text-error">
+        <i data-lucide="refresh-ccw" class="w-4 h-4 mr-1"></i> Start Over
+      </button>
       <button id="download-btn" class="btn btn-sm btn-primary">
         <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download PDF
       </button>

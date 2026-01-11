@@ -27,15 +27,24 @@ export default function init() {
   const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement;
   const selectAllBtn = document.getElementById('select-all-btn') as HTMLButtonElement;
   const deselectAllBtn = document.getElementById('deselect-all-btn') as HTMLButtonElement;
+  const undoBtn = document.getElementById('undo-btn') as HTMLButtonElement;
+  const startOverBtn = document.getElementById('start-over-btn') as HTMLButtonElement;
 
   let pages: PageItem[] = [];
+  let history: PageItem[][] = [];
   let originalPdfBytes: ArrayBuffer | null = null;
+
+  const pushHistory = () => {
+    history.push(pages.map(p => ({ ...p })));
+    if (history.length > 20) history.shift();
+  };
 
   const updateUI = () => {
     const selectedCount = pages.filter((p) => p.selected).length;
     selectionCount.textContent = `${selectedCount} pages selected`;
     removeBtn.disabled = selectedCount === 0;
     duplicateBtn.disabled = selectedCount === 0;
+    undoBtn.disabled = history.length === 0;
 
     renderPages();
   };
@@ -90,9 +99,10 @@ export default function init() {
         evt.newIndex !== undefined &&
         evt.oldIndex !== evt.newIndex
       ) {
+        pushHistory();
         const [movedItem] = pages.splice(evt.oldIndex, 1);
         pages.splice(evt.newIndex, 0, movedItem);
-        renderPages();
+        updateUI();
       }
     },
   });
@@ -108,6 +118,7 @@ export default function init() {
       const pdf = await loadingTask.promise;
 
       pages = [];
+      history = [];
       for (let i = 1; i <= pdf.numPages; i++) {
         showProgress(`Loading page ${i} of ${pdf.numPages}...`);
         await yieldToUI();
@@ -141,11 +152,13 @@ export default function init() {
   });
 
   removeBtn.addEventListener('click', () => {
+    pushHistory();
     pages = pages.filter((p) => !p.selected);
     updateUI();
   });
 
   duplicateBtn.addEventListener('click', () => {
+    pushHistory();
     const newPages: PageItem[] = [];
     pages.forEach((p) => {
       newPages.push(p);
@@ -155,6 +168,26 @@ export default function init() {
     });
     pages = newPages;
     updateUI();
+  });
+
+  undoBtn.addEventListener('click', () => {
+    const previousState = history.pop();
+    if (previousState) {
+      pages = previousState;
+      updateUI();
+    }
+  });
+
+  startOverBtn.addEventListener('click', () => {
+    if (confirm('Are you sure you want to start over? All changes will be lost.')) {
+      pages = [];
+      history = [];
+      originalPdfBytes = null;
+      dropzone.classList.remove('hidden');
+      actions.classList.add('hidden');
+      pageList.innerHTML = '';
+      (document.getElementById('pdf-file') as HTMLInputElement).value = '';
+    }
   });
 
   selectAllBtn.addEventListener('click', () => {
