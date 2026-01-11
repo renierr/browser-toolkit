@@ -56,7 +56,7 @@ export default function init() {
     pageList.innerHTML = '';
     pages.forEach((page, index) => {
       const card = document.createElement('div');
-      card.className = `relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 transition-all cursor-move touch-none ${
+      card.className = `relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-move touch-none ${
         page.selected
           ? 'border-primary ring-2 ring-primary/20'
           : 'border-base-300 hover:border-base-content/30'
@@ -73,11 +73,6 @@ export default function init() {
         </div>
         <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"></div>
       `;
-
-      card.addEventListener('click', () => {
-        page.selected = !page.selected;
-        updateUI();
-      });
 
       pageList.appendChild(card);
     });
@@ -100,6 +95,19 @@ export default function init() {
         updateUI();
       }
     },
+  });
+
+  pageList.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const card = target.closest('[data-id]') as HTMLElement;
+    if (card) {
+      const id = card.dataset.id;
+      const page = pages.find((p) => p.id === id);
+      if (page) {
+        page.selected = !page.selected;
+        updateUI();
+      }
+    }
   });
 
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
