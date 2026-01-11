@@ -15,6 +15,7 @@ interface PageItem {
   selected: boolean;
 }
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const pageList = document.getElementById('page-list') as HTMLDivElement;
   const actions = document.getElementById('organizer-actions') as HTMLDivElement;
@@ -49,7 +50,7 @@ export default function init() {
       card.dataset.id = page.id;
 
       card.innerHTML = `
-        <img src="${page.thumbnailUrl}" class="w-full h-full object-contain pointer-events-none bg-white" />
+        <img src="${page.thumbnailUrl}" class="w-full h-full object-contain pointer-events-none bg-white" alt="Page ${index + 1}" />
         <div class="absolute top-2 left-2 z-10">
           <input type="checkbox" class="checkbox checkbox-primary checkbox-sm page-checkbox shadow-sm bg-base-100 border-base-content/30" ${page.selected ? 'checked' : ''} data-id="${page.id}" />
         </div>
@@ -109,7 +110,7 @@ export default function init() {
         canvas.height = viewport.height;
         canvas.width = viewport.width;
 
-        await page.render({ canvasContext: context, viewport }).promise;
+        await page.render({ canvasContext: context, viewport, canvas }).promise;
 
         pages.push({
           id: Math.random().toString(36).substring(2, 9),
