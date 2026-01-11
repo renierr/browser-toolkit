@@ -32,7 +32,7 @@ export default function init() {
   let originalPdfBytes: ArrayBuffer | null = null;
 
   const updateUI = () => {
-    const selectedCount = pages.filter(p => p.selected).length;
+    const selectedCount = pages.filter((p) => p.selected).length;
     selectionCount.textContent = `${selectedCount} pages selected`;
     removeBtn.disabled = selectedCount === 0;
     duplicateBtn.disabled = selectedCount === 0;
@@ -45,7 +45,9 @@ export default function init() {
     pages.forEach((page, index) => {
       const card = document.createElement('div');
       card.className = `relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 transition-all cursor-move touch-none ${
-        page.selected ? 'border-primary ring-2 ring-primary/20' : 'border-base-300 hover:border-base-content/30'
+        page.selected
+          ? 'border-primary ring-2 ring-primary/20'
+          : 'border-base-300 hover:border-base-content/30'
       }`;
       card.dataset.id = page.id;
 
@@ -80,8 +82,14 @@ export default function init() {
   const sortable = Sortable.create(pageList, {
     animation: 150,
     ghostClass: 'opacity-20',
+    chosenClass: 'scale-95',
+    dragClass: 'ring-2',
     onEnd: (evt) => {
-      if (evt.oldIndex !== undefined && evt.newIndex !== undefined && evt.oldIndex !== evt.newIndex) {
+      if (
+        evt.oldIndex !== undefined &&
+        evt.newIndex !== undefined &&
+        evt.oldIndex !== evt.newIndex
+      ) {
         const [movedItem] = pages.splice(evt.oldIndex, 1);
         pages.splice(evt.newIndex, 0, movedItem);
         renderPages();
@@ -101,7 +109,7 @@ export default function init() {
 
       pages = [];
       for (let i = 1; i <= pdf.numPages; i++) {
-        showProgress(`Rendering page ${i}/${pdf.numPages}...`);
+        showProgress(`Loading page ${i} of ${pdf.numPages}...`);
         await yieldToUI();
         const page = await pdf.getPage(i);
         const viewport = page.getViewport({ scale: 0.8 });
@@ -116,7 +124,7 @@ export default function init() {
           id: Math.random().toString(36).substring(2, 9),
           originalIndex: i - 1,
           thumbnailUrl: canvas.toDataURL('image/jpeg', 0.8),
-          selected: false
+          selected: false,
         });
       }
 
@@ -133,13 +141,13 @@ export default function init() {
   });
 
   removeBtn.addEventListener('click', () => {
-    pages = pages.filter(p => !p.selected);
+    pages = pages.filter((p) => !p.selected);
     updateUI();
   });
 
   duplicateBtn.addEventListener('click', () => {
     const newPages: PageItem[] = [];
-    pages.forEach(p => {
+    pages.forEach((p) => {
       newPages.push(p);
       if (p.selected) {
         newPages.push({ ...p, id: Math.random().toString(36).substring(2, 9), selected: false });
@@ -150,12 +158,12 @@ export default function init() {
   });
 
   selectAllBtn.addEventListener('click', () => {
-    pages.forEach(p => p.selected = true);
+    pages.forEach((p) => (p.selected = true));
     updateUI();
   });
 
   deselectAllBtn.addEventListener('click', () => {
-    pages.forEach(p => p.selected = false);
+    pages.forEach((p) => (p.selected = false));
     updateUI();
   });
 
@@ -167,7 +175,9 @@ export default function init() {
       const srcDoc = await PDFDocument.load(originalPdfBytes);
       const outDoc = await PDFDocument.create();
 
-      for (const pageItem of pages) {
+      for (let i = 0; i < pages.length; i++) {
+        const pageItem = pages[i];
+        showProgress(`Assembling page ${i + 1} of ${pages.length}...`);
         const [copiedPage] = await outDoc.copyPages(srcDoc, [pageItem.originalIndex]);
         outDoc.addPage(copiedPage);
         await yieldToUI();
@@ -175,7 +185,7 @@ export default function init() {
 
       const pdfBytes = await outDoc.save();
       await downloadFile(pdfBytes, `organized-${Date.now()}.pdf`, 'application/pdf');
-      showMessage('PDF downloaded successfully.');
+      showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
     } catch (err) {
       console.error(err);
       showMessage('Failed to generate PDF.', { type: 'alert' });
