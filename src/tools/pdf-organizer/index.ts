@@ -20,7 +20,7 @@ export default function init() {
   const actions = document.getElementById('organizer-actions') as HTMLDivElement;
   const dropzone = document.getElementById('pdf-dropzone') as HTMLDivElement;
   const selectionCount = document.getElementById('selection-count') as HTMLSpanElement;
-  
+
   const removeBtn = document.getElementById('remove-selected-btn') as HTMLButtonElement;
   const duplicateBtn = document.getElementById('duplicate-selected-btn') as HTMLButtonElement;
   const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement;
@@ -35,7 +35,7 @@ export default function init() {
     selectionCount.textContent = `${selectedCount} pages selected`;
     removeBtn.disabled = selectedCount === 0;
     duplicateBtn.disabled = selectedCount === 0;
-    
+
     renderPages();
   };
 
@@ -50,10 +50,10 @@ export default function init() {
 
       card.innerHTML = `
         <img src="${page.thumbnailUrl}" class="w-full h-full object-contain pointer-events-none bg-white" />
-        <div class="absolute top-2 left-2 flex gap-1">
-          <input type="checkbox" class="checkbox checkbox-primary checkbox-sm page-checkbox" ${page.selected ? 'checked' : ''} data-id="${page.id}" />
+        <div class="absolute top-2 left-2 z-10">
+          <input type="checkbox" class="checkbox checkbox-primary checkbox-sm page-checkbox shadow-sm bg-base-100 border-base-content/30" ${page.selected ? 'checked' : ''} data-id="${page.id}" />
         </div>
-        <div class="absolute bottom-2 right-2 bg-base-300/80 px-1.5 rounded text-[10px] font-bold">
+        <div class="absolute bottom-2 right-2 bg-base-300/90 px-1.5 rounded text-[10px] font-bold z-10">
           ${index + 1}
         </div>
         <div class="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity"></div>
@@ -91,36 +91,38 @@ export default function init() {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
     if (files.length === 0) return;
     showProgress('Loading PDF...');
-    
+
     try {
       originalPdfBytes = await files[0].arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument({ data: originalPdfBytes });
+      // Use a copy for pdfjsLib to prevent detaching the original buffer when transferred to worker
+      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(originalPdfBytes.slice(0)) });
       const pdf = await loadingTask.promise;
-      
+
       pages = [];
       for (let i = 1; i <= pdf.numPages; i++) {
         showProgress(`Rendering page ${i}/${pdf.numPages}...`);
+        await yieldToUI();
         const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 0.5 });
+        const viewport = page.getViewport({ scale: 0.8 });
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d')!;
         canvas.height = viewport.height;
         canvas.width = viewport.width;
-        
+
         await page.render({ canvasContext: context, viewport }).promise;
-        
+
         pages.push({
           id: Math.random().toString(36).substring(2, 9),
           originalIndex: i - 1,
-          thumbnailUrl: canvas.toDataURL(),
+          thumbnailUrl: canvas.toDataURL('image/jpeg', 0.8),
           selected: false
         });
       }
-      
+
       dropzone.classList.add('hidden');
       actions.classList.remove('hidden');
       updateUI();
-      showMessage(`Loaded ${pdf.numPages} pages.`);
+      showMessage(`Loaded ${pdf.numPages} pages.`, { timeoutMs: 3000 });
     } catch (err) {
       console.error(err);
       showMessage('Failed to load PDF.', { type: 'alert' });
@@ -159,17 +161,17 @@ export default function init() {
   downloadBtn.addEventListener('click', async () => {
     if (pages.length === 0 || !originalPdfBytes) return;
     showProgress('Generating PDF...');
-    
+
     try {
       const srcDoc = await PDFDocument.load(originalPdfBytes);
       const outDoc = await PDFDocument.create();
-      
+
       for (const pageItem of pages) {
         const [copiedPage] = await outDoc.copyPages(srcDoc, [pageItem.originalIndex]);
         outDoc.addPage(copiedPage);
         await yieldToUI();
       }
-      
+
       const pdfBytes = await outDoc.save();
       await downloadFile(pdfBytes, `organized-${Date.now()}.pdf`, 'application/pdf');
       showMessage('PDF downloaded successfully.');
@@ -183,6 +185,5 @@ export default function init() {
 
   return () => {
     sortable.destroy();
-    pages.forEach(p => URL.revokeObjectURL(p.thumbnailUrl));
   };
 }
