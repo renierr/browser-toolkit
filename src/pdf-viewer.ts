@@ -186,13 +186,21 @@ async function handleSharedContent() {
   }
 }
 
-window.addEventListener('load', () => {
+async function boot() {
+  console.log('Booting PDF viewer...');
   // Cleanup old files in background
   cleanupOldFiles().catch((e) => console.warn('Cleanup failed', e));
 
-  // Initialize viewer immediately
-  initViewer().then(() => {
-    // Check for shared content once viewer is ready
-    return handleSharedContent();
-  }).catch((e) => console.error('Failed to initialize viewer', e));
-});
+  try {
+    await initViewer();
+    await handleSharedContent();
+  } catch (e) {
+    console.error('Failed to initialize viewer during boot', e);
+  }
+}
+
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  boot();
+} else {
+  window.addEventListener('load', boot);
+}

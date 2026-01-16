@@ -38,8 +38,14 @@ self.addEventListener('fetch', (event) => {
             keys.push(key);
           }
           const text = encodeURIComponent(form.get('text') || '');
-          const dest = `/pdf.html?shared=1&keys=${keys.join(',')}&text=${text}`;
-          return Response.redirect(dest, 303);
+
+          // Construct absolute URL for redirection
+          const redirectUrl = new URL('./pdf.html', self.location.href);
+          redirectUrl.searchParams.set('shared', '1');
+          redirectUrl.searchParams.set('keys', keys.join(','));
+          if (text) redirectUrl.searchParams.set('text', text);
+
+          return Response.redirect(redirectUrl.href, 303);
         } catch (err) {
           console.error('SW: Share processing failed', err);
           return new Response('Share processing failed', { status: 500 });
