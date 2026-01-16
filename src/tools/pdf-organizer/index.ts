@@ -2,6 +2,7 @@ import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
 import { PDFDocument } from '@cantoo/pdf-lib';
 import Sortable from 'sortablejs';
+import router from '../../js/router.ts';
 
 // Dynamic import for pdfjs to render thumbnails
 const pdfjsLib = await import('pdfjs-dist');
@@ -26,6 +27,7 @@ export default function init() {
   const duplicateBtn = document.getElementById('duplicate-selected-btn') as HTMLButtonElement;
   const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement;
   const downloadSelectedBtn = document.getElementById('download-selected-btn') as HTMLButtonElement;
+  const openViewerBtn = document.getElementById('open-viewer-btn') as HTMLButtonElement;
   const selectAllBtn = document.getElementById('select-all-btn') as HTMLButtonElement;
   const deselectAllBtn = document.getElementById('deselect-all-btn') as HTMLButtonElement;
   const undoBtn = document.getElementById('undo-btn') as HTMLButtonElement;
@@ -208,8 +210,8 @@ export default function init() {
     updateUI();
   });
 
-  const generateAndDownloadPdf = async (pagesToDownload: PageItem[], suffix: string) => {
-    if (pagesToDownload.length === 0 || !originalPdfBytes) return;
+  const generatePdfBytes = async (pagesToDownload: PageItem[]) => {
+    if (pagesToDownload.length === 0 || !originalPdfBytes) return null;
     showProgress('Generating PDF...');
 
     try {
@@ -224,22 +226,43 @@ export default function init() {
         await yieldToUI();
       }
 
-      const pdfBytes = await outDoc.save();
-      const fileName = originalFileName.replace(/\.pdf$/i, '') + suffix + '.pdf';
-      await downloadFile(pdfBytes, fileName, 'application/pdf');
-      showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
+      return await outDoc.save();
     } catch (err) {
       console.error(err);
       showMessage('Failed to generate PDF.', { type: 'alert' });
+      return null;
     } finally {
       hideProgress();
     }
   };
 
-  downloadBtn.addEventListener('click', () => generateAndDownloadPdf(pages, '_organized'));
-  downloadSelectedBtn.addEventListener('click', () => 
-    generateAndDownloadPdf(pages.filter(p => p.selected), '_selected')
-  );
+  downloadBtn.addEventListener('click', async () => {
+    const pdfBytes = await generatePdfBytes(pages);
+    if (pdfBytes) {
+      const fileName = originalFileName.replace(/\.pdf$/i, '') + '_organized.pdf';
+      await downloadFile(pdfBytes, fileName, 'application/pdf');
+      showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
+    }
+  });
+
+  downloadSelectedBtn.addEventListener('click', async () => {
+    const pdfBytes = await generatePdfBytes(pages.filter(p => p.selected));
+    if (pdfBytes) {
+      const fileName = originalFileName.replace(/\.pdf$/i, '') + '_selected.pdf';
+      await downloadFile(pdfBytes, fileName, 'application/pdf');
+      showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
+    }
+  });
+
+  openViewerBtn.addEventListener('click', async () => {
+    const pdfBytes = await generatePdfBytes(pages);
+    if (pdfBytes) {
+      router.goTo('pdf-viewer', {
+        pdfBytes,
+        fileName: originalFileName.replace(/\.pdf$/i, '') + '_organized.pdf'
+      });
+    }
+  });
 
   return () => {
     sortable.destroy();

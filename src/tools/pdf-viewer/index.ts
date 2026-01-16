@@ -26,24 +26,27 @@ const toggleToolCard = (show: boolean) => {
 
 const VIEWER_PROP = '__embedpdfViewer__';
 
-const showPdfViewer = async (files: FileList) => {
+const getViewer = async (container: HTMLElement) => {
+  let viewer: EmbedPdfContainer | undefined = (container as any)[VIEWER_PROP];
+  if (!viewer) {
+    // make absolute (works whether vite emits `/assets/...` or a relative path)
+    const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
+    viewer = EmbedPDF.init({
+      type: 'container',
+      target: container,
+      wasmUrl: absolutePdfiumWasmUrl,
+      theme: { preference: isDarkMode() ? 'dark' : 'light' },
+      zoom: { defaultZoomLevel: ZoomMode.FitWidth },
+    });
+    (container as any)[VIEWER_PROP] = viewer;
+  }
+  return viewer;
+};
+
+const showPdfViewer = async (files: FileList | { buffer: ArrayBuffer; name: string }[]) => {
   const container = document.getElementById('pdf-viewer-container');
   if (container) {
-
-    let viewer: EmbedPdfContainer | undefined = (container as any)[VIEWER_PROP];
-    if (!viewer) {
-      // make absolute (works whether vite emits `/assets/...` or a relative path)
-      const absolutePdfiumWasmUrl = new URL(pdfiumWasmUrl, location.href).href;
-      viewer = EmbedPDF.init({
-        type: 'container',
-        target: container,
-        wasmUrl: absolutePdfiumWasmUrl,
-        theme: { preference: isDarkMode() ? 'dark' : 'light' },
-        zoom: { defaultZoomLevel: ZoomMode.FitWidth },
-      });
-      (container as any)[VIEWER_PROP] = viewer;
-    }
-
+    const viewer = await getViewer(container);
     const registry = await viewer?.registry;
     if (!registry) {
       showMessage('Failed to load PDF viewer (registry not present).', { type: 'alert' });
@@ -71,10 +74,12 @@ const showPdfViewer = async (files: FileList) => {
       (container as any)[DOC_CLOSED_FLAG] = true;
     }
 
+    const fileArray = Array.from(files);
     await Promise.all(
-      Array.from(files).map(async (f) => {
-        const buffer = await f.arrayBuffer();
-        return docManager.openDocumentBuffer({ buffer, name: f.name });
+      fileArray.map(async (f) => {
+        const buffer: ArrayBuffer = 'buffer' in f ? f.buffer as ArrayBuffer : await f.arrayBuffer();
+        const name = 'name' in f ? f.name : f.name;
+        return docManager.openDocumentBuffer({ buffer, name });
       })
     );
     setTimeout(() => scrollTopOfViewer(container));
@@ -90,7 +95,7 @@ const scrollTopOfViewer = (viewerEl: HTMLElement) => {
 };
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: any) {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files: FileList) => {
     showProgress('Load PDF file...');
     if (await showPdfViewer(files)) {
@@ -104,4 +109,16 @@ export default function init() {
       { timeoutMs: 5000 }
     );
   });
+
+  if (payload && payload.pdfBytes) {
+    const { pdfBytes , fileName } = payload;
+    showProgress('Opening PDF from payload...');
+    showPdfViewer([{ buffer: pdfBytes as ArrayBuffer, name: fileName as string || 'document.pdf' }]).then((success) => {
+      if (success) {
+        toggleToolCard(false);
+        showMessage(`PDF "${fileName}" loaded from organizer.`, { timeoutMs: 5000 });
+      }
+      hideProgress();
+    });
+  }
 }
