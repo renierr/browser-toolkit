@@ -1,11 +1,11 @@
 <div class="flex flex-col gap-6 max-w-4xl mx-auto">
   <div id="dropzone" class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg h-32 cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
-    <input type="file" id="image-input" class="hidden" accept="image/jpeg,image/png,image/webp" />
+    <input type="file" id="image-input" class="hidden" accept="image/*" multiple />
     <div class="flex flex-col items-center gap-4">
       <i data-lucide="upload" class="w-12 h-12 text-base-content/30"></i>
       <div>
-        <p class="text-lg font-medium">Click or drop an image here</p>
-        <p class="text-sm text-base-content/60">Supports JPEG, PNG, WebP</p>
+        <p class="text-lg font-medium text-center">Click or drop images here</p>
+        <p class="text-sm text-base-content/60 text-center">Images to clean (Multiple files allowed)</p>
       </div>
     </div>
   </div>
@@ -13,8 +13,13 @@
   <div id="result-container" class="hidden flex flex-col gap-6">
     <div class="card bg-base-100 shadow-md">
       <div class="card-body">
-        <h2 class="card-title">Image Preview & Info</h2>
-        <div class="flex flex-col md:flex-row gap-6">
+        <h2 class="card-title" id="result-title">Images</h2>
+
+        <div id="file-list" class="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto">
+          <!-- File list will be inserted here -->
+        </div>
+
+        <div id="single-preview" class="flex flex-col md:flex-row gap-6">
           <div class="flex-1">
             <img id="preview-img" class="max-w-full h-auto rounded-lg shadow-sm" alt="Preview" />
           </div>
@@ -34,10 +39,15 @@
             </div>
           </div>
         </div>
-        <div class="card-actions justify-end mt-4">
+
+        <div class="card-actions justify-end mt-4 gap-2">
+          <button id="download-selected" class="btn btn-outline btn-primary hidden">
+            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+            Download Previewed
+          </button>
           <button id="download-clean" class="btn btn-primary">
             <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-            Convert to JPG & Download Clean Image
+            <span id="download-text">Convert & Download Clean Images</span>
           </button>
         </div>
       </div>
