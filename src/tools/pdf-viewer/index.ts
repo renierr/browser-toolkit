@@ -74,11 +74,14 @@ const showPdfViewer = async (files: FileList | { buffer: ArrayBuffer; name: stri
       (container as any)[DOC_CLOSED_FLAG] = true;
     }
 
-    const fileArray = Array.from(files);
+    const fileArray: (File | { buffer: ArrayBuffer; name: string })[] = Array.isArray(files)
+      ? files
+      : Array.from(files);
+
     await Promise.all(
       fileArray.map(async (f) => {
-        const buffer: ArrayBuffer = 'buffer' in f ? f.buffer as ArrayBuffer : await f.arrayBuffer();
-        const name = 'name' in f ? f.name : f.name;
+        const buffer: ArrayBuffer = 'buffer' in f ? f.buffer : await (f as File).arrayBuffer();
+        const name = f.name;
         return docManager.openDocumentBuffer({ buffer, name });
       })
     );
