@@ -43,12 +43,12 @@ export default function init() {
         }
 
         if (!foundAny) {
-          exifTableBody.innerHTML = '<tr><td colspan="2" class="text-center italic">No EXIF data found</td></tr>';
+          exifTableBody.innerHTML = '<tr><td colspan="2" class="text-center italic">No metadata found</td></tr>';
         }
       }
     } catch (error) {
-      console.error('Error reading EXIF:', error);
-      showMessage('Could not read EXIF data.', { type: 'alert' });
+      console.error('Error reading metadata:', error);
+      showMessage('Could not read metadata.', { type: 'alert' });
     }
   };
 
@@ -62,19 +62,19 @@ export default function init() {
     if (!currentFile) return;
 
     try {
-      // To strip EXIF without heavy dependencies, we draw to a canvas and export
       const img = new Image();
-      img.src = URL.createObjectURL(currentFile);
+      const objectUrl = URL.createObjectURL(currentFile);
 
       await new Promise((resolve, reject) => {
         img.onload = resolve;
         img.onerror = reject;
+        img.src = objectUrl;
       });
 
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
       canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { colorSpace: 'srgb' }); // Force sRGB to avoid carrying over ICC profiles
 
       if (!ctx) {
         throw new Error('Could not get canvas context');
@@ -89,12 +89,12 @@ export default function init() {
           downloadFile(blob, fileName, 'image/jpeg');
           showMessage('Image saved without EXIF data.', { type: 'info', timeoutMs: 5000 });
         }
-        URL.revokeObjectURL(img.src);
+        URL.revokeObjectURL(objectUrl);
       }, 'image/jpeg', 0.9);
 
     } catch (error) {
-      console.error('Error stripping EXIF:', error);
-      showMessage('Failed to strip EXIF data.', { type: 'alert' });
+      console.error('Error stripping metadata:', error);
+      showMessage('Failed to strip metadata.', { type: 'alert' });
     }
   });
 }
