@@ -13,7 +13,7 @@
 
   <div id="organizer-actions"
        class="hidden flex flex-wrap items-center justify-between gap-4 bg-base-200 p-4 rounded-lg sticky top-0 z-20 shadow-sm">
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
       <button id="select-all-btn" class="btn btn-sm btn-ghost">Select All</button>
       <button id="deselect-all-btn" class="btn btn-sm btn-ghost">Deselect All</button>
       <div class="divider divider-horizontal mx-0"></div>
@@ -27,13 +27,16 @@
         <i data-lucide="undo" class="w-4 h-4"></i>
       </button>
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-2 flex-wrap">
       <span id="selection-count" class="text-sm font-medium opacity-70">0 pages selected</span>
       <button id="start-over-btn" class="btn btn-sm btn-ghost text-error">
         <i data-lucide="refresh-ccw" class="w-4 h-4 mr-1"></i> Start Over
       </button>
+      <button id="download-selected-btn" class="btn btn-sm btn-outline btn-primary" disabled>
+        <i data-lucide="file-down" class="w-4 h-4 mr-1"></i> Download Selected
+      </button>
       <button id="download-btn" class="btn btn-sm btn-primary">
-        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download PDF
+        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download All
       </button>
     </div>
   </div>

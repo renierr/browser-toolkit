@@ -25,6 +25,7 @@ export default function init() {
   const removeBtn = document.getElementById('remove-selected-btn') as HTMLButtonElement;
   const duplicateBtn = document.getElementById('duplicate-selected-btn') as HTMLButtonElement;
   const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement;
+  const downloadSelectedBtn = document.getElementById('download-selected-btn') as HTMLButtonElement;
   const selectAllBtn = document.getElementById('select-all-btn') as HTMLButtonElement;
   const deselectAllBtn = document.getElementById('deselect-all-btn') as HTMLButtonElement;
   const undoBtn = document.getElementById('undo-btn') as HTMLButtonElement;
@@ -47,6 +48,7 @@ export default function init() {
     selectionCount.textContent = `${selectedCount} pages selected`;
     removeBtn.disabled = selectedCount === 0;
     duplicateBtn.disabled = selectedCount === 0;
+    downloadSelectedBtn.disabled = selectedCount === 0;
     undoBtn.disabled = history.length === 0;
 
     renderPages();
@@ -206,24 +208,24 @@ export default function init() {
     updateUI();
   });
 
-  downloadBtn.addEventListener('click', async () => {
-    if (pages.length === 0 || !originalPdfBytes) return;
+  const generateAndDownloadPdf = async (pagesToDownload: PageItem[], suffix: string) => {
+    if (pagesToDownload.length === 0 || !originalPdfBytes) return;
     showProgress('Generating PDF...');
 
     try {
       const srcDoc = await PDFDocument.load(originalPdfBytes);
       const outDoc = await PDFDocument.create();
 
-      for (let i = 0; i < pages.length; i++) {
-        const pageItem = pages[i];
-        showProgress(`Assembling page ${i + 1} of ${pages.length}...`);
+      for (let i = 0; i < pagesToDownload.length; i++) {
+        const pageItem = pagesToDownload[i];
+        showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`);
         const [copiedPage] = await outDoc.copyPages(srcDoc, [pageItem.originalIndex]);
         outDoc.addPage(copiedPage);
         await yieldToUI();
       }
 
       const pdfBytes = await outDoc.save();
-      const fileName = originalFileName.replace(/\.pdf$/i, '') + '_organized.pdf';
+      const fileName = originalFileName.replace(/\.pdf$/i, '') + suffix + '.pdf';
       await downloadFile(pdfBytes, fileName, 'application/pdf');
       showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
     } catch (err) {
@@ -232,7 +234,12 @@ export default function init() {
     } finally {
       hideProgress();
     }
-  });
+  };
+
+  downloadBtn.addEventListener('click', () => generateAndDownloadPdf(pages, '_organized'));
+  downloadSelectedBtn.addEventListener('click', () => 
+    generateAndDownloadPdf(pages.filter(p => p.selected), '_selected')
+  );
 
   return () => {
     sortable.destroy();
