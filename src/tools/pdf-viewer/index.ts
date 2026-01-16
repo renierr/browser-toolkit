@@ -2,12 +2,9 @@ import { setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
 import { isDarkMode } from '../../js/theme.ts';
-import {
-  default as EmbedPDF,
-  ZoomMode,
-  EmbedPdfContainer,
-} from '@embedpdf/snippet';
-import { getDocManager } from '../../js/embedpdf-utils.ts';
+import { default as EmbedPDF, ZoomMode, EmbedPdfContainer } from '@embedpdf/snippet';
+import { addFlattenAsImageCommand, getDocManager } from '../../js/embedpdf-utils.ts';
+
 
 // dynamic importing of large pdf libs to reduce chunk size and loading time
 const pdfjsLib = await import('pdfjs-dist');
@@ -39,6 +36,12 @@ const getViewer = async (container: HTMLElement) => {
       zoom: { defaultZoomLevel: ZoomMode.FitWidth },
     });
     (container as any)[VIEWER_PROP] = viewer;
+    if (!viewer) {
+      showMessage('Failed to initialize PDF viewer.', { type: 'alert' });
+      throw new Error('Failed to initialize PDF viewer.');
+    }
+    await addFlattenAsImageCommand(viewer);
+
   }
   return viewer;
 };

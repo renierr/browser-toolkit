@@ -1,6 +1,12 @@
 import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
 import { default as EmbedPDF, type EmbedPdfContainer, ZoomMode, } from '@embedpdf/snippet';
-import { getDocManager, getViewerCommands, getViewerUi, registerLucideIcon } from './js/embedpdf-utils.ts';
+import {
+  addFlattenAsImageCommand,
+  getDocManager,
+  getViewerCommands,
+  getViewerUi,
+  registerLucideIcon,
+} from './js/embedpdf-utils.ts';
 import { House } from 'lucide';
 
 function openDbClient(): Promise<IDBDatabase> {
@@ -71,6 +77,8 @@ async function initViewer() {
     });
 
     if (viewerInstance) {
+      await addFlattenAsImageCommand(viewerInstance);
+
       const registry = await viewerInstance.registry;
       if (registry) {
         const ui = await getViewerUi(registry);

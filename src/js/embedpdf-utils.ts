@@ -5,7 +5,9 @@ import type {
   PluginRegistry,
   UIPlugin,
 } from '@embedpdf/snippet';
-import type { IconNode } from 'lucide';
+import { FileImage, type IconNode } from 'lucide';
+import { flattenAsImage } from '../tools/pdf-to-image';
+import { showMessage } from './ui.ts';
 
 export const getDocManager = async (registry: PluginRegistry) => {
   return registry
@@ -13,17 +15,20 @@ export const getDocManager = async (registry: PluginRegistry) => {
     ?.provides();
 };
 export const getViewerUi = async (registry: PluginRegistry) => {
-  return registry
-    ?.getPlugin<InstanceType<typeof UIPlugin>>('ui')
-    ?.provides();
-}
+  return registry?.getPlugin<InstanceType<typeof UIPlugin>>('ui')?.provides();
+};
 export const getViewerCommands = async (registry: PluginRegistry) => {
-  return registry
-    ?.getPlugin<InstanceType<typeof CommandsPlugin>>('commands')
-    ?.provides();
-}
+  return registry?.getPlugin<InstanceType<typeof CommandsPlugin>>('commands')?.provides();
+};
+export const getExportPlugin = async (registry: PluginRegistry) => {
+  return registry?.getPlugin<any>('export')?.provides();
+};
 
-export function registerLucideIcon(viewer: EmbedPdfContainer, iconId: string, iconDef: IconNode | IconNode[]) {
+export function registerLucideIcon(
+  viewer: EmbedPdfContainer,
+  iconId: string,
+  iconDef: IconNode | IconNode[]
+) {
   let children: readonly IconNode[] = [];
 
   console.log('registerLucideIcon', iconId, iconDef);
@@ -34,22 +39,30 @@ export function registerLucideIcon(viewer: EmbedPdfContainer, iconId: string, ic
     // IconNode is [string, SVGProps]
     // If first element is a string, it's likely a single IconNode tuple: ['svg', attrs, children] or ['path', attrs]
     if (typeof first === 'string') {
-        // It is a single IconNode tuple
-        // Check if it has children at index 2
-        const node = iconDef as any; // Cast to any to access index 2 safely if TS complains about tuple length
-        if (node[2] && Array.isArray(node[2])) {
-            children = node[2] as IconNode[];
-        }
+      // It is a single IconNode tuple
+      // Check if it has children at index 2
+      const node = iconDef as any; // Cast to any to access index 2 safely if TS complains about tuple length
+      if (node[2] && Array.isArray(node[2])) {
+        children = node[2] as IconNode[];
+      }
     } else {
-        // If first element is NOT a string (it's an array or object), then iconDef is likely IconNode[] (array of children)
-        children = iconDef as IconNode[];
+      // If first element is NOT a string (it's an array or object), then iconDef is likely IconNode[] (array of children)
+      children = iconDef as IconNode[];
     }
   }
 
-  let paths: { d: string; stroke: string; fill: string; strokeWidth: string; strokeLinecap: string; strokeLinejoin: string }[] = [];
+  let paths: {
+    d: string;
+    stroke: string;
+    fill: string;
+    strokeWidth: string;
+    strokeLinecap: string;
+    strokeLinejoin: string;
+  }[] = [];
 
   if (children && children.length > 0) {
-      paths = children.map((child) => {
+    paths = children
+      .map((child) => {
         // child is IconNode which is [elementName, attrs]
         // We need to cast it to access elements by index safely if TS is confused
         const [tag, attrs] = child as unknown as [string, Record<string, any>];
@@ -61,11 +74,14 @@ export function registerLucideIcon(viewer: EmbedPdfContainer, iconId: string, ic
             fill: 'none',
             strokeWidth: '2',
             strokeLinecap: 'round',
-            strokeLinejoin: 'round'
+            strokeLinejoin: 'round',
           };
         } else if (tag === 'polyline') {
           const rawPoints = String(attrs.points || '');
-          const coords = rawPoints.trim().split(/[\s,]+/).filter((s: string) => s.length > 0);
+          const coords = rawPoints
+            .trim()
+            .split(/[\s,]+/)
+            .filter((s: string) => s.length > 0);
           let d = '';
           for (let i = 0; i < coords.length; i += 2) {
             const x = coords[i];
@@ -80,19 +96,86 @@ export function registerLucideIcon(viewer: EmbedPdfContainer, iconId: string, ic
             fill: 'none',
             strokeWidth: '2',
             strokeLinecap: 'round',
-            strokeLinejoin: 'round'
+            strokeLinejoin: 'round',
           };
         }
         return null;
-      }).filter((p): p is NonNullable<typeof p> => p !== null);
+      })
+      .filter((p): p is NonNullable<typeof p> => p !== null);
   }
 
   if (paths.length > 0) {
     viewer.registerIcon(iconId, {
       viewBox: '0 0 24 24',
-      paths: paths
+      paths: paths,
     });
   } else {
     console.warn(`Failed to register icon ${iconId}: No paths found in definition`, iconDef);
+  }
+}
+
+export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
+  const registry = await viewer.registry;
+  if (registry) {
+    const ui = await getViewerUi(registry);
+    const commands = await getViewerCommands(registry);
+    const docManager = await getDocManager(registry);
+    const exportPlugin = await getExportPlugin(registry);
+
+    if (commands && ui && docManager && exportPlugin) {
+      registerLucideIcon(viewer, 'icon-flatten', FileImage);
+
+      commands.registerCommand({
+        id: 'app.flatten-pdf',
+        label: 'Flatten to Image',
+        icon: 'icon-flatten',
+        action: async () => {
+          const activeDoc =
+            (docManager as any).getActiveDocument?.() || (docManager as any).getCurrentDocument?.();
+          if (!activeDoc) {
+            showMessage('No active document to flatten.', { type: 'alert' });
+            return;
+          }
+
+          try {
+            const buffer = await exportPlugin.saveAsCopy().toPromise();
+            if (buffer) {
+              const name = activeDoc.getName?.() || activeDoc.name || 'document.pdf';
+              await flattenAsImage(buffer, name);
+              showMessage(`PDF "${name}" flattened and downloaded.`, { timeoutMs: 5000 });
+            } else {
+              showMessage('Could not retrieve PDF data from the export plugin.', { type: 'alert' });
+            }
+          } catch (error) {
+            console.error('Flattening failed', error);
+            showMessage('Failed to flatten PDF: ' + (error as any).message, { type: 'alert' });
+          }
+        },
+      });
+
+      const schema = ui.getSchema();
+      const toolbar = schema.toolbars['main-toolbar'];
+      if (toolbar) {
+        const items = JSON.parse(JSON.stringify(toolbar.items));
+        const rightGroup = items.find((item: any) => item.id === 'right-group');
+
+        const flattenButton = {
+          type: 'command-button',
+          id: 'flatten-button',
+          commandId: 'app.flatten-pdf',
+          variant: 'icon',
+        };
+
+        if (rightGroup) {
+          rightGroup.items.push(flattenButton);
+        } else {
+          items.push(flattenButton);
+        }
+
+        ui.mergeSchema({
+          toolbars: { 'main-toolbar': { ...toolbar, items } },
+        });
+      }
+    }
   }
 }
