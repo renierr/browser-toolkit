@@ -130,17 +130,17 @@ export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
         label: 'Flatten to Image',
         icon: 'icon-flatten',
         action: async () => {
-          const activeDoc =
-            (docManager as any).getActiveDocument?.() || (docManager as any).getCurrentDocument?.();
-          if (!activeDoc) {
+          const activeDocId = docManager.getActiveDocumentId();
+          if (!activeDocId) {
             showMessage('No active document to flatten.', { type: 'alert' });
             return;
           }
+          const docState = docManager.getDocumentState(activeDocId);
 
           try {
             const buffer = await exportPlugin.saveAsCopy().toPromise();
             if (buffer) {
-              const name = activeDoc.getName?.() || activeDoc.name || 'document.pdf';
+              const name = docState?.name || 'document.pdf';
               await flattenAsImage(buffer, name);
               showMessage(`PDF "${name}" flattened and downloaded.`, { timeoutMs: 5000 });
             } else {
