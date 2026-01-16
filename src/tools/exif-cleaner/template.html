@@ -1,0 +1,46 @@
+<div class="flex flex-col gap-6 max-w-4xl mx-auto">
+  <div id="dropzone" class="border-2 border-dashed border-base-300 rounded-xl p-12 text-center cursor-pointer hover:border-primary transition-colors bg-base-100">
+    <input type="file" id="image-input" class="hidden" accept="image/jpeg,image/png,image/webp" />
+    <div class="flex flex-col items-center gap-4">
+      <i data-lucide="upload" class="w-12 h-12 text-base-content/30"></i>
+      <div>
+        <p class="text-lg font-medium">Click or drop an image here</p>
+        <p class="text-sm text-base-content/60">Supports JPEG, PNG, WebP</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="result-container" class="hidden flex flex-col gap-6">
+    <div class="card bg-base-100 shadow-md">
+      <div class="card-body">
+        <h2 class="card-title">Image Preview & Info</h2>
+        <div class="flex flex-col md:flex-row gap-6">
+          <div class="flex-1">
+            <img id="preview-img" class="max-w-full h-auto rounded-lg shadow-sm" alt="Preview" />
+          </div>
+          <div class="flex-1">
+            <div class="overflow-x-auto">
+              <table class="table table-compact w-full">
+                <thead>
+                  <tr>
+                    <th>Tag</th>
+                    <th>Value</th>
+                  </tr>
+                </thead>
+                <tbody id="exif-data">
+                  <!-- EXIF data will be inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions justify-end mt-4">
+          <button id="download-clean" class="btn btn-primary">
+            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+            Convert to JPG & Download Clean Image
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

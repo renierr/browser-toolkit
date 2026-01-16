@@ -70,6 +70,12 @@ importers:
         specifier: 3.0.1
         version: 3.0.1
 
+  src/tools/exif-cleaner:
+    dependencies:
+      exifreader:
+        specifier: ^4.23.3
+        version: 4.36.0
+
   src/tools/html-to-pdf:
     dependencies:
       quill:
@@ -1498,6 +1504,10 @@ packages:
   '@vue/shared@3.5.26':
     resolution: {integrity: sha512-7Z6/y3uFI5PRoKeorTOSXKcDj0MSasfNNltcslbFrPpcw6aXRUALq4IfJlaTRspiWIUOEZbrpM+iQGmCOiWe4A==}
 
+  '@xmldom/xmldom@0.9.8':
+    resolution: {integrity: sha512-p96FSY54r+WJ50FIOsCOjyj/wavs8921hG5+kVMmZgKcvIKxMXHTrjNJvRgWa/zuX3B6t2lijLNFaOyuxUH+2A==}
+    engines: {node: '>=14.6'}
+
   acorn@8.15.0:
     resolution: {integrity: sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg==}
     engines: {node: '>=0.4.0'}
@@ -1809,6 +1819,9 @@ packages:
 
   eventemitter3@5.0.1:
     resolution: {integrity: sha512-GWkBvjiSZK87ELrYOSESUYeVIc9mvLLf/nXalMOS5dYrgZq9o5OVkbZAVM06CVxYsCwH9BDZFPlQTlPA1j4ahA==}
+
+  exifreader@4.36.0:
+    resolution: {integrity: sha512-A9LvILHKAlVyF8k/ThqcnvvWrtprcKLw2BRuesuqhWZzgPu+GLDfQwVlqK4QE9ytmZDC6C71mY8ij5w9fZOANg==}
 
   extract-zip@2.0.1:
     resolution: {integrity: sha512-GDhU9ntwuKyGXdZBUgTIe+vXnWj0fppUEtMDL0+idd5Sta8TGpHssn/eusA9mrPr9qNDym6SxAYZjNvCn/9RBg==}
@@ -4445,6 +4458,9 @@ snapshots:
 
   '@vue/shared@3.5.26': {}
 
+  '@xmldom/xmldom@0.9.8':
+    optional: true
+
   acorn@8.15.0: {}
 
   ajv@8.17.1:
@@ -4831,6 +4847,10 @@ snapshots:
   esutils@2.0.3: {}
 
   eventemitter3@5.0.1: {}
+
+  exifreader@4.36.0:
+    optionalDependencies:
+      '@xmldom/xmldom': 0.9.8
 
   extract-zip@2.0.1:
     dependencies:

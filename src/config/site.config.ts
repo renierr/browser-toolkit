@@ -13,6 +13,10 @@ export const siteConfig = {
       title: 'General',
       description: 'General helper and Utilities.',
     },
+    images: {
+      title: 'Image Tools',
+      description: 'Tools for image processing and metadata management.',
+    },
     pdf: {
       title: 'PDF Tools',
       description: 'PDF-Tools, Viewers and Editors - 100% offline.',
