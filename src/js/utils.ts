@@ -62,3 +62,21 @@ export const html = (strings: TemplateStringsArray, ...values: any[]) => {
     return acc + str + (value === false ? '' : value);
   }, '');
 };
+
+export async function copyCanvasToClipboard(canvas: HTMLCanvasElement, format: 'jpg' | 'png' = 'png'): Promise<void> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(async (blob) => {
+      if (!blob) {
+        reject(new Error('Failed to create blob from canvas'));
+        return;
+      }
+      try {
+        const data = [new ClipboardItem({ [blob.type]: blob })];
+        await navigator.clipboard.write(data);
+        resolve();
+      } catch (err) {
+        reject(err);
+      }
+    }, `image/${format}`);
+  });
+}

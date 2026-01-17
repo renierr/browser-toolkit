@@ -37,15 +37,18 @@
       </div>
     </div>
 
-    <div id="qr-output-container" class="mt-8 flex justify-center bg-base-200 p-8 rounded-lg hidden">
-      <canvas id="qr-canvas-output" class="max-w-full h-auto"></canvas>
-    </div>
-
-    <div class="card-actions justify-end mt-6">
+    <div class="card-actions justify-end mt-6 gap-2">
+      <button id="copy-qr" class="btn btn-outline hidden">
+        <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+        Copy to Clipboard
+      </button>
       <button id="download-qr" class="btn btn-primary hidden">
         <i data-lucide="download" class="w-4 h-4 mr-2"></i>
         Download PNG
       </button>
     </div>
   </div>
+</div>
+<div id="qr-output-container" class="mt-8 flex justify-center bg-base-200 p-4 rounded-lg hidden">
+  <canvas id="qr-canvas-output" class="max-w-full h-auto"></canvas>
 </div>
