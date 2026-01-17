@@ -27,7 +27,7 @@ export default function init() {
     const originalText = btn.innerHTML;
     btn.textContent = 'Preparing ZIP...';
     showProgress('Preparing ZIP archive...');
-    
+
     try {
       const zipFiles: DownloadBuffer[] = extractedImages.map((img) => ({
         name: img.name,
@@ -54,8 +54,7 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
     const page = await pdf.getPage(pageNum);
     const ops = await page.getOperatorList();
-    
-    // Rendering the page ensures that all objects (images) are loaded/resolved.
+
     const viewport = page.getViewport({ scale: 1 });
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -88,14 +87,11 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
           processedNames.add(imgName);
 
           try {
-            // Try to get from local page objects
             img = (page as any).objs.get(imgName);
           } catch (e) {
             try {
-              // Try to get from common (global) objects
               img = (page as any).commonObjs.get(imgName);
             } catch (e2) {
-              console.warn(`[extract-images] Could not resolve image ${imgName} on page ${pageNum}. Skipping.`);
               continue;
             }
           }
@@ -105,10 +101,9 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
           continue;
         }
 
-        showProgress(`Extracting images from ${fileName} - Page ${pageNum} - Image ${imgName}...`);
+        showProgress(`Extracting images from ${fileName} - Page ${pageNum}...`);
 
         try {
-          // Handle ImageBitmap (preferred in modern PDF.js)
           if (img.bitmap instanceof ImageBitmap) {
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = img.width;
@@ -127,7 +122,6 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
               });
             }
           } else if (img.data) {
-            // Handle raw pixel data
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = img.width;
             tempCanvas.height = img.height;
@@ -135,9 +129,8 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
             if (tempCtx) {
               const imageData = tempCtx.createImageData(img.width, img.height);
               const data = img.data instanceof Uint8Array ? img.data : new Uint8Array(img.data.buffer);
-              
+
               if (data.length === img.width * img.height * 3) {
-                // RGB to RGBA
                 for (let j = 0, k = 0; j < data.length; j += 3, k += 4) {
                   imageData.data[k] = data[j];
                   imageData.data[k + 1] = data[j + 1];
@@ -145,13 +138,11 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
                   imageData.data[k + 3] = 255;
                 }
               } else if (data.length === img.width * img.height * 4) {
-                // RGBA
                 imageData.data.set(data);
               } else {
-                console.warn(`[extract-images] Unexpected data length for image ${imgName}: ${data.length}`);
                 continue;
               }
-              
+
               tempCtx.putImageData(imageData, 0, 0);
               const blob = await new Promise<Blob | null>((resolve) =>
                 tempCanvas.toBlob(resolve, 'image/png')
@@ -169,8 +160,6 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
         } catch (err) {
           console.error(`[extract-images] Error processing image ${imgName} on page ${pageNum}:`, err);
         }
-
-        // let ui breath
         await yieldToUI();
       }
     }
@@ -180,36 +169,26 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
 
 export async function extractImages(files : FileList) {
   showProgress('Reading PDF file(s) ...');
-
   try {
     const fileBuffers: ArrayBuffer[] = [];
     const fileNames: string[] = [];
-
     for (const file of files) {
       const buffer = await file.arrayBuffer();
       fileBuffers.push(buffer);
       fileNames.push(file.name);
     }
-
-    showProgress(`Extracting images from ${files.length} file(s)...`);
-
     for (let i = 0; i < fileBuffers.length; i++) {
       const images = await extractImagesFromPDF(fileBuffers[i], fileNames[i]);
       extractedImages = extractedImages.concat(images);
     }
-
     if (extractedImages.length === 0) {
-      showMessage('The PDF file(s) do not contain any images to extract.', { type: 'alert' });
+      showMessage('No images found in the PDF(s).', { type: 'alert' });
       return;
     }
-
     renderImages();
-    showMessage(`${extractedImages.length} image(s) extracted.`, { timeoutMs: 15000 });
   } catch (error) {
     console.error('Error extracting images:', error);
-    showMessage(
-      error instanceof Error ? error.message : 'error occurred during image extraction.', { type: 'alert' }
-    );
+    showMessage('Error occurred during image extraction.', { type: 'alert' });
   } finally {
     hideProgress();
   }
@@ -225,7 +204,6 @@ function renderImages() {
   const downloadBtn = document.getElementById('download-all-btn');
   if (!list || !actions || !downloadBtn) return;
 
-  // revoke previous object URLs
   list.querySelectorAll('img[data-url]').forEach((img) => {
     const u = (img as HTMLImageElement).dataset.url;
     if (u) URL.revokeObjectURL(u);
@@ -240,31 +218,33 @@ function renderImages() {
 
   actions.classList.remove('hidden');
   downloadBtn.innerHTML = `<i data-lucide="download" class="w-4 h-4 mr-2"></i> Download All (${extractedImages.length})`;
-  // @ts-ignore
-  if (window.lucide) window.lucide.createIcons();
 
   extractedImages.forEach((img, index) => {
     const url = createImageURL(img.data);
     const wrapper = document.createElement('div');
-    wrapper.className = 'group relative aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300';
+    wrapper.className = 'group relative aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 cursor-pointer';
+    wrapper.onclick = () => openLightbox(url, img.name);
 
     const thumb = document.createElement('img');
     thumb.src = url;
     thumb.alt = img.name;
     thumb.dataset.url = url;
     thumb.className = 'w-full h-full object-contain transition-transform group-hover:scale-105';
-    
+
     const overlay = document.createElement('div');
-    overlay.className = 'absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2';
-    
+    overlay.className = 'absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 lg:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2';
+    // On touch devices, make overlay slightly visible or ensure buttons are accessible
+    overlay.classList.add('max-lg:opacity-100', 'max-lg:bg-transparent', 'max-lg:items-end', 'max-lg:justify-end');
+
     const downloadSingle = document.createElement('a');
     downloadSingle.href = url;
     downloadSingle.download = img.name;
-    downloadSingle.className = 'btn btn-circle btn-sm btn-primary';
+    downloadSingle.className = 'btn btn-circle btn-sm btn-primary shadow-lg';
     downloadSingle.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i>';
-    
+    downloadSingle.onclick = (e) => e.stopPropagation();
+
     const removeBtn = document.createElement('button');
-    removeBtn.className = 'btn btn-circle btn-sm btn-error';
+    removeBtn.className = 'btn btn-circle btn-sm btn-error shadow-lg';
     removeBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>';
     removeBtn.onclick = (e) => {
       e.stopPropagation();
@@ -278,6 +258,38 @@ function renderImages() {
     wrapper.appendChild(overlay);
     list.appendChild(wrapper);
   });
+
+  // @ts-ignore
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function openLightbox(url: string, name: string) {
+  const overlay = document.createElement('div');
+  overlay.className = 'fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4 animate-in fade-in duration-200';
+
+  overlay.innerHTML = `
+    <div class="relative max-w-full max-h-full flex flex-col items-center">
+      <img src="${url}" class="max-w-full max-h-[85vh] object-contain shadow-2xl rounded-lg" alt="${name}">
+      <div class="mt-4 flex gap-4 items-center">
+        <span class="text-white text-sm font-medium truncate max-w-[200px]">${name}</span>
+        <a href="${url}" download="${name}" class="btn btn-primary btn-sm">
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download
+        </a>
+        <button id="close-lightbox" class="btn btn-ghost btn-sm text-white">
+          <i data-lucide="x" class="w-4 h-4 mr-2"></i> Close
+        </button>
+      </div>
+    </div>
+  `;
+
+  overlay.onclick = (e) => {
+    if (e.target === overlay) {
+      overlay.remove();
+    }
+  };
+
+  document.body.appendChild(overlay);
+  document.getElementById('close-lightbox')?.addEventListener('click', () => overlay.remove());
 
   // @ts-ignore
   if (window.lucide) window.lucide.createIcons();
