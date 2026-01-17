@@ -88,8 +88,8 @@ export default async function init() {
     container.innerHTML = notes.map(note => `
       <div class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
         <div class="card-body p-4">
-          <div class="flex justify-between items-start gap-4">
-            <div class="prose prose-sm max-w-none flex-1 text-base-content">
+          <div class="flex justify-between items-start gap-4 flex-wrap">
+            <div class="prose prose-sm max-w-full min-w-32 break-all flex-1 text-base-content">
               ${formatMarkdown(note.content)}
             </div>
             <div class="flex gap-1">
