@@ -31,7 +31,9 @@ class Router {
     this.goTo('');
     if (currentTool) {
       setTimeout(() =>
-        document.getElementById(currentTool)?.scrollIntoView({ behavior: 'smooth' })
+        document
+          .getElementById(currentTool)
+          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       );
     }
   }
