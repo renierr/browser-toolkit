@@ -1,43 +1,44 @@
-<div class="card bg-base-100 w-full mx-auto rounded-xl shadow-lg border">
+<div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title">QR Code Generator</h2>
-    <p class="text-sm text-base-content/70 mb-4">Enter text or a URL to generate a QR code.</p>
+    <h2 class="card-title text-2xl font-bold mb-4">QR Code Generator</h2>
+    <p class="text-base-content/70 mb-6">Enter text or a URL to generate a QR code.</p>
 
-    <div class="form-control w-full">
-      <label class="label block">
-        <span class="label-text">Content</span>
+    <div class="form-control w-full mb-4">
+      <label class="label">
+        <span class="label-text font-semibold">Content</span>
       </label>
       <textarea id="qr-content" class="textarea textarea-bordered h-24 w-full" placeholder="https://example.com"></textarea>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="form-control w-full">
         <label class="label">
-          <span class="label-text">Size (px)</span>
+          <span class="label-text font-semibold">Size (px)</span>
         </label>
         <input id="qr-size" type="number" value="300" min="100" max="1000" step="10" class="input input-bordered w-full" />
       </div>
       <div class="form-control w-full">
         <label class="label">
-          <span class="label-text">Margin</span>
+          <span class="label-text font-semibold">Margin</span>
         </label>
         <input id="qr-margin" type="number" value="4" min="0" max="10" class="input input-bordered w-full" />
       </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
       <div class="form-control w-full">
         <label class="label">
-          <span class="label-text">Dark Color</span>
+          <span class="label-text font-semibold">Dark Color</span>
         </label>
         <input id="qr-color-dark" type="color" value="#000000" class="input input-bordered w-full h-12 p-1" />
       </div>
       <div class="form-control w-full">
         <label class="label">
-          <span class="label-text">Light Color</span>
+          <span class="label-text font-semibold">Light Color</span>
         </label>
         <input id="qr-color-light" type="color" value="#ffffff" class="input input-bordered w-full h-12 p-1" />
       </div>
+    </div>
+
+    <div id="qr-output-container" class="mt-8 flex justify-center bg-base-200 p-8 rounded-lg hidden">
+      <canvas id="qr-canvas-output" class="max-w-full h-auto"></canvas>
     </div>
 
     <div class="card-actions justify-end mt-6">
@@ -45,10 +46,6 @@
         <i data-lucide="download" class="w-4 h-4 mr-2"></i>
         Download PNG
       </button>
-    </div>
-
-    <div id="qr-output-container" class="mt-8 flex justify-center bg-base-200 p-8 rounded-lg hidden">
-      <canvas id="qr-canvas-output"></canvas>
     </div>
   </div>
 </div>

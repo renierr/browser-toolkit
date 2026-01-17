@@ -1,60 +1,49 @@
-<div class="card bg-base-100 max-w-4xl mx-auto rounded-xl shadow-lg border">
+<div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl mb-4">Base64 Encoder / Decoder</h2>
+    <h2 class="card-title text-2xl font-bold mb-4">Base64 Encoder / Decoder</h2>
+    <p class="text-base-content/70 mb-6">Encode text to Base64 or decode Base64 back to plain text.</p>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:min-w-3xl">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Input Section -->
-      <div class="form-control w-full lg:flex-row lg:gap-4">
-        <label class="label lg:items-start lg:pt-3 lg:w-20 shrink-0">
+      <div class="form-control w-full">
+        <label class="label">
           <span class="label-text font-semibold">Input</span>
         </label>
-        <div class="flex-1">
-          <textarea id="input-text" class="textarea textarea-bordered h-64 font-mono text-sm w-full"
-                    placeholder="Type or paste content here..."></textarea>
-          <div class="label">
-            <span class="label-text-alt" id="input-stats">0 chars</span>
-          </div>
+        <textarea id="input-text" class="textarea textarea-bordered h-48 font-mono text-sm w-full"
+                  placeholder="Type or paste content here..."></textarea>
+        <div class="label">
+          <span class="label-text-alt" id="input-stats">0 chars</span>
         </div>
       </div>
 
       <!-- Output Section -->
-      <div class="form-control w-full lg:flex-row lg:gap-4">
-        <label class="label lg:items-start lg:pt-3 lg:w-20 shrink-0">
+      <div class="form-control w-full">
+        <label class="label">
           <span class="label-text font-semibold">Output</span>
         </label>
-        <div class="flex-1">
-          <textarea id="output-text" class="textarea textarea-bordered h-64 font-mono text-sm bg-base-200 w-full" readonly
-                    placeholder="Result will appear here..."></textarea>
-          <div class="label">
-            <span class="label-text-alt" id="output-stats">0 chars</span>
-          </div>
+        <textarea id="output-text" class="textarea textarea-bordered h-48 font-mono text-sm bg-base-200 w-full" readonly
+                  placeholder="Result will appear here..."></textarea>
+        <div class="label">
+          <span class="label-text-alt" id="output-stats">0 chars</span>
         </div>
       </div>
     </div>
 
     <!-- Actions -->
-    <div class="flex flex-col sm:flex-row justify-center mt-6 gap-4">
-      <button id="btn-encode" class="btn btn-primary w-full sm:w-auto">
+    <div class="card-actions justify-center mt-6 gap-2">
+      <button id="btn-encode" class="btn btn-primary flex-1 sm:flex-none">
         Encode
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             class="lucide lucide-arrow-right">
-          <path d="M5 12h14" />
-          <path d="m12 5 7 7-7 7" />
-        </svg>
+        <i data-lucide="arrow-right" class="w-4 h-4 ml-2"></i>
       </button>
-      <button id="btn-decode" class="btn btn-secondary w-full sm:w-auto">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-             class="lucide lucide-arrow-left">
-          <path d="m12 19-7-7 7-7" />
-          <path d="M19 12H5" />
-        </svg>
+      <button id="btn-decode" class="btn btn-secondary flex-1 sm:flex-none">
+        <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i>
         Decode
       </button>
-      <button id="btn-clear" class="btn btn-ghost w-full sm:w-auto">Clear</button>
-      <button id="btn-copy" class="btn btn-outline w-full sm:w-auto">Copy Output</button>
+      <button id="btn-copy" class="btn btn-outline flex-1 sm:flex-none">
+        <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+        Copy
+      </button>
+      <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
     </div>
-
   </div>
 </div>

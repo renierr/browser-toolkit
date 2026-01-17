@@ -1,36 +1,40 @@
-<div class="flex flex-col gap-4 h-full">
-  <div class="flex flex-wrap gap-2 items-center justify-between">
-    <div class="flex gap-2">
-      <button id="btn-format" class="btn btn-primary btn-sm">Format</button>
-      <button id="btn-minify" class="btn btn-outline btn-sm">Minify</button>
-      <button id="btn-clear" class="btn btn-ghost btn-sm">Clear All</button>
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">JSON Formatter</h2>
+    <p class="text-base-content/70 mb-6">Format, minify, and validate your JSON data.</p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div class="form-control w-full">
+        <label class="label">
+          <span class="label-text font-semibold">Input</span>
+        </label>
+        <textarea id="json-input" class="textarea textarea-bordered h-64 font-mono text-sm w-full"
+                  placeholder='Paste your JSON here...' spellcheck="false"></textarea>
+      </div>
+
+      <div class="form-control w-full">
+        <label class="label">
+          <span class="label-text font-semibold">Output</span>
+        </label>
+        <textarea id="json-output" class="textarea textarea-bordered h-64 font-mono text-sm bg-base-200 w-full" readonly
+                  placeholder="Formatted output will appear here..." spellcheck="false"></textarea>
+      </div>
     </div>
-    <div class="flex gap-2">
-      <button id="btn-copy" class="btn btn-secondary btn-sm">Copy Output</button>
+
+    <div class="card-actions justify-center mt-6 gap-2">
+      <button id="btn-format" class="btn btn-primary flex-1 sm:flex-none">
+        <i data-lucide="align-left" class="w-4 h-4 mr-2"></i>
+        Format
+      </button>
+      <button id="btn-minify" class="btn btn-secondary flex-1 sm:flex-none">
+        <i data-lucide="minimize" class="w-4 h-4 mr-2"></i>
+        Minify
+      </button>
+      <button id="btn-copy" class="btn btn-outline flex-1 sm:flex-none">
+        <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+        Copy
+      </button>
+      <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
     </div>
   </div>
-
-  <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-[400px]">
-    <div class="flex flex-col gap-2">
-      <label class="text-xs font-bold uppercase opacity-50">Input</label>
-      <textarea
-        id="json-input"
-        class="textarea textarea-bordered font-mono w-full flex-1 resize-none focus:outline-none"
-        placeholder='Paste your JSON here...'
-        spellcheck="false"
-      ></textarea>
-    </div>
-
-    <div class="flex flex-col gap-2">
-      <label class="text-xs font-bold uppercase opacity-50">Output</label>
-      <textarea
-        id="json-output"
-        class="textarea textarea-bordered font-mono w-full flex-1 resize-none focus:outline-none bg-base-200"
-        placeholder="Formatted output will appear here..."
-        readonly
-        spellcheck="false"
-      ></textarea>
-    </div>
-  </div>
-
 </div>

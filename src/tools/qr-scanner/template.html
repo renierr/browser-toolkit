@@ -1,58 +1,58 @@
-<div class="flex flex-col gap-6 max-w-2xl mx-auto">
-  <div class="card bg-base-100 shadow-md p-6">
-    <h2 class="text-xl font-bold mb-4">Scan QR Code</h2>
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">QR Code Scanner</h2>
+    <p class="text-base-content/70 mb-6">Scan QR codes using your camera or by uploading an image.</p>
 
-    <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-6">
       <div id="video-container" class="relative overflow-hidden rounded-lg bg-black aspect-square max-w-md mx-auto hidden">
         <video id="qr-video" class="w-full h-full object-cover"></video>
         <div class="absolute inset-0 border-2 border-primary/50 pointer-events-none"></div>
       </div>
 
-      <div class="flex flex-wrap gap-2 justify-center">
-        <button id="start-camera" class="btn btn-primary">
+      <div class="card-actions justify-center gap-2">
+        <button id="start-camera" class="btn btn-primary flex-1 sm:flex-none">
           <i data-lucide="camera" class="w-4 h-4 mr-2"></i>
           Start Camera
         </button>
-        <button id="stop-camera" class="btn btn-outline hidden">
+        <button id="stop-camera" class="btn btn-outline hidden flex-1 sm:flex-none">
           <i data-lucide="camera-off" class="w-4 h-4 mr-2"></i>
           Stop Camera
         </button>
-        <label class="btn btn-outline">
+        <label class="btn btn-outline flex-1 sm:flex-none">
           <i data-lucide="upload" class="w-4 h-4 mr-2"></i>
-          Upload Image
+          Upload
           <input type="file" id="qr-input" accept="image/*" class="hidden" />
         </label>
-        <button id="paste-btn" class="btn btn-outline">
+        <button id="paste-btn" class="btn btn-outline flex-1 sm:flex-none">
           <i data-lucide="clipboard" class="w-4 h-4 mr-2"></i>
-          Paste Image
+          Paste
         </button>
       </div>
 
-      <div id="paste-target" contenteditable="true" class="hidden mt-2 p-4 border-2 border-dashed border-base-300 rounded-lg text-center text-sm opacity-70 focus:outline-none focus:border-primary">
+      <div id="paste-target" contenteditable="true" class="hidden p-4 border-2 border-dashed border-base-300 rounded-lg text-center text-sm opacity-70 focus:outline-none focus:border-primary">
         Tap here and paste image
       </div>
 
       <p class="text-center text-xs opacity-50">Tip: You can also paste an image from your clipboard (Ctrl+V)</p>
     </div>
-  </div>
 
-  <div id="result-card" class="card bg-base-100 shadow-md p-6 hidden">
-    <div class="flex justify-between items-center mb-2">
-      <h3 class="text-lg font-semibold">Result</h3>
-      <span id="qr-format" class="badge badge-ghost badge-sm"></span>
-    </div>
-    <div class="bg-base-200 p-4 rounded break-all font-mono" id="qr-result"></div>
-    <div class="mt-4 flex gap-2">
-      <button id="copy-result" class="btn btn-sm btn-ghost">
-        <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
-        Copy
-      </button>
-      <a id="open-link" href="#" target="_blank" class="btn btn-sm btn-primary hidden">
-        <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
-        Open Link
-      </a>
+    <div id="result-card" class="mt-8 hidden">
+      <div class="divider">Result</div>
+      <div class="flex justify-between items-center mb-2">
+        <span id="qr-format" class="badge badge-ghost badge-sm"></span>
+      </div>
+      <div class="bg-base-200 p-4 rounded break-all font-mono text-sm" id="qr-result"></div>
+      <div class="card-actions justify-end mt-4">
+        <button id="copy-result" class="btn btn-sm btn-ghost">
+          <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+          Copy
+        </button>
+        <a id="open-link" href="#" target="_blank" class="btn btn-sm btn-primary hidden">
+          <i data-lucide="external-link" class="w-4 h-4 mr-2"></i>
+          Open Link
+        </a>
+      </div>
     </div>
   </div>
-
   <canvas id="qr-canvas" class="hidden"></canvas>
 </div>

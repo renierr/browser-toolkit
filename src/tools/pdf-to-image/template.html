@@ -1,19 +1,17 @@
-<div id="pdf-edit-tool-card" class="card w-full max-w-md mx-auto bg-base-100 p-6 rounded-xl shadow-lg border">
+<div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-heading">Flatten PDF as Image</h2>
-    <p class="text-sm text-muted">This tool take a PDF file and flatten all pages inside as images to download a new PDF</p>
+    <h2 class="card-title text-2xl font-bold mb-4">Flatten PDF to Images</h2>
+    <p class="text-base-content/70 mb-6">Convert each page of a PDF into an image and bundle them into a new flattened PDF.</p>
 
-    <div id="pdf-dropzone" role="button" tabindex="0"
-      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg h-32 cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3"
-    >
-      <div class="text-center">
-        <span class="text-sm text-gray-500 dark:text-gray-300">Drag & drop PDF here or click</span>
-        <div class="mt-2">
-          <label class="btn btn-sm btn-outline">Select PDF</label>
+    <div id="pdf-dropzone"
+         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg h-32 cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+      <div class="flex flex-col items-center gap-2">
+        <div class="text-base-content/30 text-4xl">
+          <i data-lucide="upload-cloud"></i>
         </div>
+        <p class="text-lg font-medium">Click or drag PDF here</p>
       </div>
+      <input type="file" id="pdf-file" class="hidden" accept="application/pdf" />
     </div>
-    <input type="file" id="pdf-file" accept="application/pdf" class="hidden" />
   </div>
 </div>
-

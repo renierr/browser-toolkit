@@ -1,56 +1,54 @@
-<div class="flex flex-col gap-6 max-w-4xl mx-auto">
-  <div id="dropzone" class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg h-32 cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
-    <input type="file" id="image-input" class="hidden" accept="image/*" multiple />
-    <div class="flex flex-col items-center gap-4">
-      <i data-lucide="upload" class="w-12 h-12 text-base-content/30"></i>
-      <div>
-        <p class="text-lg font-medium text-center">Click or drop images here</p>
-        <p class="text-sm text-base-content/60 text-center">Images to clean (Multiple files allowed)</p>
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">EXIF Cleaner</h2>
+    <p class="text-base-content/70 mb-6">Remove metadata (EXIF) from your images to protect your privacy.</p>
+
+    <div id="dropzone"
+         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg h-32 cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+      <div class="flex flex-col items-center gap-2">
+        <div class="text-base-content/30 text-4xl">
+          <i data-lucide="upload-cloud"></i>
+        </div>
+        <p class="text-lg font-medium">Click or drag images here</p>
+        <p class="text-sm text-base-content/50">Supports PNG, JPEG, WebP, ...</p>
       </div>
+      <input type="file" id="image-input" class="hidden" accept="image/*" multiple />
     </div>
-  </div>
 
-  <div id="result-container" class="hidden flex flex-col gap-6">
-    <div class="card bg-base-100 shadow-md">
-      <div class="card-body">
-        <h2 class="card-title" id="result-title">Images</h2>
+    <div id="result-container" class="hidden mt-8">
+      <div class="divider">Selected Images</div>
+      <div id="file-list" class="flex flex-col gap-2 mb-6 max-h-60 overflow-y-auto">
+        <!-- File list will be inserted here -->
+      </div>
 
-        <div id="file-list" class="flex flex-col gap-2 mb-4 max-h-60 overflow-y-auto">
-          <!-- File list will be inserted here -->
+      <div id="single-preview" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="flex justify-center items-start">
+          <img id="preview-img" class="max-w-full h-auto rounded-lg shadow-sm" alt="Preview" />
         </div>
-
-        <div class="card-actions justify-end mt-2 mb-2 gap-2">
-          <button id="download-selected" class="btn btn-outline btn-primary hidden">
-            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-            Convert & Download Clean Selected
-          </button>
-          <button id="download-clean" class="btn btn-primary">
-            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-            <span id="download-text">Convert & Download Clean Images</span>
-          </button>
+        <div class="overflow-x-auto">
+          <table class="table table-zebra table-compact w-full">
+            <thead>
+              <tr>
+                <th>Tag</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody id="exif-data">
+              <!-- EXIF data will be inserted here -->
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        <div id="single-preview" class="flex flex-col md:flex-row gap-6">
-          <div class="flex-1">
-            <img id="preview-img" class="max-w-full h-auto rounded-lg shadow-sm" alt="Preview" />
-          </div>
-          <div class="flex-1">
-            <div class="overflow-x-auto">
-              <table class="table table-compact w-full">
-                <thead>
-                  <tr>
-                    <th>Tag</th>
-                    <th>Value</th>
-                  </tr>
-                </thead>
-                <tbody id="exif-data">
-                  <!-- EXIF data will be inserted here -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
+      <div class="card-actions justify-end gap-2">
+        <button id="download-selected" class="btn btn-outline hidden">
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+          Download Selected
+        </button>
+        <button id="download-clean" class="btn btn-primary">
+          <i data-lucide="shield-check" class="w-4 h-4 mr-2"></i>
+          <span id="download-text">Download Clean Images</span>
+        </button>
       </div>
     </div>
   </div>

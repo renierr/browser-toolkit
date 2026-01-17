@@ -1,76 +1,85 @@
-<div class="p-6 flex flex-col h-full">
-  <div class="grid grid-cols-2 gap-4 mb-4">
-    <button id="load-content" class="btn btn-secondary w-full">Load HTML Content into editor</button>
-    <button id="save-content" class="btn btn-secondary w-full">Save Content as HTML</button>
-  </div>
-  <div id="editor" class="bg-white border-2 border-gray-300 rounded-lg overflow-hidden" style="height: 500px; max-height: 60vh; display: flex; flex-direction: column;"></div>
-</div>
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">HTML to PDF</h2>
+    <p class="text-base-content/70 mb-6">Create a PDF from HTML content with custom styling and page settings.</p>
 
-<div class="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-  <div>
-    <label for="font-family" class="block mb-2 text-sm font-medium text-gray-300">Font Family</label>
-    <select id="font-family" class="select select-bordered w-full">
-      <option value="helvetica" selected>Helvetica</option>
-      <option value="times">Times New Roman</option>
-      <option value="courier">Courier</option>
-    </select>
-  </div>
-  <div>
-    <label for="font-size" class="block mb-2 text-sm font-medium text-gray-300">Font Size</label>
-    <input type="number" id="font-size" value="12" class="input input-bordered w-full">
-  </div>
-  <div>
-    <label for="page-size" class="block mb-2 text-sm font-medium text-gray-300">Page Size</label>
-    <select id="page-size" class="select select-bordered w-full">
-      <optgroup label="ISO A Series">
-        <option value="A4" selected>A4 (210 x 297 mm)</option>
-        <option value="A3">A3 (297 x 420 mm)</option>
-        <option value="A5">A5 (148 x 210 mm)</option>
-        <option value="A6">A6 (105 x 148 mm)</option>
-      </optgroup>
-      <optgroup label="North American">
-        <option value="Letter">Letter (8.5 x 11 in)</option>
-        <option value="Legal">Legal (8.5 x 14 in)</option>
-        <option value="Tabloid">Tabloid (11 x 17 in)</option>
-        <option value="Executive">Executive (7.25 x 10.5 in)</option>
-      </optgroup>
-      <optgroup label="ISO B Series">
-        <option value="B4">B4 (250 x 353 mm)</option>
-        <option value="B5">B5 (176 x 250 mm)</option>
-      </optgroup>
-      <option value="Custom">Custom Size</option>
-    </select>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <button id="load-content" class="btn btn-secondary">
+        <i data-lucide="file-code" class="w-4 h-4 mr-2"></i>
+        Load HTML
+      </button>
+      <button id="save-content" class="btn btn-outline">
+        <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+        Save HTML
+      </button>
+    </div>
 
-  </div>
-  <div>
-    <label for="page-orientation" class="block mb-2 text-sm font-medium text-gray-300">Page Orientation</label>
-    <select id="page-orientation" class="select select-bordered w-full">
-      <option value="portrait" selected>Portrait</option>
-      <option value="landscape">Landscape</option>
-    </select>
-  </div>
-  <div id="custom-size-container" class="hidden col-span-2">
-    <div class="grid grid-cols-2 gap-4">
-      <div>
-        <label for="custom-width" class="block mb-2 text-sm font-medium text-gray-300">Width (pt)</label>
+    <div id="editor" class="bg-white border-2 border-base-300 rounded-lg overflow-hidden mb-6" style="height: 400px; max-height: 50vh; display: flex; flex-direction: column;"></div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Font Family</span></label>
+        <select id="font-family" class="select select-bordered w-full">
+          <option value="helvetica" selected>Helvetica</option>
+          <option value="times">Times New Roman</option>
+          <option value="courier">Courier</option>
+        </select>
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Font Size</span></label>
+        <input type="number" id="font-size" value="12" class="input input-bordered w-full">
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Page Size</span></label>
+        <select id="page-size" class="select select-bordered w-full">
+          <optgroup label="ISO A Series">
+            <option value="A4" selected>A4</option>
+            <option value="A3">A3</option>
+            <option value="A5">A5</option>
+          </optgroup>
+          <optgroup label="North American">
+            <option value="Letter">Letter</option>
+            <option value="Legal">Legal</option>
+          </optgroup>
+          <option value="Custom">Custom</option>
+        </select>
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Orientation</span></label>
+        <select id="page-orientation" class="select select-bordered w-full">
+          <option value="portrait" selected>Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="custom-size-container" class="hidden grid grid-cols-2 gap-4 mb-8">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Width (pt)</span></label>
         <input type="number" id="custom-width" value="595" min="1" class="input input-bordered w-full">
       </div>
-      <div>
-        <label for="custom-height" class="block mb-2 text-sm font-medium text-gray-300">Height (pt)</label>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Height (pt)</span></label>
         <input type="number" id="custom-height" value="842" min="1" class="input input-bordered w-full">
       </div>
     </div>
-  </div>
-</div>
 
-<div class="mt-6 space-y-3">
-  <div class="space-y-2">
-    <button id="advanced-pdf" class="btn btn-primary w-full">Advanced Text PDF</button>
-    <p class="text-sm text-gray-600 ml-2">• Good formatting • Small file size • Proper structure</p>
-  </div>
+    <div class="card-actions flex-col gap-4">
+      <div class="w-full">
+        <button id="advanced-pdf" class="btn btn-primary w-full">
+          <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
+          Generate PDF
+        </button>
+        <p class="text-xs text-base-content/50 mt-1 ml-1">Optimized file size and structure.</p>
+      </div>
 
-  <div class="space-y-2">
-    <button id="print-to-pdf" class="btn btn-outline w-full">Browser Print to PDF</button>
-    <p class="text-sm text-gray-600 ml-2">• Best formatting • Uses browser engine • Requires user interaction</p>
+      <div class="w-full">
+        <button id="print-to-pdf" class="btn btn-outline w-full">
+          <i data-lucide="printer" class="w-4 h-4 mr-2"></i>
+          Browser Print
+        </button>
+        <p class="text-xs text-base-content/50 mt-1 ml-1">Uses browser engine for best formatting.</p>
+      </div>
+    </div>
   </div>
 </div>
