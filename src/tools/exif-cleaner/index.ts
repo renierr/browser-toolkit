@@ -12,6 +12,8 @@ export default function init() {
   const fileListContainer = document.getElementById('file-list');
   const resultTitle = document.getElementById('result-title');
   const downloadText = document.getElementById('download-text');
+  const gpsContainer = document.getElementById('gps-container');
+  const gpsLink = document.getElementById('gps-link') as HTMLAnchorElement;
 
   let currentFiles: File[] = [];
   let selectedIndex = 0;
@@ -46,12 +48,14 @@ export default function init() {
         exifTableBody.innerHTML = '';
 
         let foundAny = false;
-        for (const [key, tag] of Object.entries(tags)) {
-          if (tag.description && typeof tag.description === 'string' && tag.description.length < 200) {
+        const sortedEntries = Object.entries(tags).sort(([a], [b]) => a.localeCompare(b));
+        for (const [key, tag] of sortedEntries) {
+          const description = tag.description?.toString();
+          if (description) {
             const row = document.createElement('tr');
             row.innerHTML = `
-              <td class="font-mono text-xs">${key}</td>
-              <td class="text-xs">${tag.description}</td>
+              <td class="font-mono text-xs font-bold">${key}</td>
+              <td class="text-xs break-all">${description}</td>
             `;
             exifTableBody.appendChild(row);
             foundAny = true;
@@ -61,10 +65,29 @@ export default function init() {
         if (!foundAny) {
           exifTableBody.innerHTML = '<tr><td colspan="2" class="text-center italic">No metadata found</td></tr>';
         }
+
+        // Handle GPS Link
+        if (tags.GPSLatitude && tags.GPSLongitude) {
+          const lat = tags.GPSLatitude.description;
+          const lon = tags.GPSLongitude.description;
+
+          if (typeof lat === 'number' && typeof lon === 'number') {
+            gpsLink.href = `https://www.google.com/maps?q=${lat},${lon}`;
+            gpsContainer?.classList.remove('hidden');
+          } else if (typeof lat === 'string' && typeof lon === 'string') {
+            gpsLink.href = `https://www.google.com/maps?q=${lat},${lon}`;
+            gpsContainer?.classList.remove('hidden');
+          } else {
+            gpsContainer?.classList.add('hidden');
+          }
+        } else {
+          gpsContainer?.classList.add('hidden');
+        }
       }
     } catch (error) {
       console.error('Error reading metadata:', error);
       if (exifTableBody) exifTableBody.innerHTML = '<tr><td colspan="2" class="text-center text-error">Error reading metadata</td></tr>';
+      gpsContainer?.classList.add('hidden');
     }
   };
 

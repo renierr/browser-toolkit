@@ -1,5 +1,5 @@
 {
-  "name": "EXIF Cleaner",
+  "name": "EXIF Cleaner & Viewer",
   "description": "View and strip EXIF metadata from images.",
   "icon": "image",
   "sectionId": "images",

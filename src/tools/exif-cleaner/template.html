@@ -1,13 +1,13 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">EXIF Cleaner</h2>
+    <h2 class="card-title text-2xl font-bold mb-4">EXIF Cleaner & Viewer</h2>
     <p class="text-base-content/70 mb-6">
-      Remove metadata (EXIF) from your images to protect your privacy.<br>
-      This will also convert every uploaded image to JPG format.
+      View and Remove metadata (EXIF) from your images.<br>
+      The download will be converted to JPG format – independent of the input format.
     </p>
 
     <div id="dropzone"
-         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg h-32 cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
       <div class="flex flex-col items-center gap-2">
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
@@ -25,8 +25,16 @@
       </div>
 
       <div id="single-preview" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div class="flex justify-center items-start">
-          <img id="preview-img" class="max-w-full h-auto rounded-lg shadow-sm" alt="Preview" />
+        <div class="flex flex-col gap-4">
+          <div class="flex justify-center items-start">
+            <img id="preview-img" class="max-w-full h-auto rounded-lg shadow-sm" alt="Preview" />
+          </div>
+          <div id="gps-container" class="hidden">
+            <a id="gps-link" href="#" target="_blank" class="btn btn-sm btn-secondary w-full">
+              <i data-lucide="map-pin" class="w-4 h-4 mr-2"></i>
+              View on Google Maps
+            </a>
+          </div>
         </div>
         <div class="relative">
           <div class="overflow-auto max-h-60 md:max-h-none md:absolute md:inset-0">
@@ -46,7 +54,7 @@
       </div>
 
       <div class="card-actions justify-end gap-2">
-        <button id="download-selected" class="btn btn-outline hidden">
+        <button id="download-selected" class="btn btn-outline btn-secondary hidden">
           <i data-lucide="download" class="w-4 h-4 mr-2"></i>
           Download Selected
         </button>
