@@ -79,7 +79,7 @@ export function renderToolCard(tool: Tool) {
   }
 
   return html`
-    <div class="relative group">
+    <div class="relative group" id="${tool.path}">
       <a
         href="#${tool.path}"
         aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"

@@ -27,7 +27,13 @@ class Router {
   }
 
   public goOverview() {
+    const currentTool = this.currentPath;
     this.goTo('');
+    if (currentTool) {
+      setTimeout(() =>
+        document.getElementById(currentTool)?.scrollIntoView({ behavior: 'smooth' })
+      );
+    }
   }
 
   public getCurrentPath(): string | null {
@@ -45,6 +51,9 @@ class Router {
 
   private handleHashChange() {
     this.currentPath = window.location.hash.slice(1) || null;
+    if (this.currentPath) {
+      setTimeout(() => window.scrollTo(0, 0));
+    }
     this.listeners.forEach((l) => l(this.currentPath, this.consumePayload()));
   }
 }
