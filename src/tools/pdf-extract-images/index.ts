@@ -284,14 +284,14 @@ function openLightbox(url: string, name: string) {
   overlay.setAttribute('aria-label', 'Image preview');
 
   overlay.innerHTML = `
-    <div class="relative max-w-full max-h-full flex flex-col items-center">
-      <img src="${url}" class="max-w-full max-h-[85vh] object-contain shadow-2xl rounded-lg" alt="${name}">
+    <div class="relative max-w-full max-h-full flex flex-col items-cente">
+      <span class="text-white text-sm font-medium truncate max-w-full mb-1">${name}</span>
+      <img src="${url}" class="max-w-full max-h-[85vh] object-contain shadow-2xl border rounded-lg" alt="${name}">
       <div class="mt-4 flex gap-4 items-center flex-wrap">
-        <span class="text-white text-sm font-medium truncate max-w-[200px]">${name}</span>
         <a href="${url}" download="${name}" class="btn btn-primary btn-sm">
           <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download
         </a>
-        <button id="close-lightbox" class="btn btn-ghost btn-sm text-white">
+        <button id="close-lightbox" class="btn btn-secondary btn-sm">
           <i data-lucide="x" class="w-4 h-4 mr-2"></i> Close
         </button>
       </div>
