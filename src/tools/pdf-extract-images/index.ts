@@ -221,9 +221,11 @@ function renderImages() {
 
   extractedImages.forEach((img, index) => {
     const url = createImageURL(img.data);
-    const wrapper = document.createElement('div');
-    wrapper.className = 'group relative aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 cursor-pointer';
+    const wrapper = document.createElement('button');
+    wrapper.type = 'button';
+    wrapper.className = 'group relative aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2';
     wrapper.onclick = () => openLightbox(url, img.name);
+    wrapper.setAttribute('aria-label', `Preview image ${img.name}`);
 
     const thumb = document.createElement('img');
     thumb.src = url;
@@ -232,8 +234,7 @@ function renderImages() {
     thumb.className = 'w-full h-full object-contain transition-transform group-hover:scale-105';
 
     const overlay = document.createElement('div');
-    overlay.className = 'absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 lg:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2';
-    // On touch devices, make overlay slightly visible or ensure buttons are accessible
+    overlay.className = 'absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2';
     overlay.classList.add('max-lg:opacity-100', 'max-lg:bg-transparent', 'max-lg:items-end', 'max-lg:justify-end');
 
     const downloadSingle = document.createElement('a');
@@ -241,11 +242,14 @@ function renderImages() {
     downloadSingle.download = img.name;
     downloadSingle.className = 'btn btn-circle btn-sm btn-primary shadow-lg';
     downloadSingle.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i>';
+    downloadSingle.setAttribute('aria-label', 'Download image');
     downloadSingle.onclick = (e) => e.stopPropagation();
 
     const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
     removeBtn.className = 'btn btn-circle btn-sm btn-error shadow-lg';
     removeBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>';
+    removeBtn.setAttribute('aria-label', 'Remove image');
     removeBtn.onclick = (e) => {
       e.stopPropagation();
       extractedImages.splice(index, 1);
@@ -266,6 +270,9 @@ function renderImages() {
 function openLightbox(url: string, name: string) {
   const overlay = document.createElement('div');
   overlay.className = 'fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4 animate-in fade-in duration-200';
+  overlay.setAttribute('role', 'dialog');
+  overlay.setAttribute('aria-modal', 'true');
+  overlay.setAttribute('aria-label', 'Image preview');
 
   overlay.innerHTML = `
     <div class="relative max-w-full max-h-full flex flex-col items-center">
@@ -282,14 +289,25 @@ function openLightbox(url: string, name: string) {
     </div>
   `;
 
+  const close = () => {
+    overlay.remove();
+    document.removeEventListener('keydown', handleEsc);
+  };
+
+  const handleEsc = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') close();
+  };
+
   overlay.onclick = (e) => {
-    if (e.target === overlay) {
-      overlay.remove();
-    }
+    if (e.target === overlay) close();
   };
 
   document.body.appendChild(overlay);
-  document.getElementById('close-lightbox')?.addEventListener('click', () => overlay.remove());
+  document.getElementById('close-lightbox')?.addEventListener('click', close);
+  document.addEventListener('keydown', handleEsc);
+  
+  // Focus the close button for accessibility
+  document.getElementById('close-lightbox')?.focus();
 
   // @ts-ignore
   if (window.lucide) window.lucide.createIcons();
