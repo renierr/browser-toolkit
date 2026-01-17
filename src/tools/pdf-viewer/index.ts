@@ -3,7 +3,7 @@ import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
 import { isDarkMode } from '../../js/theme.ts';
 import { default as EmbedPDF, ZoomMode, EmbedPdfContainer } from '@embedpdf/snippet';
-import { addFlattenAsImageCommand, getDocManager } from '../../js/embedpdf-utils.ts';
+import { addFlattenAsImageCommand, getDocManager, injectStyles } from '../../js/embedpdf-utils.ts';
 
 
 // dynamic importing of large pdf libs to reduce chunk size and loading time
@@ -40,6 +40,7 @@ const getViewer = async (container: HTMLElement) => {
       showMessage('Failed to initialize PDF viewer.', { type: 'alert' });
       throw new Error('Failed to initialize PDF viewer.');
     }
+    injectStyles(viewer);
     await addFlattenAsImageCommand(viewer);
 
   }

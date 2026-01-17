@@ -1,13 +1,10 @@
 import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
 import { default as EmbedPDF, type EmbedPdfContainer, ZoomMode, } from '@embedpdf/snippet';
 import {
-  addFlattenAsImageCommand,
+  addFlattenAsImageCommand, addNavigateHomeCommand,
   getDocManager,
-  getViewerCommands,
-  getViewerUi,
-  registerLucideIcon,
+  injectStyles,
 } from './js/embedpdf-utils.ts';
-import { House } from 'lucide';
 
 function openDbClient(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -77,52 +74,11 @@ async function initViewer() {
     });
 
     if (viewerInstance) {
+      injectStyles(viewerInstance);
       await addFlattenAsImageCommand(viewerInstance);
-
-      const registry = await viewerInstance.registry;
-      if (registry) {
-        const ui = await getViewerUi(registry);
-        const commands = await getViewerCommands(registry);
-
-        if (commands && ui) {
-          // Register Home Icon (Lucide House)
-          registerLucideIcon(viewerInstance, 'icon-home', House);
-
-          commands.registerCommand({
-            id: 'app.go-home',
-            label: 'Home',
-            icon: 'icon-home',
-            action: () => {
-              window.location.href = './index.html';
-            }
-          });
-
-          const schema = ui.getSchema();
-          const toolbar = schema.toolbars['main-toolbar'];
-          if (toolbar) {
-            const items = JSON.parse(JSON.stringify(toolbar.items));
-            const leftGroup = items.find((item: any) => item.id === 'left-group');
-
-            const homeButton = {
-              type: 'command-button',
-              id: 'home-button',
-              commandId: 'app.go-home',
-              variant: 'icon'
-            };
-
-            if (leftGroup) {
-              leftGroup.items.unshift(homeButton);
-            } else {
-              items.unshift(homeButton);
-            }
-
-            ui.mergeSchema({
-              toolbars: { 'main-toolbar': { ...toolbar, items } }
-            });
-          }
-        }
-      }
+      await addNavigateHomeCommand(viewerInstance);
     }
+
   }
 }
 

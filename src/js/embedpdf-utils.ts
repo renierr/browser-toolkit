@@ -5,7 +5,7 @@ import type {
   PluginRegistry,
   UIPlugin,
 } from '@embedpdf/snippet';
-import { FileImage, type IconNode } from 'lucide';
+import { FileImage, House, type IconNode } from 'lucide';
 import { flattenAsImage } from '../tools/pdf-to-image';
 import { showMessage } from './ui.ts';
 
@@ -114,6 +114,21 @@ export function registerLucideIcon(
   }
 }
 
+export function injectStyles(viewer: EmbedPdfContainer) {
+  const shadowRoot = viewer?.shadowRoot;
+  if (shadowRoot) {
+    const style = document.createElement('style');
+    style.textContent = `
+            [data-epdf-i="main-toolbar"] {
+              flex-wrap: wrap !important;
+              height: auto !important;
+              min-height: 48px;
+            }            
+          `;
+    shadowRoot.appendChild(style);
+  }
+}
+
 export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
   const registry = await viewer.registry;
   if (registry) {
@@ -174,6 +189,52 @@ export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
 
         ui.mergeSchema({
           menus: { 'document-menu': { ...menu, items } },
+        });
+      }
+    }
+  }
+}
+
+export async function addNavigateHomeCommand(viewer: EmbedPdfContainer) {
+  const registry = await viewer.registry;
+  if (registry) {
+    const ui = await getViewerUi(registry);
+    const commands = await getViewerCommands(registry);
+
+    if (commands && ui) {
+      // Register Home Icon (Lucide House)
+      registerLucideIcon(viewer, 'icon-home', House);
+
+      commands.registerCommand({
+        id: 'app.go-home',
+        label: 'Home',
+        icon: 'icon-home',
+        action: () => {
+          window.location.href = './index.html';
+        }
+      });
+
+      const schema = ui.getSchema();
+      const toolbar = schema.toolbars['main-toolbar'];
+      if (toolbar) {
+        const items = JSON.parse(JSON.stringify(toolbar.items));
+        const leftGroup = items.find((item: any) => item.id === 'left-group');
+
+        const homeButton = {
+          type: 'command-button',
+          id: 'home-button',
+          commandId: 'app.go-home',
+          variant: 'icon'
+        };
+
+        if (leftGroup) {
+          leftGroup.items.unshift(homeButton);
+        } else {
+          items.unshift(homeButton);
+        }
+
+        ui.mergeSchema({
+          toolbars: { 'main-toolbar': { ...toolbar, items } }
         });
       }
     }
