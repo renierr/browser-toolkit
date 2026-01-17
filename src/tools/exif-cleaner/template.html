@@ -19,6 +19,17 @@
           <!-- File list will be inserted here -->
         </div>
 
+        <div class="card-actions justify-end mt-2 mb-2 gap-2">
+          <button id="download-selected" class="btn btn-outline btn-primary hidden">
+            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+            Convert & Download Clean Selected
+          </button>
+          <button id="download-clean" class="btn btn-primary">
+            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+            <span id="download-text">Convert & Download Clean Images</span>
+          </button>
+        </div>
+
         <div id="single-preview" class="flex flex-col md:flex-row gap-6">
           <div class="flex-1">
             <img id="preview-img" class="max-w-full h-auto rounded-lg shadow-sm" alt="Preview" />
@@ -40,16 +51,6 @@
           </div>
         </div>
 
-        <div class="card-actions justify-end mt-4 gap-2">
-          <button id="download-selected" class="btn btn-outline btn-primary hidden">
-            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-            Download Previewed
-          </button>
-          <button id="download-clean" class="btn btn-primary">
-            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-            <span id="download-text">Convert & Download Clean Images</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
