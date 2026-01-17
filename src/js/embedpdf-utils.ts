@@ -127,7 +127,7 @@ export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
 
       commands.registerCommand({
         id: 'app.flatten-pdf',
-        label: 'Flatten to Image',
+        label: 'Export as PDF Images',
         icon: 'icon-flatten',
         action: async () => {
           const activeDocId = docManager.getActiveDocumentId();
@@ -153,27 +153,27 @@ export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
         },
       });
 
+      // Add to document-menu below export
       const schema = ui.getSchema();
-      const toolbar = schema.toolbars['main-toolbar'];
-      if (toolbar) {
-        const items = JSON.parse(JSON.stringify(toolbar.items));
-        const rightGroup = items.find((item: any) => item.id === 'right-group');
+      const menu = schema.menus['document-menu'];
+      if (menu) {
+        const items = JSON.parse(JSON.stringify(menu.items));
+        const exportIndex = items.findIndex((item: any) => item.id === 'document:export');
 
-        const flattenButton = {
-          type: 'command-button',
-          id: 'flatten-button',
+        const flattenMenuItem = {
+          type: 'command',
+          id: 'app.flatten-pdf-menu-item',
           commandId: 'app.flatten-pdf',
-          variant: 'icon',
         };
 
-        if (rightGroup) {
-          rightGroup.items.push(flattenButton);
+        if (exportIndex !== -1) {
+          items.splice(exportIndex + 1, 0, flattenMenuItem);
         } else {
-          items.push(flattenButton);
+          items.push(flattenMenuItem);
         }
 
         ui.mergeSchema({
-          toolbars: { 'main-toolbar': { ...toolbar, items } },
+          menus: { 'document-menu': { ...menu, items } },
         });
       }
     }
