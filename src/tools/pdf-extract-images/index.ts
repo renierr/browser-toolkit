@@ -44,6 +44,10 @@ export default function init() {
       hideProgress();
     }
   });
+
+  return () => {
+    extractedImages = [];
+  }
 }
 
 async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
@@ -282,7 +286,7 @@ function openLightbox(url: string, name: string) {
   overlay.innerHTML = `
     <div class="relative max-w-full max-h-full flex flex-col items-center">
       <img src="${url}" class="max-w-full max-h-[85vh] object-contain shadow-2xl rounded-lg" alt="${name}">
-      <div class="mt-4 flex gap-4 items-center">
+      <div class="mt-4 flex gap-4 items-center flex-wrap">
         <span class="text-white text-sm font-medium truncate max-w-[200px]">${name}</span>
         <a href="${url}" download="${name}" class="btn btn-primary btn-sm">
           <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download
@@ -310,7 +314,7 @@ function openLightbox(url: string, name: string) {
   document.body.appendChild(overlay);
   document.getElementById('close-lightbox')?.addEventListener('click', close);
   document.addEventListener('keydown', handleEsc);
-  
+
   document.getElementById('close-lightbox')?.focus();
 
   // @ts-ignore
