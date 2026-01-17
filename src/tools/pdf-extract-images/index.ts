@@ -6,10 +6,43 @@ const pdfjsLib = await import('pdfjs-dist');
 const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
 
+let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number }> = [];
+
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
     await extractImages(files);
+  });
+
+  document.getElementById('clear-btn')?.addEventListener('click', () => {
+    extractedImages = [];
+    renderImages();
+  });
+
+  document.getElementById('download-all-btn')?.addEventListener('click', async () => {
+    if (extractedImages.length === 0) return;
+
+    const btn = document.getElementById('download-all-btn') as HTMLButtonElement;
+    btn.disabled = true;
+    const originalText = btn.innerHTML;
+    btn.textContent = 'Preparing ZIP...';
+    showProgress('Preparing ZIP archive...');
+    
+    try {
+      const zipFiles: DownloadBuffer[] = extractedImages.map((img) => ({
+        name: img.name,
+        data: img.data,
+      }));
+      await downloadAsZip(zipFiles, 'extracted-images.zip');
+      showMessage(`${extractedImages.length} image(s) downloaded as ZIP.`, { timeoutMs: 15000 });
+    } catch (err) {
+      console.error('Error creating ZIP:', err);
+      showMessage('Failed to create ZIP file.', { type: 'alert' });
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      hideProgress();
+    }
   });
 }
 
@@ -160,19 +193,18 @@ export async function extractImages(files : FileList) {
 
     showProgress(`Extracting images from ${files.length} file(s)...`);
 
-    let allImages: Array<{ name: string; data: Uint8Array; width: number; height: number }> = [];
     for (let i = 0; i < fileBuffers.length; i++) {
       const images = await extractImagesFromPDF(fileBuffers[i], fileNames[i]);
-      allImages = allImages.concat(images);
+      extractedImages = extractedImages.concat(images);
     }
 
-    if (allImages.length === 0) {
+    if (extractedImages.length === 0) {
       showMessage('The PDF file(s) do not contain any images to extract.', { type: 'alert' });
       return;
     }
 
-    renderImages(allImages);
-    showMessage(`${allImages.length} image(s) extracted.`, { timeoutMs: 15000 });
+    renderImages();
+    showMessage(`${extractedImages.length} image(s) extracted.`, { timeoutMs: 15000 });
   } catch (error) {
     console.error('Error extracting images:', error);
     showMessage(
@@ -187,115 +219,66 @@ function createImageURL(data: Uint8Array) {
   return URL.createObjectURL(new Blob([new Uint8Array(data)], { type: 'image/png' }));
 }
 
-function renderImages(
-  images: Array<{ name: string; data: Uint8Array; width: number; height: number }>
-) {
-  const container = document.getElementById('image-container');
-  if (!container) return;
+function renderImages() {
+  const list = document.getElementById('image-list');
+  const actions = document.getElementById('actions');
+  const downloadBtn = document.getElementById('download-all-btn');
+  if (!list || !actions || !downloadBtn) return;
 
   // revoke previous object URLs
-  container.querySelectorAll('img[data-url]').forEach((img) => {
+  list.querySelectorAll('img[data-url]').forEach((img) => {
     const u = (img as HTMLImageElement).dataset.url;
-    if (u) {
-      try {
-        URL.revokeObjectURL(u);
-      } catch {
-        /* ignore */
-      }
-    }
+    if (u) URL.revokeObjectURL(u);
   });
 
-  container.innerHTML = '';
+  list.innerHTML = '';
 
-  // header area with Download All button aligned to the right
-  const header = document.createElement('div');
-  header.className = 'flex items-center justify-end mb-2';
+  if (extractedImages.length === 0) {
+    actions.classList.add('hidden');
+    return;
+  }
 
-  const downloadAllBtn = document.createElement('button');
-  downloadAllBtn.id = 'pdf-download-all';
-  downloadAllBtn.className = 'btn btn-primary';
-  downloadAllBtn.textContent = `Download all (${images.length})`;
-  header.appendChild(downloadAllBtn);
+  actions.classList.remove('hidden');
+  downloadBtn.innerHTML = `<i data-lucide="download" class="w-4 h-4 mr-2"></i> Download All (${extractedImages.length})`;
+  // @ts-ignore
+  if (window.lucide) window.lucide.createIcons();
 
-  container.appendChild(header);
-
-  const grid = document.createElement('div');
-  grid.className = 'grid grid-cols sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4';
-
-  images.forEach((img) => {
+  extractedImages.forEach((img, index) => {
     const url = createImageURL(img.data);
     const wrapper = document.createElement('div');
-    wrapper.className = 'relative cursor-pointer overflow-hidden rounded';
+    wrapper.className = 'group relative aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300';
 
     const thumb = document.createElement('img');
     thumb.src = url;
     thumb.alt = img.name;
     thumb.dataset.url = url;
-    thumb.className = 'object-cover w-full h-32 rounded shadow-sm';
-    thumb.title = img.name;
-
-    thumb.addEventListener('click', () => openLightbox(url, img.name));
-
-    // per-image download button
-    const downloadBtn = document.createElement('a');
-    downloadBtn.href = url;
-    downloadBtn.download = img.name;
-    downloadBtn.className = 'absolute top-1 right-1 btn btn-sm';
-    downloadBtn.textContent = 'Download';
-    downloadBtn.addEventListener('click', (e) => {
+    thumb.className = 'w-full h-full object-contain transition-transform group-hover:scale-105';
+    
+    const overlay = document.createElement('div');
+    overlay.className = 'absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2';
+    
+    const downloadSingle = document.createElement('a');
+    downloadSingle.href = url;
+    downloadSingle.download = img.name;
+    downloadSingle.className = 'btn btn-circle btn-sm btn-primary';
+    downloadSingle.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i>';
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'btn btn-circle btn-sm btn-error';
+    removeBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>';
+    removeBtn.onclick = (e) => {
       e.stopPropagation();
-      // allow default download behavior
-    });
+      extractedImages.splice(index, 1);
+      renderImages();
+    };
 
+    overlay.appendChild(downloadSingle);
+    overlay.appendChild(removeBtn);
     wrapper.appendChild(thumb);
-    wrapper.appendChild(downloadBtn);
-    grid.appendChild(wrapper);
+    wrapper.appendChild(overlay);
+    list.appendChild(wrapper);
   });
 
-  container.appendChild(grid);
-
-  // attach click handler to Download All button
-  downloadAllBtn.addEventListener('click', async (e) => {
-    e.stopPropagation();
-    if (images.length === 0) return;
-
-    downloadAllBtn.disabled = true;
-    const originalText = downloadAllBtn.textContent;
-    downloadAllBtn.textContent = 'Preparing ZIP...';
-    showProgress('Preparing ZIP archive...');
-    try {
-      const zipFiles: DownloadBuffer[] = images.map((img) => ({
-        name: img.name,
-        data: img.data,
-      }));
-      await downloadAsZip(zipFiles, 'images.zip');
-      showMessage(`${images.length} image(s) downloaded as ZIP.`, { timeoutMs: 15000 });
-    } catch (err) {
-      console.error('Error creating ZIP:', err);
-      showMessage('Failed to create ZIP file.', { type: 'alert' });
-    } finally {
-      downloadAllBtn.disabled = false;
-      downloadAllBtn.textContent = originalText;
-      hideProgress();
-    }
-  });
-}
-
-function openLightbox(url: string, name?: string) {
-  // avoid duplicate lightbox
-  if (document.getElementById('pdf-image-lightbox')) return;
-  const overlay = document.createElement('div');
-  overlay.id = 'pdf-image-lightbox';
-  overlay.className = 'fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70 p-4';
-  overlay.innerHTML = `
-    <div class="relative">
-      <img src="${url}" alt="${name ?? ''}" class="max-h-[90vh] max-w-[90vw] rounded shadow-lg" />
-      <button class="absolute top-2 right-14 btn btn-sm" id="pdf-image-lightbox-close">Close</button>
-    </div>
-  `;
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) overlay.remove();
-  });
-  document.getElementById('image-container')?.appendChild(overlay);
-  document.getElementById('pdf-image-lightbox-close')?.addEventListener('click', () => overlay.remove());
+  // @ts-ignore
+  if (window.lucide) window.lucide.createIcons();
 }
