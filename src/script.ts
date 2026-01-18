@@ -218,11 +218,36 @@ function initScrollToTop() {
 
 // === Routing ===
 function handleRoute(path: string | null, payload?: any) {
-  if (path) {
-    const tool = tools.find((t) => t.path === path);
-    renderTool(tool, payload);
+  const doRender = () => {
+    if (path) {
+      const tool = tools.find((t) => t.path === path);
+      renderTool(tool, payload);
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    } else {
+      renderOverview();
+    }
+  };
+
+  const appEl = document.getElementById('app');
+  if (appEl) {
+    try {
+      (appEl as any).style.viewTransitionName = path ? `tool-${path}` : 'overview';
+    } catch (e) {
+      // ignore if the environment doesn't support setting this style
+    }
+  }
+
+  const docAny = document as any;
+  if (typeof docAny.startViewTransition === 'function') {
+    try {
+      docAny.startViewTransition(() => doRender());
+    } catch (err) {
+      // If anything goes wrong, fall back to direct rendering.
+      console.warn('[script] View Transition failed, falling back to direct render', err);
+      doRender();
+    }
   } else {
-    renderOverview();
+    doRender();
   }
 }
 

@@ -9,6 +9,25 @@ svg.icon {
     width: 1em;
 }
 
+/* View transitions: fade old out, fade new in (short, smooth) */
+::view-transition-old(#app) {
+  animation: vt-fade-out 240ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+::view-transition-new(#app) {
+  animation: vt-fade-in 240ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes vt-fade-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-6px); }
+}
+
+@keyframes vt-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 /*
 marker: all above this line should be left as is, template may add/change it
 to minimise merge conflicts add your project stuff below this line
