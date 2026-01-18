@@ -115,7 +115,7 @@ function renderOverview() {
             <h3 class="text-2xl font-bold text-heading">Favorites</h3>
           </div>
         </div>
-        ${favoriteTools.map(renderToolCard)}
+        ${favoriteTools.map((tool) => renderToolCard(tool, true))}
         <div class="md:col-span-2 lg:col-span-3 xl:col-span-4 border-b border-card my-4"></div>
       `;
     }
@@ -160,7 +160,7 @@ function renderOverview() {
             </div>
           `;
 
-          const cardsHtml = section.items.map(renderToolCard).join('');
+          const cardsHtml = section.items.map((tool) => renderToolCard(tool, false)).join('');
           return headerHtml + cardsHtml;
         })
         .join('');

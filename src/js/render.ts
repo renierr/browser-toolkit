@@ -54,7 +54,7 @@ export function renderTool(tool: Tool | undefined, payload?: any) {
   }
 }
 
-export function renderToolCard(tool: Tool) {
+export function renderToolCard(tool: Tool, insideFav: boolean = false) {
   const active = isFavorite(tool.path);
 
   let badge = '';
@@ -79,7 +79,7 @@ export function renderToolCard(tool: Tool) {
   }
 
   return html`
-    <div class="relative group" id="${tool.path}">
+    <div class="relative group" id="${insideFav ? 'fav_' + tool.path : tool.path}">
       <a
         href="#${tool.path}"
         aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
