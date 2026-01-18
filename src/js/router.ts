@@ -28,6 +28,47 @@ class Router {
 
   public goOverview() {
     const currentTool = this.currentPath;
+    // Try to use the new Navigation API to find the earliest entry that points to the overview
+    // (no hash or a lone '#') and navigate back to it using history.go(delta).
+    // @ts-ignore - Navigation API is experimental
+    const nav = (window as any).navigation;
+    if (nav && typeof nav.entries === 'function') {
+      try {
+        const navEntries = nav.entries();
+        if (Array.isArray(navEntries) && navEntries.length > 1) {
+          // Determine the current entry index. If navigation provides it, use that, otherwise assume the last entry is current.
+          const currentIndex = typeof nav.currentEntryIndex === 'number' ? nav.currentEntryIndex : navEntries.length - 1;
+
+          // Find the earliest entry (lowest index) before the current index whose URL has no hash or only a single '#'.
+          let foundIndex = -1;
+          for (let i = 0; i < currentIndex; i++) {
+            const entry = navEntries[i];
+            if (!entry || !entry.url) continue;
+            try {
+              const u = new URL(entry.url);
+              if (!u.hash || u.hash === '#') {
+                foundIndex = i;
+                break; // stop at the first (earliest) matching entry
+              }
+            } catch (e) {
+              // If entry.url isn't a valid absolute URL, skip this entry and continue searching.
+            }
+          }
+
+          if (foundIndex >= 0 && foundIndex < currentIndex) {
+            const delta = foundIndex - currentIndex; // negative number -> go back
+            history.go(delta);
+            return;
+          }
+        }
+      } catch (e) {
+        // If anything goes wrong, fall back to the hash-based navigation below.
+        // eslint-disable-next-line no-console
+        console.debug('Navigation API fallback:', e);
+      }
+    }
+
+    // Fallback: set hash to overview (empty) and scroll the previously open tool into view if present.
     this.goTo('');
     if (currentTool) {
       setTimeout(() =>
