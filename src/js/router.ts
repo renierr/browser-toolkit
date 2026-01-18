@@ -28,6 +28,30 @@ class Router {
 
   public goOverview() {
     const currentTool = this.currentPath;
+    const scrollAfterNavigation = () => {
+      let called = false;
+      let doScroll = () => {
+        if (called) return;
+        called = true;
+        if (currentTool) {
+          const el = document.getElementById(currentTool);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      };
+
+      const handler = () => {
+        window.removeEventListener('hashchange', handler);
+        window.removeEventListener('popstate', handler);
+        requestAnimationFrame(() => requestAnimationFrame(doScroll));
+      };
+
+      // Add one-time listeners
+      window.addEventListener('hashchange', handler, { once: true });
+      window.addEventListener('popstate', handler, { once: true });
+    };
+
     // Try to use the new Navigation API to find the earliest entry that points to the overview
     // (no hash or a lone '#') and navigate back to it using history.go(delta).
     // @ts-ignore - Navigation API is experimental
@@ -57,6 +81,7 @@ class Router {
 
           if (foundIndex >= 0 && foundIndex < currentIndex) {
             const delta = foundIndex - currentIndex; // negative number -> go back
+            scrollAfterNavigation();
             history.go(delta);
             return;
           }
@@ -69,14 +94,10 @@ class Router {
     }
 
     // Fallback: set hash to overview (empty) and scroll the previously open tool into view if present.
-    this.goTo('');
     if (currentTool) {
-      setTimeout(() =>
-        document
-          .getElementById(currentTool)
-          ?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      );
+      scrollAfterNavigation();
     }
+    this.goTo('');
   }
 
   public getCurrentPath(): string | null {
