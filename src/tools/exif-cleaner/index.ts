@@ -10,6 +10,7 @@ import {
   gpsFormatParsedCoordinate,
   gpsParseCoordinateFromExifTags,
   gpsGenerateGoogleMapsLink,
+  isImageFile,
 } from '../../js/utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
@@ -28,6 +29,11 @@ export default function init() {
   let currentFiles: File[] = [];
   let selectedIndex = 0;
 
+  const passthroughFile = async (file: File): Promise<DownloadBuffer> => ({
+    data: await file.arrayBuffer(),
+    name: file.name,
+  });
+
   const updatePreview = async (index: number) => {
     if (index < 0 || index >= currentFiles.length) return;
     selectedIndex = index;
@@ -44,7 +50,25 @@ export default function init() {
       }
     });
 
-    // Show preview
+    // If the file is not an image, avoid image/canvas/Exif work and show a message instead
+    if (!isImageFile(file)) {
+      // hide or clear image preview
+      if (previewImg) {
+        previewImg.src = '';
+        previewImg.removeAttribute('alt');
+      }
+
+      if (exifTableBody) {
+        exifTableBody.innerHTML =
+          '<tr><td colspan="2" class="text-center italic">Selected file is not an image — no EXIF data available</td></tr>';
+      }
+
+      gpsContainer?.classList.add('hidden');
+
+      return;
+    }
+
+    // Show preview for images
     const reader = new FileReader();
     reader.onload = (e) => {
       previewImg.src = e.target?.result as string;
@@ -203,12 +227,21 @@ export default function init() {
 
     downloadSelectedBtn.disabled = true;
     try {
-      const result = await cleanImage(currentFiles[selectedIndex]);
-      await downloadFile(result.data as ArrayBuffer, result.name, 'image/jpeg');
-      showMessage(`Cleaned version of ${currentFiles[selectedIndex].name} downloaded.`, {
-        type: 'info',
-        timeoutMs: 5000,
-      });
+      const file = currentFiles[selectedIndex];
+
+      if (!isImageFile(file)) {
+        // Not an image — just write out the original file
+        const buf = await passthroughFile(file);
+        await downloadFile(buf.data as ArrayBuffer, buf.name, file.type || 'application/octet-stream');
+        showMessage(`Original file ${file.name} downloaded.`, { type: 'info', timeoutMs: 5000 });
+      } else {
+        const result = await cleanImage(file);
+        await downloadFile(result.data as ArrayBuffer, result.name, 'image/jpeg');
+        showMessage(`Cleaned version of ${file.name} downloaded.`, {
+          type: 'info',
+          timeoutMs: 5000,
+        });
+      }
     } catch (error) {
       console.error('Error stripping metadata:', error);
       showMessage('Failed to strip metadata.', { type: 'alert' });
@@ -226,13 +259,24 @@ export default function init() {
 
     try {
       if (currentFiles.length === 1) {
-        const result = await cleanImage(currentFiles[0]);
-        await downloadFile(result.data as ArrayBuffer, result.name, 'image/jpeg');
-        showMessage('Image saved without EXIF data.', { type: 'info', timeoutMs: 5000 });
+        const file = currentFiles[0];
+        if (!isImageFile(file)) {
+          // Not an image — write out original
+          const buf = await passthroughFile(file);
+          await downloadFile(buf.data as ArrayBuffer, buf.name, file.type || 'application/octet-stream');
+          showMessage('File downloaded.', { type: 'info', timeoutMs: 5000 });
+        } else {
+          const result = await cleanImage(file);
+          await downloadFile(result.data as ArrayBuffer, result.name, 'image/jpeg');
+          showMessage('Image saved without EXIF data.', { type: 'info', timeoutMs: 5000 });
+        }
       } else {
-        const results = await Promise.all(currentFiles.map((f) => cleanImage(f)));
+        // Mix of images and non-images: clean images, passthrough others, then zip
+        const results = await Promise.all(
+          currentFiles.map((f) => (isImageFile(f) ? cleanImage(f) : passthroughFile(f)))
+        );
         await downloadAsZip(results, 'cleaned_images.zip');
-        showMessage(`${currentFiles.length} images saved without EXIF data.`, {
+        showMessage(`${currentFiles.length} files saved (images cleaned).`, {
           type: 'info',
           timeoutMs: 5000,
         });

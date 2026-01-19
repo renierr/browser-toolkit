@@ -275,3 +275,8 @@ export const gpsParseCoordinateFromExifTags = (
 export const gpsGenerateGoogleMapsLink = (lat: number, lon: number): string => {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
 }
+
+export const isImageFile = (file: File) => {
+  if (file.type) return file.type.startsWith('image/');
+  return /\.(jpe?g|png|gif|webp|tiff?|bmp|heic|heif|svg)$/i.test(file.name);
+};
