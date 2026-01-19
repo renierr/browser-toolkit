@@ -37,7 +37,7 @@ function getValueByDotNotation(obj: any, path: string): string | undefined {
 }
 
 export const replacePlaceholders = (templateHtml: string, context: any): string => {
-  const placeholderRegex = /\{\{(.+?)\}\}/g;
+  const placeholderRegex = /{{(.+?)}}/g;
 
   let output = templateHtml;
 
@@ -87,6 +87,21 @@ export async function copyCanvasToClipboard(
 const parseRational = (v: any): number => {
   if (v === undefined || v === null) return NaN;
   if (typeof v === 'number') return v;
+
+  // If it's an array or array-like (e.g. typed array), try the first element or treat as [num, den]
+  if (Array.isArray(v) || (typeof v === 'object' && typeof (v as any).length === 'number')) {
+    const arr = Array.isArray(v) ? v : Array.from(v as any);
+    if (arr.length === 0) return NaN;
+    // If it's a 2-element array treat as fraction [numerator, denominator]
+    if (arr.length >= 2 && (typeof arr[0] === 'number' || typeof arr[0] === 'string')) {
+      const n = Number(arr[0]);
+      const d = Number(arr[1] ?? 1);
+      return Number.isFinite(n) && d !== 0 ? n / d : NaN;
+    }
+    // Otherwise try parsing the first element
+    return parseRational(arr[0]);
+  }
+
   if (typeof v === 'string') {
     // fraction like "50/1" or decimal string
     if (v.includes('/')) {
@@ -98,6 +113,7 @@ const parseRational = (v: any): number => {
     const num = Number(v.replace(/[^0-9+\-.eE]/g, ''));
     return Number.isFinite(num) ? num : NaN;
   }
+
   if (typeof v === 'object') {
     // ExifReader may provide { numerator, denominator } or { num, den } or { value: ... }
     if ('numerator' in v && 'denominator' in v) {
@@ -110,14 +126,21 @@ const parseRational = (v: any): number => {
       const d = Number((v as any).den || 1);
       return Number.isFinite(n) && d !== 0 ? n / d : NaN;
     }
+    // Some tag implementations wrap the actual value under a `value` property
     if ('value' in v) return parseRational((v as any).value);
+
+    // Some objects expose numeric indices (array-like object)
+    if (typeof (v as any)[0] !== 'undefined') return parseRational([(v as any)[0], (v as any)[1]]);
   }
   return NaN;
 };
 
 const gpsArrayToDecimal = (arr: any): number => {
-  if (!Array.isArray(arr)) return NaN;
-  const [degRaw, minRaw = 0, secRaw = 0] = arr;
+  if (arr === undefined || arr === null) return NaN;
+  // Accept real arrays and array-like/typed arrays
+  const parts = Array.isArray(arr) ? arr : (typeof arr === 'object' && typeof (arr as any).length === 'number') ? Array.from(arr as any) : null;
+  if (!parts) return NaN;
+  const [degRaw, minRaw = 0, secRaw = 0] = parts;
   const deg = parseRational(degRaw);
   const min = parseRational(minRaw);
   const sec = parseRational(secRaw);
@@ -158,11 +181,62 @@ const gpsApplyHemisphereReferences = (coord: number, refTag: any): number => {
 };
 
 export const gpsFormatParsedCoordinate = (coordTag: any, refTag: any, isLat: boolean): string | null => {
-  let dec = NaN;
-  if (coordTag?.value) dec = gpsArrayToDecimal(coordTag.value);
-  if (!Number.isFinite(dec))
-    dec = gpsParseDescriptionToDecimal(coordTag?.description ?? coordTag?.value ?? coordTag);
-  const final = gpsApplyHemisphereReferences(dec, refTag);
+  let dec: number | undefined;
+
+  // Helper to attempt parsing and set dec if successful
+  const trySet = (v: any) => {
+    if (dec !== undefined && Number.isFinite(dec)) return;
+    if (v === undefined || v === null) return;
+
+    // numeric decimal degrees
+    if (typeof v === 'number' && Number.isFinite(v)) {
+      dec = v;
+      return;
+    }
+
+    // array-like -> D M S
+    if (Array.isArray(v) || (typeof v === 'object' && typeof (v as any).length === 'number')) {
+      const n = gpsArrayToDecimal(v);
+      if (Number.isFinite(n)) dec = n;
+      return;
+    }
+
+    // objects with .value or .description
+    if (typeof v === 'object') {
+      if ('value' in v) trySet((v as any).value);
+      if (dec === undefined || !Number.isFinite(dec)) {
+        if ('description' in v && typeof (v as any).description === 'string') {
+          const n = gpsParseDescriptionToDecimal((v as any).description);
+          if (Number.isFinite(n)) dec = n;
+        }
+      }
+      // try numeric indices
+      if ((v as any)[0] !== undefined && (v as any)[1] !== undefined) trySet([(v as any)[0], (v as any)[1], (v as any)[2]]);
+      return;
+    }
+
+    // string fallback
+    if (typeof v === 'string') {
+      const n = gpsParseDescriptionToDecimal(v);
+      if (Number.isFinite(n)) dec = n;
+      return;
+    }
+  };
+
+  // Try multiple sources on coordTag
+  trySet(coordTag);
+  trySet(coordTag?.value ?? coordTag);
+  trySet(coordTag?.description ?? coordTag?.value ?? coordTag);
+  // Last-resort: coerce to string and parse any numbers
+  if ((dec === undefined || !Number.isFinite(dec)) && coordTag != null) {
+    const n = gpsParseDescriptionToDecimal(String(coordTag));
+    if (Number.isFinite(n)) dec = n;
+  }
+
+  // Default to NaN if nothing parsed
+  const parsed = Number.isFinite(dec as number) ? (dec as number) : NaN;
+
+  const final = gpsApplyHemisphereReferences(parsed, refTag);
   if (Number.isFinite(final)) {
     const abs = Math.abs(final);
     const refTxtRaw = String(refTag?.description ?? refTag?.value ?? '').trim();
