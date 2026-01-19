@@ -63,7 +63,10 @@ export const html = (strings: TemplateStringsArray, ...values: any[]) => {
   }, '');
 };
 
-export async function copyCanvasToClipboard(canvas: HTMLCanvasElement, format: 'jpg' | 'png' = 'png'): Promise<void> {
+export async function copyCanvasToClipboard(
+  canvas: HTMLCanvasElement,
+  format: 'jpg' | 'png' = 'png'
+): Promise<void> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(async (blob) => {
       if (!blob) {
@@ -79,4 +82,122 @@ export async function copyCanvasToClipboard(canvas: HTMLCanvasElement, format: '
       }
     }, `image/${format}`);
   });
+}
+
+const parseRational = (v: any): number => {
+  if (v === undefined || v === null) return NaN;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string') {
+    // fraction like "50/1" or decimal string
+    if (v.includes('/')) {
+      const [nStr, dStr] = v.split('/');
+      const n = Number(nStr);
+      const d = Number(dStr);
+      return Number.isFinite(n) && d !== 0 ? n / d : NaN;
+    }
+    const num = Number(v.replace(/[^0-9+\-.eE]/g, ''));
+    return Number.isFinite(num) ? num : NaN;
+  }
+  if (typeof v === 'object') {
+    // ExifReader may provide { numerator, denominator } or { num, den } or { value: ... }
+    if ('numerator' in v && 'denominator' in v) {
+      const n = Number((v as any).numerator);
+      const d = Number((v as any).denominator || 1);
+      return Number.isFinite(n) && d !== 0 ? n / d : NaN;
+    }
+    if ('num' in v && 'den' in v) {
+      const n = Number((v as any).num);
+      const d = Number((v as any).den || 1);
+      return Number.isFinite(n) && d !== 0 ? n / d : NaN;
+    }
+    if ('value' in v) return parseRational((v as any).value);
+  }
+  return NaN;
+};
+
+const gpsArrayToDecimal = (arr: any): number => {
+  if (!Array.isArray(arr)) return NaN;
+  const [degRaw, minRaw = 0, secRaw = 0] = arr;
+  const deg = parseRational(degRaw);
+  const min = parseRational(minRaw);
+  const sec = parseRational(secRaw);
+  if (![deg, min, sec].every((n) => Number.isFinite(n))) return NaN;
+  return deg + min / 60 + sec / 3600;
+};
+
+const gpsParseDescriptionToDecimal = (desc: any): number => {
+  if (desc === undefined || desc === null) return NaN;
+  const s = String(desc);
+  // If it's a single decimal number, return it
+  const single = s.match(/-?\d+(?:\.\d+)?/);
+  if (single && single.length) {
+    // If there are exactly 1 number and it contains a dot, assume decimal degrees
+    const allNums = s.match(/-?\d+(?:\.\d+)?/g) || [];
+    if (allNums.length === 1 && allNums[0].includes('.')) return Number(allNums[0]);
+    // If we have 3 numbers -> D M S
+    if (allNums.length >= 3) {
+      const d = Number(allNums[0]);
+      const m = Number(allNums[1]);
+      const sec = Number(allNums[2]);
+      if ([d, m, sec].every(Number.isFinite)) return d + m / 60 + sec / 3600;
+    }
+    // fallback to first number
+    return Number(allNums[0]);
+  }
+  return NaN;
+};
+
+const gpsApplyHemisphereReferences = (coord: number, refTag: any): number => {
+  if (!Number.isFinite(coord)) return NaN;
+  const ref = String(refTag?.description ?? refTag?.value ?? refTag ?? '')
+    .trim()
+    .toUpperCase();
+  if (ref.startsWith('S') || ref.startsWith('W') || ref === 'SOUTH' || ref === 'WEST')
+    return -Math.abs(coord);
+  return coord;
+};
+
+export const gpsFormatParsedCoordinate = (coordTag: any, refTag: any, isLat: boolean): string | null => {
+  let dec = NaN;
+  if (coordTag?.value) dec = gpsArrayToDecimal(coordTag.value);
+  if (!Number.isFinite(dec))
+    dec = gpsParseDescriptionToDecimal(coordTag?.description ?? coordTag?.value ?? coordTag);
+  const final = gpsApplyHemisphereReferences(dec, refTag);
+  if (Number.isFinite(final)) {
+    const abs = Math.abs(final);
+    const refTxtRaw = String(refTag?.description ?? refTag?.value ?? '').trim();
+    const refTxt = refTxtRaw || (final < 0 ? (isLat ? 'S' : 'W') : isLat ? 'N' : 'E');
+    return `${abs.toFixed(8)}° ${refTxt} (${final.toFixed(8)})`;
+  }
+  return null;
+};
+
+export const gpsParseCoordinateFromExifTags = (
+  longTag: any,
+  latTag: any,
+  longRefTag: any,
+  latRefTag: any
+): { longitude: number; latitude: number } => {
+  let latDecimal = NaN;
+  let lonDecimal = NaN;
+
+  // Prefer .value arrays when available (rational components)
+  if (latTag?.value) latDecimal = gpsArrayToDecimal(latTag.value);
+  if (longTag?.value) lonDecimal = gpsArrayToDecimal(longTag.value);
+
+  // Fallback to description parsing
+  if (!Number.isFinite(latDecimal))
+    latDecimal = gpsParseDescriptionToDecimal(latTag?.description ?? latTag?.value ?? latTag);
+  if (!Number.isFinite(lonDecimal))
+    lonDecimal = gpsParseDescriptionToDecimal(longTag?.description ?? longTag?.value ?? longTag);
+
+  // Apply hemisphere references
+  const finalLat = gpsApplyHemisphereReferences(latDecimal, latRefTag);
+  const finalLon = gpsApplyHemisphereReferences(lonDecimal, longRefTag);
+
+  return { longitude: finalLon, latitude: finalLat };
+};
+
+export const gpsGenerateGoogleMapsLink = (lat: number, lon: number): string => {
+  return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
 }

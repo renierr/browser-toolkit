@@ -1,6 +1,16 @@
 import ExifReader from 'exifreader';
-import { setupFileDropzone, downloadFile, downloadAsZip, type DownloadBuffer } from '../../js/file-utils';
+import {
+  setupFileDropzone,
+  downloadFile,
+  downloadAsZip,
+  type DownloadBuffer,
+} from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
+import {
+  gpsFormatParsedCoordinate,
+  gpsParseCoordinateFromExifTags,
+  gpsGenerateGoogleMapsLink,
+} from '../../js/utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -50,7 +60,23 @@ export default function init() {
         let foundAny = false;
         const sortedEntries = Object.entries(tags).sort(([a], [b]) => a.localeCompare(b));
         for (const [key, tag] of sortedEntries) {
-          const description = tag.description?.toString();
+          // Build a display description; for GPS coords we show the parsed decimal value too
+          let description = tag.description?.toString();
+
+          if (key === 'GPSLatitude' || key === 'GPSLongitude') {
+            const parsed = gpsFormatParsedCoordinate(
+              tags[key as 'GPSLatitude' | 'GPSLongitude'],
+              tags[key === 'GPSLatitude' ? 'GPSLatitudeRef' : 'GPSLongitudeRef'],
+              key === 'GPSLatitude'
+            );
+            if (parsed) {
+              description = parsed + (description ? ` — ${description}` : '');
+            } else if (!description && tags[key]?.value) {
+              // fallback to stringify the value array/object
+              description = String(tags[key].value ?? tags[key]);
+            }
+          }
+
           if (description) {
             const row = document.createElement('tr');
             row.innerHTML = `
@@ -63,19 +89,23 @@ export default function init() {
         }
 
         if (!foundAny) {
-          exifTableBody.innerHTML = '<tr><td colspan="2" class="text-center italic">No metadata found</td></tr>';
+          exifTableBody.innerHTML =
+            '<tr><td colspan="2" class="text-center italic">No metadata found</td></tr>';
         }
 
-        // Handle GPS Link
-        if (tags.GPSLatitude && tags.GPSLongitude) {
-          const lat = tags.GPSLatitude.description;
-          const lon = tags.GPSLongitude.description;
+        const hasLat = !!tags.GPSLatitude;
+        const hasLon = !!tags.GPSLongitude;
 
-          if (typeof lat === 'number' && typeof lon === 'number') {
-            gpsLink.href = `https://www.google.com/maps?q=${lat},${lon}`;
-            gpsContainer?.classList.remove('hidden');
-          } else if (typeof lat === 'string' && typeof lon === 'string') {
-            gpsLink.href = `https://www.google.com/maps?q=${lat},${lon}`;
+        if (hasLat && hasLon) {
+          const { longitude: finalLon, latitude: finalLat } = gpsParseCoordinateFromExifTags(
+            tags.GPSLongitude,
+            tags.GPSLatitude,
+            tags.GPSLongitudeRef,
+            tags.GPSLatitudeRef
+          );
+
+          if (Number.isFinite(finalLat) && Number.isFinite(finalLon)) {
+            gpsLink.href = gpsGenerateGoogleMapsLink(finalLat, finalLon);
             gpsContainer?.classList.remove('hidden');
           } else {
             gpsContainer?.classList.add('hidden');
@@ -86,7 +116,9 @@ export default function init() {
       }
     } catch (error) {
       console.error('Error reading metadata:', error);
-      if (exifTableBody) exifTableBody.innerHTML = '<tr><td colspan="2" class="text-center text-error">Error reading metadata</td></tr>';
+      if (exifTableBody)
+        exifTableBody.innerHTML =
+          '<tr><td colspan="2" class="text-center text-error">Error reading metadata</td></tr>';
       gpsContainer?.classList.add('hidden');
     }
   };
@@ -97,7 +129,8 @@ export default function init() {
 
     currentFiles.forEach((file, index) => {
       const item = document.createElement('div');
-      item.className = 'file-item p-2 rounded cursor-pointer flex justify-between items-center transition-colors bg-base-200';
+      item.className =
+        'file-item p-2 rounded cursor-pointer flex justify-between items-center transition-colors bg-base-200';
       item.innerHTML = `
         <span class="truncate text-sm font-medium">${file.name}</span>
         <span class="text-xs opacity-60">${(file.size / 1024).toFixed(1)} KB</span>
@@ -161,7 +194,7 @@ export default function init() {
 
     return {
       data: await blob.arrayBuffer(),
-      name: file.name.replace(/\.[^/.]+$/, "") + "_clean.jpg"
+      name: file.name.replace(/\.[^/.]+$/, '') + '_clean.jpg',
     };
   };
 
@@ -197,7 +230,7 @@ export default function init() {
         await downloadFile(result.data as ArrayBuffer, result.name, 'image/jpeg');
         showMessage('Image saved without EXIF data.', { type: 'info', timeoutMs: 5000 });
       } else {
-        const results = await Promise.all(currentFiles.map(f => cleanImage(f)));
+        const results = await Promise.all(currentFiles.map((f) => cleanImage(f)));
         await downloadAsZip(results, 'cleaned_images.zip');
         showMessage(`${currentFiles.length} images saved without EXIF data.`, {
           type: 'info',
