@@ -103,9 +103,14 @@ export default function init() {
 
           if (description) {
             const row = document.createElement('tr');
+            row.className = 'block md:table-row';
             row.innerHTML = `
-              <td class="font-mono text-xs font-bold">${key}</td>
-              <td class="text-xs break-all">${description}</td>
+              <td class="block md:table-cell font-mono text-xs font-bold py-2 md:py-0">
+                <div class="md:px-2">${key}</div>
+              </td>
+              <td class="block md:table-cell text-xs max-w-dvw md:max-w-80 wrap-break-word py-2 md:py-0">
+                <div class="md:px-2">${description}</div>
+              </td>
             `;
             exifTableBody.appendChild(row);
             foundAny = true;
