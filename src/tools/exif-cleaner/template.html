@@ -28,7 +28,11 @@
         <div class="flex flex-col gap-4 min-h-60 ">
           <div class="flex justify-center items-start">
             <img id="preview-img" class="max-w-full h-auto rounded-lg shadow-sm" src="" alt="Selected image preview">
+            <video id="preview-video" class="hidden max-w-full h-auto rounded-lg shadow-sm" autoplay loop muted playsinline></video>
           </div>
+          <button id="motion-image-button" class="hidden btn btn-sm btn-secondary w-full">
+            Play Motion Photo Video
+          </button>
           <div id="gps-container" class="hidden">
             <a id="gps-link" href="#" target="_blank" class="btn btn-sm btn-secondary w-full">
               <i data-lucide="map-pin" class="w-4 h-4 mr-2"></i>

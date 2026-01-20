@@ -16,6 +16,7 @@ import {
 export default function init() {
   const resultContainer = document.getElementById('result-container');
   const previewImg = document.getElementById('preview-img') as HTMLImageElement;
+  const previewVideo = document.getElementById('preview-video') as HTMLVideoElement;
   const exifTableBody = document.getElementById('exif-data');
   const downloadBtn = document.getElementById('download-clean') as HTMLButtonElement;
   const downloadSelectedBtn = document.getElementById('download-selected') as HTMLButtonElement;
@@ -23,6 +24,7 @@ export default function init() {
   const resultTitle = document.getElementById('result-title');
   const downloadText = document.getElementById('download-text');
   const gpsContainer = document.getElementById('gps-container');
+  const motionImageButton = document.getElementById('motion-image-button');
   const gpsLink = document.getElementById('gps-link') as HTMLAnchorElement;
 
   let currentFiles: File[] = [];
@@ -79,6 +81,7 @@ export default function init() {
     const buffer: ArrayBuffer = await file.arrayBuffer();
     const blob = new Blob([buffer], { type: file.type || 'image/jpeg' });
     const url = URL.createObjectURL(blob);
+    previewImg.classList.remove('hidden');
     previewImg.src = url;
     previewImg.alt = file.name;
     previewImg.onload = () => {
@@ -163,6 +166,34 @@ export default function init() {
           }
         } else {
           gpsContainer?.classList.add('hidden');
+        }
+
+        if (motionImageButton) {
+          if (tags.MotionPhoto) {
+            motionImageButton.classList.remove('hidden');
+            motionImageButton.onclick = async () => {
+              if (previewVideo.classList.contains('hidden')) {
+                const videoUrl = await extractVideo(buffer);
+                if (videoUrl) {
+                  previewImg.classList.add('hidden');
+                  previewVideo.classList.remove('hidden');
+                  previewVideo.src = videoUrl;
+                  motionImageButton.textContent = 'Stop Motion Photo Video';
+                }
+              } else {
+                previewVideo.classList.add('hidden');
+                previewImg.classList.remove('hidden');
+                previewVideo.src = '';
+                motionImageButton.textContent = 'Play Motion Photo Video';
+              }
+            };
+          } else {
+            motionImageButton.textContent = 'Play Motion Photo Video';
+            previewImg.classList.remove('hidden');
+            previewVideo.classList.add('hidden');
+            motionImageButton.classList.add('hidden');
+            motionImageButton.onclick = null;
+          }
         }
       }
     } catch (error) {
@@ -324,4 +355,42 @@ export default function init() {
       if (downloadText && originalText) downloadText.textContent = originalText;
     }
   });
+}
+
+function getVideoOffsetFromXMP(buffer: ArrayBuffer) {
+  const textDecoder = new TextDecoder();
+  const fullText = textDecoder.decode(buffer);
+
+  const match = fullText.match(/GCamera:MotionPhotoDataLength="(\d+)"/);
+
+  if (match && match[1]) {
+    const videoLength = parseInt(match[1]);
+    const totalLength = buffer.byteLength;
+    return totalLength - videoLength;
+  }
+  return null;
+}
+
+async function extractVideo(buffer: ArrayBuffer) {
+  const uint8Array = new Uint8Array(buffer);
+
+  let startOffset = getVideoOffsetFromXMP(buffer);
+
+  if (!startOffset) {
+    const marker = [0x66, 0x74, 0x79, 0x70]; // "ftyp"
+    for (let i = uint8Array.length - 10; i > 0; i--) {
+      if (uint8Array[i] === marker[0] && uint8Array[i + 1] === marker[1]) {
+        if (uint8Array[i + 2] === marker[2] && uint8Array[i + 3] === marker[3]) {
+          startOffset = i - 4;
+          break;
+        }
+      }
+    }
+  }
+
+  if (startOffset) {
+    const videoBlob = new Blob([uint8Array.slice(startOffset)], { type: 'video/mp4' });
+    return URL.createObjectURL(videoBlob);
+  }
+  return null;
 }
