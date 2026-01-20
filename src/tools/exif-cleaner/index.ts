@@ -7,7 +7,6 @@ import {
 } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 import {
-  gpsFormatParsedCoordinate,
   gpsParseCoordinateFromExifTags,
   gpsGenerateGoogleMapsLink,
   isImageFile,
@@ -33,6 +32,15 @@ export default function init() {
     data: await file.arrayBuffer(),
     name: file.name,
   });
+
+  const stringifyTagValue = (v: unknown): string | undefined =>
+    v == null
+      ? undefined
+      : Array.isArray(v)
+        ? v.join(', ')
+        : typeof v === 'object'
+          ? JSON.stringify(v)
+          : String(v);
 
   const updatePreview = async (index: number) => {
     if (index < 0 || index >= currentFiles.length) return;
@@ -68,39 +76,35 @@ export default function init() {
       return;
     }
 
-    // Show preview for images
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      previewImg.src = e.target?.result as string;
+    const buffer: ArrayBuffer = await file.arrayBuffer();
+    const blob = new Blob([buffer], { type: file.type || 'image/jpeg' });
+    const url = URL.createObjectURL(blob);
+    previewImg.src = url;
+    previewImg.alt = file.name;
+    previewImg.onload = () => {
+      URL.revokeObjectURL(url);
+      previewImg.onload = null;
     };
-    reader.readAsDataURL(file);
 
     // Read EXIF
     try {
-      const tags = await ExifReader.load(file);
+      const exifOptions = {
+        excludeTags: ['MakerNote'],
+        async: true as const,
+        expanded: false as const,
+      };
+      // @ts-ignore
+      const tags = await ExifReader.load(buffer, exifOptions);
+      delete tags['HdrPlusMakernote'];
+      delete tags['MakerNote'];
+
       if (exifTableBody) {
         exifTableBody.innerHTML = '';
 
         let foundAny = false;
         const sortedEntries = Object.entries(tags).sort(([a], [b]) => a.localeCompare(b));
         for (const [key, tag] of sortedEntries) {
-          // Build a display description; for GPS coords we show the parsed decimal value too
-          let description = tag.description?.toString();
-
-          if (key === 'GPSLatitude' || key === 'GPSLongitude') {
-            const parsed = gpsFormatParsedCoordinate(
-              tags[key as 'GPSLatitude' | 'GPSLongitude'],
-              tags[key === 'GPSLatitude' ? 'GPSLatitudeRef' : 'GPSLongitudeRef'],
-              key === 'GPSLatitude'
-            );
-            if (parsed) {
-              description = parsed + (description ? ` — ${description}` : '');
-            } else if (!description && tags[key]?.value) {
-              // fallback to stringify the value array/object
-              description = String(tags[key].value ?? tags[key]);
-            }
-          }
-
+          const description = tag.description ?? stringifyTagValue(tag.value);
           if (description) {
             const row = document.createElement('tr');
             row.className = 'block md:table-row';
@@ -237,7 +241,11 @@ export default function init() {
       if (!isImageFile(file)) {
         // Not an image — just write out the original file
         const buf = await passthroughFile(file);
-        await downloadFile(buf.data as ArrayBuffer, buf.name, file.type || 'application/octet-stream');
+        await downloadFile(
+          buf.data as ArrayBuffer,
+          buf.name,
+          file.type || 'application/octet-stream'
+        );
         showMessage(`Original file ${file.name} downloaded.`, { type: 'info', timeoutMs: 5000 });
       } else {
         const result = await cleanImage(file);
@@ -268,7 +276,11 @@ export default function init() {
         if (!isImageFile(file)) {
           // Not an image — write out original
           const buf = await passthroughFile(file);
-          await downloadFile(buf.data as ArrayBuffer, buf.name, file.type || 'application/octet-stream');
+          await downloadFile(
+            buf.data as ArrayBuffer,
+            buf.name,
+            file.type || 'application/octet-stream'
+          );
           showMessage('File downloaded.', { type: 'info', timeoutMs: 5000 });
         } else {
           const result = await cleanImage(file);
