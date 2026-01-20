@@ -89,7 +89,6 @@ export default function init() {
     // Read EXIF
     try {
       const exifOptions = {
-        excludeTags: ['MakerNote'],
         async: true as const,
         expanded: false as const,
       };
@@ -109,7 +108,7 @@ export default function init() {
             const row = document.createElement('tr');
             row.className = 'block md:table-row';
             row.innerHTML = `
-              <td class="block md:table-cell font-mono text-xs font-bold py-2 md:py-0">
+              <td class="block md:table-cell align-top font-mono text-xs font-bold py-2 md:py-0">
                 <div class="md:px-2">${key}</div>
               </td>
               <td class="block md:table-cell text-xs max-w-dvw md:max-w-80 wrap-break-word py-2 md:py-0">
@@ -119,6 +118,25 @@ export default function init() {
             exifTableBody.appendChild(row);
             foundAny = true;
           }
+        }
+
+        const thumbnail = tags.Thumbnail;
+        if (thumbnail) {
+          const thumbRow = document.createElement('tr');
+          thumbRow.className = 'block md:table-row';
+          const thumbDataUrl = `data:image/jpg;base64,${thumbnail.base64}`;
+          thumbRow.innerHTML = `
+            <td class="block md:table-cell align-top font-mono text-xs font-bold py-2 md:py-0">
+              <div class="md:px-2">Thumbnail</div>
+            </td>
+            <td class="block md:table-cell text-xs max-w-dvw md:max-w-80 wrap-break-word py-2 md:py-0">
+              <div class="md:px-2">
+                <img src="${thumbDataUrl}" alt="EXIF Thumbnail" class="max-h-24 border mt-1"/>
+              </div>
+            </td>
+          `;
+          exifTableBody.appendChild(thumbRow);
+          foundAny = true;
         }
 
         if (!foundAny) {
