@@ -1,6 +1,6 @@
 import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
-import mupdf, { ColorSpace, Image, type Matrix } from 'mupdf';
+import mupdf, { Image, type Matrix, type Rect } from 'mupdf';
 
 let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number }> = [];
 
@@ -52,6 +52,18 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
     const doc = mupdf.Document.openDocument(new Uint8Array(fileBuffer));
     const pageCount = doc.countPages();
 
+    const addImage = (image: Image, imageCounter: number, pageIndex: number) => {
+      const pixmap = image.toPixmap();
+      const pngBytes = pixmap.asPNG();
+      images.push({
+        name: `${fileName.replace(/\.pdf$/i, '')}_page-${pageIndex + 1}_img-${imageCounter}.png`,
+        data: pngBytes,
+        width: pixmap.getWidth(),
+        height: pixmap.getHeight(),
+      });
+    };
+
+
     for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
       showProgress(`Scanning ${fileName} - Page ${pageIndex + 1} of ${pageCount} for embedded images...`);
       await yieldToUI();
@@ -60,31 +72,13 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
         const page = doc.loadPage(pageIndex);
         let imageCounter = 0;
 
-        const dlist = page.toDisplayList(true);
-        const addImage = (image: Image) => {
-          imageCounter++;
-          const pixmap = image.toPixmap();
-          const pngBytes = pixmap.asPNG();
-          images.push({
-            name: `${fileName.replace(/\.pdf$/i, '')}_page${pageIndex + 1}_img${imageCounter}_op.png`,
-            data: pngBytes,
-            width: pixmap.getWidth(),
-            height: pixmap.getHeight(),
-          });
-        };
-        const device = new mupdf.Device({
-          // Called for images drawn directly
-          fillImage: (image: Image, _ctm: Matrix, _alpha: number) => {
-            addImage(image);
-          },
-          // Some PDFs draw image masks
-          fillImageMask: (image: Image, _ctm: Matrix, _colorspace: ColorSpace, _color: number[], _alpha: number) => {
-            addImage(image);
+        const structure = page.toStructuredText("preserve-images");
+        structure.walk({
+          onImageBlock: (_bbox: Rect, _transform: Matrix, image: Image) => {
+            addImage(image, imageCounter++, pageIndex)
           }
         });
 
-        dlist.run(device, mupdf.Matrix.identity);
-        device.close();
       } catch (err) {
         console.warn(`[extract-images] failed for page ${pageIndex + 1}:`, err);
       }
