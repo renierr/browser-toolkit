@@ -125,19 +125,8 @@ export default function init() {
       originalFileName = files[0].name;
       originalPdfBytes = await files[0].arrayBuffer();
 
-      // Open document with MuPDF
       const srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes));
-      // normalize countPages which may be a number or a function per typings
-      let pageCount: number;
-      if (typeof (srcDoc as any).countPages === 'function') {
-        pageCount = (srcDoc as any).countPages();
-      } else {
-        pageCount = Number((srcDoc as any).countPages ?? 0);
-      }
-
-      // Revoke previous thumbnails if any
-      revokeThumbnails(pages);
-
+      const pageCount = srcDoc.countPages();
       pages = [];
       history = [];
 
@@ -146,17 +135,11 @@ export default function init() {
         await yieldToUI();
 
         const page = srcDoc.loadPage(i);
-        // Use a modest scale for thumbnail generation (similar visual size as before)
         const scale = 0.8;
-        const matrix = mupdf.Matrix.scale(scale, scale) as any;
-        // Render to pixmap (DeviceRGB) WITHOUT alpha - JPEG doesn't support alpha channels
-        const pixmap = (page as any).toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false) as any;
-        // Get JPEG bytes (quality 80) - ensure we call the available signature
-        const jpegBytes = typeof (pixmap as any).asJPEG === 'function'
-          ? (pixmap as any).asJPEG(80)
-          : (pixmap as any).asJPEG(80, false);
-
-        const blob = new Blob([jpegBytes], { type: 'image/jpeg' });
+        const matrix = mupdf.Matrix.scale(scale, scale);
+        const pixmap = page.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false);
+        const jpegBytes = pixmap.asJPEG(80);
+        const blob = new Blob([jpegBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
         const url = URL.createObjectURL(blob);
 
         pages.push({
@@ -240,7 +223,7 @@ export default function init() {
       const outDoc = new mupdf.PDFDocument();
 
       // Ensure we have a PDFDocument instance for grafting pages
-      const srcPdf = (srcDoc as any).asPDF ? (srcDoc as any).asPDF() : null;
+      const srcPdf = srcDoc.asPDF();
       if (!srcPdf) {
         throw new Error('Source document is not a PDF or could not be converted to PDF');
       }
@@ -248,21 +231,13 @@ export default function init() {
       for (let i = 0; i < pagesToDownload.length; i++) {
         const pageItem = pagesToDownload[i];
         showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`);
-        // append at end
-        let insertAt: number = 0;
-        if (typeof (outDoc as any).countPages === 'function') {
-          insertAt = (outDoc as any).countPages();
-        } else {
-          insertAt = Number((outDoc as any).countPages ?? 0);
-        }
+        let insertAt: number = outDoc.countPages();
         outDoc.graftPage(insertAt as number, srcPdf, pageItem.originalIndex);
         await yieldToUI();
       }
 
       const buf = outDoc.saveToBuffer(); // mupdf.Buffer
-      // Convert to Uint8Array (MuPDF Buffer exposes asUint8Array)
-      const uint8 = (buf as any).asUint8Array ? (buf as any).asUint8Array() : new Uint8Array(buf as any);
-      return uint8;
+      return buf.asUint8Array();
     } catch (err) {
       console.error(err);
       showMessage('Failed to generate PDF.', { type: 'alert' });
@@ -303,5 +278,7 @@ export default function init() {
   return () => {
     sortable.destroy();
     revokeThumbnails(pages);
+    pages = [];
+    history = [];
   };
 }
