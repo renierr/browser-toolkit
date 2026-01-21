@@ -3,6 +3,8 @@ import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import wasm from 'vite-plugin-wasm';
+import topLevelAwait from 'vite-plugin-top-level-await';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -10,6 +12,8 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   base: './',
   plugins: [
+    wasm(),
+    topLevelAwait(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -67,6 +71,9 @@ export default defineConfig({
       },
     },
     chunkSizeWarningLimit: 1000,
+  },
+  optimizeDeps: {
+    exclude: ['mupdf']
   },
   assetsInclude: ['**/*.wasm'],
 });

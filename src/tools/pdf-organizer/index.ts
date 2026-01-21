@@ -1,13 +1,8 @@
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
-import { PDFDocument } from '@cantoo/pdf-lib';
+import mupdf from 'mupdf';
 import Sortable from 'sortablejs';
 import router from '../../js/router.ts';
-
-// Dynamic import for pdfjs to render thumbnails
-const pdfjsLib = await import('pdfjs-dist');
-const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
 
 interface PageItem {
   id: string;
@@ -43,6 +38,14 @@ export default function init() {
   const pushHistory = () => {
     history.push(pages.map((p) => ({ ...p })));
     if (history.length > 20) history.shift();
+  };
+
+  const revokeThumbnails = (list: PageItem[]) => {
+    for (const p of list) {
+      try {
+        if (p.thumbnailUrl && p.thumbnailUrl.startsWith('blob:')) URL.revokeObjectURL(p.thumbnailUrl);
+      } catch {}
+    }
   };
 
   const updateUI = () => {
@@ -121,28 +124,45 @@ export default function init() {
     try {
       originalFileName = files[0].name;
       originalPdfBytes = await files[0].arrayBuffer();
-      // Use a copy for pdfjsLib to prevent detaching the original buffer
-      const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(originalPdfBytes.slice(0)) });
-      const pdf = await loadingTask.promise;
+
+      // Open document with MuPDF
+      const srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes));
+      // normalize countPages which may be a number or a function per typings
+      let pageCount: number;
+      if (typeof (srcDoc as any).countPages === 'function') {
+        pageCount = (srcDoc as any).countPages();
+      } else {
+        pageCount = Number((srcDoc as any).countPages ?? 0);
+      }
+
+      // Revoke previous thumbnails if any
+      revokeThumbnails(pages);
 
       pages = [];
       history = [];
-      for (let i = 1; i <= pdf.numPages; i++) {
-        showProgress(`Loading page ${i} of ${pdf.numPages}...`);
-        await yieldToUI();
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 0.8 });
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d')!;
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
 
-        await page.render({ canvasContext: context, viewport, canvas }).promise;
+      for (let i = 0; i < pageCount; i++) {
+        showProgress(`Loading page ${i + 1} of ${pageCount}...`);
+        await yieldToUI();
+
+        const page = srcDoc.loadPage(i);
+        // Use a modest scale for thumbnail generation (similar visual size as before)
+        const scale = 0.8;
+        const matrix = mupdf.Matrix.scale(scale, scale) as any;
+        // Render to pixmap (DeviceRGB) WITHOUT alpha - JPEG doesn't support alpha channels
+        const pixmap = (page as any).toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false) as any;
+        // Get JPEG bytes (quality 80) - ensure we call the available signature
+        const jpegBytes = typeof (pixmap as any).asJPEG === 'function'
+          ? (pixmap as any).asJPEG(80)
+          : (pixmap as any).asJPEG(80, false);
+
+        const blob = new Blob([jpegBytes], { type: 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
 
         pages.push({
           id: generateId(),
-          originalIndex: i - 1,
-          thumbnailUrl: canvas.toDataURL('image/jpeg', 0.8),
+          originalIndex: i,
+          thumbnailUrl: url,
           selected: false,
         });
       }
@@ -150,7 +170,7 @@ export default function init() {
       dropzone.classList.add('hidden');
       actions.classList.remove('hidden');
       updateUI();
-      showMessage(`Loaded ${pdf.numPages} pages.`, { timeoutMs: 3000 });
+      showMessage(`Loaded ${pages.length} pages.`, { timeoutMs: 3000 });
     } catch (err) {
       console.error(err);
       showMessage('Failed to load PDF.', { type: 'alert' });
@@ -188,6 +208,7 @@ export default function init() {
 
   startOverBtn.addEventListener('click', () => {
     if (confirm('Are you sure you want to start over? All changes will be lost.')) {
+      revokeThumbnails(pages);
       pages = [];
       history = [];
       originalPdfBytes = null;
@@ -215,18 +236,33 @@ export default function init() {
     showProgress('Generating PDF...');
 
     try {
-      const srcDoc = await PDFDocument.load(originalPdfBytes);
-      const outDoc = await PDFDocument.create();
+      const srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes));
+      const outDoc = new mupdf.PDFDocument();
+
+      // Ensure we have a PDFDocument instance for grafting pages
+      const srcPdf = (srcDoc as any).asPDF ? (srcDoc as any).asPDF() : null;
+      if (!srcPdf) {
+        throw new Error('Source document is not a PDF or could not be converted to PDF');
+      }
 
       for (let i = 0; i < pagesToDownload.length; i++) {
         const pageItem = pagesToDownload[i];
         showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`);
-        const [copiedPage] = await outDoc.copyPages(srcDoc, [pageItem.originalIndex]);
-        outDoc.addPage(copiedPage);
+        // append at end
+        let insertAt: number = 0;
+        if (typeof (outDoc as any).countPages === 'function') {
+          insertAt = (outDoc as any).countPages();
+        } else {
+          insertAt = Number((outDoc as any).countPages ?? 0);
+        }
+        outDoc.graftPage(insertAt as number, srcPdf, pageItem.originalIndex);
         await yieldToUI();
       }
 
-      return await outDoc.save();
+      const buf = outDoc.saveToBuffer(); // mupdf.Buffer
+      // Convert to Uint8Array (MuPDF Buffer exposes asUint8Array)
+      const uint8 = (buf as any).asUint8Array ? (buf as any).asUint8Array() : new Uint8Array(buf as any);
+      return uint8;
     } catch (err) {
       console.error(err);
       showMessage('Failed to generate PDF.', { type: 'alert' });
@@ -266,5 +302,6 @@ export default function init() {
 
   return () => {
     sortable.destroy();
+    revokeThumbnails(pages);
   };
 }
