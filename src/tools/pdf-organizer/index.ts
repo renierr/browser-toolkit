@@ -225,14 +225,16 @@ export default function init() {
       // Ensure we have a PDFDocument instance for grafting pages
       const srcPdf = srcDoc.asPDF();
       if (!srcPdf) {
-        throw new Error('Source document is not a PDF or could not be converted to PDF');
+        showMessage('Source document is not a PDF or could not be converted to PDF', { type: 'alert' });
+        return null;
       }
 
+      const graftMap = outDoc.newGraftMap();
       for (let i = 0; i < pagesToDownload.length; i++) {
         const pageItem = pagesToDownload[i];
         showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`);
         let insertAt: number = outDoc.countPages();
-        outDoc.graftPage(insertAt as number, srcPdf, pageItem.originalIndex);
+        graftMap.graftPage(insertAt, srcPdf, pageItem.originalIndex);
         await yieldToUI();
       }
 
