@@ -146,7 +146,10 @@ function renderImages() {
   extractedImages.forEach((img, index) => {
     const url = createImageURL(img.data);
     const wrapper = document.createElement('div');
-    wrapper.className = 'group relative aspect-square bg-base-200 rounded-lg overflow-hidden border border-base-300';
+    wrapper.className = 'group relative flex flex-col bg-base-200 rounded-lg overflow-hidden border border-base-300';
+
+    const imageContainer = document.createElement('div');
+    imageContainer.className = 'w-full aspect-square relative bg-base-200 flex items-center justify-center';
 
     const thumb = document.createElement('img');
     thumb.src = url;
@@ -154,28 +157,26 @@ function renderImages() {
     thumb.dataset.url = url;
     thumb.className = 'w-full h-full object-contain transition-transform group-hover:scale-105';
 
-    // Invisible button for preview that covers the image
     const previewBtn = document.createElement('button');
     previewBtn.type = 'button';
-    previewBtn.className = 'absolute inset-0 w-full h-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset z-10';
+    previewBtn.className = 'absolute inset-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset z-10';
     previewBtn.setAttribute('aria-label', `Preview image ${img.name}`);
     previewBtn.onclick = () => openLightbox(url, img.name);
 
-    const overlay = document.createElement('div');
-    overlay.className = 'absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity flex items-center justify-center gap-2 p-2 z-20 pointer-events-none';
-    overlay.classList.add('max-lg:opacity-100', 'max-lg:bg-transparent', 'max-lg:items-end', 'max-lg:justify-end');
+    const actionBar = document.createElement('div');
+    actionBar.className = 'w-full flex items-center justify-center gap-2 p-2 bg-base-100/60';
 
     const downloadSingle = document.createElement('a');
     downloadSingle.href = url;
     downloadSingle.download = img.name;
-    downloadSingle.className = 'btn btn-circle btn-sm btn-primary shadow-lg pointer-events-auto';
+    downloadSingle.className = 'btn btn-primary btn-xs shadow pointer-events-auto flex items-center gap-1';
     downloadSingle.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i>';
     downloadSingle.setAttribute('aria-label', 'Download image');
     downloadSingle.onclick = (e) => e.stopPropagation();
 
     const removeBtn = document.createElement('button');
     removeBtn.type = 'button';
-    removeBtn.className = 'btn btn-circle btn-sm btn-error shadow-lg pointer-events-auto';
+    removeBtn.className = 'btn btn-error btn-xs shadow pointer-events-auto flex items-center gap-1';
     removeBtn.innerHTML = '<i data-lucide="trash-2" class="w-4 h-4"></i>';
     removeBtn.setAttribute('aria-label', 'Remove image');
     removeBtn.onclick = (e) => {
@@ -184,11 +185,13 @@ function renderImages() {
       renderImages();
     };
 
-    overlay.appendChild(downloadSingle);
-    overlay.appendChild(removeBtn);
-    wrapper.appendChild(thumb);
-    wrapper.appendChild(previewBtn);
-    wrapper.appendChild(overlay);
+    actionBar.appendChild(downloadSingle);
+    actionBar.appendChild(removeBtn);
+
+    imageContainer.appendChild(thumb);
+    imageContainer.appendChild(previewBtn);
+    wrapper.appendChild(imageContainer);
+    wrapper.appendChild(actionBar);
     list.appendChild(wrapper);
   });
 
