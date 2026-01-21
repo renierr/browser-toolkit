@@ -218,16 +218,21 @@ export const isImageFile = (file: File) => {
 export async function hashUint8Array(data: Uint8Array) {
   const view = data;
   const len = view.byteLength;
-  const bufferSourceForFull = view as unknown as ArrayBuffer;
+  const bufferSourceForFull: BufferSource = (view as unknown) as BufferSource;
 
-  // If SubtleCrypto is available
-  const hasSubtle = typeof crypto !== 'undefined' && !!(crypto && (crypto as any).subtle && (crypto as any).subtle.digest);
-  if (hasSubtle) {
-    const hashBuf = await (crypto.subtle.digest('SHA-1', bufferSourceForFull) as Promise<ArrayBuffer>);
-    const hashArray = Array.from(new Uint8Array(hashBuf));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  // If SubtleCrypto is available in this environment, use it
+  const subtleAvailable = typeof globalThis !== 'undefined' && typeof (globalThis as any).crypto?.subtle?.digest === 'function';
+  if (subtleAvailable) {
+    try {
+      const hashBuf = (await (globalThis as any).crypto.subtle.digest('SHA-1', bufferSourceForFull)) as ArrayBuffer;
+      const hashArray = Array.from(new Uint8Array(hashBuf));
+      return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+    } catch (err) {
+      console.warn('crypto.subtle.digest failed, falling back to JS hash', err);
+    }
   }
 
+  // Fallback hashing (FNV-1a variant) for environments without SubtleCrypto
   let h1 = BigInt(0xcbf29ce484222325n);
   const prime = BigInt(0x100000001b3n);
   for (let i = 0; i < len; i++) {
