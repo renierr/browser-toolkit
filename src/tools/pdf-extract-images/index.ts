@@ -1,8 +1,10 @@
 import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
 import mupdf, { Image, type Matrix, type Rect } from 'mupdf';
+import { hashUint8Array } from '../../js/utils.ts';
 
-let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number }> = [];
+let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number; hash: string }> = [];
+const seenHashes = new Set<string>();
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -12,6 +14,7 @@ export default function init() {
 
   document.getElementById('clear-btn')?.addEventListener('click', () => {
     extractedImages = [];
+    seenHashes.clear();
     renderImages();
   });
 
@@ -43,24 +46,33 @@ export default function init() {
 
   return () => {
     extractedImages = [];
+    seenHashes.clear();
   }
 }
 
 async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
-  const images: Array<{ name: string; data: Uint8Array; width: number; height: number }> = [];
+  const images: Array<{ name: string; data: Uint8Array; width: number; height: number; hash: string }> = [];
   try {
     const doc = mupdf.Document.openDocument(new Uint8Array(fileBuffer));
     const pageCount = doc.countPages();
 
+    const imagePromises: Promise<void>[] = [];
+
     const addImage = (image: Image, imageCounter: number, pageIndex: number) => {
-      const pixmap = image.toPixmap();
-      const pngBytes = pixmap.asPNG();
-      images.push({
-        name: `${fileName.replace(/\.pdf$/i, '')}_page-${pageIndex + 1}_img-${imageCounter}.png`,
-        data: pngBytes,
-        width: pixmap.getWidth(),
-        height: pixmap.getHeight(),
-      });
+      imagePromises.push((async () => {
+        const pixmap = image.toPixmap();
+        const pngBytes = pixmap.asPNG();
+        const hash = await hashUint8Array(pngBytes);
+        if (seenHashes.has(hash)) return; // duplicate -> skip
+        seenHashes.add(hash);
+        images.push({
+          name: `${fileName.replace(/\.pdf$/i, '')}_page-${pageIndex + 1}_img-${imageCounter}.png`,
+          data: pngBytes,
+          width: pixmap.getWidth(),
+          height: pixmap.getHeight(),
+          hash,
+        });
+      })());
     };
 
 
@@ -84,6 +96,8 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
       }
     }
 
+    await Promise.all(imagePromises);
+
   } catch (err) {
     console.error('[extract-images] Failed to open document:', err);
   }
@@ -94,6 +108,11 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
 export async function extractImages(files : FileList) {
   showProgress('Reading PDF file(s) ...');
   try {
+    seenHashes.clear();
+    for (const ex of extractedImages) {
+      if ((ex as any).hash) seenHashes.add((ex as any).hash);
+    }
+
     const fileBuffers: ArrayBuffer[] = [];
     const fileNames: string[] = [];
     for (const file of files) {
@@ -181,7 +200,8 @@ function renderImages() {
     removeBtn.setAttribute('aria-label', 'Remove image');
     removeBtn.onclick = (e) => {
       e.stopPropagation();
-      extractedImages.splice(index, 1);
+      const removed = extractedImages.splice(index, 1)[0];
+      if (removed?.hash) seenHashes.delete(removed.hash);
       renderImages();
     };
 

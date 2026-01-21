@@ -214,3 +214,12 @@ export const isImageFile = (file: File) => {
   if (file.type) return file.type.startsWith('image/');
   return /\.(jpe?g|png|gif|webp|tiff?|bmp|heic|heif|svg)$/i.test(file.name);
 };
+
+// utility: compute SHA-1 hex of a Uint8Array
+export async function hashUint8Array(data: Uint8Array) {
+  // Ensure we pass an ArrayBuffer that reflects the exact bytes
+  const buf = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+  const hashBuf = await crypto.subtle.digest('SHA-1', buf as ArrayBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuf));
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+}
