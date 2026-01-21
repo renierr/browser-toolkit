@@ -1,10 +1,6 @@
 import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
-
-// dynamic importing of large pdf libs to reduce chunk size and loading time
-const pdfjsLib = await import('pdfjs-dist');
-const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
+import mupdf, { ColorSpace, Image, type Matrix } from 'mupdf';
 
 let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number }> = [];
 
@@ -52,122 +48,52 @@ export default function init() {
 
 async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
   const images: Array<{ name: string; data: Uint8Array; width: number; height: number }> = [];
-  const loadingTask = pdfjsLib.getDocument({ data: fileBuffer });
-  const pdf = await loadingTask.promise;
+  try {
+    const doc = mupdf.Document.openDocument(new Uint8Array(fileBuffer));
+    const pageCount = doc.countPages();
 
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const ops = await page.getOperatorList();
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+      showProgress(`Scanning ${fileName} - Page ${pageIndex + 1} of ${pageCount} for embedded images...`);
+      await yieldToUI();
 
-    const viewport = page.getViewport({ scale: 1 });
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    await page.render({
-      canvas: canvas,
-      canvasContext: ctx!,
-      viewport,
-    }).promise;
+      try {
+        const page = doc.loadPage(pageIndex);
+        let imageCounter = 0;
 
-    const processedNames = new Set<string>();
-
-    for (let i = 0; i < ops.fnArray.length; i++) {
-      const fn = ops.fnArray[i];
-      const args = ops.argsArray[i];
-
-      if (
-        fn === pdfjsLib.OPS.paintImageXObject ||
-        fn === pdfjsLib.OPS.paintInlineImageXObject ||
-        fn === pdfjsLib.OPS.paintXObject
-      ) {
-        let img: any;
-        let imgName: string;
-
-        if (fn === pdfjsLib.OPS.paintInlineImageXObject) {
-          img = args[0];
-          imgName = `inline_${pageNum}_${i}`;
-        } else {
-          imgName = args[0];
-          if (processedNames.has(imgName)) continue;
-          processedNames.add(imgName);
-
-          try {
-            img = (page as any).objs.get(imgName);
-          } catch (e) {
-            try {
-              img = (page as any).commonObjs.get(imgName);
-            } catch (e2) {
-              continue;
-            }
+        const dlist = page.toDisplayList(true);
+        const addImage = (image: Image) => {
+          imageCounter++;
+          const pixmap = image.toPixmap();
+          const pngBytes = pixmap.asPNG();
+          images.push({
+            name: `${fileName.replace(/\.pdf$/i, '')}_page${pageIndex + 1}_img${imageCounter}_op.png`,
+            data: pngBytes,
+            width: pixmap.getWidth(),
+            height: pixmap.getHeight(),
+          });
+        };
+        const device = new mupdf.Device({
+          // Called for images drawn directly
+          fillImage: (image: Image, _ctm: Matrix, _alpha: number) => {
+            addImage(image);
+          },
+          // Some PDFs draw image masks
+          fillImageMask: (image: Image, _ctm: Matrix, _colorspace: ColorSpace, _color: number[], _alpha: number) => {
+            addImage(image);
           }
-        }
+        });
 
-        if (!img || typeof img.width !== 'number' || typeof img.height !== 'number') {
-          continue;
-        }
-
-        showProgress(`Extracting images from ${fileName} - Page ${pageNum}...`);
-
-        try {
-          if (img.bitmap instanceof ImageBitmap) {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = img.width;
-            tempCanvas.height = img.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCtx?.drawImage(img.bitmap, 0, 0);
-            const blob = await new Promise<Blob | null>((resolve) =>
-              tempCanvas.toBlob(resolve, 'image/png')
-            );
-            if (blob) {
-              images.push({
-                name: `${fileName.replace(/\.pdf$/i, '')}_page${pageNum}_${imgName}.png`,
-                data: new Uint8Array(await blob.arrayBuffer()),
-                width: img.width,
-                height: img.height,
-              });
-            }
-          } else if (img.data) {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = img.width;
-            tempCanvas.height = img.height;
-            const tempCtx = tempCanvas.getContext('2d');
-            if (tempCtx) {
-              const imageData = tempCtx.createImageData(img.width, img.height);
-              const data = img.data instanceof Uint8Array ? img.data : new Uint8Array(img.data.buffer);
-
-              if (data.length === img.width * img.height * 3) {
-                for (let j = 0, k = 0; j < data.length; j += 3, k += 4) {
-                  imageData.data[k] = data[j];
-                  imageData.data[k + 1] = data[j + 1];
-                  imageData.data[k + 2] = data[j + 2];
-                  imageData.data[k + 3] = 255;
-                }
-              } else if (data.length === img.width * img.height * 4) {
-                imageData.data.set(data);
-              } else {
-                continue;
-              }
-
-              tempCtx.putImageData(imageData, 0, 0);
-              const blob = await new Promise<Blob | null>((resolve) =>
-                tempCanvas.toBlob(resolve, 'image/png')
-              );
-              if (blob) {
-                images.push({
-                  name: `${fileName.replace(/\.pdf$/i, '')}_page${pageNum}_${imgName}.png`,
-                  data: new Uint8Array(await blob.arrayBuffer()),
-                  width: img.width,
-                  height: img.height,
-                });
-              }
-            }
-          }
-        } catch (err) {
-          console.error(`[extract-images] Error processing image ${imgName} on page ${pageNum}:`, err);
-        }
-        await yieldToUI();
+        dlist.run(device, mupdf.Matrix.identity);
+        device.close();
+      } catch (err) {
+        console.warn(`[extract-images] failed for page ${pageIndex + 1}:`, err);
       }
     }
+
+  } catch (err) {
+    console.error('[extract-images] Failed to open document:', err);
   }
+
   return images;
 }
 
