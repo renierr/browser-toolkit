@@ -62,7 +62,7 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
       imagePromises.push((async () => {
         const pixmap = image.toPixmap();
         const pngBytes = pixmap.asPNG();
-        const hash = await hashUint8Array(pngBytes, { sampleSize: 16 * 1024 });
+        const hash = await hashUint8Array(pngBytes);
         if (seenHashes.has(hash)) return; // duplicate -> skip
         seenHashes.add(hash);
         images.push({

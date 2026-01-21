@@ -215,47 +215,19 @@ export const isImageFile = (file: File) => {
   return /\.(jpe?g|png|gif|webp|tiff?|bmp|heic|heif|svg)$/i.test(file.name);
 };
 
-export async function hashUint8Array(data: Uint8Array, opts?: { sampleSize?: number; forceFull?: boolean }) {
-  const sampleSize = opts?.sampleSize ?? 64 * 1024; // 64KB
-  const forceFull = opts?.forceFull ?? false;
-
+export async function hashUint8Array(data: Uint8Array) {
   const view = data;
   const len = view.byteLength;
-  // create an exact ArrayBuffer slice covering only the view bytes for SubtleCrypto (avoids SharedArrayBuffer union issue)
-  const fullBuf = view.buffer.slice(view.byteOffset, view.byteOffset + view.byteLength) as ArrayBuffer;
+  const bufferSourceForFull = view as unknown as ArrayBuffer;
 
-  // If SubtleCrypto is available and the size is small or user requested full, hash full buffer
+  // If SubtleCrypto is available
   const hasSubtle = typeof crypto !== 'undefined' && !!(crypto && (crypto as any).subtle && (crypto as any).subtle.digest);
-  if (hasSubtle && (forceFull || len <= sampleSize * 3)) {
-    const hashBuf = await (crypto.subtle.digest('SHA-1', fullBuf) as Promise<ArrayBuffer>);
-    const hashArray = Array.from(new Uint8Array(hashBuf));
-    return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
-  // If large, sample first/middle/last blocks to reduce work and still be robust
   if (hasSubtle) {
-    const s = Math.min(sampleSize, len);
-    const out = new Uint8Array(s * 3 + 8);
-    // start
-    out.set(view.subarray(0, s), 0);
-    // middle
-    const midStart = Math.max(0, Math.floor((len - s) / 2));
-    out.set(view.subarray(midStart, midStart + s), s);
-    // end
-    const endStart = Math.max(0, len - s);
-    out.set(view.subarray(endStart, endStart + s), s * 2);
-    // append 64-bit little-endian length to reduce collisions
-    const dv = new DataView(out.buffer);
-    // write as unsigned 64-bit (split into two 32-bit parts)
-    dv.setUint32(s * 3, len >>> 0, true);
-    dv.setUint32(s * 3 + 4, Math.floor(len / 0x100000000), true);
-
-    const hashBuf = await (crypto.subtle.digest('SHA-1', out.buffer) as Promise<ArrayBuffer>);
+    const hashBuf = await (crypto.subtle.digest('SHA-1', bufferSourceForFull) as Promise<ArrayBuffer>);
     const hashArray = Array.from(new Uint8Array(hashBuf));
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // Fallback: fast non-crypto FNV-1a 64-bit hashed to hex (not cryptographically strong but fast)
   let h1 = BigInt(0xcbf29ce484222325n);
   const prime = BigInt(0x100000001b3n);
   for (let i = 0; i < len; i++) {
