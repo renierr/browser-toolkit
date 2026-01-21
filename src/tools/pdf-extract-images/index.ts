@@ -125,7 +125,7 @@ export async function extractImages(files : FileList) {
       extractedImages = extractedImages.concat(images);
     }
     if (extractedImages.length === 0) {
-      showMessage('No images found in the PDF(s).', { type: 'alert' });
+      showMessage('No images found in the PDF(s).', { type: 'warning', timeoutMs: 10000 });
       return;
     }
     renderImages();
