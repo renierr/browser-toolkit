@@ -2,11 +2,6 @@ import { setupFileDropzone } from '../../js/file-utils.ts';
 import { injectMaximizeToViewerFrame, openPdfInViewerFrame } from '../../js/pdf-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 
-// dynamic importing of large pdf libs to reduce chunk size and loading time
-const pdfjsLib = await import('pdfjs-dist');
-const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
-
 const showPdfViewerFrame = (blobUrl: string) => {
   const pdfViewerContainer = document.getElementById('pdf-viewer-container');
   const iframe = document.getElementById('pdf-viewer-iframe') as HTMLIFrameElement | null;
@@ -32,6 +27,11 @@ const toggleToolCard = (show: boolean) => {
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
+    // dynamic importing of large pdf libs to reduce chunk size and loading time
+    const pdfjsLib = await import('pdfjs-dist');
+    const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
+
     showProgress('Load PDF file...');
     const arrayBuffer = await files[0].arrayBuffer();
 
