@@ -55,8 +55,8 @@ export async function flattenAsImage(pdfBuffer: ArrayBuffer, filename?: string) 
       const pixmap = page.toPixmap(mat, mupdf.ColorSpace.DeviceRGB, false);
       const imgWidth = pixmap.getWidth();
       const imgHeight = pixmap.getHeight();
-
-      const img = await pdfDoc.embedPng(pixmap.asPNG());
+      const imgBuffer = pixmap.asJPEG(95, false);
+      const img = await pdfDoc.embedJpg(imgBuffer);
       const outPage = pdfDoc.addPage([imgWidth, imgHeight]);
       outPage.drawImage(img, {
         x: 0,
