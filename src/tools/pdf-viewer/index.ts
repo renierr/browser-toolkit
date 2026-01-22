@@ -5,12 +5,6 @@ import { isDarkMode } from '../../js/theme.ts';
 import { default as EmbedPDF, ZoomMode, EmbedPdfContainer } from '@embedpdf/snippet';
 import { addFlattenAsImageCommand, getDocManager, injectStyles } from '../../js/embedpdf-utils.ts';
 
-
-// dynamic importing of large pdf libs to reduce chunk size and loading time
-const pdfjsLib = await import('pdfjs-dist');
-const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
-
 const toggleToolCard = (show: boolean) => {
   const toolCardElement = document.getElementById('pdf-edit-tool-card');
   if (!toolCardElement) return;
