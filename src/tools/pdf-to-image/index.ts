@@ -1,10 +1,7 @@
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
+import mupdf from 'mupdf';
 
-// dynamic importing of large pdf libs to reduce chunk size and loading time
-const pdfjsLib = await import('pdfjs-dist');
-const workerModule = await import('pdfjs-dist/build/pdf.worker.mjs?url');
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerModule.default ?? workerModule;
 const { PDFDocument } = await import('@cantoo/pdf-lib');
 
 // noinspection JSUnusedGlobalSymbols
@@ -14,7 +11,9 @@ export default function init() {
     try {
       const arrayBuffer = await files[0].arrayBuffer();
       const name = await flattenAsImage(arrayBuffer, files[0].name);
-      showMessage(`PDF ${files[0].name} converted to ${name} and downloaded.`);
+      if (name) {
+        showMessage(`PDF ${files[0].name} converted to ${name} and downloaded.`);
+      }
     } finally {
       hideProgress();
     }
@@ -26,48 +25,7 @@ export default function init() {
 // ---------------------------------------------------------------
 const CONFIG = {
   renderScale: 2.5, // 2.5 = good quality / speed, 4.166 ≈ 300 DPI
-  chunkSize: 3, // pages rendered in one animation frame
-  maxParallel: 2, // how many pages render at the same time
 };
-
-// ---------------------------------------------------------------
-// Helper: original page size in PDF points
-// ---------------------------------------------------------------
-function originalSize(page: any) {
-  const vp = page.getViewport({ scale: 1.0 });
-  return { width: vp.width, height: vp.height };
-}
-
-function createCanvas(width: number, height: number) {
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d', { alpha: false })!;
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  return { canvas, ctx };
-}
-
-async function renderPage(page: any, scale: number) {
-  const viewport = page.getViewport({ scale });
-  const { canvas, ctx } = createCanvas(viewport.width, viewport.height);
-
-  const renderTask = page.render({
-    canvasContext: ctx,
-    viewport,
-  });
-
-  await renderTask.promise; // ← This MUST resolve before next render
-
-  const blob = await new Promise<Blob>((resolve) =>
-    canvas.toBlob((b) => resolve(b!), 'image/png', 1.0)
-  );
-
-  return {
-    pngBytes: new Uint8Array(await blob.arrayBuffer()),
-    originalSize: originalSize(page),
-  };
-}
 
 // ---------------------------------------------------------------
 // Main flattening routine (browser only)
@@ -80,60 +38,39 @@ export async function flattenAsImage(pdfBuffer: ArrayBuffer, filename?: string) 
     const name = filename?.replace(/\.[^.]+$/, '') + '_flat.pdf' || 'document_flat.pdf';
 
     // ---- 1. Load source PDF ------------------------------------------------
-    const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
-    const total = pdf.numPages;
+    const srcDoc = mupdf.Document.openDocument(pdfBuffer);
+    const total = srcDoc.countPages();
 
-    // ---- 2. Pre-fetch all page objects ------------------------------------
-    const pagePromises = Array.from({ length: total }, (_, i) => pdf.getPage(i + 1));
-    const pages = await Promise.all(pagePromises);
-    showProgress('Pages pre-fetched, flattening as images…');
-    await yieldToUI();
-
-    // ---- 3. Create destination PDF -----------------------------------------
+    // ---- 2. Create destination PDF -----------------------------------------
     const pdfDoc = await PDFDocument.create();
 
-    // ---- 4. Render in chunks (keeps UI responsive) -------------------------
-    const results: Array<{
-      pngBytes: Uint8Array;
-      originalSize: { width: number; height: number };
-    }> = [];
-
-    for (let startIdx = 0; startIdx < total; startIdx += CONFIG.chunkSize) {
-      const endIdx = Math.min(startIdx + CONFIG.chunkSize, total);
-      const chunk = pages.slice(startIdx, endIdx);
-
-      // render up to MAX_PARALLEL pages in parallel
-      const chunkResults = await Promise.all(chunk.map((p) => renderPage(p, CONFIG.renderScale)));
-
-      results.push(...chunkResults);
-
-      // update UI
-      const progress = Math.round(((startIdx + chunk.length) / total) * 100);
-      showProgress(`Flattening… ${progress}% (${startIdx + chunk.length}/${total})`);
-      await yieldToUI();
-    }
-    showProgress('Embedding Images to new PDF');
-    await yieldToUI();
-
-    // ---- 5. Embed images into the new PDF ----------------------------------
-    for (let i = 0; i < results.length; i++) {
-      showProgress(`Embedding flatten Image to PDF… (${i + 1}/${results.length})`);
+    // ---- 3. Render and embed pages as images -----------------------------------------
+    for (let i = 0; i < total; i++) {
+      const progress = Math.round(((i + 1) / total) * 100);
+      showProgress(`Flattening… ${progress}% (${i + 1}/${total})`);
       await yieldToUI();
 
-      const { pngBytes, originalSize } = results[i];
-      const img = await pdfDoc.embedPng(pngBytes);
-      const page = pdfDoc.addPage([originalSize.width, originalSize.height]);
-      page.drawImage(img, {
+      const page = srcDoc.loadPage(i);
+      const mat = mupdf.Matrix.scale(CONFIG.renderScale, CONFIG.renderScale);
+      const pixmap = page.toPixmap(mat, mupdf.ColorSpace.DeviceRGB, false);
+      const imgWidth = pixmap.getWidth();
+      const imgHeight = pixmap.getHeight();
+
+      const img = await pdfDoc.embedPng(pixmap.asPNG());
+      const outPage = pdfDoc.addPage([imgWidth, imgHeight]);
+      outPage.drawImage(img, {
         x: 0,
         y: 0,
-        width: originalSize.width,
-        height: originalSize.height,
+        width: imgWidth,
+        height: imgHeight,
       });
     }
 
-    // ---- 6. Save & download -------------------------------------------------
+    showProgress('Saving PDF…');
+    await yieldToUI();
+
     const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
-    await downloadFile(new Blob([new Uint8Array(pdfBytes)], { type: 'application/pdf' }), name);
+    await downloadFile(pdfBytes, name, 'application/pdf');
     return name;
   } catch (err: any) {
     console.error(err);
