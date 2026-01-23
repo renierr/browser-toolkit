@@ -1,3 +1,32 @@
+
+/**
+ * Parses a PDF date string (e.g., D:20221008012831+00'00') into a readable format.
+ */
+export function formatPdfDate(dateStr: string): string {
+  if (!dateStr.startsWith('D:')) return dateStr;
+
+  // Regex for D:YYYYMMDDHHmmSSOHH'mm'
+  const regex = /^D:(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?([Z+-])?(\d{2})?'?(\d{2})?'?/;
+  const match = dateStr.match(regex);
+
+  if (!match) return dateStr;
+
+  const [, year, month, day, hour, minute, second, offsetSign, offsetHour, offsetMinute] = match;
+
+  let formatted = `${year}-${month}-${day} ${hour}:${minute}`;
+  if (second) formatted += `:${second}`;
+
+  if (offsetSign) {
+    if (offsetSign === 'Z') {
+      formatted += ' UTC';
+    } else {
+      formatted += ` ${offsetSign}${offsetHour || '00'}:${offsetMinute || '00'}`;
+    }
+  }
+
+  return formatted;
+}
+
 export function openPdfInViewerFrame(iframe: HTMLIFrameElement, pdfUrl: string) {
   const start = Date.now();
   const timeoutMs = 10000;

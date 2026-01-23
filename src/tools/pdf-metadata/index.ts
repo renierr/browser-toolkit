@@ -1,6 +1,7 @@
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import mupdf from 'mupdf';
+import { formatPdfDate } from '../../js/pdf-utils.ts';
 
 // standard metadata info
 const standardKeys = [
@@ -52,7 +53,7 @@ export default function init() {
         if (!metadata[label]) {
           try {
             const value = doc.getMetaData(key);
-            if (value) metadata[label] = value;
+            if (value) metadata[label] = formatPdfDate(value);
           } catch (e) {
             console.warn(`Could not read metadata key: ${key}`, e);
           }
@@ -76,7 +77,7 @@ export default function init() {
               if (val) {
                 const label = key.toString();
                 if (!metadata[label]) {
-                  if (valStr) metadata[label] = valStr;
+                  if (valStr) metadata[label] = formatPdfDate(valStr);
                 }
               }
             }
