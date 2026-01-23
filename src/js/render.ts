@@ -15,6 +15,13 @@ const footerFinal = replacePlaceholders(footerHtml, siteContext);
 let currentToolCleanup: (() => void) | undefined;
 
 export function renderLayout(content: string, hideHeader?: boolean, hideFooter?: boolean) {
+  // Cleanup previous tool listeners/effects before replacing DOM
+  try {
+    currentToolCleanup?.();
+  } finally {
+    currentToolCleanup = undefined;
+  }
+
   const app = document.getElementById('app')!;
   const header = hideHeader ? '' : headerFinal;
   const footer = hideFooter ? '' : footerFinal;
@@ -23,13 +30,6 @@ export function renderLayout(content: string, hideHeader?: boolean, hideFooter?:
 }
 
 export function renderTool(tool: Tool | undefined, payload?: any) {
-  // Cleanup previous tool listeners/effects before replacing DOM
-  try {
-    currentToolCleanup?.();
-  } finally {
-    currentToolCleanup = undefined;
-  }
-
   renderLayout(toolPageHtml, tool?.hideHeader, tool?.hideFooter);
 
   const noToolHtml = `
