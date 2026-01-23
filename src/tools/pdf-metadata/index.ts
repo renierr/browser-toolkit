@@ -2,6 +2,19 @@ import { setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import mupdf from 'mupdf';
 
+// standard metadata info
+const standardKeys = [
+  mupdf.Document.META_INFO_TITLE,
+  mupdf.Document.META_INFO_AUTHOR,
+  mupdf.Document.META_INFO_SUBJECT,
+  mupdf.Document.META_INFO_KEYWORDS,
+  mupdf.Document.META_INFO_CREATOR,
+  mupdf.Document.META_INFO_PRODUCER,
+  mupdf.Document.META_INFO_CREATIONDATE,
+  mupdf.Document.META_INFO_MODIFICATIONDATE,
+  mupdf.Document.META_FORMAT,
+];
+
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   const dropzone = document.getElementById('pdf-dropzone');
@@ -31,32 +44,45 @@ export default function init() {
       const metadata: Record<string, string> = {
         'File Name': file.name,
         'File Size': (file.size / 1024).toFixed(2) + ' KB',
-        'Pages': doc.countPages().toString(),
+        Pages: doc.countPages().toString(),
       };
 
-      // Extract standard metadata keys
-      const keys = [
-        'info:Title',
-        'info:Author',
-        'info:Subject',
-        'info:Keywords',
-        'info:Creator',
-        'info:Producer',
-        'info:CreationDate',
-        'info:ModDate'
-      ];
-
-      keys.forEach(key => {
-        try {
-          const value = doc.getMetaData(key);
-          if (value) {
-            const label = key.replace('info:', '');
-            metadata[label] = value;
+      standardKeys.forEach((key) => {
+        const label = key.replace('info:', '');
+        if (!metadata[label]) {
+          try {
+            const value = doc.getMetaData(key);
+            if (value) metadata[label] = value;
+          } catch (e) {
+            console.warn(`Could not read metadata key: ${key}`, e);
           }
-        } catch (e) {
-          console.warn(`Could not read metadata key: ${key}`, e);
         }
       });
+
+      // additional metadata from info dict
+      const pdfDoc = doc.asPDF();
+      if (pdfDoc) {
+        const trailer = pdfDoc.getTrailer();
+        const info = trailer.get('Info');
+        if (info && info.isDictionary()) {
+          // @ts-ignore - MuPDF JS dictionaries use forEach for iteration
+          info.forEach((val: any, key: any) => {
+            if (val) {
+              // remove surrounded () from value
+              let valStr = val.toString();
+              if (valStr.startsWith('(') && valStr.endsWith(')')) {
+                valStr = valStr.slice(1, -1);
+              }
+              if (val) {
+                const label = key.toString();
+                if (!metadata[label]) {
+                  if (valStr) metadata[label] = valStr;
+                }
+              }
+            }
+          });
+        }
+      }
 
       if (tableBody) {
         tableBody.innerHTML = '';
@@ -72,7 +98,7 @@ export default function init() {
 
       dropzone?.classList.add('hidden');
       results?.classList.remove('hidden');
-      showMessage('Metadata extracted successfully.');
+      showMessage('Metadata extracted successfully.', { timeoutMs: 3000 });
     } catch (err) {
       console.error(err);
       showMessage('Failed to read PDF metadata. The file might be encrypted or invalid.', { type: 'alert' });
