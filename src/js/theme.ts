@@ -28,5 +28,8 @@ export function setupThemeToggle() {
   if (stored) {
     themeToggleCheckbox.checked = stored === 'dark';
     setTheme(stored);
+  } else {
+    themeToggleCheckbox.checked = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(themeToggleCheckbox.checked ? 'dark' : 'light');
   }
 }
