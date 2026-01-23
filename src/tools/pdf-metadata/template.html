@@ -14,13 +14,18 @@
       <input type="file" id="pdf-file" class="hidden" accept="application/pdf" />
     </div>
 
-    <div id="metadata-results" class="hidden mt-8 space-y-4">
+    <div id="metadata-results" class="hidden mt-8 space-y-6">
       <div class="flex justify-between items-center">
         <h3 class="text-xl font-semibold">Metadata Results</h3>
         <button id="reset-btn" class="btn btn-ghost btn-sm">
           <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
           Start Over
         </button>
+      </div>
+
+      <div id="thumbnail-container" class="hidden flex flex-col items-center gap-2 p-4 bg-base-200 rounded-xl border border-base-300">
+          <span class="text-xs font-bold uppercase tracking-wider opacity-50">Document Thumbnail</span>
+          <!-- Thumbnail will be inserted here -->
       </div>
 
       <div class="overflow-x-auto">

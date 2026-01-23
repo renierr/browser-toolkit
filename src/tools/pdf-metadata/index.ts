@@ -1,7 +1,7 @@
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import mupdf from 'mupdf';
-import { formatPdfDate } from '../../js/pdf-utils.ts';
+import { formatPdfDate, parseXmpMetadata, flattenXmpMetadata } from '../../js/pdf-utils.ts';
 
 // standard metadata info
 const standardKeys = [
@@ -22,11 +22,17 @@ export default function init() {
   const results = document.getElementById('metadata-results');
   const tableBody = document.getElementById('metadata-table-body');
   const resetBtn = document.getElementById('reset-btn');
+  const thumbnailContainer = document.getElementById('thumbnail-container');
 
   const reset = () => {
     if (dropzone) dropzone.classList.remove('hidden');
     if (results) results.classList.add('hidden');
     if (tableBody) tableBody.innerHTML = '';
+    if (thumbnailContainer) {
+        thumbnailContainer.classList.add('hidden');
+        const images = thumbnailContainer.querySelectorAll('img');
+        images.forEach(img => img.remove());
+    }
     const fileInput = document.getElementById('pdf-file') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
@@ -42,7 +48,7 @@ export default function init() {
       const buffer = await file.arrayBuffer();
       const doc = mupdf.Document.openDocument(buffer);
 
-      const metadata: Record<string, string> = {
+      const metadata: Record<string, any> = {
         'File Name': file.name,
         'File Size': (file.size / 1024).toFixed(2) + ' KB',
         Pages: doc.countPages().toString(),
@@ -60,7 +66,6 @@ export default function init() {
         }
       });
 
-      // additional metadata from info dict and XMP
       const pdfDoc = doc.asPDF();
       if (pdfDoc) {
         const trailer = pdfDoc.getTrailer();
@@ -68,25 +73,22 @@ export default function init() {
         // 1. Info Dictionary
         const info = trailer.get('Info');
         if (info && info.isDictionary()) {
-          // @ts-ignore - MuPDF JS dictionaries use forEach for iteration
+          // @ts-ignore
           info.forEach((val: any, key: any) => {
             if (val) {
-              // remove surrounded () from value
               let valStr = val.toString();
               if (valStr.startsWith('(') && valStr.endsWith(')')) {
                 valStr = valStr.slice(1, -1);
               }
-              if (val) {
-                const label = key.toString();
-                if (!metadata[label]) {
-                  if (valStr) metadata[label] = formatPdfDate(valStr);
-                }
+              const label = key.toString();
+              if (!metadata[label]) {
+                metadata[label] = formatPdfDate(valStr);
               }
             }
           });
         }
 
-        // 2. XMP Metadata (from Root/Catalog)
+        // 2. XMP Metadata
         try {
           const root = trailer.get('Root');
           if (root && root.isDictionary()) {
@@ -97,7 +99,9 @@ export default function init() {
                 const decoder = new TextDecoder('utf-8');
                 const xmpText = decoder.decode(xmpBuffer.asUint8Array());
                 if (xmpText) {
-                  metadata['XMP Metadata'] = `<pre class="text-xs max-h-60 overflow-auto p-2 bg-base-200 rounded mt-2 whitespace-pre-wrap break-all">${xmpText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+                  const parsedXmp = parseXmpMetadata(xmpText);
+                  const flattenedXmp = flattenXmpMetadata(parsedXmp);
+                  Object.assign(metadata, flattenedXmp);
                 }
               }
             }
@@ -110,10 +114,22 @@ export default function init() {
       if (tableBody) {
         tableBody.innerHTML = '';
         Object.entries(metadata).forEach(([key, value]) => {
+          if (!value || value === 'undefined' || value === 'null') return;
+          
+          if (typeof value === 'object' && value.type === 'image' && thumbnailContainer) {
+              thumbnailContainer.classList.remove('hidden');
+              const img = document.createElement('img');
+              img.src = `data:image/${value.format};base64,${value.data}`;
+              img.className = "max-w-[200px] h-auto shadow-lg rounded-lg border-4 border-white bg-white m-2";
+              img.title = key;
+              thumbnailContainer.appendChild(img);
+              return;
+          }
+
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td class="font-medium align-top pt-2">${key}</td>
-            <td class="break-all pt-2">${value}</td>
+            <td class="font-medium align-top pt-2 text-sm text-base-content/70">${key}</td>
+            <td class="break-all pt-2 text-sm">${String(value)}</td>
           `;
           tableBody.appendChild(row);
         });
@@ -124,7 +140,7 @@ export default function init() {
       showMessage('Metadata extracted successfully.', { timeoutMs: 3000 });
     } catch (err) {
       console.error(err);
-      showMessage('Failed to read PDF metadata. The file might be encrypted or invalid.', { type: 'alert' });
+      showMessage('Failed to read PDF metadata.', { type: 'alert' });
     } finally {
       hideProgress();
     }
