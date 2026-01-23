@@ -17,6 +17,8 @@ export default function init() {
   const presetBtns = document.querySelectorAll('.preset-btn');
   const notifPermission = document.getElementById('notif-permission') as HTMLElement;
 
+  const storedDocTitle = document.title;
+
   function saveState() {
     const state = {
       timeLeft,
@@ -185,6 +187,6 @@ export default function init() {
 
   return () => {
     if (timerId) clearInterval(timerId);
-    document.title = 'Vanilla Toolkit';
+    document.title = storedDocTitle;
   };
 }
