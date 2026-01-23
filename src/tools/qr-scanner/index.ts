@@ -100,7 +100,6 @@ export default function init() {
       }
 
       if (result) {
-        // Ensure image is on canvas for capture if it wasn't already (e.g. if detector found it)
         if (canvas && (canvasElement.width !== img.width || canvasElement.height !== img.height)) {
           const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
           canvasElement.width = img.width * scale;
@@ -123,8 +122,8 @@ export default function init() {
         const reader = new FileReader();
         reader.onload = (event) => {
           const img = new Image();
-          img.src = event.target?.result as string;
           scanImage(img);
+          img.src = event.target?.result as string;
         };
         reader.readAsDataURL(blob);
         return true;
@@ -132,6 +131,13 @@ export default function init() {
     }
     return false;
   };
+
+  const drawImageToCanvas = () => {
+    const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+    canvasElement.width = video.videoWidth * scale;
+    canvasElement.height = video.videoHeight * scale;
+    canvas?.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+  }
 
   const tick = async (time: number) => {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
@@ -150,24 +156,22 @@ export default function init() {
           }
         }
 
-        // Always draw to canvas for jsQR or for capturing the image
-        const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
-        canvasElement.width = video.videoWidth * scale;
-        canvasElement.height = video.videoHeight * scale;
-        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-
-        if (!result) {
-          const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-          if (code) {
-            result = { data: code.data, format: 'qr_code' };
-          }
-        }
-
         if (result) {
+          // Found via detector, draw once to capture image
+          drawImageToCanvas();
           setResult(result.data, result.format, canvasElement.toDataURL('image/png'));
           stopCamera();
           return;
+        } else if (!detector) {
+          // Fallback to jsQR only if native detector is not available
+          drawImageToCanvas();
+          const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+          if (code) {
+            setResult(code.data, 'qr_code', canvasElement.toDataURL('image/png'));
+            stopCamera();
+            return;
+          }
         }
       }
     }
