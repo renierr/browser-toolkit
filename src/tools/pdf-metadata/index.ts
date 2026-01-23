@@ -60,10 +60,12 @@ export default function init() {
         }
       });
 
-      // additional metadata from info dict
+      // additional metadata from info dict and XMP
       const pdfDoc = doc.asPDF();
       if (pdfDoc) {
         const trailer = pdfDoc.getTrailer();
+
+        // 1. Info Dictionary
         const info = trailer.get('Info');
         if (info && info.isDictionary()) {
           // @ts-ignore - MuPDF JS dictionaries use forEach for iteration
@@ -83,6 +85,26 @@ export default function init() {
             }
           });
         }
+
+        // 2. XMP Metadata (from Root/Catalog)
+        try {
+          const root = trailer.get('Root');
+          if (root && root.isDictionary()) {
+            const xmp = root.get('Metadata');
+            if (xmp && xmp.isStream()) {
+              const xmpBuffer = xmp.readStream();
+              if (xmpBuffer) {
+                const decoder = new TextDecoder('utf-8');
+                const xmpText = decoder.decode(xmpBuffer.asUint8Array());
+                if (xmpText) {
+                  metadata['XMP Metadata'] = `<pre class="text-xs max-h-60 overflow-auto p-2 bg-base-200 rounded mt-2 whitespace-pre-wrap break-all">${xmpText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('Could not read XMP metadata', e);
+        }
       }
 
       if (tableBody) {
@@ -90,8 +112,8 @@ export default function init() {
         Object.entries(metadata).forEach(([key, value]) => {
           const row = document.createElement('tr');
           row.innerHTML = `
-            <td class="font-medium">${key}</td>
-            <td class="break-all">${value}</td>
+            <td class="font-medium align-top pt-2">${key}</td>
+            <td class="break-all pt-2">${value}</td>
           `;
           tableBody.appendChild(row);
         });
