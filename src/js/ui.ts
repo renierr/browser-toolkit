@@ -151,7 +151,7 @@ export function showMessage(message: string, opts: MessageOptions = { type: 'inf
   badgeLabel.textContent = msgType.toUpperCase();
 
   const text = document.createElement('div');
-  text.className = '';
+  text.className = 'min-w-0 break-all';
   text.textContent = (message ?? '').toString();
 
   const closeBtn = document.createElement('button');
