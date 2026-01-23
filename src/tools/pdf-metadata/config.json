@@ -1,0 +1,7 @@
+{
+  "name": "PDF Metadata Viewer",
+  "description": "View and extract metadata from PDF files (Title, Author, Subject, Keywords, etc.)",
+  "icon": "info",
+  "sectionId": "pdf",
+  "order": 100
+}
