@@ -2,6 +2,6 @@
   "name": "exif-cleaner",
   "version": "1.0.0",
   "dependencies": {
-    "exifreader": "^4.23.3"
+    "exifreader": "^4.36.0"
   }
 }
