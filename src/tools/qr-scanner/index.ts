@@ -17,6 +17,7 @@ export default function init() {
   const formatText = document.getElementById('qr-format');
   const copyBtn = document.getElementById('copy-result');
   const openLinkBtn = document.getElementById('open-link') as HTMLAnchorElement;
+  const capturedImage = document.getElementById('qr-captured-image') as HTMLImageElement;
 
   let stream: MediaStream | null = null;
   let animationFrameId: number | null = null;
@@ -57,9 +58,10 @@ export default function init() {
     startBtn?.classList.remove('hidden');
   };
 
-  const setResult = (data: string, format: string = 'qr_code') => {
+  const setResult = (data: string, format: string = 'qr_code', imageSrc?: string) => {
     if (resultText) resultText.textContent = data;
     if (formatText) formatText.textContent = format.toUpperCase().replace('_', ' ');
+    if (capturedImage && imageSrc) capturedImage.src = imageSrc;
     resultCard?.classList.remove('hidden');
 
     if (data.startsWith('http://') || data.startsWith('https://')) {
@@ -98,7 +100,14 @@ export default function init() {
       }
 
       if (result) {
-        setResult(result.data, result.format);
+        // Ensure image is on canvas for capture if it wasn't already (e.g. if detector found it)
+        if (canvas && (canvasElement.width !== img.width || canvasElement.height !== img.height)) {
+          const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
+          canvasElement.width = img.width * scale;
+          canvasElement.height = img.height * scale;
+          canvas.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
+        }
+        setResult(result.data, result.format, canvasElement.toDataURL('image/png'));
       } else {
         showMessage('No barcode found.', { type: 'alert' });
       }
@@ -114,8 +123,8 @@ export default function init() {
         const reader = new FileReader();
         reader.onload = (event) => {
           const img = new Image();
-          scanImage(img);
           img.src = event.target?.result as string;
+          scanImage(img);
         };
         reader.readAsDataURL(blob);
         return true;
@@ -141,11 +150,13 @@ export default function init() {
           }
         }
 
+        // Always draw to canvas for jsQR or for capturing the image
+        const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
+        canvasElement.width = video.videoWidth * scale;
+        canvasElement.height = video.videoHeight * scale;
+        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+
         if (!result) {
-          const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
-          canvasElement.width = video.videoWidth * scale;
-          canvasElement.height = video.videoHeight * scale;
-          canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
           const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
           if (code) {
@@ -154,7 +165,7 @@ export default function init() {
         }
 
         if (result) {
-          setResult(result.data, result.format);
+          setResult(result.data, result.format, canvasElement.toDataURL('image/png'));
           stopCamera();
           return;
         }

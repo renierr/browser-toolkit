@@ -7,6 +7,7 @@
       <div id="video-container" class="relative overflow-hidden rounded-lg bg-black aspect-square max-w-md mx-auto hidden">
         <video id="qr-video" class="w-full h-full object-cover"></video>
         <div class="absolute inset-0 border-2 border-primary/50 pointer-events-none"></div>
+        <div class="absolute top-0 left-0 w-full h-0.5 bg-primary shadow-[0_0_10px_2px_rgba(var(--p),0.7)] animate-scanline pointer-events-none"></div>
       </div>
 
       <div class="card-actions justify-center gap-2">
@@ -38,10 +39,19 @@
 
     <div id="result-card" class="mt-8 hidden">
       <div class="divider">Result</div>
-      <div class="flex justify-between items-center mb-2">
-        <span id="qr-format" class="badge badge-ghost badge-sm"></span>
+
+      <div class="flex flex-col md:flex-row gap-4 mb-4">
+        <div class="flex-shrink-0 flex justify-center">
+          <img id="qr-captured-image" class="max-h-32 rounded-lg border border-base-300 shadow-sm object-contain bg-base-200" alt="Captured QR Code" />
+        </div>
+        <div class="flex-grow">
+          <div class="flex justify-between items-center mb-2">
+            <span id="qr-format" class="badge badge-ghost badge-sm"></span>
+          </div>
+          <div class="bg-base-200 p-4 rounded break-all font-mono text-sm" id="qr-result"></div>
+        </div>
       </div>
-      <div class="bg-base-200 p-4 rounded break-all font-mono text-sm" id="qr-result"></div>
+
       <div class="card-actions justify-end mt-4">
         <button id="copy-result" class="btn btn-sm btn-secondary">
           <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
@@ -56,3 +66,13 @@
   </div>
   <canvas id="qr-canvas" class="hidden"></canvas>
 </div>
+
+<style>
+  @keyframes scanline {
+    0% { top: 0%; }
+    100% { top: 100%; }
+  }
+  .animate-scanline {
+    animation: scanline 2s ease-in-out infinite;
+  }
+</style>
