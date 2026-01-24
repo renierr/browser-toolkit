@@ -2,19 +2,15 @@ import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
 import mupdf from 'mupdf';
 
-const { PDFDocument } = await import('@cantoo/pdf-lib');
-
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
     const dpi = parseInt((document.getElementById('opt-dpi') as HTMLInputElement)?.value);
-    const format = (document.getElementById('opt-format') as HTMLSelectElement)?.value as 'jpeg' | 'png';
-    const quality = parseInt((document.getElementById('opt-quality') as HTMLInputElement)?.value);
 
     showProgress('Load PDF file...');
     try {
       const arrayBuffer = await files[0].arrayBuffer();
-      const name = await flattenAsImage(arrayBuffer, files[0].name, { dpi, format, quality });
+      const name = await flattenAsImage(arrayBuffer, files[0].name, { dpi });
       if (name) {
         showMessage(`PDF ${files[0].name} converted to ${name} and downloaded.`);
       }
@@ -29,14 +25,10 @@ export default function init() {
 // ---------------------------------------------------------------
 const DEFAULT_OPTIONS = {
   dpi: 180, // 180 DPI ≈ 2.5 scale
-  format: 'jpeg' as 'jpeg' | 'png',
-  quality: 95,
 };
 
 export interface FlattenOptions {
   dpi?: number;
-  format?: 'jpeg' | 'png';
-  quality?: number;
 }
 
 // ---------------------------------------------------------------
@@ -47,7 +39,7 @@ export async function flattenAsImage(
   filename?: string,
   options: FlattenOptions = {}
 ) {
-  const { dpi = DEFAULT_OPTIONS.dpi, format = DEFAULT_OPTIONS.format, quality = DEFAULT_OPTIONS.quality } = options;
+  const { dpi = DEFAULT_OPTIONS.dpi } = options;
   const scale = dpi / 72;
 
   showProgress('Loading PDF for flattening as images…');
@@ -61,44 +53,47 @@ export async function flattenAsImage(
     const total = srcDoc.countPages();
 
     // ---- 2. Create destination PDF -----------------------------------------
-    const pdfDoc = await PDFDocument.create();
+    const buffer = new mupdf.Buffer();
+    const pdfWriter = new mupdf.DocumentWriter(
+      buffer,
+      'PDF',
+      'incremental,garbage,compress,compress-images'
+    );
 
-    // ---- 3. Render and embed pages as images -----------------------------------------
-    for (let i = 0; i < total; i++) {
-      const progress = Math.round(((i + 1) / total) * 100);
-      showProgress(`Flattening… ${progress}% (${i + 1}/${total})`);
-      await yieldToUI();
+    try {
 
-      const page = srcDoc.loadPage(i);
-      const mat = mupdf.Matrix.scale(scale, scale);
-      const pixmap = page.toPixmap(mat, mupdf.ColorSpace.DeviceRGB, false);
-      const imgWidth = pixmap.getWidth();
-      const imgHeight = pixmap.getHeight();
+      // ---- 3. Render and embed pages as images -----------------------------------------
+      for (let i = 0; i < total; i++) {
+        const progress = Math.round(((i + 1) / total) * 100);
+        showProgress(`Flattening… ${progress}% (${i + 1}/${total})`);
+        await yieldToUI();
 
-      let img;
-      if (format === 'png') {
-        const imgBuffer = pixmap.asPNG();
-        img = await pdfDoc.embedPng(imgBuffer);
-      } else {
-        const imgBuffer = pixmap.asJPEG(quality, false);
-        img = await pdfDoc.embedJpg(imgBuffer);
+        const page = srcDoc.loadPage(i);
+        const mat = mupdf.Matrix.scale(scale, scale);
+        const pixmap = page.toPixmap(mat, mupdf.ColorSpace.DeviceRGB, false);
+        const imgWidth = pixmap.getWidth();
+        const imgHeight = pixmap.getHeight();
+
+        const device = pdfWriter.beginPage([0, 0, imgWidth, imgHeight]);
+        const ctm = mupdf.Matrix.scale(imgWidth, imgHeight);
+        device.fillImage(new mupdf.Image(pixmap), ctm, 1);
+        device.close();
+        pdfWriter.endPage();
+
+        device.destroy();
+        pixmap.destroy();
+        page.destroy();
       }
 
-      const outPage = pdfDoc.addPage([imgWidth, imgHeight]);
-      outPage.drawImage(img, {
-        x: 0,
-        y: 0,
-        width: imgWidth,
-        height: imgHeight,
-      });
+      showProgress('Saving PDF…');
+      await yieldToUI();
+      pdfWriter.close();
+      await downloadFile(buffer.asUint8Array(), name, 'application/pdf');
+      return name;
+    } finally {
+      buffer.destroy();
+      pdfWriter.destroy();
     }
-
-    showProgress('Saving PDF…');
-    await yieldToUI();
-
-    const pdfBytes = await pdfDoc.save({ useObjectStreams: true });
-    await downloadFile(pdfBytes, name, 'application/pdf');
-    return name;
   } catch (err: any) {
     console.error(err);
     showMessage(err?.message ?? 'Flattening failed', { type: 'alert' });
