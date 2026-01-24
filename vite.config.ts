@@ -66,7 +66,6 @@ export default defineConfig({
       output: {
         manualChunks(id: string) {
           if (id.includes('pdfjs-dist')) return 'vendor-pdfjs';
-          if (id.includes('@cantoo/pdf-lib') || id.includes('pdf-lib')) return 'vendor-pdf-lib';
         },
       },
     },

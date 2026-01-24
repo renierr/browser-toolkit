@@ -31,7 +31,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@cantoo/pdf-lib": "^2.5.3",
     "@embedpdf/snippet": "^2.3.0",
     "jspdf": "^4.0.0",
     "jszip": "^3.10.1",
