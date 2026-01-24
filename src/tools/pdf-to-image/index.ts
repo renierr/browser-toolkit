@@ -74,8 +74,6 @@ export async function flattenAsImage(
         const page = srcDoc.loadPage(i);
         const mat = mupdf.Matrix.scale(scale, scale);
         const pixmap = page.toPixmap(mat, mupdf.ColorSpace.DeviceRGB, false);
-        const imgWidth = pixmap.getWidth();
-        const imgHeight = pixmap.getHeight();
 
         let imgBuffer: Uint8Array<ArrayBufferLike> | Pixmap;
         switch (format) {
@@ -90,7 +88,7 @@ export async function flattenAsImage(
             break;
         }
 
-        addImageToPDFDocument(pdfDoc, i.toString(), imgBuffer, imgWidth, imgHeight);
+        addImageToPDFDocument(pdfDoc, i.toString(), imgBuffer);
 
         page.destroy();
         pixmap.destroy();

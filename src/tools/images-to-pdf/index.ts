@@ -1,7 +1,8 @@
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui';
-import { PDFDocument } from '@cantoo/pdf-lib';
 import { downloadFile, setupFileDropzone } from '../../js/file-utils.ts';
 import Sortable from 'sortablejs';
+import { addImageToPDFDocument } from '../../js/mupdf-utils.ts';
+import mupdf from 'mupdf';
 
 interface ImageItem {
   id: string;
@@ -105,36 +106,34 @@ export default function init() {
     if (images.length === 0) return;
 
     showProgress('Generating PDF...');
-    try {
-      const pdfDoc = await PDFDocument.create();
+    const pdfDoc = new mupdf.PDFDocument();
 
+    try {
+      let imgCount = 0;
       for (const item of images) {
         showProgress('Processing image ' + item.file.name + '...');
         await yieldToUI();
 
         const imageBytes = await item.file.arrayBuffer();
+        const imgId = 'Img_' + imgCount++;
         let image;
 
         try {
-          if (item.file.type === 'image/jpeg' || item.file.type === 'image/jpg') {
-            image = await pdfDoc.embedJpg(imageBytes);
-          } else if (item.file.type === 'image/png') {
-            image = await pdfDoc.embedPng(imageBytes);
+          if (
+            item.file.type === 'image/jpeg' ||
+            item.file.type === 'image/jpg' ||
+            item.file.type === 'image/png'
+          ) {
+            image = imageBytes;
           } else {
-            image = await fallbackImageHandling(pdfDoc, item);
+            image = await fallbackImageHandling(item);
           }
         } catch (e) {
-          image = await fallbackImageHandling(pdfDoc, item);
+          image = await fallbackImageHandling(item);
         }
 
         if (image) {
-          const page = pdfDoc.addPage([image.width, image.height]);
-          page.drawImage(image, {
-            x: 0,
-            y: 0,
-            width: image.width,
-            height: image.height,
-          });
+          addImageToPDFDocument(pdfDoc, imgId, new Uint8Array(image));
         } else {
           console.warn('Failed to embed image', item.file.name);
           showMessage('Failed to embed image ' + item.file.name, {
@@ -144,14 +143,15 @@ export default function init() {
         }
       }
 
-      const pdfBytes = await pdfDoc.save();
-      await downloadFile(pdfBytes, `images-${Date.now()}.pdf`, 'application/pdf');
+      const pdfBytes = pdfDoc.saveToBuffer('compress,compress-images,garbage');
+      await downloadFile(pdfBytes.asUint8Array(), `images-${Date.now()}.pdf`, 'application/pdf');
 
       showMessage('PDF created successfully!', { type: 'info', timeoutMs: 5000 });
     } catch (error) {
       console.error('Failed to generate PDF', error);
       showMessage('Failed to generate PDF. Please try again.', { type: 'alert' });
     } finally {
+      pdfDoc.destroy();
       hideProgress();
     }
   });
@@ -162,7 +162,7 @@ export default function init() {
   };
 }
 
-const fallbackImageHandling = async (pdfDoc: PDFDocument, item: ImageItem) => {
+const fallbackImageHandling = async (item: ImageItem) => {
   // Fallback for WebP or other formats: use Canvas to convert to JPEG
   const img = await new Promise<HTMLImageElement>((resolve, reject) => {
     const i = new Image();
@@ -179,6 +179,5 @@ const fallbackImageHandling = async (pdfDoc: PDFDocument, item: ImageItem) => {
   ctx.drawImage(img, 0, 0);
   const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
   const response = await fetch(dataUrl);
-  const blob = await response.arrayBuffer();
-  return await pdfDoc.embedJpg(blob);
+  return await response.arrayBuffer();
 };

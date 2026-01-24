@@ -3,13 +3,13 @@ import mupdf, { type PDFDocument, Pixmap } from 'mupdf';
 export function addImageToPDFDocument(
   pdfDoc: PDFDocument,
   id: string,
-  imgBuffer: Uint8Array<ArrayBufferLike> | Pixmap,
-  imgWidth: number,
-  imgHeight: number
+  imgBuffer: Uint8Array<ArrayBufferLike> | Pixmap
 ) {
   const pdfImage = new mupdf.Image(imgBuffer as any);
   const img = pdfDoc.addImage(pdfImage);
   const imgId = 'Img_' + id;
+  const imgWidth = pdfImage.getWidth();
+  const imgHeight = pdfImage.getHeight();
 
   const resources = pdfDoc.addObject({
     XObject: { [imgId]: img },
