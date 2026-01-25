@@ -21,11 +21,12 @@ export default function init() {
     const saveBtn = document.getElementById('save-btn');
     const colorInput = document.getElementById('stroke-color') as HTMLInputElement;
     const widthInput = document.getElementById('stroke-width') as HTMLInputElement;
+    const widthValue = document.getElementById('width-value');
     const signaturesList = document.getElementById('signatures-list');
     const savedContainer = document.getElementById('saved-signatures-container');
     const template = document.getElementById('signature-item-template') as HTMLTemplateElement;
 
-    if (!canvas || !container || !clearBtn || !saveBtn || !signaturesList || !savedContainer || !template || !colorInput || !widthInput) return;
+    if (!canvas || !container || !clearBtn || !saveBtn || !signaturesList || !savedContainer || !template || !colorInput || !widthInput || !widthValue) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -35,6 +36,39 @@ export default function init() {
     let lastY = 0;
     let paths: { x: number; y: number }[][] = [];
     let currentPath: { x: number; y: number }[] = [];
+    let redrawTimeout: number | null = null;
+
+    // Set initial width value
+    widthValue.textContent = widthInput.value;
+
+    function redraw() {
+        ctx!.clearRect(0, 0, canvas.width, canvas.height);
+        ctx!.strokeStyle = colorInput.value;
+        ctx!.lineWidth = parseInt(widthInput.value);
+        ctx!.lineCap = 'round';
+        ctx!.lineJoin = 'round';
+
+        const drawPath = (path: { x: number; y: number }[]) => {
+            if (path.length < 2) return;
+            ctx!.beginPath();
+            ctx!.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx!.lineTo(path[i].x, path[i].y);
+            }
+            ctx!.stroke();
+        };
+
+        paths.forEach(drawPath);
+        if (isDrawing) drawPath(currentPath);
+    }
+
+    function debouncedRedraw() {
+        if (redrawTimeout) clearTimeout(redrawTimeout);
+        redrawTimeout = window.setTimeout(() => {
+            redraw();
+            redrawTimeout = null;
+        }, 50);
+    }
 
     // Set internal canvas resolution to match display size
     const syncCanvasSize = () => {
@@ -44,9 +78,7 @@ export default function init() {
         if (canvas.width !== rect.width || canvas.height !== rect.height) {
             canvas.width = rect.width;
             canvas.height = rect.height;
-            // Note: resizing clears the canvas. 
-            // We could redraw paths here if needed, but for a signature pad it's usually fine.
-            paths = []; 
+            redraw();
         }
     };
 
@@ -85,6 +117,7 @@ export default function init() {
         ctx!.strokeStyle = colorInput.value;
         ctx!.lineWidth = parseInt(widthInput.value);
         ctx!.lineCap = 'round';
+        ctx!.lineJoin = 'round';
         ctx!.stroke();
 
         lastX = pos.x;
@@ -107,6 +140,12 @@ export default function init() {
     canvas.addEventListener('touchstart', startDrawing, { passive: false });
     canvas.addEventListener('touchmove', draw, { passive: false });
     window.addEventListener('touchend', stopDrawing);
+
+    colorInput.addEventListener('input', debouncedRedraw);
+    widthInput.addEventListener('input', () => {
+        widthValue!.textContent = widthInput.value;
+        debouncedRedraw();
+    });
 
     clearBtn.addEventListener('click', () => {
         paths = [];
@@ -137,6 +176,7 @@ export default function init() {
         tempCtx.strokeStyle = color;
         tempCtx.lineWidth = strokeWidth;
         tempCtx.lineCap = 'round';
+        tempCtx.lineJoin = 'round';
 
         let svgPath = '';
         paths.forEach(path => {
@@ -228,6 +268,7 @@ export default function init() {
     renderSignatures();
 
     return () => {
+        if (redrawTimeout) clearTimeout(redrawTimeout);
         resizeObserver.disconnect();
         window.removeEventListener('mouseup', stopDrawing);
         window.removeEventListener('touchend', stopDrawing);
