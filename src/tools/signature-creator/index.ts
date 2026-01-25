@@ -13,6 +13,10 @@ interface SignatureData {
 
 const STORAGE_KEY = 'bt-signatures';
 
+export const savedSignatures = () => {
+  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as SignatureData[];
+}
+
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
     const canvas = document.getElementById('signature-canvas') as HTMLCanvasElement;
@@ -74,7 +78,7 @@ export default function init() {
     const syncCanvasSize = () => {
         const rect = canvas.getBoundingClientRect();
         if (rect.width === 0 || rect.height === 0) return;
-        
+
         if (canvas.width !== rect.width || canvas.height !== rect.height) {
             canvas.width = rect.width;
             canvas.height = rect.height;
@@ -208,7 +212,7 @@ export default function init() {
             strokeWidth: strokeWidth
         };
 
-        const saved: SignatureData[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const saved = savedSignatures();
         saved.unshift(signature);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
