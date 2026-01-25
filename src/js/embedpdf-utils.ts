@@ -1,28 +1,32 @@
-import type {
+import {
   CommandsPlugin,
   DocumentManagerPlugin,
   EmbedPdfContainer,
-  PluginRegistry,
+  type PluginRegistry,
   UIPlugin,
+  ExportPlugin,
+  AnnotationPlugin
 } from '@embedpdf/snippet';
 import { FileImage, House, type IconNode } from 'lucide';
 import { flattenAsImage } from '../tools/pdf-to-image';
 import { showMessage } from './ui.ts';
 
 export const getDocManager = async (registry: PluginRegistry) => {
-  return registry
-    ?.getPlugin<InstanceType<typeof DocumentManagerPlugin>>('document-manager')
-    ?.provides();
+  return registry.getPlugin<DocumentManagerPlugin>(DocumentManagerPlugin.id)?.provides();
 };
 export const getViewerUi = async (registry: PluginRegistry) => {
-  return registry?.getPlugin<InstanceType<typeof UIPlugin>>('ui')?.provides();
+  return registry.getPlugin<UIPlugin>(UIPlugin.id)?.provides();
 };
 export const getViewerCommands = async (registry: PluginRegistry) => {
-  return registry?.getPlugin<InstanceType<typeof CommandsPlugin>>('commands')?.provides();
+  return registry.getPlugin<CommandsPlugin>(CommandsPlugin.id)?.provides();
 };
 export const getExportPlugin = async (registry: PluginRegistry) => {
-  return registry?.getPlugin<any>('export')?.provides();
+  return registry.getPlugin<ExportPlugin>(ExportPlugin.id)?.provides();
 };
+export const getAnnotationPlugin = async (registry: PluginRegistry) => {
+  return registry.getPlugin<AnnotationPlugin>(AnnotationPlugin.id)?.provides();
+};
+
 
 export function registerLucideIcon(
   viewer: EmbedPdfContainer,
