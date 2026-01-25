@@ -2,6 +2,7 @@ interface SignatureData {
     id: string;
     image: string; // Base64 PNG
     svgPath: string;
+    paths: { x: number; y: number }[][];
     timestamp: number;
 }
 
@@ -10,13 +11,14 @@ const STORAGE_KEY = 'bt-signatures';
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
     const canvas = document.getElementById('signature-canvas') as HTMLCanvasElement;
+    const container = document.getElementById('canvas-container');
     const clearBtn = document.getElementById('clear-btn');
     const saveBtn = document.getElementById('save-btn');
     const signaturesList = document.getElementById('signatures-list');
-    const container = document.getElementById('saved-signatures-container');
+    const savedContainer = document.getElementById('saved-signatures-container');
     const template = document.getElementById('signature-item-template') as HTMLTemplateElement;
 
-    if (!canvas || !clearBtn || !saveBtn || !signaturesList || !container || !template) return;
+    if (!canvas || !container || !clearBtn || !saveBtn || !signaturesList || !savedContainer || !template) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -27,22 +29,20 @@ export default function init() {
     let paths: { x: number; y: number }[][] = [];
     let currentPath: { x: number; y: number }[] = [];
 
-    const resizeCanvas = () => {
-        const rect = canvas.parentElement?.getBoundingClientRect();
-        if (rect) {
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            drawAllPaths();
-        }
+    // Set internal canvas resolution to match display size
+    const syncCanvasSize = () => {
+        const rect = canvas.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
     };
 
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+    syncCanvasSize();
 
     function getPos(e: MouseEvent | TouchEvent) {
         const rect = canvas.getBoundingClientRect();
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+
         return {
             x: clientX - rect.left,
             y: clientY - rect.top
@@ -83,23 +83,6 @@ export default function init() {
         }
     }
 
-    function drawAllPaths() {
-        ctx!.clearRect(0, 0, canvas.width, canvas.height);
-        ctx!.strokeStyle = '#000';
-        ctx!.lineWidth = 2;
-        ctx!.lineCap = 'round';
-
-        paths.forEach(path => {
-            if (path.length < 2) return;
-            ctx!.beginPath();
-            ctx!.moveTo(path[0].x, path[0].y);
-            for (let i = 1; i < path.length; i++) {
-                ctx!.lineTo(path[i].x, path[i].y);
-            }
-            ctx!.stroke();
-        });
-    }
-
     canvas.addEventListener('mousedown', startDrawing);
     canvas.addEventListener('mousemove', draw);
     window.addEventListener('mouseup', stopDrawing);
@@ -116,24 +99,49 @@ export default function init() {
     saveBtn.addEventListener('click', () => {
         if (paths.length === 0) return;
 
-        // Create SVG path
+        // Calculate bounds for cropping
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        paths.flat().forEach(p => {
+            minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+        });
+
+        const padding = 5;
+        const width = (maxX - minX) + padding * 2;
+        const height = (maxY - minY) + padding * 2;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext('2d')!;
+        tempCtx.strokeStyle = '#000';
+        tempCtx.lineWidth = 2;
+        tempCtx.lineCap = 'round';
+
         let svgPath = '';
         paths.forEach(path => {
             if (path.length < 2) return;
-            svgPath += `M ${path[0].x} ${path[0].y} `;
+
+            tempCtx.beginPath();
+            tempCtx.moveTo(path[0].x - minX + padding, path[0].y - minY + padding);
+            svgPath += `M ${path[0].x - minX + padding} ${path[0].y - minY + padding} `;
+
             for (let i = 1; i < path.length; i++) {
-                svgPath += `L ${path[i].x} ${path[i].y} `;
+                tempCtx.lineTo(path[i].x - minX + padding, path[i].y - minY + padding);
+                svgPath += `L ${path[i].x - minX + padding} ${path[i].y - minY + padding} `;
             }
+            tempCtx.stroke();
         });
 
         const signature: SignatureData = {
             id: crypto.randomUUID(),
-            image: canvas.toDataURL('image/png'),
+            image: tempCanvas.toDataURL('image/png'),
             svgPath: svgPath.trim(),
+            paths: JSON.parse(JSON.stringify(paths)),
             timestamp: Date.now()
         };
 
-        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+        const saved: SignatureData[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         saved.unshift(signature);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
@@ -142,24 +150,36 @@ export default function init() {
         renderSignatures();
     });
 
+    function createFullSvg(sig: SignatureData): string {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        sig.paths.flat().forEach(p => {
+            minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
+        });
+        const padding = 5;
+        const width = (maxX - minX) + padding * 2;
+        const height = (maxY - minY) + padding * 2;
+
+        return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+  <path d="${sig.svgPath}" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+    }
+
     function renderSignatures() {
         const saved: SignatureData[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
         signaturesList!.innerHTML = '';
 
         if (saved.length > 0) {
-            container!.classList.remove('hidden');
+            savedContainer!.classList.remove('hidden');
         } else {
-            container!.classList.add('hidden');
+            savedContainer!.classList.add('hidden');
         }
 
         saved.forEach(sig => {
             const clone = template.content.cloneNode(true) as HTMLElement;
-
-            const img = clone.querySelector('.signature-preview') as HTMLImageElement;
-            img.src = sig.image;
-
-            const date = clone.querySelector('.signature-date') as HTMLElement;
-            date.textContent = new Date(sig.timestamp).toLocaleString();
+            (clone.querySelector('.signature-preview') as HTMLImageElement).src = sig.image;
+            (clone.querySelector('.signature-date') as HTMLElement).textContent = new Date(sig.timestamp).toLocaleString();
 
             clone.querySelector('.delete-signature-btn')?.addEventListener('click', () => {
                 const updated = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
@@ -169,7 +189,7 @@ export default function init() {
             });
 
             clone.querySelector('.copy-svg-btn')?.addEventListener('click', () => {
-                navigator.clipboard.writeText(sig.svgPath);
+                navigator.clipboard.writeText(createFullSvg(sig));
             });
 
             clone.querySelector('.download-png-btn')?.addEventListener('click', () => {
@@ -181,16 +201,11 @@ export default function init() {
 
             signaturesList!.appendChild(clone);
         });
-
-        // Re-run lucide icons if they are used in the template
-        // (Assuming a global lucide object or similar is available if needed,
-        // but the toolkit usually handles this on render)
     }
 
     renderSignatures();
 
     return () => {
-        window.removeEventListener('resize', resizeCanvas);
         window.removeEventListener('mouseup', stopDrawing);
         window.removeEventListener('touchend', stopDrawing);
     };
