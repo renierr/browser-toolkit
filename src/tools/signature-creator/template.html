@@ -1,0 +1,47 @@
+<div class="flex flex-col gap-6 max-w-4xl mx-auto">
+    <div class="card bg-base-100 shadow-md p-6 border">
+        <h2 class="text-xl font-bold mb-4">Draw your signature</h2>
+        <div class="relative border-2 border-dashed border-base-300 rounded-lg overflow-hidden bg-white" style="height: 300px;">
+            <canvas id="signature-canvas" class="absolute inset-0 w-full h-full cursor-crosshair"></canvas>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-4">
+            <button id="clear-btn" class="btn btn-outline btn-error btn-sm">
+                <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> Clear
+            </button>
+            <div class="flex-grow"></div>
+            <button id="save-btn" class="btn btn-primary btn-sm">
+                <i data-lucide="save" class="w-4 h-4 mr-1"></i> Save Signature
+            </button>
+        </div>
+    </div>
+
+    <div id="saved-signatures-container" class="card bg-base-100 shadow-md p-6 hidden">
+        <h2 class="text-xl font-bold mb-4">Saved Signatures</h2>
+        <div id="signatures-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Signatures will be injected here -->
+        </div>
+    </div>
+</div>
+
+<template id="signature-item-template">
+    <div class="flex flex-col border border-base-300 rounded-lg p-4 bg-base-200/50">
+        <div class="bg-white rounded border border-base-300 mb-2 flex items-center justify-center overflow-hidden" style="height: 100px;">
+            <img class="signature-preview max-h-full max-w-full object-contain" src="" alt="Signature preview">
+        </div>
+        <div class="flex justify-between items-center">
+            <span class="text-xs opacity-70 signature-date"></span>
+            <div class="flex gap-1">
+                <button class="btn btn-ghost btn-xs text-error delete-signature-btn">
+                    <i data-lucide="trash" class="w-3 h-3"></i>
+                </button>
+                <button class="btn btn-ghost btn-xs copy-svg-btn" title="Copy SVG Path">
+                    <i data-lucide="code" class="w-3 h-3"></i>
+                </button>
+                <button class="btn btn-ghost btn-xs download-png-btn" title="Download PNG">
+                    <i data-lucide="download" class="w-3 h-3"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</template>
