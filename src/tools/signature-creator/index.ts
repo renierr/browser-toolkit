@@ -2,7 +2,8 @@ interface SignatureData {
     id: string;
     image: string; // Base64 PNG
     svgPath: string;
-    paths: { x: number; y: number }[][];
+    width: number;
+    height: number;
     timestamp: number;
 }
 
@@ -123,12 +124,16 @@ export default function init() {
             if (path.length < 2) return;
 
             tempCtx.beginPath();
-            tempCtx.moveTo(path[0].x - minX + padding, path[0].y - minY + padding);
-            svgPath += `M ${path[0].x - minX + padding} ${path[0].y - minY + padding} `;
+            const startX = path[0].x - minX + padding;
+            const startY = path[0].y - minY + padding;
+            tempCtx.moveTo(startX, startY);
+            svgPath += `M ${startX} ${startY} `;
 
             for (let i = 1; i < path.length; i++) {
-                tempCtx.lineTo(path[i].x - minX + padding, path[i].y - minY + padding);
-                svgPath += `L ${path[i].x - minX + padding} ${path[i].y - minY + padding} `;
+                const x = path[i].x - minX + padding;
+                const y = path[i].y - minY + padding;
+                tempCtx.lineTo(x, y);
+                svgPath += `L ${x} ${y} `;
             }
             tempCtx.stroke();
         });
@@ -137,7 +142,8 @@ export default function init() {
             id: crypto.randomUUID(),
             image: tempCanvas.toDataURL('image/png'),
             svgPath: svgPath.trim(),
-            paths: JSON.parse(JSON.stringify(paths)),
+            width: width,
+            height: height,
             timestamp: Date.now()
         };
 
@@ -151,17 +157,8 @@ export default function init() {
     });
 
     function createFullSvg(sig: SignatureData): string {
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        sig.paths.flat().forEach(p => {
-            minX = Math.min(minX, p.x); minY = Math.min(minY, p.y);
-            maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
-        });
-        const padding = 5;
-        const width = (maxX - minX) + padding * 2;
-        const height = (maxY - minY) + padding * 2;
-
         return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
+<svg width="${sig.width}" height="${sig.height}" viewBox="0 0 ${sig.width} ${sig.height}" xmlns="http://www.w3.org/2000/svg">
   <path d="${sig.svgPath}" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
     }
