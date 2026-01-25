@@ -179,10 +179,12 @@ export default function init() {
             (clone.querySelector('.signature-date') as HTMLElement).textContent = new Date(sig.timestamp).toLocaleString();
 
             clone.querySelector('.delete-signature-btn')?.addEventListener('click', () => {
-                const updated = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-                    .filter((s: SignatureData) => s.id !== sig.id);
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-                renderSignatures();
+                if (confirm('Are you sure you want to delete this signature?')) {
+                    const updated = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+                        .filter((s: SignatureData) => s.id !== sig.id);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+                    renderSignatures();
+                }
             });
 
             clone.querySelector('.copy-svg-btn')?.addEventListener('click', () => {
