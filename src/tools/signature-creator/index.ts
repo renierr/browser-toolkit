@@ -7,6 +7,8 @@ interface SignatureData {
     width: number;
     height: number;
     timestamp: number;
+    color: string;
+    strokeWidth: number;
 }
 
 const STORAGE_KEY = 'bt-signatures';
@@ -17,11 +19,13 @@ export default function init() {
     const container = document.getElementById('canvas-container');
     const clearBtn = document.getElementById('clear-btn');
     const saveBtn = document.getElementById('save-btn');
+    const colorInput = document.getElementById('stroke-color') as HTMLInputElement;
+    const widthInput = document.getElementById('stroke-width') as HTMLInputElement;
     const signaturesList = document.getElementById('signatures-list');
     const savedContainer = document.getElementById('saved-signatures-container');
     const template = document.getElementById('signature-item-template') as HTMLTemplateElement;
 
-    if (!canvas || !container || !clearBtn || !saveBtn || !signaturesList || !savedContainer || !template) return;
+    if (!canvas || !container || !clearBtn || !saveBtn || !signaturesList || !savedContainer || !template || !colorInput || !widthInput) return;
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -35,10 +39,19 @@ export default function init() {
     // Set internal canvas resolution to match display size
     const syncCanvasSize = () => {
         const rect = canvas.getBoundingClientRect();
-        canvas.width = rect.width;
-        canvas.height = rect.height;
+        if (rect.width === 0 || rect.height === 0) return;
+        
+        if (canvas.width !== rect.width || canvas.height !== rect.height) {
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            // Note: resizing clears the canvas. 
+            // We could redraw paths here if needed, but for a signature pad it's usually fine.
+            paths = []; 
+        }
     };
 
+    const resizeObserver = new ResizeObserver(() => syncCanvasSize());
+    resizeObserver.observe(canvas);
     syncCanvasSize();
 
     function getPos(e: MouseEvent | TouchEvent) {
@@ -46,9 +59,10 @@ export default function init() {
         const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
         const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
+        // Calculate position relative to canvas and scale to internal resolution
         return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
+            x: (clientX - rect.left) * (canvas.width / rect.width),
+            y: (clientY - rect.top) * (canvas.height / rect.height)
         };
     }
 
@@ -68,8 +82,8 @@ export default function init() {
         ctx!.beginPath();
         ctx!.moveTo(lastX, lastY);
         ctx!.lineTo(pos.x, pos.y);
-        ctx!.strokeStyle = '#000';
-        ctx!.lineWidth = 2;
+        ctx!.strokeStyle = colorInput.value;
+        ctx!.lineWidth = parseInt(widthInput.value);
         ctx!.lineCap = 'round';
         ctx!.stroke();
 
@@ -102,6 +116,9 @@ export default function init() {
     saveBtn.addEventListener('click', () => {
         if (paths.length === 0) return;
 
+        const color = colorInput.value;
+        const strokeWidth = parseInt(widthInput.value);
+
         // Calculate bounds for cropping
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         paths.flat().forEach(p => {
@@ -109,7 +126,7 @@ export default function init() {
             maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y);
         });
 
-        const padding = 5;
+        const padding = strokeWidth + 2;
         const width = (maxX - minX) + padding * 2;
         const height = (maxY - minY) + padding * 2;
 
@@ -117,8 +134,8 @@ export default function init() {
         tempCanvas.width = width;
         tempCanvas.height = height;
         const tempCtx = tempCanvas.getContext('2d')!;
-        tempCtx.strokeStyle = '#000';
-        tempCtx.lineWidth = 2;
+        tempCtx.strokeStyle = color;
+        tempCtx.lineWidth = strokeWidth;
         tempCtx.lineCap = 'round';
 
         let svgPath = '';
@@ -146,7 +163,9 @@ export default function init() {
             svgPath: svgPath.trim(),
             width: width,
             height: height,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            color: color,
+            strokeWidth: strokeWidth
         };
 
         const saved: SignatureData[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
@@ -161,7 +180,7 @@ export default function init() {
     function createFullSvg(sig: SignatureData): string {
         return `<?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg width="${sig.width}" height="${sig.height}" viewBox="0 0 ${sig.width} ${sig.height}" xmlns="http://www.w3.org/2000/svg">
-  <path d="${sig.svgPath}" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="${sig.svgPath}" fill="none" stroke="${sig.color || 'black'}" stroke-width="${sig.strokeWidth || 2}" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
     }
 
@@ -209,6 +228,7 @@ export default function init() {
     renderSignatures();
 
     return () => {
+        resizeObserver.disconnect();
         window.removeEventListener('mouseup', stopDrawing);
         window.removeEventListener('touchend', stopDrawing);
     };

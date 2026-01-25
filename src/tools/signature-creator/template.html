@@ -2,6 +2,21 @@
     <div class="card bg-base-100 shadow-md p-6 border">
         <h2 class="text-xl font-bold mb-4">Draw your signature</h2>
 
+        <div class="flex flex-wrap gap-4 mb-4 items-start">
+            <div class="form-control">
+                <label class="label py-0" for="stroke-color">
+                    <span class="label-text text-xs">Color</span>
+                </label>
+                <input type="color" id="stroke-color" class="input input-bordered p-1 w-12 h-10" value="#000000">
+            </div>
+            <div class="form-control">
+                <label class="label py-0" for="stroke-width">
+                    <span class="label-text text-xs">Width</span>
+                </label>
+                <input type="range" id="stroke-width" min="1" max="10" value="2" class="range range-xs range-primary">
+            </div>
+        </div>
+
         <div id="canvas-container" class="relative border-2 border-dashed border-base-300 rounded-lg bg-white w-full" style="height: 300px;">
             <canvas id="signature-canvas" class="cursor-crosshair bg-white w-full h-full"></canvas>
         </div>
@@ -10,7 +25,7 @@
             <button id="clear-btn" class="btn btn-outline btn-error btn-sm">
                 <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> Clear
             </button>
-            <div class="flex-grow"></div>
+            <div class="grow"></div>
             <button id="save-btn" class="btn btn-primary btn-sm">
                 <i data-lucide="save" class="w-4 h-4 mr-1"></i> Save Signature
             </button>
