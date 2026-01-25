@@ -1,3 +1,5 @@
+import { downloadFile } from '../../js/file-utils.ts';
+
 interface SignatureData {
     id: string;
     image: string; // Base64 PNG
@@ -187,8 +189,10 @@ export default function init() {
                 }
             });
 
-            clone.querySelector('.copy-svg-btn')?.addEventListener('click', () => {
-                navigator.clipboard.writeText(createFullSvg(sig));
+            clone.querySelector('.download-svg-btn')?.addEventListener('click', async () => {
+                const svgContent = createFullSvg(sig);
+                const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+                await downloadFile(blob, `signature-${sig.timestamp}.svg`);
             });
 
             clone.querySelector('.download-png-btn')?.addEventListener('click', () => {
