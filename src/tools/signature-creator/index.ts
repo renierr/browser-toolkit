@@ -85,36 +85,76 @@ export default function init() {
     color: string,
     baseWidth: number
   ) {
-    if (path.length < 3) return;
+    // Robust, non-mutating drawing function.
+    if (!path || path.length === 0) return;
+
+    console.log('Drawing path with', path.length, 'points');
 
     targetCtx.lineCap = 'round';
     targetCtx.lineJoin = 'round';
     targetCtx.strokeStyle = color;
+    targetCtx.fillStyle = color;
 
-    for (let i = 1; i < path.length - 2; i++) {
-      const p1 = path[i];
-      const p2 = path[i + 1];
+    // Single point -> draw a dot
+    if (path.length === 1) {
+      const p = path[0];
+      targetCtx.beginPath();
+      targetCtx.arc(p.x, p.y, baseWidth / 2, 0, Math.PI * 2);
+      targetCtx.fill();
+      return;
+    }
 
-      // Calculate Midpoint for Quadratic Curve
-      const midX = (p1.x + p2.x) / 2;
-      const midY = (p1.y + p2.y) / 2;
-
-      // Velocity logic: Calculate distance and time between points
-      const dist = Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
-      const time = Math.max(1, p2.t - p1.t);
-      const velocity = dist / time;
-
-      // Natural Taper: Thinner when moving fast, limited to 30% of base weight
+    // Two points -> draw a simple line (no smoothing)
+    if (path.length === 2) {
+      const p0 = path[0];
+      const p1 = path[1];
+      const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+      const dt = Math.max(1, p1.t - p0.t);
+      const velocity = dist / dt;
       targetCtx.lineWidth = Math.max(baseWidth * 0.3, baseWidth - velocity * 2.5);
 
       targetCtx.beginPath();
-      targetCtx.moveTo(path[i - 1].x, path[i - 1].y); // Start at previous midpoint/start
-      targetCtx.quadraticCurveTo(p1.x, p1.y, midX, midY);
+      targetCtx.moveTo(p0.x, p0.y);
+      targetCtx.lineTo(p1.x, p1.y);
+      targetCtx.stroke();
+      return;
+    }
+
+    // More than two points -> smoothing using midpoints and quadratic curves
+    // Work on a shallow copy so we don't mutate the original path
+    const pts = path.map((p) => ({ x: p.x, y: p.y, t: p.t }));
+
+    const midpoints: { x: number; y: number }[] = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      midpoints.push({ x: (pts[i].x + pts[i + 1].x) / 2, y: (pts[i].y + pts[i + 1].y) / 2 });
+    }
+
+    // Start at the first point to preserve stroke start
+    let startX = pts[0].x;
+    let startY = pts[0].y;
+
+    for (let i = 0; i < pts.length - 1; i++) {
+      const control = pts[i + 1];
+      // end is the next midpoint if exists, otherwise the last point
+      const end = i + 1 < midpoints.length ? midpoints[i + 1] : { x: pts[pts.length - 1].x, y: pts[pts.length - 1].y };
+
+      // compute velocity between current point and control
+      const prev = pts[i];
+      const dist = Math.hypot(control.x - prev.x, control.y - prev.y);
+      const dt = Math.max(1, control.t - prev.t);
+      const velocity = dist / dt;
+      targetCtx.lineWidth = Math.max(baseWidth * 0.3, baseWidth - velocity * 2.5);
+
+      targetCtx.beginPath();
+      // move to the current segment start
+      targetCtx.moveTo(startX, startY);
+      // quadratic curve: control point is `control`, end point is `end`
+      targetCtx.quadraticCurveTo(control.x, control.y, end.x, end.y);
       targetCtx.stroke();
 
-      // Update start point for next segment to be the current midpoint
-      path[i].x = midX;
-      path[i].y = midY;
+      // next segment starts at the end of this one
+      startX = end.x;
+      startY = end.y;
     }
   }
 
