@@ -85,10 +85,7 @@ export default function init() {
     color: string,
     baseWidth: number
   ) {
-    // Robust, non-mutating drawing function.
     if (!path || path.length === 0) return;
-
-    console.log('Drawing path with', path.length, 'points');
 
     targetCtx.lineCap = 'round';
     targetCtx.lineJoin = 'round';
@@ -104,14 +101,14 @@ export default function init() {
       return;
     }
 
-    // Two points -> draw a simple line (no smoothing)
+    // Two points -> simple line
     if (path.length === 2) {
       const p0 = path[0];
       const p1 = path[1];
       const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
       const dt = Math.max(1, p1.t - p0.t);
       const velocity = dist / dt;
-      targetCtx.lineWidth = Math.max(baseWidth * 0.3, baseWidth - velocity * 2.5);
+      targetCtx.lineWidth = Math.max(baseWidth * 0.35, Math.min(baseWidth, baseWidth - velocity * 2));
 
       targetCtx.beginPath();
       targetCtx.moveTo(p0.x, p0.y);
@@ -120,41 +117,38 @@ export default function init() {
       return;
     }
 
-    // More than two points -> smoothing using midpoints and quadratic curves
-    // Work on a shallow copy so we don't mutate the original path
+    // More than two points -> Catmull-Rom -> cubic Bezier smoothing
     const pts = path.map((p) => ({ x: p.x, y: p.y, t: p.t }));
+    const n = pts.length;
 
-    const midpoints: { x: number; y: number }[] = [];
-    for (let i = 0; i < pts.length - 1; i++) {
-      midpoints.push({ x: (pts[i].x + pts[i + 1].x) / 2, y: (pts[i].y + pts[i + 1].y) / 2 });
-    }
+    // Helper to safely access points with clamped indices
+    const getP = (i: number) => pts[Math.max(0, Math.min(n - 1, i))];
 
-    // Start at the first point to preserve stroke start
-    let startX = pts[0].x;
-    let startY = pts[0].y;
+    // Draw each segment separately so we can vary lineWidth per segment
+    for (let i = 0; i < n - 1; i++) {
+      const P0 = getP(i - 1);
+      const P1 = getP(i);
+      const P2 = getP(i + 1);
+      const P3 = getP(i + 2);
 
-    for (let i = 0; i < pts.length - 1; i++) {
-      const control = pts[i + 1];
-      // end is the next midpoint if exists, otherwise the last point
-      const end = i + 1 < midpoints.length ? midpoints[i + 1] : { x: pts[pts.length - 1].x, y: pts[pts.length - 1].y };
+      // Catmull-Rom to Bezier control points
+      const c1x = P1.x + (P2.x - P0.x) / 6;
+      const c1y = P1.y + (P2.y - P0.y) / 6;
+      const c2x = P2.x - (P3.x - P1.x) / 6;
+      const c2y = P2.y - (P3.y - P1.y) / 6;
 
-      // compute velocity between current point and control
-      const prev = pts[i];
-      const dist = Math.hypot(control.x - prev.x, control.y - prev.y);
-      const dt = Math.max(1, control.t - prev.t);
+      // velocity between P1 and P2 -> map to stroke width
+      const dist = Math.hypot(P2.x - P1.x, P2.y - P1.y);
+      const dt = Math.max(1, P2.t - P1.t);
       const velocity = dist / dt;
-      targetCtx.lineWidth = Math.max(baseWidth * 0.3, baseWidth - velocity * 2.5);
+      // Tweak these factors to taste; keeps width within [min,max]
+      const minFactor = 0.35;
+      targetCtx.lineWidth = Math.max(baseWidth * minFactor, Math.min(baseWidth, baseWidth - velocity * 2));
 
       targetCtx.beginPath();
-      // move to the current segment start
-      targetCtx.moveTo(startX, startY);
-      // quadratic curve: control point is `control`, end point is `end`
-      targetCtx.quadraticCurveTo(control.x, control.y, end.x, end.y);
+      targetCtx.moveTo(P1.x, P1.y);
+      targetCtx.bezierCurveTo(c1x, c1y, c2x, c2y, P2.x, P2.y);
       targetCtx.stroke();
-
-      // next segment starts at the end of this one
-      startX = end.x;
-      startY = end.y;
     }
   }
 
@@ -353,16 +347,46 @@ function generateSmoothSvg(
   let svgPaths = '';
 
   paths.forEach((path) => {
-    if (path.length < 3) return;
-    const getX = (p: Point) => (p.x - bounds.minX + padding).toFixed(2);
-    const getY = (p: Point) => (p.y - bounds.minY + padding).toFixed(2);
+    if (!path || path.length === 0) return;
 
-    let d = `M ${getX(path[0])} ${getY(path[0])} `;
-    for (let i = 1; i < path.length - 2; i++) {
-      const midX = (path[i].x + path[i + 1].x) / 2;
-      const midY = (path[i].y + path[i + 1].y) / 2;
-      d += `Q ${getX(path[i])} ${getY(path[i])}, ${midX - bounds.minX + padding} ${midY - bounds.minY + padding} `;
+    const getX = (x: number) => (x - bounds.minX + padding).toFixed(2);
+    const getY = (y: number) => (y - bounds.minY + padding).toFixed(2);
+
+    if (path.length === 1) {
+      const p = path[0];
+      svgPaths += `<circle cx="${getX(p.x)}" cy="${getY(p.y)}" r="${(baseWidth / 2).toFixed(2)}" fill="${color}" />`;
+      return;
     }
+
+    if (path.length === 2) {
+      const p0 = path[0];
+      const p1 = path[1];
+      const d = `M ${getX(p0.x)} ${getY(p0.y)} L ${getX(p1.x)} ${getY(p1.y)}`;
+      svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${baseWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      return;
+    }
+
+    // n >= 3 -> use Catmull-Rom -> cubic Bezier segments to match canvas
+    const n = path.length;
+    const pts = path.map((p) => ({ x: p.x, y: p.y }));
+    const getP = (i: number) => pts[Math.max(0, Math.min(n - 1, i))];
+
+    // Start path
+    let d = `M ${getX(pts[0].x)} ${getY(pts[0].y)} `;
+    for (let i = 0; i < n - 1; i++) {
+      const P0 = getP(i - 1);
+      const P1 = getP(i);
+      const P2 = getP(i + 1);
+      const P3 = getP(i + 2);
+
+      const c1x = P1.x + (P2.x - P0.x) / 6;
+      const c1y = P1.y + (P2.y - P0.y) / 6;
+      const c2x = P2.x - (P3.x - P1.x) / 6;
+      const c2y = P2.y - (P3.y - P1.y) / 6;
+
+      d += `C ${getX(c1x)} ${getY(c1y)}, ${getX(c2x)} ${getY(c2y)}, ${getX(P2.x)} ${getY(P2.y)} `;
+    }
+
     svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${baseWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
   });
 
