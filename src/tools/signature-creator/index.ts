@@ -61,6 +61,7 @@ export default function init() {
   let paths: Point[][] = [];
   let currentPath: Point[] = [];
   let redrawTimeout: number | null = null;
+  let currentStrokeWidth = parseInt(widthInput.value);
   const dpr = window.devicePixelRatio || 1;
   const userWidth = () => canvas.width / dpr;
   const userHeight = () => canvas.height / dpr;
@@ -68,18 +69,18 @@ export default function init() {
   // Set initial width value
   widthValue.textContent = widthInput.value;
 
-  function redraw() {
-    // Clear visible canvas in user units, then draw the baked memCanvas scaled to user units.
-    ctx!.clearRect(0, 0, userWidth(), userHeight());
-    ctx!.drawImage(memCanvas, 0, 0, userWidth(), userHeight());
-  }
-
   function debouncedRedraw() {
     if (redrawTimeout) clearTimeout(redrawTimeout);
     redrawTimeout = window.setTimeout(() => {
-      redraw();
+      drawStatic();
       redrawTimeout = null;
     }, 50);
+  }
+
+  function drawStatic() {
+    // Clear visible canvas in user units, then draw the baked memCanvas scaled to user units.
+    ctx!.clearRect(0, 0, userWidth(), userHeight());
+    ctx!.drawImage(memCanvas, 0, 0, userWidth(), userHeight());
   }
 
   function drawNaturalCurve(
@@ -165,7 +166,7 @@ export default function init() {
       canvas.height = memCanvas.height = rect.height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       memCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      redraw();
+      drawStatic();
     }
   };
 
@@ -190,7 +191,8 @@ export default function init() {
   function draw(e: MouseEvent | TouchEvent) {
     if (!isDrawing) return;
     currentPath.push(getPos(e));
-    drawNaturalCurve(ctx!, [...currentPath], colorInput.value, parseInt(widthInput.value));
+    drawStatic();
+    drawNaturalCurve(ctx!, currentPath, colorInput.value, currentStrokeWidth);
     e.preventDefault();
   }
 
@@ -199,10 +201,10 @@ export default function init() {
     isDrawing = false;
 
     // Bake the active stroke into the persistent memory canvas
-    drawNaturalCurve(memCtx, [...currentPath], colorInput.value, parseInt(widthInput.value));
+    drawNaturalCurve(memCtx, currentPath, colorInput.value, currentStrokeWidth);
     paths.push([...currentPath]);
     currentPath = [];
-    redraw();
+    drawStatic();
   }
 
   const resizeObserver = new ResizeObserver(() => syncCanvasSize());
@@ -219,6 +221,7 @@ export default function init() {
 
   colorInput.addEventListener('input', debouncedRedraw);
   widthInput.addEventListener('input', () => {
+    currentStrokeWidth = parseInt(widthInput.value);
     widthValue!.textContent = widthInput.value;
     debouncedRedraw();
   });
@@ -227,7 +230,7 @@ export default function init() {
     paths = [];
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
-    redraw();
+    drawStatic();
   });
 
   saveBtn.addEventListener('click', () => {
@@ -242,10 +245,17 @@ export default function init() {
     const maxX = Math.max(...flat.map((p) => p.x));
     const maxY = Math.max(...flat.map((p) => p.y));
 
-    const baseWidth = parseInt(widthInput.value);
+    const baseWidth = currentStrokeWidth;
     const padding = baseWidth + 5;
     const cropW = maxX - minX + padding * 2;
     const cropH = maxY - minY + padding * 2;
+
+    // crop paths to shift to cropped coords
+    const croppedPaths: Point[][] = [];
+    paths.forEach((path) => {
+      const shifted = path.map((p) => ({ ...p, x: p.x - minX + padding, y: p.y - minY + padding }));
+      croppedPaths.push(shifted);
+    });
 
     // 2. Generate PNG
     const tempCanvas = document.createElement('canvas');
@@ -253,9 +263,8 @@ export default function init() {
     tempCanvas.height = cropH;
     const tCtx = tempCanvas.getContext('2d')!;
 
-    paths.forEach((path) => {
-      const shifted = path.map((p) => ({ ...p, x: p.x - minX + padding, y: p.y - minY + padding }));
-      drawNaturalCurve(tCtx, shifted, colorInput.value, baseWidth);
+    croppedPaths.forEach((path) => {
+      drawNaturalCurve(tCtx, path, colorInput.value, baseWidth);
     });
 
     const signature: SignatureData = {
@@ -266,7 +275,7 @@ export default function init() {
       timestamp: Date.now(),
       color: color,
       strokeWidth: baseWidth,
-      rawPaths: paths,
+      rawPaths: croppedPaths,
     };
 
     const saved = savedSignatures();
@@ -276,7 +285,7 @@ export default function init() {
     paths = [];
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
-    redraw();
+    drawStatic();
     renderSignatures();
   });
 
