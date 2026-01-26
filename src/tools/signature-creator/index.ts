@@ -290,10 +290,7 @@ export default function init() {
   });
 
   function createFullSvg(sig: SignatureData): string {
-    return generateSmoothSvg(sig.rawPaths, sig.width, sig.height, sig.color, sig.strokeWidth, {
-      minX: 0,
-      minY: 0,
-    });
+    return generateSmoothSvg(sig.rawPaths, sig.width, sig.height, sig.color, sig.strokeWidth);
   }
 
   function renderSignatures() {
@@ -355,17 +352,15 @@ function generateSmoothSvg(
   width: number,
   height: number,
   color: string,
-  baseWidth: number,
-  bounds: { minX: number; minY: number }
+  baseWidth: number
 ): string {
-  const padding = baseWidth + 5;
   let svgPaths = '';
 
   paths.forEach((path) => {
     if (!path || path.length === 0) return;
 
-    const getX = (x: number) => (x - bounds.minX + padding).toFixed(2);
-    const getY = (y: number) => (y - bounds.minY + padding).toFixed(2);
+    const getX = (x: number) => (x).toFixed(2);
+    const getY = (y: number) => (y).toFixed(2);
 
     if (path.length === 1) {
       const p = path[0];
