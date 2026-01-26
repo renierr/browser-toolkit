@@ -3,7 +3,6 @@ import { downloadFile } from '../../js/file-utils.ts';
 interface Point {
   x: number;
   y: number;
-  t: number; // Timestamp for velocity calculation
 }
 
 interface SignatureData {
@@ -110,10 +109,7 @@ export default function init() {
       const p0 = path[0];
       const p1 = path[1];
       const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-      const dt = Math.max(1, p1.t - p0.t);
-      const velocity = dist / dt;
-      targetCtx.lineWidth = Math.max(baseWidth * 0.35, Math.min(baseWidth, baseWidth - velocity * 2));
-
+      targetCtx.lineWidth = mapDistToWidth(dist, baseWidth);
       targetCtx.beginPath();
       targetCtx.moveTo(p0.x, p0.y);
       targetCtx.lineTo(p1.x, p1.y);
@@ -122,7 +118,7 @@ export default function init() {
     }
 
     // More than two points -> Catmull-Rom -> cubic Bezier smoothing
-    const pts = path.map((p) => ({ x: p.x, y: p.y, t: p.t }));
+    const pts = path.map((p) => ({ x: p.x, y: p.y }));
     const n = pts.length;
 
     // Helper to safely access points with clamped indices
@@ -141,13 +137,8 @@ export default function init() {
       const c2x = P2.x - (P3.x - P1.x) / 6;
       const c2y = P2.y - (P3.y - P1.y) / 6;
 
-      // velocity between P1 and P2 -> map to stroke width
       const dist = Math.hypot(P2.x - P1.x, P2.y - P1.y);
-      const dt = Math.max(1, P2.t - P1.t);
-      const velocity = dist / dt;
-      // Tweak these factors to taste; keeps width within [min,max]
-      const minFactor = 0.35;
-      targetCtx.lineWidth = Math.max(baseWidth * minFactor, Math.min(baseWidth, baseWidth - velocity * 2));
+      targetCtx.lineWidth = mapDistToWidth(dist, baseWidth);
 
       targetCtx.beginPath();
       targetCtx.moveTo(P1.x, P1.y);
@@ -177,8 +168,7 @@ export default function init() {
 
     return {
       x: clientX - rect.left,
-      y: clientY - rect.top,
-      t: Date.now(),
+      y: clientY - rect.top
     };
   }
 
@@ -191,7 +181,6 @@ export default function init() {
   function draw(e: MouseEvent | TouchEvent) {
     if (!isDrawing) return;
     currentPath.push(getPos(e));
-    drawStatic();
     drawNaturalCurve(ctx!, currentPath, colorInput.value, currentStrokeWidth);
     e.preventDefault();
   }
@@ -359,12 +348,6 @@ function generateSmoothSvg(
   const getX = (x: number) => x.toFixed(2);
   const getY = (y: number) => y.toFixed(2);
 
-  // map velocity -> stroke width (same logic as canvas)
-  const mapVelocityToWidth = (velocity: number) => {
-    const minFactor = 0.35;
-    return Math.max(baseWidth * minFactor, Math.min(baseWidth, baseWidth - velocity * 2));
-  };
-
   // Evaluate cubic Bezier at t in [0,1] for points P1 (start), C1, C2, P2 (end)
   const cubicPoint = (
     t: number,
@@ -399,7 +382,7 @@ function generateSmoothSvg(
     if (path.length === 1) {
       const p = path[0];
       // single dot; velocity unknown -> 0
-      svgPaths += `<circle cx="${getX(p.x)}" cy="${getY(p.y)}" r="${(baseWidth / 2).toFixed(2)}" fill="${color}" data-velocity="0" />`;
+      svgPaths += `<circle cx="${getX(p.x)}" cy="${getY(p.y)}" r="${(baseWidth / 2).toFixed(2)}" fill="${color}" />`;
       return;
     }
 
@@ -407,17 +390,15 @@ function generateSmoothSvg(
       const p0 = path[0];
       const p1 = path[1];
       const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-      const dt = Math.max(1, p1.t - p0.t);
-      const velocity = dist / dt;
-      const sw = mapVelocityToWidth(velocity).toFixed(2);
+      const sw = mapDistToWidth(dist, baseWidth).toFixed(2);
       const d = `M ${getX(p0.x)} ${getY(p0.y)} L ${getX(p1.x)} ${getY(p1.y)}`;
-      svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" data-velocity="${velocity.toFixed(2)}"/>`;
+      svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" />`;
       return;
     }
 
     // n >= 3 -> Catmull-Rom -> cubic Bezier segments approximated by small straight segments
     const n = path.length;
-    const pts = path.map((p) => ({ x: p.x, y: p.y, t: p.t }));
+    const pts = path.map((p) => ({ x: p.x, y: p.y }));
     const getP = (i: number) => pts[Math.max(0, Math.min(n - 1, i))];
 
     // Subdivision steps per cubic segment (higher = smoother, more paths)
@@ -437,9 +418,7 @@ function generateSmoothSvg(
 
       // velocity between P1 and P2 -> used for all subsegments of this cubic (matches canvas behavior)
       const segDist = Math.hypot(P2.x - P1.x, P2.y - P1.y);
-      const segDt = Math.max(1, P2.t - P1.t);
-      const velocity = segDist / segDt;
-      const segStroke = mapVelocityToWidth(velocity);
+      const segStroke = mapDistToWidth(segDist, baseWidth);
 
       // Subdivide cubic into STEPS straight segments, emit a small path per segment with its stroke-width and velocity
       let prev = cubicPoint(0, P1, { x: c1x, y: c1y }, { x: c2x, y: c2y }, P2);
@@ -447,7 +426,7 @@ function generateSmoothSvg(
         const t = s / STEPS;
         const curr = cubicPoint(t, P1, { x: c1x, y: c1y }, { x: c2x, y: c2y }, P2);
         const d = `M ${getX(prev.x)} ${getY(prev.y)} L ${getX(curr.x)} ${getY(curr.y)}`;
-        svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${segStroke.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" data-velocity="${velocity.toFixed(2)}"/>`;
+        svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${segStroke.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" />`;
         prev = curr;
       }
     }
@@ -456,3 +435,8 @@ function generateSmoothSvg(
   // Include base stroke width as a data attribute on the root SVG
   return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" data-stroke-width="${baseWidth}" xmlns="http://www.w3.org/2000/svg">${svgPaths}</svg>`;
 }
+
+const mapDistToWidth = (dist: number, baseWidth: number) => {
+  const minFactor = 0.35;
+  return Math.max(baseWidth * minFactor, baseWidth - dist / 4);
+};
