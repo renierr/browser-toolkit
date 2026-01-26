@@ -62,13 +62,16 @@ export default function init() {
   let currentPath: Point[] = [];
   let redrawTimeout: number | null = null;
   const dpr = window.devicePixelRatio || 1;
+  const userWidth = () => canvas.width / dpr;
+  const userHeight = () => canvas.height / dpr;
 
   // Set initial width value
   widthValue.textContent = widthInput.value;
 
   function redraw() {
-    ctx!.clearRect(0, 0, canvas.width / dpr, canvas.height / dpr);
-    ctx!.drawImage(memCanvas, 0, 0, canvas.width / dpr, canvas.height / dpr);
+    // Clear visible canvas in user units, then draw the baked memCanvas scaled to user units.
+    ctx!.clearRect(0, 0, userWidth(), userHeight());
+    ctx!.drawImage(memCanvas, 0, 0, userWidth(), userHeight());
   }
 
   function debouncedRedraw() {
@@ -222,8 +225,9 @@ export default function init() {
 
   clearBtn.addEventListener('click', () => {
     paths = [];
-    memCtx.clearRect(0, 0, memCanvas.width, memCanvas.height);
-    redraw()
+    memCtx.clearRect(0, 0, userWidth(), userHeight());
+    ctx.clearRect(0, 0, userWidth(), userHeight());
+    redraw();
   });
 
   saveBtn.addEventListener('click', () => {
@@ -270,7 +274,9 @@ export default function init() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
 
     paths = [];
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    memCtx.clearRect(0, 0, userWidth(), userHeight());
+    ctx.clearRect(0, 0, userWidth(), userHeight());
+    redraw();
     renderSignatures();
   });
 
