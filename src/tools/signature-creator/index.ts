@@ -356,49 +356,103 @@ function generateSmoothSvg(
 ): string {
   let svgPaths = '';
 
+  const getX = (x: number) => x.toFixed(2);
+  const getY = (y: number) => y.toFixed(2);
+
+  // map velocity -> stroke width (same logic as canvas)
+  const mapVelocityToWidth = (velocity: number) => {
+    const minFactor = 0.35;
+    return Math.max(baseWidth * minFactor, Math.min(baseWidth, baseWidth - velocity * 2));
+  };
+
+  // Evaluate cubic Bezier at t in [0,1] for points P1 (start), C1, C2, P2 (end)
+  const cubicPoint = (
+    t: number,
+    P1: { x: number; y: number },
+    C1: { x: number; y: number },
+    C2: { x: number; y: number },
+    P2: { x: number; y: number }
+  ) => {
+    const u = 1 - t;
+    const tt = t * t;
+    const uu = u * u;
+    const uuu = uu * u;
+    const ttt = tt * t;
+
+    const x =
+      uuu * P1.x +
+      3 * uu * t * C1.x +
+      3 * u * tt * C2.x +
+      ttt * P2.x;
+    const y =
+      uuu * P1.y +
+      3 * uu * t * C1.y +
+      3 * u * tt * C2.y +
+      ttt * P2.y;
+
+    return { x, y };
+  };
+
   paths.forEach((path) => {
     if (!path || path.length === 0) return;
 
-    const getX = (x: number) => (x).toFixed(2);
-    const getY = (y: number) => (y).toFixed(2);
-
     if (path.length === 1) {
       const p = path[0];
-      svgPaths += `<circle cx="${getX(p.x)}" cy="${getY(p.y)}" r="${(baseWidth / 2).toFixed(2)}" fill="${color}" />`;
+      // single dot; velocity unknown -> 0
+      svgPaths += `<circle cx="${getX(p.x)}" cy="${getY(p.y)}" r="${(baseWidth / 2).toFixed(2)}" fill="${color}" data-velocity="0" />`;
       return;
     }
 
     if (path.length === 2) {
       const p0 = path[0];
       const p1 = path[1];
+      const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+      const dt = Math.max(1, p1.t - p0.t);
+      const velocity = dist / dt;
+      const sw = mapVelocityToWidth(velocity).toFixed(2);
       const d = `M ${getX(p0.x)} ${getY(p0.y)} L ${getX(p1.x)} ${getY(p1.y)}`;
-      svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${baseWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" data-velocity="${velocity.toFixed(2)}"/>`;
       return;
     }
 
-    // n >= 3 -> use Catmull-Rom -> cubic Bezier segments to match canvas
+    // n >= 3 -> Catmull-Rom -> cubic Bezier segments approximated by small straight segments
     const n = path.length;
-    const pts = path.map((p) => ({ x: p.x, y: p.y }));
+    const pts = path.map((p) => ({ x: p.x, y: p.y, t: p.t }));
     const getP = (i: number) => pts[Math.max(0, Math.min(n - 1, i))];
 
-    // Start path
-    let d = `M ${getX(pts[0].x)} ${getY(pts[0].y)} `;
+    // Subdivision steps per cubic segment (higher = smoother, more paths)
+    const STEPS = 8;
+
     for (let i = 0; i < n - 1; i++) {
       const P0 = getP(i - 1);
       const P1 = getP(i);
       const P2 = getP(i + 1);
       const P3 = getP(i + 2);
 
+      // Catmull-Rom -> cubic Bezier control points
       const c1x = P1.x + (P2.x - P0.x) / 6;
       const c1y = P1.y + (P2.y - P0.y) / 6;
       const c2x = P2.x - (P3.x - P1.x) / 6;
       const c2y = P2.y - (P3.y - P1.y) / 6;
 
-      d += `C ${getX(c1x)} ${getY(c1y)}, ${getX(c2x)} ${getY(c2y)}, ${getX(P2.x)} ${getY(P2.y)} `;
-    }
+      // velocity between P1 and P2 -> used for all subsegments of this cubic (matches canvas behavior)
+      const segDist = Math.hypot(P2.x - P1.x, P2.y - P1.y);
+      const segDt = Math.max(1, P2.t - P1.t);
+      const velocity = segDist / segDt;
+      const segStroke = mapVelocityToWidth(velocity);
 
-    svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${baseWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      // Subdivide cubic into STEPS straight segments, emit a small path per segment with its stroke-width and velocity
+      let prev = cubicPoint(0, P1, { x: c1x, y: c1y }, { x: c2x, y: c2y }, P2);
+      for (let s = 1; s <= STEPS; s++) {
+        const t = s / STEPS;
+        const curr = cubicPoint(t, P1, { x: c1x, y: c1y }, { x: c2x, y: c2y }, P2);
+        const d = `M ${getX(prev.x)} ${getY(prev.y)} L ${getX(curr.x)} ${getY(curr.y)}`;
+        svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${segStroke.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" data-velocity="${velocity.toFixed(2)}"/>`;
+        prev = curr;
+      }
+    }
   });
 
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${svgPaths}</svg>`;
+  // Include base stroke width as a data attribute on the root SVG
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" data-stroke-width="${baseWidth}" xmlns="http://www.w3.org/2000/svg">${svgPaths}</svg>`;
 }
