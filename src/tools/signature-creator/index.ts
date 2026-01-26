@@ -30,6 +30,7 @@ export default function init() {
   const saveBtn = document.getElementById('save-btn');
   const colorInput = document.getElementById('stroke-color') as HTMLInputElement;
   const widthInput = document.getElementById('stroke-width') as HTMLInputElement;
+  const fastCurve = document.getElementById('fast-curve') as HTMLInputElement;
   const widthValue = document.getElementById('width-value');
   const signaturesList = document.getElementById('signatures-list');
   const savedContainer = document.getElementById('saved-signatures-container');
@@ -61,6 +62,7 @@ export default function init() {
   let currentPath: Point[] = [];
   let redrawTimeout: number | null = null;
   let currentStrokeWidth = parseInt(widthInput.value);
+  let useFastCurve = fastCurve.checked;
   const dpr = window.devicePixelRatio || 1;
   const userWidth = () => canvas.width / dpr;
   const userHeight = () => canvas.height / dpr;
@@ -80,6 +82,47 @@ export default function init() {
     // Clear visible canvas in user units, then draw the baked memCanvas scaled to user units.
     ctx!.clearRect(0, 0, userWidth(), userHeight());
     ctx!.drawImage(memCanvas, 0, 0, userWidth(), userHeight());
+  }
+
+  function drawFastCurve(
+    targetCtx: CanvasRenderingContext2D,
+    p: Point[],
+    color: string,
+    baseWidth: number,
+    finalize: boolean = false
+  ) {
+    if (p.length < 3) return;
+
+    targetCtx.beginPath();
+    targetCtx.lineCap = 'round';
+    targetCtx.lineJoin = 'round';
+    targetCtx.strokeStyle = color;
+
+    targetCtx.moveTo(p[0].x, p[0].y);
+
+    for (let i = 1; i < p.length - 2; i++) {
+      const xc = (p[i].x + p[i + 1].x) / 2;
+      const yc = (p[i].y + p[i + 1].y) / 2;
+
+      // Dynamic width logic integrated into the curve
+      const dist = Math.sqrt(Math.pow(p[i].x - p[i - 1].x, 2) + Math.pow(p[i].y - p[i - 1].y, 2));
+      targetCtx.lineWidth = mapDistToWidth(dist, baseWidth);
+
+      targetCtx.quadraticCurveTo(p[i].x, p[i].y, xc, yc);
+      targetCtx.stroke();
+      targetCtx.beginPath();
+      targetCtx.moveTo(xc, yc);
+    }
+
+    if (finalize) {
+      targetCtx.quadraticCurveTo(
+        p[p.length - 2].x,
+        p[p.length - 2].y,
+        p[p.length - 1].x,
+        p[p.length - 1].y
+      );
+      targetCtx.stroke();
+    }
   }
 
   function drawNaturalCurve(
@@ -161,14 +204,14 @@ export default function init() {
     }
   };
 
-  function getPos(e: MouseEvent | TouchEvent) : Point {
+  function getPos(e: MouseEvent | TouchEvent): Point {
     const rect = canvas.getBoundingClientRect();
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
 
     return {
       x: clientX - rect.left,
-      y: clientY - rect.top
+      y: clientY - rect.top,
     };
   }
 
@@ -178,10 +221,33 @@ export default function init() {
     e.preventDefault();
   }
 
+  const MOVE_TOLERANCE = 2;
+
   function draw(e: MouseEvent | TouchEvent) {
     if (!isDrawing) return;
-    currentPath.push(getPos(e));
-    drawNaturalCurve(ctx!, currentPath, colorInput.value, currentStrokeWidth);
+
+    const pos = getPos(e);
+    const last = currentPath.length ? currentPath[currentPath.length - 1] : undefined;
+
+    if (last) {
+      // Tolerance in user pixels to reduce noisy points
+      const dx = pos.x - last.x;
+      const dy = pos.y - last.y;
+
+      // Use squared distance for the cheap threshold check to avoid a sqrt
+      const distSq = dx * dx + dy * dy;
+      if (distSq < MOVE_TOLERANCE * MOVE_TOLERANCE) {
+        e.preventDefault();
+        return;
+      }
+    }
+
+    currentPath.push(pos);
+    if (useFastCurve) {
+      drawFastCurve(ctx!, currentPath, colorInput.value, currentStrokeWidth);
+    } else {
+      drawNaturalCurve(ctx!, currentPath, colorInput.value, currentStrokeWidth);
+    }
     e.preventDefault();
   }
 
@@ -190,7 +256,11 @@ export default function init() {
     isDrawing = false;
 
     // Bake the active stroke into the persistent memory canvas
-    drawNaturalCurve(memCtx, currentPath, colorInput.value, currentStrokeWidth);
+    if (useFastCurve) {
+      drawFastCurve(memCtx, currentPath, colorInput.value, currentStrokeWidth, true);
+    } else {
+      drawNaturalCurve(memCtx, currentPath, colorInput.value, currentStrokeWidth);
+    }
     paths.push([...currentPath]);
     currentPath = [];
     drawStatic();
@@ -214,6 +284,7 @@ export default function init() {
     widthValue!.textContent = widthInput.value;
     debouncedRedraw();
   });
+  fastCurve.addEventListener('input', () => { useFastCurve = fastCurve.checked });
 
   clearBtn.addEventListener('click', () => {
     paths = [];
@@ -362,16 +433,8 @@ function generateSmoothSvg(
     const uuu = uu * u;
     const ttt = tt * t;
 
-    const x =
-      uuu * P1.x +
-      3 * uu * t * C1.x +
-      3 * u * tt * C2.x +
-      ttt * P2.x;
-    const y =
-      uuu * P1.y +
-      3 * uu * t * C1.y +
-      3 * u * tt * C2.y +
-      ttt * P2.y;
+    const x = uuu * P1.x + 3 * uu * t * C1.x + 3 * u * tt * C2.x + ttt * P2.x;
+    const y = uuu * P1.y + 3 * uu * t * C1.y + 3 * u * tt * C2.y + ttt * P2.y;
 
     return { x, y };
   };
