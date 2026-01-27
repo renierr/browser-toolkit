@@ -595,6 +595,38 @@ export default function init() {
         }
       });
 
+      clone.querySelector('.load-signature-btn')?.addEventListener('click', async () => {
+        // Clear current paths and memCanvas
+        paths = [];
+        memCtx.clearRect(0, 0, userWidth(), userHeight());
+
+        // Compute scale to fit signature into the canvas while preserving aspect
+        const canvasW = userWidth();
+        const canvasH = userHeight();
+        const sigW = sig.width;
+        const sigH = sig.height;
+        const scale = Math.min(canvasW / sigW, canvasH / sigH, 1);
+
+        // Centering offsets
+        const offsetX = (canvasW - sigW * scale) / 2;
+        const offsetY = (canvasH - sigH * scale) / 2;
+
+        // Draw each path scaled and translated onto memCtx
+        memCtx.save();
+        memCtx.setTransform(dpr, 0, 0, dpr, 0, 0); // ensure memCtx in user units
+        memCtx.translate(offsetX, offsetY);
+        memCtx.scale(scale, scale);
+
+        sig.rawPaths.forEach((p) => {
+          drawSignaturePath(memCtx, p, sig.color, sig.strokeWidth, currentCurveMode);
+        });
+
+        memCtx.restore();
+        paths = sig.rawPaths.map((path) => path.map((pt) => ({ x: pt.x * scale + offsetX, y: pt.y * scale + offsetY })));
+
+        drawStatic();
+      });
+
       clone.querySelector('.download-svg-btn')?.addEventListener('click', async () => {
         const svgContent = createFullSvg(sig);
         const blob = new Blob([svgContent], { type: 'image/svg+xml' });
