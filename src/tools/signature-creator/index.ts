@@ -7,7 +7,7 @@ interface Point {
 
 interface SignatureData {
   id: string;
-  image: string; // Base64 PNG (High Res)
+  image: string; // Base64 PNG (preview)
   width: number; // Logical width (1x scale)
   height: number; // Logical height (1x scale)
   timestamp: number;
@@ -25,9 +25,6 @@ const DB_NAME = 'bt-signatures-db';
 const DB_STORE = 'signatures';
 const DB_VERSION = 1;
 
-// Legacy localStorage key (used by older versions)
-const LEGACY_STORAGE_KEY = 'bt-signatures';
-
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -40,56 +37,6 @@ function openDb(): Promise<IDBDatabase> {
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
-}
-
-// One-time migration: move legacy localStorage entries into IndexedDB
-async function migrateFromLocalStorage(): Promise<void> {
-  try {
-    const raw = localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (!raw) return;
-
-    let parsed: any = null;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      // Not JSON -> skip
-      return;
-    }
-
-    // Support both array of signatures or single object { id: ..., ... }
-    const arr = Array.isArray(parsed) ? parsed : [parsed];
-
-    for (const item of arr) {
-      try {
-        // Normalize incoming shape to SignatureData
-        const sig: SignatureData = {
-          id: item.id || crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`,
-          image: item.image || item.dataUrl || '',
-          width: Number(item.width) || Number(item.logicalWidth) || 0,
-          height: Number(item.height) || Number(item.logicalHeight) || 0,
-          timestamp: Number(item.timestamp) || Number(item.time) || Date.now(),
-          color: item.color || '#000000',
-          strokeWidth: Number(item.strokeWidth) || Number(item.widthPx) || 2,
-          rawPaths: item.rawPaths || item.paths || [],
-        };
-
-        // Skip invalid records (no image)
-        if (!sig.image) continue;
-
-        await putSignature(sig);
-      } catch (err) {
-        // Ignore bad items and continue
-        // eslint-disable-next-line no-console
-        console.warn('signature migration: skipped item', err);
-      }
-    }
-
-    // Remove legacy key after successful migration
-    localStorage.removeItem(LEGACY_STORAGE_KEY);
-  } catch (err) {
-    // eslint-disable-next-line no-console
-    console.warn('signature migration failed', err);
-  }
 }
 
 async function getAllSignatures(): Promise<SignatureData[]> {
@@ -627,15 +574,7 @@ export default function init() {
     });
   }
 
-  // Run migration from localStorage (if any) before rendering
-  migrateFromLocalStorage()
-    .then(() => {
-      void renderSignatures();
-    })
-    .catch(() => {
-      // If migration fails, still attempt to render existing signatures
-      void renderSignatures();
-    });
+  void renderSignatures();
 
   return () => {
     if (redrawTimeout) clearTimeout(redrawTimeout);
