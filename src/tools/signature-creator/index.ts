@@ -114,7 +114,7 @@ function buildNormalizedFromPaths(paths: Point[][], baseWidth: number) {
 
 // --- Helper: Rendering ---
 
-type CurveMode = 'fast' | 'natural';
+type CurveMode = 'fast' | 'natural' | 'none';
 
 function drawSignaturePath(
   ctx: CanvasRenderingContext2D,
@@ -163,7 +163,7 @@ function drawSignaturePath(
     }
     ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
-  } else {
+  } else if (mode === 'natural') {
     // Natural: Cubic Bezier (Catmull-Rom) - Good for final bake/export
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[Math.max(0, i - 1)];
@@ -180,6 +180,16 @@ function drawSignaturePath(
       ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
       ctx.stroke();
     }
+  } else {
+    // None: Raw strokes - straight segments with constant width
+    ctx.lineWidth = baseWidth;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      const p = points[i];
+      ctx.lineTo(p.x, p.y);
+    }
+    ctx.stroke();
   }
 }
 
@@ -191,7 +201,8 @@ function generatePng(
   baseWidth: number,
   targetDpi: number,
   logicalWidth: number,
-  logicalHeight: number
+  logicalHeight: number,
+  mode: CurveMode = 'natural'
 ): Promise<{ blob: Blob; width: number; height: number }> {
   return new Promise((resolve) => {
     // Scale Factor (72 DPI is base)
@@ -210,7 +221,7 @@ function generatePng(
     ctx.scale(scaleFactor, scaleFactor);
 
     paths.forEach((path) => {
-      drawSignaturePath(ctx, path, color, baseWidth, 'natural');
+      drawSignaturePath(ctx, path, color, baseWidth, mode);
     });
 
     canvas.toBlob((blob) => {
@@ -226,7 +237,8 @@ function generateSmoothSvg(
   width: number,
   height: number,
   color: string,
-  baseWidth: number
+  baseWidth: number,
+  mode: CurveMode = 'natural'
 ): string {
   const f = (n: number) => n.toFixed(2);
   let content = '';
@@ -240,17 +252,24 @@ function generateSmoothSvg(
     }
 
     // Draw using Cubic Beziers for max compression and smoothness
-    for (let i = 0; i < path.length - 1; i++) {
-      const p0 = path[Math.max(0, i - 1)];
-      const p1 = path[i];
-      const p2 = path[i + 1];
-      const p3 = path[Math.min(path.length - 1, i + 2)];
+    if (mode === 'none') {
+      // Simple polyline/path for raw strokes
+      let d = `M${f(path[0].x)} ${f(path[0].y)}`;
+      for (let i = 1; i < path.length; i++) d += ` L${f(path[i].x)} ${f(path[i].y)}`;
+      content += `<path d="${d}" stroke="${color}" stroke-width="${f(baseWidth)}" stroke-linecap="round" fill="none" />`;
+    } else {
+      for (let i = 0; i < path.length - 1; i++) {
+        const p0 = path[Math.max(0, i - 1)];
+        const p1 = path[i];
+        const p2 = path[i + 1];
+        const p3 = path[Math.min(path.length - 1, i + 2)];
 
-      const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
-      const w = mapDistToWidth(Math.hypot(p1.x - p2.x, p1.y - p2.y), baseWidth);
+        const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
+        const w = mapDistToWidth(Math.hypot(p1.x - p2.x, p1.y - p2.y), baseWidth);
 
-      const d = `M${f(p1.x)} ${f(p1.y)} C${f(c1x)} ${f(c1y)}, ${f(c2x)} ${f(c2y)}, ${f(p2.x)} ${f(p2.y)}`;
-      content += `<path d="${d}" stroke="${color}" stroke-width="${f(w)}" stroke-linecap="round" fill="none" />`;
+        const d = `M${f(p1.x)} ${f(p1.y)} C${f(c1x)} ${f(c1y)}, ${f(c2x)} ${f(c2y)}, ${f(p2.x)} ${f(p2.y)}`;
+        content += `<path d="${d}" stroke="${color}" stroke-width="${f(w)}" stroke-linecap="round" fill="none" />`;
+      }
     }
   });
 
@@ -267,7 +286,7 @@ export default function init() {
   const downloadSvgBtn = document.getElementById('download-current-svg-btn');
   const colorInput = document.getElementById('stroke-color') as HTMLInputElement;
   const widthInput = document.getElementById('stroke-width') as HTMLInputElement;
-  const fastCurve = document.getElementById('fast-curve') as HTMLInputElement;
+  const curveModeSelect = document.getElementById('curve-mode') as HTMLSelectElement;
   const widthValue = document.getElementById('width-value');
   const dpiInput = document.getElementById('export-dpi') as HTMLInputElement;
   const signaturesList = document.getElementById('signatures-list');
@@ -287,7 +306,7 @@ export default function init() {
     !colorInput ||
     !widthInput ||
     !widthValue ||
-    !fastCurve ||
+    !curveModeSelect ||
     !dpiInput
   )
     return;
@@ -305,7 +324,7 @@ export default function init() {
 
   let redrawTimeout: number | null = null;
   let currentStrokeWidth = parseInt(widthInput.value);
-  let useFastCurve = fastCurve.checked;
+  let currentCurveMode: CurveMode = (curveModeSelect.value as CurveMode) || 'natural';
 
   const dpr = window.devicePixelRatio || 1;
   const userWidth = () => canvas.width / dpr;
@@ -400,7 +419,7 @@ export default function init() {
       currentPath,
       colorInput.value,
       currentStrokeWidth,
-      useFastCurve ? 'fast' : 'natural'
+      currentCurveMode
     );
 
     paths.push(currentPath);
@@ -428,8 +447,9 @@ export default function init() {
     widthValue!.textContent = widthInput.value;
     debouncedRedraw();
   });
-  fastCurve.addEventListener('input', () => {
-    useFastCurve = fastCurve.checked;
+  curveModeSelect.addEventListener('change', () => {
+    currentCurveMode = curveModeSelect.value as CurveMode;
+    debouncedRedraw();
   });
 
   // --- Controls ---
@@ -453,7 +473,8 @@ export default function init() {
       currentStrokeWidth,
       72,
       logicalWidth,
-      logicalHeight
+      logicalHeight,
+      currentCurveMode
     );
 
     // Save
@@ -498,7 +519,8 @@ export default function init() {
       currentStrokeWidth,
       dpi,
       logicalWidth,
-      logicalHeight
+      logicalHeight,
+      currentCurveMode
     );
 
     await downloadFile(blob, `signature-${Date.now()}.png`);
@@ -519,7 +541,8 @@ export default function init() {
       logicalWidth,
       logicalHeight,
       colorInput.value,
-      currentStrokeWidth
+      currentStrokeWidth,
+      currentCurveMode
     );
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
@@ -529,7 +552,7 @@ export default function init() {
   // --- Signature Rendering ---
 
   function createFullSvg(sig: SignatureData): string {
-    return generateSmoothSvg(sig.rawPaths, sig.width, sig.height, sig.color, sig.strokeWidth);
+    return generateSmoothSvg(sig.rawPaths, sig.width, sig.height, sig.color, sig.strokeWidth, currentCurveMode);
   }
 
   async function renderSignatures() {
@@ -564,12 +587,12 @@ export default function init() {
 
       clone.querySelector('.download-png-btn')?.addEventListener('click', () => {
         const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
-        generatePng(sig.rawPaths, sig.color, sig.strokeWidth, dpi, sig.width, sig.height).then(
+        generatePng(sig.rawPaths, sig.color, sig.strokeWidth, dpi, sig.width, sig.height, currentCurveMode).then(
           ({ blob }) => {
             downloadFile(blob, `signature-${sig.timestamp}.png`);
             console.log('PNG downloaded', sig);
           }
-        )
+        );
       });
 
       signaturesList!.appendChild(clone);
@@ -590,3 +613,4 @@ export default function init() {
 export const savedSignatures = async (): Promise<SignatureData[]> => {
   return getAllSignatures();
 };
+
