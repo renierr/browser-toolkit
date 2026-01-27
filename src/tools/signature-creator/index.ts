@@ -100,7 +100,7 @@ async function getAllSignatures(): Promise<SignatureData[]> {
     const req = store.getAll();
     req.onsuccess = () => {
       // Return in reverse chronological order (most recent first)
-      const res = (req.result as SignatureData[] || []).sort((a, b) => b.timestamp - a.timestamp);
+      const res = ((req.result as SignatureData[]) || []).sort((a, b) => b.timestamp - a.timestamp);
       resolve(res);
     };
     req.onerror = () => reject(req.error);
@@ -131,59 +131,13 @@ async function deleteSignature(id: string): Promise<void> {
 
 // --- Helper: Math & Geometry ---
 
-// 1. Ramer-Douglas-Peucker Simplification (Reduces point count)
-function simplifyPath(points: Point[], tolerance: number): Point[] {
-  if (points.length <= 2) return points;
-  const sqTolerance = tolerance * tolerance;
-  let maxSqDist = 0;
-  let index = 0;
-  const last = points.length - 1;
-
-  for (let i = 1; i < last; i++) {
-    const p = points[i];
-    const p1 = points[0];
-    const p2 = points[last];
-    let sqDist = 0;
-
-    // Distance from point to line segment
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
-    if (dx !== 0 || dy !== 0) {
-      const t = ((p.x - p1.x) * dx + (p.y - p1.y) * dy) / (dx * dx + dy * dy);
-      if (t > 1) sqDist = (p.x - p2.x) ** 2 + (p.y - p2.y) ** 2;
-      else if (t > 0)
-        sqDist = (p.x - (p1.x + dx * t)) ** 2 + (p.y - (p1.y + dy * t)) ** 2;
-      else sqDist = (p.x - p1.x) ** 2 + (p.y - p1.y) ** 2;
-    } else {
-      sqDist = (p.x - p1.x) ** 2 + (p.y - p1.y) ** 2;
-    }
-
-    if (sqDist > maxSqDist) {
-      maxSqDist = sqDist;
-      index = i;
-    }
-  }
-
-  if (maxSqDist > sqTolerance) {
-    const left = simplifyPath(points.slice(0, index + 1), tolerance);
-    const right = simplifyPath(points.slice(index), tolerance);
-    return [...left.slice(0, -1), ...right];
-  }
-  return [points[0], points[points.length - 1]];
-}
-
-// 2. Velocity-based Width Calculation
+// Velocity-based Width Calculation
 const mapDistToWidth = (dist: number, baseWidth: number) => {
   return Math.max(baseWidth * MIN_WIDTH_FACTOR, baseWidth - dist / 4);
 };
 
-// 3. Catmull-Rom to Cubic Bezier Control Points
-const getCatmullRomControlPoints = (
-  p0: Point,
-  p1: Point,
-  p2: Point,
-  p3: Point,
-) => {
+// Catmull-Rom to Cubic Bezier Control Points
+const getCatmullRomControlPoints = (p0: Point, p1: Point, p2: Point, p3: Point) => {
   return {
     c1x: p1.x + (p2.x - p0.x) / 6,
     c1y: p1.y + (p2.y - p0.y) / 6,
@@ -192,21 +146,40 @@ const getCatmullRomControlPoints = (
   };
 };
 
+function buildNormalizedFromPaths(paths: Point[][], baseWidth: number) {
+  // Calculate Bounds & Normalize
+  const flat = paths.flat();
+  const minX = Math.min(...flat.map((p) => p.x));
+  const minY = Math.min(...flat.map((p) => p.y));
+  const maxX = Math.max(...flat.map((p) => p.x));
+  const maxY = Math.max(...flat.map((p) => p.y));
+
+  const padding = baseWidth * 2;
+  const logicalWidth = maxX - minX + padding * 2;
+  const logicalHeight = maxY - minY + padding * 2;
+
+  // Shift paths to start at (0,0) for storage portability
+  const normalizedPaths = paths.map((path) =>
+    path.map((p) => ({ x: p.x - minX + padding, y: p.y - minY + padding }))
+  );
+  return { normalizedPaths, logicalWidth, logicalHeight };
+}
+
 // --- Helper: Rendering ---
 
-type CurveMode = "fast" | "natural";
+type CurveMode = 'fast' | 'natural';
 
 function drawSignaturePath(
   ctx: CanvasRenderingContext2D,
   points: Point[],
   color: string,
   baseWidth: number,
-  mode: CurveMode,
+  mode: CurveMode
 ) {
   if (!points || points.length === 0) return;
 
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
 
@@ -219,7 +192,7 @@ function drawSignaturePath(
   }
 
   // Draw segment-by-segment for variable width
-  if (mode === "fast") {
+  if (mode === 'fast') {
     // Fast: Quadratic Curve (Midpoint approximation) - Good for live drawing
     let p1 = points[0];
     ctx.beginPath();
@@ -270,44 +243,32 @@ function generateHighResPng(
   color: string,
   baseWidth: number,
   targetDpi: number,
+  logicalWidth: number,
+  logicalHeight: number
 ): Promise<{ blob: Blob; width: number; height: number }> {
   return new Promise((resolve) => {
-    // 1. Calculate Bounding Box
-    const flat = paths.flat();
-    const minX = Math.min(...flat.map((p) => p.x));
-    const minY = Math.min(...flat.map((p) => p.y));
-    const maxX = Math.max(...flat.map((p) => p.x));
-    const maxY = Math.max(...flat.map((p) => p.y));
-
-    const contentW = maxX - minX;
-    const contentH = maxY - minY;
-    const padding = baseWidth * 2;
-
-    // 2. Scale Factor (72 DPI is base)
+    // Scale Factor (72 DPI is base)
     const scaleFactor = targetDpi / 72;
 
-    // 3. Setup Canvas
-    const logicalW = contentW + padding * 2;
-    const logicalH = contentH + padding * 2;
-    const exportW = Math.ceil(logicalW * scaleFactor);
-    const exportH = Math.ceil(logicalH * scaleFactor);
+    // Setup Canvas
+    const exportW = Math.ceil(logicalWidth * scaleFactor);
+    const exportH = Math.ceil(logicalHeight * scaleFactor);
 
-    const canvas = document.createElement("canvas");
+    const canvas = document.createElement('canvas');
     canvas.width = exportW;
     canvas.height = exportH;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext('2d')!;
 
-    // 4. Draw Scaled & Translated
+    // Draw Scaled & Translated
     ctx.scale(scaleFactor, scaleFactor);
-    ctx.translate(-minX + padding, -minY + padding);
 
     paths.forEach((path) => {
-      drawSignaturePath(ctx, path, color, baseWidth, "natural");
+      drawSignaturePath(ctx, path, color, baseWidth, 'natural');
     });
 
     canvas.toBlob((blob) => {
       if (blob) resolve({ blob, width: exportW, height: exportH });
-    }, "image/png");
+    }, 'image/png');
   });
 }
 
@@ -318,10 +279,10 @@ function generateSmoothSvg(
   width: number,
   height: number,
   color: string,
-  baseWidth: number,
+  baseWidth: number
 ): string {
   const f = (n: number) => n.toFixed(2);
-  let content = "";
+  let content = '';
 
   paths.forEach((path) => {
     if (path.length < 1) return;
@@ -349,16 +310,14 @@ function generateSmoothSvg(
   return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${content}</svg>`;
 }
 
-export const savedSignatures = async (): Promise<SignatureData[]> => {
-  return getAllSignatures();
-};
-
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   const canvas = document.getElementById('signature-canvas') as HTMLCanvasElement;
   const container = document.getElementById('canvas-container');
   const clearBtn = document.getElementById('clear-btn');
   const saveBtn = document.getElementById('save-btn');
+  const downloadPngBtn = document.getElementById('download-current-png-btn');
+  const downloadSvgBtn = document.getElementById('download-current-svg-btn');
   const colorInput = document.getElementById('stroke-color') as HTMLInputElement;
   const widthInput = document.getElementById('stroke-width') as HTMLInputElement;
   const fastCurve = document.getElementById('fast-curve') as HTMLInputElement;
@@ -373,6 +332,8 @@ export default function init() {
     !container ||
     !clearBtn ||
     !saveBtn ||
+    !downloadPngBtn ||
+    !downloadSvgBtn ||
     !signaturesList ||
     !savedContainer ||
     !template ||
@@ -536,32 +497,20 @@ export default function init() {
     if (paths.length === 0) return;
 
     const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
+    const { normalizedPaths, logicalWidth, logicalHeight } =
+      buildNormalizedFromPaths(paths, currentStrokeWidth);
 
-    // 1. Calculate Bounds & Normalize
-    const flat = paths.flat();
-    const minX = Math.min(...flat.map((p) => p.x));
-    const minY = Math.min(...flat.map((p) => p.y));
-    const maxX = Math.max(...flat.map((p) => p.x));
-    const maxY = Math.max(...flat.map((p) => p.y));
-
-    const padding = currentStrokeWidth * 2;
-    const logicalWidth = maxX - minX + padding * 2;
-    const logicalHeight = maxY - minY + padding * 2;
-
-    // Shift paths to start at (0,0) for storage portability
-    const normalizedPaths = paths.map((path) =>
-      path.map((p) => ({ x: p.x - minX + padding, y: p.y - minY + padding }))
-    );
-
-    // 2. Generate High-Res Image
+    // Generate High-Res Image
     const { blob } = await generateHighResPng(
       normalizedPaths,
       colorInput.value,
       currentStrokeWidth,
-      dpi
+      dpi,
+      logicalWidth,
+      logicalHeight
     );
 
-    // 3. Save
+    // Save
     const reader = new FileReader();
     reader.readAsDataURL(blob);
     reader.onloadend = async () => {
@@ -585,7 +534,50 @@ export default function init() {
       drawStatic();
       void renderSignatures();
     };
+  });
 
+  downloadPngBtn.addEventListener('click', async () => {
+    // include in-progress stroke if any
+    const allPaths: Point[][] = paths.slice();
+    if (currentPath.length > 0) allPaths.push(currentPath.slice());
+    if (allPaths.length === 0) return;
+
+    const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
+    const { normalizedPaths, logicalWidth, logicalHeight } =
+      buildNormalizedFromPaths(allPaths, currentStrokeWidth);
+
+    const { blob } = await generateHighResPng(
+      normalizedPaths,
+      colorInput.value,
+      currentStrokeWidth,
+      dpi,
+      logicalWidth,
+      logicalHeight
+    );
+
+    await downloadFile(blob, `signature-${Date.now()}.png`);
+  });
+
+  downloadSvgBtn.addEventListener('click', async () => {
+    const allPaths: Point[][] = paths.slice();
+    if (currentPath.length > 0) allPaths.push(currentPath.slice());
+    if (allPaths.length === 0) return;
+
+    const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
+      allPaths,
+      currentStrokeWidth
+    );
+
+    const svgContent = generateSmoothSvg(
+      normalizedPaths,
+      logicalWidth,
+      logicalHeight,
+      colorInput.value,
+      currentStrokeWidth
+    );
+
+    const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+    await downloadFile(blob, `signature-${Date.now()}.svg`);
   });
 
   // --- Signature Rendering ---
@@ -636,12 +628,14 @@ export default function init() {
   }
 
   // Run migration from localStorage (if any) before rendering
-  migrateFromLocalStorage().then(() => {
-    void renderSignatures();
-  }).catch(() => {
-    // If migration fails, still attempt to render existing signatures
-    void renderSignatures();
-  });
+  migrateFromLocalStorage()
+    .then(() => {
+      void renderSignatures();
+    })
+    .catch(() => {
+      // If migration fails, still attempt to render existing signatures
+      void renderSignatures();
+    });
 
   return () => {
     if (redrawTimeout) clearTimeout(redrawTimeout);
@@ -651,3 +645,7 @@ export default function init() {
   };
 }
 
+// noinspection JSUnusedGlobalSymbols
+export const savedSignatures = async (): Promise<SignatureData[]> => {
+  return getAllSignatures();
+};
