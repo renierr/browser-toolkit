@@ -185,7 +185,7 @@ function drawSignaturePath(
 
 // --- Helper: High Res Export ---
 
-function generateHighResPng(
+function generatePng(
   paths: Point[][],
   color: string,
   baseWidth: number,
@@ -443,16 +443,15 @@ export default function init() {
   saveBtn.addEventListener('click', async () => {
     if (paths.length === 0) return;
 
-    const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
     const { normalizedPaths, logicalWidth, logicalHeight } =
       buildNormalizedFromPaths(paths, currentStrokeWidth);
 
-    // Generate High-Res Image
-    const { blob } = await generateHighResPng(
+    // Generate Preview Image
+    const { blob } = await generatePng(
       normalizedPaths,
       colorInput.value,
       currentStrokeWidth,
-      dpi,
+      72,
       logicalWidth,
       logicalHeight
     );
@@ -493,7 +492,7 @@ export default function init() {
     const { normalizedPaths, logicalWidth, logicalHeight } =
       buildNormalizedFromPaths(allPaths, currentStrokeWidth);
 
-    const { blob } = await generateHighResPng(
+    const { blob } = await generatePng(
       normalizedPaths,
       colorInput.value,
       currentStrokeWidth,
@@ -564,10 +563,13 @@ export default function init() {
       });
 
       clone.querySelector('.download-png-btn')?.addEventListener('click', () => {
-        const link = document.createElement('a');
-        link.download = `signature-${sig.timestamp}.png`;
-        link.href = sig.image;
-        link.click();
+        const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
+        generatePng(sig.rawPaths, sig.color, sig.strokeWidth, dpi, sig.width, sig.height).then(
+          ({ blob }) => {
+            downloadFile(blob, `signature-${sig.timestamp}.png`);
+            console.log('PNG downloaded', sig);
+          }
+        )
       });
 
       signaturesList!.appendChild(clone);
