@@ -114,7 +114,7 @@ function buildNormalizedFromPaths(paths: Point[][], baseWidth: number) {
 
 // --- Helper: Rendering ---
 
-type CurveMode = 'fast' | 'natural' | 'none';
+type CurveMode = 'fast' | 'natural' | 'draft' | 'none';
 
 function drawSignaturePath(
   ctx: CanvasRenderingContext2D,
@@ -140,7 +140,7 @@ function drawSignaturePath(
 
   // Draw segment-by-segment for variable width
   if (mode === 'fast') {
-    // Fast: Quadratic Curve (Midpoint approximation) - Good for live drawing
+    // Quadratic Curve (Midpoint approximation)
     let p1 = points[0];
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
@@ -151,9 +151,6 @@ function drawSignaturePath(
 
       const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
       ctx.lineWidth = mapDistToWidth(dist, baseWidth);
-
-      // Note: We break the path to change lineWidth, so connections aren't perfect
-      // but it is fast enough for the "Draft" layer.
       ctx.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
       ctx.stroke();
       ctx.beginPath();
@@ -180,6 +177,25 @@ function drawSignaturePath(
       ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
       ctx.stroke();
     }
+  } else if (mode === 'draft') {
+    let p1 = points[0];
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+    ctx.lineCap = 'round';
+    //ctx.strokeStyle = colorInput.value;
+
+    for (let i = 1; i < points.length; i++) {
+      const p2 = points[i];
+      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      ctx.lineWidth = mapDistToWidth(dist, baseWidth);
+      ctx.moveTo(p1.x, p1.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.lineTo(p2.x, p2.y);
+      p1 = p2;
+    }
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
   } else {
     // None: Raw strokes - straight segments with constant width
     ctx.lineWidth = baseWidth;
