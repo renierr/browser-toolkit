@@ -18,7 +18,6 @@ interface SignatureData {
 
 // --- Configuration ---
 const MOVE_TOLERANCE = 2; // Ignore mouse moves smaller than 2px
-const SIMPLIFY_TOLERANCE = 0.6; // RDP Tolerance: Higher = fewer points, jagged curves
 const MIN_WIDTH_FACTOR = 0.35; // Thin lines are 35% of max width
 
 // --- IndexedDB Helper (lightweight) ---
@@ -487,24 +486,17 @@ export default function init() {
     if (!isDrawing) return;
     isDrawing = false;
 
-    // 1. Simplify (Optimization)
-    // Reduces point count by x% before baking/storing
-    const simplified = simplifyPath(currentPath, SIMPLIFY_TOLERANCE);
-
-    // 2. Bake High-Quality Curve (Correction)
+    // Bake High-Quality Curve (Correction)
     drawSignaturePath(
       memCtx,
-      simplified,
+      currentPath,
       colorInput.value,
       currentStrokeWidth,
       useFastCurve ? 'fast' : 'natural'
     );
 
-    paths.push(simplified);
+    paths.push(currentPath);
     currentPath = [];
-
-    // 3. Refresh View
-    // Wipes the "Draft" layer and shows the "Baked" layer
     drawStatic();
   }
 
