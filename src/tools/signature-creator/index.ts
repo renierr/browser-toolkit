@@ -17,10 +17,65 @@ interface SignatureData {
 }
 
 // --- Configuration ---
-const STORAGE_KEY = "bt-signatures";
 const MOVE_TOLERANCE = 2; // Ignore mouse moves smaller than 2px
 const SIMPLIFY_TOLERANCE = 0.6; // RDP Tolerance: Higher = fewer points, jagged curves
 const MIN_WIDTH_FACTOR = 0.35; // Thin lines are 35% of max width
+
+// --- IndexedDB Helper (lightweight) ---
+const DB_NAME = 'bt-signatures-db';
+const DB_STORE = 'signatures';
+const DB_VERSION = 1;
+
+function openDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (ev) => {
+      const db = (ev.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(DB_STORE)) {
+        db.createObjectStore(DB_STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function getAllSignatures(): Promise<SignatureData[]> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const store = tx.objectStore(DB_STORE);
+    const req = store.getAll();
+    req.onsuccess = () => {
+      // Return in reverse chronological order (most recent first)
+      const res = (req.result as SignatureData[] || []).sort((a, b) => b.timestamp - a.timestamp);
+      resolve(res);
+    };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function putSignature(sig: SignatureData): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    const store = tx.objectStore(DB_STORE);
+    const req = store.put(sig);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteSignature(id: string): Promise<void> {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    const store = tx.objectStore(DB_STORE);
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
 
 // --- Helper: Math & Geometry ---
 
@@ -242,8 +297,8 @@ function generateSmoothSvg(
   return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${content}</svg>`;
 }
 
-export const savedSignatures = () => {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as SignatureData[];
+export const savedSignatures = async (): Promise<SignatureData[]> => {
+  return getAllSignatures();
 };
 
 // noinspection JSUnusedGlobalSymbols
@@ -464,7 +519,7 @@ export default function init() {
     // 3. Save
     const reader = new FileReader();
     reader.readAsDataURL(blob);
-    reader.onloadend = () => {
+    reader.onloadend = async () => {
       const signature: SignatureData = {
         id: crypto.randomUUID(),
         image: reader.result as string,
@@ -476,15 +531,14 @@ export default function init() {
         rawPaths: normalizedPaths,
       };
 
-      const saved = savedSignatures();
-      saved.unshift(signature);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+      // Persist into IndexedDB
+      await putSignature(signature);
 
       // Cleanup
       paths = [];
       memCtx.clearRect(0, 0, userWidth(), userHeight());
       drawStatic();
-      renderSignatures();
+      void renderSignatures();
     };
 
   });
@@ -495,8 +549,8 @@ export default function init() {
     return generateSmoothSvg(sig.rawPaths, sig.width, sig.height, sig.color, sig.strokeWidth);
   }
 
-  function renderSignatures() {
-    const saved: SignatureData[] = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+  async function renderSignatures() {
+    const saved: SignatureData[] = await getAllSignatures();
     signaturesList!.innerHTML = '';
 
     if (saved.length > 0) {
@@ -512,13 +566,10 @@ export default function init() {
         sig.timestamp
       ).toLocaleString();
 
-      clone.querySelector('.delete-signature-btn')?.addEventListener('click', () => {
+      clone.querySelector('.delete-signature-btn')?.addEventListener('click', async () => {
         if (confirm('Are you sure you want to delete this signature?')) {
-          const updated = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(
-            (s: SignatureData) => s.id !== sig.id
-          );
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-          renderSignatures();
+          await deleteSignature(sig.id);
+          void renderSignatures();
         }
       });
 
@@ -539,7 +590,7 @@ export default function init() {
     });
   }
 
-  renderSignatures();
+  void renderSignatures();
 
   return () => {
     if (redrawTimeout) clearTimeout(redrawTimeout);
