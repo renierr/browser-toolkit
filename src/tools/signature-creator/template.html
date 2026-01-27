@@ -15,21 +15,21 @@
                 </label>
                 <input type="range" id="stroke-width" min="1" max="12" value="4" class="range range-xs range-primary">
             </div>
-            <div class="form-control flex items-center gap-2">
-                <input type="checkbox" id="fast-curve" class="checkbox checkbox-sm" />
-                <label class="label py-0 mb-0" for="fast-curve">
+            <div class="form-control">
+                <label class="label py-0" for="fast-curve">
                     <span class="label-text text-xs">Fast curve draw</span>
                 </label>
+                <input type="checkbox" id="fast-curve" class="checkbox checkbox-sm" />
             </div>
-            <div class="form-control flex items-center gap-2">
-                <label class="label py-0 mb-0" for="export-dpi">
+            <div class="form-control">
+                <label class="label py-0" for="export-dpi">
                     <span class="label-text text-xs">PNG Export DPI</span>
                 </label>
-                <input type="number" id="export-dpi" value="72" class="" />
+                <input type="number" id="export-dpi" value="72" class="input" />
             </div>
         </div>
 
-        <div id="canvas-container" class="relative border-2 border-dashed border-base-300 rounded-lg bg-white w-full" style="height: 300px;">
+        <div id="canvas-container" class="min-h-32 relative border-2 border-dashed border-base-300 rounded-lg bg-white w-full" >
             <canvas id="signature-canvas" class="cursor-crosshair bg-white w-full h-full"></canvas>
         </div>
 
@@ -37,7 +37,7 @@
             <button id="clear-btn" class="btn btn-outline btn-error btn-sm">
                 <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> Clear
             </button>
-            <div class="grow"></div>
+            <div class="sm:grow"></div>
 
             <!-- Direct download PNG -->
             <button id="download-current-png-btn" class="btn btn-ghost btn-sm" title="Download PNG (no save)">
