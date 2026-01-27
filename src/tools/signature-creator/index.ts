@@ -7,16 +7,240 @@ interface Point {
 
 interface SignatureData {
   id: string;
-  image: string; // Base64 PNG
-  width: number;
-  height: number;
+  image: string; // Base64 PNG (High Res)
+  width: number; // Logical width (1x scale)
+  height: number; // Logical height (1x scale)
   timestamp: number;
   color: string;
   strokeWidth: number;
-  rawPaths: Point[][];
+  rawPaths: Point[][]; // Normalized paths (relative to 0,0)
 }
 
-const STORAGE_KEY = 'bt-signatures';
+// --- Configuration ---
+const STORAGE_KEY = "bt-signatures";
+const MOVE_TOLERANCE = 2; // Ignore mouse moves smaller than 2px
+const SIMPLIFY_TOLERANCE = 0.6; // RDP Tolerance: Higher = fewer points, jagged curves
+const MIN_WIDTH_FACTOR = 0.35; // Thin lines are 35% of max width
+
+// --- Helper: Math & Geometry ---
+
+// 1. Ramer-Douglas-Peucker Simplification (Reduces point count)
+function simplifyPath(points: Point[], tolerance: number): Point[] {
+  if (points.length <= 2) return points;
+  const sqTolerance = tolerance * tolerance;
+  let maxSqDist = 0;
+  let index = 0;
+  const last = points.length - 1;
+
+  for (let i = 1; i < last; i++) {
+    const p = points[i];
+    const p1 = points[0];
+    const p2 = points[last];
+    let sqDist = 0;
+
+    // Distance from point to line segment
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    if (dx !== 0 || dy !== 0) {
+      const t = ((p.x - p1.x) * dx + (p.y - p1.y) * dy) / (dx * dx + dy * dy);
+      if (t > 1) sqDist = (p.x - p2.x) ** 2 + (p.y - p2.y) ** 2;
+      else if (t > 0)
+        sqDist = (p.x - (p1.x + dx * t)) ** 2 + (p.y - (p1.y + dy * t)) ** 2;
+      else sqDist = (p.x - p1.x) ** 2 + (p.y - p1.y) ** 2;
+    } else {
+      sqDist = (p.x - p1.x) ** 2 + (p.y - p1.y) ** 2;
+    }
+
+    if (sqDist > maxSqDist) {
+      maxSqDist = sqDist;
+      index = i;
+    }
+  }
+
+  if (maxSqDist > sqTolerance) {
+    const left = simplifyPath(points.slice(0, index + 1), tolerance);
+    const right = simplifyPath(points.slice(index), tolerance);
+    return [...left.slice(0, -1), ...right];
+  }
+  return [points[0], points[points.length - 1]];
+}
+
+// 2. Velocity-based Width Calculation
+const mapDistToWidth = (dist: number, baseWidth: number) => {
+  return Math.max(baseWidth * MIN_WIDTH_FACTOR, baseWidth - dist / 4);
+};
+
+// 3. Catmull-Rom to Cubic Bezier Control Points
+const getCatmullRomControlPoints = (
+  p0: Point,
+  p1: Point,
+  p2: Point,
+  p3: Point,
+) => {
+  return {
+    c1x: p1.x + (p2.x - p0.x) / 6,
+    c1y: p1.y + (p2.y - p0.y) / 6,
+    c2x: p2.x - (p3.x - p1.x) / 6,
+    c2y: p2.y - (p3.y - p1.y) / 6,
+  };
+};
+
+// --- Helper: Rendering ---
+
+type CurveMode = "fast" | "natural";
+
+function drawSignaturePath(
+  ctx: CanvasRenderingContext2D,
+  points: Point[],
+  color: string,
+  baseWidth: number,
+  mode: CurveMode,
+) {
+  if (!points || points.length === 0) return;
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+
+  if (points.length === 1) {
+    const p = points[0];
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, baseWidth / 2, 0, Math.PI * 2);
+    ctx.fill();
+    return;
+  }
+
+  // Draw segment-by-segment for variable width
+  if (mode === "fast") {
+    // Fast: Quadratic Curve (Midpoint approximation) - Good for live drawing
+    let p1 = points[0];
+    ctx.beginPath();
+    ctx.moveTo(p1.x, p1.y);
+
+    for (let i = 1; i < points.length; i++) {
+      const p2 = points[i];
+      const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+
+      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      ctx.lineWidth = mapDistToWidth(dist, baseWidth);
+
+      // Note: We break the path to change lineWidth, so connections aren't perfect
+      // but it is fast enough for the "Draft" layer.
+      ctx.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(mid.x, mid.y);
+
+      p1 = p2;
+    }
+    ctx.lineTo(p1.x, p1.y);
+    ctx.stroke();
+  } else {
+    // Natural: Cubic Bezier (Catmull-Rom) - Good for final bake/export
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[Math.max(0, i - 1)];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[Math.min(points.length - 1, i + 2)];
+
+      const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
+      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+
+      ctx.lineWidth = mapDistToWidth(dist, baseWidth);
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
+      ctx.stroke();
+    }
+  }
+}
+
+// --- Helper: High Res Export ---
+
+function generateHighResPng(
+  paths: Point[][],
+  color: string,
+  baseWidth: number,
+  targetDpi: number,
+): Promise<{ blob: Blob; width: number; height: number }> {
+  return new Promise((resolve) => {
+    // 1. Calculate Bounding Box
+    const flat = paths.flat();
+    const minX = Math.min(...flat.map((p) => p.x));
+    const minY = Math.min(...flat.map((p) => p.y));
+    const maxX = Math.max(...flat.map((p) => p.x));
+    const maxY = Math.max(...flat.map((p) => p.y));
+
+    const contentW = maxX - minX;
+    const contentH = maxY - minY;
+    const padding = baseWidth * 2;
+
+    // 2. Scale Factor (72 DPI is base)
+    const scaleFactor = targetDpi / 72;
+
+    // 3. Setup Canvas
+    const logicalW = contentW + padding * 2;
+    const logicalH = contentH + padding * 2;
+    const exportW = Math.ceil(logicalW * scaleFactor);
+    const exportH = Math.ceil(logicalH * scaleFactor);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = exportW;
+    canvas.height = exportH;
+    const ctx = canvas.getContext("2d")!;
+
+    // 4. Draw Scaled & Translated
+    ctx.scale(scaleFactor, scaleFactor);
+    ctx.translate(-minX + padding, -minY + padding);
+
+    paths.forEach((path) => {
+      drawSignaturePath(ctx, path, color, baseWidth, "natural");
+    });
+
+    canvas.toBlob((blob) => {
+      if (blob) resolve({ blob, width: exportW, height: exportH });
+    }, "image/png");
+  });
+}
+
+// --- Helper: Optimized SVG ---
+
+function generateSmoothSvg(
+  paths: Point[][],
+  width: number,
+  height: number,
+  color: string,
+  baseWidth: number,
+): string {
+  const f = (n: number) => n.toFixed(2);
+  let content = "";
+
+  paths.forEach((path) => {
+    if (path.length < 1) return;
+
+    if (path.length === 1) {
+      content += `<circle cx="${f(path[0].x)}" cy="${f(path[0].y)}" r="${f(baseWidth / 2)}" fill="${color}" />`;
+      return;
+    }
+
+    // Draw using Cubic Beziers for max compression and smoothness
+    for (let i = 0; i < path.length - 1; i++) {
+      const p0 = path[Math.max(0, i - 1)];
+      const p1 = path[i];
+      const p2 = path[i + 1];
+      const p3 = path[Math.min(path.length - 1, i + 2)];
+
+      const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
+      const w = mapDistToWidth(Math.hypot(p1.x - p2.x, p1.y - p2.y), baseWidth);
+
+      const d = `M${f(p1.x)} ${f(p1.y)} C${f(c1x)} ${f(c1y)}, ${f(c2x)} ${f(c2y)}, ${f(p2.x)} ${f(p2.y)}`;
+      content += `<path d="${d}" stroke="${color}" stroke-width="${f(w)}" stroke-linecap="round" fill="none" />`;
+    }
+  });
+
+  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${content}</svg>`;
+}
 
 export const savedSignatures = () => {
   return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]') as SignatureData[];
@@ -32,6 +256,7 @@ export default function init() {
   const widthInput = document.getElementById('stroke-width') as HTMLInputElement;
   const fastCurve = document.getElementById('fast-curve') as HTMLInputElement;
   const widthValue = document.getElementById('width-value');
+  const dpiInput = document.getElementById('export-dpi') as HTMLInputElement;
   const signaturesList = document.getElementById('signatures-list');
   const savedContainer = document.getElementById('saved-signatures-container');
   const template = document.getElementById('signature-item-template') as HTMLTemplateElement;
@@ -46,7 +271,9 @@ export default function init() {
     !template ||
     !colorInput ||
     !widthInput ||
-    !widthValue
+    !widthValue ||
+    !fastCurve ||
+    !dpiInput
   )
     return;
 
@@ -60,15 +287,35 @@ export default function init() {
   let isDrawing = false;
   let paths: Point[][] = [];
   let currentPath: Point[] = [];
+
   let redrawTimeout: number | null = null;
   let currentStrokeWidth = parseInt(widthInput.value);
   let useFastCurve = fastCurve.checked;
+
   const dpr = window.devicePixelRatio || 1;
   const userWidth = () => canvas.width / dpr;
   const userHeight = () => canvas.height / dpr;
 
-  // Set initial width value
-  widthValue.textContent = widthInput.value;
+  // Set initial display values
+  if (widthValue) widthValue.textContent = widthInput.value;
+  if (!dpiInput.value) dpiInput.value = '72'; // Default
+
+  // --- Sizing ---
+  const syncCanvasSize = () => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
+      canvas.width = memCanvas.width = rect.width * dpr;
+      canvas.height = memCanvas.height = rect.height * dpr;
+
+      // Normalize context to use CSS pixels
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      memCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      drawStatic();
+    }
+  };
 
   function debouncedRedraw() {
     if (redrawTimeout) clearTimeout(redrawTimeout);
@@ -78,141 +325,17 @@ export default function init() {
     }, 50);
   }
 
-  function drawStatic() {
-    // Clear visible canvas in user units, then draw the baked memCanvas scaled to user units.
-    ctx!.clearRect(0, 0, userWidth(), userHeight());
-    ctx!.drawImage(memCanvas, 0, 0, userWidth(), userHeight());
-  }
-
-  function drawFastCurve(
-    targetCtx: CanvasRenderingContext2D,
-    p: Point[],
-    color: string,
-    baseWidth: number,
-    finalize: boolean = false
-  ) {
-    if (p.length < 3) return;
-
-    targetCtx.beginPath();
-    targetCtx.lineCap = 'round';
-    targetCtx.lineJoin = 'round';
-    targetCtx.strokeStyle = color;
-
-    targetCtx.moveTo(p[0].x, p[0].y);
-
-    for (let i = 1; i < p.length - 2; i++) {
-      const xc = (p[i].x + p[i + 1].x) / 2;
-      const yc = (p[i].y + p[i + 1].y) / 2;
-
-      // Dynamic width logic integrated into the curve
-      const dist = Math.sqrt(Math.pow(p[i].x - p[i - 1].x, 2) + Math.pow(p[i].y - p[i - 1].y, 2));
-      targetCtx.lineWidth = mapDistToWidth(dist, baseWidth);
-
-      targetCtx.quadraticCurveTo(p[i].x, p[i].y, xc, yc);
-      targetCtx.stroke();
-      targetCtx.beginPath();
-      targetCtx.moveTo(xc, yc);
-    }
-
-    if (finalize) {
-      targetCtx.quadraticCurveTo(
-        p[p.length - 2].x,
-        p[p.length - 2].y,
-        p[p.length - 1].x,
-        p[p.length - 1].y
-      );
-      targetCtx.stroke();
-    }
-  }
-
-  function drawNaturalCurve(
-    targetCtx: CanvasRenderingContext2D,
-    path: Point[],
-    color: string,
-    baseWidth: number
-  ) {
-    if (!path || path.length === 0) return;
-
-    targetCtx.lineCap = 'round';
-    targetCtx.lineJoin = 'round';
-    targetCtx.strokeStyle = color;
-    targetCtx.fillStyle = color;
-
-    // Single point -> draw a dot
-    if (path.length === 1) {
-      const p = path[0];
-      targetCtx.beginPath();
-      targetCtx.arc(p.x, p.y, baseWidth / 2, 0, Math.PI * 2);
-      targetCtx.fill();
-      return;
-    }
-
-    // Two points -> simple line
-    if (path.length === 2) {
-      const p0 = path[0];
-      const p1 = path[1];
-      const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-      targetCtx.lineWidth = mapDistToWidth(dist, baseWidth);
-      targetCtx.beginPath();
-      targetCtx.moveTo(p0.x, p0.y);
-      targetCtx.lineTo(p1.x, p1.y);
-      targetCtx.stroke();
-      return;
-    }
-
-    // More than two points -> Catmull-Rom -> cubic Bezier smoothing
-    const pts = path.map((p) => ({ x: p.x, y: p.y }));
-    const n = pts.length;
-
-    // Helper to safely access points with clamped indices
-    const getP = (i: number) => pts[Math.max(0, Math.min(n - 1, i))];
-
-    // Draw each segment separately so we can vary lineWidth per segment
-    for (let i = 0; i < n - 1; i++) {
-      const P0 = getP(i - 1);
-      const P1 = getP(i);
-      const P2 = getP(i + 1);
-      const P3 = getP(i + 2);
-
-      // Catmull-Rom to Bezier control points
-      const c1x = P1.x + (P2.x - P0.x) / 6;
-      const c1y = P1.y + (P2.y - P0.y) / 6;
-      const c2x = P2.x - (P3.x - P1.x) / 6;
-      const c2y = P2.y - (P3.y - P1.y) / 6;
-
-      const dist = Math.hypot(P2.x - P1.x, P2.y - P1.y);
-      targetCtx.lineWidth = mapDistToWidth(dist, baseWidth);
-
-      targetCtx.beginPath();
-      targetCtx.moveTo(P1.x, P1.y);
-      targetCtx.bezierCurveTo(c1x, c1y, c2x, c2y, P2.x, P2.y);
-      targetCtx.stroke();
-    }
-  }
-
-  // Set internal canvas resolution to match display size
-  const syncCanvasSize = () => {
-    const rect = canvas.getBoundingClientRect();
-    if (rect.width === 0 || rect.height === 0) return;
-
-    if (canvas.width !== rect.width || canvas.height !== rect.height) {
-      canvas.width = memCanvas.width = rect.width * dpr;
-      canvas.height = memCanvas.height = rect.height * dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      memCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawStatic();
-    }
-  };
-
   function getPos(e: MouseEvent | TouchEvent): Point {
     const rect = canvas.getBoundingClientRect();
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+  }
 
-    return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
-    };
+  function drawStatic() {
+    // Clear visible canvas in user units, then draw the baked memCanvas scaled to user units.
+    ctx!.clearRect(0, 0, userWidth(), userHeight());
+    ctx!.drawImage(memCanvas, 0, 0, userWidth(), userHeight());
   }
 
   function startDrawing(e: MouseEvent | TouchEvent) {
@@ -221,32 +344,33 @@ export default function init() {
     e.preventDefault();
   }
 
-  const MOVE_TOLERANCE = 2;
-
   function draw(e: MouseEvent | TouchEvent) {
     if (!isDrawing) return;
-
     const pos = getPos(e);
-    const last = currentPath.length ? currentPath[currentPath.length - 1] : undefined;
+    const prev = currentPath[currentPath.length - 1];
 
-    if (last) {
-      // Tolerance in user pixels to reduce noisy points
-      const dx = pos.x - last.x;
-      const dy = pos.y - last.y;
-
-      // Use squared distance for the cheap threshold check to avoid a sqrt
-      const distSq = dx * dx + dy * dy;
-      if (distSq < MOVE_TOLERANCE * MOVE_TOLERANCE) {
-        e.preventDefault();
-        return;
-      }
+    // Cheap threshold check
+    if (prev) {
+      const distSq = (pos.x - prev.x) ** 2 + (pos.y - prev.y) ** 2;
+      if (distSq < MOVE_TOLERANCE * MOVE_TOLERANCE) return;
     }
 
     currentPath.push(pos);
-    if (useFastCurve) {
-      drawFastCurve(ctx!, currentPath, colorInput.value, currentStrokeWidth);
-    } else {
-      drawNaturalCurve(ctx!, currentPath, colorInput.value, currentStrokeWidth);
+
+    // DRAFT MODE: Additive drawing only
+    // We only draw the new segment on top of the existing canvas.
+    if (currentPath.length > 1) {
+      const p0 = currentPath[currentPath.length - 2];
+      const p1 = currentPath[currentPath.length - 1];
+      const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+
+      ctx!.beginPath();
+      ctx!.lineWidth = mapDistToWidth(dist, currentStrokeWidth);
+      ctx!.lineCap = 'round';
+      ctx!.strokeStyle = colorInput.value;
+      ctx!.moveTo(p0.x, p0.y);
+      ctx!.lineTo(p1.x, p1.y);
+      ctx!.stroke();
     }
     e.preventDefault();
   }
@@ -255,16 +379,28 @@ export default function init() {
     if (!isDrawing) return;
     isDrawing = false;
 
-    // Bake the active stroke into the persistent memory canvas
-    if (useFastCurve) {
-      drawFastCurve(memCtx, currentPath, colorInput.value, currentStrokeWidth, true);
-    } else {
-      drawNaturalCurve(memCtx, currentPath, colorInput.value, currentStrokeWidth);
-    }
-    paths.push([...currentPath]);
+    // 1. Simplify (Optimization)
+    // Reduces point count by x% before baking/storing
+    const simplified = simplifyPath(currentPath, SIMPLIFY_TOLERANCE);
+
+    // 2. Bake High-Quality Curve (Correction)
+    drawSignaturePath(
+      memCtx,
+      simplified,
+      colorInput.value,
+      currentStrokeWidth,
+      useFastCurve ? 'fast' : 'natural'
+    );
+
+    paths.push(simplified);
     currentPath = [];
+
+    // 3. Refresh View
+    // Wipes the "Draft" layer and shows the "Baked" layer
     drawStatic();
   }
+
+  // --- Listeners & Observers ---
 
   const resizeObserver = new ResizeObserver(() => syncCanvasSize());
   resizeObserver.observe(canvas);
@@ -284,70 +420,76 @@ export default function init() {
     widthValue!.textContent = widthInput.value;
     debouncedRedraw();
   });
-  fastCurve.addEventListener('input', () => { useFastCurve = fastCurve.checked });
+  fastCurve.addEventListener('input', () => {
+    useFastCurve = fastCurve.checked;
+  });
+
+  // --- Controls ---
 
   clearBtn.addEventListener('click', () => {
     paths = [];
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
-    drawStatic();
   });
 
-  saveBtn.addEventListener('click', () => {
+  saveBtn.addEventListener('click', async () => {
     if (paths.length === 0) return;
 
-    const color = colorInput.value;
+    const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
 
-    // 1. Calculate Bounding Box for Auto-Crop
+    // 1. Calculate Bounds & Normalize
     const flat = paths.flat();
     const minX = Math.min(...flat.map((p) => p.x));
     const minY = Math.min(...flat.map((p) => p.y));
     const maxX = Math.max(...flat.map((p) => p.x));
     const maxY = Math.max(...flat.map((p) => p.y));
 
-    const baseWidth = currentStrokeWidth;
-    const padding = baseWidth + 5;
-    const cropW = maxX - minX + padding * 2;
-    const cropH = maxY - minY + padding * 2;
+    const padding = currentStrokeWidth * 2;
+    const logicalWidth = maxX - minX + padding * 2;
+    const logicalHeight = maxY - minY + padding * 2;
 
-    // crop paths to shift to cropped coords
-    const croppedPaths: Point[][] = [];
-    paths.forEach((path) => {
-      const shifted = path.map((p) => ({ ...p, x: p.x - minX + padding, y: p.y - minY + padding }));
-      croppedPaths.push(shifted);
-    });
+    // Shift paths to start at (0,0) for storage portability
+    const normalizedPaths = paths.map((path) =>
+      path.map((p) => ({ x: p.x - minX + padding, y: p.y - minY + padding }))
+    );
 
-    // 2. Generate PNG
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = cropW;
-    tempCanvas.height = cropH;
-    const tCtx = tempCanvas.getContext('2d')!;
+    // 2. Generate High-Res Image
+    const { blob } = await generateHighResPng(
+      normalizedPaths,
+      colorInput.value,
+      currentStrokeWidth,
+      dpi
+    );
 
-    croppedPaths.forEach((path) => {
-      drawNaturalCurve(tCtx, path, colorInput.value, baseWidth);
-    });
+    // 3. Save
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => {
+      const signature: SignatureData = {
+        id: crypto.randomUUID(),
+        image: reader.result as string,
+        width: logicalWidth,
+        height: logicalHeight,
+        timestamp: Date.now(),
+        color: colorInput.value,
+        strokeWidth: currentStrokeWidth,
+        rawPaths: normalizedPaths,
+      };
 
-    const signature: SignatureData = {
-      id: crypto.randomUUID(),
-      image: tempCanvas.toDataURL('image/png'),
-      width: cropW,
-      height: cropH,
-      timestamp: Date.now(),
-      color: color,
-      strokeWidth: baseWidth,
-      rawPaths: croppedPaths,
+      const saved = savedSignatures();
+      saved.unshift(signature);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
+
+      // Cleanup
+      paths = [];
+      memCtx.clearRect(0, 0, userWidth(), userHeight());
+      drawStatic();
+      renderSignatures();
     };
 
-    const saved = savedSignatures();
-    saved.unshift(signature);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(saved));
-
-    paths = [];
-    memCtx.clearRect(0, 0, userWidth(), userHeight());
-    ctx.clearRect(0, 0, userWidth(), userHeight());
-    drawStatic();
-    renderSignatures();
   });
+
+  // --- Signature Rendering ---
 
   function createFullSvg(sig: SignatureData): string {
     return generateSmoothSvg(sig.rawPaths, sig.width, sig.height, sig.color, sig.strokeWidth);
@@ -407,99 +549,4 @@ export default function init() {
   };
 }
 
-function generateSmoothSvg(
-  paths: Point[][],
-  width: number,
-  height: number,
-  color: string,
-  baseWidth: number
-): string {
-  let svgPaths = '';
 
-  const getX = (x: number) => x.toFixed(2);
-  const getY = (y: number) => y.toFixed(2);
-
-  // Evaluate cubic Bezier at t in [0,1] for points P1 (start), C1, C2, P2 (end)
-  const cubicPoint = (
-    t: number,
-    P1: { x: number; y: number },
-    C1: { x: number; y: number },
-    C2: { x: number; y: number },
-    P2: { x: number; y: number }
-  ) => {
-    const u = 1 - t;
-    const tt = t * t;
-    const uu = u * u;
-    const uuu = uu * u;
-    const ttt = tt * t;
-
-    const x = uuu * P1.x + 3 * uu * t * C1.x + 3 * u * tt * C2.x + ttt * P2.x;
-    const y = uuu * P1.y + 3 * uu * t * C1.y + 3 * u * tt * C2.y + ttt * P2.y;
-
-    return { x, y };
-  };
-
-  paths.forEach((path) => {
-    if (!path || path.length === 0) return;
-
-    if (path.length === 1) {
-      const p = path[0];
-      // single dot; velocity unknown -> 0
-      svgPaths += `<circle cx="${getX(p.x)}" cy="${getY(p.y)}" r="${(baseWidth / 2).toFixed(2)}" fill="${color}" />`;
-      return;
-    }
-
-    if (path.length === 2) {
-      const p0 = path[0];
-      const p1 = path[1];
-      const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-      const sw = mapDistToWidth(dist, baseWidth).toFixed(2);
-      const d = `M ${getX(p0.x)} ${getY(p0.y)} L ${getX(p1.x)} ${getY(p1.y)}`;
-      svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" />`;
-      return;
-    }
-
-    // n >= 3 -> Catmull-Rom -> cubic Bezier segments approximated by small straight segments
-    const n = path.length;
-    const pts = path.map((p) => ({ x: p.x, y: p.y }));
-    const getP = (i: number) => pts[Math.max(0, Math.min(n - 1, i))];
-
-    // Subdivision steps per cubic segment (higher = smoother, more paths)
-    const STEPS = 8;
-
-    for (let i = 0; i < n - 1; i++) {
-      const P0 = getP(i - 1);
-      const P1 = getP(i);
-      const P2 = getP(i + 1);
-      const P3 = getP(i + 2);
-
-      // Catmull-Rom -> cubic Bezier control points
-      const c1x = P1.x + (P2.x - P0.x) / 6;
-      const c1y = P1.y + (P2.y - P0.y) / 6;
-      const c2x = P2.x - (P3.x - P1.x) / 6;
-      const c2y = P2.y - (P3.y - P1.y) / 6;
-
-      // velocity between P1 and P2 -> used for all subsegments of this cubic (matches canvas behavior)
-      const segDist = Math.hypot(P2.x - P1.x, P2.y - P1.y);
-      const segStroke = mapDistToWidth(segDist, baseWidth);
-
-      // Subdivide cubic into STEPS straight segments, emit a small path per segment with its stroke-width and velocity
-      let prev = cubicPoint(0, P1, { x: c1x, y: c1y }, { x: c2x, y: c2y }, P2);
-      for (let s = 1; s <= STEPS; s++) {
-        const t = s / STEPS;
-        const curr = cubicPoint(t, P1, { x: c1x, y: c1y }, { x: c2x, y: c2y }, P2);
-        const d = `M ${getX(prev.x)} ${getY(prev.y)} L ${getX(curr.x)} ${getY(curr.y)}`;
-        svgPaths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${segStroke.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round" />`;
-        prev = curr;
-      }
-    }
-  });
-
-  // Include base stroke width as a data attribute on the root SVG
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" data-stroke-width="${baseWidth}" xmlns="http://www.w3.org/2000/svg">${svgPaths}</svg>`;
-}
-
-const mapDistToWidth = (dist: number, baseWidth: number) => {
-  const minFactor = 0.35;
-  return Math.max(baseWidth * minFactor, baseWidth - dist / 4);
-};
