@@ -500,8 +500,6 @@ export default function init() {
     }
     const simplified = epsilon > 0 ? simplifyRDP(currentPath, epsilon) : currentPath;
 
-    console.log(currentPath.length, 'reduce to', simplified.length);
-
     // Bake High-Quality Curve (Correction)
     drawSignaturePath(memCtx, simplified, colorInput.value, currentStrokeWidth, currentCurveMode);
 
