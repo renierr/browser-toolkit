@@ -112,9 +112,61 @@ function buildNormalizedFromPaths(paths: Point[][], baseWidth: number) {
   return { normalizedPaths, logicalWidth, logicalHeight };
 }
 
+function perpendicularDistanceSq(p: Point, p0: Point, p1: Point): number {
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
+  if (dx === 0 && dy === 0) {
+    // p0 und p1 sind identisch → Distanz zu p0
+    return (p.x - p0.x) ** 2 + (p.y - p0.y) ** 2;
+  }
+
+  const t = ((p.x - p0.x) * dx + (p.y - p0.y) * dy) / (dx * dx + dy * dy);
+  const tClamped = Math.max(0, Math.min(1, t)); // Projektion auf das Segment
+
+  const projX = p0.x + tClamped * dx;
+  const projY = p0.y + tClamped * dy;
+
+  const distX = p.x - projX;
+  const distY = p.y - projY;
+  return distX * distX + distY * distY;
+}
+
+function simplifyRDP(points: Point[], epsilon: number): Point[] {
+  if (points.length < 3) return points.slice();
+
+  const result: Point[] = [];
+  const stack: [number, number][] = [[0, points.length - 1]];
+
+  while (stack.length > 0) {
+    const [start, end] = stack.pop()!;
+    let maxDistSq = 0;
+    let maxIndex = 0;
+
+    for (let i = start + 1; i < end; i++) {
+      const distSq = perpendicularDistanceSq(points[i], points[start], points[end]);
+      if (distSq > maxDistSq) {
+        maxDistSq = distSq;
+        maxIndex = i;
+      }
+    }
+
+    if (maxDistSq > epsilon * epsilon) {
+      stack.push([maxIndex, end]);
+      stack.push([start, maxIndex]);
+    } else {
+      result.push(points[start]);
+    }
+  }
+
+  result.push(points[points.length - 1]);
+  result.sort((a, b) => points.indexOf(a) - points.indexOf(b));
+  return result;
+}
+
 // --- Helper: Rendering ---
 
 type CurveMode = 'fast' | 'natural' | 'draft' | 'none';
+type RDPMode = 'none' | 'low' | 'medium' | 'high';
 
 function drawSignaturePath(
   ctx: CanvasRenderingContext2D,
@@ -308,6 +360,7 @@ export default function init() {
   const colorInput = document.getElementById('stroke-color') as HTMLInputElement;
   const widthInput = document.getElementById('stroke-width') as HTMLInputElement;
   const curveModeSelect = document.getElementById('curve-mode') as HTMLSelectElement;
+  const rdpSelect = document.getElementById('rdp-epsilon') as HTMLSelectElement;
   const widthValue = document.getElementById('width-value');
   const dpiInput = document.getElementById('export-dpi') as HTMLInputElement;
   const signaturesList = document.getElementById('signatures-list');
@@ -328,6 +381,7 @@ export default function init() {
     !widthInput ||
     !widthValue ||
     !curveModeSelect ||
+    !rdpSelect ||
     !dpiInput
   )
     return;
@@ -434,10 +488,24 @@ export default function init() {
     if (!isDrawing) return;
     isDrawing = false;
 
-    // Bake High-Quality Curve (Correction)
-    drawSignaturePath(memCtx, currentPath, colorInput.value, currentStrokeWidth, currentCurveMode);
+    const currentRDPMode: RDPMode = (rdpSelect.value as RDPMode) || 'none';
+    let epsilon = 0;
 
-    paths.push(currentPath);
+    if (currentRDPMode === 'low') {
+      epsilon = 0.5;
+    } else if (currentRDPMode === 'medium') {
+      epsilon = 1.0;
+    } else if (currentRDPMode === 'high') {
+      epsilon = 1.5;
+    }
+    const simplified = epsilon > 0 ? simplifyRDP(currentPath, epsilon) : currentPath;
+
+    console.log(currentPath.length, 'reduce to', simplified.length);
+
+    // Bake High-Quality Curve (Correction)
+    drawSignaturePath(memCtx, simplified, colorInput.value, currentStrokeWidth, currentCurveMode);
+
+    paths.push(simplified);
     currentPath = [];
     drawStatic();
   }
