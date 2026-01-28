@@ -489,9 +489,13 @@ export default function init() {
   function debouncedRedraw() {
     if (redrawTimeout) clearTimeout(redrawTimeout);
     redrawTimeout = window.setTimeout(() => {
+      memCtx.clearRect(0, 0, userWidth(), userHeight());
+      paths.forEach((p) => {
+        drawSignaturePath(memCtx, p, colorInput.value, currentStrokeWidth, currentCurveMode);
+      });
       drawStatic();
       redrawTimeout = null;
-    }, 50);
+    }, 100);
   }
 
   function getPos(e: PointerEvent): Point {
