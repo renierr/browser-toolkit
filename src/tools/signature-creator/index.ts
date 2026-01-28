@@ -390,6 +390,7 @@ function generateSmoothSvg(
       for (let i = 1; i < path.length; i++) d += ` L${f(path[i].x)} ${f(path[i].y)}`;
       content += `<path d="${d}" stroke="${color}" stroke-width="${f(baseWidth)}" stroke-linecap="round" fill="none" />`;
     } else {
+      let prevWidth = baseWidth;
       for (let i = 0; i < path.length - 1; i++) {
         const p0 = path[Math.max(0, i - 1)];
         const p1 = path[i];
@@ -397,7 +398,9 @@ function generateSmoothSvg(
         const p3 = path[Math.min(path.length - 1, i + 2)];
 
         const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
-        const w = computeSegmentWidth(p1, p2, baseWidth);
+        const rawW = computeSegmentWidth(p1, p2, baseWidth);
+        const w = prevWidth * WIDTH_SMOOTHING + rawW * (1 - WIDTH_SMOOTHING);
+        prevWidth = w;
 
         const d = `M${f(p1.x)} ${f(p1.y)} C${f(c1x)} ${f(c1y)}, ${f(c2x)} ${f(c2y)}, ${f(p2.x)} ${f(p2.y)}`;
         content += `<path d="${d}" stroke="${color}" stroke-width="${f(w)}" stroke-linecap="round" fill="none" />`;
