@@ -372,14 +372,17 @@ function generateSmoothSvg(
   baseWidth: number,
   mode: CurveMode = 'natural'
 ): string {
-  const f = (n: number) => n.toFixed(2);
+  const f = (n: number) => {
+    const s = n.toFixed(1);
+    return s.endsWith('.0') ? s.slice(0, -2) : s;
+  };
   let content = '';
 
   paths.forEach((path) => {
-    if (path.length < 1) return;
+    if (!path || path.length === 0) return;
 
     if (path.length === 1) {
-      content += `<circle cx="${f(path[0].x)}" cy="${f(path[0].y)}" r="${f(baseWidth / 2)}" fill="${color}" />`;
+      content += `<circle cx="${f(path[0].x)}" cy="${f(path[0].y)}" r="${f(baseWidth / 2)}" fill="${color}" />\n`;
       return;
     }
 
@@ -388,7 +391,7 @@ function generateSmoothSvg(
       // Simple polyline/path for raw strokes
       let d = `M${f(path[0].x)} ${f(path[0].y)}`;
       for (let i = 1; i < path.length; i++) d += ` L${f(path[i].x)} ${f(path[i].y)}`;
-      content += `<path d="${d}" stroke="${color}" stroke-width="${f(baseWidth)}" stroke-linecap="round" fill="none" />`;
+      content += `<path d="${d}" stroke-width="${f(baseWidth)}" />\n`;
     } else {
       let prevWidth = baseWidth;
       for (let i = 0; i < path.length - 1; i++) {
@@ -403,12 +406,12 @@ function generateSmoothSvg(
         prevWidth = w;
 
         const d = `M${f(p1.x)} ${f(p1.y)} C${f(c1x)} ${f(c1y)}, ${f(c2x)} ${f(c2y)}, ${f(p2.x)} ${f(p2.y)}`;
-        content += `<path d="${d}" stroke="${color}" stroke-width="${f(w)}" stroke-linecap="round" fill="none" />`;
+        content += `<path d="${d}" stroke-width="${f(w)}" />\n`;
       }
     }
   });
 
-  return `<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">${content}</svg>`;
+  return `<svg width="${f(width)}" height="${f(height)}" viewBox="0 0 ${f(width)} ${f(height)}" xmlns="http://www.w3.org/2000/svg"><g stroke="${color}" fill="none" stroke-linecap="round" stroke-linejoin="round">\n${content}</g></svg>`;
 }
 
 // noinspection JSUnusedGlobalSymbols
