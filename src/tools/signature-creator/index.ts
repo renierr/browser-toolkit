@@ -26,7 +26,45 @@ let MAX_WIDTH_FACTOR = 2.0; // allow up to x% of base width
 let VELOCITY_SENSITIVITY = 0.85; // larger -> velocity reduces width more strongly
 let PRESSURE_INFLUENCE = 0.9; // how strongly pressure scales width (0..1)
 let VELOCITY_INFLUENCE = 0.8; // how strongly velocity scaling contributes (0..1)
-let WIDTH_SMOOTHING = 0.25; // 0..1 where higher keeps more of previous width
+let WIDTH_SMOOTHING = 0.25; // 0..1 where higher keeps more of previous width (0.65 is a gentle smoothing)
+
+const ADV_KEY = 'bt-signature-advanced';
+
+function loadAdvancedSettings() {
+  try {
+    const raw = localStorage.getItem(ADV_KEY);
+    if (!raw) return;
+    const obj = JSON.parse(raw);
+    if (typeof obj.MOVE_TOLERANCE === 'number') MOVE_TOLERANCE = obj.MOVE_TOLERANCE;
+    if (typeof obj.MIN_WIDTH_FACTOR === 'number') MIN_WIDTH_FACTOR = obj.MIN_WIDTH_FACTOR;
+    if (typeof obj.MAX_WIDTH_FACTOR === 'number') MAX_WIDTH_FACTOR = obj.MAX_WIDTH_FACTOR;
+    if (typeof obj.VELOCITY_SENSITIVITY === 'number')
+      VELOCITY_SENSITIVITY = obj.VELOCITY_SENSITIVITY;
+    if (typeof obj.PRESSURE_INFLUENCE === 'number') PRESSURE_INFLUENCE = obj.PRESSURE_INFLUENCE;
+    if (typeof obj.VELOCITY_INFLUENCE === 'number') VELOCITY_INFLUENCE = obj.VELOCITY_INFLUENCE;
+    if (typeof obj.WIDTH_SMOOTHING === 'number') WIDTH_SMOOTHING = obj.WIDTH_SMOOTHING;
+  } catch (e) {
+    // ignore parse errors
+    console.warn('Failed to load advanced signature settings', e);
+  }
+}
+
+function saveAdvancedSettings() {
+  const obj = {
+    MOVE_TOLERANCE,
+    MIN_WIDTH_FACTOR,
+    MAX_WIDTH_FACTOR,
+    VELOCITY_SENSITIVITY,
+    PRESSURE_INFLUENCE,
+    VELOCITY_INFLUENCE,
+    WIDTH_SMOOTHING,
+  };
+  try {
+    localStorage.setItem(ADV_KEY, JSON.stringify(obj));
+  } catch (e) {
+    console.warn('Failed to save advanced signature settings', e);
+  }
+}
 
 // --- IndexedDB Helper (lightweight) ---
 const DB_NAME = 'bt-signatures-db';
@@ -642,6 +680,8 @@ export default function init() {
   const widthSmoothingValue = document.getElementById('width-smoothing-value');
 
   // Initialize advanced values from defaults
+  loadAdvancedSettings();
+
   if (moveToleranceInput && moveToleranceValue) {
     moveToleranceInput.value = String(MOVE_TOLERANCE);
     moveToleranceValue.textContent = String(MOVE_TOLERANCE);
@@ -675,36 +715,71 @@ export default function init() {
   moveToleranceInput?.addEventListener('input', () => {
     MOVE_TOLERANCE = parseInt(moveToleranceInput.value);
     moveToleranceValue && (moveToleranceValue.textContent = moveToleranceInput.value);
+    saveAdvancedSettings();
   });
   minWidthFactorInput?.addEventListener('input', () => {
     MIN_WIDTH_FACTOR = parseFloat(minWidthFactorInput.value);
     minWidthFactorValue && (minWidthFactorValue.textContent = minWidthFactorInput.value);
-    debouncedRedraw();
+    saveAdvancedSettings();
   });
   maxWidthFactorInput?.addEventListener('input', () => {
     MAX_WIDTH_FACTOR = parseFloat(maxWidthFactorInput.value);
     maxWidthFactorValue && (maxWidthFactorValue.textContent = maxWidthFactorInput.value);
-    debouncedRedraw();
+    saveAdvancedSettings();
   });
   velocitySensitivityInput?.addEventListener('input', () => {
     VELOCITY_SENSITIVITY = parseFloat(velocitySensitivityInput.value);
     velocitySensitivityValue &&
       (velocitySensitivityValue.textContent = velocitySensitivityInput.value);
-    debouncedRedraw();
+    saveAdvancedSettings();
   });
   pressureInfluenceInput?.addEventListener('input', () => {
     PRESSURE_INFLUENCE = parseFloat(pressureInfluenceInput.value);
     pressureInfluenceValue && (pressureInfluenceValue.textContent = pressureInfluenceInput.value);
-    debouncedRedraw();
+    saveAdvancedSettings();
   });
   velocityInfluenceInput?.addEventListener('input', () => {
     VELOCITY_INFLUENCE = parseFloat(velocityInfluenceInput.value);
     velocityInfluenceValue && (velocityInfluenceValue.textContent = velocityInfluenceInput.value);
-    debouncedRedraw();
+    saveAdvancedSettings();
   });
   widthSmoothingInput?.addEventListener('input', () => {
     WIDTH_SMOOTHING = parseFloat(widthSmoothingInput.value);
     widthSmoothingValue && (widthSmoothingValue.textContent = widthSmoothingInput.value);
+    debouncedRedraw();
+    saveAdvancedSettings();
+  });
+
+  // Reset to defaults button
+  const advancedResetBtn = document.getElementById('advanced-reset-btn');
+  advancedResetBtn?.addEventListener('click', () => {
+    // Restore hard-coded defaults
+    MOVE_TOLERANCE = 2;
+    MIN_WIDTH_FACTOR = 0.15;
+    MAX_WIDTH_FACTOR = 2.0;
+    VELOCITY_SENSITIVITY = 0.85;
+    PRESSURE_INFLUENCE = 0.9;
+    VELOCITY_INFLUENCE = 0.8;
+    WIDTH_SMOOTHING = 0.25;
+
+    // Update inputs and displays
+    if (moveToleranceInput) moveToleranceInput.value = String(MOVE_TOLERANCE);
+    moveToleranceValue && (moveToleranceValue.textContent = String(MOVE_TOLERANCE));
+    if (minWidthFactorInput) minWidthFactorInput.value = String(MIN_WIDTH_FACTOR);
+    minWidthFactorValue && (minWidthFactorValue.textContent = String(MIN_WIDTH_FACTOR));
+    if (maxWidthFactorInput) maxWidthFactorInput.value = String(MAX_WIDTH_FACTOR);
+    maxWidthFactorValue && (maxWidthFactorValue.textContent = String(MAX_WIDTH_FACTOR));
+    if (velocitySensitivityInput) velocitySensitivityInput.value = String(VELOCITY_SENSITIVITY);
+    velocitySensitivityValue &&
+      (velocitySensitivityValue.textContent = String(VELOCITY_SENSITIVITY));
+    if (pressureInfluenceInput) pressureInfluenceInput.value = String(PRESSURE_INFLUENCE);
+    pressureInfluenceValue && (pressureInfluenceValue.textContent = String(PRESSURE_INFLUENCE));
+    if (velocityInfluenceInput) velocityInfluenceInput.value = String(VELOCITY_INFLUENCE);
+    velocityInfluenceValue && (velocityInfluenceValue.textContent = String(VELOCITY_INFLUENCE));
+    if (widthSmoothingInput) widthSmoothingInput.value = String(WIDTH_SMOOTHING);
+    widthSmoothingValue && (widthSmoothingValue.textContent = String(WIDTH_SMOOTHING));
+
+    saveAdvancedSettings();
     debouncedRedraw();
   });
 
