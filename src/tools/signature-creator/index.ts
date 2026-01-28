@@ -755,27 +755,32 @@ export default function init() {
   minWidthFactorInput?.addEventListener('input', () => {
     MIN_WIDTH_FACTOR = parseFloat(minWidthFactorInput.value);
     minWidthFactorValue && (minWidthFactorValue.textContent = minWidthFactorInput.value);
+    debouncedRedraw();
     saveSettings({ MIN_WIDTH_FACTOR });
   });
   maxWidthFactorInput?.addEventListener('input', () => {
     MAX_WIDTH_FACTOR = parseFloat(maxWidthFactorInput.value);
     maxWidthFactorValue && (maxWidthFactorValue.textContent = maxWidthFactorInput.value);
+    debouncedRedraw();
     saveSettings({ MAX_WIDTH_FACTOR });
   });
   velocitySensitivityInput?.addEventListener('input', () => {
     VELOCITY_SENSITIVITY = parseFloat(velocitySensitivityInput.value);
     velocitySensitivityValue &&
       (velocitySensitivityValue.textContent = velocitySensitivityInput.value);
+    debouncedRedraw();
     saveSettings({ VELOCITY_SENSITIVITY });
   });
   pressureInfluenceInput?.addEventListener('input', () => {
     PRESSURE_INFLUENCE = parseFloat(pressureInfluenceInput.value);
     pressureInfluenceValue && (pressureInfluenceValue.textContent = pressureInfluenceInput.value);
+    debouncedRedraw();
     saveSettings({ PRESSURE_INFLUENCE });
   });
   velocityInfluenceInput?.addEventListener('input', () => {
     VELOCITY_INFLUENCE = parseFloat(velocityInfluenceInput.value);
     velocityInfluenceValue && (velocityInfluenceValue.textContent = velocityInfluenceInput.value);
+    debouncedRedraw();
     saveSettings({ VELOCITY_INFLUENCE });
   });
   widthSmoothingInput?.addEventListener('input', () => {
