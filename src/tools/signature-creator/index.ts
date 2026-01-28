@@ -21,6 +21,8 @@ interface SignatureData {
 // --- Configuration ---
 const MOVE_TOLERANCE = 2; // Ignore mouse moves smaller than 2px
 const MIN_WIDTH_FACTOR = 0.35; // Thin lines are 35% of max width
+const VELOCITY_SENSITIVITY = 0.15; // higher = more sensitive to speed (thinner on fast strokes)
+const MAX_WIDTH_FACTOR = 1.4; // allow slightly thicker than base when slow + high pressure
 
 // --- IndexedDB Helper (lightweight) ---
 const DB_NAME = 'bt-signatures-db';
@@ -80,10 +82,33 @@ async function deleteSignature(id: string): Promise<void> {
 
 // --- Helper: Math & Geometry ---
 
-// Velocity-based Width Calculation
-const mapDistToWidth = (dist: number, baseWidth: number) => {
-  return Math.max(baseWidth * MIN_WIDTH_FACTOR, baseWidth - dist / 4);
-};
+function computeWidthFromVelocityAndPressure(velocity: number, pressure: number, baseWidth: number) {
+  // Normalize inputs
+  const p = Math.max(0.01, Math.min(1, pressure || 0.5));
+  const v = Math.max(0, velocity || 0);
+
+  // Exponential falloff: velocity 0 -> factor ~1, velocity large -> factor -> 0
+  const velocityFactor = Math.exp(-v * VELOCITY_SENSITIVITY);
+
+  // Combine pressure and velocity: pressure scales the width, velocity reduces it
+  let width = baseWidth * p * velocityFactor;
+
+  // Apply reasonable clamps to avoid disappearing or huge strokes
+  const minW = baseWidth * MIN_WIDTH_FACTOR;
+  const maxW = baseWidth * MAX_WIDTH_FACTOR;
+  width = Math.max(minW, Math.min(maxW, width));
+
+  return width;
+}
+
+function computeSegmentWidth(p0: Point, p1: Point, baseWidth: number) {
+  const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+  let dt = p1.timestamp - p0.timestamp;
+  if (!dt || dt < 1) dt = 1; // avoid division by zero / extremely large velocities
+  const velocity = dist / dt; // pixels per ms
+  const pressureAvg = ((p0.pressure || 0.5) + (p1.pressure || 0.5)) / 2;
+  return computeWidthFromVelocityAndPressure(velocity, pressureAvg, baseWidth);
+}
 
 // Catmull-Rom to Cubic Bezier Control Points
 const getCatmullRomControlPoints = (p0: Point, p1: Point, p2: Point, p3: Point) => {
@@ -208,8 +233,7 @@ function drawSignaturePath(
       const p2 = points[i];
       const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
 
-      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-      ctx.lineWidth = mapDistToWidth(dist, baseWidth);
+      ctx.lineWidth = computeSegmentWidth(p1, p2, baseWidth);
       ctx.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
       ctx.stroke();
       ctx.beginPath();
@@ -220,7 +244,8 @@ function drawSignaturePath(
     ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
   } else if (mode === 'natural') {
-    let recentDists: number[] = [];
+    let recentVels: number[] = [];
+    let recentPressures: number[] = [];
 
     // Natural: Cubic Bezier (Catmull-Rom) - Good for final bake/export
     for (let i = 0; i < points.length - 1; i++) {
@@ -231,11 +256,19 @@ function drawSignaturePath(
 
       const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
       const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-      recentDists.push(dist);
-      if (recentDists.length > 5) recentDists.shift(); // max 5 Segmente merken
-      const avgDist = recentDists.reduce((a, b) => a + b, 0) / recentDists.length;
+      const dt = Math.max(1, p2.timestamp - p1.timestamp);
+      const vel = dist / dt;
+      const pressAvg = ((p1.pressure || 0.5) + (p2.pressure || 0.5)) / 2;
 
-      ctx.lineWidth = mapDistToWidth(avgDist, baseWidth);
+      recentVels.push(vel);
+      recentPressures.push(pressAvg);
+      if (recentVels.length > 5) recentVels.shift(); // max 5 segments
+      if (recentPressures.length > 5) recentPressures.shift();
+
+      const avgVel = recentVels.reduce((a, b) => a + b, 0) / recentVels.length;
+      const avgPress = recentPressures.reduce((a, b) => a + b, 0) / recentPressures.length;
+
+      ctx.lineWidth = computeWidthFromVelocityAndPressure(avgVel, avgPress, baseWidth);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
@@ -246,12 +279,11 @@ function drawSignaturePath(
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
     ctx.lineCap = 'round';
-    //ctx.strokeStyle = colorInput.value;
 
     for (let i = 1; i < points.length; i++) {
       const p2 = points[i];
-      const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-      ctx.lineWidth = mapDistToWidth(dist, baseWidth);
+      const w = computeSegmentWidth(p1, p2, baseWidth);
+      ctx.lineWidth = w;
       ctx.moveTo(p1.x, p1.y);
       ctx.stroke();
       ctx.beginPath();
@@ -345,7 +377,7 @@ function generateSmoothSvg(
         const p3 = path[Math.min(path.length - 1, i + 2)];
 
         const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
-        const w = mapDistToWidth(Math.hypot(p1.x - p2.x, p1.y - p2.y), baseWidth);
+        const w = computeSegmentWidth(p1, p2, baseWidth);
 
         const d = `M${f(p1.x)} ${f(p1.y)} C${f(c1x)} ${f(c1y)}, ${f(c2x)} ${f(c2y)}, ${f(p2.x)} ${f(p2.y)}`;
         content += `<path d="${d}" stroke="${color}" stroke-width="${f(w)}" stroke-linecap="round" fill="none" />`;
@@ -485,10 +517,8 @@ export default function init() {
     if (currentPath.length > 1) {
       const p0 = currentPath[currentPath.length - 2];
       const p1 = currentPath[currentPath.length - 1];
-      const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-
       ctx!.beginPath();
-      ctx!.lineWidth = mapDistToWidth(dist, currentStrokeWidth);
+      ctx!.lineWidth = computeSegmentWidth(p0, p1, currentStrokeWidth);
       ctx!.lineCap = 'round';
       ctx!.strokeStyle = colorInput.value;
       ctx!.moveTo(p0.x, p0.y);
