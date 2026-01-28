@@ -161,6 +161,8 @@ function drawSignaturePath(
     ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
   } else if (mode === 'natural') {
+    let recentDists: number[] = [];
+
     // Natural: Cubic Bezier (Catmull-Rom) - Good for final bake/export
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[Math.max(0, i - 1)];
@@ -170,8 +172,11 @@ function drawSignaturePath(
 
       const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
       const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      recentDists.push(dist);
+      if (recentDists.length > 5) recentDists.shift(); // max 5 Segmente merken
+      const avgDist = recentDists.reduce((a, b) => a + b, 0) / recentDists.length;
 
-      ctx.lineWidth = mapDistToWidth(dist, baseWidth);
+      ctx.lineWidth = mapDistToWidth(avgDist, baseWidth);
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
@@ -430,13 +435,7 @@ export default function init() {
     isDrawing = false;
 
     // Bake High-Quality Curve (Correction)
-    drawSignaturePath(
-      memCtx,
-      currentPath,
-      colorInput.value,
-      currentStrokeWidth,
-      currentCurveMode
-    );
+    drawSignaturePath(memCtx, currentPath, colorInput.value, currentStrokeWidth, currentCurveMode);
 
     paths.push(currentPath);
     currentPath = [];
@@ -479,8 +478,10 @@ export default function init() {
   saveBtn.addEventListener('click', async () => {
     if (paths.length === 0) return;
 
-    const { normalizedPaths, logicalWidth, logicalHeight } =
-      buildNormalizedFromPaths(paths, currentStrokeWidth);
+    const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
+      paths,
+      currentStrokeWidth
+    );
 
     // Generate Preview Image
     const { blob } = await generatePng(
@@ -526,8 +527,10 @@ export default function init() {
     if (allPaths.length === 0) return;
 
     const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
-    const { normalizedPaths, logicalWidth, logicalHeight } =
-      buildNormalizedFromPaths(allPaths, currentStrokeWidth);
+    const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
+      allPaths,
+      currentStrokeWidth
+    );
 
     const { blob } = await generatePng(
       normalizedPaths,
@@ -568,7 +571,14 @@ export default function init() {
   // --- Signature Rendering ---
 
   function createFullSvg(sig: SignatureData): string {
-    return generateSmoothSvg(sig.rawPaths, sig.width, sig.height, sig.color, sig.strokeWidth, currentCurveMode);
+    return generateSmoothSvg(
+      sig.rawPaths,
+      sig.width,
+      sig.height,
+      sig.color,
+      sig.strokeWidth,
+      currentCurveMode
+    );
   }
 
   async function renderSignatures() {
@@ -622,7 +632,9 @@ export default function init() {
         });
 
         memCtx.restore();
-        paths = sig.rawPaths.map((path) => path.map((pt) => ({ x: pt.x * scale + offsetX, y: pt.y * scale + offsetY })));
+        paths = sig.rawPaths.map((path) =>
+          path.map((pt) => ({ x: pt.x * scale + offsetX, y: pt.y * scale + offsetY }))
+        );
 
         drawStatic();
       });
@@ -635,12 +647,18 @@ export default function init() {
 
       clone.querySelector('.download-png-btn')?.addEventListener('click', () => {
         const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
-        generatePng(sig.rawPaths, sig.color, sig.strokeWidth, dpi, sig.width, sig.height, currentCurveMode).then(
-          ({ blob }) => {
-            downloadFile(blob, `signature-${sig.timestamp}.png`);
-            console.log('PNG downloaded', sig);
-          }
-        );
+        generatePng(
+          sig.rawPaths,
+          sig.color,
+          sig.strokeWidth,
+          dpi,
+          sig.width,
+          sig.height,
+          currentCurveMode
+        ).then(({ blob }) => {
+          downloadFile(blob, `signature-${sig.timestamp}.png`);
+          console.log('PNG downloaded', sig);
+        });
       });
 
       signaturesList!.appendChild(clone);
@@ -661,4 +679,3 @@ export default function init() {
 export const savedSignatures = async (): Promise<SignatureData[]> => {
   return getAllSignatures();
 };
-
