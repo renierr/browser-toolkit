@@ -28,41 +28,27 @@ let PRESSURE_INFLUENCE = 0.9; // how strongly pressure scales width (0..1)
 let VELOCITY_INFLUENCE = 0.8; // how strongly velocity scaling contributes (0..1)
 let WIDTH_SMOOTHING = 0.25; // 0..1 where higher keeps more of previous width (0.65 is a gentle smoothing)
 
-const ADV_KEY = 'bt-signature-advanced';
+// Single storage key for both basic and advanced signature settings
+const SETTINGS_KEY = 'bt-signature-settings';
 
-function loadAdvancedSettings() {
+function loadSettings(): Record<string, any> {
   try {
-    const raw = localStorage.getItem(ADV_KEY);
-    if (!raw) return;
-    const obj = JSON.parse(raw);
-    if (typeof obj.MOVE_TOLERANCE === 'number') MOVE_TOLERANCE = obj.MOVE_TOLERANCE;
-    if (typeof obj.MIN_WIDTH_FACTOR === 'number') MIN_WIDTH_FACTOR = obj.MIN_WIDTH_FACTOR;
-    if (typeof obj.MAX_WIDTH_FACTOR === 'number') MAX_WIDTH_FACTOR = obj.MAX_WIDTH_FACTOR;
-    if (typeof obj.VELOCITY_SENSITIVITY === 'number')
-      VELOCITY_SENSITIVITY = obj.VELOCITY_SENSITIVITY;
-    if (typeof obj.PRESSURE_INFLUENCE === 'number') PRESSURE_INFLUENCE = obj.PRESSURE_INFLUENCE;
-    if (typeof obj.VELOCITY_INFLUENCE === 'number') VELOCITY_INFLUENCE = obj.VELOCITY_INFLUENCE;
-    if (typeof obj.WIDTH_SMOOTHING === 'number') WIDTH_SMOOTHING = obj.WIDTH_SMOOTHING;
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) || {};
   } catch (e) {
-    // ignore parse errors
-    console.warn('Failed to load advanced signature settings', e);
+    console.warn('Failed to load signature settings', e);
+    return {};
   }
 }
 
-function saveAdvancedSettings() {
-  const obj = {
-    MOVE_TOLERANCE,
-    MIN_WIDTH_FACTOR,
-    MAX_WIDTH_FACTOR,
-    VELOCITY_SENSITIVITY,
-    PRESSURE_INFLUENCE,
-    VELOCITY_INFLUENCE,
-    WIDTH_SMOOTHING,
-  };
+function saveSettings(partial: Record<string, any>) {
   try {
-    localStorage.setItem(ADV_KEY, JSON.stringify(obj));
+    const cur = loadSettings();
+    const next = Object.assign({}, cur, partial);
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
   } catch (e) {
-    console.warn('Failed to save advanced signature settings', e);
+    console.warn('Failed to save signature settings', e);
   }
 }
 
@@ -515,7 +501,40 @@ export default function init() {
 
   // Set initial display values
   if (widthValue) widthValue.textContent = widthInput.value;
+  // Set initial display values
+  if (widthValue) widthValue.textContent = widthInput.value;
   if (!dpiInput.value) dpiInput.value = '72'; // Default
+
+  // Load persisted settings (both advanced and basic) and apply to UI/runtime
+  const settings = loadSettings();
+  // Advanced numeric settings (preserve defaults if missing)
+  MOVE_TOLERANCE = settings.MOVE_TOLERANCE ?? MOVE_TOLERANCE;
+  MIN_WIDTH_FACTOR = settings.MIN_WIDTH_FACTOR ?? MIN_WIDTH_FACTOR;
+  MAX_WIDTH_FACTOR = settings.MAX_WIDTH_FACTOR ?? MAX_WIDTH_FACTOR;
+  VELOCITY_SENSITIVITY = settings.VELOCITY_SENSITIVITY ?? VELOCITY_SENSITIVITY;
+  PRESSURE_INFLUENCE = settings.PRESSURE_INFLUENCE ?? PRESSURE_INFLUENCE;
+  VELOCITY_INFLUENCE = settings.VELOCITY_INFLUENCE ?? VELOCITY_INFLUENCE;
+  WIDTH_SMOOTHING = settings.WIDTH_SMOOTHING ?? WIDTH_SMOOTHING;
+
+  // Basic UI settings
+  if (settings.color && typeof settings.color === 'string') {
+    colorInput.value = settings.color;
+  }
+  if (settings.strokeWidth && !isNaN(parseInt(settings.strokeWidth))) {
+    widthInput.value = String(settings.strokeWidth);
+    currentStrokeWidth = parseInt(widthInput.value);
+    if (widthValue) widthValue.textContent = widthInput.value;
+  }
+  if (settings.curveMode && typeof settings.curveMode === 'string') {
+    curveModeSelect.value = settings.curveMode;
+    currentCurveMode = curveModeSelect.value as CurveMode;
+  }
+  if (settings.rdp && typeof settings.rdp === 'string') {
+    rdpSelect.value = settings.rdp;
+  }
+  if (settings.dpi && !isNaN(parseInt(settings.dpi))) {
+    dpiInput.value = String(parseInt(settings.dpi));
+  }
 
   // --- Sizing ---
   const syncCanvasSize = () => {
@@ -642,15 +661,31 @@ export default function init() {
   canvas.style.touchAction = 'none';
   container.style.touchAction = 'none';
 
-  colorInput.addEventListener('input', debouncedRedraw);
+  // Basic UI listeners
+  colorInput.addEventListener('input', () => {
+    debouncedRedraw();
+    saveSettings({ color: colorInput.value });
+  });
+
   widthInput.addEventListener('input', () => {
     currentStrokeWidth = parseInt(widthInput.value);
     widthValue!.textContent = widthInput.value;
     debouncedRedraw();
+    saveSettings({ strokeWidth: currentStrokeWidth });
   });
+
   curveModeSelect.addEventListener('change', () => {
     currentCurveMode = curveModeSelect.value as CurveMode;
     debouncedRedraw();
+    saveSettings({ curveMode: currentCurveMode });
+  });
+
+  rdpSelect.addEventListener('change', () => {
+    saveSettings({ rdp: rdpSelect.value });
+  });
+
+  dpiInput.addEventListener('change', () => {
+    if (dpiInput.value) saveSettings({ dpi: dpiInput.value });
   });
 
   // Advanced controls
@@ -680,7 +715,7 @@ export default function init() {
   const widthSmoothingValue = document.getElementById('width-smoothing-value');
 
   // Initialize advanced values from defaults
-  loadAdvancedSettings();
+  loadSettings();
 
   if (moveToleranceInput && moveToleranceValue) {
     moveToleranceInput.value = String(MOVE_TOLERANCE);
@@ -715,39 +750,39 @@ export default function init() {
   moveToleranceInput?.addEventListener('input', () => {
     MOVE_TOLERANCE = parseInt(moveToleranceInput.value);
     moveToleranceValue && (moveToleranceValue.textContent = moveToleranceInput.value);
-    saveAdvancedSettings();
+    saveSettings({ MOVE_TOLERANCE });
   });
   minWidthFactorInput?.addEventListener('input', () => {
     MIN_WIDTH_FACTOR = parseFloat(minWidthFactorInput.value);
     minWidthFactorValue && (minWidthFactorValue.textContent = minWidthFactorInput.value);
-    saveAdvancedSettings();
+    saveSettings({ MIN_WIDTH_FACTOR });
   });
   maxWidthFactorInput?.addEventListener('input', () => {
     MAX_WIDTH_FACTOR = parseFloat(maxWidthFactorInput.value);
     maxWidthFactorValue && (maxWidthFactorValue.textContent = maxWidthFactorInput.value);
-    saveAdvancedSettings();
+    saveSettings({ MAX_WIDTH_FACTOR });
   });
   velocitySensitivityInput?.addEventListener('input', () => {
     VELOCITY_SENSITIVITY = parseFloat(velocitySensitivityInput.value);
     velocitySensitivityValue &&
       (velocitySensitivityValue.textContent = velocitySensitivityInput.value);
-    saveAdvancedSettings();
+    saveSettings({ VELOCITY_SENSITIVITY });
   });
   pressureInfluenceInput?.addEventListener('input', () => {
     PRESSURE_INFLUENCE = parseFloat(pressureInfluenceInput.value);
     pressureInfluenceValue && (pressureInfluenceValue.textContent = pressureInfluenceInput.value);
-    saveAdvancedSettings();
+    saveSettings({ PRESSURE_INFLUENCE });
   });
   velocityInfluenceInput?.addEventListener('input', () => {
     VELOCITY_INFLUENCE = parseFloat(velocityInfluenceInput.value);
     velocityInfluenceValue && (velocityInfluenceValue.textContent = velocityInfluenceInput.value);
-    saveAdvancedSettings();
+    saveSettings({ VELOCITY_INFLUENCE });
   });
   widthSmoothingInput?.addEventListener('input', () => {
     WIDTH_SMOOTHING = parseFloat(widthSmoothingInput.value);
     widthSmoothingValue && (widthSmoothingValue.textContent = widthSmoothingInput.value);
     debouncedRedraw();
-    saveAdvancedSettings();
+    saveSettings({ WIDTH_SMOOTHING });
   });
 
   // Reset to defaults button
@@ -761,6 +796,11 @@ export default function init() {
     PRESSURE_INFLUENCE = 0.9;
     VELOCITY_INFLUENCE = 0.8;
     WIDTH_SMOOTHING = 0.25;
+    currentCurveMode = 'natural';
+    currentStrokeWidth = 4;
+    dpiInput.value = '72';
+    rdpSelect.value = 'none';
+    colorInput.value = '#0B3D91';
 
     // Update inputs and displays
     if (moveToleranceInput) moveToleranceInput.value = String(MOVE_TOLERANCE);
@@ -778,8 +818,19 @@ export default function init() {
     velocityInfluenceValue && (velocityInfluenceValue.textContent = String(VELOCITY_INFLUENCE));
     if (widthSmoothingInput) widthSmoothingInput.value = String(WIDTH_SMOOTHING);
     widthSmoothingValue && (widthSmoothingValue.textContent = String(WIDTH_SMOOTHING));
+    if (curveModeSelect) curveModeSelect.value = currentCurveMode;
+    if (widthInput) widthInput.value = String(currentStrokeWidth);
+    if (widthValue) widthValue.textContent = String(currentStrokeWidth);
 
-    saveAdvancedSettings();
+    saveSettings({
+      MOVE_TOLERANCE,
+      MIN_WIDTH_FACTOR,
+      MAX_WIDTH_FACTOR,
+      VELOCITY_SENSITIVITY,
+      PRESSURE_INFLUENCE,
+      VELOCITY_INFLUENCE,
+      WIDTH_SMOOTHING,
+    });
     debouncedRedraw();
   });
 
