@@ -19,10 +19,13 @@ interface SignatureData {
 }
 
 // --- Configuration ---
+
 const MOVE_TOLERANCE = 2; // Ignore mouse moves smaller than 2px
-const MIN_WIDTH_FACTOR = 0.35; // Thin lines are 35% of max width
-const VELOCITY_SENSITIVITY = 0.15; // higher = more sensitive to speed (thinner on fast strokes)
-const MAX_WIDTH_FACTOR = 1.4; // allow slightly thicker than base when slow + high pressure
+const MIN_WIDTH_FACTOR = 0.15; // Thin lines can be x% of base width
+const MAX_WIDTH_FACTOR = 2.0;  // allow up to x% of base width
+const VELOCITY_SENSITIVITY = 0.85; // larger -> velocity reduces width more strongly
+const PRESSURE_INFLUENCE = 0.9; // how strongly pressure scales width (0..1)
+const VELOCITY_INFLUENCE = 0.8; // how strongly velocity scaling contributes (0..1)
 
 // --- IndexedDB Helper (lightweight) ---
 const DB_NAME = 'bt-signatures-db';
@@ -84,14 +87,14 @@ async function deleteSignature(id: string): Promise<void> {
 
 function computeWidthFromVelocityAndPressure(velocity: number, pressure: number, baseWidth: number) {
   // Normalize inputs
-  const p = Math.max(0.01, Math.min(1, pressure || 0.5));
-  const v = Math.max(0, velocity || 0);
+  const p = Math.max(0, Math.min(1, pressure ?? 1));
+  const v = Math.max(0, velocity ?? 0);
 
-  // Exponential falloff: velocity 0 -> factor ~1, velocity large -> factor -> 0
   const velocityFactor = Math.exp(-v * VELOCITY_SENSITIVITY);
+  const pressureScale = 0.5 + p * PRESSURE_INFLUENCE; // ranges ~0.5..(0.5+PRESSURE_INFLUENCE)
+  const velocityScale = 0.5 + velocityFactor * VELOCITY_INFLUENCE; // ranges ~0.5..(0.5+VELOCITY_INFLUENCE)
 
-  // Combine pressure and velocity: pressure scales the width, velocity reduces it
-  let width = baseWidth * p * velocityFactor;
+  let width = baseWidth * pressureScale * velocityScale;
 
   // Apply reasonable clamps to avoid disappearing or huge strokes
   const minW = baseWidth * MIN_WIDTH_FACTOR;
@@ -106,7 +109,7 @@ function computeSegmentWidth(p0: Point, p1: Point, baseWidth: number) {
   let dt = p1.timestamp - p0.timestamp;
   if (!dt || dt < 1) dt = 1; // avoid division by zero / extremely large velocities
   const velocity = dist / dt; // pixels per ms
-  const pressureAvg = ((p0.pressure || 0.5) + (p1.pressure || 0.5)) / 2;
+  const pressureAvg = ((p0.pressure || 1) + (p1.pressure || 1)) / 2;
   return computeWidthFromVelocityAndPressure(velocity, pressureAvg, baseWidth);
 }
 
@@ -258,7 +261,7 @@ function drawSignaturePath(
       const dist = Math.hypot(p1.x - p2.x, p1.y - p2.y);
       const dt = Math.max(1, p2.timestamp - p1.timestamp);
       const vel = dist / dt;
-      const pressAvg = ((p1.pressure || 0.5) + (p2.pressure || 0.5)) / 2;
+      const pressAvg = ((p1.pressure || 1) + (p2.pressure || 1)) / 2;
 
       recentVels.push(vel);
       recentPressures.push(pressAvg);
@@ -479,7 +482,7 @@ export default function init() {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
       timestamp: performance.now(),
-      pressure: e.pressure || 0.5,
+      pressure: e.pressure || 1,
     };
   }
 
