@@ -52,6 +52,72 @@
             </div>
         </div>
 
+        <!-- Advanced stroke settings (collapsible, initially closed) -->
+        <details class="mt-4 border rounded-lg bg-base-100 p-3">
+          <summary class="cursor-pointer font-medium text-sm">Advanced stroke settings</summary>
+
+          <!-- Short overall description -->
+          <p class="text-sm opacity-70 mt-2 mb-3">Fine-tune how strokes respond to speed and pressure. Tweak these only if you want more control over thin/thick transitions and responsiveness.</p>
+
+            <div class="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="form-control">
+                <label class="label py-0" for="move-tolerance">
+                  <span class="label-text text-xs">Move tolerance: <span id="move-tolerance-value">2</span>px</span>
+                </label>
+                <input type="range" id="move-tolerance" min="0" max="20" step="1" value="2" class="range range-xs range-primary">
+                <p class="text-sm opacity-60 mt-1">Minimum pointer movement (px) required to register a new point. Increase to smooth jitter.</p>
+              </div>
+
+              <div class="form-control">
+                <label class="label py-0" for="min-width-factor">
+                  <span class="label-text text-xs">Min width factor: <span id="min-width-factor-value">0.15</span></span>
+                </label>
+                <input type="range" id="min-width-factor" min="0.05" max="1.0" step="0.01" value="0.15" class="range range-xs range-primary">
+                <p class="text-sm opacity-60 mt-1">Lowest allowed stroke width as a fraction of base width.</p>
+              </div>
+
+              <div class="form-control">
+                <label class="label py-0" for="max-width-factor">
+                  <span class="label-text text-xs">Max width factor: <span id="max-width-factor-value">2.0</span></span>
+                </label>
+                <input type="range" id="max-width-factor" min="1.0" max="4.0" step="0.01" value="2.0" class="range range-xs range-primary">
+                <p class="text-sm opacity-60 mt-1">Maximum stroke width multiplier relative to base width.</p>
+              </div>
+
+              <div class="form-control">
+                <label class="label py-0" for="velocity-sensitivity">
+                  <span class="label-text text-xs">Velocity sensitivity: <span id="velocity-sensitivity-value">0.85</span></span>
+                </label>
+                <input type="range" id="velocity-sensitivity" min="0" max="2.0" step="0.01" value="0.85" class="range range-xs range-primary">
+                <p class="text-sm opacity-60 mt-1">Higher values make speed affect width more strongly (faster → thinner).</p>
+              </div>
+
+              <div class="form-control">
+                <label class="label py-0" for="pressure-influence">
+                  <span class="label-text text-xs">Pressure influence: <span id="pressure-influence-value">0.90</span></span>
+                </label>
+                <input type="range" id="pressure-influence" min="0" max="1.0" step="0.01" value="0.90" class="range range-xs range-primary">
+                <p class="text-sm opacity-60 mt-1">How much pen pressure scales stroke width (0 = ignore pressure).</p>
+              </div>
+
+              <div class="form-control">
+                <label class="label py-0" for="velocity-influence">
+                  <span class="label-text text-xs">Velocity influence: <span id="velocity-influence-value">0.80</span></span>
+                </label>
+                <input type="range" id="velocity-influence" min="0" max="1.0" step="0.01" value="0.80" class="range range-xs range-primary">
+                <p class="text-sm opacity-60 mt-1">Blend amount of velocity-based scaling into computed width (0..1).</p>
+              </div>
+
+              <div class="form-control sm:col-span-2">
+                <label class="label py-0" for="width-smoothing">
+                  <span class="label-text text-xs">Width smoothing: <span id="width-smoothing-value">0.65</span></span>
+                </label>
+                <input type="range" id="width-smoothing" min="0" max="1.0" step="0.01" value="0.65" class="range range-xs range-primary">
+                <p class="text-sm opacity-60 mt-1">How much previous width is preserved when computing the next segment (higher = smoother).</p>
+              </div>
+            </div>
+        </details>
+
         <div id="canvas-container" class="min-h-32 relative border-2 border-dashed border-base-300 rounded-lg bg-white w-full" >
             <canvas id="signature-canvas" class="cursor-crosshair bg-white w-full h-full"></canvas>
         </div>

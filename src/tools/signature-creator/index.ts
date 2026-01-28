@@ -20,13 +20,13 @@ interface SignatureData {
 
 // --- Configuration ---
 
-const MOVE_TOLERANCE = 2; // Ignore mouse moves smaller than 2px
-const MIN_WIDTH_FACTOR = 0.15; // Thin lines can be x% of base width
-const MAX_WIDTH_FACTOR = 2.0;  // allow up to x% of base width
-const VELOCITY_SENSITIVITY = 0.85; // larger -> velocity reduces width more strongly
-const PRESSURE_INFLUENCE = 0.9; // how strongly pressure scales width (0..1)
-const VELOCITY_INFLUENCE = 0.8; // how strongly velocity scaling contributes (0..1)
-const WIDTH_SMOOTHING = 0.65; // 0..1 where higher keeps more of previous width (0.65 is a gentle smoothing)
+let MOVE_TOLERANCE = 2; // Ignore mouse moves smaller than 2px
+let MIN_WIDTH_FACTOR = 0.15; // Thin lines can be x% of base width
+let MAX_WIDTH_FACTOR = 2.0; // allow up to x% of base width
+let VELOCITY_SENSITIVITY = 0.85; // larger -> velocity reduces width more strongly
+let PRESSURE_INFLUENCE = 0.9; // how strongly pressure scales width (0..1)
+let VELOCITY_INFLUENCE = 0.8; // how strongly velocity scaling contributes (0..1)
+let WIDTH_SMOOTHING = 0.25; // 0..1 where higher keeps more of previous width
 
 // --- IndexedDB Helper (lightweight) ---
 const DB_NAME = 'bt-signatures-db';
@@ -86,7 +86,11 @@ async function deleteSignature(id: string): Promise<void> {
 
 // --- Helper: Math & Geometry ---
 
-function computeWidthFromVelocityAndPressure(velocity: number, pressure: number, baseWidth: number) {
+function computeWidthFromVelocityAndPressure(
+  velocity: number,
+  pressure: number,
+  baseWidth: number
+) {
   // Normalize inputs
   const p = Math.max(0, Math.min(1, pressure ?? 1));
   const v = Math.max(0, velocity ?? 0);
@@ -608,6 +612,99 @@ export default function init() {
   });
   curveModeSelect.addEventListener('change', () => {
     currentCurveMode = curveModeSelect.value as CurveMode;
+    debouncedRedraw();
+  });
+
+  // Advanced controls
+  const moveToleranceInput = document.getElementById('move-tolerance') as HTMLInputElement | null;
+  const moveToleranceValue = document.getElementById('move-tolerance-value');
+  const minWidthFactorInput = document.getElementById(
+    'min-width-factor'
+  ) as HTMLInputElement | null;
+  const minWidthFactorValue = document.getElementById('min-width-factor-value');
+  const maxWidthFactorInput = document.getElementById(
+    'max-width-factor'
+  ) as HTMLInputElement | null;
+  const maxWidthFactorValue = document.getElementById('max-width-factor-value');
+  const velocitySensitivityInput = document.getElementById(
+    'velocity-sensitivity'
+  ) as HTMLInputElement | null;
+  const velocitySensitivityValue = document.getElementById('velocity-sensitivity-value');
+  const pressureInfluenceInput = document.getElementById(
+    'pressure-influence'
+  ) as HTMLInputElement | null;
+  const pressureInfluenceValue = document.getElementById('pressure-influence-value');
+  const velocityInfluenceInput = document.getElementById(
+    'velocity-influence'
+  ) as HTMLInputElement | null;
+  const velocityInfluenceValue = document.getElementById('velocity-influence-value');
+  const widthSmoothingInput = document.getElementById('width-smoothing') as HTMLInputElement | null;
+  const widthSmoothingValue = document.getElementById('width-smoothing-value');
+
+  // Initialize advanced values from defaults
+  if (moveToleranceInput && moveToleranceValue) {
+    moveToleranceInput.value = String(MOVE_TOLERANCE);
+    moveToleranceValue.textContent = String(MOVE_TOLERANCE);
+  }
+  if (minWidthFactorInput && minWidthFactorValue) {
+    minWidthFactorInput.value = String(MIN_WIDTH_FACTOR);
+    minWidthFactorValue.textContent = String(MIN_WIDTH_FACTOR);
+  }
+  if (maxWidthFactorInput && maxWidthFactorValue) {
+    maxWidthFactorInput.value = String(MAX_WIDTH_FACTOR);
+    maxWidthFactorValue.textContent = String(MAX_WIDTH_FACTOR);
+  }
+  if (velocitySensitivityInput && velocitySensitivityValue) {
+    velocitySensitivityInput.value = String(VELOCITY_SENSITIVITY);
+    velocitySensitivityValue.textContent = String(VELOCITY_SENSITIVITY);
+  }
+  if (pressureInfluenceInput && pressureInfluenceValue) {
+    pressureInfluenceInput.value = String(PRESSURE_INFLUENCE);
+    pressureInfluenceValue.textContent = String(PRESSURE_INFLUENCE);
+  }
+  if (velocityInfluenceInput && velocityInfluenceValue) {
+    velocityInfluenceInput.value = String(VELOCITY_INFLUENCE);
+    velocityInfluenceValue.textContent = String(VELOCITY_INFLUENCE);
+  }
+  if (widthSmoothingInput && widthSmoothingValue) {
+    widthSmoothingInput.value = String(WIDTH_SMOOTHING);
+    widthSmoothingValue.textContent = String(WIDTH_SMOOTHING);
+  }
+
+  // Listeners to update runtime config
+  moveToleranceInput?.addEventListener('input', () => {
+    MOVE_TOLERANCE = parseInt(moveToleranceInput.value);
+    moveToleranceValue && (moveToleranceValue.textContent = moveToleranceInput.value);
+  });
+  minWidthFactorInput?.addEventListener('input', () => {
+    MIN_WIDTH_FACTOR = parseFloat(minWidthFactorInput.value);
+    minWidthFactorValue && (minWidthFactorValue.textContent = minWidthFactorInput.value);
+    debouncedRedraw();
+  });
+  maxWidthFactorInput?.addEventListener('input', () => {
+    MAX_WIDTH_FACTOR = parseFloat(maxWidthFactorInput.value);
+    maxWidthFactorValue && (maxWidthFactorValue.textContent = maxWidthFactorInput.value);
+    debouncedRedraw();
+  });
+  velocitySensitivityInput?.addEventListener('input', () => {
+    VELOCITY_SENSITIVITY = parseFloat(velocitySensitivityInput.value);
+    velocitySensitivityValue &&
+      (velocitySensitivityValue.textContent = velocitySensitivityInput.value);
+    debouncedRedraw();
+  });
+  pressureInfluenceInput?.addEventListener('input', () => {
+    PRESSURE_INFLUENCE = parseFloat(pressureInfluenceInput.value);
+    pressureInfluenceValue && (pressureInfluenceValue.textContent = pressureInfluenceInput.value);
+    debouncedRedraw();
+  });
+  velocityInfluenceInput?.addEventListener('input', () => {
+    VELOCITY_INFLUENCE = parseFloat(velocityInfluenceInput.value);
+    velocityInfluenceValue && (velocityInfluenceValue.textContent = velocityInfluenceInput.value);
+    debouncedRedraw();
+  });
+  widthSmoothingInput?.addEventListener('input', () => {
+    WIDTH_SMOOTHING = parseFloat(widthSmoothingInput.value);
+    widthSmoothingValue && (widthSmoothingValue.textContent = widthSmoothingInput.value);
     debouncedRedraw();
   });
 
