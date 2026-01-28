@@ -3,6 +3,8 @@ import { downloadFile } from '../../js/file-utils.ts';
 interface Point {
   x: number;
   y: number;
+  timestamp: number;
+  pressure: number;
 }
 
 interface SignatureData {
@@ -106,8 +108,13 @@ function buildNormalizedFromPaths(paths: Point[][], baseWidth: number) {
   const logicalHeight = maxY - minY + padding * 2;
 
   // Shift paths to start at (0,0) for storage portability
-  const normalizedPaths = paths.map((path) =>
-    path.map((p) => ({ x: p.x - minX + padding, y: p.y - minY + padding }))
+  const normalizedPaths: Point[][] = paths.map((path) =>
+    path.map((p) => ({
+      x: p.x - minX + padding,
+      y: p.y - minY + padding,
+      timestamp: p.timestamp,
+      pressure: p.pressure,
+    }))
   );
   return { normalizedPaths, logicalWidth, logicalHeight };
 }
@@ -434,11 +441,14 @@ export default function init() {
     }, 50);
   }
 
-  function getPos(e: MouseEvent | TouchEvent): Point {
+  function getPos(e: PointerEvent): Point {
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    return {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      timestamp: performance.now(),
+      pressure: e.pressure || 0.5,
+    };
   }
 
   function drawStatic() {
@@ -447,13 +457,17 @@ export default function init() {
     ctx!.drawImage(memCanvas, 0, 0, userWidth(), userHeight());
   }
 
-  function startDrawing(e: MouseEvent | TouchEvent) {
+  function startDrawing(e: PointerEvent) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+    e.preventDefault();
     isDrawing = true;
     currentPath = [getPos(e)];
-    e.preventDefault();
+
+    canvas.setPointerCapture(e.pointerId);
   }
 
-  function draw(e: MouseEvent | TouchEvent) {
+  function draw(e: PointerEvent) {
     if (!isDrawing) return;
     const pos = getPos(e);
     const prev = currentPath[currentPath.length - 1];
@@ -514,13 +528,10 @@ export default function init() {
   resizeObserver.observe(canvas);
   syncCanvasSize();
 
-  canvas.addEventListener('mousedown', startDrawing);
-  canvas.addEventListener('mousemove', draw);
-  window.addEventListener('mouseup', stopDrawing);
-
-  canvas.addEventListener('touchstart', startDrawing, { passive: false });
-  canvas.addEventListener('touchmove', draw, { passive: false });
-  window.addEventListener('touchend', stopDrawing);
+  canvas.addEventListener('pointerdown', startDrawing);
+  canvas.addEventListener('pointermove', draw);
+  window.addEventListener('pointerup', stopDrawing);
+  canvas.addEventListener('pointercancel', stopDrawing);
 
   colorInput.addEventListener('input', debouncedRedraw);
   widthInput.addEventListener('input', () => {
@@ -699,7 +710,12 @@ export default function init() {
 
         memCtx.restore();
         paths = sig.rawPaths.map((path) =>
-          path.map((pt) => ({ x: pt.x * scale + offsetX, y: pt.y * scale + offsetY }))
+          path.map((pt) => ({
+            x: pt.x * scale + offsetX,
+            y: pt.y * scale + offsetY,
+            timestamp: pt.timestamp,
+            pressure: pt.pressure,
+          }))
         );
 
         drawStatic();
@@ -736,8 +752,7 @@ export default function init() {
   return () => {
     if (redrawTimeout) clearTimeout(redrawTimeout);
     resizeObserver.disconnect();
-    window.removeEventListener('mouseup', stopDrawing);
-    window.removeEventListener('touchend', stopDrawing);
+    window.removeEventListener('pointerup', stopDrawing);
   };
 }
 
