@@ -26,6 +26,7 @@ const MAX_WIDTH_FACTOR = 2.0;  // allow up to x% of base width
 const VELOCITY_SENSITIVITY = 0.85; // larger -> velocity reduces width more strongly
 const PRESSURE_INFLUENCE = 0.9; // how strongly pressure scales width (0..1)
 const VELOCITY_INFLUENCE = 0.8; // how strongly velocity scaling contributes (0..1)
+const WIDTH_SMOOTHING = 0.65; // 0..1 where higher keeps more of previous width (0.65 is a gentle smoothing)
 
 // --- IndexedDB Helper (lightweight) ---
 const DB_NAME = 'bt-signatures-db';
@@ -232,17 +233,23 @@ function drawSignaturePath(
     ctx.beginPath();
     ctx.moveTo(p1.x, p1.y);
 
+    let prevWidth = baseWidth;
+
     for (let i = 1; i < points.length; i++) {
       const p2 = points[i];
       const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
 
-      ctx.lineWidth = computeSegmentWidth(p1, p2, baseWidth);
+      const rawW = computeSegmentWidth(p1, p2, baseWidth);
+      const w = prevWidth * WIDTH_SMOOTHING + rawW * (1 - WIDTH_SMOOTHING);
+
+      ctx.lineWidth = w;
       ctx.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
       ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(mid.x, mid.y);
 
       p1 = p2;
+      prevWidth = w;
     }
     ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
@@ -250,7 +257,9 @@ function drawSignaturePath(
     let recentVels: number[] = [];
     let recentPressures: number[] = [];
 
-    // Natural: Cubic Bezier (Catmull-Rom) - Good for final bake/export
+    // Natural: Cubic Bezier (Catmull-Rom)
+    let prevWidth = baseWidth;
+
     for (let i = 0; i < points.length - 1; i++) {
       const p0 = points[Math.max(0, i - 1)];
       const p1 = points[i];
@@ -271,7 +280,11 @@ function drawSignaturePath(
       const avgVel = recentVels.reduce((a, b) => a + b, 0) / recentVels.length;
       const avgPress = recentPressures.reduce((a, b) => a + b, 0) / recentPressures.length;
 
-      ctx.lineWidth = computeWidthFromVelocityAndPressure(avgVel, avgPress, baseWidth);
+      const rawWidth = computeWidthFromVelocityAndPressure(avgVel, avgPress, baseWidth);
+      const w = prevWidth * WIDTH_SMOOTHING + rawWidth * (1 - WIDTH_SMOOTHING);
+      prevWidth = w;
+
+      ctx.lineWidth = w;
       ctx.beginPath();
       ctx.moveTo(p1.x, p1.y);
       ctx.bezierCurveTo(c1x, c1y, c2x, c2y, p2.x, p2.y);
@@ -283,15 +296,19 @@ function drawSignaturePath(
     ctx.moveTo(p1.x, p1.y);
     ctx.lineCap = 'round';
 
+    let prevWidth = baseWidth;
+
     for (let i = 1; i < points.length; i++) {
       const p2 = points[i];
-      const w = computeSegmentWidth(p1, p2, baseWidth);
+      const rawW = computeSegmentWidth(p1, p2, baseWidth);
+      const w = prevWidth * WIDTH_SMOOTHING + rawW * (1 - WIDTH_SMOOTHING);
       ctx.lineWidth = w;
       ctx.moveTo(p1.x, p1.y);
       ctx.stroke();
       ctx.beginPath();
       ctx.lineTo(p2.x, p2.y);
       p1 = p2;
+      prevWidth = w;
     }
     ctx.lineTo(p1.x, p1.y);
     ctx.stroke();
@@ -442,6 +459,7 @@ export default function init() {
   let redrawTimeout: number | null = null;
   let currentStrokeWidth = parseInt(widthInput.value);
   let currentCurveMode: CurveMode = (curveModeSelect.value as CurveMode) || 'natural';
+  let prevLiveWidth = currentStrokeWidth;
 
   const dpr = window.devicePixelRatio || 1;
   const userWidth = () => canvas.width / dpr;
@@ -498,6 +516,7 @@ export default function init() {
     e.preventDefault();
     isDrawing = true;
     currentPath = [getPos(e)];
+    prevLiveWidth = currentStrokeWidth;
 
     canvas.setPointerCapture(e.pointerId);
   }
@@ -521,7 +540,10 @@ export default function init() {
       const p0 = currentPath[currentPath.length - 2];
       const p1 = currentPath[currentPath.length - 1];
       ctx!.beginPath();
-      ctx!.lineWidth = computeSegmentWidth(p0, p1, currentStrokeWidth);
+      const rawSegmentW = computeSegmentWidth(p0, p1, currentStrokeWidth);
+      const liveW = prevLiveWidth * WIDTH_SMOOTHING + rawSegmentW * (1 - WIDTH_SMOOTHING);
+      prevLiveWidth = liveW;
+      ctx!.lineWidth = liveW;
       ctx!.lineCap = 'round';
       ctx!.strokeStyle = colorInput.value;
       ctx!.moveTo(p0.x, p0.y);
@@ -583,6 +605,7 @@ export default function init() {
     paths = [];
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
+    prevLiveWidth = currentStrokeWidth;
   });
 
   saveBtn.addEventListener('click', async () => {
@@ -719,6 +742,7 @@ export default function init() {
         // Clear current paths and memCanvas
         paths = [];
         memCtx.clearRect(0, 0, userWidth(), userHeight());
+        prevLiveWidth = sig.strokeWidth;
 
         // Compute scale to fit signature into the canvas while preserving aspect
         const canvasW = userWidth();
