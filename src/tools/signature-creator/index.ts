@@ -583,10 +583,12 @@ export default function init() {
   resizeObserver.observe(canvas);
   syncCanvasSize();
 
-  canvas.addEventListener('pointerdown', startDrawing);
-  canvas.addEventListener('pointermove', draw);
-  window.addEventListener('pointerup', stopDrawing);
-  canvas.addEventListener('pointercancel', stopDrawing);
+  canvas.addEventListener('pointerdown', startDrawing, { passive: false });
+  canvas.addEventListener('pointermove', draw, { passive: false });
+  window.addEventListener('pointerup', stopDrawing, { passive: false });
+  canvas.addEventListener('pointercancel', stopDrawing, { passive: false });
+  canvas.style.touchAction = 'none';
+  container.style.touchAction = 'none';
 
   colorInput.addEventListener('input', debouncedRedraw);
   widthInput.addEventListener('input', () => {
