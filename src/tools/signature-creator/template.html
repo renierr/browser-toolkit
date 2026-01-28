@@ -7,16 +7,16 @@
         </p>
         <div class="flex flex-wrap gap-4 mb-4 items-start">
             <div class="form-control">
-                <label class="label py-0" for="stroke-color">
+                <label class="label py-0" for="stroke-width">
+                    <span class="label-text text-xs">Width: <span id="width-value" class="inline-block w-3">2</span></span>
+                </label>
+                <input type="range" id="stroke-width" min="1" max="12" value="4" class="range range-xs range-primary">
+            </div>
+            <div class="form-control">
+                <label class="label py-0 block" for="stroke-color">
                     <span class="label-text text-xs">Color</span>
                 </label>
                 <input type="color" id="stroke-color" class="input input-bordered p-1 w-12 h-10" value="#0B3D91">
-            </div>
-            <div class="form-control">
-                <label class="label py-0" for="stroke-width">
-                    <span class="label-text text-xs">Width: <span id="width-value">2</span>px</span>
-                </label>
-                <input type="range" id="stroke-width" min="1" max="12" value="4" class="range range-xs range-primary">
             </div>
             <div class="form-control">
                 <label class="label py-0" for="export-dpi">
