@@ -1,4 +1,5 @@
 import { downloadFile } from '../../js/file-utils.ts';
+import { showMessage } from '../../js/ui.ts';
 
 interface Point {
   x: number;
@@ -448,6 +449,7 @@ export default function init() {
   const container = document.getElementById('canvas-container');
   const clearBtn = document.getElementById('clear-btn');
   const saveBtn = document.getElementById('save-btn');
+  const copyClipboardBtn = document.getElementById('copy-clipboard');
   const downloadPngBtn = document.getElementById('download-current-png-btn');
   const downloadSvgBtn = document.getElementById('download-current-svg-btn');
   const colorInput = document.getElementById('stroke-color') as HTMLInputElement;
@@ -465,6 +467,7 @@ export default function init() {
     !container ||
     !clearBtn ||
     !saveBtn ||
+    !copyClipboardBtn ||
     !downloadPngBtn ||
     !downloadSvgBtn ||
     !signaturesList ||
@@ -499,8 +502,6 @@ export default function init() {
   const userWidth = () => canvas.width / dpr;
   const userHeight = () => canvas.height / dpr;
 
-  // Set initial display values
-  if (widthValue) widthValue.textContent = widthInput.value;
   // Set initial display values
   if (widthValue) widthValue.textContent = widthInput.value;
   if (!dpiInput.value) dpiInput.value = '72'; // Default
@@ -714,9 +715,6 @@ export default function init() {
   const widthSmoothingInput = document.getElementById('width-smoothing') as HTMLInputElement | null;
   const widthSmoothingValue = document.getElementById('width-smoothing-value');
 
-  // Initialize advanced values from defaults
-  loadSettings();
-
   if (moveToleranceInput && moveToleranceValue) {
     moveToleranceInput.value = String(MOVE_TOLERANCE);
     moveToleranceValue.textContent = String(MOVE_TOLERANCE);
@@ -891,6 +889,41 @@ export default function init() {
       drawStatic();
       void renderSignatures();
     };
+  });
+
+  copyClipboardBtn.addEventListener('click', async () => {
+    if (paths.length === 0 && currentPath.length === 0) {
+      showMessage('No signature to copy.', { type: 'warning', timeoutMs: 5000});
+    }
+    
+    const allPaths: Point[][] = paths.slice();
+    if (currentPath.length > 0) allPaths.push(currentPath.slice());
+    if (allPaths.length === 0) return;
+
+    const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
+    const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
+      allPaths,
+      currentStrokeWidth
+    );
+
+    const { blob } = await generatePng(
+      normalizedPaths,
+      colorInput.value,
+      currentStrokeWidth,
+      dpi,
+      logicalWidth,
+      logicalHeight,
+      currentCurveMode
+    );
+
+    try {
+      const data = [new ClipboardItem({ [blob.type]: blob })];
+      await navigator.clipboard.write(data);
+      showMessage('Image copied to clipboard!', { timeoutMs: 5000 });
+    } catch (err) {
+      showMessage('Failed to copy image to clipboard.', { type: 'alert', timeoutMs: 5000 });
+    }
+
   });
 
   downloadPngBtn.addEventListener('click', async () => {
