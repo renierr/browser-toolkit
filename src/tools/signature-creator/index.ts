@@ -376,7 +376,7 @@ function generatePng(
 
 // --- Helper: Optimized SVG ---
 
-function generateSmoothSvg(
+function generateSvg(
   paths: Point[][],
   width: number,
   height: number,
@@ -873,7 +873,7 @@ export default function init() {
       currentStrokeWidth
     );
 
-    const svgContent = generateSmoothSvg(
+    const svgContent = generateSvg(
       normalizedPaths,
       logicalWidth,
       logicalHeight,
@@ -967,17 +967,6 @@ export default function init() {
 
   // --- Signature Rendering ---
 
-  function createFullSvg(sig: SignatureData): string {
-    return generateSmoothSvg(
-      sig.rawPaths,
-      sig.width,
-      sig.height,
-      sig.color,
-      sig.strokeWidth,
-      currentCurveMode
-    );
-  }
-
   async function renderSignatures() {
     const saved: SignatureData[] = await getAllSignatures();
     dom.signaturesList.innerHTML = '';
@@ -1043,7 +1032,14 @@ export default function init() {
       });
 
       clone.querySelector('.download-svg-btn')?.addEventListener('click', async () => {
-        const svgContent = createFullSvg(sig);
+        const svgContent = generateSvg(
+          sig.rawPaths,
+          sig.width,
+          sig.height,
+          sig.color,
+          sig.strokeWidth,
+          currentCurveMode
+        );
         const blob = new Blob([svgContent], { type: 'image/svg+xml' });
         await downloadFile(blob, `signature-${sig.timestamp}.svg`);
       });
