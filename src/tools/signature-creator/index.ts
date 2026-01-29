@@ -1,5 +1,7 @@
 import { downloadFile } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
+import { loadSettings, saveSettings, type CurveMode, type RDPMode, resetToDefaults } from './settings.ts';
+import { getDomElements } from './dom.ts';
 
 interface Point {
   x: number;
@@ -30,28 +32,6 @@ let VELOCITY_INFLUENCE = 0.8; // how strongly velocity scaling contributes (0..1
 let WIDTH_SMOOTHING = 0.25; // 0..1 where higher keeps more of previous width (0.65 is a gentle smoothing)
 
 // Single storage key for both basic and advanced signature settings
-const SETTINGS_KEY = 'bt-signature-settings';
-
-function loadSettings(): Record<string, any> {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) || {};
-  } catch (e) {
-    console.warn('Failed to load signature settings', e);
-    return {};
-  }
-}
-
-function saveSettings(partial: Record<string, any>) {
-  try {
-    const cur = loadSettings();
-    const next = Object.assign({}, cur, partial);
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
-  } catch (e) {
-    console.warn('Failed to save signature settings', e);
-  }
-}
 
 // --- IndexedDB Helper (lightweight) ---
 const DB_NAME = 'bt-signatures-db';
@@ -230,8 +210,7 @@ function simplifyRDP(points: Point[], epsilon: number): Point[] {
 
 // --- Helper: Rendering ---
 
-type CurveMode = 'fast' | 'natural' | 'draft' | 'none';
-type RDPMode = 'none' | 'low' | 'medium' | 'high';
+
 
 function drawSignaturePath(
   ctx: CanvasRenderingContext2D,
@@ -445,44 +424,10 @@ function generateSmoothSvg(
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
-  const canvas = document.getElementById('signature-canvas') as HTMLCanvasElement;
-  const container = document.getElementById('canvas-container');
-  const clearBtn = document.getElementById('clear-btn');
-  const saveBtn = document.getElementById('save-btn');
-  const copyClipboardBtn = document.getElementById('copy-clipboard');
-  const downloadPngBtn = document.getElementById('download-current-png-btn');
-  const downloadSvgBtn = document.getElementById('download-current-svg-btn');
-  const colorInput = document.getElementById('stroke-color') as HTMLInputElement;
-  const widthInput = document.getElementById('stroke-width') as HTMLInputElement;
-  const curveModeSelect = document.getElementById('curve-mode') as HTMLSelectElement;
-  const rdpSelect = document.getElementById('rdp-epsilon') as HTMLSelectElement;
-  const widthValue = document.getElementById('width-value');
-  const dpiInput = document.getElementById('export-dpi') as HTMLInputElement;
-  const signaturesList = document.getElementById('signatures-list');
-  const savedContainer = document.getElementById('saved-signatures-container');
-  const template = document.getElementById('signature-item-template') as HTMLTemplateElement;
+  const dom = getDomElements(document);
+  const currentDpiValue = () => { return parseInt(dom.dpiInput.value) || 96; };
 
-  if (
-    !canvas ||
-    !container ||
-    !clearBtn ||
-    !saveBtn ||
-    !copyClipboardBtn ||
-    !downloadPngBtn ||
-    !downloadSvgBtn ||
-    !signaturesList ||
-    !savedContainer ||
-    !template ||
-    !colorInput ||
-    !widthInput ||
-    !widthValue ||
-    !curveModeSelect ||
-    !rdpSelect ||
-    !dpiInput
-  )
-    return;
-
-  const ctx = canvas.getContext('2d');
+  const ctx = dom.canvas.getContext('2d');
   if (!ctx) return;
 
   // Performance Buffer: Stores "dried" ink to keep the UI snappy
@@ -494,17 +439,16 @@ export default function init() {
   let currentPath: Point[] = [];
 
   let redrawTimeout: number | null = null;
-  let currentStrokeWidth = parseInt(widthInput.value);
-  let currentCurveMode: CurveMode = (curveModeSelect.value as CurveMode) || 'natural';
+  let currentStrokeWidth = parseInt(dom.penWidthInput.value);
+  let currentCurveMode: CurveMode = (dom.curveModeSelect.value as CurveMode) || 'natural';
   let prevLiveWidth = currentStrokeWidth;
 
   const dpr = window.devicePixelRatio || 1;
-  const userWidth = () => canvas.width / dpr;
-  const userHeight = () => canvas.height / dpr;
+  const userWidth = () => dom.canvas.width / dpr;
+  const userHeight = () => dom.canvas.height / dpr;
 
   // Set initial display values
-  if (widthValue) widthValue.textContent = widthInput.value;
-  if (!dpiInput.value) dpiInput.value = '72'; // Default
+  if (dom.penWidthValue) dom.penWidthValue.textContent = dom.penWidthInput.value;
 
   // Load persisted settings (both advanced and basic) and apply to UI/runtime
   const settings = loadSettings();
@@ -519,32 +463,32 @@ export default function init() {
 
   // Basic UI settings
   if (settings.color && typeof settings.color === 'string') {
-    colorInput.value = settings.color;
+    dom.penColorInput!.value = settings.color;
   }
   if (settings.strokeWidth && !isNaN(parseInt(settings.strokeWidth))) {
-    widthInput.value = String(settings.strokeWidth);
-    currentStrokeWidth = parseInt(widthInput.value);
-    if (widthValue) widthValue.textContent = widthInput.value;
+    dom.penWidthInput.value = String(settings.strokeWidth);
+    currentStrokeWidth = parseInt(dom.penWidthInput.value);
+    if (dom.penWidthValue) dom.penWidthValue.textContent = dom.penWidthInput.value;
   }
   if (settings.curveMode && typeof settings.curveMode === 'string') {
-    curveModeSelect.value = settings.curveMode;
-    currentCurveMode = curveModeSelect.value as CurveMode;
+    dom.curveModeSelect.value = settings.curveMode;
+    currentCurveMode = dom.curveModeSelect.value as CurveMode;
   }
   if (settings.rdp && typeof settings.rdp === 'string') {
-    rdpSelect.value = settings.rdp;
+    dom.rdpModeSelect.value = settings.rdp;
   }
   if (settings.dpi && !isNaN(parseInt(settings.dpi))) {
-    dpiInput.value = String(parseInt(settings.dpi));
+    dom.dpiInput.value = String(parseInt(settings.dpi));
   }
 
   // --- Sizing ---
   const syncCanvasSize = () => {
-    const rect = canvas.getBoundingClientRect();
+    const rect = dom.canvas.getBoundingClientRect();
     if (rect.width === 0 || rect.height === 0) return;
 
-    if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-      canvas.width = memCanvas.width = rect.width * dpr;
-      canvas.height = memCanvas.height = rect.height * dpr;
+    if (dom.canvas.width !== rect.width * dpr || dom.canvas.height !== rect.height * dpr) {
+      dom.canvas.width = memCanvas.width = rect.width * dpr;
+      dom.canvas.height = memCanvas.height = rect.height * dpr;
 
       // Normalize context to use CSS pixels
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -559,7 +503,7 @@ export default function init() {
     redrawTimeout = window.setTimeout(() => {
       memCtx.clearRect(0, 0, userWidth(), userHeight());
       paths.forEach((p) => {
-        drawSignaturePath(memCtx, p, colorInput.value, currentStrokeWidth, currentCurveMode);
+        drawSignaturePath(memCtx, p, dom.penColorInput.value, currentStrokeWidth, currentCurveMode);
       });
       drawStatic();
       redrawTimeout = null;
@@ -567,7 +511,7 @@ export default function init() {
   }
 
   function getPos(e: PointerEvent): Point {
-    const rect = canvas.getBoundingClientRect();
+    const rect = dom.canvas.getBoundingClientRect();
     return {
       x: e.clientX - rect.left,
       y: e.clientY - rect.top,
@@ -590,7 +534,7 @@ export default function init() {
     currentPath = [getPos(e)];
     prevLiveWidth = currentStrokeWidth;
 
-    canvas.setPointerCapture(e.pointerId);
+    dom.canvas.setPointerCapture(e.pointerId);
   }
 
   function draw(e: PointerEvent) {
@@ -617,7 +561,7 @@ export default function init() {
       prevLiveWidth = liveW;
       ctx!.lineWidth = liveW;
       ctx!.lineCap = 'round';
-      ctx!.strokeStyle = colorInput.value;
+      ctx!.strokeStyle = dom.penColorInput.value;
       ctx!.moveTo(p0.x, p0.y);
       ctx!.lineTo(p1.x, p1.y);
       ctx!.stroke();
@@ -629,7 +573,7 @@ export default function init() {
     if (!isDrawing) return;
     isDrawing = false;
 
-    const currentRDPMode: RDPMode = (rdpSelect.value as RDPMode) || 'none';
+    const currentRDPMode: RDPMode = (dom.rdpModeSelect.value as RDPMode) || 'none';
     let epsilon = 0;
 
     if (currentRDPMode === 'low') {
@@ -642,7 +586,13 @@ export default function init() {
     const simplified = epsilon > 0 ? simplifyRDP(currentPath, epsilon) : currentPath;
 
     // Bake High-Quality Curve (Correction)
-    drawSignaturePath(memCtx, simplified, colorInput.value, currentStrokeWidth, currentCurveMode);
+    drawSignaturePath(
+      memCtx,
+      simplified,
+      dom.penColorInput.value,
+      currentStrokeWidth,
+      currentCurveMode
+    );
 
     paths.push(simplified);
     currentPath = [];
@@ -652,41 +602,41 @@ export default function init() {
   // --- Listeners & Observers ---
 
   const resizeObserver = new ResizeObserver(() => syncCanvasSize());
-  resizeObserver.observe(canvas);
+  resizeObserver.observe(dom.canvas);
   syncCanvasSize();
 
-  canvas.addEventListener('pointerdown', startDrawing, { passive: false });
-  canvas.addEventListener('pointermove', draw, { passive: false });
+  dom.canvas.addEventListener('pointerdown', startDrawing, { passive: false });
+  dom.canvas.addEventListener('pointermove', draw, { passive: false });
   window.addEventListener('pointerup', stopDrawing, { passive: false });
-  canvas.addEventListener('pointercancel', stopDrawing, { passive: false });
-  canvas.style.touchAction = 'none';
-  container.style.touchAction = 'none';
+  dom.canvas.addEventListener('pointercancel', stopDrawing, { passive: false });
+  dom.canvas.style.touchAction = 'none';
+  dom.canvasContainer.style.touchAction = 'none';
 
   // Basic UI listeners
-  colorInput.addEventListener('input', () => {
+  dom.penColorInput.addEventListener('input', () => {
     debouncedRedraw();
-    saveSettings({ color: colorInput.value });
+    saveSettings({ color: dom.penColorInput.value });
   });
 
-  widthInput.addEventListener('input', () => {
-    currentStrokeWidth = parseInt(widthInput.value);
-    widthValue!.textContent = widthInput.value;
+  dom.penWidthInput.addEventListener('input', () => {
+    currentStrokeWidth = parseInt(dom.penWidthInput.value);
+    dom.penWidthValue.textContent = dom.penWidthInput.value;
     debouncedRedraw();
     saveSettings({ strokeWidth: currentStrokeWidth });
   });
 
-  curveModeSelect.addEventListener('change', () => {
-    currentCurveMode = curveModeSelect.value as CurveMode;
+  dom.curveModeSelect.addEventListener('change', () => {
+    currentCurveMode = dom.curveModeSelect.value as CurveMode;
     debouncedRedraw();
     saveSettings({ curveMode: currentCurveMode });
   });
 
-  rdpSelect.addEventListener('change', () => {
-    saveSettings({ rdp: rdpSelect.value });
+  dom.rdpModeSelect.addEventListener('change', () => {
+    saveSettings({ rdp: dom.rdpModeSelect.value });
   });
 
-  dpiInput.addEventListener('change', () => {
-    if (dpiInput.value) saveSettings({ dpi: dpiInput.value });
+  dom.dpiInput.addEventListener('change', () => {
+    if (dom.dpiInput.value) saveSettings({ dpi: dom.dpiInput.value });
   });
 
   // Advanced controls
@@ -789,64 +739,21 @@ export default function init() {
   });
 
   // Reset to defaults button
-  const advancedResetBtn = document.getElementById('advanced-reset-btn');
-  advancedResetBtn?.addEventListener('click', () => {
-    // Restore hard-coded defaults
-    MOVE_TOLERANCE = 2;
-    MIN_WIDTH_FACTOR = 0.15;
-    MAX_WIDTH_FACTOR = 2.0;
-    VELOCITY_SENSITIVITY = 0.85;
-    PRESSURE_INFLUENCE = 0.9;
-    VELOCITY_INFLUENCE = 0.8;
-    WIDTH_SMOOTHING = 0.25;
-    currentCurveMode = 'natural';
-    currentStrokeWidth = 4;
-    dpiInput.value = '72';
-    rdpSelect.value = 'none';
-    colorInput.value = '#0B3D91';
-
-    // Update inputs and displays
-    if (moveToleranceInput) moveToleranceInput.value = String(MOVE_TOLERANCE);
-    moveToleranceValue && (moveToleranceValue.textContent = String(MOVE_TOLERANCE));
-    if (minWidthFactorInput) minWidthFactorInput.value = String(MIN_WIDTH_FACTOR);
-    minWidthFactorValue && (minWidthFactorValue.textContent = String(MIN_WIDTH_FACTOR));
-    if (maxWidthFactorInput) maxWidthFactorInput.value = String(MAX_WIDTH_FACTOR);
-    maxWidthFactorValue && (maxWidthFactorValue.textContent = String(MAX_WIDTH_FACTOR));
-    if (velocitySensitivityInput) velocitySensitivityInput.value = String(VELOCITY_SENSITIVITY);
-    velocitySensitivityValue &&
-      (velocitySensitivityValue.textContent = String(VELOCITY_SENSITIVITY));
-    if (pressureInfluenceInput) pressureInfluenceInput.value = String(PRESSURE_INFLUENCE);
-    pressureInfluenceValue && (pressureInfluenceValue.textContent = String(PRESSURE_INFLUENCE));
-    if (velocityInfluenceInput) velocityInfluenceInput.value = String(VELOCITY_INFLUENCE);
-    velocityInfluenceValue && (velocityInfluenceValue.textContent = String(VELOCITY_INFLUENCE));
-    if (widthSmoothingInput) widthSmoothingInput.value = String(WIDTH_SMOOTHING);
-    widthSmoothingValue && (widthSmoothingValue.textContent = String(WIDTH_SMOOTHING));
-    if (curveModeSelect) curveModeSelect.value = currentCurveMode;
-    if (widthInput) widthInput.value = String(currentStrokeWidth);
-    if (widthValue) widthValue.textContent = String(currentStrokeWidth);
-
-    saveSettings({
-      MOVE_TOLERANCE,
-      MIN_WIDTH_FACTOR,
-      MAX_WIDTH_FACTOR,
-      VELOCITY_SENSITIVITY,
-      PRESSURE_INFLUENCE,
-      VELOCITY_INFLUENCE,
-      WIDTH_SMOOTHING,
-    });
+  dom.resetBtn.addEventListener('click', () => {
+    resetToDefaults();
     debouncedRedraw();
   });
 
   // --- Controls ---
 
-  clearBtn.addEventListener('click', () => {
+  dom.clearBtn.addEventListener('click', () => {
     paths = [];
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
     prevLiveWidth = currentStrokeWidth;
   });
 
-  saveBtn.addEventListener('click', async () => {
+  dom.saveBtn.addEventListener('click', async () => {
     if (paths.length === 0) return;
 
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
@@ -857,7 +764,7 @@ export default function init() {
     // Generate Preview Image
     const { blob } = await generatePng(
       normalizedPaths,
-      colorInput.value,
+      dom.penColorInput.value,
       currentStrokeWidth,
       72,
       logicalWidth,
@@ -875,7 +782,7 @@ export default function init() {
         width: logicalWidth,
         height: logicalHeight,
         timestamp: Date.now(),
-        color: colorInput.value,
+        color: dom.penColorInput.value,
         strokeWidth: currentStrokeWidth,
         rawPaths: normalizedPaths,
       };
@@ -891,16 +798,16 @@ export default function init() {
     };
   });
 
-  copyClipboardBtn.addEventListener('click', async () => {
+  dom.copyClipboardBtn.addEventListener('click', async () => {
     if (paths.length === 0 && currentPath.length === 0) {
-      showMessage('No signature to copy.', { type: 'warning', timeoutMs: 5000});
+      showMessage('No signature to copy.', { type: 'warning', timeoutMs: 5000 });
     }
-    
+
     const allPaths: Point[][] = paths.slice();
     if (currentPath.length > 0) allPaths.push(currentPath.slice());
     if (allPaths.length === 0) return;
 
-    const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
+    const dpi = currentDpiValue();
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
       allPaths,
       currentStrokeWidth
@@ -908,7 +815,7 @@ export default function init() {
 
     const { blob } = await generatePng(
       normalizedPaths,
-      colorInput.value,
+      dom.penColorInput.value,
       currentStrokeWidth,
       dpi,
       logicalWidth,
@@ -923,16 +830,15 @@ export default function init() {
     } catch (err) {
       showMessage('Failed to copy image to clipboard.', { type: 'alert', timeoutMs: 5000 });
     }
-
   });
 
-  downloadPngBtn.addEventListener('click', async () => {
+  dom.downloadPngBtn.addEventListener('click', async () => {
     // include in-progress stroke if any
     const allPaths: Point[][] = paths.slice();
     if (currentPath.length > 0) allPaths.push(currentPath.slice());
     if (allPaths.length === 0) return;
 
-    const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
+    const dpi = currentDpiValue();
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
       allPaths,
       currentStrokeWidth
@@ -940,7 +846,7 @@ export default function init() {
 
     const { blob } = await generatePng(
       normalizedPaths,
-      colorInput.value,
+      dom.penColorInput.value,
       currentStrokeWidth,
       dpi,
       logicalWidth,
@@ -951,7 +857,7 @@ export default function init() {
     await downloadFile(blob, `signature-${Date.now()}.png`);
   });
 
-  downloadSvgBtn.addEventListener('click', async () => {
+  dom.downloadSvgBtn.addEventListener('click', async () => {
     const allPaths: Point[][] = paths.slice();
     if (currentPath.length > 0) allPaths.push(currentPath.slice());
     if (allPaths.length === 0) return;
@@ -965,7 +871,7 @@ export default function init() {
       normalizedPaths,
       logicalWidth,
       logicalHeight,
-      colorInput.value,
+      dom.penColorInput.value,
       currentStrokeWidth,
       currentCurveMode
     );
@@ -989,16 +895,16 @@ export default function init() {
 
   async function renderSignatures() {
     const saved: SignatureData[] = await getAllSignatures();
-    signaturesList!.innerHTML = '';
+    dom.signaturesList.innerHTML = '';
 
     if (saved.length > 0) {
-      savedContainer!.classList.remove('hidden');
+      dom.savedContainer.classList.remove('hidden');
     } else {
-      savedContainer!.classList.add('hidden');
+      dom.savedContainer.classList.add('hidden');
     }
 
     saved.forEach((sig) => {
-      const clone = template.content.cloneNode(true) as HTMLElement;
+      const clone = dom.template.content.cloneNode(true) as HTMLElement;
       (clone.querySelector('.signature-preview') as HTMLImageElement).src = sig.image;
       (clone.querySelector('.signature-date') as HTMLElement).textContent = new Date(
         sig.timestamp
@@ -1058,7 +964,7 @@ export default function init() {
       });
 
       clone.querySelector('.download-png-btn')?.addEventListener('click', () => {
-        const dpi = dpiInput && dpiInput.value ? parseInt(dpiInput.value) : 72;
+        const dpi = currentDpiValue();
         generatePng(
           sig.rawPaths,
           sig.color,
@@ -1073,7 +979,7 @@ export default function init() {
         });
       });
 
-      signaturesList!.appendChild(clone);
+      dom.signaturesList.appendChild(clone);
     });
   }
 
