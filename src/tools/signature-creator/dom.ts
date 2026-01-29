@@ -1,5 +1,3 @@
-
-
 interface DomElements {
   canvas: HTMLCanvasElement;
   canvasContainer: HTMLElement;
@@ -40,6 +38,10 @@ interface DomElements {
 
   widthSmoothingInput: HTMLInputElement;
   widthSmoothingValue: HTMLElement;
+
+  exportSignaturesBtn: HTMLElement;
+  importSignaturesBtn: HTMLElement;
+  importFileInput: HTMLInputElement;
 }
 
 let cached: DomElements | null = null;
@@ -72,7 +74,6 @@ function getCanvas(root: Document | Element, id: string): HTMLCanvasElement {
 function getTemplateElement(root: Document | Element, id: string): HTMLTemplateElement {
   return getById<HTMLTemplateElement>(root, id);
 }
-
 
 /**
  * Returns a cached object of DOM elements. Call this after the DOM is available.
@@ -121,6 +122,10 @@ export function getDomElements(root: Document | Element = document): DomElements
 
     widthSmoothingInput: getInput(root, 'width-smoothing'),
     widthSmoothingValue: getElement(root, 'width-smoothing-value'),
+
+    exportSignaturesBtn: getElement(root, 'export-signatures-btn'),
+    importSignaturesBtn: getElement(root, 'import-signatures-btn'),
+    importFileInput: getInput(root, 'import-file-input'),
   };
 
   return cached;

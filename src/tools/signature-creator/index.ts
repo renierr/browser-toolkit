@@ -1,6 +1,12 @@
 import { downloadFile } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
-import { loadSettings, saveSettings, type CurveMode, type RDPMode, resetToDefaults } from './settings.ts';
+import {
+  loadSettings,
+  saveSettings,
+  type CurveMode,
+  type RDPMode,
+  resetToDefaults,
+} from './settings.ts';
 import { getDomElements } from './dom.ts';
 
 interface Point {
@@ -209,8 +215,6 @@ function simplifyRDP(points: Point[], epsilon: number): Point[] {
 }
 
 // --- Helper: Rendering ---
-
-
 
 function drawSignaturePath(
   ctx: CanvasRenderingContext2D,
@@ -425,7 +429,9 @@ function generateSmoothSvg(
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   const dom = getDomElements(document);
-  const currentDpiValue = () => { return parseInt(dom.dpiInput.value) || 96; };
+  const currentDpiValue = () => {
+    return parseInt(dom.dpiInput.value) || 96;
+  };
 
   const ctx = dom.canvas.getContext('2d');
   if (!ctx) return;
@@ -878,6 +884,85 @@ export default function init() {
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     await downloadFile(blob, `signature-${Date.now()}.svg`);
+  });
+
+  dom.exportSignaturesBtn.addEventListener('click', async () => {
+    try {
+      const all = await getAllSignatures();
+      if (!all || all.length === 0) {
+        showMessage('No saved signatures to export.', { type: 'warning', timeoutMs: 4000 });
+        return;
+      }
+      const payload = JSON.stringify(all, null, 2);
+      const blob = new Blob([payload], { type: 'application/json' });
+      await downloadFile(blob, `signatures-export-${Date.now()}.json`);
+      showMessage('Signatures exported.', { timeoutMs: 3000 });
+    } catch (e) {
+      console.error('Export failed', e);
+      showMessage('Failed to export signatures.', { type: 'alert', timeoutMs: 5000 });
+    }
+  });
+
+  dom.importSignaturesBtn.addEventListener('click', () => {
+    dom.importFileInput.value = '';
+    dom.importFileInput.click();
+  });
+
+  dom.importFileInput.addEventListener('change', async (ev) => {
+    const input = ev.target as HTMLInputElement;
+    if (!input.files || input.files.length === 0) return;
+    const file = input.files[0];
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text) as unknown;
+      if (!Array.isArray(parsed)) {
+        showMessage('Invalid file format. Expected an array of signatures.', {
+          type: 'alert',
+          timeoutMs: 6000,
+        });
+        return;
+      }
+
+      // Validate & import entries
+      let imported = 0;
+      for (const item of parsed) {
+        try {
+          const obj = item as Partial<SignatureData>;
+          if (!obj.rawPaths || !obj.timestamp) continue; // minimal validation
+
+          const sig: SignatureData = {
+            id: obj.id || crypto.randomUUID(),
+            image: obj.image || '',
+            width: obj.width || 0,
+            height: obj.height || 0,
+            timestamp: obj.timestamp || Date.now(),
+            color: obj.color || dom.penColorInput.value,
+            strokeWidth: obj.strokeWidth || currentStrokeWidth,
+            rawPaths: (obj.rawPaths as Point[][]) || [],
+          };
+
+          await putSignature(sig);
+          imported++;
+        } catch (inner) {
+          console.warn('Skipping invalid signature entry', inner);
+        }
+      }
+
+      if (imported > 0) {
+        showMessage(`Imported ${imported} signatures.`, { timeoutMs: 4000 });
+        void renderSignatures();
+      } else {
+        showMessage('No valid signatures found in file.', { type: 'warning', timeoutMs: 5000 });
+      }
+    } catch (e) {
+      console.error('Import failed', e);
+      showMessage('Failed to import signatures. Is this a valid JSON export?', {
+        type: 'alert',
+        timeoutMs: 6000,
+      });
+    } finally {
+      dom.importFileInput.value = '';
+    }
   });
 
   // --- Signature Rendering ---
