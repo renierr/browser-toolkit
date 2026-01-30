@@ -1,6 +1,12 @@
 import { downloadFile } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
-import { applySettings, loadSettings, resetToDefaults, saveSettings, } from './settings.ts';
+import {
+  applySettings,
+  DEFAULT_SIGNATURE_SETTINGS,
+  loadSettings,
+  resetToDefaults,
+  saveSettings,
+} from './settings.ts';
 import { getDomElements } from './dom.ts';
 import type { CurveMode, Point, RDPMode, SignatureData, SignatureSettings } from './signature-types.ts';
 import {
@@ -479,35 +485,6 @@ export default function init() {
   const widthSmoothingInput = dom.widthSmoothingInput;
   const widthSmoothingValue = dom.widthSmoothingValue;
 
-  if (moveToleranceInput && moveToleranceValue) {
-    moveToleranceInput.value = String(currentSettings.moveTolerance);
-    moveToleranceValue.textContent = String(currentSettings.moveTolerance);
-  }
-  if (minWidthFactorInput && minWidthFactorValue) {
-    minWidthFactorInput.value = String(currentSettings.minWidthFactor);
-    minWidthFactorValue.textContent = String(currentSettings.minWidthFactor);
-  }
-  if (maxWidthFactorInput && maxWidthFactorValue) {
-    maxWidthFactorInput.value = String(currentSettings.maxWidthFactor);
-    maxWidthFactorValue.textContent = String(currentSettings.maxWidthFactor);
-  }
-  if (velocitySensitivityInput && velocitySensitivityValue) {
-    velocitySensitivityInput.value = String(currentSettings.velocitySensitivity);
-    velocitySensitivityValue.textContent = String(currentSettings.velocitySensitivity);
-  }
-  if (pressureInfluenceInput && pressureInfluenceValue) {
-    pressureInfluenceInput.value = String(currentSettings.pressureInfluence);
-    pressureInfluenceValue.textContent = String(currentSettings.pressureInfluence);
-  }
-  if (velocityInfluenceInput && velocityInfluenceValue) {
-    velocityInfluenceInput.value = String(currentSettings.velocityInfluence);
-    velocityInfluenceValue.textContent = String(currentSettings.velocityInfluence);
-  }
-  if (widthSmoothingInput && widthSmoothingValue) {
-    widthSmoothingInput.value = String(currentSettings.widthSmoothing);
-    widthSmoothingValue.textContent = String(currentSettings.widthSmoothing);
-  }
-
   // Listeners to update runtime config
   moveToleranceInput?.addEventListener('input', () => {
     currentSettings.moveTolerance = parseInt(moveToleranceInput.value);
@@ -554,6 +531,7 @@ export default function init() {
 
   // Reset to defaults button
   dom.resetBtn.addEventListener('click', () => {
+    currentSettings = Object.assign({}, DEFAULT_SIGNATURE_SETTINGS);
     resetToDefaults();
     debouncedRedraw();
   });

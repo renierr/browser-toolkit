@@ -5,7 +5,7 @@ const SETTINGS_KEY = 'bt-signature-settings';
 
 export const DEFAULT_SIGNATURE_SETTINGS: SignatureSettings = {
   penColor: '#0B3D91',
-  penWidth: 2,
+  penWidth: 4,
   curveMode: 'natural',
   rdpMode: 'none',
   dpi: 96,
@@ -17,6 +17,7 @@ export const DEFAULT_SIGNATURE_SETTINGS: SignatureSettings = {
   pressureInfluence: 0.5,
   velocityInfluence: 0.9,
 };
+Object.freeze(DEFAULT_SIGNATURE_SETTINGS);
 
 export function loadSettings(): SignatureSettings {
   try {
