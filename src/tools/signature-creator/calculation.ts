@@ -1,5 +1,5 @@
 // Catmull-Rom to Cubic Bezier Control Points
-import type { Point } from './signature-types.ts';
+import type { Point, SignatureSettings } from './signature-types.ts';
 
 export const getCatmullRomControlPoints = (p0: Point, p1: Point, p2: Point, p3: Point) => {
   return {
@@ -83,4 +83,35 @@ export function simplifyRDP(points: Point[], epsilon: number): Point[] {
   result.push(points[points.length - 1]);
   result.sort((a, b) => points.indexOf(a) - points.indexOf(b));
   return result;
+}
+export function computeWidthFromVelocityAndPressure(
+  velocity: number,
+  pressure: number,
+  settings: SignatureSettings
+) {
+  // Normalize inputs
+  const p = Math.max(0, Math.min(1, pressure ?? 1));
+  const v = Math.max(0, velocity ?? 0);
+
+  const velocityFactor = Math.exp(-v * settings.velocitySensitivity);
+  const pressureScale = 0.5 + p * settings.pressureInfluence;
+  const velocityScale = 0.5 + velocityFactor * settings.velocityInfluence;
+
+  let width = settings.penWidth * pressureScale * velocityScale;
+
+  // Apply reasonable clamps to avoid disappearing or huge strokes
+  const minW = settings.penWidth * settings.minWidthFactor;
+  const maxW = settings.penWidth * settings.maxWidthFactor;
+  width = Math.max(minW, Math.min(maxW, width));
+
+  return width;
+}
+
+export function computeSegmentWidth(p0: Point, p1: Point, settings: SignatureSettings) {
+  const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+  let dt = p1.timestamp - p0.timestamp;
+  if (!dt || dt < 1) dt = 1; // avoid division by zero / extremely large velocities
+  const velocity = dist / dt; // pixels per ms
+  const pressureAvg = ((p0.pressure || 1) + (p1.pressure || 1)) / 2;
+  return computeWidthFromVelocityAndPressure(velocity, pressureAvg, settings);
 }

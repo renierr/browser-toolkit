@@ -18,21 +18,23 @@ export const DEFAULT_SIGNATURE_SETTINGS: SignatureSettings = {
   velocityInfluence: 0.9,
 };
 
-export function loadSettings(): Record<string, any> {
+export function loadSettings(): SignatureSettings {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) || {};
+    if (!raw) return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS);
+    const parsed = JSON.parse(raw) as Partial<SignatureSettings> | null;
+    return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, parsed || {});
   } catch (e) {
     console.warn('Failed to load signature settings', e);
-    return {};
+    return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS);
   }
 }
 
-export function saveSettings(partial: Record<string, any>) {
+export function saveSettings(partial: Partial<SignatureSettings>) {
   try {
-    const cur = loadSettings();
-    const next = Object.assign({}, cur, partial);
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    const stored = raw ? (JSON.parse(raw) as Partial<SignatureSettings>) : {};
+    const next = Object.assign({}, stored, partial);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
   } catch (e) {
     console.warn('Failed to save signature settings', e);
@@ -52,11 +54,6 @@ export function resetToDefaults() {
   saveSettings(DEFAULT_SIGNATURE_SETTINGS);
 }
 
-export function getEffectiveSettings(): SignatureSettings {
-  const loaded = loadSettings();
-  return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, loaded);
-}
-
 export function applySettings(partial: Partial<SignatureSettings>) {
   // Merge partial settings with defaults
   const settings: SignatureSettings = Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, partial);
@@ -66,6 +63,8 @@ export function applySettings(partial: Partial<SignatureSettings>) {
   // Apply values to inputs/selects
   if (dom.penColorInput) dom.penColorInput.value = String(settings.penColor);
   if (dom.penWidthInput) dom.penWidthInput.value = String(settings.penWidth);
+  if (dom.penWidthValue) dom.penWidthValue.textContent = dom.penWidthInput.value;
+
   if (dom.curveModeSelect) dom.curveModeSelect.value = settings.curveMode;
   if (dom.rdpModeSelect) dom.rdpModeSelect.value = settings.rdpMode;
   if (dom.dpiInput) dom.dpiInput.value = String(settings.dpi);

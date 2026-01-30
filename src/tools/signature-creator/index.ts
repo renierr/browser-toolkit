@@ -1,30 +1,15 @@
 import { downloadFile } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
-import {
-  DEFAULT_SIGNATURE_SETTINGS,
-  loadSettings,
-  resetToDefaults,
-  saveSettings,
-} from './settings.ts';
+import { applySettings, loadSettings, resetToDefaults, saveSettings, } from './settings.ts';
 import { getDomElements } from './dom.ts';
 import type { CurveMode, Point, RDPMode, SignatureData, SignatureSettings } from './signature-types.ts';
 import {
   buildNormalizedFromPaths,
+  computeSegmentWidth,
+  computeWidthFromVelocityAndPressure,
   getCatmullRomControlPoints,
   simplifyRDP,
 } from './calculation.ts';
-
-// --- Configuration ---
-
-let MOVE_TOLERANCE = 2; // Ignore mouse moves smaller than 2px
-let MIN_WIDTH_FACTOR = 0.15; // Thin lines can be x% of base width
-let MAX_WIDTH_FACTOR = 2.0; // allow up to x% of base width
-let VELOCITY_SENSITIVITY = 0.85; // larger -> velocity reduces width more strongly
-let PRESSURE_INFLUENCE = 0.9; // how strongly pressure scales width (0..1)
-let VELOCITY_INFLUENCE = 0.8; // how strongly velocity scaling contributes (0..1)
-let WIDTH_SMOOTHING = 0.25; // 0..1 where higher keeps more of previous width (0.65 is a gentle smoothing)
-
-// Single storage key for both basic and advanced signature settings
 
 // --- IndexedDB Helper (lightweight) ---
 const DB_NAME = 'bt-signatures-db';
@@ -82,40 +67,6 @@ async function deleteSignature(id: string): Promise<void> {
   });
 }
 
-// --- Helper: Math & Geometry ---
-
-function computeWidthFromVelocityAndPressure(
-  velocity: number,
-  pressure: number,
-  baseWidth: number
-) {
-  // Normalize inputs
-  const p = Math.max(0, Math.min(1, pressure ?? 1));
-  const v = Math.max(0, velocity ?? 0);
-
-  const velocityFactor = Math.exp(-v * VELOCITY_SENSITIVITY);
-  const pressureScale = 0.5 + p * PRESSURE_INFLUENCE; // ranges ~0.5..(0.5+PRESSURE_INFLUENCE)
-  const velocityScale = 0.5 + velocityFactor * VELOCITY_INFLUENCE; // ranges ~0.5..(0.5+VELOCITY_INFLUENCE)
-
-  let width = baseWidth * pressureScale * velocityScale;
-
-  // Apply reasonable clamps to avoid disappearing or huge strokes
-  const minW = baseWidth * MIN_WIDTH_FACTOR;
-  const maxW = baseWidth * MAX_WIDTH_FACTOR;
-  width = Math.max(minW, Math.min(maxW, width));
-
-  return width;
-}
-
-function computeSegmentWidth(p0: Point, p1: Point, baseWidth: number) {
-  const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
-  let dt = p1.timestamp - p0.timestamp;
-  if (!dt || dt < 1) dt = 1; // avoid division by zero / extremely large velocities
-  const velocity = dist / dt; // pixels per ms
-  const pressureAvg = ((p0.pressure || 1) + (p1.pressure || 1)) / 2;
-  return computeWidthFromVelocityAndPressure(velocity, pressureAvg, baseWidth);
-}
-
 // --- Helper: Rendering ---
 
 function drawSignaturePath(
@@ -154,8 +105,8 @@ function drawSignaturePath(
       const p2 = points[i];
       const mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
 
-      const rawW = computeSegmentWidth(p1, p2, baseWidth);
-      const w = prevWidth * WIDTH_SMOOTHING + rawW * (1 - WIDTH_SMOOTHING);
+      const rawW = computeSegmentWidth(p1, p2, settings);
+      const w = prevWidth * settings.widthSmoothing + rawW * (1 - settings.widthSmoothing);
 
       ctx.lineWidth = w;
       ctx.quadraticCurveTo(p1.x, p1.y, mid.x, mid.y);
@@ -195,8 +146,8 @@ function drawSignaturePath(
       const avgVel = recentVels.reduce((a, b) => a + b, 0) / recentVels.length;
       const avgPress = recentPressures.reduce((a, b) => a + b, 0) / recentPressures.length;
 
-      const rawWidth = computeWidthFromVelocityAndPressure(avgVel, avgPress, baseWidth);
-      const w = prevWidth * WIDTH_SMOOTHING + rawWidth * (1 - WIDTH_SMOOTHING);
+      const rawWidth = computeWidthFromVelocityAndPressure(avgVel, avgPress, settings);
+      const w = prevWidth * settings.widthSmoothing + rawWidth * (1 - settings.widthSmoothing);
       prevWidth = w;
 
       ctx.lineWidth = w;
@@ -215,8 +166,8 @@ function drawSignaturePath(
 
     for (let i = 1; i < points.length; i++) {
       const p2 = points[i];
-      const rawW = computeSegmentWidth(p1, p2, baseWidth);
-      const w = prevWidth * WIDTH_SMOOTHING + rawW * (1 - WIDTH_SMOOTHING);
+      const rawW = computeSegmentWidth(p1, p2, settings);
+      const w = prevWidth * settings.widthSmoothing + rawW * (1 - settings.widthSmoothing);
       ctx.lineWidth = w;
       ctx.moveTo(p1.x, p1.y);
       ctx.stroke();
@@ -313,8 +264,8 @@ function generateSvg(
         const p3 = path[Math.min(path.length - 1, i + 2)];
 
         const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
-        const rawW = computeSegmentWidth(p1, p2, baseWidth);
-        const w = prevWidth * WIDTH_SMOOTHING + rawW * (1 - WIDTH_SMOOTHING);
+        const rawW = computeSegmentWidth(p1, p2, settings);
+        const w = prevWidth * settings.widthSmoothing + rawW * (1 - settings.widthSmoothing);
         prevWidth = w;
 
         const d = `M${f(p1.x)} ${f(p1.y)} C${f(c1x)} ${f(c1y)}, ${f(c2x)} ${f(c2y)}, ${f(p2.x)} ${f(p2.y)}`;
@@ -342,9 +293,7 @@ export default function init() {
   let currentPath: Point[] = [];
 
   let redrawTimeout: number | null = null;
-  const settings = loadSettings();
-  console.log('Loaded signature settings:', settings);
-  let currentSettings: SignatureSettings = Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, settings);
+  let currentSettings: SignatureSettings = loadSettings();
   let prevLiveWidth = currentSettings.penWidth;
 
   const dpr = window.devicePixelRatio || 1;
@@ -352,36 +301,7 @@ export default function init() {
   const userHeight = () => dom.canvas.height / dpr;
 
   // Set initial display values
-  if (dom.penWidthValue) dom.penWidthValue.textContent = dom.penWidthInput.value;
-
-  // Load persisted settings (both advanced and basic) and apply to UI/runtime
-
-  // Advanced numeric settings (preserve defaults if missing)
-  MOVE_TOLERANCE = settings.MOVE_TOLERANCE ?? MOVE_TOLERANCE;
-  MIN_WIDTH_FACTOR = settings.MIN_WIDTH_FACTOR ?? MIN_WIDTH_FACTOR;
-  MAX_WIDTH_FACTOR = settings.MAX_WIDTH_FACTOR ?? MAX_WIDTH_FACTOR;
-  VELOCITY_SENSITIVITY = settings.VELOCITY_SENSITIVITY ?? VELOCITY_SENSITIVITY;
-  PRESSURE_INFLUENCE = settings.PRESSURE_INFLUENCE ?? PRESSURE_INFLUENCE;
-  VELOCITY_INFLUENCE = settings.VELOCITY_INFLUENCE ?? VELOCITY_INFLUENCE;
-  WIDTH_SMOOTHING = settings.WIDTH_SMOOTHING ?? WIDTH_SMOOTHING;
-
-  // Basic UI settings
-  if (settings.color && typeof settings.color === 'string') {
-    dom.penColorInput!.value = settings.color;
-  }
-  if (settings.strokeWidth && !isNaN(parseInt(settings.strokeWidth))) {
-    dom.penWidthInput.value = String(settings.strokeWidth);
-    if (dom.penWidthValue) dom.penWidthValue.textContent = dom.penWidthInput.value;
-  }
-  if (settings.curveMode && typeof settings.curveMode === 'string') {
-    dom.curveModeSelect.value = settings.curveMode;
-  }
-  if (settings.rdp && typeof settings.rdp === 'string') {
-    dom.rdpModeSelect.value = settings.rdp;
-  }
-  if (settings.dpi && !isNaN(parseInt(settings.dpi))) {
-    dom.dpiInput.value = String(parseInt(settings.dpi));
-  }
+  applySettings(currentSettings);
 
   // --- Sizing ---
   const syncCanvasSize = () => {
@@ -447,7 +367,7 @@ export default function init() {
     // Cheap threshold check
     if (prev) {
       const distSq = (pos.x - prev.x) ** 2 + (pos.y - prev.y) ** 2;
-      if (distSq < MOVE_TOLERANCE * MOVE_TOLERANCE) return;
+      if (distSq < currentSettings.moveTolerance * currentSettings.moveTolerance) return;
     }
 
     currentPath.push(pos);
@@ -458,8 +378,9 @@ export default function init() {
       const p0 = currentPath[currentPath.length - 2];
       const p1 = currentPath[currentPath.length - 1];
       ctx!.beginPath();
-      const rawSegmentW = computeSegmentWidth(p0, p1, currentSettings.penWidth);
-      const liveW = prevLiveWidth * WIDTH_SMOOTHING + rawSegmentW * (1 - WIDTH_SMOOTHING);
+      const rawSegmentW = computeSegmentWidth(p0, p1, currentSettings);
+      const liveW =
+        prevLiveWidth * currentSettings.widthSmoothing + rawSegmentW * (1 - currentSettings.widthSmoothing);
       prevLiveWidth = liveW;
       ctx!.lineWidth = liveW;
       ctx!.lineCap = 'round';
@@ -516,129 +437,119 @@ export default function init() {
   dom.penColorInput.addEventListener('input', () => {
     currentSettings.penColor = dom.penColorInput.value;
     debouncedRedraw();
-    saveSettings({ penColor: currentSettings.penColor });
+    saveSettings(currentSettings);
   });
 
   dom.penWidthInput.addEventListener('input', () => {
     currentSettings.penWidth = parseInt(dom.penWidthInput.value);
     dom.penWidthValue.textContent = dom.penWidthInput.value;
     debouncedRedraw();
-    saveSettings({ penWidth: currentSettings.penWidth });
+    saveSettings(currentSettings);
   });
 
   dom.curveModeSelect.addEventListener('change', () => {
     currentSettings.curveMode = dom.curveModeSelect.value as CurveMode;
     debouncedRedraw();
-    saveSettings({ curveMode: currentSettings.curveMode });
+    saveSettings(currentSettings);
   });
 
   dom.rdpModeSelect.addEventListener('change', () => {
     currentSettings.rdpMode = dom.rdpModeSelect.value as RDPMode;
-    saveSettings({ rdpMode: currentSettings.rdpMode });
+    saveSettings(currentSettings);
   });
 
   dom.dpiInput.addEventListener('change', () => {
     currentSettings.dpi = parseInt(dom.dpiInput.value);
-    if (dom.dpiInput.value) saveSettings({ dpi: currentSettings.dpi });
+    saveSettings(currentSettings)
   });
 
   // Advanced controls
-  const moveToleranceInput = document.getElementById('move-tolerance') as HTMLInputElement | null;
-  const moveToleranceValue = document.getElementById('move-tolerance-value');
-  const minWidthFactorInput = document.getElementById(
-    'min-width-factor'
-  ) as HTMLInputElement | null;
-  const minWidthFactorValue = document.getElementById('min-width-factor-value');
-  const maxWidthFactorInput = document.getElementById(
-    'max-width-factor'
-  ) as HTMLInputElement | null;
-  const maxWidthFactorValue = document.getElementById('max-width-factor-value');
-  const velocitySensitivityInput = document.getElementById(
-    'velocity-sensitivity'
-  ) as HTMLInputElement | null;
-  const velocitySensitivityValue = document.getElementById('velocity-sensitivity-value');
-  const pressureInfluenceInput = document.getElementById(
-    'pressure-influence'
-  ) as HTMLInputElement | null;
-  const pressureInfluenceValue = document.getElementById('pressure-influence-value');
-  const velocityInfluenceInput = document.getElementById(
-    'velocity-influence'
-  ) as HTMLInputElement | null;
-  const velocityInfluenceValue = document.getElementById('velocity-influence-value');
-  const widthSmoothingInput = document.getElementById('width-smoothing') as HTMLInputElement | null;
-  const widthSmoothingValue = document.getElementById('width-smoothing-value');
+  const moveToleranceInput = dom.moveToleranceInput;
+  const moveToleranceValue = dom.moveToleranceValue;
+  const minWidthFactorInput = dom.minWidthFactorInput;
+  const minWidthFactorValue = dom.minWidthFactorValue;
+  const maxWidthFactorInput = dom.maxWidthFactorInput;
+  const maxWidthFactorValue = dom.maxWidthFactorValue;
+  const velocitySensitivityInput = dom.velocitySensitivityInput;
+  const velocitySensitivityValue = dom.velocitySensitivityValue;
+  const pressureInfluenceInput = dom.pressureInfluenceInput;
+  const pressureInfluenceValue = dom.pressureInfluenceValue;
+  const velocityInfluenceInput = dom.velocityInfluenceInput;
+  const velocityInfluenceValue = dom.velocityInfluenceValue;
+  const widthSmoothingInput = dom.widthSmoothingInput;
+  const widthSmoothingValue = dom.widthSmoothingValue;
 
   if (moveToleranceInput && moveToleranceValue) {
-    moveToleranceInput.value = String(MOVE_TOLERANCE);
-    moveToleranceValue.textContent = String(MOVE_TOLERANCE);
+    moveToleranceInput.value = String(currentSettings.moveTolerance);
+    moveToleranceValue.textContent = String(currentSettings.moveTolerance);
   }
   if (minWidthFactorInput && minWidthFactorValue) {
-    minWidthFactorInput.value = String(MIN_WIDTH_FACTOR);
-    minWidthFactorValue.textContent = String(MIN_WIDTH_FACTOR);
+    minWidthFactorInput.value = String(currentSettings.minWidthFactor);
+    minWidthFactorValue.textContent = String(currentSettings.minWidthFactor);
   }
   if (maxWidthFactorInput && maxWidthFactorValue) {
-    maxWidthFactorInput.value = String(MAX_WIDTH_FACTOR);
-    maxWidthFactorValue.textContent = String(MAX_WIDTH_FACTOR);
+    maxWidthFactorInput.value = String(currentSettings.maxWidthFactor);
+    maxWidthFactorValue.textContent = String(currentSettings.maxWidthFactor);
   }
   if (velocitySensitivityInput && velocitySensitivityValue) {
-    velocitySensitivityInput.value = String(VELOCITY_SENSITIVITY);
-    velocitySensitivityValue.textContent = String(VELOCITY_SENSITIVITY);
+    velocitySensitivityInput.value = String(currentSettings.velocitySensitivity);
+    velocitySensitivityValue.textContent = String(currentSettings.velocitySensitivity);
   }
   if (pressureInfluenceInput && pressureInfluenceValue) {
-    pressureInfluenceInput.value = String(PRESSURE_INFLUENCE);
-    pressureInfluenceValue.textContent = String(PRESSURE_INFLUENCE);
+    pressureInfluenceInput.value = String(currentSettings.pressureInfluence);
+    pressureInfluenceValue.textContent = String(currentSettings.pressureInfluence);
   }
   if (velocityInfluenceInput && velocityInfluenceValue) {
-    velocityInfluenceInput.value = String(VELOCITY_INFLUENCE);
-    velocityInfluenceValue.textContent = String(VELOCITY_INFLUENCE);
+    velocityInfluenceInput.value = String(currentSettings.velocityInfluence);
+    velocityInfluenceValue.textContent = String(currentSettings.velocityInfluence);
   }
   if (widthSmoothingInput && widthSmoothingValue) {
-    widthSmoothingInput.value = String(WIDTH_SMOOTHING);
-    widthSmoothingValue.textContent = String(WIDTH_SMOOTHING);
+    widthSmoothingInput.value = String(currentSettings.widthSmoothing);
+    widthSmoothingValue.textContent = String(currentSettings.widthSmoothing);
   }
 
   // Listeners to update runtime config
   moveToleranceInput?.addEventListener('input', () => {
-    MOVE_TOLERANCE = parseInt(moveToleranceInput.value);
+    currentSettings.moveTolerance = parseInt(moveToleranceInput.value);
     moveToleranceValue && (moveToleranceValue.textContent = moveToleranceInput.value);
-    saveSettings({ MOVE_TOLERANCE });
+    saveSettings(currentSettings);
   });
   minWidthFactorInput?.addEventListener('input', () => {
-    MIN_WIDTH_FACTOR = parseFloat(minWidthFactorInput.value);
+    currentSettings.minWidthFactor = parseFloat(minWidthFactorInput.value);
     minWidthFactorValue && (minWidthFactorValue.textContent = minWidthFactorInput.value);
     debouncedRedraw();
-    saveSettings({ MIN_WIDTH_FACTOR });
+    saveSettings(currentSettings);
   });
   maxWidthFactorInput?.addEventListener('input', () => {
-    MAX_WIDTH_FACTOR = parseFloat(maxWidthFactorInput.value);
+    currentSettings.maxWidthFactor = parseFloat(maxWidthFactorInput.value);
     maxWidthFactorValue && (maxWidthFactorValue.textContent = maxWidthFactorInput.value);
     debouncedRedraw();
-    saveSettings({ MAX_WIDTH_FACTOR });
+    saveSettings(currentSettings);
   });
   velocitySensitivityInput?.addEventListener('input', () => {
-    VELOCITY_SENSITIVITY = parseFloat(velocitySensitivityInput.value);
+    currentSettings.velocitySensitivity = parseFloat(velocitySensitivityInput.value);
     velocitySensitivityValue &&
       (velocitySensitivityValue.textContent = velocitySensitivityInput.value);
     debouncedRedraw();
-    saveSettings({ VELOCITY_SENSITIVITY });
+    saveSettings(currentSettings);
   });
   pressureInfluenceInput?.addEventListener('input', () => {
-    PRESSURE_INFLUENCE = parseFloat(pressureInfluenceInput.value);
+    currentSettings.pressureInfluence = parseFloat(pressureInfluenceInput.value);
     pressureInfluenceValue && (pressureInfluenceValue.textContent = pressureInfluenceInput.value);
     debouncedRedraw();
-    saveSettings({ PRESSURE_INFLUENCE });
+    saveSettings(currentSettings);
   });
   velocityInfluenceInput?.addEventListener('input', () => {
-    VELOCITY_INFLUENCE = parseFloat(velocityInfluenceInput.value);
+    currentSettings.velocityInfluence = parseFloat(velocityInfluenceInput.value);
     velocityInfluenceValue && (velocityInfluenceValue.textContent = velocityInfluenceInput.value);
     debouncedRedraw();
-    saveSettings({ VELOCITY_INFLUENCE });
+    saveSettings(currentSettings);
   });
   widthSmoothingInput?.addEventListener('input', () => {
-    WIDTH_SMOOTHING = parseFloat(widthSmoothingInput.value);
+    currentSettings.widthSmoothing = parseFloat(widthSmoothingInput.value);
     widthSmoothingValue && (widthSmoothingValue.textContent = widthSmoothingInput.value);
     debouncedRedraw();
-    saveSettings({ WIDTH_SMOOTHING });
+    saveSettings(currentSettings);
   });
 
   // Reset to defaults button
