@@ -1,5 +1,5 @@
 import { downloadFile } from '../../js/file-utils.ts';
-import { showMessage } from '../../js/ui.ts';
+import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import {
   applySettings,
   DEFAULT_SIGNATURE_SETTINGS,
@@ -19,7 +19,7 @@ import type {
 import { buildNormalizedFromPaths, computeSegmentWidth, simplifyRDP } from './calculation.ts';
 import { deleteSignature, getAllSignatures, putSignature } from './signature-store.ts';
 import { drawSignaturePath } from './drawing.ts';
-import { generatePng, generateSvg } from './export.ts';
+import { generatePng, generateSvg, generateWebMAnimation } from './export.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -467,13 +467,13 @@ export default function init() {
   });
 
   dom.downloadPngBtn.addEventListener('click', async () => {
-    // include in-progress stroke if any
-    const allPaths: Point[][] = paths.slice();
-    if (currentPath.length > 0) allPaths.push(currentPath.slice());
-    if (allPaths.length === 0) return;
+    if (paths.length === 0) {
+      showMessage('No signature to export.', { type: 'warning', timeoutMs: 5000 });
+      return;
+    }
 
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
-      allPaths,
+      paths,
       currentSettings.penWidth
     );
 
@@ -488,12 +488,13 @@ export default function init() {
   });
 
   dom.downloadSvgBtn.addEventListener('click', async () => {
-    const allPaths: Point[][] = paths.slice();
-    if (currentPath.length > 0) allPaths.push(currentPath.slice());
-    if (allPaths.length === 0) return;
+    if (paths.length === 0) {
+      showMessage('No signature to export.', { type: 'warning', timeoutMs: 5000 });
+      return;
+    }
 
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
-      allPaths,
+      paths,
       currentSettings.penWidth
     );
 
@@ -501,6 +502,38 @@ export default function init() {
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     await downloadFile(blob, `signature-${Date.now()}.svg`);
+  });
+
+  // Animated export
+  dom.downloadAnimatedBtn.addEventListener('click', async () => {
+    if (paths.length === 0) {
+      showMessage('No signature to export.', { type: 'warning', timeoutMs: 5000 });
+      return;
+    }
+
+    try {
+      showProgress('Generating animated signature...');
+      const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
+        paths,
+        currentSettings.penWidth
+      );
+
+      const blob = await generateWebMAnimation(
+        normalizedPaths,
+        logicalWidth,
+        logicalHeight,
+        currentSettings,
+        {
+          durationMs: 2500,
+          fps: 30,
+          background: null, // null = transparent; or '#ffffff' for white
+          dpi: 144,
+        }
+      );
+      await downloadFile(blob, `signature-animated-${Date.now()}.webm`);
+    } finally {
+      hideProgress();
+    }
   });
 
   dom.exportSignaturesBtn.addEventListener('click', async () => {

@@ -9,6 +9,7 @@ interface DomElements {
   copyClipboardBtn: HTMLElement;
   downloadPngBtn: HTMLElement;
   downloadSvgBtn: HTMLElement;
+  downloadAnimatedBtn: HTMLElement;
   signaturesList: HTMLElement;
   savedContainer: HTMLElement;
   template: HTMLTemplateElement;
@@ -95,6 +96,7 @@ export function getDomElements(root: Document | Element = document): DomElements
     copyClipboardBtn: getElement(root, 'copy-clipboard'),
     downloadPngBtn: getElement(root, 'download-current-png-btn'),
     downloadSvgBtn: getElement(root, 'download-current-svg-btn'),
+    downloadAnimatedBtn: getElement(root, 'download-current-animated-btn'),
     signaturesList: getElement(root, 'signatures-list'),
     savedContainer: getElement(root, 'saved-signatures-container'),
     template: getTemplateElement(root, 'signature-item-template'),
