@@ -8,7 +8,13 @@ import {
   saveSettings,
 } from './settings.ts';
 import { getDomElements } from './dom.ts';
-import type { CurveMode, Point, RDPMode, SignatureData, SignatureSettings } from './signature-types.ts';
+import type {
+  CurveMode,
+  Point,
+  RDPMode,
+  SignatureData,
+  SignatureSettings,
+} from './signature-types.ts';
 import {
   buildNormalizedFromPaths,
   computeSegmentWidth,
@@ -386,7 +392,8 @@ export default function init() {
       ctx!.beginPath();
       const rawSegmentW = computeSegmentWidth(p0, p1, currentSettings);
       const liveW =
-        prevLiveWidth * currentSettings.widthSmoothing + rawSegmentW * (1 - currentSettings.widthSmoothing);
+        prevLiveWidth * currentSettings.widthSmoothing +
+        rawSegmentW * (1 - currentSettings.widthSmoothing);
       prevLiveWidth = liveW;
       ctx!.lineWidth = liveW;
       ctx!.lineCap = 'round';
@@ -415,11 +422,7 @@ export default function init() {
     const simplified = epsilon > 0 ? simplifyRDP(currentPath, epsilon) : currentPath;
 
     // Bake High-Quality Curve (Correction)
-    drawSignaturePath(
-      memCtx,
-      simplified,
-      currentSettings
-    );
+    drawSignaturePath(memCtx, simplified, currentSettings);
 
     paths.push(simplified);
     currentPath = [];
@@ -439,95 +442,111 @@ export default function init() {
   dom.canvas.style.touchAction = 'none';
   dom.canvasContainer.style.touchAction = 'none';
 
-  // Basic UI listeners
-  dom.penColorInput.addEventListener('input', () => {
-    currentSettings.penColor = dom.penColorInput.value;
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
+  const bindInput = (
+    element: HTMLInputElement | HTMLSelectElement | null | undefined,
+    handler: (value: string) => void,
+    options?: {
+      event?: 'input' | 'change';
+      displayEl?: HTMLElement | null;
+      redraw?: boolean;
+      save?: boolean;
+    }
+  ) => {
+    element?.addEventListener(options?.event || 'input', () => {
+      handler(element.value);
+      if (options?.displayEl) options.displayEl.textContent = element.value;
+      if (options?.redraw) debouncedRedraw();
+      if (options?.save) saveSettings(currentSettings);
+    });
+  };
 
-  dom.penWidthInput.addEventListener('input', () => {
-    currentSettings.penWidth = parseInt(dom.penWidthInput.value);
-    dom.penWidthValue.textContent = dom.penWidthInput.value;
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
+  bindInput(
+    dom.penColorInput,
+    (v) => {
+      currentSettings.penColor = v;
+    },
+    { redraw: true, save: true }
+  );
+  bindInput(
+    dom.penWidthInput,
+    (v) => {
+      currentSettings.penWidth = parseInt(v);
+      // display handled by displayEl below as well, but keep explicit for clarity
+      dom.penWidthValue.textContent = v;
+    },
+    { redraw: true, save: true }
+  );
+  bindInput(
+    dom.curveModeSelect,
+    (v) => {
+      currentSettings.curveMode = v as CurveMode;
+    },
+    { event: 'change', redraw: true, save: true }
+  );
+  bindInput(
+    dom.rdpModeSelect,
+    (v) => {
+      currentSettings.rdpMode = v as RDPMode;
+    },
+    { event: 'change', save: true }
+  );
+  bindInput(
+    dom.dpiInput,
+    (v) => {
+      currentSettings.dpi = parseInt(v);
+    },
+    { event: 'change', save: true }
+  );
 
-  dom.curveModeSelect.addEventListener('change', () => {
-    currentSettings.curveMode = dom.curveModeSelect.value as CurveMode;
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
-
-  dom.rdpModeSelect.addEventListener('change', () => {
-    currentSettings.rdpMode = dom.rdpModeSelect.value as RDPMode;
-    saveSettings(currentSettings);
-  });
-
-  dom.dpiInput.addEventListener('change', () => {
-    currentSettings.dpi = parseInt(dom.dpiInput.value);
-    saveSettings(currentSettings)
-  });
-
-  // Advanced controls
-  const moveToleranceInput = dom.moveToleranceInput;
-  const moveToleranceValue = dom.moveToleranceValue;
-  const minWidthFactorInput = dom.minWidthFactorInput;
-  const minWidthFactorValue = dom.minWidthFactorValue;
-  const maxWidthFactorInput = dom.maxWidthFactorInput;
-  const maxWidthFactorValue = dom.maxWidthFactorValue;
-  const velocitySensitivityInput = dom.velocitySensitivityInput;
-  const velocitySensitivityValue = dom.velocitySensitivityValue;
-  const pressureInfluenceInput = dom.pressureInfluenceInput;
-  const pressureInfluenceValue = dom.pressureInfluenceValue;
-  const velocityInfluenceInput = dom.velocityInfluenceInput;
-  const velocityInfluenceValue = dom.velocityInfluenceValue;
-  const widthSmoothingInput = dom.widthSmoothingInput;
-  const widthSmoothingValue = dom.widthSmoothingValue;
-
-  // Listeners to update runtime config
-  moveToleranceInput?.addEventListener('input', () => {
-    currentSettings.moveTolerance = parseInt(moveToleranceInput.value);
-    moveToleranceValue && (moveToleranceValue.textContent = moveToleranceInput.value);
-    saveSettings(currentSettings);
-  });
-  minWidthFactorInput?.addEventListener('input', () => {
-    currentSettings.minWidthFactor = parseFloat(minWidthFactorInput.value);
-    minWidthFactorValue && (minWidthFactorValue.textContent = minWidthFactorInput.value);
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
-  maxWidthFactorInput?.addEventListener('input', () => {
-    currentSettings.maxWidthFactor = parseFloat(maxWidthFactorInput.value);
-    maxWidthFactorValue && (maxWidthFactorValue.textContent = maxWidthFactorInput.value);
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
-  velocitySensitivityInput?.addEventListener('input', () => {
-    currentSettings.velocitySensitivity = parseFloat(velocitySensitivityInput.value);
-    velocitySensitivityValue &&
-      (velocitySensitivityValue.textContent = velocitySensitivityInput.value);
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
-  pressureInfluenceInput?.addEventListener('input', () => {
-    currentSettings.pressureInfluence = parseFloat(pressureInfluenceInput.value);
-    pressureInfluenceValue && (pressureInfluenceValue.textContent = pressureInfluenceInput.value);
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
-  velocityInfluenceInput?.addEventListener('input', () => {
-    currentSettings.velocityInfluence = parseFloat(velocityInfluenceInput.value);
-    velocityInfluenceValue && (velocityInfluenceValue.textContent = velocityInfluenceInput.value);
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
-  widthSmoothingInput?.addEventListener('input', () => {
-    currentSettings.widthSmoothing = parseFloat(widthSmoothingInput.value);
-    widthSmoothingValue && (widthSmoothingValue.textContent = widthSmoothingInput.value);
-    debouncedRedraw();
-    saveSettings(currentSettings);
-  });
+  bindInput(
+    dom.moveToleranceInput,
+    (v) => {
+      currentSettings.moveTolerance = parseInt(v);
+    },
+    { displayEl: dom.moveToleranceValue, save: true }
+  );
+  bindInput(
+    dom.minWidthFactorInput,
+    (v) => {
+      currentSettings.minWidthFactor = parseFloat(v);
+    },
+    { displayEl: dom.minWidthFactorValue, redraw: true, save: true }
+  );
+  bindInput(
+    dom.maxWidthFactorInput,
+    (v) => {
+      currentSettings.maxWidthFactor = parseFloat(v);
+    },
+    { displayEl: dom.maxWidthFactorValue, redraw: true, save: true }
+  );
+  bindInput(
+    dom.velocitySensitivityInput,
+    (v) => {
+      currentSettings.velocitySensitivity = parseFloat(v);
+    },
+    { displayEl: dom.velocitySensitivityValue, redraw: true, save: true }
+  );
+  bindInput(
+    dom.pressureInfluenceInput,
+    (v) => {
+      currentSettings.pressureInfluence = parseFloat(v);
+    },
+    { displayEl: dom.pressureInfluenceValue, redraw: true, save: true }
+  );
+  bindInput(
+    dom.velocityInfluenceInput,
+    (v) => {
+      currentSettings.velocityInfluence = parseFloat(v);
+    },
+    { displayEl: dom.velocityInfluenceValue, redraw: true, save: true }
+  );
+  bindInput(
+    dom.widthSmoothingInput,
+    (v) => {
+      currentSettings.widthSmoothing = parseFloat(v);
+    },
+    { displayEl: dom.widthSmoothingValue, redraw: true, save: true }
+  );
 
   // Reset to defaults button
   dom.resetBtn.addEventListener('click', () => {
@@ -555,12 +574,7 @@ export default function init() {
 
     // Generate Preview Image
     const settings: SignatureSettings = { ...currentSettings, dpi: 72 };
-    const { blob } = await generatePng(
-      normalizedPaths,
-      logicalWidth,
-      logicalHeight,
-      settings
-    );
+    const { blob } = await generatePng(normalizedPaths, logicalWidth, logicalHeight, settings);
 
     // Save
     const reader = new FileReader();
@@ -648,12 +662,7 @@ export default function init() {
       currentSettings.penWidth
     );
 
-    const svgContent = generateSvg(
-      normalizedPaths,
-      logicalWidth,
-      logicalHeight,
-      currentSettings
-    );
+    const svgContent = generateSvg(normalizedPaths, logicalWidth, logicalHeight, currentSettings);
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
     await downloadFile(blob, `signature-${Date.now()}.svg`);
