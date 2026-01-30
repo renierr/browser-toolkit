@@ -431,6 +431,7 @@ export default function init() {
     undoStack.push(paths.map((p) => p.slice()));
     // Clear redo since new action invalidates redo history
     redoStack = [];
+    updateUndoRedoButtons();
 
     paths.push(simplified);
     currentPath = [];
@@ -575,6 +576,7 @@ export default function init() {
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
     prevLiveWidth = currentSettings.penWidth;
+    updateUndoRedoButtons();
   });
 
   // Undo / Redo helpers
@@ -585,12 +587,22 @@ export default function init() {
     drawStatic();
   }
 
+  function updateUndoRedoButtons() {
+    try {
+      dom.undoBtn.disabled = undoStack.length === 0;
+      dom.redoBtn.disabled = redoStack.length === 0;
+    } catch (e) {
+      // no-op if dom not ready
+    }
+  }
+
   function undo() {
     if (undoStack.length === 0) return;
     // push current state to redo
     redoStack.push(paths.map((p) => p.slice()));
     const prev = undoStack.pop()!;
     applyPaths(prev);
+    updateUndoRedoButtons();
   }
 
   function redo() {
@@ -598,11 +610,15 @@ export default function init() {
     undoStack.push(paths.map((p) => p.slice()));
     const next = redoStack.pop()!;
     applyPaths(next);
+    updateUndoRedoButtons();
   }
 
   // Wire buttons and keyboard shortcuts
   dom.undoBtn?.addEventListener('click', () => undo());
   dom.redoBtn?.addEventListener('click', () => redo());
+
+  // initialize disabled state
+  updateUndoRedoButtons();
 
   dom.saveBtn.addEventListener('click', async () => {
     if (paths.length === 0) return;
@@ -641,6 +657,7 @@ export default function init() {
       memCtx.clearRect(0, 0, userWidth(), userHeight());
       drawStatic();
       void renderSignatures();
+      updateUndoRedoButtons();
     };
   });
 
@@ -883,6 +900,7 @@ export default function init() {
         );
 
         drawStatic();
+        updateUndoRedoButtons();
       });
 
       clone.querySelector('.download-svg-btn')?.addEventListener('click', async () => {

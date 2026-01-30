@@ -2,8 +2,8 @@ interface DomElements {
   canvas: HTMLCanvasElement;
   canvasContainer: HTMLElement;
   clearBtn: HTMLElement;
-  undoBtn: HTMLElement;
-  redoBtn: HTMLElement;
+  undoBtn: HTMLButtonElement;
+  redoBtn: HTMLButtonElement;
   saveBtn: HTMLElement;
   resetBtn: HTMLElement;
   copyClipboardBtn: HTMLElement;
@@ -88,8 +88,8 @@ export function getDomElements(root: Document | Element = document): DomElements
     canvas: getCanvas(root, 'signature-canvas'),
     canvasContainer: getElement(root, 'canvas-container'),
     clearBtn: getElement(root, 'clear-btn'),
-    undoBtn: getElement(root, 'undo-btn'),
-    redoBtn: getElement(root, 'redo-btn'),
+    undoBtn: getById<HTMLButtonElement>(root, 'undo-btn'),
+    redoBtn: getById<HTMLButtonElement>(root, 'redo-btn'),
     saveBtn: getElement(root, 'save-btn'),
     resetBtn: getElement(root, 'reset-btn'),
     copyClipboardBtn: getElement(root, 'copy-clipboard'),
