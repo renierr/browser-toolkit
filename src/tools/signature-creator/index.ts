@@ -622,6 +622,7 @@ export default function init() {
         // revert to prev
         redoStack.push(cmd);
         applyPaths(cmd.prev);
+        lastLoadedSignatureId = null;
         break;
       }
     }
