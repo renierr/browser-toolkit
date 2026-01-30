@@ -772,6 +772,30 @@ export default function init() {
     }
 
     saved.forEach((sig) => {
+      // correct missing values for signature settings use defaults
+      if (!sig.rawPaths) {
+        sig.rawPaths = [];
+      }
+      if (!sig.settings) {
+        sig.settings = currentSettings;
+      }
+      if (!sig.timestamp) {
+        sig.timestamp = Date.now();
+      }
+      if (!sig.width) {
+        sig.width = userWidth();
+      }
+      if (!sig.height) {
+        sig.height = userHeight();
+      }
+      if (!sig.id) {
+        sig.id = crypto.randomUUID();
+      }
+      if (!sig.image) {
+        sig.image = '';
+      }
+      sig.settings = { ...currentSettings, ...sig.settings };
+
       const clone = dom.template.content.cloneNode(true) as HTMLElement;
       (clone.querySelector('.signature-preview') as HTMLImageElement).src = sig.image;
       (clone.querySelector('.signature-date') as HTMLElement).textContent = new Date(
@@ -809,12 +833,7 @@ export default function init() {
         memCtx.scale(scale, scale);
 
         sig.rawPaths.forEach((p) => {
-          const sig_setting: SignatureSettings = {
-            ...currentSettings,
-            penColor: sig.settings.penColor,
-            penWidth: sig.settings.penWidth
-          };
-          drawSignaturePath(memCtx, p, sig_setting);
+          drawSignaturePath(memCtx, p, sig.settings || currentSettings);
         });
 
         memCtx.restore();
@@ -831,36 +850,23 @@ export default function init() {
       });
 
       clone.querySelector('.download-svg-btn')?.addEventListener('click', async () => {
-        const sig_setting: SignatureSettings = {
-          ...currentSettings,
-          penColor: sig.settings.penColor,
-          penWidth: sig.settings.penWidth
-        };
         const svgContent = generateSvg(
           sig.rawPaths,
           sig.width,
           sig.height,
-          sig_setting
+          sig.settings || currentSettings
         );
         const blob = new Blob([svgContent], { type: 'image/svg+xml' });
         await downloadFile(blob, `signature-${sig.timestamp}.svg`);
       });
 
       clone.querySelector('.download-png-btn')?.addEventListener('click', () => {
-        const sig_setting: SignatureSettings = {
-          ...currentSettings,
-          penColor: sig.settings.penColor,
-          penWidth: sig.settings.penWidth,
-        };
-        generatePng(
-          sig.rawPaths,
-          sig.width,
-          sig.height,
-          sig_setting
-        ).then(({ blob }) => {
-          downloadFile(blob, `signature-${sig.timestamp}.png`);
-          console.log('PNG downloaded', sig);
-        });
+        generatePng(sig.rawPaths, sig.width, sig.height, sig.settings || currentSettings).then(
+          ({ blob }) => {
+            downloadFile(blob, `signature-${sig.timestamp}.png`);
+            console.log('PNG downloaded', sig);
+          }
+        );
       });
 
       dom.signaturesList.appendChild(clone);
