@@ -811,6 +811,8 @@ export default function init() {
 
       clone.querySelector('.load-signature-btn')?.addEventListener('click', async () => {
         // Clear current paths and memCanvas
+        currentSettings = sig.settings || currentSettings;
+        applySettings(currentSettings);
         paths = [];
         memCtx.clearRect(0, 0, userWidth(), userHeight());
         prevLiveWidth = sig.settings.penWidth;
