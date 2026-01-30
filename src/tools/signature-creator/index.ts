@@ -1,12 +1,18 @@
 import { downloadFile } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import {
+  DEFAULT_SIGNATURE_SETTINGS,
   loadSettings,
   resetToDefaults,
   saveSettings,
 } from './settings.ts';
 import { getDomElements } from './dom.ts';
-import type { CurveMode, Point, RDPMode, SignatureData } from './signature-types.ts';
+import type { CurveMode, Point, RDPMode, SignatureData, SignatureSettings } from './signature-types.ts';
+import {
+  buildNormalizedFromPaths,
+  getCatmullRomControlPoints,
+  simplifyRDP,
+} from './calculation.ts';
 
 // --- Configuration ---
 
@@ -110,106 +116,22 @@ function computeSegmentWidth(p0: Point, p1: Point, baseWidth: number) {
   return computeWidthFromVelocityAndPressure(velocity, pressureAvg, baseWidth);
 }
 
-// Catmull-Rom to Cubic Bezier Control Points
-const getCatmullRomControlPoints = (p0: Point, p1: Point, p2: Point, p3: Point) => {
-  return {
-    c1x: p1.x + (p2.x - p0.x) / 6,
-    c1y: p1.y + (p2.y - p0.y) / 6,
-    c2x: p2.x - (p3.x - p1.x) / 6,
-    c2y: p2.y - (p3.y - p1.y) / 6,
-  };
-};
-
-function buildNormalizedFromPaths(paths: Point[][], baseWidth: number) {
-  // Calculate Bounds & Normalize
-  const flat = paths.flat();
-  const minX = Math.min(...flat.map((p) => p.x));
-  const minY = Math.min(...flat.map((p) => p.y));
-  const maxX = Math.max(...flat.map((p) => p.x));
-  const maxY = Math.max(...flat.map((p) => p.y));
-
-  const padding = baseWidth * 2;
-  const logicalWidth = maxX - minX + padding * 2;
-  const logicalHeight = maxY - minY + padding * 2;
-
-  // Shift paths to start at (0,0) for storage portability
-  const normalizedPaths: Point[][] = paths.map((path) =>
-    path.map((p) => ({
-      x: p.x - minX + padding,
-      y: p.y - minY + padding,
-      timestamp: p.timestamp,
-      pressure: p.pressure,
-    }))
-  );
-  return { normalizedPaths, logicalWidth, logicalHeight };
-}
-
-function perpendicularDistanceSq(p: Point, p0: Point, p1: Point): number {
-  const dx = p1.x - p0.x;
-  const dy = p1.y - p0.y;
-  if (dx === 0 && dy === 0) {
-    // p0 und p1 sind identisch → Distanz zu p0
-    return (p.x - p0.x) ** 2 + (p.y - p0.y) ** 2;
-  }
-
-  const t = ((p.x - p0.x) * dx + (p.y - p0.y) * dy) / (dx * dx + dy * dy);
-  const tClamped = Math.max(0, Math.min(1, t)); // Projektion auf das Segment
-
-  const projX = p0.x + tClamped * dx;
-  const projY = p0.y + tClamped * dy;
-
-  const distX = p.x - projX;
-  const distY = p.y - projY;
-  return distX * distX + distY * distY;
-}
-
-function simplifyRDP(points: Point[], epsilon: number): Point[] {
-  if (points.length < 3) return points.slice();
-
-  const result: Point[] = [];
-  const stack: [number, number][] = [[0, points.length - 1]];
-
-  while (stack.length > 0) {
-    const [start, end] = stack.pop()!;
-    let maxDistSq = 0;
-    let maxIndex = 0;
-
-    for (let i = start + 1; i < end; i++) {
-      const distSq = perpendicularDistanceSq(points[i], points[start], points[end]);
-      if (distSq > maxDistSq) {
-        maxDistSq = distSq;
-        maxIndex = i;
-      }
-    }
-
-    if (maxDistSq > epsilon * epsilon) {
-      stack.push([maxIndex, end]);
-      stack.push([start, maxIndex]);
-    } else {
-      result.push(points[start]);
-    }
-  }
-
-  result.push(points[points.length - 1]);
-  result.sort((a, b) => points.indexOf(a) - points.indexOf(b));
-  return result;
-}
-
 // --- Helper: Rendering ---
 
 function drawSignaturePath(
   ctx: CanvasRenderingContext2D,
   points: Point[],
-  color: string,
-  baseWidth: number,
-  mode: CurveMode
+  settings: SignatureSettings
 ) {
   if (!points || points.length === 0) return;
 
+  const mode = settings.curveMode || 'natural';
+  const baseWidth = settings.penWidth || 2;
+
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = color;
-  ctx.fillStyle = color;
+  ctx.strokeStyle = settings.penColor;
+  ctx.fillStyle = settings.penColor;
 
   if (points.length === 1) {
     const p = points[0];
@@ -322,16 +244,13 @@ function drawSignaturePath(
 
 function generatePng(
   paths: Point[][],
-  color: string,
-  baseWidth: number,
-  targetDpi: number,
   logicalWidth: number,
   logicalHeight: number,
-  mode: CurveMode = 'natural'
+  settings: SignatureSettings
 ): Promise<{ blob: Blob; width: number; height: number }> {
   return new Promise((resolve) => {
     // Scale Factor (72 DPI is base)
-    const scaleFactor = targetDpi / 72;
+    const scaleFactor = settings.dpi / 72;
 
     // Setup Canvas
     const exportW = Math.ceil(logicalWidth * scaleFactor);
@@ -346,7 +265,7 @@ function generatePng(
     ctx.scale(scaleFactor, scaleFactor);
 
     paths.forEach((path) => {
-      drawSignaturePath(ctx, path, color, baseWidth, mode);
+      drawSignaturePath(ctx, path, settings);
     });
 
     canvas.toBlob((blob) => {
@@ -361,9 +280,7 @@ function generateSvg(
   paths: Point[][],
   width: number,
   height: number,
-  color: string,
-  baseWidth: number,
-  mode: CurveMode = 'natural'
+  settings: SignatureSettings
 ): string {
   const f = (n: number) => {
     const s = n.toFixed(1);
@@ -373,9 +290,11 @@ function generateSvg(
 
   paths.forEach((path) => {
     if (!path || path.length === 0) return;
+    const mode = settings.curveMode || 'natural';
+    const baseWidth = settings.penWidth || 2;
 
     if (path.length === 1) {
-      content += `<circle cx="${f(path[0].x)}" cy="${f(path[0].y)}" r="${f(baseWidth / 2)}" fill="${color}" />\n`;
+      content += `<circle cx="${f(path[0].x)}" cy="${f(path[0].y)}" r="${f(baseWidth / 2)}" fill="${settings.penColor}" />\n`;
       return;
     }
 
@@ -404,15 +323,12 @@ function generateSvg(
     }
   });
 
-  return `<svg width="${f(width)}" height="${f(height)}" viewBox="0 0 ${f(width)} ${f(height)}" xmlns="http://www.w3.org/2000/svg"><g stroke="${color}" fill="none" stroke-linecap="round" stroke-linejoin="round">\n${content}</g></svg>`;
+  return `<svg width="${f(width)}" height="${f(height)}" viewBox="0 0 ${f(width)} ${f(height)}" xmlns="http://www.w3.org/2000/svg"><g stroke="${settings.penColor}" fill="none" stroke-linecap="round" stroke-linejoin="round">\n${content}</g></svg>`;
 }
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   const dom = getDomElements(document);
-  const currentDpiValue = () => {
-    return parseInt(dom.dpiInput.value) || 96;
-  };
 
   const ctx = dom.canvas.getContext('2d');
   if (!ctx) return;
@@ -426,9 +342,10 @@ export default function init() {
   let currentPath: Point[] = [];
 
   let redrawTimeout: number | null = null;
-  let currentStrokeWidth = parseInt(dom.penWidthInput.value);
-  let currentCurveMode: CurveMode = (dom.curveModeSelect.value as CurveMode) || 'natural';
-  let prevLiveWidth = currentStrokeWidth;
+  const settings = loadSettings();
+  console.log('Loaded signature settings:', settings);
+  let currentSettings: SignatureSettings = Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, settings);
+  let prevLiveWidth = currentSettings.penWidth;
 
   const dpr = window.devicePixelRatio || 1;
   const userWidth = () => dom.canvas.width / dpr;
@@ -438,7 +355,7 @@ export default function init() {
   if (dom.penWidthValue) dom.penWidthValue.textContent = dom.penWidthInput.value;
 
   // Load persisted settings (both advanced and basic) and apply to UI/runtime
-  const settings = loadSettings();
+
   // Advanced numeric settings (preserve defaults if missing)
   MOVE_TOLERANCE = settings.MOVE_TOLERANCE ?? MOVE_TOLERANCE;
   MIN_WIDTH_FACTOR = settings.MIN_WIDTH_FACTOR ?? MIN_WIDTH_FACTOR;
@@ -454,12 +371,10 @@ export default function init() {
   }
   if (settings.strokeWidth && !isNaN(parseInt(settings.strokeWidth))) {
     dom.penWidthInput.value = String(settings.strokeWidth);
-    currentStrokeWidth = parseInt(dom.penWidthInput.value);
     if (dom.penWidthValue) dom.penWidthValue.textContent = dom.penWidthInput.value;
   }
   if (settings.curveMode && typeof settings.curveMode === 'string') {
     dom.curveModeSelect.value = settings.curveMode;
-    currentCurveMode = dom.curveModeSelect.value as CurveMode;
   }
   if (settings.rdp && typeof settings.rdp === 'string') {
     dom.rdpModeSelect.value = settings.rdp;
@@ -490,7 +405,7 @@ export default function init() {
     redrawTimeout = window.setTimeout(() => {
       memCtx.clearRect(0, 0, userWidth(), userHeight());
       paths.forEach((p) => {
-        drawSignaturePath(memCtx, p, dom.penColorInput.value, currentStrokeWidth, currentCurveMode);
+        drawSignaturePath(memCtx, p, currentSettings);
       });
       drawStatic();
       redrawTimeout = null;
@@ -519,7 +434,7 @@ export default function init() {
     e.preventDefault();
     isDrawing = true;
     currentPath = [getPos(e)];
-    prevLiveWidth = currentStrokeWidth;
+    prevLiveWidth = currentSettings.penWidth;
 
     dom.canvas.setPointerCapture(e.pointerId);
   }
@@ -543,7 +458,7 @@ export default function init() {
       const p0 = currentPath[currentPath.length - 2];
       const p1 = currentPath[currentPath.length - 1];
       ctx!.beginPath();
-      const rawSegmentW = computeSegmentWidth(p0, p1, currentStrokeWidth);
+      const rawSegmentW = computeSegmentWidth(p0, p1, currentSettings.penWidth);
       const liveW = prevLiveWidth * WIDTH_SMOOTHING + rawSegmentW * (1 - WIDTH_SMOOTHING);
       prevLiveWidth = liveW;
       ctx!.lineWidth = liveW;
@@ -560,7 +475,7 @@ export default function init() {
     if (!isDrawing) return;
     isDrawing = false;
 
-    const currentRDPMode: RDPMode = (dom.rdpModeSelect.value as RDPMode) || 'none';
+    const currentRDPMode: RDPMode = currentSettings.rdpMode || 'none';
     let epsilon = 0;
 
     if (currentRDPMode === 'low') {
@@ -576,9 +491,7 @@ export default function init() {
     drawSignaturePath(
       memCtx,
       simplified,
-      dom.penColorInput.value,
-      currentStrokeWidth,
-      currentCurveMode
+      currentSettings
     );
 
     paths.push(simplified);
@@ -601,29 +514,32 @@ export default function init() {
 
   // Basic UI listeners
   dom.penColorInput.addEventListener('input', () => {
+    currentSettings.penColor = dom.penColorInput.value;
     debouncedRedraw();
-    saveSettings({ color: dom.penColorInput.value });
+    saveSettings({ penColor: currentSettings.penColor });
   });
 
   dom.penWidthInput.addEventListener('input', () => {
-    currentStrokeWidth = parseInt(dom.penWidthInput.value);
+    currentSettings.penWidth = parseInt(dom.penWidthInput.value);
     dom.penWidthValue.textContent = dom.penWidthInput.value;
     debouncedRedraw();
-    saveSettings({ strokeWidth: currentStrokeWidth });
+    saveSettings({ penWidth: currentSettings.penWidth });
   });
 
   dom.curveModeSelect.addEventListener('change', () => {
-    currentCurveMode = dom.curveModeSelect.value as CurveMode;
+    currentSettings.curveMode = dom.curveModeSelect.value as CurveMode;
     debouncedRedraw();
-    saveSettings({ curveMode: currentCurveMode });
+    saveSettings({ curveMode: currentSettings.curveMode });
   });
 
   dom.rdpModeSelect.addEventListener('change', () => {
-    saveSettings({ rdp: dom.rdpModeSelect.value });
+    currentSettings.rdpMode = dom.rdpModeSelect.value as RDPMode;
+    saveSettings({ rdpMode: currentSettings.rdpMode });
   });
 
   dom.dpiInput.addEventListener('change', () => {
-    if (dom.dpiInput.value) saveSettings({ dpi: dom.dpiInput.value });
+    currentSettings.dpi = parseInt(dom.dpiInput.value);
+    if (dom.dpiInput.value) saveSettings({ dpi: currentSettings.dpi });
   });
 
   // Advanced controls
@@ -737,7 +653,7 @@ export default function init() {
     paths = [];
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
-    prevLiveWidth = currentStrokeWidth;
+    prevLiveWidth = currentSettings.penWidth;
   });
 
   dom.saveBtn.addEventListener('click', async () => {
@@ -745,18 +661,16 @@ export default function init() {
 
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
       paths,
-      currentStrokeWidth
+      currentSettings.penWidth
     );
 
     // Generate Preview Image
+    const settings: SignatureSettings = { ...currentSettings, dpi: 72 };
     const { blob } = await generatePng(
       normalizedPaths,
-      dom.penColorInput.value,
-      currentStrokeWidth,
-      72,
       logicalWidth,
       logicalHeight,
-      currentCurveMode
+      settings
     );
 
     // Save
@@ -769,8 +683,7 @@ export default function init() {
         width: logicalWidth,
         height: logicalHeight,
         timestamp: Date.now(),
-        color: dom.penColorInput.value,
-        strokeWidth: currentStrokeWidth,
+        settings: currentSettings,
         rawPaths: normalizedPaths,
       };
 
@@ -794,20 +707,16 @@ export default function init() {
     if (currentPath.length > 0) allPaths.push(currentPath.slice());
     if (allPaths.length === 0) return;
 
-    const dpi = currentDpiValue();
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
       allPaths,
-      currentStrokeWidth
+      currentSettings.penWidth
     );
 
     const { blob } = await generatePng(
       normalizedPaths,
-      dom.penColorInput.value,
-      currentStrokeWidth,
-      dpi,
       logicalWidth,
       logicalHeight,
-      currentCurveMode
+      currentSettings
     );
 
     try {
@@ -825,20 +734,16 @@ export default function init() {
     if (currentPath.length > 0) allPaths.push(currentPath.slice());
     if (allPaths.length === 0) return;
 
-    const dpi = currentDpiValue();
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
       allPaths,
-      currentStrokeWidth
+      currentSettings.penWidth
     );
 
     const { blob } = await generatePng(
       normalizedPaths,
-      dom.penColorInput.value,
-      currentStrokeWidth,
-      dpi,
       logicalWidth,
       logicalHeight,
-      currentCurveMode
+      currentSettings
     );
 
     await downloadFile(blob, `signature-${Date.now()}.png`);
@@ -851,16 +756,14 @@ export default function init() {
 
     const { normalizedPaths, logicalWidth, logicalHeight } = buildNormalizedFromPaths(
       allPaths,
-      currentStrokeWidth
+      currentSettings.penWidth
     );
 
     const svgContent = generateSvg(
       normalizedPaths,
       logicalWidth,
       logicalHeight,
-      dom.penColorInput.value,
-      currentStrokeWidth,
-      currentCurveMode
+      currentSettings
     );
 
     const blob = new Blob([svgContent], { type: 'image/svg+xml' });
@@ -917,8 +820,7 @@ export default function init() {
             width: obj.width || 0,
             height: obj.height || 0,
             timestamp: obj.timestamp || Date.now(),
-            color: obj.color || dom.penColorInput.value,
-            strokeWidth: obj.strokeWidth || currentStrokeWidth,
+            settings: obj.settings || currentSettings,
             rawPaths: (obj.rawPaths as Point[][]) || [],
           };
 
@@ -976,7 +878,7 @@ export default function init() {
         // Clear current paths and memCanvas
         paths = [];
         memCtx.clearRect(0, 0, userWidth(), userHeight());
-        prevLiveWidth = sig.strokeWidth;
+        prevLiveWidth = sig.settings.penWidth;
 
         // Compute scale to fit signature into the canvas while preserving aspect
         const canvasW = userWidth();
@@ -996,7 +898,12 @@ export default function init() {
         memCtx.scale(scale, scale);
 
         sig.rawPaths.forEach((p) => {
-          drawSignaturePath(memCtx, p, sig.color, sig.strokeWidth, currentCurveMode);
+          const sig_setting: SignatureSettings = {
+            ...currentSettings,
+            penColor: sig.settings.penColor,
+            penWidth: sig.settings.penWidth
+          };
+          drawSignaturePath(memCtx, p, sig_setting);
         });
 
         memCtx.restore();
@@ -1013,28 +920,32 @@ export default function init() {
       });
 
       clone.querySelector('.download-svg-btn')?.addEventListener('click', async () => {
+        const sig_setting: SignatureSettings = {
+          ...currentSettings,
+          penColor: sig.settings.penColor,
+          penWidth: sig.settings.penWidth
+        };
         const svgContent = generateSvg(
           sig.rawPaths,
           sig.width,
           sig.height,
-          sig.color,
-          sig.strokeWidth,
-          currentCurveMode
+          sig_setting
         );
         const blob = new Blob([svgContent], { type: 'image/svg+xml' });
         await downloadFile(blob, `signature-${sig.timestamp}.svg`);
       });
 
       clone.querySelector('.download-png-btn')?.addEventListener('click', () => {
-        const dpi = currentDpiValue();
+        const sig_setting: SignatureSettings = {
+          ...currentSettings,
+          penColor: sig.settings.penColor,
+          penWidth: sig.settings.penWidth,
+        };
         generatePng(
           sig.rawPaths,
-          sig.color,
-          sig.strokeWidth,
-          dpi,
           sig.width,
           sig.height,
-          currentCurveMode
+          sig_setting
         ).then(({ blob }) => {
           downloadFile(blob, `signature-${sig.timestamp}.png`);
           console.log('PNG downloaded', sig);

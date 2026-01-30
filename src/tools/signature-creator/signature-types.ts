@@ -11,8 +11,7 @@ export interface SignatureData {
   width: number; // Logical width (1x scale)
   height: number; // Logical height (1x scale)
   timestamp: number;
-  color: string;
-  strokeWidth: number;
+  settings: SignatureSettings;
   rawPaths: Point[][]; // Normalized paths (relative to 0,0)
 }
 export type CurveMode = 'fast' | 'natural' | 'draft' | 'none';
