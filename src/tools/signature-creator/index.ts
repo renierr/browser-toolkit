@@ -307,6 +307,7 @@ export default function init() {
   let redrawTimeout: number | null = null;
   let currentSettings: SignatureSettings = loadSettings();
   let prevLiveWidth = currentSettings.penWidth;
+  let lastLoadedSignatureId: string | null = null;
 
   const dpr = window.devicePixelRatio || 1;
   const userWidth = () => dom.canvas.width / dpr;
@@ -559,6 +560,7 @@ export default function init() {
 
   dom.clearBtn.addEventListener('click', () => {
     paths = [];
+    lastLoadedSignatureId = null;
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
     prevLiveWidth = currentSettings.penWidth;
@@ -581,7 +583,7 @@ export default function init() {
     reader.readAsDataURL(blob);
     reader.onloadend = async () => {
       const signature: SignatureData = {
-        id: crypto.randomUUID(),
+        id: lastLoadedSignatureId || crypto.randomUUID(),
         image: reader.result as string,
         width: logicalWidth,
         height: logicalHeight,
@@ -589,6 +591,7 @@ export default function init() {
         settings: currentSettings,
         rawPaths: normalizedPaths,
       };
+      lastLoadedSignatureId = null;
 
       // Persist into IndexedDB
       await putSignature(signature);
@@ -800,6 +803,7 @@ export default function init() {
         // Clear current paths and memCanvas
         currentSettings = sig.settings || currentSettings;
         applySettings(currentSettings);
+        lastLoadedSignatureId = sig.id;
         paths = [];
         memCtx.clearRect(0, 0, userWidth(), userHeight());
         prevLiveWidth = sig.settings.penWidth;
