@@ -9,6 +9,7 @@ import {
 } from './settings.ts';
 import { getDomElements } from './dom.ts';
 import type {
+  Cmd,
   CurveMode,
   Point,
   RDPMode,
@@ -303,8 +304,9 @@ export default function init() {
   let isDrawing = false;
   let paths: Point[][] = [];
   let currentPath: Point[] = [];
-  let undoStack: Point[][][] = []; // each entry is a snapshot of paths
-  let redoStack: Point[][][] = [];
+
+  let undoStack: Cmd[] = [];
+  let redoStack: Cmd[] = [];
 
   let redrawTimeout: number | null = null;
   let currentSettings: SignatureSettings = loadSettings();
@@ -427,8 +429,9 @@ export default function init() {
     // Bake High-Quality Curve (Correction)
     drawSignaturePath(memCtx, simplified, currentSettings);
 
-    // Save snapshot for undo before mutating paths
-    undoStack.push(paths.map((p) => p.slice()));
+    // Command-based: store the single added path
+    const savedPath: Point[] = simplified.map((pt): Point => ({ ...pt }));
+    undoStack.push({ type: 'addPath', path: savedPath });
     // Clear redo since new action invalidates redo history
     redoStack = [];
     updateUndoRedoButtons();
@@ -568,7 +571,8 @@ export default function init() {
 
   dom.clearBtn.addEventListener('click', () => {
     if (paths.length > 0) {
-      undoStack.push(paths.map((p) => p.slice()));
+      const prev = paths.map((p) => p.slice());
+      undoStack.push({ type: 'clear', prev });
       redoStack = [];
     }
     paths = [];
@@ -598,18 +602,57 @@ export default function init() {
 
   function undo() {
     if (undoStack.length === 0) return;
-    // push current state to redo
-    redoStack.push(paths.map((p) => p.slice()));
-    const prev = undoStack.pop()!;
-    applyPaths(prev);
+    const cmd = undoStack.pop()!;
+    switch (cmd.type) {
+      case 'addPath': {
+        // remove last path (the one that was added)
+        // push same command to redo so redo can re-add it
+        redoStack.push(cmd);
+        if (paths.length > 0) paths.pop();
+        applyPaths(paths);
+        break;
+      }
+      case 'clear': {
+        // restore previous paths
+        redoStack.push(cmd);
+        applyPaths(cmd.prev);
+        break;
+      }
+      case 'replace': {
+        // revert to prev
+        redoStack.push(cmd);
+        applyPaths(cmd.prev);
+        break;
+      }
+    }
     updateUndoRedoButtons();
   }
 
   function redo() {
     if (redoStack.length === 0) return;
-    undoStack.push(paths.map((p) => p.slice()));
-    const next = redoStack.pop()!;
-    applyPaths(next);
+    const cmd = redoStack.pop()!;
+    switch (cmd.type) {
+      case 'addPath': {
+        // re-add the path
+        undoStack.push(cmd);
+        paths.push(cmd.path);
+        applyPaths(paths);
+        break;
+      }
+      case 'clear': {
+        // re-apply clear (remove all paths)
+        undoStack.push(cmd);
+        paths = [];
+        applyPaths(paths);
+        break;
+      }
+      case 'replace': {
+        // re-apply next
+        undoStack.push(cmd);
+        applyPaths(cmd.next);
+        break;
+      }
+    }
     updateUndoRedoButtons();
   }
 
@@ -861,10 +904,8 @@ export default function init() {
         currentSettings = sig.settings || currentSettings;
         applySettings(currentSettings);
         lastLoadedSignatureId = sig.id;
-        // loading a signature replaces current paths
-        undoStack.push(paths.map((p) => p.slice()));
+        const prev = paths.map((p) => p.slice());
         redoStack = [];
-        paths = [];
         memCtx.clearRect(0, 0, userWidth(), userHeight());
         prevLiveWidth = sig.settings.penWidth;
 
@@ -890,14 +931,23 @@ export default function init() {
         });
 
         memCtx.restore();
-        paths = sig.rawPaths.map((path) =>
-          path.map((pt) => ({
-            x: pt.x * scale + offsetX,
-            y: pt.y * scale + offsetY,
-            timestamp: pt.timestamp,
-            pressure: pt.pressure,
-          }))
+        const scaledPaths: Point[][] = sig.rawPaths.map((path: Point[]) =>
+          path.map(
+            (pt): Point => ({
+              x: pt.x * scale + offsetX,
+              y: pt.y * scale + offsetY,
+              timestamp: pt.timestamp,
+              pressure: pt.pressure,
+            })
+          )
         );
+
+        undoStack.push({
+          type: 'replace',
+          prev,
+          next: scaledPaths,
+        });
+        paths = scaledPaths;
 
         drawStatic();
         updateUndoRedoButtons();

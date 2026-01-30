@@ -31,3 +31,8 @@ export interface SignatureSettings {
   velocityInfluence: number;
   widthSmoothing: number;
 }
+
+export type Cmd =
+  | { type: 'addPath'; path: Point[] }
+  | { type: 'clear'; prev: Point[][] }
+  | { type: 'replace'; prev: Point[][]; next: Point[][] };
