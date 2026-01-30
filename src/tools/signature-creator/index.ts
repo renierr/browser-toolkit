@@ -2,30 +2,11 @@ import { downloadFile } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import {
   loadSettings,
-  saveSettings,
-  type CurveMode,
-  type RDPMode,
   resetToDefaults,
+  saveSettings,
 } from './settings.ts';
 import { getDomElements } from './dom.ts';
-
-interface Point {
-  x: number;
-  y: number;
-  timestamp: number;
-  pressure: number;
-}
-
-interface SignatureData {
-  id: string;
-  image: string; // Base64 PNG (preview)
-  width: number; // Logical width (1x scale)
-  height: number; // Logical height (1x scale)
-  timestamp: number;
-  color: string;
-  strokeWidth: number;
-  rawPaths: Point[][]; // Normalized paths (relative to 0,0)
-}
+import type { CurveMode, Point, RDPMode, SignatureData } from './signature-types.ts';
 
 // --- Configuration ---
 

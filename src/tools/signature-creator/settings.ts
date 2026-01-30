@@ -1,24 +1,7 @@
 import { getDomElements } from './dom.ts';
+import type { SignatureSettings } from './signature-types.ts';
 
 const SETTINGS_KEY = 'bt-signature-settings';
-
-export type CurveMode = 'fast' | 'natural' | 'draft' | 'none';
-export type RDPMode = 'none' | 'low' | 'medium' | 'high';
-
-interface SignatureSettings {
-  penColor: string;
-  penWidth: number;
-  curveMode: CurveMode;
-  rdpMode: RDPMode;
-  dpi: number;
-  moveTolerance: number;
-  minWidthFactor: number;
-  maxWidthFactor: number;
-  velocitySensitivity: number;
-  pressureInfluence: number;
-  velocityInfluence: number;
-  widthSmoothing: number;
-}
 
 export const DEFAULT_SIGNATURE_SETTINGS: SignatureSettings = {
   penColor: '#0B3D91',
@@ -32,8 +15,8 @@ export const DEFAULT_SIGNATURE_SETTINGS: SignatureSettings = {
   maxWidthFactor: 2.0,
   velocitySensitivity: 0.85,
   pressureInfluence: 0.5,
-  velocityInfluence: 0.9
-}
+  velocityInfluence: 0.9,
+};
 
 export function loadSettings(): Record<string, any> {
   try {
@@ -74,7 +57,6 @@ export function getEffectiveSettings(): SignatureSettings {
   return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, loaded);
 }
 
-
 export function applySettings(partial: Partial<SignatureSettings>) {
   // Merge partial settings with defaults
   const settings: SignatureSettings = Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, partial);
@@ -96,14 +78,16 @@ export function applySettings(partial: Partial<SignatureSettings>) {
     dom.minWidthFactorValue.textContent = String(settings.minWidthFactor);
 
   if (dom.maxWidthFactorInput) dom.maxWidthFactorInput.value = String(settings.maxWidthFactor);
-  if (dom.maxWidthFactorValue) dom.maxWidthFactorValue.textContent = String(settings.maxWidthFactor);
+  if (dom.maxWidthFactorValue)
+    dom.maxWidthFactorValue.textContent = String(settings.maxWidthFactor);
 
   if (dom.velocitySensitivityInput)
     dom.velocitySensitivityInput.value = String(settings.velocitySensitivity);
   if (dom.velocitySensitivityValue)
     dom.velocitySensitivityValue.textContent = String(settings.velocitySensitivity);
 
-  if (dom.pressureInfluenceInput) dom.pressureInfluenceInput.value = String(settings.pressureInfluence);
+  if (dom.pressureInfluenceInput)
+    dom.pressureInfluenceInput.value = String(settings.pressureInfluence);
   if (dom.pressureInfluenceValue)
     dom.pressureInfluenceValue.textContent = String(settings.pressureInfluence);
 
@@ -113,7 +97,6 @@ export function applySettings(partial: Partial<SignatureSettings>) {
     dom.velocityInfluenceValue.textContent = String(settings.velocityInfluence);
 
   if (dom.widthSmoothingInput) dom.widthSmoothingInput.value = String(settings.widthSmoothing);
-  if (dom.widthSmoothingValue) dom.widthSmoothingValue.textContent = String(settings.widthSmoothing);
+  if (dom.widthSmoothingValue)
+    dom.widthSmoothingValue.textContent = String(settings.widthSmoothing);
 }
-
-
