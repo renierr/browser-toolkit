@@ -303,6 +303,8 @@ export default function init() {
   let isDrawing = false;
   let paths: Point[][] = [];
   let currentPath: Point[] = [];
+  let undoStack: Point[][][] = []; // each entry is a snapshot of paths
+  let redoStack: Point[][][] = [];
 
   let redrawTimeout: number | null = null;
   let currentSettings: SignatureSettings = loadSettings();
@@ -424,6 +426,11 @@ export default function init() {
 
     // Bake High-Quality Curve (Correction)
     drawSignaturePath(memCtx, simplified, currentSettings);
+
+    // Save snapshot for undo before mutating paths
+    undoStack.push(paths.map((p) => p.slice()));
+    // Clear redo since new action invalidates redo history
+    redoStack = [];
 
     paths.push(simplified);
     currentPath = [];
@@ -559,12 +566,43 @@ export default function init() {
   // --- Controls ---
 
   dom.clearBtn.addEventListener('click', () => {
+    if (paths.length > 0) {
+      undoStack.push(paths.map((p) => p.slice()));
+      redoStack = [];
+    }
     paths = [];
     lastLoadedSignatureId = null;
     memCtx.clearRect(0, 0, userWidth(), userHeight());
     ctx.clearRect(0, 0, userWidth(), userHeight());
     prevLiveWidth = currentSettings.penWidth;
   });
+
+  // Undo / Redo helpers
+  function applyPaths(newPaths: Point[][]) {
+    paths = newPaths.map((p) => p.slice());
+    memCtx.clearRect(0, 0, userWidth(), userHeight());
+    paths.forEach((p) => drawSignaturePath(memCtx, p, currentSettings));
+    drawStatic();
+  }
+
+  function undo() {
+    if (undoStack.length === 0) return;
+    // push current state to redo
+    redoStack.push(paths.map((p) => p.slice()));
+    const prev = undoStack.pop()!;
+    applyPaths(prev);
+  }
+
+  function redo() {
+    if (redoStack.length === 0) return;
+    undoStack.push(paths.map((p) => p.slice()));
+    const next = redoStack.pop()!;
+    applyPaths(next);
+  }
+
+  // Wire buttons and keyboard shortcuts
+  dom.undoBtn?.addEventListener('click', () => undo());
+  dom.redoBtn?.addEventListener('click', () => redo());
 
   dom.saveBtn.addEventListener('click', async () => {
     if (paths.length === 0) return;
@@ -598,6 +636,8 @@ export default function init() {
 
       // Cleanup
       paths = [];
+      undoStack = [];
+      redoStack = [];
       memCtx.clearRect(0, 0, userWidth(), userHeight());
       drawStatic();
       void renderSignatures();
@@ -804,6 +844,9 @@ export default function init() {
         currentSettings = sig.settings || currentSettings;
         applySettings(currentSettings);
         lastLoadedSignatureId = sig.id;
+        // loading a signature replaces current paths
+        undoStack.push(paths.map((p) => p.slice()));
+        redoStack = [];
         paths = [];
         memCtx.clearRect(0, 0, userWidth(), userHeight());
         prevLiveWidth = sig.settings.penWidth;
