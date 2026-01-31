@@ -20,6 +20,7 @@ import { buildNormalizedFromPaths, computeSegmentWidth, simplifyRDP } from './ca
 import { deleteSignature, getAllSignatures, putSignature } from './signature-store.ts';
 import { drawSignaturePath } from './drawing.ts';
 import { generatePng, generateSvg, generateWebMAnimation } from './export.ts';
+import { debounce } from '../../js/utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -39,7 +40,6 @@ export default function init() {
   let undoStack: Cmd[] = [];
   let redoStack: Cmd[] = [];
 
-  let redrawTimeout: number | null = null;
   let currentSettings: SignatureSettings = loadSettings();
   let prevLiveWidth = currentSettings.penWidth;
   let lastLoadedSignatureId: string | null = null;
@@ -68,17 +68,11 @@ export default function init() {
     }
   };
 
-  function debouncedRedraw() {
-    if (redrawTimeout) clearTimeout(redrawTimeout);
-    redrawTimeout = window.setTimeout(() => {
-      memCtx.clearRect(0, 0, userWidth(), userHeight());
-      paths.forEach((p) => {
-        drawSignaturePath(memCtx, p, currentSettings);
-      });
-      drawStatic();
-      redrawTimeout = null;
-    }, 100);
-  }
+  const debouncedRedraw = debounce(() => {
+    memCtx.clearRect(0, 0, userWidth(), userHeight());
+    paths.forEach((p) => drawSignaturePath(memCtx, p, currentSettings));
+    drawStatic();
+  }, 300);
 
   function getPos(e: PointerEvent): Point {
     const rect = dom.canvas.getBoundingClientRect();
@@ -666,7 +660,7 @@ export default function init() {
 
       clone.querySelector('.load-signature-btn')?.addEventListener('click', async () => {
         // Clear current paths and memCanvas
-        currentSettings = sig.settings ? {...sig.settings} : currentSettings;
+        currentSettings = sig.settings ? { ...sig.settings } : currentSettings;
         applySettings(currentSettings);
         lastLoadedSignatureId = sig.id;
         const prev = paths.map((p) => p.slice());
@@ -745,7 +739,7 @@ export default function init() {
   void renderSignatures();
 
   return () => {
-    if (redrawTimeout) clearTimeout(redrawTimeout);
+    debouncedRedraw.cancel();
     resizeObserver.disconnect();
     window.removeEventListener('pointerup', stopDrawing);
   };

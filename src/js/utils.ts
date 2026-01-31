@@ -138,7 +138,11 @@ const parseRational = (v: any): number => {
 const gpsArrayToDecimal = (arr: any): number => {
   if (arr === undefined || arr === null) return NaN;
   // Accept real arrays and array-like/typed arrays
-  const parts = Array.isArray(arr) ? arr : (typeof arr === 'object' && typeof (arr as any).length === 'number') ? Array.from(arr as any) : null;
+  const parts = Array.isArray(arr)
+    ? arr
+    : typeof arr === 'object' && typeof (arr as any).length === 'number'
+      ? Array.from(arr as any)
+      : null;
   if (!parts) return NaN;
   const [degRaw, minRaw = 0, secRaw = 0] = parts;
   const deg = parseRational(degRaw);
@@ -208,7 +212,7 @@ export const gpsParseCoordinateFromExifTags = (
 
 export const gpsGenerateGoogleMapsLink = (lat: number, lon: number): string => {
   return `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-}
+};
 
 export const isImageFile = (file: File) => {
   if (file.type) return file.type.startsWith('image/');
@@ -218,13 +222,18 @@ export const isImageFile = (file: File) => {
 export async function hashUint8Array(data: Uint8Array) {
   const view = data;
   const len = view.byteLength;
-  const bufferSourceForFull: BufferSource = (view as unknown) as BufferSource;
+  const bufferSourceForFull: BufferSource = view as unknown as BufferSource;
 
   // If SubtleCrypto is available in this environment, use it
-  const subtleAvailable = typeof globalThis !== 'undefined' && typeof (globalThis as any).crypto?.subtle?.digest === 'function';
+  const subtleAvailable =
+    typeof globalThis !== 'undefined' &&
+    typeof (globalThis as any).crypto?.subtle?.digest === 'function';
   if (subtleAvailable) {
     try {
-      const hashBuf = (await (globalThis as any).crypto.subtle.digest('SHA-1', bufferSourceForFull)) as ArrayBuffer;
+      const hashBuf = (await (globalThis as any).crypto.subtle.digest(
+        'SHA-1',
+        bufferSourceForFull
+      )) as ArrayBuffer;
       const hashArray = Array.from(new Uint8Array(hashBuf));
       return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
     } catch (err) {
@@ -241,4 +250,111 @@ export async function hashUint8Array(data: Uint8Array) {
   }
   // convert to hex padded to 16 chars
   return h1.toString(16).padStart(16, '0');
+}
+
+export function debounce<T extends (...args: any[]) => any>(fn: T, wait = 0, immediate = false) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let lastArgs: Parameters<T> | null = null;
+  let lastThis: any = null;
+  let result: ReturnType<T> | undefined;
+
+  const later = () => {
+    timer = null;
+    if (!immediate && lastArgs) {
+      result = fn.apply(lastThis, lastArgs);
+      lastArgs = null;
+      lastThis = null;
+    }
+  };
+
+  const debounced = function (this: any, ...args: Parameters<T>) {
+    lastArgs = args;
+    lastThis = this;
+
+    const callNow = immediate && timer === null;
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(later, wait);
+
+    if (callNow) {
+      result = fn.apply(this, args);
+      lastArgs = null;
+      lastThis = null;
+    }
+    return result;
+  };
+
+  (debounced as any).cancel = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    lastArgs = null;
+    lastThis = null;
+  };
+
+  (debounced as any).flush = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+      if (lastArgs) {
+        result = fn.apply(lastThis, lastArgs);
+        lastArgs = null;
+        lastThis = null;
+        return result;
+      }
+    }
+    return result;
+  };
+
+  return debounced as ((...args: Parameters<T>) => ReturnType<T> | undefined) & {
+    cancel: () => void;
+    flush: () => ReturnType<T> | undefined;
+  };
+}
+
+export function throttleTrailing<T extends (...args: any[]) => any>(fn: T, wait = 0) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let lastArgs: Parameters<T> | null = null;
+  let lastThis: any = null;
+
+  const throttled = function (this: any, ...args: Parameters<T>) {
+    lastArgs = args;
+    lastThis = this;
+
+    // If no timer is active, schedule execution after `wait`.
+    if (timer === null) {
+      timer = setTimeout(() => {
+        timer = null;
+        if (lastArgs) {
+          fn.apply(lastThis, lastArgs);
+          lastArgs = null;
+          lastThis = null;
+        }
+      }, wait);
+    }
+  };
+
+  (throttled as any).cancel = () => {
+    if (timer) clearTimeout(timer);
+    timer = null;
+    lastArgs = null;
+    lastThis = null;
+  };
+
+  (throttled as any).flush = () => {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+      if (lastArgs) {
+        const res = fn.apply(lastThis, lastArgs);
+        lastArgs = null;
+        lastThis = null;
+        return res;
+      }
+    }
+    return undefined;
+  };
+
+  return throttled as ((...args: Parameters<T>) => void) & {
+    cancel: () => void;
+    flush: () => ReturnType<T> | undefined;
+  };
 }
