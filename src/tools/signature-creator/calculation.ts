@@ -94,8 +94,10 @@ export function computeWidthFromVelocityAndPressure(
   const v = Math.max(0, velocity ?? 0);
 
   const velocityFactor = Math.exp(-v * settings.velocitySensitivity);
-  const pressureScale = 0.5 + p * settings.pressureInfluence;
-  const velocityScale = 0.5 + velocityFactor * settings.velocityInfluence;
+  //const pressureScale = 0.5 + p * settings.pressureInfluence;
+  //const velocityScale = 0.5 + velocityFactor * settings.velocityInfluence;
+  const pressureScale = 1 + (p - 0.5) * settings.pressureInfluence;
+  const velocityScale = 1 + (velocityFactor - 0.5) * settings.velocityInfluence;
 
   let width = settings.penWidth * pressureScale * velocityScale;
 
