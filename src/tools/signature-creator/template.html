@@ -10,6 +10,10 @@
     background-color: transparent;
   }
 
+  #signature-canvas {
+      aspect-ratio: 16 / 6;
+  }
+
 </style>
 
 <div class="flex flex-col gap-6 max-w-4xl mx-auto">
@@ -137,7 +141,7 @@
             </div>
         </details>
 
-        <div id="canvas-container" class="bg-[#fbf5ec] min-h-32 relative border-2 border-dashed border-base-300 rounded-lg  w-full" >
+        <div id="canvas-container" class="bg-[#fbf5ec] relative border-2 border-dashed border-base-300 rounded-lg  w-full" >
             <canvas id="signature-canvas" class="cursor-crosshair w-full h-full checkerboard-bg"></canvas>
         </div>
 
@@ -159,18 +163,18 @@
           </button>
 
             <!-- Direct download PNG -->
-            <button id="download-current-png-btn" class="btn btn-ghost btn-sm" title="Download PNG (no save)">
+            <button id="download-current-png-btn" class="btn btn-ghost btn-sm" title="Download PNG">
                 <i data-lucide="download" class="w-4 h-4 mr-1"></i> PNG
             </button>
 
             <!-- Direct download SVG -->
-            <button id="download-current-svg-btn" class="btn btn-ghost btn-sm" title="Download SVG (no save)">
+            <button id="download-current-svg-btn" class="btn btn-ghost btn-sm" title="Download SVG">
                 <i data-lucide="file-code" class="w-4 h-4 mr-1"></i> SVG
             </button>
 
             <!-- Direct download Animated SVG -->
-            <button id="download-current-animated-btn" class="btn btn-ghost btn-sm" title="Download Animated SVG (draw animation)">
-                <i data-lucide="play" class="w-4 h-4 mr-1"></i> Animated
+            <button id="download-current-animated-btn" class="btn btn-ghost btn-sm" title="Download Video (WebM)">
+                <i data-lucide="play" class="w-4 h-4 mr-1"></i> Video
             </button>
 
             <button id="save-btn" class="btn btn-primary btn-sm">
