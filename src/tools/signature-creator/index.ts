@@ -666,7 +666,7 @@ export default function init() {
 
       clone.querySelector('.load-signature-btn')?.addEventListener('click', async () => {
         // Clear current paths and memCanvas
-        currentSettings = sig.settings || currentSettings;
+        currentSettings = sig.settings ? {...sig.settings} : currentSettings;
         applySettings(currentSettings);
         lastLoadedSignatureId = sig.id;
         const prev = paths.map((p) => p.slice());
