@@ -90,7 +90,7 @@ export function computeWidthFromVelocityAndPressure(
   settings: SignatureSettings
 ) {
   // Normalize inputs
-  const p = Math.max(0, Math.min(1, pressure ?? 1));
+  const p = Math.max(0, Math.min(1, pressure ?? 0.5));
   const v = Math.max(0, velocity ?? 0);
 
   const velocityFactor = Math.exp(-v * settings.velocitySensitivity);
