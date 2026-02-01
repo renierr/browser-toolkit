@@ -1,21 +1,3 @@
-<style>
-  .checkerboard-bg {
-    background-image:
-      linear-gradient(45deg, rgba(0,0,0,0.06) 25%, transparent 25%),
-      linear-gradient(-45deg, rgba(0,0,0,0.06) 25%, transparent 25%),
-      linear-gradient(45deg, transparent 75%, rgba(0,0,0,0.06) 75%),
-      linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.06) 75%);
-    background-size: 16px 16px;
-    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
-    background-color: transparent;
-  }
-
-  #signature-canvas {
-      aspect-ratio: 16 / 6;
-  }
-
-</style>
-
 <div class="flex flex-col gap-6 max-w-4xl mx-auto">
     <div class="card bg-base-100 shadow-md p-6 border">
         <h2 class="text-xl font-bold mb-4">Signature Creator</h2>
@@ -142,7 +124,7 @@
         </details>
 
         <div id="canvas-container" class="bg-[#fbf5ec] relative border-2 border-dashed border-base-300 rounded-lg  w-full" >
-            <canvas id="signature-canvas" class="cursor-crosshair w-full h-full checkerboard-bg"></canvas>
+            <canvas id="signature-canvas" class="cursor-crosshair w-full h-full checkerboard-bg" style="aspect-ratio: 16 / 6;"></canvas>
         </div>
 
         <div class="flex flex-wrap gap-2 mt-4">

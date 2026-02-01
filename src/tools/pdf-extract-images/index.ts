@@ -198,7 +198,8 @@ function renderImages() {
     thumb.src = url;
     thumb.alt = img.name;
     thumb.dataset.url = url;
-    thumb.className = 'w-full h-full object-contain transition-transform group-hover:scale-105';
+    thumb.className =
+      'checkerboard-bg w-full h-full object-contain transition-transform group-hover:scale-105';
 
     const previewBtn = document.createElement('button');
     previewBtn.type = 'button';
@@ -253,7 +254,9 @@ function openLightbox(url: string, name: string) {
   overlay.innerHTML = `
     <div class="relative max-w-full max-h-full flex flex-col items-cente">
       <span class="text-white text-sm font-medium truncate max-w-full mb-1">${name}</span>
-      <img src="${url}" class="max-w-full max-h-[85vh] object-contain shadow-2xl border rounded-lg" alt="${name}">
+      <div class="bg-neutral-200 rounded border border-base-300">
+        <img src="${url}" class="checkerboard-bg max-w-full max-h-[85vh] object-contain shadow-2xl border rounded-lg" alt="${name}">
+      </div>
       <div class="mt-4 flex gap-4 items-center flex-wrap">
         <a href="${url}" download="${name}" class="btn btn-primary btn-sm">
           <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download
