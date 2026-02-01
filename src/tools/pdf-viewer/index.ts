@@ -3,7 +3,12 @@ import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
 import { isDarkMode } from '../../js/theme.ts';
 import { default as EmbedPDF, ZoomMode, EmbedPdfContainer } from '@embedpdf/snippet';
-import { addFlattenAsImageCommand, getDocManager, injectStyles } from '../../js/embedpdf-utils.ts';
+import {
+  addFlattenAsImageCommand,
+  addSignatureCommand,
+  getDocManager,
+  injectStyles,
+} from '../../js/embedpdf-utils.ts';
 
 const toggleToolCard = (show: boolean) => {
   const toolCardElement = document.getElementById('pdf-edit-tool-card');
@@ -36,7 +41,7 @@ const getViewer = async (container: HTMLElement) => {
     }
     injectStyles(viewer);
     await addFlattenAsImageCommand(viewer);
-
+    await addSignatureCommand(viewer);
   }
   return viewer;
 };
@@ -112,9 +117,11 @@ export default function init(payload?: any) {
   });
 
   if (payload && payload.pdfBytes) {
-    const { pdfBytes , fileName } = payload;
+    const { pdfBytes, fileName } = payload;
     showProgress('Opening PDF from payload...');
-    showPdfViewer([{ buffer: pdfBytes as ArrayBuffer, name: fileName as string || 'document.pdf' }]).then((success) => {
+    showPdfViewer([
+      { buffer: pdfBytes as ArrayBuffer, name: (fileName as string) || 'document.pdf' },
+    ]).then((success) => {
       if (success) {
         toggleToolCard(false);
         showMessage(`PDF "${fileName}" loaded from organizer.`, { timeoutMs: 5000 });

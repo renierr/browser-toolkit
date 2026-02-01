@@ -5,11 +5,13 @@ import {
   type PluginRegistry,
   UIPlugin,
   ExportPlugin,
-  AnnotationPlugin
+  AnnotationPlugin,
 } from '@embedpdf/snippet';
-import { FileImage, House, type IconNode } from 'lucide';
+import { FileImage, House, PenLine, type IconNode } from 'lucide';
 import { flattenAsImage } from '../tools/pdf-to-image';
 import { showMessage } from './ui.ts';
+import { getAllSignatures as getStoredSignatures } from '../tools/signature-creator/signature-store.ts';
+import type { SignatureData } from '../tools/signature-creator/signature-types.ts';
 
 export const getDocManager = async (registry: PluginRegistry) => {
   return registry.getPlugin<DocumentManagerPlugin>(DocumentManagerPlugin.id)?.provides();
@@ -26,7 +28,6 @@ export const getExportPlugin = async (registry: PluginRegistry) => {
 export const getAnnotationPlugin = async (registry: PluginRegistry) => {
   return registry.getPlugin<AnnotationPlugin>(AnnotationPlugin.id)?.provides();
 };
-
 
 export function registerLucideIcon(
   viewer: EmbedPdfContainer,
@@ -127,7 +128,7 @@ export function injectStyles(viewer: EmbedPdfContainer) {
               flex-wrap: wrap !important;
               height: auto !important;
               min-height: 48px;
-            }            
+            }
           `;
     shadowRoot.appendChild(style);
   }
@@ -215,7 +216,7 @@ export async function addNavigateHomeCommand(viewer: EmbedPdfContainer) {
         icon: 'icon-home',
         action: () => {
           window.location.href = './index.html';
-        }
+        },
       });
 
       const schema = ui.getSchema();
@@ -228,7 +229,7 @@ export async function addNavigateHomeCommand(viewer: EmbedPdfContainer) {
           type: 'command-button',
           id: 'home-button',
           commandId: 'app.go-home',
-          variant: 'icon'
+          variant: 'icon',
         };
 
         if (leftGroup) {
@@ -238,9 +239,207 @@ export async function addNavigateHomeCommand(viewer: EmbedPdfContainer) {
         }
 
         ui.mergeSchema({
-          toolbars: { 'main-toolbar': { ...toolbar, items } }
+          toolbars: { 'main-toolbar': { ...toolbar, items } },
         });
       }
     }
+  }
+}
+
+const ADD_SIGNATURE_COMMAND_ID = 'add-signature-from-storage';
+
+/**
+ * Represents the structure of a signature object for the selection dialog.
+ */
+interface Signature {
+  name: string;
+  dataUrl: string;
+  createdAt: string;
+}
+
+/**
+ * Fetches signatures from the signature creator tool's IndexedDB store.
+ * @returns A promise that resolves to an array of signatures, sorted by creation date.
+ */
+async function getSignatures(): Promise<Signature[]> {
+  try {
+    const storedSignatures: SignatureData[] = await getStoredSignatures();
+
+    return storedSignatures.map((sig) => ({
+      name: `Signature from ${new Date(sig.timestamp).toLocaleString()}`,
+      dataUrl: sig.image,
+      createdAt: new Date(sig.timestamp).toISOString(),
+    }));
+  } catch (error) {
+    console.error('Failed to read signatures from IndexedDB', error);
+    showMessage('Could not load signatures.', { type: 'alert' });
+    return [];
+  }
+}
+
+/**
+ * Creates and returns the signature selection dialog element.
+ * It is created once and reused.
+ * @returns The dialog element.
+ */
+function createSignatureDialog(): HTMLDialogElement {
+  const DIALOG_ID = 'signature-selection-dialog';
+  let dialog = document.getElementById(DIALOG_ID) as HTMLDialogElement;
+  if (dialog) {
+    return dialog;
+  }
+
+  const dialogHTML = `
+    <dialog id="${DIALOG_ID}" class="modal">
+      <div class="modal-box">
+        <h3 class="font-bold text-lg">Select a Signature</h3>
+        <p class="py-2 text-sm text-base-content/70">Click a signature to place it on the document.</p>
+        <div id="signature-selection-list" class="py-4 grid grid-cols-2 gap-4 bg-base-200 rounded-box p-4 min-h-32"></div>
+        <div class="modal-action">
+          <form method="dialog">
+            <button class="btn">Cancel</button>
+          </form>
+        </div>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
+  `;
+  document.body.insertAdjacentHTML('beforeend', dialogHTML);
+  return document.getElementById(DIALOG_ID) as HTMLDialogElement;
+}
+
+/**
+ * Displays a modal dialog for selecting a signature.
+ * @param signatures An array of available signatures.
+ * @returns A promise that resolves with the data URL of the selected signature, or null if canceled.
+ */
+function showSignatureDialog(signatures: Signature[]): Promise<string | null> {
+  return new Promise((resolve) => {
+    const dialog = createSignatureDialog();
+    const listElement = dialog.querySelector<HTMLDivElement>('#signature-selection-list');
+    if (!listElement) {
+      console.error('Signature dialog is missing the list element.');
+      return resolve(null);
+    }
+
+    listElement.innerHTML = ''; // Clear previous items
+
+    // This handler resolves with null if the dialog is closed without a selection (e.g., ESC key).
+    const onDialogClose = () => {
+      resolve(null);
+    };
+    dialog.addEventListener('close', onDialogClose, { once: true });
+
+    if (signatures.length === 0) {
+      listElement.innerHTML = `<p class="text-center col-span-2">No signatures found. Please create one using the "Signature Creator" tool first.</p>`;
+    } else {
+      signatures.forEach((sig) => {
+        const item = document.createElement('div');
+        item.className =
+          'p-2 border border-base-300 rounded-lg cursor-pointer hover:bg-base-300 flex justify-center items-center bg-white';
+        item.innerHTML = `<img src="${sig.dataUrl}" alt="${sig.name}" class="max-w-full h-auto max-h-24 object-contain" />`;
+        item.addEventListener('click', () => {
+          // A signature was clicked. Remove the 'close' listener to prevent the race condition.
+          dialog.removeEventListener('close', onDialogClose);
+          resolve(sig.dataUrl);
+          dialog.close();
+        });
+        listElement.appendChild(item);
+      });
+    }
+
+    dialog.showModal();
+  });
+}
+
+/**
+ * Registers a command and toolbar button to add a signature to the PDF.
+ * The button is placed next to the "Add Image" (stamp) button.
+ * @param viewer The EmbedPDF container instance.
+ */
+export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<void> {
+  const registry = await viewer.registry;
+  if (!registry) return;
+
+  // Use the existing helper to get the annotation plugin for better type safety.
+  const annotationPlugin = await getAnnotationPlugin(registry);
+  const commands = await getViewerCommands(registry);
+  if (!annotationPlugin || !commands) {
+    console.warn('AnnotationPlugin or CommandsPlugin not available, cannot add signature command.');
+    return;
+  }
+
+  // 1. Register the command logic
+  commands.registerCommand({
+    id: ADD_SIGNATURE_COMMAND_ID,
+    label: 'Add Signature',
+    icon: 'icon-signature',
+    action: async () => {
+      const signatures = await getSignatures();
+      const selectedSignatureUrl = await showSignatureDialog(signatures);
+
+      if (!selectedSignatureUrl) {
+        return; // User cancelled
+      }
+
+      const response = await fetch(selectedSignatureUrl);
+      const blob = await response.blob();
+
+      // The provided API of the AnnotationPlugin exposes the `setTool` method directly.
+      // We activate the 'StampAnnotation' tool to let the user place the signature image.
+      (annotationPlugin as any).setTool('StampAnnotation', { blob });
+    },
+  });
+
+  // 2. Register the toolbar button
+  const SIGNATURE_ICON_ID = 'icon-signature';
+  registerLucideIcon(viewer, SIGNATURE_ICON_ID, PenLine);
+
+  const ANNOTATION_TOOLBAR_ID = 'annotation-toolbar';
+  const STAMP_BUTTON_ID = 'add-stamp';
+
+  const ui = await getViewerUi(registry);
+  if (!ui) {
+    console.warn('UIPlugin not available, cannot add signature button.');
+    return;
+  }
+
+  const schema = ui.getSchema();
+  const toolbar = schema.toolbars?.[ANNOTATION_TOOLBAR_ID];
+
+  if (toolbar) {
+    const items = JSON.parse(JSON.stringify(toolbar.items));
+    const annotationToolsGroup = items.find(
+      (item: any) => item.id === 'annotation-tools' && item.type === 'group'
+    );
+
+    if (annotationToolsGroup && Array.isArray(annotationToolsGroup.items)) {
+      const stampButtonIndex = annotationToolsGroup.items.findIndex(
+        (item: any) => item.id === STAMP_BUTTON_ID
+      );
+
+      const signatureButton = {
+        type: 'command-button',
+        id: 'add-signature-from-storage-button',
+        commandId: ADD_SIGNATURE_COMMAND_ID,
+        variant: 'icon',
+        categories: ['annotation', 'annotation-signature'],
+      };
+
+      if (stampButtonIndex !== -1) {
+        annotationToolsGroup.items.splice(stampButtonIndex + 1, 0, signatureButton);
+      } else {
+        console.warn(`'${STAMP_BUTTON_ID}' not found. Appending button to annotation tools group.`);
+        annotationToolsGroup.items.push(signatureButton);
+      }
+
+      ui.mergeSchema({
+        toolbars: { [ANNOTATION_TOOLBAR_ID]: { ...toolbar, items } },
+      });
+    } else {
+      console.warn(`Group 'annotation-tools' not found in '${ANNOTATION_TOOLBAR_ID}'.`);
+    }
+  } else {
+    console.warn(`Toolbar '${ANNOTATION_TOOLBAR_ID}' not found. Cannot add signature button.`);
   }
 }
