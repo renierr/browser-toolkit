@@ -16,9 +16,9 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
-    "@types/node": "^25.0.10",
+    "@types/node": "^25.1.0",
     "@types/sortablejs": "^1.15.9",
-    "daisyui": "^5.5.14",
+    "daisyui": "^5.5.16",
     "extract-zip": "^2.0.1",
     "prettier": "^3.8.1",
     "rimraf": "^6.1.2",
@@ -34,7 +34,7 @@
     "@embedpdf/snippet": "^2.3.0",
     "jspdf": "^4.0.0",
     "jszip": "^3.10.1",
-    "lucide": "^0.561.0",
+    "lucide": "^0.563.0",
     "mupdf": "^1.27.0",
     "pdfjs-dist": "^5.4.530",
     "sortablejs": "^1.15.6"

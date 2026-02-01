@@ -52,6 +52,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: 'lucide',
+        replacement: path.resolve(__dirname, 'node_modules/lucide/dist/esm/lucide/src/lucide.js'),
+      },
+      {
         find: '@tools',
         replacement: path.resolve(__dirname, 'src/tools'),
       },
@@ -72,6 +76,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
+    include: ['lucide'],
     exclude: ['mupdf']
   },
   assetsInclude: ['**/*.wasm'],
