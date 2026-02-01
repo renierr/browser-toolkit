@@ -1,6 +1,6 @@
 import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
-import mupdf, { Image, type Matrix, type Rect } from 'mupdf';
+import mupdf, { Image, type Matrix, PDFPage, type Rect } from 'mupdf';
 import { hashUint8Array } from '../../js/utils.ts';
 
 let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number; hash: string }> = [];
@@ -58,36 +58,60 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
 
     const imagePromises: Promise<void>[] = [];
 
-    const addImage = (image: Image, imageCounter: number, pageIndex: number) => {
-      imagePromises.push((async () => {
-        const pixmap = image.toPixmap();
-        const pngBytes = pixmap.asPNG();
-        const hash = await hashUint8Array(pngBytes);
-        if (seenHashes.has(hash)) return; // duplicate -> skip
-        seenHashes.add(hash);
-        images.push({
-          name: `${fileName.replace(/\.pdf$/i, '')}_page-${pageIndex + 1}_img-${imageCounter}.png`,
-          data: pngBytes,
-          width: pixmap.getWidth(),
-          height: pixmap.getHeight(),
-          hash,
-        });
-      })());
-    };
+    const processPixmap = (pixmap: any, nameSuffix: string, pageIndex: number) => {
+      imagePromises.push(
+        (async () => {
+          try {
+            const pngBytes = pixmap.asPNG();
+            const hash = await hashUint8Array(pngBytes);
 
+            if (seenHashes.has(hash)) return; // duplicate -> skip
+            seenHashes.add(hash);
+
+            images.push({
+              name: `${fileName.replace(/\.pdf$/i, '')}_p${pageIndex + 1}_${nameSuffix}.png`,
+              data: pngBytes,
+              width: pixmap.getWidth(),
+              height: pixmap.getHeight(),
+              hash,
+            });
+          } catch (e) {
+            console.warn(`Failed to process image ${nameSuffix}`, e);
+          }
+        })()
+      );
+    };
 
     for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
       showProgress(`Scanning ${fileName} - Page ${pageIndex + 1} of ${pageCount} for embedded images...`);
       await yieldToUI();
 
       try {
-        const page = doc.loadPage(pageIndex);
+        const page = doc.loadPage(pageIndex) as PDFPage;
         let imageCounter = 0;
 
         const structure = page.toStructuredText("preserve-images");
         structure.walk({
           onImageBlock: (_bbox: Rect, _transform: Matrix, image: Image) => {
-            addImage(image, imageCounter++, pageIndex)
+            const pixmap = image.toPixmap();
+            processPixmap(pixmap, `img-${imageCounter++}`, pageIndex);
+          }
+        });
+
+        let annotCounter = 0;
+        const matrix = mupdf.Matrix.identity;
+        const colorspace = mupdf.ColorSpace.DeviceRGB;
+
+        page.getAnnotations().forEach((annot) => {
+          const annotType = annot.getType();
+          switch (annotType) {
+            case 'Ink':
+            case 'Stamp':
+              const pixmap = annot.toPixmap(matrix, colorspace, true);
+              processPixmap(pixmap, `annot-${annotCounter++}`, pageIndex);
+              break;
+            default:
+              console.debug(`Annotation of type ${annotType} ignored for image extraction`);
           }
         });
 
