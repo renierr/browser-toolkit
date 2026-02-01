@@ -73,7 +73,7 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false) {
         aria-label="${active ? 'Remove from favorites' : 'Add to favorites'}"
         title="${active ? 'Remove from favorites' : 'Add to favorites'}"
       >
-        <i data-lucide="star" class="w-4 h-4 ${active ? 'fill-current' : ''}"></i>
+        <i data-lucide="star" class="w-4 h-4 drop-shadow-blue-400 dark:drop-shadow-blue-100 drop-shadow-xs ${active ? 'fill-current' : ''}"></i>
       </button>
     `;
   }
