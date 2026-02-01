@@ -192,7 +192,7 @@ function renderImages() {
     wrapper.className = 'group relative flex flex-col bg-base-200 rounded-lg overflow-hidden border border-base-300';
 
     const imageContainer = document.createElement('div');
-    imageContainer.className = 'w-full aspect-square relative bg-base-200 flex items-center justify-center';
+    imageContainer.className = 'w-full max-h-48 aspect-square relative bg-base-200 flex items-center justify-center';
 
     const thumb = document.createElement('img');
     thumb.src = url;
