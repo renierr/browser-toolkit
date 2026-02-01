@@ -151,49 +151,6 @@ export function flattenXmpMetadata(obj: any, prefix = ''): Record<string, any> {
   return results;
 }
 
-export function openPdfInViewerFrame(iframe: HTMLIFrameElement, pdfUrl: string) {
-  const start = Date.now();
-  const timeoutMs = 10000;
-
-  const tryOpen = async () => {
-    try {
-      const win = iframe.contentWindow as any;
-      if (!win) return;
-
-      const app = win?.PDFViewerApplication;
-      if (app) {
-        if (app.initializedPromise && typeof app.initializedPromise.then === 'function') {
-          await app.initializedPromise;
-        }
-        if (typeof app.open === 'function') {
-          try {
-            app.open({ url: pdfUrl });
-            return;
-          } catch (err) {
-            console.error('PDFViewerApplication.open failed', err);
-            return;
-          }
-        }
-      }
-    } catch (err) {
-      console.error('Cannot access iframe PDFViewerApplication', err);
-      return;
-    }
-
-    if (Date.now() - start < timeoutMs) {
-      setTimeout(tryOpen, 50);
-    } else {
-      console.error('Timed out waiting for PDFViewerApplication in iframe');
-    }
-  };
-
-  tryOpen();
-
-  iframe.addEventListener('load', () => {
-    tryOpen();
-  });
-}
-
 export const setPdfViewerOptions = (viewerWindow: Window, options: {}) => {
   const win = viewerWindow as any;
   if (win?.PDFViewerApplicationOptions) {
@@ -238,52 +195,3 @@ export function setupGlobalWebViewerDelegate() {
   });
 }
 
-export const injectMaximizeToViewerFrame = (iframe: HTMLIFrameElement) => {
-  const contentWindow = iframe.contentWindow;
-  if (!contentWindow) return;
-
-  const doc = contentWindow.document;
-  const separatorHTML = `<div id="editorModeSeparator" class="verticalToolbarSeparator"></div>`;
-  const rightToolbar = doc.getElementById('toolbarViewerRight');
-  if (!rightToolbar) return;
-
-  const style = doc.createElement('style');
-  style.textContent = `
-  #pdfViewerMaximizeBtn::before { 
-    display: none !important; 
-  }
-  #addSignatureDrawContainer {
-    touch-action: none;
-    user-select: none; 
-  }
-  `;
-  (doc.head || doc.documentElement).appendChild(style);
-
-  rightToolbar.insertAdjacentHTML('beforeend', separatorHTML);
-  const btn = doc.createElement('button');
-  btn.id = 'pdfViewerMaximizeBtn';
-  btn.className = 'toolbarButton pdf-inline-maximize-btn';
-  btn.type = 'button';
-  btn.title = 'Toggle maximize';
-  btn.textContent = '⤢';
-  btn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    iframe.classList.toggle('pdf-maximized');
-
-    const isMax = iframe.classList.contains('pdf-maximized');
-    if (btn) btn.textContent = isMax ? '⤡' : '⤢';
-
-    if (isMax) {
-      document.body.classList.add('no-scroll');
-    } else {
-      document.body.classList.remove('no-scroll');
-    }
-
-    try {
-      contentWindow.parent.postMessage({ type: 'pdf-toggle-maximize' }, window.location.origin);
-    } catch {
-      contentWindow.parent.postMessage({ type: 'pdf-toggle-maximize' }, '*');
-    }
-  });
-  rightToolbar.appendChild(btn);
-};

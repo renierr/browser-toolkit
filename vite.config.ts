@@ -33,7 +33,6 @@ export default defineConfig({
           {
             urlPattern: ({ url }) =>
               url.pathname.endsWith('.mjs') ||
-              url.pathname.includes('/pdfjs/') ||
               url.pathname.endsWith('.bcmap') ||
               url.pathname.endsWith('.pfb') ||
               url.pathname.endsWith('.ttf'),
@@ -66,11 +65,6 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         pdf: path.resolve(__dirname, 'pdf.html'),
-      },
-      output: {
-        manualChunks(id: string) {
-          if (id.includes('pdfjs-dist')) return 'vendor-pdfjs';
-        },
       },
     },
     chunkSizeWarningLimit: 1000,
