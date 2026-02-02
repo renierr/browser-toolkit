@@ -6,6 +6,9 @@ import {
   UIPlugin,
   ExportPlugin,
   AnnotationPlugin,
+  type ToolbarItem,
+  type GroupItem,
+  type MenuItem,
 } from '@embedpdf/snippet';
 import { FileImage, House, PenLine, type IconNode } from 'lucide';
 import { flattenAsImage } from '../tools/pdf-to-image';
@@ -177,24 +180,20 @@ export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
       const schema = ui.getSchema();
       const menu = schema.menus['document-menu'];
       if (menu) {
-        const items = JSON.parse(JSON.stringify(menu.items));
-        const exportIndex = items.findIndex((item: any) => item.id === 'document:export');
+        const items = menu.items;
+        const exportIndex = items.findIndex((item: MenuItem) => item.id === 'document:export');
 
         const flattenMenuItem = {
           type: 'command',
           id: 'app.flatten-pdf-menu-item',
           commandId: 'app.flatten-pdf',
-        };
+        } as MenuItem;
 
         if (exportIndex !== -1) {
           items.splice(exportIndex + 1, 0, flattenMenuItem);
         } else {
           items.push(flattenMenuItem);
         }
-
-        ui.mergeSchema({
-          menus: { 'document-menu': { ...menu, items } },
-        });
       }
     }
   }
@@ -222,31 +221,27 @@ export async function addNavigateHomeCommand(viewer: EmbedPdfContainer) {
       const schema = ui.getSchema();
       const toolbar = schema.toolbars['main-toolbar'];
       if (toolbar) {
-        const items = JSON.parse(JSON.stringify(toolbar.items));
-        const leftGroup = items.find((item: any) => item.id === 'left-group');
+        const items = toolbar.items;
+        const leftGroup = items.find((item: ToolbarItem) => item.id === 'left-group') as GroupItem | undefined;
 
         const homeButton = {
           type: 'command-button',
           id: 'home-button',
           commandId: 'app.go-home',
           variant: 'icon',
-        };
+        } as ToolbarItem;
 
         if (leftGroup) {
           leftGroup.items.unshift(homeButton);
         } else {
           items.unshift(homeButton);
         }
-
-        ui.mergeSchema({
-          toolbars: { 'main-toolbar': { ...toolbar, items } },
-        });
       }
     }
   }
 }
 
-const ADD_SIGNATURE_COMMAND_ID = 'add-signature-from-storage';
+const ADD_SIGNATURE_COMMAND_ID = 'annotation:add-signature';
 
 /**
  * Represents the structure of a signature object for the selection dialog.
@@ -361,7 +356,6 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
   const registry = await viewer.registry;
   if (!registry) return;
 
-  // Use the existing helper to get the annotation plugin for better type safety.
   const annotationPlugin = await getAnnotationPlugin(registry);
   const commands = await getViewerCommands(registry);
   if (!annotationPlugin || !commands) {
@@ -408,34 +402,30 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
   const toolbar = schema.toolbars?.[ANNOTATION_TOOLBAR_ID];
 
   if (toolbar) {
-    const items = JSON.parse(JSON.stringify(toolbar.items));
+    const items = toolbar.items;
     const annotationToolsGroup = items.find(
-      (item: any) => item.id === 'annotation-tools' && item.type === 'group'
-    );
+      (item: ToolbarItem) => item.id === 'annotation-tools' && item.type === 'group'
+    ) as GroupItem | undefined;
 
-    if (annotationToolsGroup && Array.isArray(annotationToolsGroup.items)) {
+    if (annotationToolsGroup) {
       const stampButtonIndex = annotationToolsGroup.items.findIndex(
         (item: any) => item.id === STAMP_BUTTON_ID
       );
 
       const signatureButton = {
         type: 'command-button',
-        id: 'add-signature-from-storage-button',
+        id: ADD_SIGNATURE_COMMAND_ID + '-button',
         commandId: ADD_SIGNATURE_COMMAND_ID,
         variant: 'icon',
         categories: ['annotation', 'annotation-signature'],
-      };
+      } as ToolbarItem;
 
       if (stampButtonIndex !== -1) {
-        annotationToolsGroup.items.splice(stampButtonIndex + 1, 0, signatureButton);
+        annotationToolsGroup.items.splice(stampButtonIndex + 1, 0, signatureButton );
       } else {
         console.warn(`'${STAMP_BUTTON_ID}' not found. Appending button to annotation tools group.`);
         annotationToolsGroup.items.push(signatureButton);
       }
-
-      ui.mergeSchema({
-        toolbars: { [ANNOTATION_TOOLBAR_ID]: { ...toolbar, items } },
-      });
     } else {
       console.warn(`Group 'annotation-tools' not found in '${ANNOTATION_TOOLBAR_ID}'.`);
     }
