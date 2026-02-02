@@ -315,8 +315,8 @@ function createSignatureDialog(): HTMLDialogElement {
     <dialog id="${DIALOG_ID}" class="modal">
       <div class="modal-box">
         <h3 class="font-bold text-lg">Select a Signature</h3>
-        <p class="py-2 text-sm text-base-content/70">Click a signature to place it on the document.</p>
-        <div id="signature-selection-list" class="py-4 grid grid-cols-2 gap-4 bg-base-200 rounded-box p-4 min-h-32"></div>
+        <p class="py-2 text-sm text-base-content/70">Select a signature, then place it on the document.</p>
+        <div id="signature-selection-list" class="py-4 grid grid-cols md:grid-cols-2 gap-4 bg-base-200 rounded-box p-4 min-h-32"></div>
         <div class="modal-action">
           <form method="dialog">
             <button class="btn">Cancel</button>
@@ -353,13 +353,13 @@ function showSignatureDialog(signatures: Signature[]): Promise<Signature | null>
     dialog.addEventListener('close', onDialogClose, { once: true });
 
     if (signatures.length === 0) {
-      listElement.innerHTML = `<p class="text-center col-span-2">No signatures found. Please create one using the "Signature Creator" tool first.</p>`;
+      listElement.innerHTML = `<p class="text-center col-span-2">No signatures were found. Please create one using the "Signature Creator" tool first.</p>`;
     } else {
       signatures.forEach((sig) => {
-        const item = document.createElement('div');
+        const item = document.createElement('button');
         item.className =
-          'p-2 border border-base-300 rounded-lg cursor-pointer hover:bg-base-300 flex justify-center items-center bg-white';
-        item.innerHTML = `<img src="${sig.dataUrl}" alt="${sig.id}: ${sig.createdAt}" class="max-w-full h-auto max-h-24 object-contain" />`;
+          'p-2 border border-base-300 rounded-lg cursor-pointer flex justify-center items-center bg-white hover:ring-2 hover:ring-primary focus:ring-2 focus:ring-primary';
+        item.innerHTML = `<img src="${sig.dataUrl}" alt="${sig.id}: ${sig.createdAt}" class="checkerboard-bg max-w-full h-auto max-h-24 object-contain" />`;
         item.addEventListener('click', () => {
           // A signature was clicked. Remove the 'close' listener to prevent the race condition.
           dialog.removeEventListener('close', onDialogClose);
