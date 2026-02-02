@@ -10,6 +10,8 @@ import {
   type GroupItem,
   type MenuItem,
 } from '@embedpdf/snippet';
+import { type AnnotationTool } from '@embedpdf/plugin-annotation';
+import { PdfAnnotationSubtype, type PdfStampAnnoObject } from '@embedpdf/models';
 import { FileImage, House, PenLine, type IconNode } from 'lucide';
 import { flattenAsImage } from '../tools/pdf-to-image';
 import { showMessage } from './ui.ts';
@@ -39,7 +41,6 @@ export function registerLucideIcon(
 ) {
   let children: readonly IconNode[] = [];
 
-  console.log('registerLucideIcon', iconId, iconDef);
   if (Array.isArray(iconDef)) {
     // Check if it's an array of IconNode (children) or a single IconNode tuple
     const first = iconDef[0];
@@ -363,12 +364,32 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
     return;
   }
 
+  const SIGNATURE_TOOL_ID = 'stampSignature';
+
+  annotationPlugin.addTool<AnnotationTool<PdfStampAnnoObject>>({
+    id: SIGNATURE_TOOL_ID,
+    name: 'Signature',
+    interaction: {
+      exclusive: false,
+      cursor: 'crosshair',
+    },
+    matchScore: () => 0,
+    defaults: {
+      type: PdfAnnotationSubtype.STAMP,
+      imageSrc: undefined
+    },
+    behavior: {
+      deactivateToolAfterCreate: true
+    }
+  });
+
   // 1. Register the command logic
   commands.registerCommand({
     id: ADD_SIGNATURE_COMMAND_ID,
     label: 'Add Signature',
     icon: 'icon-signature',
-    action: async () => {
+    action: async (context) => {
+      console.log('Add Signature command invoked', context);
       const signatures = await getSignatures();
       const selectedSignatureUrl = await showSignatureDialog(signatures);
 
@@ -376,12 +397,9 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
         return; // User cancelled
       }
 
-      const response = await fetch(selectedSignatureUrl);
-      const blob = await response.blob();
-
-      // The provided API of the AnnotationPlugin exposes the `setTool` method directly.
-      // We activate the 'StampAnnotation' tool to let the user place the signature image.
-      (annotationPlugin as any).setTool('StampAnnotation', { blob });
+      const signatureTool = annotationPlugin.getTool(SIGNATURE_TOOL_ID);
+      (signatureTool?.defaults as any).imageSrc = selectedSignatureUrl;
+      annotationPlugin.setActiveTool(SIGNATURE_TOOL_ID);
     },
   });
 

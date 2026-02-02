@@ -30,6 +30,8 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@embedpdf/models": "^2.3.0",
+    "@embedpdf/plugin-annotation": "^2.3.0",
     "@embedpdf/snippet": "^2.3.0",
     "jspdf": "^4.0.0",
     "jszip": "^3.10.1",

@@ -8,6 +8,12 @@ importers:
 
   .:
     dependencies:
+      '@embedpdf/models':
+        specifier: ^2.3.0
+        version: 2.3.0
+      '@embedpdf/plugin-annotation':
+        specifier: ^2.3.0
+        version: 2.3.0(7e3f716a70675e1918cc97e085c7f301)
       '@embedpdf/snippet':
         specifier: ^2.3.0
         version: 2.3.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(svelte@5.46.1)(vue@3.5.26(typescript@5.9.3))
