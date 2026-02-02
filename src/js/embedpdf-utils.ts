@@ -147,10 +147,11 @@ export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
     const exportPlugin = await getExportPlugin(registry);
 
     if (commands && ui && docManager && exportPlugin) {
+      const FLATTEN_COMMAND_ID = 'app.flatten-pdf';
       registerLucideIcon(viewer, 'icon-flatten', FileImage);
 
       commands.registerCommand({
-        id: 'app.flatten-pdf',
+        id: FLATTEN_COMMAND_ID,
         label: 'Export as PDF Images',
         icon: 'icon-flatten',
         action: async () => {
@@ -181,8 +182,10 @@ export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
       const schema = ui.getSchema();
       const menu = schema.menus['document-menu'];
       if (menu) {
-        const items = menu.items;
-        const exportIndex = items.findIndex((item: MenuItem) => item.id === 'document:export');
+        const originalItems = menu.items;
+        const exportIndex = originalItems.findIndex(
+          (item: MenuItem) => item.id === 'document:export'
+        );
 
         const flattenMenuItem = {
           type: 'command',
@@ -190,11 +193,20 @@ export async function addFlattenAsImageCommand(viewer: EmbedPdfContainer) {
           commandId: 'app.flatten-pdf',
         } as MenuItem;
 
+        let newItems;
         if (exportIndex !== -1) {
-          items.splice(exportIndex + 1, 0, flattenMenuItem);
+          newItems = [
+            ...originalItems.slice(0, exportIndex + 1),
+            flattenMenuItem,
+            ...originalItems.slice(exportIndex + 1),
+          ];
         } else {
-          items.push(flattenMenuItem);
+          newItems = [...originalItems, flattenMenuItem];
         }
+
+        ui.mergeSchema({
+          menus: { 'document-menu': { ...menu, items: newItems } },
+        });
       }
     }
   }
@@ -207,11 +219,11 @@ export async function addNavigateHomeCommand(viewer: EmbedPdfContainer) {
     const commands = await getViewerCommands(registry);
 
     if (commands && ui) {
-      // Register Home Icon (Lucide House)
+      const HOME_COMMAND_ID = 'app.go-home';
       registerLucideIcon(viewer, 'icon-home', House);
 
       commands.registerCommand({
-        id: 'app.go-home',
+        id: HOME_COMMAND_ID,
         label: 'Home',
         icon: 'icon-home',
         action: () => {
@@ -222,27 +234,41 @@ export async function addNavigateHomeCommand(viewer: EmbedPdfContainer) {
       const schema = ui.getSchema();
       const toolbar = schema.toolbars['main-toolbar'];
       if (toolbar) {
-        const items = toolbar.items;
-        const leftGroup = items.find((item: ToolbarItem) => item.id === 'left-group') as GroupItem | undefined;
-
+        const originalItems = toolbar.items;
         const homeButton = {
           type: 'command-button',
           id: 'home-button',
-          commandId: 'app.go-home',
+          commandId: HOME_COMMAND_ID,
           variant: 'icon',
         } as ToolbarItem;
 
-        if (leftGroup) {
-          leftGroup.items.unshift(homeButton);
+        const leftGroupIndex = originalItems.findIndex(
+          (item: ToolbarItem) => item.id === 'left-group' && item.type === 'group'
+        );
+
+        let newItems;
+        if (leftGroupIndex !== -1) {
+          const leftGroup = originalItems[leftGroupIndex] as GroupItem;
+          const newLeftGroup = {
+            ...leftGroup,
+            items: [homeButton, ...leftGroup.items],
+          };
+          newItems = [
+            ...originalItems.slice(0, leftGroupIndex),
+            newLeftGroup,
+            ...originalItems.slice(leftGroupIndex + 1),
+          ];
         } else {
-          items.unshift(homeButton);
+          newItems = [homeButton, ...originalItems];
         }
+
+        ui.mergeSchema({
+          toolbars: { 'main-toolbar': { ...toolbar, items: newItems } },
+        });
       }
     }
   }
 }
-
-const ADD_SIGNATURE_COMMAND_ID = 'annotation:add-signature';
 
 /**
  * Represents the structure of a signature object for the selection dialog.
@@ -363,7 +389,7 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
     console.warn('AnnotationPlugin or CommandsPlugin not available, cannot add signature command.');
     return;
   }
-
+  const ADD_SIGNATURE_COMMAND_ID = 'annotation:add-signature';
   const SIGNATURE_TOOL_ID = 'stampSignature';
 
   annotationPlugin.addTool<AnnotationTool<PdfStampAnnoObject>>({
@@ -376,11 +402,11 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
     matchScore: () => 0,
     defaults: {
       type: PdfAnnotationSubtype.STAMP,
-      imageSrc: undefined
+      imageSrc: undefined,
     },
     behavior: {
-      deactivateToolAfterCreate: true
-    }
+      deactivateToolAfterCreate: true,
+    },
   });
 
   // 1. Register the command logic
@@ -420,12 +446,13 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
   const toolbar = schema.toolbars?.[ANNOTATION_TOOLBAR_ID];
 
   if (toolbar) {
-    const items = toolbar.items;
-    const annotationToolsGroup = items.find(
+    const originalItems = toolbar.items;
+    const groupIndex = originalItems.findIndex(
       (item: ToolbarItem) => item.id === 'annotation-tools' && item.type === 'group'
-    ) as GroupItem | undefined;
+    );
 
-    if (annotationToolsGroup) {
+    if (groupIndex !== -1) {
+      const annotationToolsGroup = originalItems[groupIndex] as GroupItem;
       const stampButtonIndex = annotationToolsGroup.items.findIndex(
         (item: any) => item.id === STAMP_BUTTON_ID
       );
@@ -438,12 +465,28 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
         categories: ['annotation', 'annotation-signature'],
       } as ToolbarItem;
 
+      let newGroupItems;
       if (stampButtonIndex !== -1) {
-        annotationToolsGroup.items.splice(stampButtonIndex + 1, 0, signatureButton );
+        newGroupItems = [
+          ...annotationToolsGroup.items.slice(0, stampButtonIndex + 1),
+          signatureButton,
+          ...annotationToolsGroup.items.slice(stampButtonIndex + 1),
+        ];
       } else {
         console.warn(`'${STAMP_BUTTON_ID}' not found. Appending button to annotation tools group.`);
-        annotationToolsGroup.items.push(signatureButton);
+        newGroupItems = [...annotationToolsGroup.items, signatureButton];
       }
+
+      const newGroup = { ...annotationToolsGroup, items: newGroupItems };
+      const newToolbarItems = [
+        ...originalItems.slice(0, groupIndex),
+        newGroup,
+        ...originalItems.slice(groupIndex + 1),
+      ];
+
+      ui.mergeSchema({
+        toolbars: { [ANNOTATION_TOOLBAR_ID]: { ...toolbar, items: newToolbarItems } },
+      });
     } else {
       console.warn(`Group 'annotation-tools' not found in '${ANNOTATION_TOOLBAR_ID}'.`);
     }
