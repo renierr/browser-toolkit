@@ -274,7 +274,7 @@ export async function addNavigateHomeCommand(viewer: EmbedPdfContainer) {
  * Represents the structure of a signature object for the selection dialog.
  */
 interface Signature {
-  name: string;
+  id: string;
   dataUrl: string;
   createdAt: string;
 }
@@ -288,9 +288,9 @@ async function getSignatures(): Promise<Signature[]> {
     const storedSignatures: SignatureData[] = await getStoredSignatures();
 
     return storedSignatures.map((sig) => ({
-      name: `Signature from ${new Date(sig.timestamp).toLocaleString()}`,
+      id: sig.id,
       dataUrl: sig.image,
-      createdAt: new Date(sig.timestamp).toISOString(),
+      createdAt: new Date(sig.timestamp).toLocaleString(),
     }));
   } catch (error) {
     console.error('Failed to read signatures from IndexedDB', error);
@@ -334,8 +334,8 @@ function createSignatureDialog(): HTMLDialogElement {
  * Displays a modal dialog for selecting a signature.
  * @param signatures An array of available signatures.
  * @returns A promise that resolves with the data URL of the selected signature, or null if canceled.
- */
-function showSignatureDialog(signatures: Signature[]): Promise<string | null> {
+ */ 2;
+function showSignatureDialog(signatures: Signature[]): Promise<Signature | null> {
   return new Promise((resolve) => {
     const dialog = createSignatureDialog();
     const listElement = dialog.querySelector<HTMLDivElement>('#signature-selection-list');
@@ -359,11 +359,11 @@ function showSignatureDialog(signatures: Signature[]): Promise<string | null> {
         const item = document.createElement('div');
         item.className =
           'p-2 border border-base-300 rounded-lg cursor-pointer hover:bg-base-300 flex justify-center items-center bg-white';
-        item.innerHTML = `<img src="${sig.dataUrl}" alt="${sig.name}" class="max-w-full h-auto max-h-24 object-contain" />`;
+        item.innerHTML = `<img src="${sig.dataUrl}" alt="${sig.id}: ${sig.createdAt}" class="max-w-full h-auto max-h-24 object-contain" />`;
         item.addEventListener('click', () => {
           // A signature was clicked. Remove the 'close' listener to prevent the race condition.
           dialog.removeEventListener('close', onDialogClose);
-          resolve(sig.dataUrl);
+          resolve(sig);
           dialog.close();
         });
         listElement.appendChild(item);
@@ -372,6 +372,11 @@ function showSignatureDialog(signatures: Signature[]): Promise<string | null> {
 
     dialog.showModal();
   });
+}
+
+function renderSignatureIdToUrl(selectedSignature: Signature) {
+  // TODO  maybe render a new Data url with stored params
+  return selectedSignature.dataUrl;
 }
 
 /**
@@ -414,17 +419,16 @@ export async function addSignatureCommand(viewer: EmbedPdfContainer): Promise<vo
     id: ADD_SIGNATURE_COMMAND_ID,
     label: 'Add Signature',
     icon: 'icon-signature',
-    action: async (context) => {
-      console.log('Add Signature command invoked', context);
+    action: async () => {
       const signatures = await getSignatures();
-      const selectedSignatureUrl = await showSignatureDialog(signatures);
+      const selectedSignature = await showSignatureDialog(signatures);
 
-      if (!selectedSignatureUrl) {
+      if (!selectedSignature) {
         return; // User cancelled
       }
 
       const signatureTool = annotationPlugin.getTool(SIGNATURE_TOOL_ID);
-      (signatureTool?.defaults as any).imageSrc = selectedSignatureUrl;
+      (signatureTool?.defaults as any).imageSrc = renderSignatureIdToUrl(selectedSignature);
       annotationPlugin.setActiveTool(SIGNATURE_TOOL_ID);
     },
   });
