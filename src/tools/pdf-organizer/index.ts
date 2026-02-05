@@ -192,7 +192,6 @@ export default function init() {
           selected: false,
         });
       }
-      srcDoc.destroy();
       dropzone.classList.add('hidden');
       actions.classList.remove('hidden');
       updateUI();
