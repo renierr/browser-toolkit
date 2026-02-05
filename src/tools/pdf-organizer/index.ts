@@ -30,7 +30,7 @@ export default function init() {
 
   let pages: PageItem[] = [];
   let history: PageItem[][] = [];
-  let originalPdfBytes: ArrayBuffer | null = null;
+  let originalPdfBytes: Uint8Array<ArrayBufferLike> | null = null;
   let originalFileName = 'document.pdf';
 
   const generateId = () => crypto.randomUUID();
@@ -43,7 +43,8 @@ export default function init() {
   const revokeThumbnails = (list: PageItem[]) => {
     for (const p of list) {
       try {
-        if (p.thumbnailUrl && p.thumbnailUrl.startsWith('blob:')) URL.revokeObjectURL(p.thumbnailUrl);
+        if (p.thumbnailUrl && p.thumbnailUrl.startsWith('blob:'))
+          URL.revokeObjectURL(p.thumbnailUrl);
       } catch {}
     }
   };
@@ -118,17 +119,57 @@ export default function init() {
   });
 
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
-    if (files.length === 0) return;
+    if (files.length === 0) {
+      return;
+    }
     showProgress('Loading PDF...');
 
     try {
-      originalFileName = files[0].name;
-      originalPdfBytes = await files[0].arrayBuffer();
+      revokeThumbnails(pages);
+      pages = [];
+      history = [];
+      originalPdfBytes = null;
+      originalFileName = 'document.pdf';
+
+      if (files.length > 1) {
+        showProgress('Merging PDFs...');
+        const outDoc = new mupdf.PDFDocument();
+        let pageInsertIndex = 0;
+
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          showProgress(`Loading file ${i + 1} of ${files.length}: ${file.name}`);
+          await yieldToUI();
+          const fileBuffer = await file.arrayBuffer();
+          const srcDoc = mupdf.Document.openDocument(new Uint8Array(fileBuffer));
+          const srcPdf = srcDoc.asPDF();
+
+          if (srcPdf) {
+            const graftMap = outDoc.newGraftMap();
+            const pageCount = srcDoc.countPages();
+            for (let pageNum = 0; pageNum < pageCount; pageNum++) {
+              graftMap.graftPage(pageInsertIndex, srcPdf, pageNum);
+              pageInsertIndex++;
+            }
+            graftMap.destroy();
+            srcDoc.destroy();
+          }
+        }
+        originalPdfBytes = outDoc.saveToBuffer().asUint8Array();
+        originalFileName = 'merged.pdf';
+      } else {
+        const file = files[0];
+        originalPdfBytes = new Uint8Array<ArrayBuffer>(await file.arrayBuffer());
+        originalFileName = file.name;
+      }
+
+      if (!originalPdfBytes) {
+        showMessage('Failed to load PDF file(s).', { type: 'alert' });
+        return;
+      }
 
       const srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes));
       const pageCount = srcDoc.countPages();
-      pages = [];
-      history = [];
 
       for (let i = 0; i < pageCount; i++) {
         showProgress(`Loading page ${i + 1} of ${pageCount}...`);
@@ -141,6 +182,8 @@ export default function init() {
         const jpegBytes = pixmap.asJPEG(80);
         const blob = new Blob([jpegBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
         const url = URL.createObjectURL(blob);
+        pixmap.destroy();
+        page.destroy();
 
         pages.push({
           id: generateId(),
@@ -149,7 +192,7 @@ export default function init() {
           selected: false,
         });
       }
-
+      srcDoc.destroy();
       dropzone.classList.add('hidden');
       actions.classList.remove('hidden');
       updateUI();
@@ -225,7 +268,9 @@ export default function init() {
       // Ensure we have a PDFDocument instance for grafting pages
       const srcPdf = srcDoc.asPDF();
       if (!srcPdf) {
-        showMessage('Source document is not a PDF or could not be converted to PDF', { type: 'alert' });
+        showMessage('Source document is not a PDF or could not be converted to PDF', {
+          type: 'alert',
+        });
         return null;
       }
 
@@ -239,6 +284,9 @@ export default function init() {
       }
 
       const buf = outDoc.saveToBuffer(); // mupdf.Buffer
+      graftMap.destroy();
+      srcDoc.destroy();
+      outDoc.destroy();
       return buf.asUint8Array();
     } catch (err) {
       console.error(err);
@@ -259,7 +307,7 @@ export default function init() {
   });
 
   downloadSelectedBtn.addEventListener('click', async () => {
-    const pdfBytes = await generatePdfBytes(pages.filter(p => p.selected));
+    const pdfBytes = await generatePdfBytes(pages.filter((p) => p.selected));
     if (pdfBytes) {
       const fileName = originalFileName.replace(/\.pdf$/i, '') + '_selected.pdf';
       await downloadFile(pdfBytes, fileName, 'application/pdf');
@@ -272,7 +320,7 @@ export default function init() {
     if (pdfBytes) {
       router.goTo('pdf-viewer', {
         pdfBytes,
-        fileName: originalFileName.replace(/\.pdf$/i, '') + '_organized.pdf'
+        fileName: originalFileName.replace(/\.pdf$/i, '') + '_organized.pdf',
       });
     }
   });

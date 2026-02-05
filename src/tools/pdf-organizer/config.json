@@ -1,6 +1,6 @@
 {
   "name": "PDF Organizer",
-  "description": "Reorder, remove, or duplicate pages in your PDF documents.",
+  "description": "Merge, Reorder, remove, or duplicate pages in your PDF documents.",
   "icon": "layout-grid",
   "sectionId": "pdf",
   "order": 5
