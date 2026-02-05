@@ -1,11 +1,12 @@
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
-import mupdf from 'mupdf';
+import mupdf, { type PDFDocument } from 'mupdf';
 import Sortable from 'sortablejs';
 import router from '../../js/router.ts';
 
 interface PageItem {
   id: string;
+  pdf: number;
   originalIndex: number;
   thumbnailUrl: string;
   selected: boolean;
@@ -30,8 +31,8 @@ export default function init() {
 
   let pages: PageItem[] = [];
   let history: PageItem[][] = [];
-  let originalPdfBytes: Uint8Array<ArrayBufferLike> | null = null;
-  let originalFileName = 'document.pdf';
+  let originalPdfBytes: Uint8Array<ArrayBufferLike>[] = [];
+  let originalFileName: string[] = [];
 
   const generateId = () => crypto.randomUUID();
 
@@ -128,66 +129,42 @@ export default function init() {
       revokeThumbnails(pages);
       pages = [];
       history = [];
-      originalPdfBytes = null;
-      originalFileName = 'document.pdf';
+      originalPdfBytes = [];
+      originalFileName = [];
 
-      if (files.length > 1) {
-        showProgress('Merging PDFs...');
-        const outDoc = new mupdf.PDFDocument();
-        let pageInsertIndex = 0;
-
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          showProgress(`Loading file ${i + 1} of ${files.length}: ${file.name}`);
-          await yieldToUI();
-          const fileBuffer = await file.arrayBuffer();
-          const srcDoc = mupdf.Document.openDocument(new Uint8Array(fileBuffer));
-          const srcPdf = srcDoc.asPDF();
-
-          if (srcPdf) {
-            const graftMap = outDoc.newGraftMap();
-            const pageCount = srcDoc.countPages();
-            for (let pageNum = 0; pageNum < pageCount; pageNum++) {
-              graftMap.graftPage(pageInsertIndex, srcPdf, pageNum);
-              pageInsertIndex++;
-            }
-          }
-        }
-        originalPdfBytes = outDoc.saveToBuffer().asUint8Array();
-        originalFileName = 'merged.pdf';
-      } else {
-        const file = files[0];
-        originalPdfBytes = new Uint8Array<ArrayBuffer>(await file.arrayBuffer());
-        originalFileName = file.name;
-      }
-
-      if (!originalPdfBytes) {
-        showMessage('Failed to load PDF file(s).', { type: 'alert' });
-        return;
-      }
-
-      const srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes));
-      const pageCount = srcDoc.countPages();
-
-      for (let i = 0; i < pageCount; i++) {
-        showProgress(`Loading page ${i + 1} of ${pageCount}...`);
+      for (let k = 0; k < files.length; k++) {
+        const file = files[k];
+        showProgress(`Loading file ${k + 1} of ${files.length}: ${file.name}`);
         await yieldToUI();
 
-        const page = srcDoc.loadPage(i);
-        const scale = 0.8;
-        const matrix = mupdf.Matrix.scale(scale, scale);
-        const pixmap = page.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false);
-        const jpegBytes = pixmap.asJPEG(80);
-        const blob = new Blob([jpegBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
-        const url = URL.createObjectURL(blob);
+        originalPdfBytes[k] = new Uint8Array<ArrayBuffer>(await file.arrayBuffer());
+        originalFileName[k] = file.name;
 
-        pages.push({
-          id: generateId(),
-          originalIndex: i,
-          thumbnailUrl: url,
-          selected: false,
-        });
+        const srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes[k]));
+        const pageCount = srcDoc.countPages();
+
+        for (let i = 0; i < pageCount; i++) {
+          showProgress(`Loading page ${i + 1} of ${pageCount}...`);
+          await yieldToUI();
+
+          const page = srcDoc.loadPage(i);
+          const scale = 0.8;
+          const matrix = mupdf.Matrix.scale(scale, scale);
+          const pixmap = page.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false);
+          const jpegBytes = pixmap.asJPEG(80);
+          const blob = new Blob([jpegBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
+          const url = URL.createObjectURL(blob);
+
+          pages.push({
+            id: generateId(),
+            pdf: k,
+            originalIndex: i,
+            thumbnailUrl: url,
+            selected: false,
+          });
+        }
       }
+
       dropzone.classList.add('hidden');
       actions.classList.remove('hidden');
       updateUI();
@@ -232,8 +209,8 @@ export default function init() {
       revokeThumbnails(pages);
       pages = [];
       history = [];
-      originalPdfBytes = null;
-      originalFileName = 'document.pdf';
+      originalPdfBytes = [];
+      originalFileName = [];
       dropzone.classList.remove('hidden');
       actions.classList.add('hidden');
       pageList.innerHTML = '';
@@ -257,31 +234,27 @@ export default function init() {
     showProgress('Generating PDF...');
 
     try {
-      const srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes));
       const outDoc = new mupdf.PDFDocument();
+      const loadedDocs = [];
 
-      // Ensure we have a PDFDocument instance for grafting pages
-      const srcPdf = srcDoc.asPDF();
-      if (!srcPdf) {
-        showMessage('Source document is not a PDF or could not be converted to PDF', {
-          type: 'alert',
-        });
-        return null;
-      }
-
-      const graftMap = outDoc.newGraftMap();
       for (let i = 0; i < pagesToDownload.length; i++) {
         const pageItem = pagesToDownload[i];
         showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`);
+
+        let srcDoc;
+        if (loadedDocs[i] === undefined) {
+          srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes[pageItem.pdf]));
+          loadedDocs[i] = srcDoc;
+        } else {
+          srcDoc = loadedDocs[i];
+        }
+        const graftMap = outDoc.newGraftMap();
         let insertAt: number = outDoc.countPages();
-        graftMap.graftPage(insertAt, srcPdf, pageItem.originalIndex);
+        graftMap.graftPage(insertAt, srcDoc as PDFDocument, pageItem.originalIndex);
         await yieldToUI();
       }
 
       const buf = outDoc.saveToBuffer(); // mupdf.Buffer
-      graftMap.destroy();
-      srcDoc.destroy();
-      outDoc.destroy();
       return buf.asUint8Array();
     } catch (err) {
       console.error(err);
@@ -295,7 +268,7 @@ export default function init() {
   downloadBtn.addEventListener('click', async () => {
     const pdfBytes = await generatePdfBytes(pages);
     if (pdfBytes) {
-      const fileName = originalFileName.replace(/\.pdf$/i, '') + '_organized.pdf';
+      const fileName = originalFileName[0].replace(/\.pdf$/i, '') + '_organized.pdf';
       await downloadFile(pdfBytes, fileName, 'application/pdf');
       showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
     }
@@ -304,7 +277,7 @@ export default function init() {
   downloadSelectedBtn.addEventListener('click', async () => {
     const pdfBytes = await generatePdfBytes(pages.filter((p) => p.selected));
     if (pdfBytes) {
-      const fileName = originalFileName.replace(/\.pdf$/i, '') + '_selected.pdf';
+      const fileName = originalFileName[0].replace(/\.pdf$/i, '') + '_selected.pdf';
       await downloadFile(pdfBytes, fileName, 'application/pdf');
       showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
     }
@@ -315,7 +288,7 @@ export default function init() {
     if (pdfBytes) {
       router.goTo('pdf-viewer', {
         pdfBytes,
-        fileName: originalFileName.replace(/\.pdf$/i, '') + '_organized.pdf',
+        fileName: originalFileName[0].replace(/\.pdf$/i, '') + '_organized.pdf',
       });
     }
   });
