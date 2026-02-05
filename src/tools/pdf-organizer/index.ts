@@ -151,8 +151,6 @@ export default function init() {
               graftMap.graftPage(pageInsertIndex, srcPdf, pageNum);
               pageInsertIndex++;
             }
-            graftMap.destroy();
-            srcDoc.destroy();
           }
         }
         originalPdfBytes = outDoc.saveToBuffer().asUint8Array();
@@ -182,8 +180,6 @@ export default function init() {
         const jpegBytes = pixmap.asJPEG(80);
         const blob = new Blob([jpegBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
         const url = URL.createObjectURL(blob);
-        pixmap.destroy();
-        page.destroy();
 
         pages.push({
           id: generateId(),
