@@ -1,0 +1,7 @@
+{
+  "name": "PDF Unlocker",
+  "description": "Remove printing, copying, and editing restrictions from PDF files.",
+  "icon": "unlock",
+  "sectionId": "pdf",
+  "order": 6
+}
