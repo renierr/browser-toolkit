@@ -98,7 +98,8 @@ export async function flattenAsImage(
       await yieldToUI();
 
       const pdfBytes = pdfDoc.saveToBuffer('compress,compress-images,garbage');
-      await downloadFile(pdfBytes.asUint8Array(), name, 'application/pdf');
+      await downloadFile(new Uint8Array(pdfBytes.asUint8Array()), name, 'application/pdf');
+      pdfBytes.destroy();
 
       return name;
     } finally {

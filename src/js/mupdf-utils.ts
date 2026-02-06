@@ -17,10 +17,14 @@ export function addImageToPDFDocument(
 
   const contents = `q ${imgWidth} 0 0 ${imgHeight} 0 0 cm /${imgId} Do Q`;
   const outPage = pdfDoc.addPage([0, 0, imgWidth, imgHeight], 0, resources, contents);
-  pdfDoc.insertPage(-1, outPage);
 
-  outPage.destroy();
-  img.destroy();
-  resources.destroy();
-  pdfImage.destroy();
+  try {
+    pdfDoc.insertPage(-1, outPage);
+  } finally {
+    outPage.destroy();
+    img.destroy();
+    resources.destroy();
+    pdfImage.destroy();
+  }
+
 }
