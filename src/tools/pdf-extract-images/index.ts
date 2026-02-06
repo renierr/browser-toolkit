@@ -1,6 +1,6 @@
 import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
-import mupdf, { Image, type Matrix, PDFPage, type Rect } from 'mupdf';
+import mupdf, { Image, type Matrix, PDFPage, type Rect, type Document, type Pixmap } from 'mupdf';
 import { hashUint8Array } from '../../js/utils.ts';
 
 let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number; hash: string }> = [];
@@ -52,13 +52,14 @@ export default function init() {
 
 async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
   const images: Array<{ name: string; data: Uint8Array; width: number; height: number; hash: string }> = [];
+  let doc : Document | null = null;
   try {
-    const doc = mupdf.Document.openDocument(new Uint8Array(fileBuffer));
+    doc = mupdf.Document.openDocument(fileBuffer);
     const pageCount = doc.countPages();
 
     const imagePromises: Promise<void>[] = [];
 
-    const processPixmap = (pixmap: any, nameSuffix: string, pageIndex: number) => {
+    const processPixmap = (pixmap: Pixmap, nameSuffix: string, pageIndex: number) => {
       imagePromises.push(
         (async () => {
           try {
@@ -70,13 +71,15 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
 
             images.push({
               name: `${fileName.replace(/\.pdf$/i, '')}_p${pageIndex + 1}_${nameSuffix}.png`,
-              data: pngBytes,
+              data: new Uint8Array(pngBytes),
               width: pixmap.getWidth(),
               height: pixmap.getHeight(),
               hash,
             });
           } catch (e) {
             console.warn(`Failed to process image ${nameSuffix}`, e);
+          } finally {
+            pixmap.destroy();
           }
         })()
       );
@@ -114,6 +117,7 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
               console.debug(`Annotation of type ${annotType} ignored for image extraction`);
           }
         });
+        page.destroy();
 
       } catch (err) {
         console.warn(`[extract-images] failed for page ${pageIndex + 1}:`, err);
@@ -124,6 +128,8 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
 
   } catch (err) {
     console.error('[extract-images] Failed to open document:', err);
+  } finally {
+    doc?.destroy();
   }
 
   return images;
