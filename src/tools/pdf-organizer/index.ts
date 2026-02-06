@@ -1,6 +1,6 @@
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
-import mupdf, { type PDFDocument } from 'mupdf';
+import mupdf, { type PDFDocument, type Document } from 'mupdf';
 import Sortable from 'sortablejs';
 import router from '../../js/router.ts';
 
@@ -140,7 +140,7 @@ export default function init() {
         originalPdfBytes[k] = new Uint8Array<ArrayBuffer>(await file.arrayBuffer());
         originalFileName[k] = file.name;
 
-        const srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes[k]));
+        const srcDoc = mupdf.Document.openDocument(originalPdfBytes[k]);
         const pageCount = srcDoc.countPages();
 
         for (let i = 0; i < pageCount; i++) {
@@ -151,9 +151,12 @@ export default function init() {
           const scale = 0.8;
           const matrix = mupdf.Matrix.scale(scale, scale);
           const pixmap = page.toPixmap(matrix, mupdf.ColorSpace.DeviceRGB, false);
-          const jpegBytes = pixmap.asJPEG(80);
+          const jpegBytes = new Uint8Array(pixmap.asJPEG(80));
           const blob = new Blob([jpegBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
           const url = URL.createObjectURL(blob);
+
+          pixmap.destroy();
+          page.destroy();
 
           pages.push({
             id: generateId(),
@@ -163,6 +166,7 @@ export default function init() {
             selected: false,
           });
         }
+        srcDoc.destroy();
       }
 
       dropzone.classList.add('hidden');
@@ -233,9 +237,10 @@ export default function init() {
     if (pagesToDownload.length === 0 || !originalPdfBytes) return null;
     showProgress('Generating PDF...');
 
+    const loadedDocs : Document[] = [];
+    let outDoc: PDFDocument | null = null;
     try {
-      const outDoc = new mupdf.PDFDocument();
-      const loadedDocs = [];
+      outDoc = new mupdf.PDFDocument();
 
       for (let i = 0; i < pagesToDownload.length; i++) {
         const pageItem = pagesToDownload[i];
@@ -243,7 +248,7 @@ export default function init() {
 
         let srcDoc;
         if (loadedDocs[i] === undefined) {
-          srcDoc = mupdf.Document.openDocument(new Uint8Array(originalPdfBytes[pageItem.pdf]));
+          srcDoc = mupdf.Document.openDocument(originalPdfBytes[pageItem.pdf]);
           loadedDocs[i] = srcDoc;
         } else {
           srcDoc = loadedDocs[i];
@@ -251,16 +256,21 @@ export default function init() {
         const graftMap = outDoc.newGraftMap();
         let insertAt: number = outDoc.countPages();
         graftMap.graftPage(insertAt, srcDoc as PDFDocument, pageItem.originalIndex);
+        graftMap.destroy();
         await yieldToUI();
       }
 
       const buf = outDoc.saveToBuffer(); // mupdf.Buffer
-      return buf.asUint8Array();
+      const ret = new Uint8Array(buf.asUint8Array());
+      buf.destroy();
+      return ret;
     } catch (err) {
       console.error(err);
       showMessage('Failed to generate PDF.', { type: 'alert' });
       return null;
     } finally {
+      outDoc?.destroy();
+      loadedDocs.forEach((doc) => doc.destroy());
       hideProgress();
     }
   };
