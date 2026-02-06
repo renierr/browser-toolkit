@@ -1,7 +1,7 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">PDF Unlocker</h2>
-    <p class="text-base-content/70 mb-6">Remove printing, copying, and editing restrictions from your PDF files.</p>
+    <h2 class="card-title text-2xl font-bold mb-4">PDF Unlocker & Restriction Manager</h2>
+    <p class="text-base-content/70 mb-6">Remove or set printing, copying, and editing restrictions on your PDF files.</p>
 
     <div id="pdf-dropzone"
          class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8">
@@ -14,11 +14,52 @@
       <input type="file" id="pdf-file" class="hidden" accept="application/pdf" />
     </div>
 
+    <div id="restrictions-config" class="hidden mt-6 border-t pt-4">
+        <div id="no-restrictions-msg" class="alert alert-info mb-4 hidden">
+            <i data-lucide="info" class="w-4 h-4"></i>
+            <span>This document currently has no restrictions.</span>
+        </div>
+
+        <h3 class="font-bold mb-2">Configure Restrictions</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <label class="label cursor-pointer justify-start gap-2">
+                <input type="checkbox" id="perm-print" class="checkbox checkbox-primary" checked />
+                <span class="label-text">Allow Printing</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-2">
+                <input type="checkbox" id="perm-copy" class="checkbox checkbox-primary" checked />
+                <span class="label-text">Allow Copying Content</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-2">
+                <input type="checkbox" id="perm-edit" class="checkbox checkbox-primary" checked />
+                <span class="label-text">Allow Editing/Modifying</span>
+            </label>
+            <label class="label cursor-pointer justify-start gap-2">
+                <input type="checkbox" id="perm-annotate" class="checkbox checkbox-primary" checked />
+                <span class="label-text">Allow Annotating</span>
+            </label>
+        </div>
+        <div class="mt-4">
+            <label class="label">
+                <span class="label-text">Owner Password (to protect these settings)</span>
+            </label>
+            <input type="password" id="owner-password" placeholder="Leave empty for no password" class="input input-bordered w-full" />
+        </div>
+        <div class="flex flex-col gap-2 mt-6">
+            <button id="apply-btn" class="btn btn-primary">
+                <i data-lucide="shield-check" class="w-4 h-4 mr-2"></i> Apply & Process
+            </button>
+            <button id="remove-all-btn" class="btn btn-outline btn-secondary">
+                <i data-lucide="unlock" class="w-4 h-4 mr-2"></i> Remove All Restrictions
+            </button>
+        </div>
+    </div>
+
     <div id="processing-section" class="hidden text-center mt-8">
         <p class="text-lg font-medium mb-4">Your PDF is ready!</p>
         <div class="flex justify-center gap-4">
             <button id="download-btn" class="btn btn-primary" disabled>
-              <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download Unrestricted PDF
+              <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download PDF
             </button>
             <button id="start-over-btn" class="btn btn-ghost">
               <i data-lucide="refresh-ccw" class="w-4 h-4 mr-2"></i> Start Over
