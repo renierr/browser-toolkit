@@ -17,6 +17,7 @@ export default function init() {
   const permCopy = document.getElementById('perm-copy') as HTMLInputElement;
   const permEdit = document.getElementById('perm-edit') as HTMLInputElement;
   const permAnnotate = document.getElementById('perm-annotate') as HTMLInputElement;
+  const userPassword = document.getElementById('user-password') as HTMLInputElement;
   const ownerPassword = document.getElementById('owner-password') as HTMLInputElement;
 
   let originalPdfBytes: Uint8Array | null = null;
@@ -110,6 +111,7 @@ export default function init() {
       let saveOptions = 'incremental=false';
       if (!removeRestrictions) {
         let opwd = ownerPassword.value;
+        let upwd = userPassword.value;
 
         // Start with the mandatory reserved bits (7-8, 13-32) set to 1.
         // This is -3904 (0xFFFFF0C0) as a signed 32-bit integer.
@@ -142,9 +144,9 @@ export default function init() {
           showMessage('No owner password provided. Using "restricted" to enforce permissions.', { type: 'warning', timeoutMs: 15000 });
         }
 
-        if (opwd || permissionsMask !== -4) {
+        if (opwd || upwd || permissionsMask !== -4) {
           // Use (mask | 0) to ensure the signed integer string (e.g. "-4") is passed to MuPDF
-          saveOptions += `,encrypt=aes-256,owner-password=${opwd},user-password=,permissions=${permissionsMask | 0}`;
+          saveOptions += `,encrypt=aes-256,owner-password=${opwd},user-password=${upwd},permissions=${permissionsMask | 0}`;
         }
       }
 
@@ -192,6 +194,7 @@ export default function init() {
     downloadBtn.disabled = true;
     const fileInput = document.getElementById('pdf-file') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
+    userPassword.value = '';
     ownerPassword.value = '';
   });
 

@@ -1,7 +1,7 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">PDF Unlocker & Restriction Manager</h2>
-    <p class="text-base-content/70 mb-6">Remove or set printing, copying, and editing restrictions on your PDF files.</p>
+    <h2 class="card-title text-2xl font-bold mb-4">PDF Un-/locker & Restriction Manager</h2>
+    <p class="text-base-content/70 mb-6">User / Owner Passwort to protect the PDF<br>Remove or set printing, copying, and editing restrictions on your PDF files.</p>
 
     <div id="pdf-dropzone"
          class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8">
@@ -39,11 +39,19 @@
                 <span class="label-text">Allow Annotating</span>
             </label>
         </div>
-        <div class="mt-4">
-            <label class="label">
-                <span class="label-text">Owner Password (to protect these settings)</span>
-            </label>
-            <input type="password" id="owner-password" class="input input-bordered w-full" />
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            <div>
+                <label class="label">
+                    <span class="label-text">User Password (to open - leave empty for no restriction to open)</span>
+                </label>
+                <input type="password" id="user-password" class="input input-bordered w-full" placeholder="Optional" />
+            </div>
+            <div>
+                <label class="label">
+                    <span class="label-text">Owner Password (to protect settings)</span>
+                </label>
+                <input type="password" id="owner-password" class="input input-bordered w-full" placeholder="Optional" />
+            </div>
         </div>
         <div class="flex flex-col gap-2 mt-6">
             <button id="apply-btn" class="btn btn-primary">
