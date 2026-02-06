@@ -121,8 +121,7 @@ export default function init() {
         if (!permAnnotate.checked) permissionsMask &= ~(1 << 5);
 
         if (opwd || permissionsMask !== 0xFFFFFFFC) {
-          // Use AES-256 for modern encryption
-          saveOptions += `,encryption=aes-256,owner=${opwd},user=,permissions=${permissionsMask}`;
+          saveOptions += `,encrypt=aes-256,owner=${opwd},user=,permissions=${permissionsMask}`;
         }
       }
 
