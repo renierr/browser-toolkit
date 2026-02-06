@@ -1,6 +1,6 @@
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
-import mupdf from 'mupdf';
+import mupdf, { type Document } from 'mupdf';
 import { formatPdfDate, parseXmpMetadata, flattenXmpMetadata } from '../../js/pdf-utils.ts';
 
 // standard metadata info
@@ -44,9 +44,10 @@ export default function init() {
     const file = files[0];
 
     showProgress('Reading PDF metadata...');
+    let doc : Document | null = null;
     try {
       const buffer = await file.arrayBuffer();
-      const doc = mupdf.Document.openDocument(buffer);
+      doc = mupdf.Document.openDocument(buffer);
 
       const metadata: Record<string, any> = {
         'File Name': file.name,
@@ -58,7 +59,7 @@ export default function init() {
         const label = key.replace('info:', '');
         if (!metadata[label]) {
           try {
-            const value = doc.getMetaData(key);
+            const value = doc?.getMetaData(key);
             if (value) metadata[label] = formatPdfDate(value);
           } catch (e) {
             console.warn(`Could not read metadata key: ${key}`, e);
@@ -105,17 +106,20 @@ export default function init() {
                 }
               }
             }
+            xmp.destroy();
           }
+          root.destroy();
         } catch (e) {
           console.warn('Could not read XMP metadata', e);
         }
+        trailer.destroy();
       }
 
       if (tableBody) {
         tableBody.innerHTML = '';
         Object.entries(metadata).forEach(([key, value]) => {
           if (!value || value === 'undefined' || value === 'null') return;
-          
+
           if (typeof value === 'object' && value.type === 'image' && thumbnailContainer) {
               thumbnailContainer.classList.remove('hidden');
               const img = document.createElement('img');
@@ -142,6 +146,7 @@ export default function init() {
       console.error(err);
       showMessage('Failed to read PDF metadata.', { type: 'alert' });
     } finally {
+      doc?.destroy();
       hideProgress();
     }
   });
