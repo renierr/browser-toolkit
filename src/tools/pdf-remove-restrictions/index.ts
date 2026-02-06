@@ -109,19 +109,42 @@ export default function init() {
 
       let saveOptions = 'incremental=false';
       if (!removeRestrictions) {
-        const opwd = ownerPassword.value;
-        // Default permissions bitmask (all allowed except those we might unset)
-        // PDF permissions are a bit tricky: 0xFFFFFFFC allows everything.
-        // We start with a base that allows most things and then mask based on UI.
-        let permissionsMask = 0xFFFFFFFC;
+        let opwd = ownerPassword.value;
 
-        if (!permPrint.checked) permissionsMask &= ~(1 << 2);
-        if (!permEdit.checked) permissionsMask &= ~(1 << 3);
-        if (!permCopy.checked) permissionsMask &= ~(1 << 4);
-        if (!permAnnotate.checked) permissionsMask &= ~(1 << 5);
+        // Start with the mandatory reserved bits (7-8, 13-32) set to 1.
+        // This is -3904 (0xFFFFF0C0) as a signed 32-bit integer.
+        let permissionsMask = -3904;
 
-        if (opwd || permissionsMask !== 0xFFFFFFFC) {
-          saveOptions += `,encrypt=aes-256,owner=${opwd},user=,permissions=${permissionsMask}`;
+        // Add permissions based on checkboxes, including related Revision 3 bits
+        if (permPrint.checked) {
+          permissionsMask |= (1 << 2);  // Bit 3: Print
+          permissionsMask |= (1 << 11); // Bit 12: High quality print
+        }
+        if (permEdit.checked) {
+          permissionsMask |= (1 << 3);  // Bit 4: Modify
+          permissionsMask |= (1 << 10); // Bit 11: Assemble (rotate/delete pages)
+        }
+        if (permCopy.checked) {
+          permissionsMask |= (1 << 4);  // Bit 5: Copy
+        }
+        if (permAnnotate.checked) {
+          permissionsMask |= (1 << 5);  // Bit 6: Annotate
+          permissionsMask |= (1 << 8);  // Bit 9: Fill forms
+        }
+
+        // Always allow accessibility (Bit 10) as it's good practice
+        permissionsMask |= (1 << 9);
+
+        // If restrictions are set, an owner password is required for them to be effective.
+        // If the user didn't provide one, we use a default one to ensure enforcement.
+        if (!opwd && permissionsMask !== -4) {
+          opwd = 'restricted';
+          showMessage('No owner password provided. Using "restricted" to enforce permissions.', { type: 'warning', timeoutMs: 15000 });
+        }
+
+        if (opwd || permissionsMask !== -4) {
+          // Use (mask | 0) to ensure the signed integer string (e.g. "-4") is passed to MuPDF
+          saveOptions += `,encrypt=aes-256,owner-password=${opwd},user-password=,permissions=${permissionsMask | 0}`;
         }
       }
 
