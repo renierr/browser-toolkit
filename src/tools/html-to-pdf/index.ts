@@ -535,10 +535,25 @@ const initTextPageDefaults = (): void => {
   if (pageOrientationKey) textStyleDefaults.pageOrientation = pageOrientationKey;
 };
 
+const fetchFontAsBase64 = async (url: string): Promise<string> => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = (reader.result as string).split(',')[1];
+      resolve(base64String);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
 const generateAdvancedTextPdf = async (): Promise<void> => {
   try {
     const { jsPDF } = await import('jspdf');
     initTextPageDefaults();
+
     const pageSizeMm = [
       textStyleDefaults.pageSize[0] * 0.352778,
       textStyleDefaults.pageSize[1] * 0.352778,
@@ -547,7 +562,37 @@ const generateAdvancedTextPdf = async (): Promise<void> => {
       textStyleDefaults.pageOrientation === 'landscape' || textStyleDefaults.pageOrientation === 'l'
         ? 'l'
         : 'p';
-    const pdf = new jsPDF(orientation, 'mm', pageSizeMm);
+
+    const pdf = new jsPDF({
+      orientation,
+      unit: 'mm',
+      format: pageSizeMm,
+      putOnlyUsedFonts: true
+    });
+
+    // Load and register fonts for Unicode support
+    try {
+      const [reg, bold, ital, bi] = await Promise.all([
+        fetchFontAsBase64('./DejaVuSans.ttf'),
+        fetchFontAsBase64('./DejaVuSans-Bold.ttf'),
+        fetchFontAsBase64('./DejaVuSans-Oblique.ttf'),
+        fetchFontAsBase64('./DejaVuSans-BoldOblique.ttf'),
+      ]);
+      pdf.addFileToVFS('DejaVuSans.ttf', reg);
+      pdf.addFont('DejaVuSans.ttf', 'dejavusans', 'normal');
+
+      pdf.addFileToVFS('DejaVuSans-Bold.ttf', bold);
+      pdf.addFont('DejaVuSans-Bold.ttf', 'dejavusans', 'bold');
+
+      pdf.addFileToVFS('DejaVuSans-Oblique.ttf', ital);
+      pdf.addFont('DejaVuSans-Oblique.ttf', 'dejavusans', 'italic');
+
+      pdf.addFileToVFS('DejaVuSans-BoldOblique.ttf', bi);
+      pdf.addFont('DejaVuSans-BoldOblique.ttf', 'dejavusans', 'bolditalic');
+    } catch (e) {
+      console.error('Failed to load dejavusans font:', e);
+    }
+
     pdf.setFont(textStyleDefaults.fontFamily.toLowerCase(), 'normal');
     pdf.setFontSize(textStyleDefaults.fontSize);
 
@@ -879,32 +924,37 @@ const generatePrintCSS = (): string => {
     .join('\n  ');
 
   return `
-  @page { 
-    margin: 20mm; 
-    size: ${pageSize[0]}pt ${pageSize[1]}pt ${textStyleDefaults.pageOrientation}; 
+  @font-face {
+    font-family: 'dejavusans';
+    src: url('./DejaVuSans.ttf') format('truetype');
   }
-  
+
+  @page {
+    margin: 20mm;
+    size: ${pageSize[0]}pt ${pageSize[1]}pt ${textStyleDefaults.pageOrientation};
+  }
+
   body {
-    font-family: ${fontFamily}, system-ui, sans-serif;
-    font-size: ${fontSize}pt; line-height: ${fontSize * 1.1}pt; 
-    color: #000; 
-    padding: 0; 
+    font-family: '${fontFamily}', system-ui, sans-serif;
+    font-size: ${fontSize}pt; line-height: ${fontSize * 1.1}pt;
+    color: #000;
+    padding: 0;
     margin: 0;
     background: white;
     width: 100%;
     height: 100%;
     print-color-adjust: exact !important;
   }
-  
+
   @media print {
     .print-instructions {
       display: none !important;
     }
   }
-  
+
   /* Headers */
   ${headerCSS}
-  
+
   /* Text formatting */
   strong, b { font-weight: bold !important; }
   em, i { font-style: italic !important; }
@@ -912,32 +962,32 @@ const generatePrintCSS = (): string => {
   s { text-decoration: line-through !important; }
   sup { vertical-align: super; font-size: 0.75em; }
   sub { vertical-align: sub; font-size: 0.75em; }
-  
+
   /* Quill-specific sizes */
   .ql-size-small { font-size: 10pt !important; }
   .ql-size-large { font-size: 18pt !important; }
   .ql-size-huge { font-size: 32pt !important; }
-  
+
   /* Alignment */
   .ql-align-center { text-align: center; }
   .ql-align-right { text-align: right; }
   .ql-align-justify { text-align: justify; }
-  
+
   /* Indentation - generate dynamically */
   ${Array.from({ length: 8 }, (_, i) => `.ql-indent-${i + 1} { padding-left: ${(i + 1) * 20}pt; }`).join('\n  ')}
-  
+
   /* Lists, blocks, and elements */
   ul, ol { margin: 8pt 0; padding-left: 20pt; }
   li { margin: 4pt 0; }
   p { margin: 6pt 0; }
   a { color: #0066cc; text-decoration: underline; }
   img { max-width: 100%; height: auto; margin: 8pt 0; }
-  
+
   blockquote {
     margin: 12pt 20pt; padding: 8pt 16pt; border-left: 4pt solid #ddd;
     background: #f9f9f9; font-style: italic;
   }
-  
+
   pre, .ql-code-block-container {
     background: #f5f5f5; border: 1pt solid #ddd; border-radius: 4pt;
     padding: 12pt; font-family: 'Courier New', Courier, monospace;
@@ -1163,13 +1213,13 @@ function mountHtmlToPdfTool() {
         top: 50% !important;
         transform: translate(-50%, -50%) !important;
       }
-      
+
       .ql-tooltip.ql-editing {
         left: 50% !important;
         top: 50% !important;
         transform: translate(-50%, -50%) !important;
       }
-      
+
       .ql-tooltip input[type=text] {
         width: 220px !important;
         padding: 8px 10px !important;
@@ -1178,7 +1228,7 @@ function mountHtmlToPdfTool() {
         font-size: 14px !important;
         margin-bottom: 8px !important;
       }
-      
+
       .ql-tooltip .ql-action,
       .ql-tooltip .ql-remove {
         margin: 0 2px !important;
@@ -1189,39 +1239,39 @@ function mountHtmlToPdfTool() {
         font-size: 12px !important;
         text-decoration: none !important;
       }
-      
+
       .ql-tooltip .ql-action {
         background: #007bff !important;
         color: white !important;
       }
-      
+
       .ql-tooltip .ql-action:hover {
         background: #0056b3 !important;
       }
-      
+
       .ql-tooltip .ql-remove {
         background: #6c757d !important;
         color: white !important;
       }
-      
+
       .ql-tooltip .ql-remove:hover {
         background: #545b62 !important;
       }
-      
+
       /* Ensure tooltips are always visible and don't get cut off by overflow */
       #editor {
         overflow: visible !important;
       }
-      
+
       .ql-container {
         overflow: visible !important;
       }
-      
+
       .ql-editor {
         overflow-y: auto !important;
         overflow-x: visible !important;
       }
-      
+
       /* Fix for link preview */
       .ql-tooltip[data-mode="link"]::before {
         content: "Visit URL:" !important;
