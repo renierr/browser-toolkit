@@ -97,8 +97,8 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0
       tesseract.js-core:
-        specifier: ^6.1.2
-        version: 6.1.2
+        specifier: ^7.0.0
+        version: 7.0.0
 
   src/tools/qr-generator:
     dependencies:
@@ -2763,9 +2763,6 @@ packages:
     resolution: {integrity: sha512-jTwoImyr/QbOWFFso3YoU3ik0jBBDJ6JTOQiy/J2YxVJdZCc+5u7skhNwiOR3FQIygFqVUPHl7qbbxtjW2K3Qg==}
     engines: {node: '>=10'}
     hasBin: true
-
-  tesseract.js-core@6.1.2:
-    resolution: {integrity: sha512-pv4GjmramjdObhDyR1q85Td8X60Puu/lGQn7Kw2id05LLgHhAcWgnz6xSdMCSxBMWjQDmMyDXPTC2aqADdpiow==}
 
   tesseract.js-core@7.0.0:
     resolution: {integrity: sha512-WnNH518NzmbSq9zgTPeoF8c+xmilS8rFIl1YKbk/ptuuc7p6cLNELNuPAzcmsYw450ca6bLa8j3t0VAtq435Vw==}
@@ -5867,8 +5864,6 @@ snapshots:
       acorn: 8.15.0
       commander: 2.20.3
       source-map-support: 0.5.21
-
-  tesseract.js-core@6.1.2: {}
 
   tesseract.js-core@7.0.0: {}
 

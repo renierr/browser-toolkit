@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "dependencies": {
     "tesseract.js": "^7.0.0",
-    "tesseract.js-core": "^6.1.2"
+    "tesseract.js-core": "^7.0.0"
   }
 }
