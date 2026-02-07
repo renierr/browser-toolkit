@@ -2,6 +2,8 @@ import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file
 import { showMessage } from '../../js/ui';
 import Tesseract from 'tesseract.js';
 
+const TESSERACT_LANGS = ['deu','eng'];
+
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   const statusContainer = document.getElementById('status-container');
@@ -48,7 +50,7 @@ export default function init() {
 
     try {
       if (!worker) {
-        worker = await Tesseract.createWorker('eng', 1, {
+        worker = await Tesseract.createWorker(TESSERACT_LANGS, 1, {
           logger: (m) => {
             if (m.status === 'recognizing text') {
               const progress = Math.round(m.progress * 100);
@@ -62,7 +64,9 @@ export default function init() {
         });
       }
 
-      const { data: { text } } = await worker.recognize(file);
+      const {
+        data: { text },
+      } = await worker.recognize(file);
 
       outputText.value = text;
       resultContainer?.classList.remove('hidden');
