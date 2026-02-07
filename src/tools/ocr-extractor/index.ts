@@ -1,10 +1,9 @@
-import { createWorker } from 'tesseract.js';
 import { setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
+import Tesseract from 'tesseract.js';
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
-  const dropzone = document.getElementById('dropzone');
-  const imageInput = document.getElementById('image-input') as HTMLInputElement;
   const statusContainer = document.getElementById('status-container');
   const statusText = document.getElementById('status-text');
   const progressPercent = document.getElementById('progress-percent');
@@ -48,7 +47,7 @@ export default function init() {
 
     try {
       if (!worker) {
-        worker = await createWorker('eng', 1, {
+        worker = await Tesseract.createWorker('eng', 1, {
           logger: (m) => {
             if (m.status === 'recognizing text') {
               const progress = Math.round(m.progress * 100);

@@ -1,28 +1,32 @@
-<div class="flex flex-col gap-6 max-w-4xl mx-auto">
-  <div class="card bg-base-100 shadow-xl border border-base-300">
-    <div class="card-body">
-      <h2 class="card-title flex items-center gap-2">
-        <i data-lucide="scan-text" class="w-6 h-6"></i>
-        OCR Text Extractor
-      </h2>
-      <p class="text-sm opacity-70">Upload an image to extract text using Tesseract.js. Processing happens entirely in your browser.</p>
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">
+      <i data-lucide="scan-text" class="w-6 h-6"></i>
+      OCR Text Extractor
+    </h2>
+    <p class="text-sm opacity-70 mb-6">
+      Upload an image to extract text using Tesseract.js. <br>
+      Processing happens entirely in your browser.
+    </p>
 
-      <div id="dropzone" class="mt-4 border-2 border-dashed border-base-300 rounded-xl p-8 flex flex-col items-center justify-center gap-4 hover:border-primary transition-colors cursor-pointer bg-base-200/50">
-        <i data-lucide="upload-cloud" class="w-12 h-12 opacity-30"></i>
-        <div class="text-center">
-          <p class="font-semibold">Click to upload or drag and drop</p>
-          <p class="text-xs opacity-50">PNG, JPG, WebP</p>
+    <div id="dropzone"
+         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+      <div class="flex flex-col items-center gap-2">
+        <div class="text-base-content/30 text-4xl">
+          <i data-lucide="upload-cloud"></i>
         </div>
-        <input type="file" id="image-input" class="hidden" accept="image/*" />
+        <p class="text-lg font-medium">Click or drag images here</p>
+        <p class="text-sm text-base-content/50">Supports PNG, JPEG, WebP, ...</p>
       </div>
+      <input type="file" id="image-input" class="hidden" accept="image/*" />
+    </div>
 
-      <div id="status-container" class="hidden mt-4">
-        <div class="flex items-center justify-between mb-2">
-          <span id="status-text" class="text-sm font-medium">Initializing...</span>
-          <span id="progress-percent" class="text-xs opacity-70">0%</span>
-        </div>
-        <progress id="ocr-progress" class="progress progress-primary w-full" value="0" max="100"></progress>
+    <div id="status-container" class="hidden mt-4">
+      <div class="flex items-center justify-between mb-2">
+        <span id="status-text" class="text-sm font-medium">Initializing...</span>
+        <span id="progress-percent" class="text-xs opacity-70">0%</span>
       </div>
+      <progress id="ocr-progress" class="progress progress-primary w-full" value="0" max="100"></progress>
     </div>
   </div>
 
@@ -30,8 +34,8 @@
     <div class="card bg-base-100 shadow-xl border border-base-300">
       <div class="card-body">
         <h3 class="card-title text-sm">Preview</h3>
-        <div class="bg-base-200 rounded-lg overflow-hidden flex items-center justify-center min-h-[200px]">
-          <img id="preview-img" class="max-w-full max-h-[400px] object-contain" />
+        <div class="bg-base-200 rounded-lg overflow-hidden flex items-center justify-center min-h-50">
+          <img id="preview-img" class="max-w-full max-h-100 object-contain" alt="upload preview"/>
         </div>
       </div>
     </div>
@@ -39,13 +43,14 @@
     <div class="card bg-base-100 shadow-xl border border-base-300">
       <div class="card-body">
         <div class="flex justify-between items-center mb-2">
-          <h3 class="card-title text-sm">Extracted Text</h3>
+          <label for="output-text" class="h3 card-title text-sm">Extracted Text</label>
           <button id="copy-btn" class="btn btn-ghost btn-xs gap-1">
             <i data-lucide="copy" class="w-3 h-3"></i>
             Copy
           </button>
         </div>
-        <textarea id="output-text" class="textarea textarea-bordered h-[300px] font-mono text-sm leading-relaxed" placeholder="Text will appear here..."></textarea>
+        <textarea id="output-text" class="textarea textarea-bordered h-87.5 w-full font-mono text-sm leading-relaxed"
+                                                   placeholder="Text will appear here..."></textarea>
       </div>
     </div>
   </div>
