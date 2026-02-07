@@ -23,7 +23,7 @@ export default function init() {
     }
   };
 
-  const processImage = async (file: File) => {
+  const processImage = async (file: Blob) => {
     if (!file.type.startsWith('image/')) {
       showMessage('Please upload an image file.', { type: 'alert' });
       return;
@@ -90,7 +90,7 @@ export default function init() {
     const imageBlob = await retrieveImageBlobFromClipboard();
     console.log('image type: ', imageBlob?.type);
     if (imageBlob) {
-      processImage(new File([imageBlob], 'image.png'));
+      processImage(imageBlob);
     } else {
       showMessage('No image found in clipboard.', { type: 'info', timeoutMs: 5000 });
     }
