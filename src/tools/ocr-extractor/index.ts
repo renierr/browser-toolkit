@@ -1,8 +1,10 @@
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 import Tesseract from 'tesseract.js';
+import tesseractWorker from 'tesseract.js/dist/worker.min.js?url';
+import tesseractWasm from 'tesseract.js-core/tesseract-core-simd.wasm.js?url'
 
-const TESSERACT_LANGS = ['deu','eng'];
+const TESSERACT_LANGS = ['deu', 'eng'];
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -51,6 +53,9 @@ export default function init() {
     try {
       if (!worker) {
         worker = await Tesseract.createWorker(TESSERACT_LANGS, 1, {
+          workerPath: tesseractWorker,
+          corePath: tesseractWasm,
+          langPath: './lib/tesseract/lang-data',
           logger: (m) => {
             if (m.status === 'recognizing text') {
               const progress = Math.round(m.progress * 100);
@@ -92,7 +97,6 @@ export default function init() {
     e.preventDefault();
     e.stopPropagation();
     const imageBlob = await retrieveImageBlobFromClipboard();
-    console.log('image type: ', imageBlob?.type);
     if (imageBlob) {
       processImage(imageBlob);
     } else {
