@@ -1,5 +1,6 @@
 import jsQR from 'jsqr';
 import { showMessage } from '../../js/ui.ts';
+import { retrieveImageBlobFromClipboard } from '../../js/file-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -217,23 +218,17 @@ export default function init() {
 
   pasteBtn?.addEventListener('click', async () => {
     try {
-      // Try Clipboard API first (modern browsers)
-      if (navigator.clipboard && navigator.clipboard.read) {
-        const items = await navigator.clipboard.read();
-        for (const item of items) {
-          const imageTypes = item.types.filter(type => type.startsWith('image/'));
-          if (imageTypes.length > 0) {
-            const blob = await item.getType(imageTypes[0]);
-            const reader = new FileReader();
-            reader.onload = (event) => {
-              const img = new Image();
-              scanImage(img);
-              img.src = event.target?.result as string;
-            };
-            reader.readAsDataURL(blob);
-            return;
-          }
-        }
+      const imageBlob = await retrieveImageBlobFromClipboard();
+      if (imageBlob) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          scanImage(img);
+          img.src = event.target?.result as string;
+        };
+        reader.readAsDataURL(imageBlob);
+        return;
+      } else if (navigator.clipboard) {
         showMessage('No image found in clipboard.', { type: 'info' });
       } else {
         // Fallback: show paste target for mobile/older browsers

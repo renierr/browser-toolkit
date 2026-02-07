@@ -1,4 +1,4 @@
-import { setupFileDropzone } from '../../js/file-utils';
+import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 import Tesseract from 'tesseract.js';
 
@@ -12,6 +12,7 @@ export default function init() {
   const previewImg = document.getElementById('preview-img') as HTMLImageElement;
   const outputText = document.getElementById('output-text') as HTMLTextAreaElement;
   const copyBtn = document.getElementById('copy-btn');
+  const pasteBtn = document.getElementById('paste-btn');
 
   let worker: Tesseract.Worker | null = null;
 
@@ -80,6 +81,18 @@ export default function init() {
   setupFileDropzone('dropzone', 'image-input', (files) => {
     if (files.length > 0) {
       processImage(files[0]);
+    }
+  });
+
+  pasteBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const imageBlob = await retrieveImageBlobFromClipboard();
+    console.log('image type: ', imageBlob?.type);
+    if (imageBlob) {
+      processImage(new File([imageBlob], 'image.png'));
+    } else {
+      showMessage('No image found in clipboard.', { type: 'info', timeoutMs: 5000 });
     }
   });
 
