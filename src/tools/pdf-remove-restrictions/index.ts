@@ -4,10 +4,8 @@ import mupdf from 'mupdf';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
-  const downloadBtn = document.getElementById('download-btn') as HTMLButtonElement;
   const startOverBtn = document.getElementById('start-over-btn') as HTMLButtonElement;
   const dropzone = document.getElementById('pdf-dropzone') as HTMLDivElement;
-  const processingSection = document.getElementById('processing-section') as HTMLDivElement;
   const restrictionsConfig = document.getElementById('restrictions-config') as HTMLDivElement;
   const noRestrictionsMsg = document.getElementById('no-restrictions-msg') as HTMLDivElement;
   const applyBtn = document.getElementById('apply-btn') as HTMLButtonElement;
@@ -22,7 +20,6 @@ export default function init() {
 
   let originalPdfBytes: Uint8Array | null = null;
   let originalFileName = 'document.pdf';
-  let processedPdfBytes: Uint8Array | null = null;
   let password : string | null = null;
   let modified : boolean = false;
 
@@ -85,7 +82,7 @@ export default function init() {
     }
   });
 
-  async function processPdf(removeRestrictions: boolean) {
+  async function processAndDownloadPdf(removeRestrictions: boolean) {
     if (!originalPdfBytes) return;
     showProgress('Processing PDF...');
 
@@ -152,16 +149,16 @@ export default function init() {
 
       console.log(`Saving PDF with options: ${saveOptions}`);
       const buffer = outDoc.saveToBuffer(saveOptions);
-      processedPdfBytes = new Uint8Array(buffer.asUint8Array());
+      const processedPdfBytes = new Uint8Array(buffer.asUint8Array());
       buffer.destroy();
       doc.destroy();
       outDoc.destroy();
 
-      restrictionsConfig.classList.add('hidden');
-      processingSection.classList.remove('hidden');
-      downloadBtn.disabled = false;
-
+      const suffix = modified ? '_modified.pdf' : '_unrestricted.pdf';
+      const fileName = originalFileName.replace(/\.pdf$/i, '') + suffix;
+      await downloadFile(processedPdfBytes, fileName, 'application/pdf');
       showMessage(removeRestrictions ? 'Restrictions removed.' : 'Restrictions applied.', { timeoutMs: 3000 });
+      showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
     } catch (err) {
       console.error(err);
       showMessage('An error occurred while processing the PDF.', { type: 'alert' });
@@ -170,28 +167,23 @@ export default function init() {
     }
   }
 
-  applyBtn.addEventListener('click', () => processPdf(false));
-  removeAllBtn.addEventListener('click', () => processPdf(true));
-
-  downloadBtn.addEventListener('click', async () => {
-    if (processedPdfBytes) {
-      const suffix = modified ? '_modified.pdf' : '_unrestricted.pdf';
-      const fileName = originalFileName.replace(/\.pdf$/i, '') + suffix;
-      await downloadFile(processedPdfBytes, fileName, 'application/pdf');
-      showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
-    }
+  applyBtn.addEventListener('click', () => {
+    processAndDownloadPdf(false)
   });
+
+
+  removeAllBtn.addEventListener('click', () => {
+    processAndDownloadPdf(true)
+  });
+
 
   startOverBtn.addEventListener('click', () => {
     password = null;
     originalPdfBytes = null;
-    processedPdfBytes = null;
     originalFileName = 'document.pdf';
     dropzone.classList.remove('hidden');
     restrictionsConfig.classList.add('hidden');
-    processingSection.classList.add('hidden');
     noRestrictionsMsg.classList.add('hidden');
-    downloadBtn.disabled = true;
     const fileInput = document.getElementById('pdf-file') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
     userPassword.value = '';
@@ -201,6 +193,5 @@ export default function init() {
   return () => {
     password = null;
     originalPdfBytes = null;
-    processedPdfBytes = null;
   };
 }
