@@ -1,0 +1,7 @@
+{
+  "name": "OCR Text Extractor",
+  "description": "Extract text from images using Tesseract",
+  "icon": "scan-text",
+  "sectionId": "images",
+  "order": 10
+}

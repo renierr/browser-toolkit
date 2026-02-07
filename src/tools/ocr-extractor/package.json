@@ -1,0 +1,7 @@
+{
+  "name": "ocr-extractor",
+  "version": "1.0.0",
+  "dependencies": {
+    "tesseract.js": "^7.0.0"
+  }
+}
