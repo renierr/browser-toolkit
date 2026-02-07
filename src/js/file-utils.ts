@@ -157,16 +157,20 @@ export async function downloadFile(
   }
 }
 
-export async function retrieveImageBlobFromClipboard() {
+export async function retrieveBlobFromClipboard(fileType: string) {
   if (navigator.clipboard && navigator.clipboard.read) {
     const items = await navigator.clipboard.read();
     for (const item of items) {
-      const imageTypes = item.types.filter((type) => type.startsWith('image/'));
-      if (imageTypes.length > 0) {
-        const blob = await item.getType(imageTypes[0]);
+      const itemTypes = item.types.filter((type) => type.startsWith(fileType));
+      if (itemTypes.length > 0) {
+        const blob = await item.getType(itemTypes[0]);
         if (!blob) continue;
         return blob;
       }
     }
   }
+}
+
+export async function retrieveImageBlobFromClipboard() {
+  return retrieveBlobFromClipboard('image/');
 }
