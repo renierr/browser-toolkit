@@ -83,7 +83,6 @@ export default function init() {
   const enterCropMode = () => {
     baseSnapshot = ctx.getImageData(0, 0, elements.canvas.width, elements.canvas.height);
     elements.cropActions.classList.remove('hidden');
-    elements.cropActions.classList.add('flex');
 
     // Init Rect (80% centered)
     const w = elements.canvas.width * 0.8;

@@ -50,10 +50,11 @@
 
         <div class="flex-none gap-2">
           <button class="btn btn-sm btn-ghost text-error" id="btn-reset">
-            <i data-lucide="restart" class="w-4 h-4 mr-2"></i> Resetstart over
+            <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+            Start Over
           </button>
           <button class="btn btn-sm btn-primary" id="btn-download">
-            <i data-lucide="download" class="w-4 h-4 mr-2"></i> Save
+            <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download
           </button>
         </div>
       </div>
@@ -61,19 +62,19 @@
       <div class="relative flex-1 bg-base-200/50 rounded-xl overflow-hidden flex items-center justify-center border border-base-300 shadow-inner select-none" id="canvas-wrapper">
         <canvas id="editor-canvas" class="shadow-lg touch-none max-w-full max-h-full cursor-crosshair"></canvas>
 
-        <div id="crop-actions" class="absolute bottom-4 z-30 hidden gap-2">
+        <div id="crop-actions" class="absolute bottom-4 z-30 hidden gap-2 flex items-center justify-center">
           <button id="btn-cancel-crop" class="btn btn-circle btn-sm btn-error text-white shadow-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            <i data-lucide="x" class="w-6 h-6"></i>
           </button>
           <button id="btn-apply-crop" class="btn btn-md btn-success text-white shadow-lg gap-2 px-6">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <i data-lucide="save" class="w-4 h-4 mr-2"></i>
             Apply Crop
           </button>
         </div>
       </div>
 
       <div class="text-center text-xs text-base-content/50 pb-2" id="hint-text">
-        Wähle ein Werkzeug und ziehe auf dem Bild.
+        Choose Tool to redact
       </div>
     </div>
   </div>

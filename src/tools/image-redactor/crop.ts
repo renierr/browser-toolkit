@@ -1,6 +1,6 @@
 import type { Rect, Point, HandleType } from './types';
 
-const HANDLE_SIZE = 24; // Hitbox Größe
+const HANDLE_SIZE = 24;
 const MIN_SIZE = 50;
 
 export function getHitHandle(pos: Point, rect: Rect): HandleType {
@@ -14,7 +14,6 @@ export function getHitHandle(pos: Point, rect: Rect): HandleType {
   if (isHit(rect.x, rect.y + rect.h)) return 'bl';
   if (isHit(rect.x + rect.w, rect.y + rect.h)) return 'br';
 
-  // Check 'Inside' für Move
   if (
     pos.x > rect.x + half &&
     pos.x < rect.x + rect.w - half &&
@@ -36,29 +35,31 @@ export function resizeRect(
   const newRect = { ...startRect };
 
   if (handle === 'move') {
-    newRect.x += delta.x;
-    newRect.y += delta.y;
-    // Optional: Hier Bounds check einfügen, damit man nicht aus dem Bild schiebt
-  } else if (handle) {
-    if (handle.includes('l')) {
-      newRect.x += delta.x;
-      newRect.w -= delta.x;
-    }
-    if (handle.includes('r')) {
-      newRect.w += delta.x;
-    }
-    if (handle.includes('t')) {
-      newRect.y += delta.y;
-      newRect.h -= delta.y;
-    }
-    if (handle.includes('b')) {
-      newRect.h += delta.y;
-    }
+    newRect.x = Math.max(0, Math.min(startRect.x + delta.x, bounds.w - startRect.w));
+    newRect.y = Math.max(0, Math.min(startRect.y + delta.y, bounds.h - startRect.h));
+    return newRect;
   }
 
-  // Constraints erzwingen (Min Size & Negativ-Werte verhindern)
-  if (newRect.w < MIN_SIZE) newRect.w = MIN_SIZE;
-  if (newRect.h < MIN_SIZE) newRect.h = MIN_SIZE;
+  if (handle) {
+    if (handle.includes('l')) {
+      const maxX = startRect.x + startRect.w - MIN_SIZE;
+      newRect.x = Math.max(0, Math.min(startRect.x + delta.x, maxX));
+      newRect.w = startRect.x + startRect.w - newRect.x;
+    }
+    if (handle.includes('r')) {
+      const maxW = bounds.w - startRect.x;
+      newRect.w = Math.max(MIN_SIZE, Math.min(startRect.w + delta.x, maxW));
+    }
+    if (handle.includes('t')) {
+      const maxY = startRect.y + startRect.h - MIN_SIZE;
+      newRect.y = Math.max(0, Math.min(startRect.y + delta.y, maxY));
+      newRect.h = startRect.y + startRect.h - newRect.y;
+    }
+    if (handle.includes('b')) {
+      const maxH = bounds.h - startRect.y;
+      newRect.h = Math.max(MIN_SIZE, Math.min(startRect.h + delta.y, maxH));
+    }
+  }
 
   return newRect;
 }
