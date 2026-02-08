@@ -54,10 +54,19 @@ export default function init() {
   const updateUI = () => {
     elements.btnUndo.disabled = !history.canUndo();
     elements.btnRedo.disabled = !history.canRedo();
-    elements.hint.textContent =
-      state.activeTool === 'crop'
-        ? "Use edges to crop and click 'Apply' to submit."
-        : 'Mark areas to redact.';
+
+    if (state.activeTool === 'move') {
+      elements.canvas.classList.remove('touch-none');
+      elements.canvas.style.cursor = 'move';
+      elements.hint.textContent = 'Scroll or zoom the image.';
+    } else {
+      elements.canvas.classList.add('touch-none');
+      elements.canvas.style.cursor = state.activeTool === 'crop' ? 'default' : 'crosshair';
+      elements.hint.textContent =
+        state.activeTool === 'crop'
+          ? "Use edges to crop and click 'Apply' to submit."
+          : 'Mark areas to redact.';
+    }
   };
 
   const loadImage = (file: Blob) => {
@@ -121,13 +130,17 @@ export default function init() {
     }
     baseSnapshot = null;
 
-    // Reset to pixelate tool
-    const pixBtn = document.querySelector('[data-tool="pixelate"]') as HTMLElement;
-    if (pixBtn) pixBtn.click();
+    // Reset to pixelate tool if we were in crop
+    if (state.activeTool === 'crop') {
+      const pixBtn = document.querySelector('[data-tool="pixelate"]') as HTMLElement;
+      if (pixBtn) pixBtn.click();
+    }
   };
 
   // --- Event Handlers ---
   const onPointerDown = (e: PointerEvent) => {
+    if (state.activeTool === 'move') return;
+
     elements.canvas.setPointerCapture(e.pointerId);
     state.isDragging = true;
     const pos = getPos(e);
@@ -146,6 +159,8 @@ export default function init() {
   };
 
   const onPointerMove = (e: PointerEvent) => {
+    if (state.activeTool === 'move') return;
+
     const pos = getPos(e);
 
     // Cursor Logic
@@ -181,6 +196,8 @@ export default function init() {
   };
 
   const onPointerUp = (e: PointerEvent) => {
+    if (state.activeTool === 'move') return;
+
     elements.canvas.releasePointerCapture(e.pointerId);
     state.isDragging = false;
 
