@@ -288,18 +288,7 @@ export default function init() {
           x: state.dragStartRect.x + dx,
           y: state.dragStartRect.y + dy,
         };
-
-        ctx.drawImage(baseSnapshot, 0, 0);
-        applyEffect(ctx, elements.canvas, { ...state.lastOperation, rect: newRect });
-
-        // Draw outline to indicate selection
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(newRect.x, newRect.y, newRect.w, newRect.h);
-        ctx.strokeStyle = '#000';
-        ctx.setLineDash([5, 5]);
-        ctx.strokeRect(newRect.x, newRect.y, newRect.w, newRect.h);
-        ctx.setLineDash([]);
+        drawRedactPreview(ctx, baseSnapshot, newRect);
       } else if (baseSnapshot) {
         const w = pos.x - state.dragStartMouse.x;
         const h = pos.y - state.dragStartMouse.y;
