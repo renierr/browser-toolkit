@@ -117,11 +117,21 @@ export function applyEffect(
 
     if (pattern) {
       ctx.save();
-      ctx.globalAlpha = Math.max(0.1, intensity / 100);
+
+      ctx.beginPath();
+      ctx.rect(x, y, w, h);
+      ctx.clip();
+      ctx.globalAlpha = 1.0;
+
+      const scale = 1 + (intensity / 100) * 3;
+
+      ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = pattern;
-      // Translate so the pattern is anchored to the rect (prevents "swimming" noise)
+
       ctx.translate(x, y);
-      ctx.fillRect(0, 0, w, h);
+      ctx.scale(scale, scale);
+      ctx.fillRect(0, 0, w / scale + 1, h / scale + 1);
+
       ctx.restore();
     }
   }
