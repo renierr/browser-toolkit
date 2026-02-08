@@ -30,7 +30,7 @@ export default function init() {
   // --- State ---
   const state: AppState = {
     originalImage: null,
-    activeTool: 'pixelate',
+    activeTool: 'move',
     isDragging: false,
     cropRect: { x: 0, y: 0, w: 0, h: 0 },
     dragStartMouse: { x: 0, y: 0 },
@@ -56,11 +56,11 @@ export default function init() {
     elements.btnRedo.disabled = !history.canRedo();
 
     if (state.activeTool === 'move') {
-      elements.canvas.classList.remove('touch-none');
+      elements.canvas.style.touchAction = 'auto';
       elements.canvas.style.cursor = 'move';
       elements.hint.textContent = 'Scroll or zoom the image.';
     } else {
-      elements.canvas.classList.add('touch-none');
+      elements.canvas.style.touchAction = 'none';
       elements.canvas.style.cursor = state.activeTool === 'crop' ? 'default' : 'crosshair';
       elements.hint.textContent =
         state.activeTool === 'crop'
@@ -130,10 +130,10 @@ export default function init() {
     }
     baseSnapshot = null;
 
-    // Reset to pixelate tool if we were in crop
+    // Reset to move tool if we were in crop
     if (state.activeTool === 'crop') {
-      const pixBtn = document.querySelector('[data-tool="pixelate"]') as HTMLElement;
-      if (pixBtn) pixBtn.click();
+      const moveBtn = document.querySelector('[data-tool="move"]') as HTMLElement;
+      if (moveBtn) moveBtn.click();
     }
   };
 

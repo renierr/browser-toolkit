@@ -18,7 +18,7 @@ export function drawCropOverlay(
   ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
 
   ctx.fillStyle = '#fff';
-  const size = 12;
+  const size = 24;
   const half = size / 2;
 
   const corners = [
@@ -30,6 +30,8 @@ export function drawCropOverlay(
 
   corners.forEach((c) => {
     ctx.fillRect(c.x - half, c.y - half, size, size);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
     ctx.strokeRect(c.x - half, c.y - half, size, size);
   });
 

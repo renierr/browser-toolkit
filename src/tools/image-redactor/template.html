@@ -26,16 +26,16 @@
 
     <div id="editor-container" class="hidden flex flex-col h-full gap-4 relative">
 
-      <div class="navbar bg-base-200 rounded-box shadow-sm z-20 p-2 min-h-0 flex-wrap gap-2">
+      <div class="navbar bg-base-200 rounded-box shadow-sm z-20 p-2 min-h-0 flex-wrap gap-2 sticky top-0">
         <div class="flex-1 flex flex-wrap gap-2 items-center">
           <div class="join">
-            <button class="btn btn-sm join-item" data-tool="move" title="Move/Zoom">
+            <button class="btn btn-sm join-item btn-primary" data-tool="move" title="Move/Zoom">
               <i data-lucide="move" class="w-4 h-4"></i>
             </button>
             <button class="btn btn-sm join-item" id="btn-tool-crop" data-tool="crop" title="Zuschneiden Modus">
               <i data-lucide="crop" class="w-4 h-4"></i> Crop
             </button>
-            <button class="btn btn-sm join-item btn-primary" data-tool="pixelate">Pixel</button>
+            <button class="btn btn-sm join-item" data-tool="pixelate">Pixel</button>
             <button class="btn btn-sm join-item" data-tool="blur">Blur</button>
             <button class="btn btn-sm join-item" data-tool="fill">Solid</button>
           </div>
@@ -64,17 +64,16 @@
       </div>
 
       <div class="relative flex-1 bg-base-200/50 rounded-xl overflow-hidden flex items-center justify-center border border-base-300 shadow-inner select-none" id="canvas-wrapper">
-        <canvas id="editor-canvas" class="shadow-lg touch-none max-w-full max-h-full cursor-crosshair"></canvas>
+        <canvas id="editor-canvas" class="shadow-lg touch-auto max-w-full max-h-full cursor-move"></canvas>
+      </div>
 
-        <div id="crop-actions" class="absolute bottom-4 z-30 hidden gap-2 flex items-center justify-center">
-          <button id="btn-cancel-crop" class="btn btn-circle btn-sm btn-error text-white shadow-lg">
-            <i data-lucide="x" class="w-6 h-6"></i>
-          </button>
-          <button id="btn-apply-crop" class="btn btn-md btn-success text-white shadow-lg gap-2 px-6">
-            <i data-lucide="save" class="w-4 h-4 mr-2"></i>
-            Apply Crop
-          </button>
-        </div>
+      <div id="crop-actions" class="hidden gap-2 items-center justify-center p-2 bg-base-200 rounded-box shadow-sm">
+        <button id="btn-cancel-crop" class="btn btn-sm btn-error text-white gap-2">
+          <i data-lucide="x" class="w-4 h-4"></i> Cancel
+        </button>
+        <button id="btn-apply-crop" class="btn btn-sm btn-success text-white gap-2 px-6">
+          <i data-lucide="save" class="w-4 h-4"></i> Apply Crop
+        </button>
       </div>
 
       <div class="text-center text-xs text-base-content/50 pb-2" id="hint-text">

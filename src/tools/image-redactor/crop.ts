@@ -1,6 +1,6 @@
 import type { Rect, Point, HandleType } from './types';
 
-const HANDLE_SIZE = 24;
+const HANDLE_SIZE = 40;
 const MIN_SIZE = 50;
 
 export function getHitHandle(pos: Point, rect: Rect): HandleType {
