@@ -1,6 +1,6 @@
 export class HistoryManager {
   private stack: ImageData[] = [];
-  private maxSteps: number;
+  private readonly maxSteps: number;
 
   constructor(maxSteps = 15) {
     this.maxSteps = maxSteps;
@@ -10,7 +10,6 @@ export class HistoryManager {
     if (this.stack.length >= this.maxSteps) {
       this.stack.shift();
     }
-    // Speichert Pixeldaten UND Dimensionen
     this.stack.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
   }
 
@@ -19,7 +18,6 @@ export class HistoryManager {
 
     const lastState = this.stack.pop();
     if (lastState) {
-      // Erkennt Größenänderung (Crop Undo)
       if (canvas.width !== lastState.width || canvas.height !== lastState.height) {
         canvas.width = lastState.width;
         canvas.height = lastState.height;

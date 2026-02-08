@@ -6,7 +6,6 @@ import { setupFileDropzone } from '../../js/file-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
-
   const elements = {
     dropzone: document.getElementById('dropzone')!,
     editor: document.getElementById('editor-container')!,
@@ -242,20 +241,12 @@ export default function init() {
     state.draggedHandle = null;
     history.clear();
     updateUI();
-
   });
 
   elements.canvas.addEventListener('pointerdown', onPointerDown);
   elements.canvas.addEventListener('pointermove', onPointerMove);
   elements.canvas.addEventListener('pointerup', onPointerUp);
 
-  setupFileDropzone('dropzone', 'image-input', (files) => {
-    if (files.length > 0) {
-      loadImage(files[0]);
-    }
-  });
-
-  // Download
   elements.btnDownload.addEventListener('click', () => {
     if (state.activeTool === 'crop') exitCropMode(true);
     const link = document.createElement('a');
@@ -264,7 +255,12 @@ export default function init() {
     link.click();
   });
 
-  // Cleanup
+  setupFileDropzone('dropzone', 'image-input', (files) => {
+    if (files.length > 0) {
+      loadImage(files[0]);
+    }
+  });
+
   return () => {
     elements.canvas.removeEventListener('pointerdown', onPointerDown);
   };

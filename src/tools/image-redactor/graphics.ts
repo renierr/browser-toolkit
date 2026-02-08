@@ -6,28 +6,21 @@ export function drawCropOverlay(
   rect: Rect,
   baseImage: ImageData
 ) {
-  // 1. Basis-Bild wiederherstellen (Clean Slate)
   ctx.putImageData(baseImage, 0, 0);
 
-  // 2. Dimming (Alles abdunkeln)
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // 3. Auswahl wieder "hell" machen
-  // Trick: Wir zeichnen den Ausschnitt des Originalbildes wieder über den Dim-Layer
   ctx.putImageData(baseImage, 0, 0, rect.x, rect.y, rect.w, rect.h);
 
-  // 4. Rahmen
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
   ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
 
-  // 5. Handles
   ctx.fillStyle = '#fff';
-  const size = 12; // Visuelle Größe (kleiner als Hitbox)
+  const size = 12;
   const half = size / 2;
 
-  // Ecken zeichnen
   const corners = [
     { x: rect.x, y: rect.y }, // TL
     { x: rect.x + rect.w, y: rect.y }, // TR
@@ -40,7 +33,6 @@ export function drawCropOverlay(
     ctx.strokeRect(c.x - half, c.y - half, size, size);
   });
 
-  // 6. Grid (Drittel-Regel)
   ctx.beginPath();
   ctx.strokeStyle = 'rgba(255,255,255,0.3)';
   ctx.lineWidth = 1;
