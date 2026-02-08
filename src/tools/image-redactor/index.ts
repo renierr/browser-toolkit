@@ -4,7 +4,7 @@ import { drawCropOverlay, drawRedactPreview, applyEffect } from './graphics';
 import type { AppState, ToolType } from './types';
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
-import { copyCanvasToClipboard } from '../../js/utils.ts';
+import { copyCanvasToClipboard, debounce } from '../../js/utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -40,6 +40,7 @@ export default function init() {
     dragStartMouse: { x: 0, y: 0 },
     dragStartRect: { x: 0, y: 0, w: 0, h: 0 },
     draggedHandle: null,
+    lastOperation: null,
   };
 
   let baseSnapshot: HTMLCanvasElement | null = null;
@@ -232,6 +233,16 @@ export default function init() {
         history.push(ctx, elements.canvas);
         const intensity = parseInt(elements.intensityInput.value, 10);
         applyEffect(ctx, elements.canvas, rect, state.activeTool as any, intensity);
+
+        if (state.activeTool === 'blur' || state.activeTool === 'pixelate') {
+          state.lastOperation = {
+            tool: state.activeTool,
+            rect: rect,
+            intensity: intensity,
+          };
+        } else {
+          state.lastOperation = null;
+        }
       }
       baseSnapshot = null;
     }
@@ -249,12 +260,39 @@ export default function init() {
         exitCropMode(false);
       }
 
+      if (state.activeTool !== newTool && newTool !== 'move' && state.activeTool !== 'move') {
+        state.lastOperation = null;
+      }
+
       elements.tools.forEach((b) => b.classList.remove('btn-primary'));
       btn.classList.add('btn-primary');
       state.activeTool = newTool;
       updateUI();
     });
   });
+
+  elements.intensityInput.addEventListener(
+    'input',
+    debounce(() => {
+      if (!state.lastOperation) return;
+
+      if (state.activeTool !== state.lastOperation.tool) return;
+
+      if (history.undo(ctx, elements.canvas)) {
+        history.push(ctx, elements.canvas);
+
+        const intensity = parseInt(elements.intensityInput.value, 10);
+        applyEffect(
+          ctx,
+          elements.canvas,
+          state.lastOperation.rect,
+          state.lastOperation.tool,
+          intensity
+        );
+        state.lastOperation.intensity = intensity;
+      }
+    }, 200)
+  );
 
   elements.btnApplyCrop.addEventListener('click', () => exitCropMode(true));
   elements.btnCancelCrop.addEventListener('click', () => {
@@ -266,12 +304,14 @@ export default function init() {
 
   elements.btnUndo.addEventListener('click', () => {
     history.undo(ctx, elements.canvas);
+    state.lastOperation = null;
     if (state.activeTool === 'crop') exitCropMode(false);
     updateUI();
   });
 
   elements.btnRedo.addEventListener('click', () => {
     history.redo(ctx, elements.canvas);
+    state.lastOperation = null;
     if (state.activeTool === 'crop') exitCropMode(false);
     updateUI();
   });
@@ -290,6 +330,7 @@ export default function init() {
     state.dragStartMouse = { x: 0, y: 0 };
     state.dragStartRect = { x: 0, y: 0, w: 0, h: 0 };
     state.draggedHandle = null;
+    state.lastOperation = null;
     history.clear();
     updateUI();
   });
@@ -323,7 +364,7 @@ export default function init() {
       showMessage('Copied to clipboard');
       console.log('Copied to clipboard');
     } catch (err) {
-      showMessage('Failed to copy image to clipboard', { type: 'alert' })
+      showMessage('Failed to copy image to clipboard', { type: 'alert' });
     }
   });
 

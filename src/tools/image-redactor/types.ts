@@ -11,4 +11,9 @@ export interface AppState {
   dragStartMouse: Point;
   dragStartRect: Rect;
   draggedHandle: HandleType;
+  lastOperation: {
+    tool: ToolType;
+    rect: Rect;
+    intensity: number;
+  } | null;
 }

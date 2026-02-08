@@ -1,4 +1,4 @@
-import type { Rect } from './types';
+import type { Rect, ToolType } from './types';
 
 export function drawCropOverlay(
   ctx: CanvasRenderingContext2D,
@@ -55,7 +55,11 @@ export function drawCropOverlay(
   ctx.stroke();
 }
 
-export function drawRedactPreview(ctx: CanvasRenderingContext2D, snapshot: CanvasImageSource, rect: Rect) {
+export function drawRedactPreview(
+  ctx: CanvasRenderingContext2D,
+  snapshot: CanvasImageSource,
+  rect: Rect
+) {
   ctx.drawImage(snapshot, 0, 0);
   ctx.strokeStyle = '#ff0000';
   ctx.lineWidth = 2;
@@ -68,7 +72,7 @@ export function applyEffect(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   rect: Rect,
-  type: 'pixelate' | 'blur' | 'fill',
+  type: ToolType,
   intensity: number = 50
 ) {
   const { x, y, w, h } = rect;
