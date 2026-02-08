@@ -80,7 +80,12 @@
 
       <div class="relative flex-1 bg-base-200/50 rounded-xl overflow-hidden flex items-center justify-center border border-base-300 shadow-inner select-none" id="canvas-wrapper">
         <canvas id="editor-canvas" class="shadow-lg touch-auto max-w-full max-h-full cursor-move"></canvas>
-        <div id="selection-overlay" class="absolute border-2 border-white outline outline-black pointer-events-none hidden shadow-sm"></div>
+        <div id="selection-overlay" class="absolute border-2 border-white outline outline-black pointer-events-none hidden shadow-sm">
+          <div class="absolute -top-5 left-1/2 -translate-x-1/2 text-white drop-shadow-xs drop-shadow-black"><i data-lucide="chevron-up" class="w-5 h-5"></i></div>
+          <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-white drop-shadow-xs drop-shadow-black"><i data-lucide="chevron-down" class="w-5 h-5"></i></div>
+          <div class="absolute -left-4 top-1/2 -translate-y-1/2 text-white drop-shadow-xs drop-shadow-black"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
+          <div class="absolute -right-4 top-1/2 -translate-y-1/2 text-white drop-shadow-xs drop-shadow-black"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        </div>
       </div>
 
       <div id="crop-actions" class="hidden gap-2 items-center justify-center p-2 bg-base-200 rounded-box shadow-sm">
