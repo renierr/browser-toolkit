@@ -14,6 +14,7 @@ export default function init() {
     hint: document.getElementById('hint-text')!,
     cropActions: document.getElementById('crop-actions')!,
     btnUndo: document.getElementById('btn-undo') as HTMLButtonElement,
+    btnRedo: document.getElementById('btn-redo') as HTMLButtonElement,
     tools: document.querySelectorAll('[data-tool]'),
     btnApplyCrop: document.getElementById('btn-apply-crop')!,
     btnCancelCrop: document.getElementById('btn-cancel-crop')!,
@@ -52,6 +53,7 @@ export default function init() {
 
   const updateUI = () => {
     elements.btnUndo.disabled = !history.canUndo();
+    elements.btnRedo.disabled = !history.canRedo();
     elements.hint.textContent =
       state.activeTool === 'crop'
         ? "Use edges to crop and click 'Apply' to submit."
@@ -223,6 +225,12 @@ export default function init() {
 
   elements.btnUndo.addEventListener('click', () => {
     history.undo(ctx, elements.canvas);
+    if (state.activeTool === 'crop') exitCropMode(false);
+    updateUI();
+  });
+
+  elements.btnRedo.addEventListener('click', () => {
+    history.redo(ctx, elements.canvas);
     if (state.activeTool === 'crop') exitCropMode(false);
     updateUI();
   });
