@@ -4,14 +4,18 @@ export function drawCropOverlay(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   rect: Rect,
-  baseImage: ImageData
+  baseImage: CanvasImageSource
 ) {
-  ctx.putImageData(baseImage, 0, 0);
+  // Use drawImage for GPU acceleration
+  ctx.drawImage(baseImage, 0, 0);
 
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.putImageData(baseImage, 0, 0, rect.x, rect.y, rect.w, rect.h);
+  // Draw the un-dimmed part
+  if (rect.w > 0 && rect.h > 0) {
+    ctx.drawImage(baseImage, rect.x, rect.y, rect.w, rect.h, rect.x, rect.y, rect.w, rect.h);
+  }
 
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
@@ -19,7 +23,6 @@ export function drawCropOverlay(
 
   ctx.fillStyle = '#fff';
 
-  // Scale visual handle size based on device pixel ratio
   const dpr = window.devicePixelRatio || 1;
   const size = Math.max(32, 16 * dpr);
   const half = size / 2;
@@ -52,8 +55,8 @@ export function drawCropOverlay(
   ctx.stroke();
 }
 
-export function drawRedactPreview(ctx: CanvasRenderingContext2D, snapshot: ImageData, rect: Rect) {
-  ctx.putImageData(snapshot, 0, 0);
+export function drawRedactPreview(ctx: CanvasRenderingContext2D, snapshot: CanvasImageSource, rect: Rect) {
+  ctx.drawImage(snapshot, 0, 0);
   ctx.strokeStyle = '#ff0000';
   ctx.lineWidth = 2;
   ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);

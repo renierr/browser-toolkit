@@ -38,7 +38,8 @@ export default function init() {
     draggedHandle: null,
   };
 
-  let baseSnapshot: ImageData | null = null;
+  let baseSnapshot: HTMLCanvasElement | null = null;
+  let rafId: number | null = null;
 
   // --- Helpers ---
   const getPos = (e: PointerEvent) => {
@@ -69,6 +70,14 @@ export default function init() {
     }
   };
 
+  const createSnapshot = () => {
+    const off = document.createElement('canvas');
+    off.width = elements.canvas.width;
+    off.height = elements.canvas.height;
+    off.getContext('2d')!.drawImage(elements.canvas, 0, 0);
+    return off;
+  };
+
   const loadImage = (file: Blob) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -93,11 +102,10 @@ export default function init() {
 
   // --- Mode Management ---
   const enterCropMode = () => {
-    baseSnapshot = ctx.getImageData(0, 0, elements.canvas.width, elements.canvas.height);
+    baseSnapshot = createSnapshot();
     elements.cropActions.classList.remove('hidden');
 
     if (state.cropRect.w === 0 || state.cropRect.h === 0) {
-      // Init Rect (80% centered)
       const w = elements.canvas.width * 0.8;
       const h = elements.canvas.height * 0.8;
       state.cropRect = {
@@ -116,15 +124,13 @@ export default function init() {
     elements.cropToolBtn.classList.remove('btn-active', 'btn-primary');
 
     if (baseSnapshot) {
-      // Restore original view first
-      ctx.putImageData(baseSnapshot, 0, 0);
+      ctx.drawImage(baseSnapshot, 0, 0);
 
       if (apply) {
-        // Cut & Resize
         const { x, y, w, h } = state.cropRect;
         const cutData = ctx.getImageData(x, y, w, h);
 
-        history.push(ctx, elements.canvas); // Save undo
+        history.push(ctx, elements.canvas);
 
         elements.canvas.width = w;
         elements.canvas.height = h;
@@ -134,7 +140,6 @@ export default function init() {
     }
     baseSnapshot = null;
 
-    // Reset to move tool if we were in crop and applied/cancelled
     if (state.activeTool === 'crop' && apply) {
       const moveBtn = document.querySelector('[data-tool="move"]') as HTMLElement;
       if (moveBtn) moveBtn.click();
@@ -156,9 +161,8 @@ export default function init() {
         state.dragStartRect = { ...state.cropRect };
       }
     } else {
-      // Redact Mode
       state.dragStartMouse = pos;
-      baseSnapshot = ctx.getImageData(0, 0, elements.canvas.width, elements.canvas.height);
+      baseSnapshot = createSnapshot();
     }
   };
 
@@ -167,7 +171,6 @@ export default function init() {
 
     const pos = getPos(e);
 
-    // Cursor Logic
     if (state.activeTool === 'crop' && !state.isDragging) {
       const hit = getHitHandle(pos, state.cropRect);
       elements.canvas.style.cursor = hit ? 'pointer' : 'default';
@@ -175,28 +178,30 @@ export default function init() {
 
     if (!state.isDragging) return;
 
-    if (state.activeTool === 'crop' && baseSnapshot) {
-      if (state.draggedHandle) {
-        const delta = {
-          x: pos.x - state.dragStartMouse.x,
-          y: pos.y - state.dragStartMouse.y,
-        };
-        state.cropRect = resizeRect(state.draggedHandle, state.dragStartRect, delta, {
-          w: elements.canvas.width,
-          h: elements.canvas.height,
-        });
-        drawCropOverlay(ctx, elements.canvas, state.cropRect, baseSnapshot);
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(() => {
+      if (state.activeTool === 'crop' && baseSnapshot) {
+        if (state.draggedHandle) {
+          const delta = {
+            x: pos.x - state.dragStartMouse.x,
+            y: pos.y - state.dragStartMouse.y,
+          };
+          state.cropRect = resizeRect(state.draggedHandle, state.dragStartRect, delta, {
+            w: elements.canvas.width,
+            h: elements.canvas.height,
+          });
+          drawCropOverlay(ctx, elements.canvas, state.cropRect, baseSnapshot);
+        }
+      } else if (baseSnapshot) {
+        const w = pos.x - state.dragStartMouse.x;
+        const h = pos.y - state.dragStartMouse.y;
+        drawRedactPreview(
+          ctx,
+          baseSnapshot,
+          normalizeRect(state.dragStartMouse.x, state.dragStartMouse.y, w, h)
+        );
       }
-    } else if (baseSnapshot) {
-      // Redact Preview
-      const w = pos.x - state.dragStartMouse.x;
-      const h = pos.y - state.dragStartMouse.y;
-      drawRedactPreview(
-        ctx,
-        baseSnapshot,
-        normalizeRect(state.dragStartMouse.x, state.dragStartMouse.y, w, h)
-      );
-    }
+    });
   };
 
   const onPointerUp = (e: PointerEvent) => {
@@ -204,10 +209,10 @@ export default function init() {
 
     elements.canvas.releasePointerCapture(e.pointerId);
     state.isDragging = false;
+    if (rafId) cancelAnimationFrame(rafId);
 
     if (state.activeTool !== 'crop' && baseSnapshot) {
-      // Apply Redact
-      ctx.putImageData(baseSnapshot, 0, 0); // Clear preview
+      ctx.drawImage(baseSnapshot, 0, 0);
       const w = getPos(e).x - state.dragStartMouse.x;
       const h = getPos(e).y - state.dragStartMouse.y;
       const rect = normalizeRect(state.dragStartMouse.x, state.dragStartMouse.y, w, h);
@@ -226,14 +231,12 @@ export default function init() {
     btn.addEventListener('click', () => {
       const newTool = btn.getAttribute('data-tool') as ToolType;
 
-      // Switch Logic
       if (newTool === 'crop' && state.activeTool !== 'crop') {
         enterCropMode();
       } else if (state.activeTool === 'crop' && newTool !== 'crop') {
         exitCropMode(false);
       }
 
-      // UI Update
       elements.tools.forEach((b) => b.classList.remove('btn-primary'));
       btn.classList.add('btn-primary');
       state.activeTool = newTool;
@@ -243,7 +246,7 @@ export default function init() {
 
   elements.btnApplyCrop.addEventListener('click', () => exitCropMode(true));
   elements.btnCancelCrop.addEventListener('click', () => {
-    state.cropRect = { x: 0, y: 0, w: 0, h: 0 }; // Reset on explicit cancel
+    state.cropRect = { x: 0, y: 0, w: 0, h: 0 };
     exitCropMode(false);
     const moveBtn = document.querySelector('[data-tool="move"]') as HTMLElement;
     if (moveBtn) moveBtn.click();
