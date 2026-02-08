@@ -4,6 +4,7 @@ import { drawCropOverlay, drawRedactPreview, applyEffect } from './graphics';
 import type { AppState, ToolType } from './types';
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
+import { copyCanvasToClipboard } from '../../js/utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -22,6 +23,7 @@ export default function init() {
     btnDownload: document.getElementById('btn-download')!,
     cropToolBtn: document.getElementById('btn-tool-crop')!,
     pasteBtn: document.getElementById('paste-btn')!,
+    btnCopyClipboard: document.getElementById('btn-copy-clipboard')!,
   };
 
   const ctx = elements.canvas.getContext('2d', { willReadFrequently: true })!;
@@ -302,6 +304,16 @@ export default function init() {
       loadImage(imageBlob);
     } else {
       showMessage('No image found in clipboard.', { type: 'info', timeoutMs: 5000 });
+    }
+  });
+
+  elements.btnCopyClipboard.addEventListener('click', async () => {
+    try {
+      await copyCanvasToClipboard(elements.canvas);
+      showMessage('Copied to clipboard');
+      console.log('Copied to clipboard');
+    } catch (err) {
+      showMessage('Failed to copy image to clipboard', { type: 'alert' })
     }
   });
 
