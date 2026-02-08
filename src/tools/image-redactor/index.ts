@@ -64,7 +64,11 @@ export default function init() {
     elements.btnRedo.disabled = !history.canRedo();
 
     // Show/hide controls based on the tool
-    if (state.activeTool === 'blur' || state.activeTool === 'pixelate') {
+    if (
+      state.activeTool === 'blur' ||
+      state.activeTool === 'pixelate' ||
+      state.activeTool === 'noise'
+    ) {
       elements.intensityControl.classList.remove('hidden');
       elements.colorControl.classList.add('hidden');
     } else if (state.activeTool === 'fill') {
@@ -253,7 +257,8 @@ export default function init() {
         if (
           state.activeTool === 'blur' ||
           state.activeTool === 'pixelate' ||
-          state.activeTool === 'fill'
+          state.activeTool === 'fill' ||
+          state.activeTool === 'noise'
         ) {
           state.lastOperation = operation;
         } else {
