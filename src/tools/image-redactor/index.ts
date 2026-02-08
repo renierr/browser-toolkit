@@ -1,7 +1,7 @@
 import { HistoryManager } from './history';
-import { getHitHandle, resizeRect, normalizeRect } from './crop';
-import { drawCropOverlay, drawRedactPreview, applyEffect } from './graphics';
-import type { AppState, ToolType } from './types';
+import { getHitHandle, normalizeRect, resizeRect } from './crop';
+import { applyEffect, drawCropOverlay, drawRedactPreview } from './graphics';
+import type { AppState, Operation, ToolType } from './types';
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import { copyCanvasToClipboard, debounce } from '../../js/utils.ts';
@@ -63,7 +63,7 @@ export default function init() {
     elements.btnUndo.disabled = !history.canUndo();
     elements.btnRedo.disabled = !history.canRedo();
 
-    // Show/hide intensity control based on tool
+    // Show/hide controls based on the tool
     if (state.activeTool === 'blur' || state.activeTool === 'pixelate') {
       elements.intensityControl.classList.remove('hidden');
       elements.colorControl.classList.add('hidden');
@@ -242,15 +242,20 @@ export default function init() {
         history.push(ctx, elements.canvas);
         const intensity = parseInt(elements.intensityInput.value, 10);
         const color = elements.colorInput.value;
-        applyEffect(ctx, elements.canvas, rect, state.activeTool as any, intensity, color);
+        const operation: Operation = {
+          tool: state.activeTool,
+          rect,
+          intensity,
+          color,
+        };
+        applyEffect(ctx, elements.canvas, operation);
 
-        if (state.activeTool === 'blur' || state.activeTool === 'pixelate' || state.activeTool === 'fill') {
-          state.lastOperation = {
-            tool: state.activeTool,
-            rect: rect,
-            intensity: intensity,
-            color: color,
-          };
+        if (
+          state.activeTool === 'blur' ||
+          state.activeTool === 'pixelate' ||
+          state.activeTool === 'fill'
+        ) {
+          state.lastOperation = operation;
         } else {
           state.lastOperation = null;
         }
@@ -292,17 +297,8 @@ export default function init() {
       if (history.undo(ctx, elements.canvas)) {
         history.push(ctx, elements.canvas);
 
-        const intensity = parseInt(elements.intensityInput.value, 10);
-        const color = elements.colorInput.value;
-        applyEffect(
-          ctx,
-          elements.canvas,
-          state.lastOperation.rect,
-          state.lastOperation.tool,
-          intensity,
-          color
-        );
-        state.lastOperation.intensity = intensity;
+        state.lastOperation.intensity = parseInt(elements.intensityInput.value, 10);
+        applyEffect(ctx, elements.canvas, state.lastOperation);
       }
     }, 200)
   );
@@ -317,17 +313,8 @@ export default function init() {
       if (history.undo(ctx, elements.canvas)) {
         history.push(ctx, elements.canvas);
 
-        const intensity = parseInt(elements.intensityInput.value, 10);
-        const color = elements.colorInput.value;
-        applyEffect(
-          ctx,
-          elements.canvas,
-          state.lastOperation.rect,
-          state.lastOperation.tool,
-          intensity,
-          color
-        );
-        state.lastOperation.color = color;
+        state.lastOperation.color = elements.colorInput.value;
+        applyEffect(ctx, elements.canvas, state.lastOperation);
       }
     }, 200)
   );

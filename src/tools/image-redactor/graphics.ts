@@ -1,4 +1,4 @@
-import type { Rect, ToolType } from './types';
+import type { Operation, Rect } from './types';
 
 export function drawCropOverlay(
   ctx: CanvasRenderingContext2D,
@@ -12,7 +12,7 @@ export function drawCropOverlay(
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Draw the un-dimmed part
+  // Draw the undimmed part
   if (rect.w > 0 && rect.h > 0) {
     ctx.drawImage(baseImage, rect.x, rect.y, rect.w, rect.h, rect.x, rect.y, rect.w, rect.h);
   }
@@ -72,16 +72,14 @@ export function drawRedactPreview(
 export function applyEffect(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
-  rect: Rect,
-  type: ToolType,
-  intensity: number = 50,
-  color: string = '#000000'
+  operation: Operation
 ) {
+  const { rect, tool: type, intensity, color } = operation;
   const { x, y, w, h } = rect;
   if (w < 1 || h < 1) return;
 
   if (type === 'fill') {
-    ctx.fillStyle = color;
+    ctx.fillStyle = color || '#000000';
     ctx.fillRect(x, y, w, h);
   } else if (type === 'blur') {
     ctx.save();

@@ -3,6 +3,13 @@ export type Rect = { x: number; y: number; w: number; h: number };
 export type ToolType = 'pixelate' | 'blur' | 'fill' | 'crop' | 'move';
 export type HandleType = 'tl' | 'tr' | 'bl' | 'br' | 'move' | null;
 
+export interface Operation {
+  tool: ToolType;
+  rect: Rect;
+  intensity: number;
+  color?: string;
+}
+
 export interface AppState {
   originalImage: HTMLImageElement | null;
   activeTool: ToolType;
@@ -11,10 +18,5 @@ export interface AppState {
   dragStartMouse: Point;
   dragStartRect: Rect;
   draggedHandle: HandleType;
-  lastOperation: {
-    tool: ToolType;
-    rect: Rect;
-    intensity: number;
-    color?: string;
-  } | null;
+  lastOperation: Operation | null;
 }
