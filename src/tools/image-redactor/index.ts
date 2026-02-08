@@ -43,6 +43,8 @@ export default function init() {
     dragStartRect: { x: 0, y: 0, w: 0, h: 0 },
     draggedHandle: null,
     lastOperation: null,
+    lastOperationSnapshot: null,
+    isMovingLastOp: false,
   };
 
   let baseSnapshot: HTMLCanvasElement | null = null;
@@ -115,6 +117,8 @@ export default function init() {
         elements.editor.classList.remove('hidden');
 
         state.cropRect = { x: 0, y: 0, w: 0, h: 0 };
+        state.lastOperation = null;
+        state.lastOperationSnapshot = null;
         history.clear();
         updateUI();
       };
@@ -159,6 +163,8 @@ export default function init() {
         elements.canvas.height = h;
         ctx.putImageData(cutData, 0, 0);
         state.cropRect = { x: 0, y: 0, w: 0, h: 0 };
+        state.lastOperation = null;
+        state.lastOperationSnapshot = null;
       }
     }
     baseSnapshot = null;
@@ -184,8 +190,32 @@ export default function init() {
         state.dragStartRect = { ...state.cropRect };
       }
     } else {
+      // Check if clicking inside the last operation rect to move it
+      if (state.lastOperation && state.lastOperation.tool === state.activeTool) {
+        const { x, y, w, h } = state.lastOperation.rect;
+        if (pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h) {
+          state.isMovingLastOp = true;
+          state.dragStartMouse = pos;
+          state.dragStartRect = { ...state.lastOperation.rect };
+
+          // Restore the state before the last operation
+          if (state.lastOperationSnapshot) {
+            ctx.putImageData(state.lastOperationSnapshot, 0, 0);
+            baseSnapshot = createSnapshot();
+          }
+          return;
+        }
+      }
+
       state.dragStartMouse = pos;
       baseSnapshot = createSnapshot();
+      // Save snapshot before starting new operation
+      state.lastOperationSnapshot = ctx.getImageData(
+        0,
+        0,
+        elements.canvas.width,
+        elements.canvas.height
+      );
     }
   };
 
@@ -197,6 +227,17 @@ export default function init() {
     if (state.activeTool === 'crop' && !state.isDragging) {
       const hit = getHitHandle(pos, state.cropRect);
       elements.canvas.style.cursor = hit ? 'pointer' : 'default';
+    } else if (
+      state.lastOperation &&
+      state.lastOperation.tool === state.activeTool &&
+      !state.isDragging
+    ) {
+      const { x, y, w, h } = state.lastOperation.rect;
+      if (pos.x >= x && pos.x <= x + w && pos.y >= y && pos.y <= y + h) {
+        elements.canvas.style.cursor = 'move';
+      } else {
+        elements.canvas.style.cursor = 'crosshair';
+      }
     }
 
     if (!state.isDragging) return;
@@ -215,6 +256,27 @@ export default function init() {
           });
           drawCropOverlay(ctx, elements.canvas, state.cropRect, baseSnapshot);
         }
+      } else if (state.isMovingLastOp && state.lastOperation && baseSnapshot) {
+        const dx = pos.x - state.dragStartMouse.x;
+        const dy = pos.y - state.dragStartMouse.y;
+
+        const newRect = {
+          ...state.dragStartRect,
+          x: state.dragStartRect.x + dx,
+          y: state.dragStartRect.y + dy,
+        };
+
+        ctx.drawImage(baseSnapshot, 0, 0);
+        applyEffect(ctx, elements.canvas, { ...state.lastOperation, rect: newRect });
+
+        // Draw outline to indicate selection
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(newRect.x, newRect.y, newRect.w, newRect.h);
+        ctx.strokeStyle = '#000';
+        ctx.setLineDash([5, 5]);
+        ctx.strokeRect(newRect.x, newRect.y, newRect.w, newRect.h);
+        ctx.setLineDash([]);
       } else if (baseSnapshot) {
         const w = pos.x - state.dragStartMouse.x;
         const h = pos.y - state.dragStartMouse.y;
@@ -237,6 +299,19 @@ export default function init() {
     if (rafId) cancelAnimationFrame(rafId);
 
     if (state.activeTool !== 'crop' && baseSnapshot) {
+      if (state.isMovingLastOp && state.lastOperation) {
+        const dx = getPos(e).x - state.dragStartMouse.x;
+        const dy = getPos(e).y - state.dragStartMouse.y;
+        state.lastOperation.rect.x = state.dragStartRect.x + dx;
+        state.lastOperation.rect.y = state.dragStartRect.y + dy;
+
+        ctx.drawImage(baseSnapshot, 0, 0);
+        applyEffect(ctx, elements.canvas, state.lastOperation);
+        state.isMovingLastOp = false;
+        baseSnapshot = null;
+        return;
+      }
+
       ctx.drawImage(baseSnapshot, 0, 0);
       const w = getPos(e).x - state.dragStartMouse.x;
       const h = getPos(e).y - state.dragStartMouse.y;
@@ -263,6 +338,7 @@ export default function init() {
           state.lastOperation = operation;
         } else {
           state.lastOperation = null;
+          state.lastOperationSnapshot = null;
         }
       }
       baseSnapshot = null;
@@ -283,6 +359,7 @@ export default function init() {
 
       if (state.activeTool !== newTool && newTool !== 'move' && state.activeTool !== 'move') {
         state.lastOperation = null;
+        state.lastOperationSnapshot = null;
       }
 
       elements.tools.forEach((b) => b.classList.remove('btn-primary'));
@@ -299,13 +376,13 @@ export default function init() {
 
       if (state.activeTool !== state.lastOperation.tool) return;
 
-      if (history.undo(ctx, elements.canvas)) {
-        history.push(ctx, elements.canvas);
-
+      // We need to restore the state BEFORE the last operation to re-apply with new intensity
+      if (state.lastOperationSnapshot) {
+        ctx.putImageData(state.lastOperationSnapshot, 0, 0);
         state.lastOperation.intensity = parseInt(elements.intensityInput.value, 10);
         applyEffect(ctx, elements.canvas, state.lastOperation);
       }
-    }, 200)
+    }, 50)
   );
 
   elements.colorInput.addEventListener(
@@ -315,13 +392,12 @@ export default function init() {
       if (state.activeTool !== 'fill') return;
       if (state.activeTool !== state.lastOperation.tool) return;
 
-      if (history.undo(ctx, elements.canvas)) {
-        history.push(ctx, elements.canvas);
-
+      if (state.lastOperationSnapshot) {
+        ctx.putImageData(state.lastOperationSnapshot, 0, 0);
         state.lastOperation.color = elements.colorInput.value;
         applyEffect(ctx, elements.canvas, state.lastOperation);
       }
-    }, 200)
+    }, 50)
   );
 
   elements.btnApplyCrop.addEventListener('click', () => exitCropMode(true));
@@ -335,6 +411,7 @@ export default function init() {
   elements.btnUndo.addEventListener('click', () => {
     history.undo(ctx, elements.canvas);
     state.lastOperation = null;
+    state.lastOperationSnapshot = null;
     if (state.activeTool === 'crop') exitCropMode(false);
     updateUI();
   });
@@ -342,6 +419,7 @@ export default function init() {
   elements.btnRedo.addEventListener('click', () => {
     history.redo(ctx, elements.canvas);
     state.lastOperation = null;
+    state.lastOperationSnapshot = null;
     if (state.activeTool === 'crop') exitCropMode(false);
     updateUI();
   });
@@ -361,6 +439,7 @@ export default function init() {
     state.dragStartRect = { x: 0, y: 0, w: 0, h: 0 };
     state.draggedHandle = null;
     state.lastOperation = null;
+    state.lastOperationSnapshot = null;
     history.clear();
     updateUI();
   });
@@ -407,6 +486,8 @@ export default function init() {
   return () => {
     history.clear();
     state.originalImage = null;
+    state.lastOperation = null;
+    state.lastOperationSnapshot = null;
     baseSnapshot = null;
     rafId = null;
   };

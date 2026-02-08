@@ -19,4 +19,6 @@ export interface AppState {
   dragStartRect: Rect;
   draggedHandle: HandleType;
   lastOperation: Operation | null;
+  lastOperationSnapshot: ImageData | null;
+  isMovingLastOp: boolean;
 }
