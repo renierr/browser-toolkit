@@ -24,19 +24,15 @@
       <input type="file" id="image-input" class="hidden" accept="image/*" />
     </div>
 
-    <div id="editor-container" class="hidden flex-col h-full gap-4 relative">
+    <div id="editor-container" class="hidden flex flex-col h-full gap-4 relative">
 
       <div class="navbar bg-base-200 rounded-box shadow-sm z-20 p-2 min-h-0">
         <div class="flex-1 overflow-x-auto no-scrollbar gap-2 items-center">
-
-          <button class="btn btn-sm join-item" id="btn-tool-crop" data-tool="crop" title="Zuschneiden Modus">
-            <i data-lucide="crop" class="w-6 h-6"></i> Crop
-          </button>
-
-          <div class="divider divider-horizontal mx-1"></div>
-
           <div class="join">
-            <button class="btn btn-sm join-item btn-active" data-tool="pixelate">Pixel</button>
+            <button class="btn btn-sm join-item" id="btn-tool-crop" data-tool="crop" title="Zuschneiden Modus">
+              <i data-lucide="crop" class="w-6 h-6"></i> Crop
+            </button>
+            <button class="btn btn-sm join-item btn-primary" data-tool="pixelate">Pixel</button>
             <button class="btn btn-sm join-item" data-tool="blur">Blur</button>
             <button class="btn btn-sm join-item" data-tool="fill">Solid</button>
           </div>

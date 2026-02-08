@@ -2,7 +2,8 @@ import { HistoryManager } from './history';
 import { getHitHandle, resizeRect, normalizeRect } from './crop';
 import { drawCropOverlay, drawRedactPreview, applyEffect } from './graphics';
 import type { AppState, ToolType } from './types';
-import { setupFileDropzone } from '../../js/file-utils.ts';
+import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
+import { showMessage } from '../../js/ui.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -19,6 +20,7 @@ export default function init() {
     btnReset: document.getElementById('btn-reset')!,
     btnDownload: document.getElementById('btn-download')!,
     cropToolBtn: document.getElementById('btn-tool-crop')!,
+    pasteBtn: document.getElementById('paste-btn')!,
   };
 
   const ctx = elements.canvas.getContext('2d', { willReadFrequently: true })!;
@@ -56,7 +58,7 @@ export default function init() {
         : 'Mark areas to redact.';
   };
 
-  const loadImage = (file: File) => {
+  const loadImage = (file: Blob) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -68,7 +70,6 @@ export default function init() {
 
         elements.dropzone.classList.add('hidden');
         elements.editor.classList.remove('hidden');
-        elements.editor.classList.add('flex');
 
         history.clear();
         updateUI();
@@ -194,6 +195,7 @@ export default function init() {
       }
       baseSnapshot = null;
     }
+    updateUI();
   };
 
   // --- Wiring ---
@@ -209,8 +211,8 @@ export default function init() {
       }
 
       // UI Update
-      elements.tools.forEach((b) => b.classList.remove('btn-active', 'btn-primary'));
-      btn.classList.add(newTool === 'crop' ? 'btn-primary' : 'btn-active');
+      elements.tools.forEach((b) => b.classList.remove('btn-primary'));
+      btn.classList.add('btn-primary');
       state.activeTool = newTool;
       updateUI();
     });
@@ -253,6 +255,17 @@ export default function init() {
     link.download = `redacted-${Date.now()}.png`;
     link.href = elements.canvas.toDataURL('image/png');
     link.click();
+  });
+
+  elements.pasteBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const imageBlob = await retrieveImageBlobFromClipboard();
+    if (imageBlob) {
+      loadImage(imageBlob);
+    } else {
+      showMessage('No image found in clipboard.', { type: 'info', timeoutMs: 5000 });
+    }
   });
 
   setupFileDropzone('dropzone', 'image-input', (files) => {
