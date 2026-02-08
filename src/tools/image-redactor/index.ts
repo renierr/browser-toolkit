@@ -2,13 +2,14 @@ import { HistoryManager } from './history';
 import { getHitHandle, resizeRect, normalizeRect } from './crop';
 import { drawCropOverlay, drawRedactPreview, applyEffect } from './graphics';
 import type { AppState, ToolType } from './types';
+import { setupFileDropzone } from '../../js/file-utils.ts';
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
-  // --- Elements ---
+
   const elements = {
-    upload: document.getElementById('upload-container')!,
+    dropzone: document.getElementById('dropzone')!,
     editor: document.getElementById('editor-container')!,
-    fileInput: document.getElementById('file-input') as HTMLInputElement,
     canvas: document.getElementById('editor-canvas') as HTMLCanvasElement,
     hint: document.getElementById('hint-text')!,
     cropActions: document.getElementById('crop-actions')!,
@@ -35,7 +36,7 @@ export default function init() {
     draggedHandle: null,
   };
 
-  let baseSnapshot: ImageData | null = null; // Für Crop overlay oder Redact preview
+  let baseSnapshot: ImageData | null = null;
 
   // --- Helpers ---
   const getPos = (e: PointerEvent) => {
@@ -52,8 +53,8 @@ export default function init() {
     elements.btnUndo.disabled = !history.canUndo();
     elements.hint.textContent =
       state.activeTool === 'crop'
-        ? "Zieh an den Ecken. Klicke 'Apply' zum Bestätigen."
-        : 'Markiere Bereiche zum Zensieren.';
+        ? "Use edges to crop and click 'Apply' to submit."
+        : 'Mark areas to redact.';
   };
 
   const loadImage = (file: File) => {
@@ -66,7 +67,7 @@ export default function init() {
         elements.canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
 
-        elements.upload.classList.add('hidden');
+        elements.dropzone.classList.add('hidden');
         elements.editor.classList.remove('hidden');
         elements.editor.classList.add('flex');
 
@@ -226,16 +227,34 @@ export default function init() {
     updateUI();
   });
 
+  elements.btnReset.addEventListener('click', () => {
+    elements.dropzone.classList.remove('hidden');
+    elements.editor.classList.add('hidden');
+
+    if (state.activeTool === 'crop') exitCropMode(false);
+    state.originalImage = null;
+    ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+    elements.canvas.width = 0;
+    elements.canvas.height = 0;
+    baseSnapshot = null;
+    state.cropRect = { x: 0, y: 0, w: 0, h: 0 };
+    state.dragStartMouse = { x: 0, y: 0 };
+    state.dragStartRect = { x: 0, y: 0, w: 0, h: 0 };
+    state.draggedHandle = null;
+    history.clear();
+    updateUI();
+
+  });
+
   elements.canvas.addEventListener('pointerdown', onPointerDown);
   elements.canvas.addEventListener('pointermove', onPointerMove);
   elements.canvas.addEventListener('pointerup', onPointerUp);
 
-  // File Input wiring
-  elements.fileInput.addEventListener('change', (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) loadImage(file);
+  setupFileDropzone('dropzone', 'image-input', (files) => {
+    if (files.length > 0) {
+      loadImage(files[0]);
+    }
   });
-  elements.upload.addEventListener('click', () => elements.fileInput.click());
 
   // Download
   elements.btnDownload.addEventListener('click', () => {
@@ -249,6 +268,5 @@ export default function init() {
   // Cleanup
   return () => {
     elements.canvas.removeEventListener('pointerdown', onPointerDown);
-    // ... remove other listeners
   };
 }
