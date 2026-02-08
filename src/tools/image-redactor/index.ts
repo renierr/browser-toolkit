@@ -82,6 +82,7 @@ export default function init() {
         elements.dropzone.classList.add('hidden');
         elements.editor.classList.remove('hidden');
 
+        state.cropRect = { x: 0, y: 0, w: 0, h: 0 };
         history.clear();
         updateUI();
       };
@@ -95,15 +96,17 @@ export default function init() {
     baseSnapshot = ctx.getImageData(0, 0, elements.canvas.width, elements.canvas.height);
     elements.cropActions.classList.remove('hidden');
 
-    // Init Rect (80% centered)
-    const w = elements.canvas.width * 0.8;
-    const h = elements.canvas.height * 0.8;
-    state.cropRect = {
-      x: (elements.canvas.width - w) / 2,
-      y: (elements.canvas.height - h) / 2,
-      w,
-      h,
-    };
+    if (state.cropRect.w === 0 || state.cropRect.h === 0) {
+      // Init Rect (80% centered)
+      const w = elements.canvas.width * 0.8;
+      const h = elements.canvas.height * 0.8;
+      state.cropRect = {
+        x: (elements.canvas.width - w) / 2,
+        y: (elements.canvas.height - h) / 2,
+        w,
+        h,
+      };
+    }
     drawCropOverlay(ctx, elements.canvas, state.cropRect, baseSnapshot);
   };
 
@@ -126,12 +129,13 @@ export default function init() {
         elements.canvas.width = w;
         elements.canvas.height = h;
         ctx.putImageData(cutData, 0, 0);
+        state.cropRect = { x: 0, y: 0, w: 0, h: 0 };
       }
     }
     baseSnapshot = null;
 
-    // Reset to move tool if we were in crop
-    if (state.activeTool === 'crop') {
+    // Reset to move tool if we were in crop and applied/cancelled
+    if (state.activeTool === 'crop' && apply) {
       const moveBtn = document.querySelector('[data-tool="move"]') as HTMLElement;
       if (moveBtn) moveBtn.click();
     }
@@ -238,7 +242,12 @@ export default function init() {
   });
 
   elements.btnApplyCrop.addEventListener('click', () => exitCropMode(true));
-  elements.btnCancelCrop.addEventListener('click', () => exitCropMode(false));
+  elements.btnCancelCrop.addEventListener('click', () => {
+    state.cropRect = { x: 0, y: 0, w: 0, h: 0 }; // Reset on explicit cancel
+    exitCropMode(false);
+    const moveBtn = document.querySelector('[data-tool="move"]') as HTMLElement;
+    if (moveBtn) moveBtn.click();
+  });
 
   elements.btnUndo.addEventListener('click', () => {
     history.undo(ctx, elements.canvas);

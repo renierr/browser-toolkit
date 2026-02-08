@@ -19,9 +19,9 @@ export function drawCropOverlay(
 
   ctx.fillStyle = '#fff';
 
-  // Scale handle size based on device pixel ratio for high-density screens
+  // Scale visual handle size based on device pixel ratio
   const dpr = window.devicePixelRatio || 1;
-  const size = Math.max(24, 12 * dpr);
+  const size = Math.max(32, 16 * dpr);
   const half = size / 2;
 
   const corners = [

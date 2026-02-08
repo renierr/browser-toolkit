@@ -4,7 +4,8 @@ const MIN_SIZE = 50;
 
 function getHandleSize() {
   const dpr = window.devicePixelRatio || 1;
-  return Math.max(40, 20 * dpr);
+  // Further increased base size and scaling for mobile
+  return Math.max(60, 30 * dpr);
 }
 
 export function getHitHandle(pos: Point, rect: Rect): HandleType {
