@@ -28,9 +28,15 @@
 
       <!-- Non-sticky Action Bar -->
       <div class="flex flex-wrap gap-2 justify-between px-1 items-center">
-        <div id="intensity-control" class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
-          <span class="text-xs font-medium">Intensity:</span>
-          <input type="range" min="1" max="100" value="50" class="range range-xs range-primary w-24" id="tool-intensity" />
+        <div class="flex gap-2">
+          <div id="intensity-control" class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
+            <span class="text-xs font-medium">Intensity:</span>
+            <input type="range" min="1" max="100" value="50" class="range range-xs range-primary w-24" id="tool-intensity" />
+          </div>
+          <div id="color-control" class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
+            <span class="text-xs font-medium">Color:</span>
+            <input type="color" value="#000000" class="w-8 h-6 p-0 border-0 bg-transparent cursor-pointer rounded" id="tool-color" />
+          </div>
         </div>
         <div class="flex flex-wrap gap-2 justify-end flex-1">
           <button class="btn btn-sm btn-ghost text-error" id="btn-reset">

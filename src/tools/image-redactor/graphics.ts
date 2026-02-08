@@ -58,13 +58,14 @@ export function drawCropOverlay(
 export function drawRedactPreview(
   ctx: CanvasRenderingContext2D,
   snapshot: CanvasImageSource,
-  rect: Rect
+  rect: Rect,
+  color?: string
 ) {
   ctx.drawImage(snapshot, 0, 0);
-  ctx.strokeStyle = '#ff0000';
+  ctx.strokeStyle = color || '#ff0000';
   ctx.lineWidth = 2;
   ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-  ctx.fillStyle = 'rgba(255,0,0,0.1)';
+  ctx.fillStyle = color ? color + '1A' : 'rgba(255,0,0,0.1)'; // 1A is approx 10% alpha
   ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
 }
 
@@ -73,13 +74,14 @@ export function applyEffect(
   canvas: HTMLCanvasElement,
   rect: Rect,
   type: ToolType,
-  intensity: number = 50
+  intensity: number = 50,
+  color: string = '#000000'
 ) {
   const { x, y, w, h } = rect;
   if (w < 1 || h < 1) return;
 
   if (type === 'fill') {
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = color;
     ctx.fillRect(x, y, w, h);
   } else if (type === 'blur') {
     ctx.save();

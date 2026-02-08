@@ -15,5 +15,6 @@ export interface AppState {
     tool: ToolType;
     rect: Rect;
     intensity: number;
+    color?: string;
   } | null;
 }

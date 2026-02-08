@@ -26,6 +26,8 @@ export default function init() {
     btnCopyClipboard: document.getElementById('btn-copy-clipboard')!,
     intensityControl: document.getElementById('intensity-control')!,
     intensityInput: document.getElementById('tool-intensity') as HTMLInputElement,
+    colorControl: document.getElementById('color-control')!,
+    colorInput: document.getElementById('tool-color') as HTMLInputElement,
   };
 
   const ctx = elements.canvas.getContext('2d', { willReadFrequently: true })!;
@@ -64,8 +66,13 @@ export default function init() {
     // Show/hide intensity control based on tool
     if (state.activeTool === 'blur' || state.activeTool === 'pixelate') {
       elements.intensityControl.classList.remove('hidden');
+      elements.colorControl.classList.add('hidden');
+    } else if (state.activeTool === 'fill') {
+      elements.intensityControl.classList.add('hidden');
+      elements.colorControl.classList.remove('hidden');
     } else {
       elements.intensityControl.classList.add('hidden');
+      elements.colorControl.classList.add('hidden');
     }
 
     if (state.activeTool === 'move') {
@@ -207,10 +214,12 @@ export default function init() {
       } else if (baseSnapshot) {
         const w = pos.x - state.dragStartMouse.x;
         const h = pos.y - state.dragStartMouse.y;
+        const color = state.activeTool === 'fill' ? elements.colorInput.value : undefined;
         drawRedactPreview(
           ctx,
           baseSnapshot,
-          normalizeRect(state.dragStartMouse.x, state.dragStartMouse.y, w, h)
+          normalizeRect(state.dragStartMouse.x, state.dragStartMouse.y, w, h),
+          color
         );
       }
     });
@@ -232,13 +241,15 @@ export default function init() {
       if (rect.w > 5 && rect.h > 5) {
         history.push(ctx, elements.canvas);
         const intensity = parseInt(elements.intensityInput.value, 10);
-        applyEffect(ctx, elements.canvas, rect, state.activeTool as any, intensity);
+        const color = elements.colorInput.value;
+        applyEffect(ctx, elements.canvas, rect, state.activeTool as any, intensity, color);
 
-        if (state.activeTool === 'blur' || state.activeTool === 'pixelate') {
+        if (state.activeTool === 'blur' || state.activeTool === 'pixelate' || state.activeTool === 'fill') {
           state.lastOperation = {
             tool: state.activeTool,
             rect: rect,
             intensity: intensity,
+            color: color,
           };
         } else {
           state.lastOperation = null;
@@ -282,14 +293,41 @@ export default function init() {
         history.push(ctx, elements.canvas);
 
         const intensity = parseInt(elements.intensityInput.value, 10);
+        const color = elements.colorInput.value;
         applyEffect(
           ctx,
           elements.canvas,
           state.lastOperation.rect,
           state.lastOperation.tool,
-          intensity
+          intensity,
+          color
         );
         state.lastOperation.intensity = intensity;
+      }
+    }, 200)
+  );
+
+  elements.colorInput.addEventListener(
+    'input',
+    debounce(() => {
+      if (!state.lastOperation) return;
+      if (state.activeTool !== 'fill') return;
+      if (state.activeTool !== state.lastOperation.tool) return;
+
+      if (history.undo(ctx, elements.canvas)) {
+        history.push(ctx, elements.canvas);
+
+        const intensity = parseInt(elements.intensityInput.value, 10);
+        const color = elements.colorInput.value;
+        applyEffect(
+          ctx,
+          elements.canvas,
+          state.lastOperation.rect,
+          state.lastOperation.tool,
+          intensity,
+          color
+        );
+        state.lastOperation.color = color;
       }
     }, 200)
   );
