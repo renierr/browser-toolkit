@@ -112,37 +112,41 @@ export function applyEffect(
 
     ctx.imageSmoothingEnabled = true;
   } else if (type === 'noise') {
-    const imageData = ctx.getImageData(x, y, w, h);
-    const data = imageData.data;
+    const noiseCanvas = getNoiseCanvas();
+    const pattern = ctx.createPattern(noiseCanvas, 'repeat');
 
-    for (let i = 0; i < data.length; i += 4) {
-      const noise = Math.random() * 255;
-      data[i] = noise; // R
-      data[i + 1] = noise; // G
-      data[i + 2] = noise; // B
-      // Alpha remains unchanged or can be set to 255
-      // data[i + 3] = 255;
+    if (pattern) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0.1, intensity / 100);
+      ctx.fillStyle = pattern;
+      // Translate so the pattern is anchored to the rect (prevents "swimming" noise)
+      ctx.translate(x, y);
+      ctx.fillRect(0, 0, w, h);
+      ctx.restore();
     }
-
-    const offCanvas = document.createElement('canvas');
-    offCanvas.width = w;
-    offCanvas.height = h;
-    const offCtx = offCanvas.getContext('2d')!;
-    const noiseImage = offCtx.createImageData(w, h);
-    const noiseData = noiseImage.data;
-
-    for (let i = 0; i < noiseData.length; i += 4) {
-      const v = Math.random() * 255;
-      noiseData[i] = v;
-      noiseData[i + 1] = v;
-      noiseData[i + 2] = v;
-      noiseData[i + 3] = 255;
-    }
-    offCtx.putImageData(noiseImage, 0, 0);
-
-    ctx.save();
-    ctx.globalAlpha = Math.max(0.1, intensity / 100);
-    ctx.drawImage(offCanvas, x, y);
-    ctx.restore();
   }
+}
+
+// Singleton noise canvas to avoid regeneration and shimmering
+let noiseCanvas: HTMLCanvasElement | null = null;
+
+function getNoiseCanvas() {
+  if (noiseCanvas) return noiseCanvas;
+
+  const size = 256;
+  noiseCanvas = document.createElement('canvas');
+  noiseCanvas.width = size;
+  noiseCanvas.height = size;
+  const ctx = noiseCanvas.getContext('2d')!;
+  const imageData = ctx.createImageData(size, size);
+  const data = imageData.data;
+  for (let i = 0; i < data.length; i += 4) {
+    const v = Math.random() * 255;
+    data[i] = v;
+    data[i + 1] = v;
+    data[i + 2] = v;
+    data[i + 3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return noiseCanvas;
 }
