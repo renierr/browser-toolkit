@@ -223,6 +223,7 @@ export default function init() {
           if (state.lastOperationSnapshot) {
             ctx.putImageData(state.lastOperationSnapshot, 0, 0);
             baseSnapshot = createSnapshot();
+            drawRedactPreview(ctx, baseSnapshot, state.lastOperation.rect);
           }
           elements.selectionOverlay.classList.add('hidden');
           return;
