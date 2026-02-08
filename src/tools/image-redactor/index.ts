@@ -12,6 +12,7 @@ export default function init() {
     dropzone: document.getElementById('dropzone')!,
     editor: document.getElementById('editor-container')!,
     canvas: document.getElementById('editor-canvas') as HTMLCanvasElement,
+    selectionOverlay: document.getElementById('selection-overlay')!,
     hint: document.getElementById('hint-text')!,
     cropActions: document.getElementById('crop-actions')!,
     btnUndo: document.getElementById('btn-undo') as HTMLButtonElement,
@@ -61,6 +62,23 @@ export default function init() {
     };
   };
 
+  const updateSelectionOverlay = () => {
+    if (state.lastOperation && state.activeTool === state.lastOperation.tool) {
+      const { x, y, w, h } = state.lastOperation.rect;
+      const rect = elements.canvas.getBoundingClientRect();
+      const scaleX = rect.width / elements.canvas.width;
+      const scaleY = rect.height / elements.canvas.height;
+
+      elements.selectionOverlay.style.left = `${x * scaleX}px`;
+      elements.selectionOverlay.style.top = `${y * scaleY}px`;
+      elements.selectionOverlay.style.width = `${w * scaleX}px`;
+      elements.selectionOverlay.style.height = `${h * scaleY}px`;
+      elements.selectionOverlay.classList.remove('hidden');
+    } else {
+      elements.selectionOverlay.classList.add('hidden');
+    }
+  };
+
   const updateUI = () => {
     elements.btnUndo.disabled = !history.canUndo();
     elements.btnRedo.disabled = !history.canRedo();
@@ -93,6 +111,7 @@ export default function init() {
           ? "Use edges to crop and click 'Apply' to submit."
           : 'Mark areas to redact.';
     }
+    updateSelectionOverlay();
   };
 
   const createSnapshot = () => {
@@ -131,6 +150,7 @@ export default function init() {
   const enterCropMode = () => {
     baseSnapshot = createSnapshot();
     elements.cropActions.classList.remove('hidden');
+    elements.selectionOverlay.classList.add('hidden');
 
     if (state.cropRect.w === 0 || state.cropRect.h === 0) {
       const w = elements.canvas.width * 0.8;
@@ -173,6 +193,7 @@ export default function init() {
       const moveBtn = document.querySelector('[data-tool="move"]') as HTMLElement;
       if (moveBtn) moveBtn.click();
     }
+    updateUI();
   };
 
   // --- Event Handlers ---
@@ -203,6 +224,7 @@ export default function init() {
             ctx.putImageData(state.lastOperationSnapshot, 0, 0);
             baseSnapshot = createSnapshot();
           }
+          elements.selectionOverlay.classList.add('hidden');
           return;
         }
       }
@@ -216,6 +238,7 @@ export default function init() {
         elements.canvas.width,
         elements.canvas.height
       );
+      elements.selectionOverlay.classList.add('hidden');
     }
   };
 
@@ -309,6 +332,7 @@ export default function init() {
         applyEffect(ctx, elements.canvas, state.lastOperation);
         state.isMovingLastOp = false;
         baseSnapshot = null;
+        updateUI();
         return;
       }
 
