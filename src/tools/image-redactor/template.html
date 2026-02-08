@@ -26,39 +26,37 @@
 
     <div id="editor-container" class="hidden flex flex-col h-full gap-4 relative">
 
-      <div class="navbar bg-base-200 rounded-box shadow-sm z-20 p-2 min-h-0 flex-wrap gap-2 sticky top-0">
-        <div class="flex-1 flex flex-wrap gap-2 items-center">
-          <div class="join">
-            <button class="btn btn-sm join-item btn-primary" data-tool="move" title="Move/Zoom">
-              <i data-lucide="move" class="w-4 h-4"></i>
-            </button>
-            <button class="btn btn-sm join-item" id="btn-tool-crop" data-tool="crop" title="Zuschneiden Modus">
-              <i data-lucide="crop" class="w-4 h-4"></i> Crop
-            </button>
-            <button class="btn btn-sm join-item" data-tool="pixelate">Pixel</button>
-            <button class="btn btn-sm join-item" data-tool="blur">Blur</button>
-            <button class="btn btn-sm join-item" data-tool="fill">Solid</button>
-          </div>
+      <!-- Non-sticky Action Bar -->
+      <div class="flex flex-wrap gap-2 justify-end px-1">
+        <button class="btn btn-sm btn-ghost text-error" id="btn-reset">
+          <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+          Start Over
+        </button>
+        <button class="btn btn-sm btn-primary" id="btn-download">
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download
+        </button>
+      </div>
 
-          <div class="divider divider-horizontal mx-1 hidden sm:flex"></div>
-
-          <div class="flex gap-1">
-            <button class="btn btn-sm btn-ghost" id="btn-undo" disabled title="Undo">
-              <i data-lucide="undo" class="w-6 h-6"></i>
-            </button>
-            <button class="btn btn-sm btn-ghost" id="btn-redo" disabled title="Redo">
-              <i data-lucide="redo" class="w-6 h-6"></i>
-            </button>
-          </div>
+      <!-- Sticky Tool Bar - Direct child of editor-container to allow sticking across the whole view -->
+      <div class="sticky top-0 z-20 bg-base-200/95 backdrop-blur p-2 rounded-box shadow-md flex flex-wrap gap-2 items-center justify-between border border-base-300">
+        <div class="join flex-wrap">
+          <button class="btn btn-sm join-item btn-primary" data-tool="move" title="Move/Zoom">
+            <i data-lucide="move" class="w-4 h-4"></i>
+          </button>
+          <button class="btn btn-sm join-item" id="btn-tool-crop" data-tool="crop" title="Zuschneiden Modus">
+            <i data-lucide="crop" class="w-4 h-4"></i> Crop
+          </button>
+          <button class="btn btn-sm join-item" data-tool="pixelate">Pixel</button>
+          <button class="btn btn-sm join-item" data-tool="blur">Blur</button>
+          <button class="btn btn-sm join-item" data-tool="fill">Solid</button>
         </div>
 
-        <div class="flex-none flex flex-wrap gap-2">
-          <button class="btn btn-sm btn-ghost text-error" id="btn-reset">
-            <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
-            Start Over
+        <div class="flex gap-1">
+          <button class="btn btn-sm btn-ghost" id="btn-undo" disabled title="Undo">
+            <i data-lucide="undo" class="w-5 h-5"></i>
           </button>
-          <button class="btn btn-sm btn-primary" id="btn-download">
-            <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download
+          <button class="btn btn-sm btn-ghost" id="btn-redo" disabled title="Redo">
+            <i data-lucide="redo" class="w-5 h-5"></i>
           </button>
         </div>
       </div>
