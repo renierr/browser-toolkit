@@ -26,8 +26,8 @@
 
     <div id="editor-container" class="hidden flex flex-col h-full gap-4 relative">
 
-      <div class="navbar bg-base-200 rounded-box shadow-sm z-20 p-2 min-h-0">
-        <div class="flex-1 overflow-x-auto no-scrollbar gap-2 items-center">
+      <div class="navbar bg-base-200 rounded-box shadow-sm z-20 p-2 min-h-0 flex-wrap gap-2">
+        <div class="flex-1 flex flex-wrap gap-2 items-center">
           <div class="join">
             <button class="btn btn-sm join-item" id="btn-tool-crop" data-tool="crop" title="Zuschneiden Modus">
               <i data-lucide="crop" class="w-6 h-6"></i> Crop
@@ -37,7 +37,7 @@
             <button class="btn btn-sm join-item" data-tool="fill">Solid</button>
           </div>
 
-          <div class="divider divider-horizontal mx-1"></div>
+          <div class="divider divider-horizontal mx-1 hidden sm:flex"></div>
 
           <div class="flex gap-1">
             <button class="btn btn-sm btn-ghost" id="btn-undo" disabled title="Undo">
@@ -49,7 +49,7 @@
           </div>
         </div>
 
-        <div class="flex-none gap-2">
+        <div class="flex-none flex flex-wrap gap-2">
           <button class="btn btn-sm btn-ghost text-error" id="btn-reset">
             <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
             Start Over
