@@ -1,10 +1,15 @@
 import type { Rect, Point, HandleType } from './types';
 
-const HANDLE_SIZE = 40;
 const MIN_SIZE = 50;
 
+function getHandleSize() {
+  const dpr = window.devicePixelRatio || 1;
+  return Math.max(40, 20 * dpr);
+}
+
 export function getHitHandle(pos: Point, rect: Rect): HandleType {
-  const half = HANDLE_SIZE / 2;
+  const handleSize = getHandleSize();
+  const half = handleSize / 2;
 
   const isHit = (tx: number, ty: number) =>
     Math.abs(pos.x - tx) <= half && Math.abs(pos.y - ty) <= half;

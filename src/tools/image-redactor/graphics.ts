@@ -18,7 +18,10 @@ export function drawCropOverlay(
   ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
 
   ctx.fillStyle = '#fff';
-  const size = 24;
+
+  // Scale handle size based on device pixel ratio for high-density screens
+  const dpr = window.devicePixelRatio || 1;
+  const size = Math.max(24, 12 * dpr);
   const half = size / 2;
 
   const corners = [
