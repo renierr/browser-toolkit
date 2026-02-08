@@ -405,6 +405,9 @@ export default function init() {
   });
 
   return () => {
-    elements.canvas.removeEventListener('pointerdown', onPointerDown);
+    history.clear();
+    state.originalImage = null;
+    baseSnapshot = null;
+    rafId = null;
   };
 }
