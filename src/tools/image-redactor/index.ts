@@ -24,6 +24,8 @@ export default function init() {
     cropToolBtn: document.getElementById('btn-tool-crop')!,
     pasteBtn: document.getElementById('paste-btn')!,
     btnCopyClipboard: document.getElementById('btn-copy-clipboard')!,
+    intensityControl: document.getElementById('intensity-control')!,
+    intensityInput: document.getElementById('tool-intensity') as HTMLInputElement,
   };
 
   const ctx = elements.canvas.getContext('2d', { willReadFrequently: true })!;
@@ -57,6 +59,13 @@ export default function init() {
   const updateUI = () => {
     elements.btnUndo.disabled = !history.canUndo();
     elements.btnRedo.disabled = !history.canRedo();
+
+    // Show/hide intensity control based on tool
+    if (state.activeTool === 'blur' || state.activeTool === 'pixelate') {
+      elements.intensityControl.classList.remove('hidden');
+    } else {
+      elements.intensityControl.classList.add('hidden');
+    }
 
     if (state.activeTool === 'move') {
       elements.canvas.style.touchAction = 'auto';
@@ -221,7 +230,8 @@ export default function init() {
 
       if (rect.w > 5 && rect.h > 5) {
         history.push(ctx, elements.canvas);
-        applyEffect(ctx, elements.canvas, rect, state.activeTool as any);
+        const intensity = parseInt(elements.intensityInput.value, 10);
+        applyEffect(ctx, elements.canvas, rect, state.activeTool as any, intensity);
       }
       baseSnapshot = null;
     }

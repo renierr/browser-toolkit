@@ -68,7 +68,8 @@ export function applyEffect(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   rect: Rect,
-  type: 'pixelate' | 'blur' | 'fill'
+  type: 'pixelate' | 'blur' | 'fill',
+  intensity: number = 50
 ) {
   const { x, y, w, h } = rect;
   if (w < 1 || h < 1) return;
@@ -81,11 +82,15 @@ export function applyEffect(
     ctx.beginPath();
     ctx.rect(x, y, w, h);
     ctx.clip();
-    ctx.filter = 'blur(15px)';
+    const blurAmount = Math.max(1, intensity * 0.4);
+    ctx.filter = `blur(${blurAmount}px)`;
     ctx.drawImage(canvas, 0, 0);
     ctx.restore();
   } else if (type === 'pixelate') {
-    const blockSize = Math.max(8, Math.min(w, h) / 15);
+    const minDim = Math.min(w, h);
+    const factor = 0.02 + (intensity / 100) * 0.18;
+    const blockSize = Math.max(4, minDim * factor);
+
     const offCanvas = document.createElement('canvas');
     const sw = Math.floor(w / blockSize);
     const sh = Math.floor(h / blockSize);
