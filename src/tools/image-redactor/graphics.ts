@@ -6,14 +6,17 @@ export function drawCropOverlay(
   rect: Rect,
   baseImage: CanvasImageSource
 ) {
-  // Use drawImage for GPU acceleration
+  // Clear canvas first
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // Draw base image
   ctx.drawImage(baseImage, 0, 0);
 
   ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Draw the undimmed part
+  // Draw the undimmed part by clearing and redrawing the cropped region
   if (rect.w > 0 && rect.h > 0) {
+    ctx.clearRect(rect.x, rect.y, rect.w, rect.h);
     ctx.drawImage(baseImage, rect.x, rect.y, rect.w, rect.h, rect.x, rect.y, rect.w, rect.h);
   }
 
@@ -57,10 +60,12 @@ export function drawCropOverlay(
 
 export function drawRedactPreview(
   ctx: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
   snapshot: CanvasImageSource,
   rect: Rect,
   color?: string
 ) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(snapshot, 0, 0);
   ctx.strokeStyle = color || '#ff0000';
   ctx.lineWidth = 2;
@@ -71,7 +76,7 @@ export function drawRedactPreview(
 
 export function applyEffect(
   ctx: CanvasRenderingContext2D,
-  canvas: HTMLCanvasElement,
+  _canvas: HTMLCanvasElement,
   operation: Operation
 ) {
   const { rect, tool: type, intensity, color } = operation;
@@ -82,35 +87,66 @@ export function applyEffect(
     ctx.fillStyle = color || '#000000';
     ctx.fillRect(x, y, w, h);
   } else if (type === 'blur') {
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.clip();
-    const blurAmount = Math.max(1, intensity * 0.4);
-    ctx.filter = `blur(${blurAmount}px)`;
-    ctx.drawImage(canvas, 0, 0);
-    ctx.restore();
+    // Extract the region to blur
+    const regionData = ctx.getImageData(x, y, w, h);
+
+    // Create source canvas with the region
+    const srcCanvas = document.createElement('canvas');
+    srcCanvas.width = w;
+    srcCanvas.height = h;
+    const srcCtx = srcCanvas.getContext('2d')!;
+    srcCtx.putImageData(regionData, 0, 0);
+
+    // Create destination canvas for blur effect
+    const blurCanvas = document.createElement('canvas');
+    blurCanvas.width = w;
+    blurCanvas.height = h;
+    const blurCtx = blurCanvas.getContext('2d')!;
+
+    // Apply blur by drawing from source to destination with filter
+    const blurAmount = Math.max(1, intensity * 0.2);
+    blurCtx.filter = `blur(${blurAmount}px)`;
+    blurCtx.drawImage(srcCanvas, 0, 0);
+
+    // Clear the original region and draw the blurred result
+    ctx.clearRect(x, y, w, h);
+    ctx.drawImage(blurCanvas, 0, 0, w, h, x, y, w, h);
   } else if (type === 'pixelate') {
     const minDim = Math.min(w, h);
     const factor = 0.02 + (intensity / 100) * 0.18;
     const blockSize = Math.max(4, minDim * factor);
 
-    const offCanvas = document.createElement('canvas');
     const sw = Math.floor(w / blockSize);
     const sh = Math.floor(h / blockSize);
     if (sw < 1 || sh < 1) return;
 
+    // Extract the region to pixelate
+    const regionData = ctx.getImageData(x, y, w, h);
+
+    // Create offscreen canvas for the region
+    const regionCanvas = document.createElement('canvas');
+    regionCanvas.width = w;
+    regionCanvas.height = h;
+    const regionCtx = regionCanvas.getContext('2d')!;
+    regionCtx.putImageData(regionData, 0, 0);
+
+    // Create small canvas for downscaling
+    const offCanvas = document.createElement('canvas');
     offCanvas.width = sw;
     offCanvas.height = sh;
     const offCtx = offCanvas.getContext('2d')!;
 
     offCtx.imageSmoothingEnabled = false;
+
+    // Downscale from the region canvas
+    offCtx.drawImage(regionCanvas, 0, 0, w, h, 0, 0, sw, sh);
+
+    // Clear the original region and draw pixelated result
+    ctx.save();
     ctx.imageSmoothingEnabled = false;
-
-    offCtx.drawImage(canvas, x, y, w, h, 0, 0, sw, sh);
+    ctx.clearRect(x, y, w, h);
     ctx.drawImage(offCanvas, 0, 0, sw, sh, x, y, w, h);
-
-    ctx.imageSmoothingEnabled = true;
+    ctx.restore();
   } else if (type === 'noise') {
     const noiseCanvas = getNoiseCanvas();
     const pattern = ctx.createPattern(noiseCanvas, 'repeat');

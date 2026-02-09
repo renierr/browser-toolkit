@@ -133,6 +133,7 @@ export default function init() {
         state.originalImage = img;
         elements.canvas.width = img.width;
         elements.canvas.height = img.height;
+        ctx.clearRect(0, 0, img.width, img.height);
         ctx.drawImage(img, 0, 0);
 
         elements.dropzone.classList.add('hidden');
@@ -174,6 +175,7 @@ export default function init() {
     elements.cropToolBtn.classList.remove('btn-active', 'btn-primary');
 
     if (baseSnapshot) {
+      ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
       ctx.drawImage(baseSnapshot, 0, 0);
 
       if (apply) {
@@ -226,7 +228,7 @@ export default function init() {
           if (state.lastOperationSnapshot) {
             ctx.putImageData(state.lastOperationSnapshot, 0, 0);
             baseSnapshot = createSnapshot();
-            drawRedactPreview(ctx, baseSnapshot, state.lastOperation.rect);
+            drawRedactPreview(ctx, elements.canvas, baseSnapshot, state.lastOperation.rect);
           }
           elements.selectionOverlay.classList.add('hidden');
           return;
@@ -292,13 +294,14 @@ export default function init() {
           x: state.dragStartRect.x + dx,
           y: state.dragStartRect.y + dy,
         };
-        drawRedactPreview(ctx, baseSnapshot, newRect);
+        drawRedactPreview(ctx, elements.canvas, baseSnapshot, newRect);
       } else if (baseSnapshot) {
         const w = pos.x - state.dragStartMouse.x;
         const h = pos.y - state.dragStartMouse.y;
         const color = state.activeTool === 'fill' ? elements.colorInput.value : undefined;
         drawRedactPreview(
           ctx,
+          elements.canvas,
           baseSnapshot,
           normalizeRect(state.dragStartMouse.x, state.dragStartMouse.y, w, h),
           color
@@ -321,6 +324,7 @@ export default function init() {
         state.lastOperation.rect.x = state.dragStartRect.x + dx;
         state.lastOperation.rect.y = state.dragStartRect.y + dy;
 
+        ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
         ctx.drawImage(baseSnapshot, 0, 0);
         applyEffect(ctx, elements.canvas, state.lastOperation);
         state.isMovingLastOp = false;
@@ -329,6 +333,7 @@ export default function init() {
         return;
       }
 
+      ctx.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
       ctx.drawImage(baseSnapshot, 0, 0);
       const w = getPos(e).x - state.dragStartMouse.x;
       const h = getPos(e).y - state.dragStartMouse.y;
