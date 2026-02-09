@@ -29,6 +29,7 @@ export default function init() {
     intensityInput: document.getElementById('tool-intensity') as HTMLInputElement,
     colorControl: document.getElementById('color-control')!,
     colorInput: document.getElementById('tool-color') as HTMLInputElement,
+    exportFormat: document.getElementById('export-format') as HTMLSelectElement,
   };
 
   const ctx = elements.canvas.getContext('2d', { willReadFrequently: true })!;
@@ -472,9 +473,12 @@ export default function init() {
 
   elements.btnDownload.addEventListener('click', () => {
     if (state.activeTool === 'crop') exitCropMode(true);
+    const format = elements.exportFormat.value;
+    const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
+    const quality = format === 'image/png' ? undefined : 0.92;
     const link = document.createElement('a');
-    link.download = `redacted-${Date.now()}.png`;
-    link.href = elements.canvas.toDataURL('image/png');
+    link.download = `redacted-${Date.now()}.${ext}`;
+    link.href = elements.canvas.toDataURL(format, quality);
     link.click();
   });
 
@@ -491,7 +495,10 @@ export default function init() {
 
   elements.btnCopyClipboard.addEventListener('click', async () => {
     try {
-      await copyCanvasToClipboard(elements.canvas);
+      const format = elements.exportFormat.value;
+      const formatKey = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
+      const quality = format === 'image/png' ? undefined : 0.92;
+      await copyCanvasToClipboard(elements.canvas, formatKey, quality);
       showMessage('Copied to clipboard');
       console.log('Copied to clipboard');
     } catch (err) {

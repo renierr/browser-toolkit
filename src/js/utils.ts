@@ -65,7 +65,8 @@ export const html = (strings: TemplateStringsArray, ...values: any[]) => {
 
 export async function copyCanvasToClipboard(
   canvas: HTMLCanvasElement,
-  format: 'jpg' | 'png' = 'png'
+  format: 'jpg' | 'png' | 'webp' = 'png',
+  quality?: number
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(async (blob) => {
@@ -80,7 +81,7 @@ export async function copyCanvasToClipboard(
       } catch (err) {
         reject(err);
       }
-    }, `image/${format}`);
+    }, `image/${format}`, quality);
   });
 }
 

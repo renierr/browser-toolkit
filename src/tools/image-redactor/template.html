@@ -28,13 +28,21 @@
 
       <!-- Non-sticky Action Bar -->
       <div class="flex flex-wrap gap-2 justify-between px-1 items-center">
-        <div class="flex gap-2">
+        <div class="flex gap-2 flex-wrap">
+          <div id="format-control" class="flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
+            <label for="export-format" class="text-xs font-medium">Export as:</label>
+            <select id="export-format" class="select select-xs focus:outline-none">
+              <option value="image/png">PNG</option>
+              <option value="image/jpeg">JPEG</option>
+              <option value="image/webp">WebP</option>
+            </select>
+          </div>
           <div id="intensity-control" class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
-            <span class="text-xs font-medium">Intensity:</span>
+            <label for="tool-intensity" class="text-xs font-medium">Intensity:</label>
             <input type="range" min="1" max="100" value="50" class="range range-xs range-primary w-24" id="tool-intensity" />
           </div>
           <div id="color-control" class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
-            <span class="text-xs font-medium">Color:</span>
+            <label for="tool-color" class="text-xs font-medium">Color:</label>
             <input type="color" value="#000000" class="w-8 h-6 p-0 border-0 bg-transparent cursor-pointer rounded" id="tool-color" />
           </div>
         </div>
