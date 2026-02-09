@@ -66,7 +66,7 @@ export default function init() {
     if (state.lastOperation && state.activeTool === state.lastOperation.tool) {
       const { x, y, w, h } = state.lastOperation.rect;
       const canvasRect = elements.canvas.getBoundingClientRect();
-      const parentRect = elements.canvas.parentElement!.getBoundingClientRect();
+      const parentRect = elements.canvas.parentElement!.parentElement!.getBoundingClientRect();
       const scaleX = canvasRect.width / elements.canvas.width;
       const scaleY = canvasRect.height / elements.canvas.height;
       const offsetLeft = canvasRect.left - parentRect.left;
