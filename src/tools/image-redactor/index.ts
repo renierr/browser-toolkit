@@ -34,6 +34,7 @@ export default function init() {
 
   const ctx = elements.canvas.getContext('2d', { willReadFrequently: true })!;
   const history = new HistoryManager();
+  let downloadFilename = 'redacted-image';
 
   // --- State ---
   const state: AppState = {
@@ -464,6 +465,7 @@ export default function init() {
     state.lastOperation = null;
     state.lastOperationSnapshot = null;
     history.clear();
+    downloadFilename = 'redacted-image';
     updateUI();
   });
 
@@ -477,7 +479,7 @@ export default function init() {
     const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
     const quality = format === 'image/png' ? undefined : 0.92;
     const link = document.createElement('a');
-    link.download = `redacted-${Date.now()}.${ext}`;
+    link.download = `${downloadFilename}.${ext}`;
     link.href = elements.canvas.toDataURL(format, quality);
     link.click();
   });
@@ -508,7 +510,9 @@ export default function init() {
 
   setupFileDropzone('dropzone', 'image-input', (files) => {
     if (files.length > 0) {
-      loadImage(files[0]);
+      const file = files[0]
+      downloadFilename = file.name.replace(/\.[^/.]+$/, '') + '-redacted';
+      loadImage(file);
     }
   });
 
