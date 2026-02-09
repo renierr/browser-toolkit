@@ -65,12 +65,15 @@ export default function init() {
   const updateSelectionOverlay = () => {
     if (state.lastOperation && state.activeTool === state.lastOperation.tool) {
       const { x, y, w, h } = state.lastOperation.rect;
-      const rect = elements.canvas.getBoundingClientRect();
-      const scaleX = rect.width / elements.canvas.width;
-      const scaleY = rect.height / elements.canvas.height;
+      const canvasRect = elements.canvas.getBoundingClientRect();
+      const parentRect = elements.canvas.parentElement!.getBoundingClientRect();
+      const scaleX = canvasRect.width / elements.canvas.width;
+      const scaleY = canvasRect.height / elements.canvas.height;
+      const offsetLeft = canvasRect.left - parentRect.left;
+      const offsetTop = canvasRect.top - parentRect.top;
 
-      elements.selectionOverlay.style.left = `${x * scaleX}px`;
-      elements.selectionOverlay.style.top = `${y * scaleY}px`;
+      elements.selectionOverlay.style.left = `${offsetLeft + x * scaleX}px`;
+      elements.selectionOverlay.style.top = `${offsetTop + y * scaleY}px`;
       elements.selectionOverlay.style.width = `${w * scaleX}px`;
       elements.selectionOverlay.style.height = `${h * scaleY}px`;
       elements.selectionOverlay.classList.remove('hidden');
