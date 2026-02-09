@@ -500,7 +500,7 @@ export default function init() {
       const format = elements.exportFormat.value;
       const formatKey = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
       const quality = format === 'image/png' ? undefined : 0.92;
-      await copyCanvasToClipboard(elements.canvas, formatKey, quality);
+      await copyCanvasToClipboard(elements.canvas, formatKey === 'webp' ? 'jpg' : formatKey, quality);
       showMessage('Copied to clipboard');
       console.log('Copied to clipboard');
     } catch (err) {

@@ -65,7 +65,7 @@ export const html = (strings: TemplateStringsArray, ...values: any[]) => {
 
 export async function copyCanvasToClipboard(
   canvas: HTMLCanvasElement,
-  format: 'jpg' | 'png' | 'webp' = 'png',
+  format: 'jpg' | 'png' = 'png',
   quality?: number
 ): Promise<void> {
   return new Promise((resolve, reject) => {
