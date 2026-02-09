@@ -2,7 +2,7 @@ import { HistoryManager } from './history';
 import { getHitHandle, normalizeRect, resizeRect } from './crop';
 import { applyEffect, cleanupWorkCanvases, drawCropOverlay, drawRedactPreview } from './graphics';
 import type { AppState, Operation, ToolType } from './types';
-import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
+import { downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import { copyCanvasToClipboard, debounce } from '../../js/utils.ts';
 
@@ -478,10 +478,13 @@ export default function init() {
     const format = elements.exportFormat.value;
     const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
     const quality = format === 'image/png' ? undefined : 0.92;
-    const link = document.createElement('a');
-    link.download = `${downloadFilename}.${ext}`;
-    link.href = elements.canvas.toDataURL(format, quality);
-    link.click();
+
+    elements.canvas.toBlob(async (blob) => {
+      if (blob)
+        await downloadFile(blob, `${downloadFilename}.${ext}`);
+      else
+        showMessage('Failed to generate image blob for download.', { type: 'alert' });
+    }, format, quality);
   });
 
   elements.pasteBtn.addEventListener('click', async (e) => {
