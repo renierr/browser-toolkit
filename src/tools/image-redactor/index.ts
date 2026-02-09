@@ -1,6 +1,6 @@
 import { HistoryManager } from './history';
 import { getHitHandle, normalizeRect, resizeRect } from './crop';
-import { applyEffect, drawCropOverlay, drawRedactPreview } from './graphics';
+import { applyEffect, cleanupWorkCanvases, drawCropOverlay, drawRedactPreview } from './graphics';
 import type { AppState, Operation, ToolType } from './types';
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
@@ -506,6 +506,7 @@ export default function init() {
   });
 
   return () => {
+    cleanupWorkCanvases();
     history.clear();
     state.originalImage = null;
     state.lastOperation = null;

@@ -1,5 +1,38 @@
 import type { Operation, Rect } from './types';
 
+// Reusable offscreen canvases to avoid GC pressure
+let _srcCanvas: HTMLCanvasElement | null = null;
+let _dstCanvas: HTMLCanvasElement | null = null;
+let noiseCanvas: HTMLCanvasElement | null = null;
+
+function getWorkCanvas(width: number, height: number, index: 0 | 1 = 0): [HTMLCanvasElement, CanvasRenderingContext2D] {
+  const canvas = index === 0
+    ? (_srcCanvas ??= document.createElement('canvas'))
+    : (_dstCanvas ??= document.createElement('canvas'));
+
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
+  ctx.clearRect(0, 0, width, height);
+  return [canvas, ctx];
+}
+
+export function cleanupWorkCanvases() {
+  if (_srcCanvas) {
+    _srcCanvas.width = 0;
+    _srcCanvas.height = 0;
+    _srcCanvas = null;
+  }
+  if (_dstCanvas) {
+    _dstCanvas.width = 0;
+    _dstCanvas.height = 0;
+    _dstCanvas = null;
+  }
+}
+
 export function drawCropOverlay(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
@@ -74,9 +107,10 @@ export function drawRedactPreview(
   ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
 }
 
+
 export function applyEffect(
   ctx: CanvasRenderingContext2D,
-  _canvas: HTMLCanvasElement,
+  canvas: HTMLCanvasElement,
   operation: Operation
 ) {
   const { rect, tool: type, intensity, color } = operation;
@@ -86,81 +120,79 @@ export function applyEffect(
   if (type === 'fill') {
     ctx.fillStyle = color || '#000000';
     ctx.fillRect(x, y, w, h);
-  } else if (type === 'blur') {
-    // Extract the region to blur
-    const regionData = ctx.getImageData(x, y, w, h);
+    return;
+  }
 
-    // Create source canvas with the region
-    const srcCanvas = document.createElement('canvas');
-    srcCanvas.width = w;
-    srcCanvas.height = h;
-    const srcCtx = srcCanvas.getContext('2d')!;
-    srcCtx.putImageData(regionData, 0, 0);
+  if (type === 'blur') {
+    // Add padding to handle blur edge bleeding
+    const blurAmount = Math.max(1, intensity * 0.5);
+    const padding = Math.ceil(blurAmount * 2);
 
-    // Create destination canvas for blur effect
-    const blurCanvas = document.createElement('canvas');
-    blurCanvas.width = w;
-    blurCanvas.height = h;
-    const blurCtx = blurCanvas.getContext('2d')!;
+    // Calculate padded region (clamped to canvas bounds)
+    const px = Math.max(0, x - padding);
+    const py = Math.max(0, y - padding);
+    const px2 = Math.min(canvas.width, x + w + padding);
+    const py2 = Math.min(canvas.height, y + h + padding);
+    const pw = px2 - px;
+    const ph = py2 - py;
 
-    // Apply blur by drawing from source to destination with filter
-    const blurAmount = Math.max(1, intensity * 0.2);
-    blurCtx.filter = `blur(${blurAmount}px)`;
-    blurCtx.drawImage(srcCanvas, 0, 0);
+    // Get work canvases
+    const [srcCanvas, srcCtx] = getWorkCanvas(pw, ph, 0);
+    const [dstCanvas, dstCtx] = getWorkCanvas(pw, ph, 1);
 
-    // Clear the original region and draw the blurred result
+    // Copy padded region to source canvas
+    srcCtx.drawImage(canvas, px, py, pw, ph, 0, 0, pw, ph);
+
+    // Apply blur filter drawing from src to dst
+    dstCtx.filter = `blur(${blurAmount}px)`;
+    dstCtx.drawImage(srcCanvas, 0, 0);
+    dstCtx.filter = 'none';
+
+    // Calculate the inner region coordinates relative to padded canvas
+    const innerX = x - px;
+    const innerY = y - py;
+
+    // Only draw back the original selection area (not the padding)
     ctx.clearRect(x, y, w, h);
-    ctx.drawImage(blurCanvas, 0, 0, w, h, x, y, w, h);
-  } else if (type === 'pixelate') {
+    ctx.drawImage(dstCanvas, innerX, innerY, w, h, x, y, w, h);
+    return;
+  }
+
+  if (type === 'pixelate') {
     const minDim = Math.min(w, h);
     const factor = 0.02 + (intensity / 100) * 0.18;
     const blockSize = Math.max(4, minDim * factor);
 
-    const sw = Math.floor(w / blockSize);
-    const sh = Math.floor(h / blockSize);
-    if (sw < 1 || sh < 1) return;
+    const sw = Math.max(1, Math.floor(w / blockSize));
+    const sh = Math.max(1, Math.floor(h / blockSize));
 
-    // Extract the region to pixelate
-    const regionData = ctx.getImageData(x, y, w, h);
+    // Get work canvases - small one for downscaling
+    const [smallCanvas, smallCtx] = getWorkCanvas(sw, sh, 0);
 
-    // Create offscreen canvas for the region
-    const regionCanvas = document.createElement('canvas');
-    regionCanvas.width = w;
-    regionCanvas.height = h;
-    const regionCtx = regionCanvas.getContext('2d')!;
-    regionCtx.putImageData(regionData, 0, 0);
+    // Downscale directly from main canvas region
+    smallCtx.imageSmoothingEnabled = true; // Average colors when downscaling
+    smallCtx.drawImage(canvas, x, y, w, h, 0, 0, sw, sh);
 
-    // Create small canvas for downscaling
-    const offCanvas = document.createElement('canvas');
-    offCanvas.width = sw;
-    offCanvas.height = sh;
-    const offCtx = offCanvas.getContext('2d')!;
-
-    offCtx.imageSmoothingEnabled = false;
-
-    // Downscale from the region canvas
-    offCtx.drawImage(regionCanvas, 0, 0, w, h, 0, 0, sw, sh);
-
-    // Clear the original region and draw pixelated result
+    // Upscale back without smoothing for pixelated look
     ctx.save();
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(x, y, w, h);
-    ctx.drawImage(offCanvas, 0, 0, sw, sh, x, y, w, h);
+    ctx.drawImage(smallCanvas, 0, 0, sw, sh, x, y, w, h);
     ctx.restore();
-  } else if (type === 'noise') {
+    return;
+  }
+
+  if (type === 'noise') {
     const noiseCanvas = getNoiseCanvas();
     const pattern = ctx.createPattern(noiseCanvas, 'repeat');
 
     if (pattern) {
       ctx.save();
-
       ctx.beginPath();
       ctx.rect(x, y, w, h);
       ctx.clip();
-      ctx.globalAlpha = 1.0;
 
       const scale = 1 + (intensity / 100) * 3;
-
       ctx.imageSmoothingEnabled = false;
       ctx.fillStyle = pattern;
 
@@ -172,9 +204,6 @@ export function applyEffect(
     }
   }
 }
-
-// Singleton noise canvas to avoid regeneration and shimmering
-let noiseCanvas: HTMLCanvasElement | null = null;
 
 function getNoiseCanvas() {
   if (noiseCanvas) return noiseCanvas;
