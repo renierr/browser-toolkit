@@ -6,6 +6,8 @@ import { downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from 
 import { showMessage } from '../../js/ui.ts';
 import { copyCanvasToClipboard, debounce } from '../../js/utils.ts';
 
+const EXPORT_QUALITY = 0.92;
+
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   const elements = {
@@ -477,7 +479,7 @@ export default function init() {
     if (state.activeTool === 'crop') exitCropMode(true);
     const format = elements.exportFormat.value;
     const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
-    const quality = format === 'image/png' ? undefined : 0.92;
+    const quality = format === 'image/png' ? undefined : EXPORT_QUALITY;
 
     elements.canvas.toBlob(async (blob) => {
       if (blob)
@@ -501,9 +503,9 @@ export default function init() {
   elements.btnCopyClipboard.addEventListener('click', async () => {
     try {
       const format = elements.exportFormat.value;
-      const formatKey = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
-      const quality = format === 'image/png' ? undefined : 0.92;
-      await copyCanvasToClipboard(elements.canvas, formatKey === 'webp' ? 'jpg' : formatKey, quality);
+      const formatKey = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'jpg' : 'png';
+      const quality = format === 'image/png' ? undefined : EXPORT_QUALITY;
+      await copyCanvasToClipboard(elements.canvas, formatKey, quality);
       showMessage('Copied to clipboard');
       console.log('Copied to clipboard');
     } catch (err) {
@@ -515,6 +517,7 @@ export default function init() {
     if (files.length > 0) {
       const file = files[0]
       downloadFilename = file.name.replace(/\.[^/.]+$/, '') + '-redacted';
+      elements.exportFormat.value = file.type === 'image/jpeg' ? 'image/jpeg' : file.type === 'image/webp' ? 'image/webp' : 'image/png';
       loadImage(file);
     }
   });
