@@ -82,15 +82,15 @@ function wpmToUnitMs(wpm: number): number {
   return Math.round(1200 / wpm);
 }
 
-function playTone(durationMs: number, volume: number): void {
-  const ctx = getAudioContext();
-  if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+function playTone(durationMs: number, volume: number): Promise<void> {
+  return new Promise((resolve) => {
+    const ctx = getAudioContext();
 
-  const osc = ctx.createOscillator();
-  const gainNode = ctx.createGain();
+    const osc = ctx.createOscillator();
+    const gainNode = ctx.createGain();
 
-  osc.type = 'sine';
-  osc.frequency.value = 600; // Classic CW tone frequency
+    osc.type = 'sine';
+    osc.frequency.value = 600; // Classic CW tone frequency
 
   // Use envelope to avoid clicking (attack/decay)
   const now = ctx.currentTime;
@@ -98,16 +98,19 @@ function playTone(durationMs: number, volume: number): void {
   const decayTime = 0.005; // 5ms decay
   const peakGain = volume * 0.3;
 
-  gainNode.gain.setValueAtTime(0, now);
-  gainNode.gain.linearRampToValueAtTime(peakGain, now + attackTime);
-  gainNode.gain.setValueAtTime(peakGain, now + durationMs / 1000 - decayTime);
-  gainNode.gain.linearRampToValueAtTime(0, now + durationMs / 1000);
+    gainNode.gain.setValueAtTime(0, now);
+    gainNode.gain.linearRampToValueAtTime(peakGain, now + attackTime);
+    gainNode.gain.setValueAtTime(peakGain, now + durationMs / 1000 - decayTime);
+    gainNode.gain.linearRampToValueAtTime(0, now + durationMs / 1000);
 
-  osc.connect(gainNode);
-  gainNode.connect(ctx.destination);
+    osc.connect(gainNode);
+    gainNode.connect(ctx.destination);
 
-  osc.start(now);
-  osc.stop(now + durationMs / 1000 + 0.01);
+    osc.start(now);
+    osc.stop(now + durationMs / 1000 + 0.01);
+
+    osc.onended = () => resolve();
+  });
 }
 
 let flashIndicator: HTMLElement | null = null;
@@ -138,6 +141,14 @@ async function playMorse(
 ): Promise<void> {
   if (signal.aborted) return;
 
+  // Ensure AudioContext is ready before starting
+  if (mode === 'both' || mode === 'sound') {
+    const ctx = getAudioContext();
+    if (ctx.state === 'suspended') {
+      await ctx.resume();
+    }
+  }
+
   const parts = morse.split(' ');
 
   for (const part of parts) {
@@ -155,15 +166,18 @@ async function playMorse(
       const durUnits = isDash ? 3 : 1;
       const duration = durUnits * unitMs;
 
-      if (mode === 'both' || mode === 'sound') {
-        playTone(duration, volume);
-      }
       if (mode === 'both' || mode === 'flash') {
         flashElement(duration);
       }
 
-      // Wait for tone duration + 1 unit gap between elements within a character
-      await delay(duration + unitMs);
+      if (mode === 'both' || mode === 'sound') {
+        await playTone(duration, volume);
+        // Add inter-element gap (1 unit silence)
+        await delay(unitMs);
+      } else {
+        // Flash only mode - wait for duration + gap
+        await delay(duration + unitMs);
+      }
     }
 
     // Inter-character gap: 3 units total, but we already waited 1 unit after last element
