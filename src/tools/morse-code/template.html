@@ -27,12 +27,12 @@
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Speed</span>
-          <span class="label-text-alt" id="wpm-display">20 WPM</span>
+          <span class="label-text-alt" id="wpm-display">17 WPM</span>
         </label>
         <input
           type="range"
           id="speed-slider"
-          min="5" max="35" value="20"
+          min="5" max="35" value="17"
           class="range range-primary range-sm"
           step="1"
         />
@@ -42,12 +42,12 @@
       <div class="form-control">
         <label class="label">
           <span class="label-text font-semibold">Volume</span>
-          <span class="label-text-alt" id="volume-display">80%</span>
+          <span class="label-text-alt" id="volume-display">90%</span>
         </label>
         <input
           type="range"
           id="volume-slider"
-          min="0" max="100" value="80"
+          min="0" max="100" value="90"
           class="range range-primary range-sm"
           step="5"
         />
@@ -71,8 +71,18 @@
       <label class="label">
         <span class="label-text font-semibold">Morse Code</span>
       </label>
-      <div id="output-morse" class="textarea textarea-bordered h-24 font-mono text-lg break-all whitespace-pre-wrap leading-relaxed bg-base-200 p-3 overflow-auto">
+      <div id="output-morse" class="w-full textarea textarea-bordered h-24 font-mono text-lg break-all whitespace-pre-wrap leading-relaxed bg-base-200 p-3 overflow-auto">
         --- ... ---
+      </div>
+    </div>
+
+    <!-- Flash Indicator -->
+    <div class="form-control w-full mb-6">
+      <label class="label">
+        <span class="label-text font-semibold">Signal</span>
+      </label>
+      <div id="flash-indicator" class="h-32 rounded-lg bg-base-300 border-2 border-base-300 transition-colors duration-75 flex items-center justify-center">
+        <span class="text-base-content/40 text-sm">Visual indicator</span>
       </div>
     </div>
 
@@ -91,11 +101,6 @@
 
     <div id="status" class="mt-4 text-sm text-base-content/60 text-center">
       Ready
-    </div>
-
-    <div class="alert alert-warning mt-6">
-      <i data-lucide="triangle-alert" class="w-5 h-5"></i>
-      <span>Rapid flashing may be problematic for those with light sensitivity.</span>
     </div>
   </div>
 </div>

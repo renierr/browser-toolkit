@@ -90,25 +90,42 @@ function playTone(durationMs: number, volume: number): void {
   const gainNode = ctx.createGain();
 
   osc.type = 'sine';
-  osc.frequency.value = 700; // 650-800 Hz is typical for morse
-  gainNode.gain.value = volume * 0.5; // Scale volume to reasonable level
+  osc.frequency.value = 600; // Classic CW tone frequency
+
+  // Use envelope to avoid clicking (attack/decay)
+  const now = ctx.currentTime;
+  const attackTime = 0.005; // 5ms attack
+  const decayTime = 0.005; // 5ms decay
+  const peakGain = volume * 0.3;
+
+  gainNode.gain.setValueAtTime(0, now);
+  gainNode.gain.linearRampToValueAtTime(peakGain, now + attackTime);
+  gainNode.gain.setValueAtTime(peakGain, now + durationMs / 1000 - decayTime);
+  gainNode.gain.linearRampToValueAtTime(0, now + durationMs / 1000);
 
   osc.connect(gainNode);
   gainNode.connect(ctx.destination);
 
-  const now = ctx.currentTime;
   osc.start(now);
-  osc.stop(now + durationMs / 1000);
+  osc.stop(now + durationMs / 1000 + 0.01);
 }
 
-function flashScreen(durationMs: number): void {
-  const original = document.body.style.backgroundColor;
-  document.body.style.backgroundColor = '#ffffff';
-  document.body.style.transition = 'background 0.06s';
+let flashIndicator: HTMLElement | null = null;
+
+function flashElement(durationMs: number): void {
+  if (!flashIndicator) {
+    flashIndicator = document.getElementById('flash-indicator');
+  }
+  if (!flashIndicator) return;
+
+  flashIndicator.classList.add('bg-warning', 'border-warning');
+  flashIndicator.classList.remove('bg-base-300', 'border-base-300');
 
   setTimeout(() => {
-    document.body.style.backgroundColor = original || '';
-    document.body.style.transition = '';
+    if (flashIndicator) {
+      flashIndicator.classList.remove('bg-warning', 'border-warning');
+      flashIndicator.classList.add('bg-base-300', 'border-base-300');
+    }
   }, durationMs);
 }
 
@@ -142,13 +159,15 @@ async function playMorse(
         playTone(duration, volume);
       }
       if (mode === 'both' || mode === 'flash') {
-        flashScreen(duration);
+        flashElement(duration);
       }
 
-      await delay(unitMs); // intra-character space
+      // Wait for tone duration + 1 unit gap between elements within a character
+      await delay(duration + unitMs);
     }
 
-    await delay(unitMs * 2); // inter-character = 3 units total (1 already above)
+    // Inter-character gap: 3 units total, but we already waited 1 unit after last element
+    await delay(unitMs * 2);
   }
 }
 
@@ -240,5 +259,6 @@ export default function init() {
 
   return () => {
     if (currentAbortController) currentAbortController.abort();
+    flashIndicator = null;
   };
 }
