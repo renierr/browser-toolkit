@@ -141,12 +141,14 @@ async function playMorse(
 ): Promise<void> {
   if (signal.aborted) return;
 
-  // Ensure AudioContext is ready before starting
+  // Ensure AudioContext is created and ready before starting
   if (mode === 'both' || mode === 'sound') {
     const ctx = getAudioContext();
     if (ctx.state === 'suspended') {
       await ctx.resume();
     }
+    // Small delay to ensure audio system is fully ready
+    await delay(50);
   }
 
   const parts = morse.split(' ');

@@ -2,6 +2,6 @@
   "name": "Morse Code",
   "description": "Convert text to Morse code and play it as sound or screen flash",
   "icon": "radio",
-  "sectionId": "utilities",
+  "sectionId": "general",
   "order": 5
 }

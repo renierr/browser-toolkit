@@ -3,6 +3,6 @@
   "description": "Draw and save signatures as transparent images or SVG paths for use in PDF annotations.",
   "icon": "pen-tool",
   "sectionId": "general",
-  "order": 100,
+  "order": 4,
   "draft": false
 }

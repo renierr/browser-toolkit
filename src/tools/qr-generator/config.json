@@ -3,5 +3,5 @@
   "description": "Generate QR codes from text or URLs. Customize size and colors.",
   "icon": "qr-code",
   "sectionId": "general",
-  "order": 11
+  "order": 2
 }
