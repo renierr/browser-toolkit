@@ -1,7 +1,7 @@
-// prettier-ignore
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import { downloadFile } from '../../js/file-utils.ts';
 
+// prettier-ignore
 const MORSE_CODE: Record<string, string> = {
   A: '.-',
   B: '-...',
@@ -29,10 +29,10 @@ const MORSE_CODE: Record<string, string> = {
   X: '-..-',
   Y: '-.--',
   Z: '--..',
-  Ä: '.-.-',
-  Ö: '---.',
-  Ü: '..--',
-  ß: '...--..',
+  'Ä': '.-.-',
+  'Ö': '---.',
+  'Ü': '..--',
+  'ß': '...--..',
   '0': '-----',
   '1': '.----',
   '2': '..---',
@@ -284,7 +284,7 @@ async function exportAudio(
     return bufferToWebM(renderedBuffer, onProgress);
   } else {
     onProgress?.(100);
-    return bufferToWave(renderedBuffer, totalDuration * sampleRate);
+    return bufferToWave(renderedBuffer, renderedBuffer.length);
   }
 }
 
