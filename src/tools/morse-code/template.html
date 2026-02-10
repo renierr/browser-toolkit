@@ -11,6 +11,13 @@
     <div class="form-control w-full mb-6">
       <label class="label">
         <span class="label-text font-semibold">Your Text</span>
+        <span class="label-text-alt">
+           <button id="btn-import-audio" class="btn btn-xs btn-ghost">
+             <i data-lucide="upload" class="w-3 h-3 mr-1"></i>
+             Import Audio
+           </button>
+           <input type="file" id="audio-file-input" accept="audio/*" class="hidden" />
+        </span>
       </label>
       <textarea
         id="input-text"
@@ -96,6 +103,10 @@
       <button id="btn-stop" class="btn btn-outline btn-error hidden flex-1 sm:flex-none">
         <i data-lucide="square" class="w-4 h-4 mr-2"></i>
         Stop
+      </button>
+      <button id="btn-export-audio" class="btn btn-outline flex-1 sm:flex-none">
+        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+        Export Audio
       </button>
     </div>
 
