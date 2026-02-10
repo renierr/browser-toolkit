@@ -1,5 +1,5 @@
 
-
+// prettier-ignore
 const MORSE_CODE: Record<string, string> = {
   A: '.-',
   B: '-...',
@@ -27,7 +27,7 @@ const MORSE_CODE: Record<string, string> = {
   X: '-..-',
   Y: '-.--',
   Z: '--..',
-  'Ä': '.−.−',
+  'Ä': '.-.-',
   'Ö': '---.',
   'Ü': '..--',
   'ß': '...--..',
