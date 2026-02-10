@@ -146,6 +146,7 @@ function flashElement(durationMs: number): void {
 async function playMorse(
   morse: string,
   unitMs: number,
+  wordGapUnits: number,
   mode: 'both' | 'sound' | 'flash',
   volume: number,
   signal: AbortSignal
@@ -168,7 +169,7 @@ async function playMorse(
     if (signal.aborted) return;
 
     if (part === '/') {
-      await delay(unitMs * 7);
+      await delay(unitMs * wordGapUnits);
       continue;
     }
 
@@ -207,6 +208,7 @@ function delay(ms: number): Promise<void> {
 async function exportAudio(
   morse: string,
   wpm: number,
+  wordGapUnits: number,
   format: 'wav' | 'webm',
   onProgress?: (pct: number) => void
 ): Promise<Blob> {
@@ -220,7 +222,7 @@ async function exportAudio(
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (part === '/') {
-      totalUnits += 7;
+      totalUnits += wordGapUnits;
     } else {
       for (let j = 0; j < part.length; j++) {
         const sym = part[j];
@@ -255,7 +257,7 @@ async function exportAudio(
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
     if (part === '/') {
-      currentTime += 7 * unitSec;
+      currentTime += wordGapUnits * unitSec;
     } else {
       for (let j = 0; j < part.length; j++) {
         const sym = part[j];
@@ -502,6 +504,8 @@ export default function init() {
 
   const speedSlider = document.getElementById('speed-slider') as HTMLInputElement;
   const wpmDisplay = document.getElementById('wpm-display') as HTMLElement;
+  const wordGapSlider = document.getElementById('word-gap-slider') as HTMLInputElement;
+  const wordGapDisplay = document.getElementById('word-gap-display') as HTMLElement;
   const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
   const volumeDisplay = document.getElementById('volume-display') as HTMLElement;
   const modeSelect = document.getElementById('output-mode') as HTMLSelectElement;
@@ -518,6 +522,10 @@ export default function init() {
   // Update slider display
   speedSlider.addEventListener('input', () => {
     wpmDisplay.textContent = `${speedSlider.value} WPM`;
+  });
+
+  wordGapSlider.addEventListener('input', () => {
+    wordGapDisplay.textContent = `${wordGapSlider.value} units`;
   });
 
   volumeSlider.addEventListener('input', () => {
@@ -545,11 +553,12 @@ export default function init() {
     try {
       const morse = textToMorse(text);
       const wpm = parseInt(speedSlider.value, 10);
+      const wordGapUnits = parseInt(wordGapSlider.value, 10);
       const unitMs = wpmToUnitMs(wpm);
       const volume = parseInt(volumeSlider.value, 10) / 100;
       const mode = modeSelect.value as 'both' | 'sound' | 'flash';
 
-      await playMorse(morse, unitMs, mode, volume, signal);
+      await playMorse(morse, unitMs, wordGapUnits, mode, volume, signal);
 
       if (!signal.aborted) {
         status.textContent = 'Playback finished';
@@ -588,9 +597,10 @@ export default function init() {
     try {
       const morse = textToMorse(text);
       const wpm = parseInt(speedSlider.value, 10);
+      const wordGapUnits = parseInt(wordGapSlider.value, 10);
       const format = exportFormatSelect.value as 'wav' | 'webm';
 
-      const blob = await exportAudio(morse, wpm, format, (pct) => {
+      const blob = await exportAudio(morse, wpm, wordGapUnits, format, (pct) => {
         status.textContent = `Exporting ${format.toUpperCase()}... ${pct}%`;
       });
 

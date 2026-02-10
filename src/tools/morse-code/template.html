@@ -29,7 +29,7 @@
     </div>
 
     <!-- Settings -->
-    <div class="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
       <!-- Speed -->
       <div class="form-control">
         <label class="label">
@@ -40,6 +40,21 @@
           type="range"
           id="speed-slider"
           min="5" max="35" value="17"
+          class="range range-primary range-sm"
+          step="1"
+        />
+      </div>
+
+      <!-- Word Gap -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Word Gap</span>
+          <span class="label-text-alt" id="word-gap-display">7 units</span>
+        </label>
+        <input
+          type="range"
+          id="word-gap-slider"
+          min="3" max="50" value="7"
           class="range range-primary range-sm"
           step="1"
         />
