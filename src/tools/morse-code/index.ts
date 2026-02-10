@@ -204,7 +204,7 @@ function delay(ms: number): Promise<void> {
 
 // --- Audio Export ---
 
-async function exportAudio(morse: string, wpm: number): Promise<Blob> {
+async function exportAudio(morse: string, wpm: number, format: 'wav' | 'webm'): Promise<Blob> {
   const unitMs = wpmToUnitMs(wpm);
   const unitSec = unitMs / 1000;
   const sampleRate = 44100;
@@ -269,7 +269,12 @@ async function exportAudio(morse: string, wpm: number): Promise<Blob> {
   osc.stop(totalDuration);
 
   const renderedBuffer = await offlineCtx.startRendering();
-  return bufferToWave(renderedBuffer, totalDuration * sampleRate);
+
+  if (format === 'webm') {
+    return bufferToWebM(renderedBuffer);
+  } else {
+    return bufferToWave(renderedBuffer, totalDuration * sampleRate);
+  }
 }
 
 function bufferToWave(abuffer: AudioBuffer, len: number): Blob {
@@ -325,6 +330,36 @@ function bufferToWave(abuffer: AudioBuffer, len: number): Blob {
     view.setUint32(pos, data, true);
     pos += 4;
   }
+}
+
+async function bufferToWebM(buffer: AudioBuffer): Promise<Blob> {
+  // Create a new context for recording
+  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  const dest = ctx.createMediaStreamDestination();
+  source.connect(dest);
+
+  const recorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm' });
+  const chunks: Blob[] = [];
+
+  return new Promise((resolve) => {
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+    recorder.onstop = () => {
+      resolve(new Blob(chunks, { type: 'audio/webm' }));
+      ctx.close(); // Clean up context
+    };
+
+    recorder.start();
+    source.start(0);
+
+    // Stop recording when buffer finishes playing
+    source.onended = () => {
+      recorder.stop();
+    };
+  });
 }
 
 // --- Audio Import & Decoding ---
@@ -445,6 +480,7 @@ export default function init() {
   const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
   const volumeDisplay = document.getElementById('volume-display') as HTMLElement;
   const modeSelect = document.getElementById('output-mode') as HTMLSelectElement;
+  const exportFormatSelect = document.getElementById('export-format') as HTMLSelectElement;
 
   // Live Morse preview
   function updatePreview() {
@@ -527,12 +563,13 @@ export default function init() {
     try {
       const morse = textToMorse(text);
       const wpm = parseInt(speedSlider.value, 10);
-      const blob = await exportAudio(morse, wpm);
+      const format = exportFormatSelect.value as 'wav' | 'webm';
+      const blob = await exportAudio(morse, wpm, format);
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'morse_code.wav';
+      a.download = `morse_code.${format}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

@@ -29,7 +29,7 @@
     </div>
 
     <!-- Settings -->
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+    <div class="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-6">
       <!-- Speed -->
       <div class="form-control">
         <label class="label">
@@ -69,6 +69,17 @@
           <option value="both" selected>Sound + Flash</option>
           <option value="sound">Sound Only</option>
           <option value="flash">Flash Only</option>
+        </select>
+      </div>
+
+      <!-- Export Format -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Export Format</span>
+        </label>
+        <select id="export-format" class="select select-bordered select-sm w-full">
+          <option value="wav" selected>WAV (Fast)</option>
+          <option value="webm">WebM (Small)</option>
         </select>
       </div>
     </div>
