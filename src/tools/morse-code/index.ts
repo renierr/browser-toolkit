@@ -158,7 +158,7 @@ async function playMorse(
     if (ctx.state === 'suspended') {
       await ctx.resume();
     }
-    // Small delay to ensure audio system is fully ready
+    // Small delay to ensure an audio system is fully ready
     await delay(50);
   }
 
@@ -185,15 +185,15 @@ async function playMorse(
 
       if (mode === 'both' || mode === 'sound') {
         await playTone(duration, volume);
-        // Add inter-element gap (1 unit silence)
+        // Add an inter-element gap (1 unit silence)
         await delay(unitMs);
       } else {
-        // Flash only mode - wait for duration + gap
+        // Flash-only mode - wait for duration + gap
         await delay(duration + unitMs);
       }
     }
 
-    // Inter-character gap: 3 units total, but we already waited 1 unit after last element
+    // Inter-character gap: 3 units total, but we already waited 1 unit after the last element
     await delay(unitMs * 2);
   }
 }
@@ -212,9 +212,6 @@ async function exportAudio(
 ): Promise<Blob> {
   const unitMs = wpmToUnitMs(wpm);
   const unitSec = unitMs / 1000;
-  // Optimize: Use 8kHz sample rate for Morse code.
-  // This drastically reduces WAV file size (approx 5.5x smaller than 44.1kHz)
-  // and is sufficient for the simple 600Hz tone.
   const sampleRate = 8000;
 
   // Calculate total duration
@@ -380,7 +377,7 @@ async function bufferToWebM(
     recorder.start();
     source.start(0);
 
-    // Stop recording when buffer finishes playing
+    // Stop recording when the buffer finishes playing
     source.onended = () => {
       clearInterval(interval);
       onProgress?.(100);
@@ -490,6 +487,7 @@ async function decodeAudioFile(file: File): Promise<string> {
     .join(' ');
 }
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const input = document.getElementById('input-text') as HTMLTextAreaElement;
   const outputMorse = document.getElementById('output-morse') as HTMLDivElement;
@@ -626,8 +624,7 @@ export default function init() {
     btnImport.disabled = true;
 
     try {
-      const decodedText = await decodeAudioFile(file);
-      input.value = decodedText;
+      input.value = await decodeAudioFile(file);
       updatePreview();
       status.textContent = 'Audio decoded!';
     } catch (err) {
