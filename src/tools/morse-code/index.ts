@@ -1,4 +1,7 @@
 // prettier-ignore
+import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
+import { downloadFile } from '../../js/file-utils.ts';
+
 const MORSE_CODE: Record<string, string> = {
   A: '.-',
   B: '-...',
@@ -26,10 +29,10 @@ const MORSE_CODE: Record<string, string> = {
   X: '-..-',
   Y: '-.--',
   Z: '--..',
-  'Ä': '.-.-',
-  'Ö': '---.',
-  'Ü': '..--',
-  'ß': '...--..',
+  Ä: '.-.-',
+  Ö: '---.',
+  Ü: '..--',
+  ß: '...--..',
   '0': '-----',
   '1': '.----',
   '2': '..---',
@@ -537,7 +540,7 @@ export default function init() {
 
     const text = input.value.trim();
     if (!text) {
-      status.textContent = 'Please enter text...';
+      showMessage('Please enter text to play...', { timeoutMs: 5000 });
       return;
     }
 
@@ -559,14 +562,10 @@ export default function init() {
       const mode = modeSelect.value as 'both' | 'sound' | 'flash';
 
       await playMorse(morse, unitMs, wordGapUnits, mode, volume, signal);
-
-      if (!signal.aborted) {
-        status.textContent = 'Playback finished';
-      }
     } catch (err: any) {
       if (!signal.aborted) {
         console.error(err);
-        status.textContent = 'Error during playback';
+        showMessage('Error during playback', { type: 'alert' });
       }
     } finally {
       isPlaying = false;
@@ -574,8 +573,9 @@ export default function init() {
       btnStop.classList.add('hidden');
       spinner.classList.add('hidden');
       if (signal.aborted) {
-        status.textContent = 'Cancelled';
+        showMessage('Playback cancelled', { timeoutMs: 3000 });
       }
+      status.textContent = '';
     }
   });
 
@@ -587,12 +587,12 @@ export default function init() {
   btnExport.addEventListener('click', async () => {
     const text = input.value.trim();
     if (!text) {
-      status.textContent = 'Please enter text to export...';
+      showMessage('Please enter text to export...', { timeoutMs: 5000 });
       return;
     }
 
     btnExport.disabled = true;
-    status.textContent = 'Generating audio...';
+    showProgress('Generating audio...');
 
     try {
       const morse = textToMorse(text);
@@ -601,24 +601,17 @@ export default function init() {
       const format = exportFormatSelect.value as 'wav' | 'webm';
 
       const blob = await exportAudio(morse, wpm, wordGapUnits, format, (pct) => {
-        status.textContent = `Exporting ${format.toUpperCase()}... ${pct}%`;
+        showProgress(`Exporting ${format.toUpperCase()}... ${pct}%`);
       });
 
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `morse_code.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      status.textContent = 'Audio exported!';
+      await downloadFile(blob, `morse_code.${format}`);
+      showMessage('Audio exported!', { timeoutMs: 3000 });
     } catch (err) {
       console.error(err);
-      status.textContent = 'Error exporting audio';
+      showMessage('Error exporting audio', { type: 'alert' });
     } finally {
       btnExport.disabled = false;
+      hideProgress();
     }
   });
 
@@ -630,19 +623,20 @@ export default function init() {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
-    status.textContent = 'Decoding audio...';
+    showProgress('Decoding audio...');
     btnImport.disabled = true;
 
     try {
       input.value = await decodeAudioFile(file);
       updatePreview();
-      status.textContent = 'Audio decoded!';
+      showMessage('Audio decoded!', { timeoutMs: 3000 });
     } catch (err) {
       console.error(err);
-      status.textContent = 'Error decoding audio';
+      showMessage('Error decoding audio', { type: 'alert' });
     } finally {
+      hideProgress();
       btnImport.disabled = false;
-      fileInput.value = ''; // Reset
+      fileInput.value = '';
     }
   });
 
