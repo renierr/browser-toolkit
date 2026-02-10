@@ -1,0 +1,101 @@
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">
+      <i data-lucide="radio" class="w-6 h-6"></i>
+      Morse Code
+    </h2>
+    <p class="text-base-content/70 mb-6">
+      Convert text to Morse code and play it as sound and/or screen flash.
+    </p>
+
+    <div class="form-control w-full mb-6">
+      <label class="label">
+        <span class="label-text font-semibold">Your Text</span>
+      </label>
+      <textarea
+        id="input-text"
+        class="textarea textarea-bordered h-32 font-mono text-sm w-full"
+        placeholder="e.g. CQ CQ DE DL1ABC or SOS"
+        autocapitalize="characters"
+        spellcheck="false"
+      ></textarea>
+    </div>
+
+    <!-- Settings -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+      <!-- Speed -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Speed</span>
+          <span class="label-text-alt" id="wpm-display">20 WPM</span>
+        </label>
+        <input
+          type="range"
+          id="speed-slider"
+          min="5" max="35" value="20"
+          class="range range-primary range-sm"
+          step="1"
+        />
+      </div>
+
+      <!-- Volume -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Volume</span>
+          <span class="label-text-alt" id="volume-display">80%</span>
+        </label>
+        <input
+          type="range"
+          id="volume-slider"
+          min="0" max="100" value="80"
+          class="range range-primary range-sm"
+          step="5"
+        />
+      </div>
+
+      <!-- Output Mode -->
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Output</span>
+        </label>
+        <select id="output-mode" class="select select-bordered select-sm w-full">
+          <option value="both" selected>Sound + Flash</option>
+          <option value="sound">Sound Only</option>
+          <option value="flash">Flash Only</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Morse Output -->
+    <div class="form-control w-full mb-6">
+      <label class="label">
+        <span class="label-text font-semibold">Morse Code</span>
+      </label>
+      <div id="output-morse" class="textarea textarea-bordered h-24 font-mono text-lg break-all whitespace-pre-wrap leading-relaxed bg-base-200 p-3 overflow-auto">
+        --- ... ---
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card-actions justify-center mt-6 gap-2">
+      <button id="btn-play" class="btn btn-primary flex-1 sm:flex-none">
+        <span class="loading loading-spinner hidden" id="spinner"></span>
+        <i data-lucide="play" class="w-4 h-4 mr-2" id="play-icon"></i>
+        Play
+      </button>
+      <button id="btn-stop" class="btn btn-outline btn-error hidden flex-1 sm:flex-none">
+        <i data-lucide="square" class="w-4 h-4 mr-2"></i>
+        Stop
+      </button>
+    </div>
+
+    <div id="status" class="mt-4 text-sm text-base-content/60 text-center">
+      Ready
+    </div>
+
+    <div class="alert alert-warning mt-6">
+      <i data-lucide="triangle-alert" class="w-5 h-5"></i>
+      <span>Rapid flashing may be problematic for those with light sensitivity.</span>
+    </div>
+  </div>
+</div>
