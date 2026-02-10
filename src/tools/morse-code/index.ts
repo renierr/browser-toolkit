@@ -204,10 +204,18 @@ function delay(ms: number): Promise<void> {
 
 // --- Audio Export ---
 
-async function exportAudio(morse: string, wpm: number, format: 'wav' | 'webm'): Promise<Blob> {
+async function exportAudio(
+  morse: string,
+  wpm: number,
+  format: 'wav' | 'webm',
+  onProgress?: (pct: number) => void
+): Promise<Blob> {
   const unitMs = wpmToUnitMs(wpm);
   const unitSec = unitMs / 1000;
-  const sampleRate = 44100;
+  // Optimize: Use 8kHz sample rate for Morse code.
+  // This drastically reduces WAV file size (approx 5.5x smaller than 44.1kHz)
+  // and is sufficient for the simple 600Hz tone.
+  const sampleRate = 8000;
 
   // Calculate total duration
   let totalUnits = 0;
@@ -229,7 +237,7 @@ async function exportAudio(morse: string, wpm: number, format: 'wav' | 'webm'): 
   totalUnits += 2;
 
   const totalDuration = totalUnits * unitSec;
-  const offlineCtx = new OfflineAudioContext(1, sampleRate * totalDuration, sampleRate);
+  const offlineCtx = new OfflineAudioContext(1, Math.ceil(sampleRate * totalDuration), sampleRate);
 
   const osc = offlineCtx.createOscillator();
   const gainNode = offlineCtx.createGain();
@@ -271,8 +279,9 @@ async function exportAudio(morse: string, wpm: number, format: 'wav' | 'webm'): 
   const renderedBuffer = await offlineCtx.startRendering();
 
   if (format === 'webm') {
-    return bufferToWebM(renderedBuffer);
+    return bufferToWebM(renderedBuffer, onProgress);
   } else {
+    onProgress?.(100);
     return bufferToWave(renderedBuffer, totalDuration * sampleRate);
   }
 }
@@ -332,9 +341,16 @@ function bufferToWave(abuffer: AudioBuffer, len: number): Blob {
   }
 }
 
-async function bufferToWebM(buffer: AudioBuffer): Promise<Blob> {
+async function bufferToWebM(
+  buffer: AudioBuffer,
+  onProgress?: (pct: number) => void
+): Promise<Blob> {
   // Create a new context for recording
   const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  if (ctx.state === 'suspended') {
+    await ctx.resume();
+  }
+
   const source = ctx.createBufferSource();
   source.buffer = buffer;
   const dest = ctx.createMediaStreamDestination();
@@ -352,11 +368,22 @@ async function bufferToWebM(buffer: AudioBuffer): Promise<Blob> {
       ctx.close(); // Clean up context
     };
 
+    // Progress tracking
+    const duration = buffer.duration;
+    const interval = setInterval(() => {
+      if (ctx.state === 'running') {
+        const pct = Math.min(100, Math.round((ctx.currentTime / duration) * 100));
+        onProgress?.(pct);
+      }
+    }, 100);
+
     recorder.start();
     source.start(0);
 
     // Stop recording when buffer finishes playing
     source.onended = () => {
+      clearInterval(interval);
+      onProgress?.(100);
       recorder.stop();
     };
   });
@@ -564,7 +591,10 @@ export default function init() {
       const morse = textToMorse(text);
       const wpm = parseInt(speedSlider.value, 10);
       const format = exportFormatSelect.value as 'wav' | 'webm';
-      const blob = await exportAudio(morse, wpm, format);
+
+      const blob = await exportAudio(morse, wpm, format, (pct) => {
+        status.textContent = `Exporting ${format.toUpperCase()}... ${pct}%`;
+      });
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
