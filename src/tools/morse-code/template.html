@@ -28,18 +28,18 @@
   }
 
   #output-morse .morse-part.highlight {
-    background-color: hsl(var(--p));
-    color: hsl(var(--pc));
+    background-color: var(--color-primary);
+    color: var(--color-primary-content);
     transform: scale(1.4) translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 20px hsl(var(--p));
-    border-color: hsl(var(--pc));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 20px var(--color-primary);
+    border-color: var(--color-primary-content);
     z-index: 10;
     position: relative;
   }
 
   #output-morse .morse-part.highlight .dot,
   #output-morse .morse-part.highlight .dash {
-    text-shadow: 0 0 5px hsl(var(--pc));
+    text-shadow: 0 0 5px var(--color-primary-content);
   }
 
   #flash-indicator {
