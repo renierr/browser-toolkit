@@ -83,28 +83,54 @@ function getAudioContext(): AudioContext {
 }
 
 function textToMorse(text: string): string {
-  return text
+  const words = text
     .toUpperCase()
-    .split('')
-    .map((c) => MORSE_CODE[c] || '')
-    .filter(Boolean)
-    .join(' ');
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w !== '');
+
+  const result: string[] = [];
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const chars = word.split('');
+
+    for (let j = 0; j < chars.length; j++) {
+      const char = chars[j];
+      const code = MORSE_CODE[char];
+      if (code) {
+        result.push(code);
+        // After each character, add a character gap separator
+        if (j < chars.length - 1) {
+          result.push('/');
+        }
+      }
+    }
+
+    // After each word, add a word gap separator
+    if (i < words.length - 1) {
+      result.push('//');
+    }
+  }
+
+  return result.join(' ');
 }
 
 function textToMorseHtml(text: string): string {
-  const upper = text.toUpperCase();
+  const morse = textToMorse(text);
+  const parts = morse.split(' ');
   let result = '';
 
-  for (let i = 0; i < upper.length; i++) {
-    const c = upper[i];
-    const code = MORSE_CODE[c];
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
 
-    if (code === '/') {
-      // Word gap (space character)
-      result += '<span class="word-gap"> / </span>';
-    } else if (code) {
+    if (part === '//') {
+      result += '<span class="word-gap"> // </span>';
+    } else if (part === '/') {
+      result += '<span class="char-gap"> / </span>';
+    } else {
       let charHtml = '';
-      for (const sym of code) {
+      for (const sym of part) {
         if (sym === '.') {
           charHtml += '<span class="dot">.</span>';
         } else if (sym === '-') {
@@ -112,15 +138,13 @@ function textToMorseHtml(text: string): string {
         }
       }
       result += charHtml;
-
-      // Space between characters (but not after last one or before word gap)
-      if (i < upper.length - 1 && MORSE_CODE[upper[i + 1]] !== '/') {
-        result += ' ';
-      }
     }
   }
 
-  return result || '--- ... ---';
+  return (
+    result ||
+    '<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span> <span class="char-gap"> / </span> <span class="dash">-</span><span class="dash">-</span><span class="dash">-</span> <span class="char-gap"> / </span> <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>'
+  );
 }
 
 function wpmToUnitMs(wpm: number): number {
@@ -201,8 +225,14 @@ async function playMorse(
   for (const part of parts) {
     if (signal.aborted) return;
 
+    if (part === '//') {
+      await delay(unitMs * (wordGapUnits - 1));
+      continue;
+    }
+
     if (part === '/') {
-      await delay(unitMs * wordGapUnits);
+      const charGapUnits = Math.max(1, (wordGapUnits * 3) / 7);
+      await delay(unitMs * (charGapUnits - 1));
       continue;
     }
 
@@ -226,9 +256,6 @@ async function playMorse(
         await delay(duration + unitMs);
       }
     }
-
-    // Inter-character gap: 3 units total, but we already waited 1 unit after the last element
-    await delay(unitMs * 2);
   }
 }
 
@@ -252,17 +279,20 @@ async function exportAudio(
   // Calculate total duration
   let totalUnits = 0;
   const parts = morse.split(' ');
+  const charGapUnits = Math.max(1, (wordGapUnits * 3) / 7);
+
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    if (part === '/') {
-      totalUnits += wordGapUnits;
+    if (part === '//') {
+      totalUnits += wordGapUnits - 1;
+    } else if (part === '/') {
+      totalUnits += charGapUnits - 1;
     } else {
       for (let j = 0; j < part.length; j++) {
         const sym = part[j];
         totalUnits += sym === '-' ? 3 : 1;
-        if (j < part.length - 1) totalUnits += 1; // Inter-element gap
+        totalUnits += 1; // Inter-element gap
       }
-      if (i < parts.length - 1) totalUnits += 3; // Inter-char gap
     }
   }
   // Add a little padding
@@ -289,8 +319,10 @@ async function exportAudio(
 
   for (let i = 0; i < parts.length; i++) {
     const part = parts[i];
-    if (part === '/') {
+    if (part === '//') {
       currentTime += wordGapUnits * unitSec;
+    } else if (part === '/') {
+      currentTime += charGapUnits * unitSec;
     } else {
       for (let j = 0; j < part.length; j++) {
         const sym = part[j];
