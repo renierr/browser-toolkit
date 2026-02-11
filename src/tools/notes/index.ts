@@ -1,5 +1,5 @@
 import OverType from 'overtype';
-import MarkdownParser from 'overtype/parser';
+import { MarkdownParser } from 'overtype/parser';
 import { isDarkMode } from '../../js/theme.ts';
 
 interface Note {
@@ -27,34 +27,6 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
-/**
- * Simple markdown-like formatter
- */
-function formatMarkdown(text: string): string {
-  return (
-    text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      // Headings (ordered from longest to shortest to avoid partial matches)
-      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mt-2">$1</h3>')
-      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-3">$1</h2>')
-      .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-4">$1</h1>')
-      // Bold: **text**
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      // Italic: *text*
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      // Code: `text`
-      .replace(/`(.*?)`/g, '<code class="bg-base-200 px-1 rounded">$1</code>')
-      // Lists: - item
-      .replace(/^\s*-\s+(.*)$/gm, '<li class="ml-4">$1</li>')
-      // Wrap lists in ul
-      .replace(/(<li.*<\/li>)/s, '<ul class="list-disc my-2">$1</ul>')
-      // Newlines to br
-      .replace(/\n/g, '<br>')
-  );
-}
-
 // noinspection JSUnusedGlobalSymbols
 export default async function init() {
   const db = await openDB();
@@ -65,7 +37,10 @@ export default async function init() {
   const searchInput = document.getElementById('search-input') as HTMLInputElement;
   const container = document.getElementById('notes-container') as HTMLDivElement;
 
-  const overType = new OverType(noteInput, { theme: isDarkMode() ? 'cave' : 'solar' })[0];
+  const overType = new OverType(noteInput, {
+    toolbar: true,
+    theme: isDarkMode() ? 'cave' : 'solar',
+  })[0];
 
   let editingId: number | null = null;
 
@@ -93,14 +68,17 @@ export default async function init() {
       return;
     }
 
+    console.log(notes[0].content);
+    console.log(MarkdownParser.parse(notes[0].content));
+
     container.innerHTML = notes
       .map(
         (note) => `
       <div class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
         <div class="card-body p-4">
           <div class="flex justify-between items-start gap-4 flex-wrap">
-            <div class="prose prose-sm max-w-full min-w-32 break-all flex-1 text-base-content">
-              ${formatMarkdown(note.content)}
+          <div class="overtype-content prose prose-sm max-w-full min-w-32 break-all flex-1 text-base-content">
+              ${MarkdownParser.parse(note.content)}
             </div>
             <div class="flex gap-1">
               <button class="btn btn-ghost btn-xs edit-btn" data-id="${note.id}">
