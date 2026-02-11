@@ -228,7 +228,7 @@ async function playMorse(
     const part = parts[i];
     if (signal.aborted) return;
 
-    // Highlight current part
+    // Highlight the current part
     const partElement = outputMorse?.querySelector(`[data-index="${i}"]`);
     if (partElement) {
       partElement.classList.add('highlight');

@@ -1,3 +1,4 @@
+<!--suppress CssUnusedSymbol -->
 <style>
   /* Make dots & dashes more distinct */
   #output-morse .dot,
@@ -130,7 +131,7 @@
     </p>
 
     <div class="form-control w-full mb-6">
-      <label class="label">
+      <label class="label" for="input-text">
         <span class="label-text font-semibold">Your Text</span>
         <span class="label-text-alt">
            <button id="btn-import-audio" class="btn btn-xs btn-ghost">
@@ -153,7 +154,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
       <!-- Speed -->
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="speed-slider">
           <span class="label-text font-semibold">Speed</span>
           <span class="label-text-alt" id="wpm-display">17 WPM</span>
         </label>
@@ -168,7 +169,7 @@
 
       <!-- Word Gap -->
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="word-gap-slider">
           <span class="label-text font-semibold">Word Gap</span>
           <span class="label-text-alt" id="word-gap-display">10 units</span>
         </label>
@@ -183,7 +184,7 @@
 
       <!-- Volume -->
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="volume-slider">
           <span class="label-text font-semibold">Volume</span>
           <span class="label-text-alt" id="volume-display">90%</span>
         </label>
@@ -198,7 +199,7 @@
 
       <!-- Output Mode -->
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="output-mode">
           <span class="label-text font-semibold">Output</span>
         </label>
         <select id="output-mode" class="select select-bordered select-sm w-full">
@@ -210,7 +211,7 @@
 
       <!-- Export Format -->
       <div class="form-control">
-        <label class="label">
+        <label class="label" for="export-format">
           <span class="label-text font-semibold">Export Format</span>
         </label>
         <select id="export-format" class="select select-bordered select-sm w-full">
