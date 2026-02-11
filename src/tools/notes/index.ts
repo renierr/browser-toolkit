@@ -1,3 +1,7 @@
+import OverType from 'overtype';
+import MarkdownParser from 'overtype/parser';
+import { isDarkMode } from '../../js/theme.ts';
+
 interface Note {
   id?: number;
   content: string;
@@ -27,37 +31,41 @@ function openDB(): Promise<IDBDatabase> {
  * Simple markdown-like formatter
  */
 function formatMarkdown(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    // Headings (ordered from longest to shortest to avoid partial matches)
-    .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mt-2">$1</h3>')
-    .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-3">$1</h2>')
-    .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-4">$1</h1>')
-    // Bold: **text**
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Italic: *text*
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // Code: `text`
-    .replace(/`(.*?)`/g, '<code class="bg-base-200 px-1 rounded">$1</code>')
-    // Lists: - item
-    .replace(/^\s*-\s+(.*)$/gm, '<li class="ml-4">$1</li>')
-    // Wrap lists in ul
-    .replace(/(<li.*<\/li>)/s, '<ul class="list-disc my-2">$1</ul>')
-    // Newlines to br
-    .replace(/\n/g, '<br>');
+  return (
+    text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      // Headings (ordered from longest to shortest to avoid partial matches)
+      .replace(/^### (.*$)/gm, '<h3 class="text-lg font-bold mt-2">$1</h3>')
+      .replace(/^## (.*$)/gm, '<h2 class="text-xl font-bold mt-3">$1</h2>')
+      .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-4">$1</h1>')
+      // Bold: **text**
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      // Italic: *text*
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      // Code: `text`
+      .replace(/`(.*?)`/g, '<code class="bg-base-200 px-1 rounded">$1</code>')
+      // Lists: - item
+      .replace(/^\s*-\s+(.*)$/gm, '<li class="ml-4">$1</li>')
+      // Wrap lists in ul
+      .replace(/(<li.*<\/li>)/s, '<ul class="list-disc my-2">$1</ul>')
+      // Newlines to br
+      .replace(/\n/g, '<br>')
+  );
 }
 
 // noinspection JSUnusedGlobalSymbols
 export default async function init() {
   const db = await openDB();
-  const noteInput = document.getElementById('note-input') as HTMLTextAreaElement;
+  const noteInput = document.getElementById('note-input') as HTMLDivElement;
   const addBtn = document.getElementById('add-note-btn') as HTMLButtonElement;
   const cancelBtn = document.getElementById('cancel-edit-btn') as HTMLButtonElement;
   const formTitle = document.getElementById('form-title') as HTMLSpanElement;
   const searchInput = document.getElementById('search-input') as HTMLInputElement;
   const container = document.getElementById('notes-container') as HTMLDivElement;
+
+  const overType = new OverType(noteInput, { theme: isDarkMode() ? 'cave' : 'solar' })[0];
 
   let editingId: number | null = null;
 
@@ -71,7 +79,7 @@ export default async function init() {
 
       if (query) {
         const q = query.toLowerCase();
-        notes = notes.filter(n => n.content.toLowerCase().includes(q));
+        notes = notes.filter((n) => n.content.toLowerCase().includes(q));
       }
 
       notes.sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
@@ -85,7 +93,9 @@ export default async function init() {
       return;
     }
 
-    container.innerHTML = notes.map(note => `
+    container.innerHTML = notes
+      .map(
+        (note) => `
       <div class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
         <div class="card-body p-4">
           <div class="flex justify-between items-start gap-4 flex-wrap">
@@ -106,11 +116,13 @@ export default async function init() {
           </div>
         </div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
   }
 
   async function saveNote() {
-    const content = noteInput.value.trim();
+    const content = overType.getValue().trim();
     if (!content) return;
 
     const transaction = db.transaction(STORE_NAME, 'readwrite');
@@ -127,7 +139,7 @@ export default async function init() {
     } else {
       const note: Note = {
         content,
-        createdAt: Date.now()
+        createdAt: Date.now(),
       };
       store.add(note);
     }
@@ -140,7 +152,7 @@ export default async function init() {
 
   function resetForm() {
     editingId = null;
-    noteInput.value = '';
+    overType.setValue('');
     addBtn.textContent = 'Add Note';
     formTitle.textContent = 'New Note';
     cancelBtn.classList.add('hidden');
@@ -155,11 +167,11 @@ export default async function init() {
       const note = request.result;
       if (note) {
         editingId = id;
-        noteInput.value = note.content;
+        overType.setValue(note.content);
         addBtn.textContent = 'Update Note';
         formTitle.textContent = 'Edit Note';
         cancelBtn.classList.remove('hidden');
-        noteInput.focus();
+        overType.focus();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     };
