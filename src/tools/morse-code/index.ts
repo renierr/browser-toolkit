@@ -163,18 +163,16 @@ let flashIndicator: HTMLElement | null = null;
 
 function flashElement(durationMs: number): void {
   if (!flashIndicator) {
-    flashIndicator = document.getElementById('output-morse');
+    flashIndicator = document.getElementById('flash-indicator');
+    if (!flashIndicator) return;
   }
-  if (!flashIndicator) return;
 
-  flashIndicator.classList.add('bg-warning', 'border-warning');
-  flashIndicator.classList.remove('bg-base-300', 'border-base-300');
+  // Turn ON
+  flashIndicator.classList.add('on');
 
+  // Turn OFF after duration
   setTimeout(() => {
-    if (flashIndicator) {
-      flashIndicator.classList.remove('bg-warning', 'border-warning');
-      flashIndicator.classList.add('bg-base-300', 'border-base-300');
-    }
+    flashIndicator?.classList.remove('on');
   }, durationMs);
 }
 

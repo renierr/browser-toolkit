@@ -14,6 +14,82 @@
     margin-left: 0.5rem;
     margin-right: 0.5rem;
   }
+
+  #flash-indicator {
+    --lamp-off: #1e293b;        /* slate-900-ish */
+    --lamp-on:  #fef08a;        /* warm yellow */
+    --glow-color: #fbbf24;      /* amber-400 */
+    --filament: #d97706;        /* amber-600 */
+
+    width: 140px;
+    height: 140px;
+    position: relative;
+    background: radial-gradient(circle at 30% 30%, #334155 0%, var(--lamp-off) 70%);
+    border-radius: 50% 50% 40% 40% / 60% 60% 50% 50%;
+    border: 3px solid #475569;
+    box-shadow:
+      inset 0 4px 12px rgba(0,0,0,0.7),
+      0 0 30px rgba(0,0,0,0.6);
+    overflow: hidden;
+    transition: all 0.15s ease-out;
+  }
+
+  .flash-lamp.on {
+    background: radial-gradient(circle at 30% 30%, #475569 0%, var(--lamp-off) 60%);
+    box-shadow:
+      inset 0 4px 12px rgba(0,0,0,0.5),
+      0 0 60px var(--glow-color),
+      0 0 120px var(--glow-color),
+      0 0 200px rgba(251,191,36,0.5);
+  }
+
+  /* The glass bulb shine */
+  .flash-lamp .bulb {
+    position: absolute;
+    inset: 12px;
+    background: radial-gradient(circle at 40% 35%, rgba(255,255,255,0.9) 0%, transparent 60%);
+    border-radius: 50%;
+    opacity: 0.15;
+    pointer-events: none;
+  }
+
+  /* Filament (the glowing wire inside) */
+  .flash-lamp .filament {
+    position: absolute;
+    inset: 35% 28% 35% 28%;
+    background: var(--filament);
+    border-radius: 40% 40% 10% 10%;
+    box-shadow:
+      inset 0 0 12px #fef08a,
+      0 0 18px var(--filament);
+    opacity: 0;
+    transition: opacity 0.08s ease;
+  }
+
+  .flash-lamp.on .filament {
+    opacity: 1;
+  }
+
+  /* Big outer glow halo */
+  .flash-lamp .glow {
+    position: absolute;
+    inset: -40%;
+    background: radial-gradient(circle, var(--glow-color) 10%, transparent 60%);
+    opacity: 0;
+    filter: blur(40px);
+    transition: opacity 0.12s ease;
+  }
+
+  .flash-lamp.on .glow {
+    opacity: 0.7;
+    animation: glow-pulse 2.4s infinite ease-in-out;
+  }
+
+  /* Animations */
+  @keyframes glow-pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1.05); }
+    50%      { opacity: 0.95; transform: scale(1.18); }
+  }
 </style>
 
 <div class="card bg-base-100 shadow-xl border">
@@ -118,13 +194,22 @@
     </div>
 
     <!-- Morse Output -->
-    <div class="form-control w-full mb-6">
-      <label class="label">
-        <span class="label-text font-semibold">Morse Code</span>
-      </label>
-      <div id="output-morse" class="w-full h-32 font-mono text-2xl tracking-wider leading-relaxed p-6 bg-base-200 text-primary rounded-xl border border-base-300 shadow-lg whitespace-pre-wrap break-all overflow-auto transition-all duration-300">
+    <div class="flex flex-col md:flex-row md:items-start gap-6">
+      <div id="flash-indicator" class="flash-lamp mx-auto md:mx-0 shrink-0">
+        <div class="bulb"></div>
+        <div class="filament"></div>
+        <div class="glow"></div>
+      </div>
+
+      <div class="form-control flex-1 w-full mb-6">
+        <label class="label">
+          <span class="label-text font-semibold">Morse Code</span>
+        </label>
+        <div id="output-morse" class="w-full h-32 font-mono text-2xl tracking-wider leading-relaxed p-6 bg-base-200 text-primary rounded-xl border border-base-300 shadow-lg whitespace-pre-wrap break-all overflow-auto transition-all duration-300">
+        </div>
       </div>
     </div>
+
 
     <!-- Actions -->
     <div class="card-actions justify-center mt-6 gap-2">
