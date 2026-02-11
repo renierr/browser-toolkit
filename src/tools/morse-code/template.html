@@ -15,6 +15,31 @@
     margin-left: 0.5rem;
     margin-right: 0.5rem;
     opacity: 0.7;
+    transition: all 0.2s ease;
+  }
+
+  #output-morse .morse-part {
+    display: inline-block;
+    padding: 0 4px;
+    margin: 0 1px;
+    border-radius: 4px;
+    transition: all 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border: 2px solid transparent;
+  }
+
+  #output-morse .morse-part.highlight {
+    background-color: hsl(var(--p));
+    color: hsl(var(--pc));
+    transform: scale(1.4) translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 0 20px hsl(var(--p));
+    border-color: hsl(var(--pc));
+    z-index: 10;
+    position: relative;
+  }
+
+  #output-morse .morse-part.highlight .dot,
+  #output-morse .morse-part.highlight .dash {
+    text-shadow: 0 0 5px hsl(var(--pc));
   }
 
   #flash-indicator {

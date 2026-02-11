@@ -125,9 +125,9 @@ function textToMorseHtml(text: string): string {
     const part = parts[i];
 
     if (part === '//') {
-      result += '<span class="word-gap"> // </span>';
+      result += `<span class="morse-part word-gap" data-index="${i}"> // </span>`;
     } else if (part === '/') {
-      result += '<span class="char-gap"> / </span>';
+      result += `<span class="morse-part char-gap" data-index="${i}"> / </span>`;
     } else {
       let charHtml = '';
       for (const sym of part) {
@@ -137,13 +137,13 @@ function textToMorseHtml(text: string): string {
           charHtml += '<span class="dash">-</span>';
         }
       }
-      result += charHtml;
+      result += `<span class="morse-part" data-index="${i}">${charHtml}</span>`;
     }
   }
 
   return (
     result ||
-    '<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span> <span class="char-gap"> / </span> <span class="dash">-</span><span class="dash">-</span><span class="dash">-</span> <span class="char-gap"> / </span> <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>'
+    '<span class="morse-part" data-index="0"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span> <span class="morse-part char-gap" data-index="1"> / </span> <span class="morse-part" data-index="2"><span class="dash">-</span><span class="dash">-</span><span class="dash">-</span></span> <span class="morse-part char-gap" data-index="3"> / </span> <span class="morse-part" data-index="4"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>'
   );
 }
 
@@ -210,6 +210,8 @@ async function playMorse(
 ): Promise<void> {
   if (signal.aborted) return;
 
+  const outputMorse = document.getElementById('output-morse');
+
   // Ensure AudioContext is created and ready before starting
   if (mode === 'both' || mode === 'sound') {
     const ctx = getAudioContext();
@@ -222,40 +224,50 @@ async function playMorse(
 
   const parts = morse.split(' ');
 
-  for (const part of parts) {
+  for (let i = 0; i < parts.length; i++) {
+    const part = parts[i];
     if (signal.aborted) return;
+
+    // Highlight current part
+    const partElement = outputMorse?.querySelector(`[data-index="${i}"]`);
+    if (partElement) {
+      partElement.classList.add('highlight');
+      partElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
     if (part === '//') {
       await delay(unitMs * (wordGapUnits - 1));
-      continue;
-    }
-
-    if (part === '/') {
+    } else if (part === '/') {
       const charGapUnits = Math.max(1, (wordGapUnits * 3) / 7);
       await delay(unitMs * (charGapUnits - 1));
-      continue;
+    } else {
+      for (const sym of part) {
+        if (signal.aborted) {
+          partElement?.classList.remove('highlight');
+          return;
+        }
+
+        const isDash = sym === '-';
+        const durUnits = isDash ? 3 : 1;
+        const duration = durUnits * unitMs;
+
+        if (mode === 'both' || mode === 'flash') {
+          flashElement(duration);
+        }
+
+        if (mode === 'both' || mode === 'sound') {
+          await playTone(duration, volume);
+          // Add an inter-element gap (1 unit silence)
+          await delay(unitMs);
+        } else {
+          // Flash-only mode - wait for duration + gap
+          await delay(duration + unitMs);
+        }
+      }
     }
 
-    for (const sym of part) {
-      if (signal.aborted) return;
-
-      const isDash = sym === '-';
-      const durUnits = isDash ? 3 : 1;
-      const duration = durUnits * unitMs;
-
-      if (mode === 'both' || mode === 'flash') {
-        flashElement(duration);
-      }
-
-      if (mode === 'both' || mode === 'sound') {
-        await playTone(duration, volume);
-        // Add an inter-element gap (1 unit silence)
-        await delay(unitMs);
-      } else {
-        // Flash-only mode - wait for duration + gap
-        await delay(duration + unitMs);
-      }
-    }
+    // Remove highlight
+    partElement?.classList.remove('highlight');
   }
 }
 
@@ -634,6 +646,13 @@ export default function init() {
       btnPlay.disabled = false;
       btnStop.classList.add('hidden');
       spinner.classList.add('hidden');
+
+      // Clear all highlights
+      const outputMorse = document.getElementById('output-morse');
+      outputMorse?.querySelectorAll('.morse-part.highlight').forEach((el) => {
+        el.classList.remove('highlight');
+      });
+
       if (signal.aborted) {
         showMessage('Playback cancelled', { timeoutMs: 3000 });
       }
