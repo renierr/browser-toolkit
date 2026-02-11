@@ -68,17 +68,28 @@ export default async function init() {
       return;
     }
 
-    console.log(notes[0].content);
-    console.log(MarkdownParser.parse(notes[0].content));
-
     container.innerHTML = notes
-      .map(
-        (note) => `
+      .map((note) => {
+        const lines = note.content.split('\n');
+        const hasManyLines = lines.length > 3 || note.content.length > 200;
+
+        return `
       <div class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
         <div class="card-body p-4">
           <div class="flex justify-between items-start gap-4 flex-wrap">
-          <div class="overtype-content prose prose-sm max-w-full min-w-32 break-all flex-1 text-base-content">
-              ${MarkdownParser.parse(note.content)}
+            <div class="note-content-wrapper flex-1">
+              <div class="overtype-content prose prose-sm max-w-full min-w-32 break-all text-base-content ${hasManyLines ? 'note-content-collapsed' : ''}">
+                ${MarkdownParser.parse(note.content)}
+              </div>
+              ${
+                hasManyLines
+                  ? `
+              <button class="btn btn-link btn-xs p-0 h-auto min-h-0 mt-2 expand-btn" data-id="${note.id}">
+                Show more
+              </button>
+              `
+                  : ''
+              }
             </div>
             <div class="flex gap-1">
               <button class="btn btn-ghost btn-xs edit-btn" data-id="${note.id}">
@@ -94,8 +105,8 @@ export default async function init() {
           </div>
         </div>
       </div>
-    `
-      )
+    `;
+      })
       .join('');
   }
 
@@ -173,8 +184,24 @@ export default async function init() {
     const target = e.target as HTMLElement;
     const editBtn = target.closest('.edit-btn');
     const deleteBtn = target.closest('.delete-btn');
+    const expandBtn = target.closest('.expand-btn') as HTMLButtonElement;
 
-    if (editBtn) {
+    if (expandBtn) {
+      const wrapper = expandBtn.closest('.note-content-wrapper');
+      const content = wrapper?.querySelector('.overtype-content');
+      if (content && expandBtn) {
+        const isCollapsed = content.classList.contains('note-content-collapsed');
+        if (isCollapsed) {
+          content.classList.remove('note-content-collapsed');
+          content.classList.add('note-content-expanded');
+          expandBtn.textContent = 'Show less';
+        } else {
+          content.classList.remove('note-content-expanded');
+          content.classList.add('note-content-collapsed');
+          expandBtn.textContent = 'Show more';
+        }
+      }
+    } else if (editBtn) {
       const id = parseInt(editBtn.getAttribute('data-id') || '0');
       if (id) startEdit(id);
     } else if (deleteBtn) {

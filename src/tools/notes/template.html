@@ -1,8 +1,4 @@
 <style>
-    .overtype-content {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      line-height: 1.5;
-    }
     .overtype-content .syntax-marker {
       opacity: 0.4;
       font-weight: normal;
@@ -52,6 +48,22 @@
       color: var(--color-primary);
       text-decoration: underline;
       text-underline-offset: 2px;
+    }
+
+    /* Expand/Collapse styles */
+    .note-content-wrapper {
+      position: relative;
+    }
+    .note-content-collapsed {
+      max-height: 4.5rem; /* Approx 3 lines of text-base (1.5rem line-height) */
+      overflow: hidden;
+      mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+      -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    }
+    .note-content-expanded {
+      max-height: none;
+      mask-image: none;
+      -webkit-mask-image: none;
     }
   </style>
 
