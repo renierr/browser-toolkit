@@ -91,6 +91,38 @@ function textToMorse(text: string): string {
     .join(' ');
 }
 
+function textToMorseHtml(text: string): string {
+  const upper = text.toUpperCase();
+  let result = '';
+
+  for (let i = 0; i < upper.length; i++) {
+    const c = upper[i];
+    const code = MORSE_CODE[c];
+
+    if (code === '/') {
+      // Word gap (space character)
+      result += '<span class="word-gap"> / </span>';
+    } else if (code) {
+      let charHtml = '';
+      for (const sym of code) {
+        if (sym === '.') {
+          charHtml += '<span class="dot">.</span>';
+        } else if (sym === '-') {
+          charHtml += '<span class="dash">-</span>';
+        }
+      }
+      result += charHtml;
+
+      // Space between characters (but not after last one or before word gap)
+      if (i < upper.length - 1 && MORSE_CODE[upper[i + 1]] !== '/') {
+        result += ' ';
+      }
+    }
+  }
+
+  return result || '--- ... ---';
+}
+
 function wpmToUnitMs(wpm: number): number {
   // Standard: "PARIS" = 50 units -> 1200 / WPM = duration of one unit
   return Math.round(1200 / wpm);
@@ -131,7 +163,7 @@ let flashIndicator: HTMLElement | null = null;
 
 function flashElement(durationMs: number): void {
   if (!flashIndicator) {
-    flashIndicator = document.getElementById('flash-indicator');
+    flashIndicator = document.getElementById('output-morse');
   }
   if (!flashIndicator) return;
 
@@ -517,7 +549,7 @@ export default function init() {
   // Live Morse preview
   function updatePreview() {
     const text = input.value.trim();
-    outputMorse.textContent = text ? textToMorse(text) : '--- ... ---';
+    outputMorse.innerHTML = textToMorseHtml(text);
   }
   input.addEventListener('input', updatePreview);
   updatePreview();
