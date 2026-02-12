@@ -1,186 +1,14 @@
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import { downloadFile } from '../../js/file-utils.ts';
+import { ensureAudioContextReady, playTone, exportAudio } from './audio.ts';
+import { REVERSE_MORSE_CODE, textToMorse, textToMorseHtml } from './morsecode.ts';
 
-// prettier-ignore
-const MORSE_CODE: Record<string, string> = {
-  A: '.-',
-  B: '-...',
-  C: '-.-.',
-  D: '-..',
-  E: '.',
-  F: '..-.',
-  G: '--.',
-  H: '....',
-  I: '..',
-  J: '.---',
-  K: '-.-',
-  L: '.-..',
-  M: '--',
-  N: '-.',
-  O: '---',
-  P: '.--.',
-  Q: '--.-',
-  R: '.-.',
-  S: '...',
-  T: '-',
-  U: '..-',
-  V: '...-',
-  W: '.--',
-  X: '-..-',
-  Y: '-.--',
-  Z: '--..',
-  'Ä': '.-.-',
-  'Ö': '---.',
-  'Ü': '..--',
-  'ß': '...--..',
-  '0': '-----',
-  '1': '.----',
-  '2': '..---',
-  '3': '...--',
-  '4': '....-',
-  '5': '.....',
-  '6': '-....',
-  '7': '--...',
-  '8': '---..',
-  '9': '----.',
-  ' ': '/',
-  '.': '.-.-.-',
-  ',': '--..--',
-  '?': '..--..',
-  "'": '.----.',
-  '!': '-.-.--',
-  '/': '-..-.',
-  '(': '-.--.',
-  ')': '-.--.-',
-  '&': '.-...',
-  ':': '---...',
-  ';': '-.-.-.',
-  '=': '-...-',
-  '+': '.-.-.',
-  '-': '-....-',
-  _: '..--.-',
-  '"': '.-..-.',
-  '@': '.--.-.',
-};
-
-const REVERSE_MORSE_CODE: Record<string, string> = Object.entries(MORSE_CODE).reduce(
-  (acc, [char, code]) => {
-    acc[code] = char;
-    return acc;
-  },
-  {} as Record<string, string>
-);
-
-let audioCtx: AudioContext | null = null;
 let currentAbortController: AbortController | null = null;
 let isPlaying = false;
-
-function getAudioContext(): AudioContext {
-  if (!audioCtx || audioCtx.state === 'closed') {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  }
-  return audioCtx;
-}
-
-function textToMorse(text: string): string {
-  const words = text
-    .toUpperCase()
-    .trim()
-    .split(/\s+/)
-    .filter((w) => w !== '');
-
-  const result: string[] = [];
-
-  for (let i = 0; i < words.length; i++) {
-    const word = words[i];
-    const chars = word.split('');
-
-    for (let j = 0; j < chars.length; j++) {
-      const char = chars[j];
-      const code = MORSE_CODE[char];
-      if (code) {
-        result.push(code);
-        // After each character, add a character gap separator
-        if (j < chars.length - 1) {
-          result.push('/');
-        }
-      }
-    }
-
-    // After each word, add a word gap separator
-    if (i < words.length - 1) {
-      result.push('//');
-    }
-  }
-
-  return result.join(' ');
-}
-
-function textToMorseHtml(text: string): string {
-  const morse = textToMorse(text);
-  const parts = morse.split(' ');
-  let result = '';
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-
-    if (part === '//') {
-      result += `<span class="morse-part word-gap" data-index="${i}"> // </span>`;
-    } else if (part === '/') {
-      result += `<span class="morse-part char-gap" data-index="${i}"> / </span>`;
-    } else {
-      let charHtml = '';
-      for (const sym of part) {
-        if (sym === '.') {
-          charHtml += '<span class="dot">.</span>';
-        } else if (sym === '-') {
-          charHtml += '<span class="dash">-</span>';
-        }
-      }
-      result += `<span class="morse-part" data-index="${i}">${charHtml}</span>`;
-    }
-  }
-
-  return (
-    result ||
-    '<span class="morse-part" data-index="0"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span> <span class="morse-part char-gap" data-index="1"> / </span> <span class="morse-part" data-index="2"><span class="dash">-</span><span class="dash">-</span><span class="dash">-</span></span> <span class="morse-part char-gap" data-index="3"> / </span> <span class="morse-part" data-index="4"><span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>'
-  );
-}
 
 function wpmToUnitMs(wpm: number): number {
   // Standard: "PARIS" = 50 units -> 1200 / WPM = duration of one unit
   return Math.round(1200 / wpm);
-}
-
-function playTone(durationMs: number, volume: number): Promise<void> {
-  return new Promise((resolve) => {
-    const ctx = getAudioContext();
-
-    const osc = ctx.createOscillator();
-    const gainNode = ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.value = 600; // Classic CW tone frequency
-
-    // Use envelope to avoid clicking (attack/decay)
-    const now = ctx.currentTime;
-    const attackTime = 0.005; // 5ms attack
-    const decayTime = 0.005; // 5ms decay
-    const peakGain = volume * 0.3;
-
-    gainNode.gain.setValueAtTime(0, now);
-    gainNode.gain.linearRampToValueAtTime(peakGain, now + attackTime);
-    gainNode.gain.setValueAtTime(peakGain, now + durationMs / 1000 - decayTime);
-    gainNode.gain.linearRampToValueAtTime(0, now + durationMs / 1000);
-
-    osc.connect(gainNode);
-    gainNode.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + durationMs / 1000 + 0.01);
-
-    osc.onended = () => resolve();
-  });
 }
 
 let flashIndicator: HTMLElement | null = null;
@@ -214,11 +42,7 @@ async function playMorse(
 
   // Ensure AudioContext is created and ready before starting
   if (mode === 'both' || mode === 'sound') {
-    const ctx = getAudioContext();
-    if (ctx.state === 'suspended') {
-      await ctx.resume();
-    }
-    // Small delay to ensure an audio system is fully ready
+    await ensureAudioContextReady();
     await delay(50);
   }
 
@@ -236,19 +60,17 @@ async function playMorse(
     }
 
     if (part === '//') {
-      await delay(unitMs * (wordGapUnits - 1));
+      await delay(unitMs * wordGapUnits); // standard is 7
     } else if (part === '/') {
-      const charGapUnits = Math.max(1, (wordGapUnits * 3) / 7);
-      await delay(unitMs * (charGapUnits - 1));
+      await delay(unitMs * 3); // standard is 3
     } else {
-      for (const sym of part) {
+      for (let j = 0; j < part.length; j++) {
         if (signal.aborted) {
           partElement?.classList.remove('highlight');
           return;
         }
 
-        const isDash = sym === '-';
-        const durUnits = isDash ? 3 : 1;
+        const durUnits = part[j] === '-' ? 3 : 1;
         const duration = durUnits * unitMs;
 
         if (mode === 'both' || mode === 'flash') {
@@ -257,11 +79,14 @@ async function playMorse(
 
         if (mode === 'both' || mode === 'sound') {
           await playTone(duration, volume);
-          // Add an inter-element gap (1 unit silence)
-          await delay(unitMs);
         } else {
-          // Flash-only mode - wait for duration + gap
-          await delay(duration + unitMs);
+          // Flash-only mode - wait for duration
+          await delay(duration);
+        }
+
+        // add 1-unit gap between ONLY if this is another dot/dash in this same letter
+        if (j < part.length - 1) {
+          await delay(unitMs);
         }
       }
     }
@@ -276,194 +101,6 @@ function delay(ms: number): Promise<void> {
 }
 
 // --- Audio Export ---
-
-async function exportAudio(
-  morse: string,
-  wpm: number,
-  wordGapUnits: number,
-  format: 'wav' | 'webm',
-  onProgress?: (pct: number) => void
-): Promise<Blob> {
-  const unitMs = wpmToUnitMs(wpm);
-  const unitSec = unitMs / 1000;
-  const sampleRate = 8000;
-
-  // Calculate total duration
-  let totalUnits = 0;
-  const parts = morse.split(' ');
-  const charGapUnits = Math.max(1, (wordGapUnits * 3) / 7);
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (part === '//') {
-      totalUnits += wordGapUnits - 1;
-    } else if (part === '/') {
-      totalUnits += charGapUnits - 1;
-    } else {
-      for (let j = 0; j < part.length; j++) {
-        const sym = part[j];
-        totalUnits += sym === '-' ? 3 : 1;
-        totalUnits += 1; // Inter-element gap
-      }
-    }
-  }
-  // Add a little padding
-  totalUnits += 2;
-
-  const totalDuration = totalUnits * unitSec;
-  const offlineCtx = new OfflineAudioContext(1, Math.ceil(sampleRate * totalDuration), sampleRate);
-
-  const osc = offlineCtx.createOscillator();
-  const gainNode = offlineCtx.createGain();
-
-  osc.type = 'sine';
-  osc.frequency.value = 600;
-  osc.connect(gainNode);
-  gainNode.connect(offlineCtx.destination);
-
-  let currentTime = 0;
-  const attackTime = 0.005;
-  const decayTime = 0.005;
-  const peakGain = 0.5;
-
-  gainNode.gain.setValueAtTime(0, 0);
-  osc.start(0);
-
-  for (let i = 0; i < parts.length; i++) {
-    const part = parts[i];
-    if (part === '//') {
-      currentTime += wordGapUnits * unitSec;
-    } else if (part === '/') {
-      currentTime += charGapUnits * unitSec;
-    } else {
-      for (let j = 0; j < part.length; j++) {
-        const sym = part[j];
-        const duration = (sym === '-' ? 3 : 1) * unitSec;
-
-        gainNode.gain.setTargetAtTime(peakGain, currentTime, attackTime / 3);
-        gainNode.gain.setTargetAtTime(0, currentTime + duration - decayTime, decayTime / 3);
-
-        currentTime += duration;
-        currentTime += unitSec; // Inter-element gap
-      }
-      currentTime += 2 * unitSec; // Inter-char gap (already added 1 unit above)
-    }
-  }
-
-  osc.stop(totalDuration);
-
-  const renderedBuffer = await offlineCtx.startRendering();
-
-  if (format === 'webm') {
-    return bufferToWebM(renderedBuffer, onProgress);
-  } else {
-    onProgress?.(100);
-    return bufferToWave(renderedBuffer, renderedBuffer.length);
-  }
-}
-
-function bufferToWave(abuffer: AudioBuffer, len: number): Blob {
-  const numOfChan = abuffer.numberOfChannels;
-  const length = len * numOfChan * 2 + 44;
-  const buffer = new ArrayBuffer(length);
-  const view = new DataView(buffer);
-  const channels = [];
-  let i;
-  let sample;
-  let offset = 0;
-  let pos = 0;
-
-  // write WAVE header
-  setUint32(0x46464952); // "RIFF"
-  setUint32(length - 8); // file length - 8
-  setUint32(0x45564157); // "WAVE"
-
-  setUint32(0x20746d66); // "fmt " chunk
-  setUint32(16); // length = 16
-  setUint16(1); // PCM (uncompressed)
-  setUint16(numOfChan);
-  setUint32(abuffer.sampleRate);
-  setUint32(abuffer.sampleRate * 2 * numOfChan); // avg. bytes/sec
-  setUint16(numOfChan * 2); // block-align
-  setUint16(16); // 16-bit (hardcoded in this function)
-
-  setUint32(0x61746164); // "data" - chunk
-  setUint32(length - pos - 4); // chunk length
-
-  // write interleaved data
-  for (i = 0; i < abuffer.numberOfChannels; i++) channels.push(abuffer.getChannelData(i));
-
-  const totalFrames = abuffer.length;
-  while (offset < totalFrames && pos < length) {
-    for (i = 0; i < numOfChan; i++) {
-      sample = Math.max(-1, Math.min(1, channels[i][offset]));
-      sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-      view.setInt16(pos, sample, true);
-      pos += 2;
-    }
-    offset++;
-  }
-
-  return new Blob([buffer], { type: 'audio/wav' });
-
-  function setUint16(data: number) {
-    view.setUint16(pos, data, true);
-    pos += 2;
-  }
-
-  function setUint32(data: number) {
-    view.setUint32(pos, data, true);
-    pos += 4;
-  }
-}
-
-async function bufferToWebM(
-  buffer: AudioBuffer,
-  onProgress?: (pct: number) => void
-): Promise<Blob> {
-  // Create a new context for recording
-  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  if (ctx.state === 'suspended') {
-    await ctx.resume();
-  }
-
-  const source = ctx.createBufferSource();
-  source.buffer = buffer;
-  const dest = ctx.createMediaStreamDestination();
-  source.connect(dest);
-
-  const recorder = new MediaRecorder(dest.stream, { mimeType: 'audio/webm' });
-  const chunks: Blob[] = [];
-
-  return new Promise((resolve) => {
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-    recorder.onstop = () => {
-      resolve(new Blob(chunks, { type: 'audio/webm' }));
-      ctx.close(); // Clean up context
-    };
-
-    // Progress tracking
-    const duration = buffer.duration;
-    const interval = setInterval(() => {
-      if (ctx.state === 'running') {
-        const pct = Math.min(100, Math.round((ctx.currentTime / duration) * 100));
-        onProgress?.(pct);
-      }
-    }, 100);
-
-    recorder.start();
-    source.start(0);
-
-    // Stop recording when the buffer finishes playing
-    source.onended = () => {
-      clearInterval(interval);
-      onProgress?.(100);
-      recorder.stop();
-    };
-  });
-}
 
 // --- Audio Import & Decoding ---
 
@@ -679,9 +316,10 @@ export default function init() {
       const morse = textToMorse(text);
       const wpm = parseInt(speedSlider.value, 10);
       const wordGapUnits = parseInt(wordGapSlider.value, 10);
+      const unitMs = wpmToUnitMs(wpm);
       const format = exportFormatSelect.value as 'wav' | 'webm';
 
-      const blob = await exportAudio(morse, wpm, wordGapUnits, format, (pct) => {
+      const blob = await exportAudio(morse, unitMs, wordGapUnits, format, (pct) => {
         showProgress(`Exporting ${format.toUpperCase()}... ${pct}%`);
       });
 
