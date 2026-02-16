@@ -2,6 +2,6 @@
   "name": "svg-optimizer",
   "version": "1.0.0",
   "dependencies": {
-    "svgo": "^3.3.2"
+    "svgo": "^4.0.0"
   }
 }
