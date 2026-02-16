@@ -1,5 +1,5 @@
 import { optimize } from 'svgo';
-import { setupFileDropzone, downloadFile } from '../../js/file-utils';
+import { downloadFile, setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 
 // noinspection JSUnusedGlobalSymbols
@@ -17,6 +17,7 @@ export default function init() {
   const previewOptimized = document.getElementById('preview-optimized') as HTMLDivElement;
   const savingsInfo = document.getElementById('savings-info') as HTMLDivElement;
   const savingsText = document.getElementById('savings-text') as HTMLSpanElement;
+  const keepXmlnsCheckbox = document.getElementById('keep-xmlns') as HTMLInputElement;
 
   let currentFileName = 'optimized.svg';
 
@@ -107,21 +108,28 @@ export default function init() {
 
     try {
       const originalSize = new TextEncoder().encode(input).length;
+      const keepXmlns = keepXmlnsCheckbox?.checked ?? false;
+
+      const plugins: any[] = [
+        {
+          name: 'preset-default',
+          params: {
+            overrides: {
+              removeViewBox: false,
+            },
+          },
+        },
+        'removeDimensions',
+      ];
+
+      // Only add removeXMLNS plugin if user doesn't want to keep xmlns
+      if (!keepXmlns) {
+        plugins.push('removeXMLNS');
+      }
 
       const result = optimize(input, {
         multipass: true,
-        plugins: [
-          {
-            name: 'preset-default',
-            params: {
-              overrides: {
-                removeViewBox: false,
-              },
-            },
-          },
-          'removeXMLNS',
-          'removeDimensions',
-        ],
+        plugins,
       });
 
       outputText.value = result.data;
@@ -189,8 +197,7 @@ export default function init() {
     currentFileName = file.name.replace(/\.svg$/i, '-optimized.svg');
 
     try {
-      const text = await file.text();
-      inputText.value = text;
+      inputText.value = await file.text();
       updateStats();
       // Auto-optimize on file upload
       handleOptimize();
@@ -208,6 +215,13 @@ export default function init() {
   btnDownload.addEventListener('click', handleDownload);
   btnClear.addEventListener('click', handleClear);
   inputText.addEventListener('input', updateStats);
+
+  // Re-optimize when namespace option changes
+  keepXmlnsCheckbox.addEventListener('change', () => {
+    if (inputText.value.trim()) {
+      handleOptimize();
+    }
+  });
 
   // Auto-optimize on paste
   inputText.addEventListener('paste', () => {
