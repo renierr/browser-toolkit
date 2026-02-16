@@ -1,0 +1,8 @@
+{
+  "name": "SVG Optimizer",
+  "description": "Optimize and minify SVG files. Upload or paste SVG code to reduce file size.",
+  "icon": "image",
+  "sectionId": "utilities",
+  "order": 11
+}
+
