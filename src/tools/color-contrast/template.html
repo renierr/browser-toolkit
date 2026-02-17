@@ -12,10 +12,11 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
       <!-- Foreground Color -->
       <div class="form-control w-full">
-        <label class="label">
+        <label class="label mb-2" for="fg-color-input">
           <span class="label-text font-semibold">Foreground (Text) Color</span>
         </label>
         <div class="flex gap-2">
+          <!--suppress HtmlFormInputWithoutLabel -->
           <input type="color" id="fg-color-picker" value="#000000" class="w-14 h-12 p-1 rounded-lg border cursor-pointer" />
           <input type="text" id="fg-color-input" value="#000000" class="input input-bordered flex-1 font-mono uppercase" placeholder="#000000" />
           <button id="fg-eyedropper" class="btn btn-outline btn-square" title="Pick color from screen">
@@ -26,10 +27,11 @@
 
       <!-- Background Color -->
       <div class="form-control w-full">
-        <label class="label">
+        <label class="label mb-2" for="bg-color-input">
           <span class="label-text font-semibold">Background Color</span>
         </label>
         <div class="flex gap-2">
+          <!--suppress HtmlFormInputWithoutLabel -->
           <input type="color" id="bg-color-picker" value="#FFFFFF" class="w-14 h-12 p-1 rounded-lg border cursor-pointer" />
           <input type="text" id="bg-color-input" value="#FFFFFF" class="input input-bordered flex-1 font-mono uppercase" placeholder="#FFFFFF" />
           <button id="bg-eyedropper" class="btn btn-outline btn-square" title="Pick color from screen">
@@ -118,10 +120,10 @@
     <div id="image-analysis" class="hidden mt-6">
       <div class="flex flex-col md:flex-row gap-6">
         <div class="md:w-1/3">
-          <img id="analyzed-image" class="w-full rounded-lg shadow-sm" alt="Analyzed image" />
+          <img id="analyzed-image" class="w-auto max-h-52 rounded-lg shadow-sm" alt="Analyzed image" />
         </div>
         <div class="md:w-2/3">
-          <h3 class="font-semibold mb-3">Extracted Colors (click to use)</h3>
+          <h3 class="font-semibold mb-3">Extracted Colors (click to use color - left ⇒ foreground; right ⇒ background)</h3>
           <div id="extracted-colors" class="flex flex-wrap gap-2">
             <!-- Colors will be inserted here -->
           </div>

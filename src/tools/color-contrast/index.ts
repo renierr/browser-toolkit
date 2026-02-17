@@ -345,10 +345,7 @@ export default function init() {
         analyzedImage.src = e.target!.result as string;
         imageAnalysis.classList.remove('hidden');
 
-        extractedColors.innerHTML = colors.map(color => {
-          const rgb = hexToRgb(color)!;
-          const textColor = getLuminance(rgb) > 0.5 ? '#000' : '#FFF';
-          return `
+        extractedColors.innerHTML = colors.map(color => `
             <div class="flex flex-col gap-1">
               <button class="extracted-color w-12 h-12 rounded-lg shadow-sm border-2 border-base-300 cursor-pointer hover:scale-110 transition-transform"
                       data-color="${color}"
@@ -357,12 +354,11 @@ export default function init() {
               </button>
               <span class="text-xs text-center font-mono">${color}</span>
             </div>
-          `;
-        }).join('');
+          `).join('');
 
         // Add click handlers with context menu for fg/bg
         extractedColors.querySelectorAll('.extracted-color').forEach(btn => {
-          btn.addEventListener('click', (e) => {
+          btn.addEventListener('click', () => {
             const color = (btn as HTMLElement).dataset.color!;
             // Left click = foreground
             fgColorInput.value = color;
