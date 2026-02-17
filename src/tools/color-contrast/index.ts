@@ -1,4 +1,4 @@
-import { setupFileDropzone } from '../../js/file-utils';
+import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 
 // Types
@@ -181,6 +181,8 @@ export default function init() {
   const analyzedImage = document.getElementById('analyzed-image') as HTMLImageElement;
   const extractedColors = document.getElementById('extracted-colors')!;
 
+  const pasteImageBtn = document.getElementById('paste-btn') as HTMLButtonElement;
+
   // Check EyeDropper API support
   const eyeDropperSupported = 'EyeDropper' in window;
   if (!eyeDropperSupported) {
@@ -323,7 +325,7 @@ export default function init() {
   }
 
   // Image analysis
-  function analyzeImage(file: File) {
+  function analyzeImage(file: Blob) {
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
@@ -394,6 +396,17 @@ export default function init() {
   fgEyedropper.addEventListener('click', () => pickColor('fg'));
   bgEyedropper.addEventListener('click', () => pickColor('bg'));
   swapColorsBtn.addEventListener('click', swapColors);
+
+  pasteImageBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const imageBlob = await retrieveImageBlobFromClipboard();
+    if (imageBlob) {
+      analyzeImage(imageBlob);
+    } else {
+      showMessage('No image found in clipboard.', { type: 'info', timeoutMs: 5000 });
+    }
+  });
 
   // Setup file dropzone
   setupFileDropzone('dropzone', 'image-input', (files) => {
