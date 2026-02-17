@@ -1,71 +1,14 @@
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
-
-// Types
-interface RGB {
-  r: number;
-  g: number;
-  b: number;
-}
-
-// Color conversion utilities
-function hexToRgb(hex: string): RGB | null {
-  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  if (!result) {
-    // Try 3-digit hex
-    const shortResult = /^#?([a-f\d])([a-f\d])([a-f\d])$/i.exec(hex);
-    if (shortResult) {
-      return {
-        r: parseInt(shortResult[1] + shortResult[1], 16),
-        g: parseInt(shortResult[2] + shortResult[2], 16),
-        b: parseInt(shortResult[3] + shortResult[3], 16),
-      };
-    }
-    return null;
-  }
-  return {
-    r: parseInt(result[1], 16),
-    g: parseInt(result[2], 16),
-    b: parseInt(result[3], 16),
-  };
-}
-
-function rgbToHex(r: number, g: number, b: number): string {
-  return '#' + [r, g, b].map(x => {
-    const hex = Math.round(Math.max(0, Math.min(255, x))).toString(16);
-    return hex.length === 1 ? '0' + hex : hex;
-  }).join('').toUpperCase();
-}
-
-// WCAG relative luminance calculation
-function getLuminance(rgb: RGB): number {
-  const [rs, gs, bs] = [rgb.r, rgb.g, rgb.b].map(c => {
-    const sRGB = c / 255;
-    return sRGB <= 0.03928
-      ? sRGB / 12.92
-      : Math.pow((sRGB + 0.055) / 1.055, 2.4);
-  });
-  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
-}
-
-// WCAG contrast ratio calculation
-function getContrastRatio(color1: RGB, color2: RGB): number {
-  const l1 = getLuminance(color1);
-  const l2 = getLuminance(color2);
-  const lighter = Math.max(l1, l2);
-  const darker = Math.min(l1, l2);
-  return (lighter + 0.05) / (darker + 0.05);
-}
-
-// Check WCAG compliance
-function checkWCAG(ratio: number) {
-  return {
-    aaLarge: ratio >= 3,       // AA for large text (18pt+ or 14pt bold)
-    aaNormal: ratio >= 4.5,    // AA for normal text
-    aaaLarge: ratio >= 4.5,    // AAA for large text
-    aaaNormal: ratio >= 7,     // AAA for normal text
-  };
-}
+import {
+  checkWCAG,
+  getContrastRatio,
+  getLuminance,
+  hexToRgb,
+  normalizeHex,
+  type RGB,
+  rgbToHex,
+} from './color-utils.ts';
 
 // Generate suggested colors with better contrast
 function suggestBetterColors(fg: RGB, bg: RGB, targetRatio: number = 4.5): string[] {
@@ -117,7 +60,11 @@ function suggestBetterColors(fg: RGB, bg: RGB, targetRatio: number = 4.5): strin
 }
 
 // Extract dominant colors from image
-function extractColorsFromImage(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, numColors: number = 8): string[] {
+function extractColorsFromImage(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+  numColors: number = 8
+): string[] {
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   const pixels = imageData.data;
   const colorCounts = new Map<string, number>();
@@ -138,19 +85,6 @@ function extractColorsFromImage(canvas: HTMLCanvasElement, ctx: CanvasRenderingC
     .sort((a, b) => b[1] - a[1])
     .slice(0, numColors)
     .map(([color]) => color);
-}
-
-// Validate and normalize hex color
-function normalizeHex(input: string): string | null {
-  let hex = input.trim().toUpperCase();
-  if (!hex.startsWith('#')) hex = '#' + hex;
-
-  if (/^#[0-9A-F]{6}$/.test(hex)) return hex;
-  if (/^#[0-9A-F]{3}$/.test(hex)) {
-    // Expand 3-digit hex
-    return '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
-  }
-  return null;
 }
 
 // noinspection JSUnusedGlobalSymbols
@@ -235,18 +169,20 @@ export default function init() {
       const suggestions = suggestBetterColors(fgRgb, bgRgb, 4.5);
       if (suggestions.length > 0) {
         suggestionContainer.classList.remove('hidden');
-        suggestionList.innerHTML = suggestions.map(color => {
-          const textColor = getLuminance(hexToRgb(color)!) > 0.5 ? '#000' : '#FFF';
-          return `
+        suggestionList.innerHTML = suggestions
+          .map((color) => {
+            const textColor = getLuminance(hexToRgb(color)!) > 0.5 ? '#000' : '#FFF';
+            return `
             <button class="btn btn-sm suggestion-color gap-2" data-color="${color}" style="background-color: ${color}; color: ${textColor}; border-color: ${color};">
               ${color}
               <span class="text-xs opacity-70">(${getContrastRatio(hexToRgb(color)!, bgRgb).toFixed(1)}:1)</span>
             </button>
           `;
-        }).join('');
+          })
+          .join('');
 
         // Add click handlers for suggestions
-        suggestionList.querySelectorAll('.suggestion-color').forEach(btn => {
+        suggestionList.querySelectorAll('.suggestion-color').forEach((btn) => {
           btn.addEventListener('click', () => {
             fgColorInput.value = (btn as HTMLElement).dataset.color!;
             updateContrast();
@@ -347,7 +283,9 @@ export default function init() {
         analyzedImage.src = e.target!.result as string;
         imageAnalysis.classList.remove('hidden');
 
-        extractedColors.innerHTML = colors.map(color => `
+        extractedColors.innerHTML = colors
+          .map(
+            (color) => `
             <div class="flex flex-col gap-1">
               <button class="extracted-color w-12 h-12 rounded-lg shadow-sm border-2 border-base-300 cursor-pointer hover:scale-110 transition-transform"
                       data-color="${color}"
@@ -356,10 +294,12 @@ export default function init() {
               </button>
               <span class="text-xs text-center font-mono">${color}</span>
             </div>
-          `).join('');
+          `
+          )
+          .join('');
 
         // Add click handlers with context menu for fg/bg
-        extractedColors.querySelectorAll('.extracted-color').forEach(btn => {
+        extractedColors.querySelectorAll('.extracted-color').forEach((btn) => {
           btn.addEventListener('click', () => {
             const color = (btn as HTMLElement).dataset.color!;
             // Left click = foreground
@@ -418,4 +358,3 @@ export default function init() {
   // Initial update
   updateContrast();
 }
-
