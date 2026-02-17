@@ -1,0 +1,8 @@
+{
+  "name": "Color Checker",
+  "description": "Check color contrast for WCAG accessibility, analyze image colors, and pick colors.",
+  "icon": "palette",
+  "sectionId": "utilities",
+  "order": 10
+}
+
