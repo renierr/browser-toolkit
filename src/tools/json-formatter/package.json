@@ -1,0 +1,10 @@
+{
+  "name": "code-formatter",
+  "version": "1.0.0",
+  "dependencies": {
+    "shiki": "^3.7.0",
+    "sql-formatter": "^15.6.2",
+    "html-format": "^1.1.7"
+  }
+}
+

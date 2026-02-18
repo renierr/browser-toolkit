@@ -1,48 +1,130 @@
-
 // noinspection JSUnusedGlobalSymbols
 import { showMessage } from '../../js/ui.ts';
+import { formatCode, minifyCode, type SupportedFormat } from './formatters.ts';
+import {
+  generateHighlightedHtml,
+  renderCodeToCanvasSimple,
+  downloadCanvasAsPng,
+  copyCanvasToClipboard,
+  type ExportTheme,
+  type ExportOptions,
+} from './export.ts';
 
 export default function init() {
-  const input = document.getElementById('json-input') as HTMLTextAreaElement;
-  const output = document.getElementById('json-output') as HTMLTextAreaElement;
-  const btnFormat = document.getElementById('btn-format');
-  const btnMinify = document.getElementById('btn-minify');
-  const btnClear = document.getElementById('btn-clear');
-  const btnCopy = document.getElementById('btn-copy');
+  const input = document.getElementById('code-input') as HTMLTextAreaElement;
+  const outputContainer = document.getElementById('code-output') as HTMLDivElement;
+  const outputCode = document.getElementById('code-output-code') as HTMLElement;
+  const formatSelect = document.getElementById('format-select') as HTMLSelectElement;
+  const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
+  const fontSizeInput = document.getElementById('export-font-size') as HTMLInputElement;
+  const paddingInput = document.getElementById('export-padding') as HTMLInputElement;
 
+  const btnFormat = document.getElementById('btn-format') as HTMLButtonElement;
+  const btnMinify = document.getElementById('btn-minify') as HTMLButtonElement;
+  const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
+  const btnCopy = document.getElementById('btn-copy') as HTMLButtonElement;
+  const btnExportClipboard = document.getElementById('btn-export-clipboard') as HTMLButtonElement;
+  const btnExportFile = document.getElementById('btn-export-file') as HTMLButtonElement;
 
-  const processJson = (space: number | string) => {
-    const val = input.value.trim();
-    if (!val) {
-      output.value = '';
+  let currentFormattedCode = '';
+  let isProcessing = false;
+
+  const getFormat = (): SupportedFormat => {
+    return formatSelect.value as SupportedFormat;
+  };
+
+  const getExportOptions = (): ExportOptions => ({
+    theme: themeSelect.value as ExportTheme,
+    fontSize: parseInt(fontSizeInput.value) || 14,
+    padding: parseInt(paddingInput.value) || 20,
+  });
+
+  const updateHighlightedPreview = async (code: string) => {
+    if (!code.trim()) {
+      outputCode.innerHTML = '';
+      currentFormattedCode = '';
       return;
     }
 
     try {
-      const parsed = JSON.parse(val);
-      output.value = JSON.stringify(parsed, null, space);
-    } catch (e: any) {
-      showMessage(e.message, { type: 'alert' });
+      const options = getExportOptions();
+      const html = await generateHighlightedHtml(code, getFormat(), options.theme);
+
+      // Extract just the code content and apply to our container
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = html;
+      const pre = tempDiv.querySelector('pre');
+
+      if (pre) {
+        // Apply the highlighted content
+        outputContainer.innerHTML = '';
+        outputContainer.appendChild(pre);
+        pre.className = 'whitespace-pre-wrap break-words h-full overflow-auto rounded-lg';
+        pre.style.margin = '0';
+        pre.style.height = '100%';
+      } else {
+        outputCode.innerHTML = html;
+      }
+
+      currentFormattedCode = code;
+    } catch (e) {
+      // Fallback to plain text
+      outputCode.textContent = code;
+      currentFormattedCode = code;
     }
   };
 
-  btnFormat?.addEventListener('click', () => processJson(2));
-  btnMinify?.addEventListener('click', () => processJson(0));
+  const processCode = async (action: 'format' | 'minify') => {
+    if (isProcessing) return;
 
+    const val = input.value.trim();
+    if (!val) {
+      await updateHighlightedPreview('');
+      return;
+    }
+
+    isProcessing = true;
+    const format = getFormat();
+
+    try {
+      let result: string;
+      if (action === 'format') {
+        result = formatCode(val, format);
+      } else {
+        result = minifyCode(val, format);
+      }
+
+      input.value = result;
+      await updateHighlightedPreview(result);
+    } catch (e: any) {
+      showMessage(`${format.toUpperCase()} Error: ${e.message}`, { type: 'alert' });
+    } finally {
+      isProcessing = false;
+    }
+  };
+
+  // Event listeners for format/minify buttons
+  btnFormat?.addEventListener('click', () => processCode('format'));
+  btnMinify?.addEventListener('click', () => processCode('minify'));
+
+  // Clear button
   btnClear?.addEventListener('click', () => {
     input.value = '';
-    output.value = '';
+    outputCode.innerHTML = '';
+    outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap break-words"><code id="code-output-code"></code></pre>';
+    currentFormattedCode = '';
   });
 
+  // Copy formatted text to clipboard
   btnCopy?.addEventListener('click', async () => {
-    if (!output.value) return;
+    if (!currentFormattedCode) return;
     try {
-      await navigator.clipboard.writeText(output.value);
-      const originalText = btnCopy.textContent;
-      btnCopy.textContent = 'Copied!';
+      await navigator.clipboard.writeText(currentFormattedCode);
+      const originalHtml = btnCopy.innerHTML;
+      btnCopy.innerHTML = '<i data-lucide="check" class="w-4 h-4 mr-2"></i>Copied!';
       btnCopy.classList.add('btn-success');
       setTimeout(() => {
-        btnCopy.textContent = originalText;
+        btnCopy.innerHTML = originalHtml;
         btnCopy.classList.remove('btn-success');
       }, 2000);
     } catch (err) {
@@ -50,14 +132,82 @@ export default function init() {
     }
   });
 
+  // Export as image to clipboard
+  btnExportClipboard?.addEventListener('click', async () => {
+    if (!currentFormattedCode) {
+      showMessage('No code to export', { type: 'warning' });
+      return;
+    }
+
+    try {
+      btnExportClipboard.disabled = true;
+      const canvas = await renderCodeToCanvasSimple(
+        currentFormattedCode,
+        getFormat(),
+        getExportOptions()
+      );
+      await copyCanvasToClipboard(canvas);
+
+      const originalHtml = btnExportClipboard.innerHTML;
+      btnExportClipboard.innerHTML = '<i data-lucide="check" class="w-4 h-4 mr-2"></i>Copied!';
+      btnExportClipboard.classList.add('btn-success');
+      setTimeout(() => {
+        btnExportClipboard.innerHTML = originalHtml;
+        btnExportClipboard.classList.remove('btn-success');
+        btnExportClipboard.disabled = false;
+      }, 2000);
+    } catch (err: any) {
+      showMessage(`Failed to copy image: ${err.message}`, { type: 'alert' });
+      btnExportClipboard.disabled = false;
+    }
+  });
+
+  // Export as image file download
+  btnExportFile?.addEventListener('click', async () => {
+    if (!currentFormattedCode) {
+      showMessage('No code to export', { type: 'warning' });
+      return;
+    }
+
+    try {
+      btnExportFile.disabled = true;
+      const canvas = await renderCodeToCanvasSimple(
+        currentFormattedCode,
+        getFormat(),
+        getExportOptions()
+      );
+
+      const format = getFormat();
+      const timestamp = new Date().toISOString().slice(0, 10);
+      downloadCanvasAsPng(canvas, `code-${format}-${timestamp}.png`);
+
+      btnExportFile.disabled = false;
+    } catch (err: any) {
+      showMessage(`Failed to export image: ${err.message}`, { type: 'alert' });
+      btnExportFile.disabled = false;
+    }
+  });
+
+  // Update preview when theme changes
+  themeSelect?.addEventListener('change', () => {
+    if (currentFormattedCode) {
+      updateHighlightedPreview(currentFormattedCode);
+    }
+  });
+
+  // Clear output when input is emptied
   input?.addEventListener('input', () => {
     if (input.value.trim() === '') {
-      output.value = '';
+      outputCode.innerHTML = '';
+      outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap break-words"><code id="code-output-code"></code></pre>';
+      currentFormattedCode = '';
     }
   });
 
   // Auto-format on paste
   input?.addEventListener('paste', () => {
-    setTimeout(() => processJson(2), 0);
+    setTimeout(() => processCode('format'), 0);
   });
 }
+
+

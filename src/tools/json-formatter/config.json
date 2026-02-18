@@ -1,7 +1,7 @@
 {
-  "name": "JSON Formatter",
-  "description": "Format, minify and validate JSON strings.",
-  "icon": "braces",
+  "name": "Code Formatter",
+  "description": "Format, minify and highlight code and data formats (JSON, XML, SQL, HTML, CSS, JavaScript, TypeScript, Java). Export highlighted code as image.",
+  "icon": "code",
   "sectionId": "utilities",
   "order": 10
 }
