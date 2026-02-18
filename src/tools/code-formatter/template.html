@@ -6,7 +6,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="form-control w-full">
         <div class="flex items-center justify-between mb-2">
-          <label class="label py-0">
+          <label class="label py-0" for="format-select">
             <span class="label-text font-semibold">Input</span>
           </label>
           <select id="format-select" class="select select-bordered select-sm">
@@ -29,7 +29,7 @@
           <span class="label-text font-semibold">Output (Highlighted)</span>
         </label>
         <div id="code-output" class="h-72 font-mono text-sm bg-base-200 w-full border rounded-lg overflow-auto p-3">
-          <pre id="code-output-pre" class="whitespace-pre-wrap break-words"><code id="code-output-code"></code></pre>
+          <pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>
         </div>
       </div>
     </div>
@@ -54,7 +54,7 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
       <div class="form-control">
-        <label class="label py-0">
+        <label class="label py-0" for="theme-select">
           <span class="label-text text-xs">Theme</span>
         </label>
         <select id="theme-select" class="select select-bordered select-sm w-full">
@@ -70,13 +70,13 @@
         </select>
       </div>
       <div class="form-control">
-        <label class="label py-0">
+        <label class="label py-0" for="export-font-size">
           <span class="label-text text-xs">Font Size</span>
         </label>
         <input type="number" id="export-font-size" value="14" min="8" max="32" class="input input-bordered input-sm w-full" />
       </div>
       <div class="form-control">
-        <label class="label py-0">
+        <label class="label py-0" for="export-padding">
           <span class="label-text text-xs">Padding</span>
         </label>
         <input type="number" id="export-padding" value="20" min="0" max="100" class="input input-bordered input-sm w-full" />

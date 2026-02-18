@@ -1,7 +1,3 @@
-/**
- * Export highlighted code as an image using Shiki for syntax highlighting
- */
-
 import { codeToHtml, bundledThemes, bundledLanguages } from 'shiki';
 import type { SupportedFormat } from './formatters';
 import { getShikiLanguage } from './formatters';
@@ -351,38 +347,6 @@ function roundRect(
   ctx.lineTo(x, y + radius);
   ctx.quadraticCurveTo(x, y, x + radius, y);
   ctx.closePath();
-}
-
-/**
- * Export canvas to PNG file download
- */
-export function downloadCanvasAsPng(canvas: HTMLCanvasElement, filename = 'code.png'): void {
-  const link = document.createElement('a');
-  link.download = filename;
-  link.href = canvas.toDataURL('image/png');
-  link.click();
-}
-
-/**
- * Copy canvas to clipboard
- */
-export async function copyCanvasToClipboard(canvas: HTMLCanvasElement): Promise<void> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        reject(new Error('Failed to create blob from canvas'));
-        return;
-      }
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({ 'image/png': blob })
-        ]);
-        resolve();
-      } catch (err) {
-        reject(err);
-      }
-    }, 'image/png');
-  });
 }
 
 /**

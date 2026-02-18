@@ -1,15 +1,14 @@
-// noinspection JSUnusedGlobalSymbols
 import { showMessage } from '../../js/ui.ts';
 import { formatCode, minifyCode, type SupportedFormat } from './formatters.ts';
 import {
   generateHighlightedHtml,
   renderCodeToCanvasSimple,
-  downloadCanvasAsPng,
-  copyCanvasToClipboard,
   type ExportTheme,
   type ExportOptions,
 } from './export.ts';
+import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const input = document.getElementById('code-input') as HTMLTextAreaElement;
   const outputContainer = document.getElementById('code-output') as HTMLDivElement;
@@ -111,7 +110,7 @@ export default function init() {
   btnClear?.addEventListener('click', () => {
     input.value = '';
     outputCode.innerHTML = '';
-    outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap break-words"><code id="code-output-code"></code></pre>';
+    outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>';
     currentFormattedCode = '';
   });
 
@@ -179,7 +178,7 @@ export default function init() {
 
       const format = getFormat();
       const timestamp = new Date().toISOString().slice(0, 10);
-      downloadCanvasAsPng(canvas, `code-${format}-${timestamp}.png`);
+      await downloadCanvasAsImage(canvas, `code-${format}-${timestamp}`, 'png');
 
       btnExportFile.disabled = false;
     } catch (err: any) {
@@ -199,7 +198,7 @@ export default function init() {
   input?.addEventListener('input', () => {
     if (input.value.trim() === '') {
       outputCode.innerHTML = '';
-      outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap break-words"><code id="code-output-code"></code></pre>';
+      outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>';
       currentFormattedCode = '';
     }
   });

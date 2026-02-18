@@ -2,9 +2,9 @@ import { HistoryManager } from './history';
 import { getHitHandle, normalizeRect, resizeRect } from './crop';
 import { applyEffect, cleanupWorkCanvases, drawCropOverlay, drawRedactPreview } from './graphics';
 import type { AppState, Operation, ToolType } from './types';
-import { downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
+import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
-import { copyCanvasToClipboard, debounce } from '../../js/utils.ts';
+import { copyCanvasToClipboard, debounce, downloadCanvasAsImage } from '../../js/utils.ts';
 
 const EXPORT_QUALITY = 0.92;
 
@@ -475,18 +475,13 @@ export default function init() {
   elements.canvas.addEventListener('pointermove', onPointerMove);
   elements.canvas.addEventListener('pointerup', onPointerUp);
 
-  elements.btnDownload.addEventListener('click', () => {
+  elements.btnDownload.addEventListener('click', async () => {
     if (state.activeTool === 'crop') exitCropMode(true);
     const format = elements.exportFormat.value;
     const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
     const quality = format === 'image/png' ? undefined : EXPORT_QUALITY;
 
-    elements.canvas.toBlob(async (blob) => {
-      if (blob)
-        await downloadFile(blob, `${downloadFilename}.${ext}`);
-      else
-        showMessage('Failed to generate image blob for download.', { type: 'alert' });
-    }, format, quality);
+    await downloadCanvasAsImage(elements.canvas, downloadFilename, ext, quality);
   });
 
   elements.pasteBtn.addEventListener('click', async (e) => {

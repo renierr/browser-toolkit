@@ -1,8 +1,3 @@
-/**
- * Code formatters for various languages and data formats.
- * Uses minimal dependencies where possible.
- */
-
 import { format as sqlFormat } from 'sql-formatter';
 import htmlFormat from 'html-format';
 

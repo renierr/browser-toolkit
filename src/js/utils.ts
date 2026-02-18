@@ -1,3 +1,5 @@
+import { downloadFile } from './file-utils.ts';
+
 export const isDev = Boolean(import.meta.env.DEV);
 
 export const fuzzyScore = (text: string, term: string): number => {
@@ -63,25 +65,57 @@ export const html = (strings: TemplateStringsArray, ...values: any[]) => {
   }, '');
 };
 
-export async function copyCanvasToClipboard(
+export async function downloadCanvasAsImage(
   canvas: HTMLCanvasElement,
-  format: 'jpg' | 'png' = 'png',
+  filename: string = 'canvas_image',
+  format: 'jpg' | 'webp' | 'png' = 'png',
   quality?: number
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    canvas.toBlob(async (blob) => {
-      if (!blob) {
-        reject(new Error('Failed to create blob from canvas'));
-        return;
-      }
-      try {
-        const data = [new ClipboardItem({ [blob.type]: blob })];
-        await navigator.clipboard.write(data);
-        resolve();
-      } catch (err) {
-        reject(err);
-      }
-    }, `image/${format}`, quality);
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create blob from canvas'));
+          return;
+        }
+        try {
+          await downloadFile(blob, `${filename}.${format}`);
+          const data = [new ClipboardItem({ [blob.type]: blob })];
+          await navigator.clipboard.write(data);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      },
+      `image/${format}`,
+      quality
+    );
+  });
+}
+
+export async function copyCanvasToClipboard(
+  canvas: HTMLCanvasElement,
+  format: 'jpg' | 'webp' | 'png' = 'png',
+  quality?: number
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      async (blob) => {
+        if (!blob) {
+          reject(new Error('Failed to create blob from canvas'));
+          return;
+        }
+        try {
+          const data = [new ClipboardItem({ [blob.type]: blob })];
+          await navigator.clipboard.write(data);
+          resolve();
+        } catch (err) {
+          reject(err);
+        }
+      },
+      `image/${format}`,
+      quality
+    );
   });
 }
 
