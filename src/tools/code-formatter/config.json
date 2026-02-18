@@ -1,6 +1,6 @@
 {
   "name": "Code Formatter",
-  "description": "Format, minify and highlight code and data formats (JSON, XML, SQL, HTML, CSS, JavaScript, TypeScript, Java). Export highlighted code as image.",
+  "description": "Format, minify and highlight code and data formats",
   "icon": "code",
   "sectionId": "utilities",
   "order": 10
