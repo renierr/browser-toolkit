@@ -275,7 +275,14 @@ export async function renderCodeToCanvasSimple(
 
   // Create final canvas
   const canvas = document.createElement('canvas');
-  const dpr = 2;
+  // Use a fixed high DPI for better quality, but cap it for very large images to avoid browser limits
+  // Max canvas area is usually around 268,435,456 pixels (16384 x 16384)
+  // Let's be safe and limit the scaling if the image is huge
+  let dpr = 2;
+  if (width * height * dpr * dpr > 16000000) { // If > 16MP (e.g. 4000x4000)
+      dpr = 1;
+  }
+
   canvas.width = width * dpr;
   canvas.height = height * dpr;
 
@@ -373,4 +380,3 @@ export async function generateHighlightedHtml(
     return `<pre style="background: #1e1e1e; color: #d4d4d4; padding: 1em; border-radius: 8px;"><code>${escaped}</code></pre>`;
   }
 }
-
