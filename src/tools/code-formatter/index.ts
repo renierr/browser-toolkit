@@ -48,11 +48,30 @@ export default function init() {
     }
   };
 
+  const updateButtonStates = (format: SupportedFormat) => {
+    const hasText = input.value.trim() !== '';
+    // Disable format/minify for text
+    const isText = format === 'text';
+    // Some formats might not support minification (like yaml/markdown)
+    const noMinify = ['yaml', 'markdown', 'graphql', 'text'].includes(format);
+
+    if (btnFormat) btnFormat.disabled = !hasText || isText;
+    if (btnMinify) btnMinify.disabled = !hasText || noMinify;
+  };
+
+  const clearState = () => {
+    input.value = '';
+    outputCode.innerHTML = '';
+    outputContainer.innerHTML =
+      '<pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>';
+    currentFormattedCode = '';
+    updateDetectedFormatBadge(null);
+    updateButtonStates('text');
+  };
+
   const updateHighlightedPreview = async (code: string) => {
     if (!code.trim()) {
-      outputCode.innerHTML = '';
-      currentFormattedCode = '';
-      updateDetectedFormatBadge(null);
+      clearState();
       return;
     }
 
@@ -68,6 +87,8 @@ export default function init() {
       } else {
         updateDetectedFormatBadge(null);
       }
+
+      updateButtonStates(format);
 
       const html = await generateHighlightedHtml(code, format, options.theme);
 
@@ -117,7 +138,6 @@ export default function init() {
 
       input.value = result;
       await updateHighlightedPreview(result);
-
     } catch (e: any) {
       showMessage(`${format.toUpperCase()} Error: ${e.message}`, { type: 'alert' });
     } finally {
@@ -131,11 +151,7 @@ export default function init() {
 
   // Clear button
   btnClear?.addEventListener('click', () => {
-    input.value = '';
-    outputCode.innerHTML = '';
-    outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>';
-    currentFormattedCode = '';
-    updateDetectedFormatBadge(null);
+    clearState();
   });
 
   // Copy formatted text to clipboard
@@ -237,21 +253,26 @@ export default function init() {
     // Hide badge if user manually selects a format
     if (formatSelect.value !== 'auto') {
       updateDetectedFormatBadge(null);
+      updateButtonStates(formatSelect.value as SupportedFormat);
+    } else {
+      // If switching back to auto, re-detect to set button states
+      const detected = detectFormat(currentFormattedCode);
+      updateButtonStates(detected);
     }
   });
 
   // Clear output when input is emptied
   input?.addEventListener('input', () => {
     if (input.value.trim() === '') {
-      outputCode.innerHTML = '';
-      outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>';
-      currentFormattedCode = '';
-      updateDetectedFormatBadge(null);
+      clearState();
     }
+    updateButtonStates('auto');
   });
 
   // Auto-format on paste
   input?.addEventListener('paste', () => {
     setTimeout(() => processCode('format'), 0);
   });
+
+  updateButtonStates('text');
 }
