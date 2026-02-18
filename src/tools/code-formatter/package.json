@@ -2,9 +2,9 @@
   "name": "code-formatter",
   "version": "1.0.0",
   "dependencies": {
-    "shiki": "^3.7.0",
-    "sql-formatter": "^15.6.2",
-    "html-format": "^1.1.7"
+    "shiki": "^3.22.0",
+    "sql-formatter": "^15.7.2",
+    "html-format": "^1.1.7",
+    "prettier": "^3.8.1"
   }
 }
-

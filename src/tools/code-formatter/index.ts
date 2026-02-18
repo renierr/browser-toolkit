@@ -88,7 +88,7 @@ export default function init() {
     try {
       let result: string;
       if (action === 'format') {
-        result = formatCode(val, format);
+        result = await formatCode(val, format);
       } else {
         result = minifyCode(val, format);
       }
@@ -208,5 +208,3 @@ export default function init() {
     setTimeout(() => processCode('format'), 0);
   });
 }
-
-

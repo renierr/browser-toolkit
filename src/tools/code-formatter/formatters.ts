@@ -1,5 +1,10 @@
 import { format as sqlFormat } from 'sql-formatter';
 import htmlFormat from 'html-format';
+import * as prettier from 'prettier/standalone';
+import * as prettierPluginBabel from 'prettier/plugins/babel';
+import * as prettierPluginEstree from 'prettier/plugins/estree';
+import * as prettierPluginHtml from 'prettier/plugins/html';
+import * as prettierPluginCss from 'prettier/plugins/postcss';
 
 export type SupportedFormat = 'json' | 'xml' | 'html' | 'css' | 'sql' | 'javascript' | 'typescript' | 'java';
 
@@ -7,16 +12,25 @@ export type SupportedFormat = 'json' | 'xml' | 'html' | 'css' | 'sql' | 'javascr
  * Format JSON string with indentation
  */
 function formatJson(input: string, indent = 2): string {
-  const parsed = JSON.parse(input);
-  return JSON.stringify(parsed, null, indent);
+  try {
+    const parsed = JSON.parse(input);
+    return JSON.stringify(parsed, null, indent);
+  } catch (e) {
+    // If JSON is invalid, return as is or throw
+    throw new Error('Invalid JSON');
+  }
 }
 
 /**
  * Minify JSON by removing whitespace
  */
 function minifyJson(input: string): string {
-  const parsed = JSON.parse(input);
-  return JSON.stringify(parsed);
+  try {
+    const parsed = JSON.parse(input);
+    return JSON.stringify(parsed);
+  } catch (e) {
+    return input;
+  }
 }
 
 /**
@@ -66,8 +80,18 @@ function minifyXml(input: string): string {
 /**
  * Format HTML string with indentation
  */
-function formatHtml(input: string, indent = 2): string {
-  return htmlFormat(input, ' '.repeat(indent));
+async function formatHtml(input: string, indent = 2): Promise<string> {
+  try {
+    return await prettier.format(input, {
+      parser: 'html',
+      plugins: [prettierPluginHtml],
+      tabWidth: indent,
+      printWidth: 120,
+    });
+  } catch (e) {
+    // Fallback to simple formatter if prettier fails
+    return htmlFormat(input, ' '.repeat(indent));
+  }
 }
 
 /**
@@ -83,7 +107,20 @@ function minifyHtml(input: string): string {
 /**
  * Format CSS string with indentation
  */
-function formatCss(input: string, indent = 2): string {
+async function formatCss(input: string, indent = 2): Promise<string> {
+  try {
+    return await prettier.format(input, {
+      parser: 'css',
+      plugins: [prettierPluginCss],
+      tabWidth: indent,
+    });
+  } catch (e) {
+    // Fallback to simple formatter
+    return formatCssSimple(input, indent);
+  }
+}
+
+function formatCssSimple(input: string, indent = 2): string {
   const PADDING = ' '.repeat(indent);
   let formatted = '';
   let depth = 0;
@@ -178,10 +215,29 @@ function minifySql(input: string): string {
 }
 
 /**
- * Basic JavaScript/TypeScript formatter
+ * Format JavaScript/TypeScript using Prettier
+ */
+async function formatJsLike(input: string, indent = 2, parser: 'babel' | 'typescript' = 'babel'): Promise<string> {
+  try {
+    return await prettier.format(input, {
+      parser: parser,
+      plugins: [prettierPluginBabel, prettierPluginEstree],
+      tabWidth: indent,
+      semi: true,
+      singleQuote: true,
+      printWidth: 100,
+    });
+  } catch (e) {
+    // Fallback to simple formatter
+    return formatJsLikeSimple(input, indent);
+  }
+}
+
+/**
+ * Basic JavaScript/TypeScript formatter (Fallback)
  * Uses simple indentation rules - not a full parser
  */
-function formatJsLike(input: string, indent = 2): string {
+function formatJsLikeSimple(input: string, indent = 2): string {
   const PADDING = ' '.repeat(indent);
   let formatted = '';
   let depth = 0;
@@ -359,7 +415,7 @@ function minifyJsLike(input: string): string {
 /**
  * Format code based on the selected format
  */
-export function formatCode(input: string, format: SupportedFormat, indent = 2): string {
+export async function formatCode(input: string, format: SupportedFormat, indent = 2): Promise<string> {
   const trimmed = input.trim();
   if (!trimmed) return '';
 
@@ -369,15 +425,17 @@ export function formatCode(input: string, format: SupportedFormat, indent = 2): 
     case 'xml':
       return formatXml(trimmed, indent);
     case 'html':
-      return formatHtml(trimmed, indent);
+      return await formatHtml(trimmed, indent);
     case 'css':
-      return formatCss(trimmed, indent);
+      return await formatCss(trimmed, indent);
     case 'sql':
       return formatSql(trimmed);
     case 'javascript':
+      return await formatJsLike(trimmed, indent, 'babel');
     case 'typescript':
+      return await formatJsLike(trimmed, indent, 'typescript');
     case 'java':
-      return formatJsLike(trimmed, indent);
+      return formatJsLikeSimple(trimmed, indent);
     default:
       return trimmed;
   }
@@ -435,4 +493,3 @@ export function getShikiLanguage(format: SupportedFormat): string {
       return 'text';
   }
 }
-
