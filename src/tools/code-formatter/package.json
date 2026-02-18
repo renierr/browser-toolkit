@@ -4,7 +4,6 @@
   "dependencies": {
     "shiki": "^3.22.0",
     "sql-formatter": "^15.7.2",
-    "html-format": "^1.1.7",
     "prettier": "^3.8.1"
   }
 }

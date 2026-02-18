@@ -1,12 +1,19 @@
 import { format as sqlFormat } from 'sql-formatter';
-import htmlFormat from 'html-format';
 import * as prettier from 'prettier/standalone';
 import * as prettierPluginBabel from 'prettier/plugins/babel';
 import * as prettierPluginEstree from 'prettier/plugins/estree';
 import * as prettierPluginHtml from 'prettier/plugins/html';
 import * as prettierPluginCss from 'prettier/plugins/postcss';
 
-export type SupportedFormat = 'json' | 'xml' | 'html' | 'css' | 'sql' | 'javascript' | 'typescript' | 'java';
+export type SupportedFormat =
+  | 'json'
+  | 'xml'
+  | 'html'
+  | 'css'
+  | 'sql'
+  | 'javascript'
+  | 'typescript'
+  | 'java';
 
 /**
  * Format JSON string with indentation
@@ -54,7 +61,10 @@ function formatXml(input: string, indent = 2): string {
 
     formatted += PADDING.repeat(Math.max(0, pad)) + node.trim() + '\n';
 
-    if (node.match(/^<\w([^>]*[^\/])?>.*$/) && !node.match(/^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)/i)) {
+    if (
+      node.match(/^<\w([^>]*[^\/])?>.*$/) &&
+      !node.match(/^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)/i)
+    ) {
       // Opening tag (not self-closing, not void element)
       if (!node.match(/<.*\/>/)) {
         pad += 1;
@@ -89,19 +99,51 @@ async function formatHtml(input: string, indent = 2): Promise<string> {
       printWidth: 120,
     });
   } catch (e) {
-    // Fallback to simple formatter if prettier fails
-    return htmlFormat(input, ' '.repeat(indent));
+    // Fallback to simple regex-based formatter if prettier fails
+    return formatHtmlSimple(input, indent);
   }
+}
+
+/**
+ * Simple HTML formatter (Fallback)
+ */
+function formatHtmlSimple(input: string, indent = 2): string {
+  const PADDING = ' '.repeat(indent);
+  let formatted = '';
+  let pad = 0;
+
+  // Remove existing formatting
+  const lines = input.replace(/>\s*</g, '><').split(/(<[^>]+>)/);
+
+  for (const node of lines) {
+    if (!node.trim()) continue;
+
+    if (node.match(/^<\/\w/)) {
+      // Closing tag
+      pad -= 1;
+    }
+
+    formatted += PADDING.repeat(Math.max(0, pad)) + node.trim() + '\n';
+
+    if (
+      node.match(/^<\w([^>]*[^\/])?>.*$/) &&
+      !node.match(/^<(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)/i)
+    ) {
+      // Opening tag (not self-closing, not void element)
+      if (!node.match(/<.*\/>/)) {
+        pad += 1;
+      }
+    }
+  }
+
+  return formatted.trim();
 }
 
 /**
  * Minify HTML by removing unnecessary whitespace
  */
 function minifyHtml(input: string): string {
-  return input
-    .replace(/>\s+</g, '><')
-    .replace(/\s+/g, ' ')
-    .trim();
+  return input.replace(/>\s+</g, '><').replace(/\s+/g, ' ').trim();
 }
 
 /**
@@ -153,7 +195,8 @@ function formatCssSimple(input: string, indent = 2): string {
       depth++;
     } else if (char === '}') {
       depth--;
-      formatted = formatted.trimEnd() + '\n' + PADDING.repeat(depth) + '}\n' + PADDING.repeat(depth);
+      formatted =
+        formatted.trimEnd() + '\n' + PADDING.repeat(depth) + '}\n' + PADDING.repeat(depth);
     } else if (char === ';') {
       formatted += ';\n' + PADDING.repeat(depth);
     } else if (char === ':' && nextChar !== ':') {
@@ -217,7 +260,11 @@ function minifySql(input: string): string {
 /**
  * Format JavaScript/TypeScript using Prettier
  */
-async function formatJsLike(input: string, indent = 2, parser: 'babel' | 'typescript' = 'babel'): Promise<string> {
+async function formatJsLike(
+  input: string,
+  indent = 2,
+  parser: 'babel' | 'typescript' = 'babel'
+): Promise<string> {
   try {
     return await prettier.format(input, {
       parser: parser,
@@ -350,7 +397,7 @@ function formatJsLikeSimple(input: string, indent = 2): string {
   return formatted
     .replace(/\n\s*\n\s*\n/g, '\n\n')
     .replace(/\(\s*\)/g, '()')
-    .replace(/\[\s*\]/g, '[]')
+    .replace(/\[\s*]/g, '[]')
     .replace(/{\s*}/g, '{}')
     .trim();
 }
@@ -401,7 +448,11 @@ function minifyJsLike(input: string): string {
     }
 
     if (char === ' ' || char === '\t' || char === '\n' || char === '\r') {
-      if (minified.length > 0 && /[a-zA-Z0-9_$]$/.test(minified) && /^[a-zA-Z0-9_$]/.test(result[i + 1] || '')) {
+      if (
+        minified.length > 0 &&
+        /[a-zA-Z0-9_$]$/.test(minified) &&
+        /^[a-zA-Z0-9_$]/.test(result[i + 1] || '')
+      ) {
         minified += ' ';
       }
     } else {
@@ -415,7 +466,11 @@ function minifyJsLike(input: string): string {
 /**
  * Format code based on the selected format
  */
-export async function formatCode(input: string, format: SupportedFormat, indent = 2): Promise<string> {
+export async function formatCode(
+  input: string,
+  format: SupportedFormat,
+  indent = 2
+): Promise<string> {
   const trimmed = input.trim();
   if (!trimmed) return '';
 
