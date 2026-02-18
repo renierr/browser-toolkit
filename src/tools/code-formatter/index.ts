@@ -1,5 +1,5 @@
 import { showMessage } from '../../js/ui.ts';
-import { formatCode, minifyCode, type SupportedFormat } from './formatters.ts';
+import { formatCode, minifyCode, detectFormat, type SupportedFormat } from './formatters.ts';
 import {
   generateHighlightedHtml,
   renderCodeToCanvasSimple,
@@ -14,6 +14,7 @@ export default function init() {
   const outputContainer = document.getElementById('code-output') as HTMLDivElement;
   const outputCode = document.getElementById('code-output-code') as HTMLElement;
   const formatSelect = document.getElementById('format-select') as HTMLSelectElement;
+  const detectedFormatBadge = document.getElementById('detected-format') as HTMLSpanElement;
   const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
   const fontSizeInput = document.getElementById('export-font-size') as HTMLInputElement;
   const paddingInput = document.getElementById('export-padding') as HTMLInputElement;
@@ -38,16 +39,37 @@ export default function init() {
     padding: parseInt(paddingInput.value) || 20,
   });
 
+  const updateDetectedFormatBadge = (format: SupportedFormat | null) => {
+    if (format && format !== 'auto' && format !== 'text') {
+      detectedFormatBadge.textContent = format.toUpperCase();
+      detectedFormatBadge.classList.remove('hidden');
+    } else {
+      detectedFormatBadge.classList.add('hidden');
+    }
+  };
+
   const updateHighlightedPreview = async (code: string) => {
     if (!code.trim()) {
       outputCode.innerHTML = '';
       currentFormattedCode = '';
+      updateDetectedFormatBadge(null);
       return;
     }
 
     try {
       const options = getExportOptions();
-      const html = await generateHighlightedHtml(code, getFormat(), options.theme);
+      let format = getFormat();
+
+      // If auto, detect format for highlighting
+      if (format === 'auto') {
+        const detected = detectFormat(code);
+        format = detected;
+        updateDetectedFormatBadge(detected);
+      } else {
+        updateDetectedFormatBadge(null);
+      }
+
+      const html = await generateHighlightedHtml(code, format, options.theme);
 
       // Extract just the code content and apply to our container
       const tempDiv = document.createElement('div');
@@ -83,7 +105,7 @@ export default function init() {
     }
 
     isProcessing = true;
-    const format = getFormat();
+    let format = getFormat();
 
     try {
       let result: string;
@@ -95,6 +117,7 @@ export default function init() {
 
       input.value = result;
       await updateHighlightedPreview(result);
+
     } catch (e: any) {
       showMessage(`${format.toUpperCase()} Error: ${e.message}`, { type: 'alert' });
     } finally {
@@ -112,6 +135,7 @@ export default function init() {
     outputCode.innerHTML = '';
     outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>';
     currentFormattedCode = '';
+    updateDetectedFormatBadge(null);
   });
 
   // Copy formatted text to clipboard
@@ -140,9 +164,15 @@ export default function init() {
 
     try {
       btnExportClipboard.disabled = true;
+
+      let format = getFormat();
+      if (format === 'auto') {
+        format = detectFormat(currentFormattedCode);
+      }
+
       const canvas = await renderCodeToCanvasSimple(
         currentFormattedCode,
-        getFormat(),
+        format,
         getExportOptions()
       );
       await copyCanvasToClipboard(canvas);
@@ -170,13 +200,18 @@ export default function init() {
 
     try {
       btnExportFile.disabled = true;
+
+      let format = getFormat();
+      if (format === 'auto') {
+        format = detectFormat(currentFormattedCode);
+      }
+
       const canvas = await renderCodeToCanvasSimple(
         currentFormattedCode,
-        getFormat(),
+        format,
         getExportOptions()
       );
 
-      const format = getFormat();
       const timestamp = new Date().toISOString().slice(0, 10);
       await downloadCanvasAsImage(canvas, `code-${format}-${timestamp}`, 'png');
 
@@ -194,12 +229,24 @@ export default function init() {
     }
   });
 
+  // Update preview when format changes (to re-highlight with correct language)
+  formatSelect?.addEventListener('change', () => {
+    if (currentFormattedCode) {
+      updateHighlightedPreview(currentFormattedCode);
+    }
+    // Hide badge if user manually selects a format
+    if (formatSelect.value !== 'auto') {
+      updateDetectedFormatBadge(null);
+    }
+  });
+
   // Clear output when input is emptied
   input?.addEventListener('input', () => {
     if (input.value.trim() === '') {
       outputCode.innerHTML = '';
       outputContainer.innerHTML = '<pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>';
       currentFormattedCode = '';
+      updateDetectedFormatBadge(null);
     }
   });
 

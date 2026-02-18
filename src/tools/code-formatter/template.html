@@ -6,19 +6,26 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="form-control w-full">
         <div class="flex items-center justify-between mb-2">
-          <label class="label py-0" for="format-select">
+          <label class="label py-0" for="code-input">
             <span class="label-text font-semibold">Input</span>
           </label>
-          <select id="format-select" class="select select-bordered select-sm">
-            <option value="json" selected>JSON</option>
-            <option value="xml">XML</option>
-            <option value="html">HTML</option>
-            <option value="css">CSS</option>
-            <option value="sql">SQL</option>
-            <option value="javascript">JavaScript</option>
-            <option value="typescript">TypeScript</option>
-            <option value="java">Java</option>
-          </select>
+          <div class="flex items-center gap-2">
+            <span id="detected-format" class="badge badge-ghost badge-sm hidden"></span>
+            <select id="format-select" class="select select-bordered select-sm">
+              <option value="auto" selected>Auto Detect</option>
+              <option value="json">JSON</option>
+              <option value="xml">XML</option>
+              <option value="html">HTML</option>
+              <option value="css">CSS</option>
+              <option value="sql">SQL</option>
+              <option value="javascript">JavaScript</option>
+              <option value="typescript">TypeScript</option>
+              <option value="java">Java</option>
+              <option value="yaml">YAML</option>
+              <option value="markdown">Markdown</option>
+              <option value="graphql">GraphQL</option>
+            </select>
+          </div>
         </div>
         <textarea id="code-input" class="textarea textarea-bordered h-72 font-mono text-sm w-full"
                   placeholder='Paste your code here...' spellcheck="false"></textarea>
@@ -58,9 +65,9 @@
           <span class="label-text text-xs">Theme</span>
         </label>
         <select id="theme-select" class="select select-bordered select-sm w-full">
-          <option value="github-dark" selected>GitHub Dark</option>
+          <option value="github-dark">GitHub Dark</option>
           <option value="github-light">GitHub Light</option>
-          <option value="dracula">Dracula</option>
+          <option value="dracula" selected>Dracula</option>
           <option value="nord">Nord</option>
           <option value="one-dark-pro">One Dark Pro</option>
           <option value="vitesse-dark">Vitesse Dark</option>
@@ -95,5 +102,3 @@
     </div>
   </div>
 </div>
-
-
