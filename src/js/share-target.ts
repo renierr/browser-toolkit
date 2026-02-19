@@ -219,36 +219,37 @@ export function setupLaunchHandler(): Promise<File[] | null> {
       return;
     }
 
-    let resolved = false;
+    const collectedFiles: File[] = [];
+    let resolveTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    // Set a timeout - if no files arrive quickly, assume none are coming
-    const timeout = setTimeout(() => {
-      if (!resolved) {
-        resolved = true;
+    // Set initial timeout - if no files arrive, assume none are coming
+    const initialTimeout = setTimeout(() => {
+      if (collectedFiles.length === 0) {
         resolve(null);
       }
-    }, 500);
+    }, 300);
 
     (window as any).launchQueue.setConsumer(async (launchParams: any) => {
-      clearTimeout(timeout);
-
-      if (resolved) return;
+      clearTimeout(initialTimeout);
 
       if (launchParams.files && launchParams.files.length > 0) {
-        const files: File[] = [];
+        // Collect files from this launch event
         for (const fileHandle of launchParams.files) {
           try {
             const file = await fileHandle.getFile();
-            files.push(file);
+            collectedFiles.push(file);
           } catch (e) {
             console.error('Failed to get file from handle:', e);
           }
         }
-        resolved = true;
-        resolve(files.length > 0 ? files : null);
-      } else {
-        resolved = true;
-        resolve(null);
+
+        // Reset the resolve timeout - wait a bit for more files
+        if (resolveTimeout) {
+          clearTimeout(resolveTimeout);
+        }
+        resolveTimeout = setTimeout(() => {
+          resolve(collectedFiles.length > 0 ? collectedFiles : null);
+        }, 100);
       }
     });
   });
