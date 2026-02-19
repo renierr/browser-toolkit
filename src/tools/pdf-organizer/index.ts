@@ -184,9 +184,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   setupFileDropzone('pdf-dropzone', 'pdf-file', loadFiles);
 
-  // Handle shared PDF files
   if (payload?.sharedFiles?.length) {
-    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    const pdfFiles = payload.sharedFiles.filter(
+      (f) => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf')
+    );
     if (pdfFiles.length > 0) {
       loadFiles(pdfFiles as unknown as FileList);
     }
@@ -248,7 +249,7 @@ export default function init(payload?: SharedFilesPayload) {
     if (pagesToDownload.length === 0 || !originalPdfBytes) return null;
     showProgress('Generating PDF...');
 
-    const loadedDocs : Document[] = [];
+    const loadedDocs: Document[] = [];
     let outDoc: PDFDocument | null = null;
     try {
       outDoc = new mupdf.PDFDocument();

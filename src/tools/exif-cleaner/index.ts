@@ -244,7 +244,6 @@ export default function init(payload?: SharedFilesPayload) {
     renderFileList();
   });
 
-  // Handle shared files from PWA share target
   if (payload?.sharedFiles?.length) {
     currentFiles = payload.sharedFiles.filter((f) => isImageFile(f));
     if (currentFiles.length > 0) {

@@ -30,9 +30,9 @@ export default function init(payload?: SharedFilesPayload) {
     if (results) results.classList.add('hidden');
     if (tableBody) tableBody.innerHTML = '';
     if (thumbnailContainer) {
-        thumbnailContainer.classList.add('hidden');
-        const images = thumbnailContainer.querySelectorAll('img');
-        images.forEach(img => img.remove());
+      thumbnailContainer.classList.add('hidden');
+      const images = thumbnailContainer.querySelectorAll('img');
+      images.forEach((img) => img.remove());
     }
     const fileInput = document.getElementById('pdf-file') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
@@ -42,7 +42,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   const processFile = async (file: File) => {
     showProgress('Reading PDF metadata...');
-    let doc : Document | null = null;
+    let doc: Document | null = null;
     try {
       const buffer = await file.arrayBuffer();
       doc = mupdf.Document.openDocument(buffer);
@@ -119,13 +119,14 @@ export default function init(payload?: SharedFilesPayload) {
           if (!value || value === 'undefined' || value === 'null') return;
 
           if (typeof value === 'object' && value.type === 'image' && thumbnailContainer) {
-              thumbnailContainer.classList.remove('hidden');
-              const img = document.createElement('img');
-              img.src = `data:image/${value.format};base64,${value.data}`;
-              img.className = "max-w-[200px] h-auto shadow-lg rounded-lg border-4 border-white bg-white m-2";
-              img.title = key;
-              thumbnailContainer.appendChild(img);
-              return;
+            thumbnailContainer.classList.remove('hidden');
+            const img = document.createElement('img');
+            img.src = `data:image/${value.format};base64,${value.data}`;
+            img.className =
+              'max-w-[200px] h-auto shadow-lg rounded-lg border-4 border-white bg-white m-2';
+            img.title = key;
+            thumbnailContainer.appendChild(img);
+            return;
           }
 
           const row = document.createElement('tr');
@@ -154,9 +155,10 @@ export default function init(payload?: SharedFilesPayload) {
     await processFile(files[0]);
   });
 
-  // Handle shared PDF files
   if (payload?.sharedFiles?.length) {
-    const pdfFile = payload.sharedFiles.find(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    const pdfFile = payload.sharedFiles.find(
+      (f) => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf')
+    );
     if (pdfFile) {
       processFile(pdfFile);
     }

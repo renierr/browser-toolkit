@@ -21,8 +21,8 @@ export default function init(payload?: SharedFilesPayload) {
 
   let originalPdfBytes: Uint8Array | null = null;
   let originalFileName = 'document.pdf';
-  let password : string | null = null;
-  let modified : boolean = false;
+  let password: string | null = null;
+  let modified: boolean = false;
 
   const loadPdf = async (files: FileList | File[]) => {
     if (files.length === 0) return;
@@ -85,9 +85,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   setupFileDropzone('pdf-dropzone', 'pdf-file', loadPdf);
 
-  // Handle shared PDF files
   if (payload?.sharedFiles?.length) {
-    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    const pdfFiles = payload.sharedFiles.filter(
+      (f) => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf')
+    );
     if (pdfFiles.length > 0) {
       loadPdf(pdfFiles);
     }
@@ -105,8 +106,7 @@ export default function init(payload?: SharedFilesPayload) {
       if (!pdf) return;
 
       // Re-authenticate if needed
-      if (password)
-        pdf.authenticatePassword(password);
+      if (password) pdf.authenticatePassword(password);
 
       const outDoc = new mupdf.PDFDocument();
       const graftMap = outDoc.newGraftMap();
@@ -127,29 +127,32 @@ export default function init(payload?: SharedFilesPayload) {
 
         // Add permissions based on checkboxes, including related Revision 3 bits
         if (permPrint.checked) {
-          permissionsMask |= (1 << 2);  // Bit 3: Print
-          permissionsMask |= (1 << 11); // Bit 12: High quality print
+          permissionsMask |= 1 << 2; // Bit 3: Print
+          permissionsMask |= 1 << 11; // Bit 12: High quality print
         }
         if (permEdit.checked) {
-          permissionsMask |= (1 << 3);  // Bit 4: Modify
-          permissionsMask |= (1 << 10); // Bit 11: Assemble (rotate/delete pages)
+          permissionsMask |= 1 << 3; // Bit 4: Modify
+          permissionsMask |= 1 << 10; // Bit 11: Assemble (rotate/delete pages)
         }
         if (permCopy.checked) {
-          permissionsMask |= (1 << 4);  // Bit 5: Copy
+          permissionsMask |= 1 << 4; // Bit 5: Copy
         }
         if (permAnnotate.checked) {
-          permissionsMask |= (1 << 5);  // Bit 6: Annotate
-          permissionsMask |= (1 << 8);  // Bit 9: Fill forms
+          permissionsMask |= 1 << 5; // Bit 6: Annotate
+          permissionsMask |= 1 << 8; // Bit 9: Fill forms
         }
 
         // Always allow accessibility (Bit 10) as it's good practice
-        permissionsMask |= (1 << 9);
+        permissionsMask |= 1 << 9;
 
         // If restrictions are set, an owner password is required for them to be effective.
         // If the user didn't provide one, we use a default one to ensure enforcement.
         if (!opwd && permissionsMask !== -4) {
           opwd = 'restricted';
-          showMessage('No owner password provided. Using "restricted" to enforce permissions.', { type: 'warning', timeoutMs: 15000 });
+          showMessage('No owner password provided. Using "restricted" to enforce permissions.', {
+            type: 'warning',
+            timeoutMs: 15000,
+          });
         }
 
         if (opwd || upwd || permissionsMask !== -4) {
@@ -168,7 +171,9 @@ export default function init(payload?: SharedFilesPayload) {
       const suffix = modified ? '_modified.pdf' : '_unrestricted.pdf';
       const fileName = originalFileName.replace(/\.pdf$/i, '') + suffix;
       await downloadFile(processedPdfBytes, fileName, 'application/pdf');
-      showMessage(removeRestrictions ? 'Restrictions removed.' : 'Restrictions applied.', { timeoutMs: 3000 });
+      showMessage(removeRestrictions ? 'Restrictions removed.' : 'Restrictions applied.', {
+        timeoutMs: 3000,
+      });
       showMessage('PDF downloaded successfully.', { timeoutMs: 5000 });
     } catch (err) {
       console.error(err);
@@ -179,14 +184,12 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   applyBtn.addEventListener('click', () => {
-    processAndDownloadPdf(false)
+    processAndDownloadPdf(false);
   });
-
 
   removeAllBtn.addEventListener('click', () => {
-    processAndDownloadPdf(true)
+    processAndDownloadPdf(true);
   });
-
 
   startOverBtn.addEventListener('click', () => {
     password = null;

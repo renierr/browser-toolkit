@@ -4,7 +4,13 @@ import mupdf, { Image, type Matrix, PDFPage, type Rect, type Document, type Pixm
 import { hashUint8Array } from '../../js/utils.ts';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
 
-let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number; hash: string }> = [];
+let extractedImages: Array<{
+  name: string;
+  data: Uint8Array;
+  width: number;
+  height: number;
+  hash: string;
+}> = [];
 const seenHashes = new Set<string>();
 
 // noinspection JSUnusedGlobalSymbols
@@ -13,9 +19,10 @@ export default function init(payload?: SharedFilesPayload) {
     await extractImages(files);
   });
 
-  // Handle shared PDF files
   if (payload?.sharedFiles?.length) {
-    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    const pdfFiles = payload.sharedFiles.filter(
+      (f) => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf')
+    );
     if (pdfFiles.length > 0) {
       extractImages(pdfFiles as unknown as FileList);
     }
@@ -56,12 +63,18 @@ export default function init(payload?: SharedFilesPayload) {
   return () => {
     extractedImages = [];
     seenHashes.clear();
-  }
+  };
 }
 
 async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
-  const images: Array<{ name: string; data: Uint8Array; width: number; height: number; hash: string }> = [];
-  let doc : Document | null = null;
+  const images: Array<{
+    name: string;
+    data: Uint8Array;
+    width: number;
+    height: number;
+    hash: string;
+  }> = [];
+  let doc: Document | null = null;
   try {
     doc = mupdf.Document.openDocument(fileBuffer);
     const pageCount = doc.countPages();
@@ -95,19 +108,21 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
     };
 
     for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-      showProgress(`Scanning ${fileName} - Page ${pageIndex + 1} of ${pageCount} for embedded images...`);
+      showProgress(
+        `Scanning ${fileName} - Page ${pageIndex + 1} of ${pageCount} for embedded images...`
+      );
       await yieldToUI();
 
       try {
         const page = doc.loadPage(pageIndex) as PDFPage;
         let imageCounter = 0;
 
-        const structure = page.toStructuredText("preserve-images");
+        const structure = page.toStructuredText('preserve-images');
         structure.walk({
           onImageBlock: (_bbox: Rect, _transform: Matrix, image: Image) => {
             const pixmap = image.toPixmap();
             processPixmap(pixmap, `img-${imageCounter++}`, pageIndex);
-          }
+          },
         });
 
         let annotCounter = 0;
@@ -127,14 +142,12 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
           }
         });
         page.destroy();
-
       } catch (err) {
         console.warn(`[extract-images] failed for page ${pageIndex + 1}:`, err);
       }
     }
 
     await Promise.all(imagePromises);
-
   } catch (err) {
     console.error('[extract-images] Failed to open document:', err);
   } finally {
@@ -144,7 +157,7 @@ async function extractImagesFromPDF(fileBuffer: ArrayBuffer, fileName: string) {
   return images;
 }
 
-export async function extractImages(files : FileList) {
+export async function extractImages(files: FileList) {
   showProgress('Reading PDF file(s) ...');
   try {
     seenHashes.clear();
@@ -204,10 +217,12 @@ function renderImages() {
   extractedImages.forEach((img, index) => {
     const url = createImageURL(img.data);
     const wrapper = document.createElement('div');
-    wrapper.className = 'group relative flex flex-col bg-base-200 rounded-lg overflow-hidden border border-base-300';
+    wrapper.className =
+      'group relative flex flex-col bg-base-200 rounded-lg overflow-hidden border border-base-300';
 
     const imageContainer = document.createElement('div');
-    imageContainer.className = 'w-full max-h-48 aspect-square relative bg-base-200 flex items-center justify-center';
+    imageContainer.className =
+      'w-full max-h-48 aspect-square relative bg-base-200 flex items-center justify-center';
 
     const thumb = document.createElement('img');
     thumb.src = url;
@@ -218,7 +233,8 @@ function renderImages() {
 
     const previewBtn = document.createElement('button');
     previewBtn.type = 'button';
-    previewBtn.className = 'absolute inset-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset z-10';
+    previewBtn.className =
+      'absolute inset-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-inset z-10';
     previewBtn.setAttribute('aria-label', `Preview image ${img.name}`);
     previewBtn.onclick = () => openLightbox(url, img.name);
 
@@ -228,7 +244,8 @@ function renderImages() {
     const downloadSingle = document.createElement('a');
     downloadSingle.href = url;
     downloadSingle.download = img.name;
-    downloadSingle.className = 'btn btn-primary btn-xs shadow pointer-events-auto flex items-center gap-1';
+    downloadSingle.className =
+      'btn btn-primary btn-xs shadow pointer-events-auto flex items-center gap-1';
     downloadSingle.innerHTML = '<i data-lucide="download" class="w-4 h-4"></i>';
     downloadSingle.setAttribute('aria-label', 'Download image');
     downloadSingle.onclick = (e) => e.stopPropagation();
@@ -261,7 +278,8 @@ function renderImages() {
 
 function openLightbox(url: string, name: string) {
   const overlay = document.createElement('div');
-  overlay.className = 'fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4 animate-in fade-in duration-200';
+  overlay.className =
+    'fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4 animate-in fade-in duration-200';
   overlay.setAttribute('role', 'dialog');
   overlay.setAttribute('aria-modal', 'true');
   overlay.setAttribute('aria-label', 'Image preview');

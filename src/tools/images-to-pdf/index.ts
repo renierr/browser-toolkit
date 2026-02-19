@@ -3,6 +3,8 @@ import { downloadFile, setupFileDropzone } from '../../js/file-utils.ts';
 import Sortable from 'sortablejs';
 import { addImageToPDFDocument } from '../../js/mupdf-utils.ts';
 import mupdf from 'mupdf';
+import type { SharedFilesPayload } from '../../js/share-target';
+import { isImageFile } from '../../js/utils.ts';
 
 interface ImageItem {
   id: string;
@@ -11,7 +13,7 @@ interface ImageItem {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
   const imageList = document.getElementById('image-list') as HTMLDivElement;
   const actions = document.getElementById('actions') as HTMLDivElement;
@@ -81,6 +83,13 @@ export default function init() {
     handleFiles(files);
     fileInput.value = '';
   });
+
+  if (payload?.sharedFiles?.length) {
+    const files = payload.sharedFiles.filter((f) => isImageFile(f));
+    if (files.length > 0) {
+      handleFiles(files as unknown as FileList);
+    }
+  }
 
   imageList.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;

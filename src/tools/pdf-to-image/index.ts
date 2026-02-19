@@ -28,9 +28,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   setupFileDropzone('pdf-dropzone', 'pdf-file', processFiles);
 
-  // Handle shared PDF files
   if (payload?.sharedFiles?.length) {
-    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    const pdfFiles = payload.sharedFiles.filter(
+      (f) => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf')
+    );
     if (pdfFiles.length > 0) {
       processFiles(pdfFiles);
     }
