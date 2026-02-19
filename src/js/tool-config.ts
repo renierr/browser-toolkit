@@ -1,4 +1,4 @@
-import type { ShareTargetConfig, Tool } from './types';
+import type { ShareTargetConfig, Tool, ToolScript } from './types';
 
 export type ToolConfig = {
   name: string;
@@ -26,7 +26,7 @@ export type ToolConfig = {
 type BuildToolParams = {
   folder: string;
   html: string;
-  initScript?: () => void;
+  initScript?: ToolScript;
   config: ToolConfig;
 };
 

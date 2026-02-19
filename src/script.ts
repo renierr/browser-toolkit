@@ -17,6 +17,7 @@ import {
   type SharedFilesPayload,
 } from './js/share-target.ts';
 import { showToolChooser } from './js/tool-chooser.ts';
+import { setTools, tools } from './js/tools.ts';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -29,7 +30,6 @@ const htmlModules = import.meta.glob('@tools/**/template.html', {
   import: 'default',
 });
 const scriptModules = import.meta.glob('@tools/**/index.ts');
-let tools: Tool[] = [];
 
 async function buildToolsList(): Promise<Tool[]> {
   const result: Tool[] = [];
@@ -286,10 +286,11 @@ function invokeOptionalMain(ctx: CustomMainContext): Promise<void> | void {
 }
 
 async function boot() {
-  tools = await buildToolsList();
+  const loadedTools = await buildToolsList();
+  setTools(loadedTools);
 
   await invokeOptionalMain({
-    tools,
+    tools: loadedTools,
   } as CustomMainContext);
 
   if (document.readyState === 'loading') {
