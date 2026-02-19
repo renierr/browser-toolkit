@@ -251,7 +251,7 @@ export function detectFormat(input: string): SupportedFormat {
   const goScore = [
     /^\s*package\s+\w+\s*$/m.test(trimmed),
     /^\s*func\s+(\(\w+\s+\*?\w+\)\s*)?\w+\s*\([^)]*\)\s*(\([^)]*\)|[\w*]+)?\s*\{/m.test(trimmed),
-    /^\s*import\s+(\(|")/m.test(trimmed),
+    /^\s*import\s+[("]/m.test(trimmed),
     /\b(fmt|log|http|os|io|context|errors|strings|strconv|sync|time)\.\w+/.test(trimmed),
     /:=/.test(trimmed),
     /\bgo\s+func\b|\bdefer\s+/.test(trimmed),
@@ -1042,6 +1042,482 @@ async function formatAngular(input: string, indent = 2): Promise<string> {
 }
 
 /**
+ * Generic C-style language formatter (works for C, C++, C#, Java, Go, Rust, Swift, Kotlin, PHP)
+ * Handles brace-based indentation, basic spacing, and cleanup
+ */
+function formatCStyleGeneric(input: string, indent = 2): string {
+  const PADDING = ' '.repeat(indent);
+  const lines = input.split('\n');
+  const result: string[] = [];
+  let depth = 0;
+
+  for (let line of lines) {
+    let trimmedLine = line.trim();
+    if (!trimmedLine) {
+      result.push('');
+      continue;
+    }
+
+    // Track multi-line comments (simplified - just skip comment-only lines)
+    if (trimmedLine.startsWith('/*') || trimmedLine.startsWith('*') || trimmedLine.startsWith('//')) {
+      result.push(PADDING.repeat(depth) + trimmedLine);
+      continue;
+    }
+
+    // Handle preprocessor directives (C/C++)
+    if (trimmedLine.startsWith('#')) {
+      result.push(trimmedLine);
+      continue;
+    }
+
+    // Calculate depth adjustment for this line
+    let lineDepthAdjust = 0;
+    let nextDepthAdjust = 0;
+
+    // Count braces/brackets for indentation (excluding strings and comments)
+    let tempInString = false;
+    let tempStringChar = '';
+    let tempInComment = false;
+
+    for (let i = 0; i < trimmedLine.length; i++) {
+      const char = trimmedLine[i];
+      const nextChar = trimmedLine[i + 1];
+      const prevChar = trimmedLine[i - 1];
+
+      // Skip comments
+      if (!tempInString && char === '/' && nextChar === '/') break;
+      if (!tempInString && char === '/' && nextChar === '*') {
+        tempInComment = true;
+        continue;
+      }
+      if (tempInComment && char === '*' && nextChar === '/') {
+        tempInComment = false;
+        i++;
+        continue;
+      }
+      if (tempInComment) continue;
+
+      // Track strings
+      if ((char === '"' || char === "'" || char === '`') && prevChar !== '\\') {
+        if (!tempInString) {
+          tempInString = true;
+          tempStringChar = char;
+        } else if (char === tempStringChar) {
+          tempInString = false;
+        }
+        continue;
+      }
+      if (tempInString) continue;
+
+      // Count braces
+      if (char === '{' || char === '[' || char === '(') {
+        nextDepthAdjust++;
+      } else if (char === '}' || char === ']' || char === ')') {
+        if (i === 0 || trimmedLine.slice(0, i).trim() === '') {
+          lineDepthAdjust--;
+        } else {
+          nextDepthAdjust--;
+        }
+      }
+    }
+
+    // Apply current line indentation
+    const currentDepth = Math.max(0, depth + lineDepthAdjust);
+    result.push(PADDING.repeat(currentDepth) + trimmedLine);
+
+    // Update depth for next line
+    depth = Math.max(0, depth + lineDepthAdjust + nextDepthAdjust);
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Format Python code with proper indentation
+ */
+function formatPython(input: string, indent = 4): string {
+  const PADDING = ' '.repeat(indent);
+  const lines = input.split('\n');
+  const result: string[] = [];
+  let depth = 0;
+  let inMultiLineString = false;
+  let multiLineStringChar = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    let trimmedLine = line.trim();
+
+    // Handle empty lines
+    if (!trimmedLine) {
+      result.push('');
+      continue;
+    }
+
+    // Track multi-line strings
+    const tripleQuotes = ['"""', "'''"];
+    for (const quote of tripleQuotes) {
+      const count = (trimmedLine.match(new RegExp(quote.replace(/'/g, "\\'"), 'g')) || []).length;
+      if (count % 2 === 1) {
+        if (!inMultiLineString) {
+          inMultiLineString = true;
+          multiLineStringChar = quote;
+        } else if (quote === multiLineStringChar) {
+          inMultiLineString = false;
+        }
+      }
+    }
+
+    // If inside multi-line string, preserve original indentation relative to start
+    if (inMultiLineString && i > 0) {
+      result.push(line);
+      continue;
+    }
+
+    // Check if this line decreases indentation
+    const decreaseKeywords = ['elif', 'else', 'except', 'finally', 'case'];
+    const startsWithDecrease = decreaseKeywords.some(kw =>
+      trimmedLine.startsWith(kw + ':') || trimmedLine.startsWith(kw + ' ')
+    );
+
+    if (startsWithDecrease && depth > 0) {
+      depth--;
+    }
+
+    // Also handle closing brackets/parens that decrease depth
+    if (trimmedLine.startsWith(')') || trimmedLine.startsWith(']') || trimmedLine.startsWith('}')) {
+      depth = Math.max(0, depth - 1);
+    }
+
+    // Apply indentation
+    result.push(PADDING.repeat(depth) + trimmedLine);
+
+    // Check if this line increases indentation for next line
+    const endsWithColon = /:\s*(#.*)?$/.test(trimmedLine);
+    const opensBlock = ['def ', 'class ', 'if ', 'elif ', 'else:', 'for ', 'while ', 'try:',
+                        'except', 'finally:', 'with ', 'async def ', 'async for ', 'async with ',
+                        'match ', 'case '];
+
+    if (endsWithColon || opensBlock.some(kw => trimmedLine.startsWith(kw))) {
+      if (endsWithColon) {
+        depth++;
+      }
+    }
+
+    // Handle continuation with open brackets
+    const openBrackets = (trimmedLine.match(/[\(\[\{]/g) || []).length;
+    const closeBrackets = (trimmedLine.match(/[\)\]\}]/g) || []).length;
+    if (openBrackets > closeBrackets) {
+      depth += (openBrackets - closeBrackets);
+    } else if (closeBrackets > openBrackets && !trimmedLine.startsWith(')') && !trimmedLine.startsWith(']')) {
+      depth = Math.max(0, depth - (closeBrackets - openBrackets));
+    }
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Format Ruby code with proper indentation
+ */
+function formatRuby(input: string, indent = 2): string {
+  const PADDING = ' '.repeat(indent);
+  const lines = input.split('\n');
+  const result: string[] = [];
+  let depth = 0;
+
+  const increaseKeywords = /^\s*(def|class|module|if|unless|case|while|until|for|begin|do|\{)\b/;
+  const decreaseKeywords = /^\s*(end|elsif|else|when|rescue|ensure|\})\b/;
+  const neutralKeywords = /^\s*(elsif|else|when|rescue|ensure)\b/;
+
+  for (let line of lines) {
+    let trimmedLine = line.trim();
+
+    if (!trimmedLine) {
+      result.push('');
+      continue;
+    }
+
+    // Check if line starts with decrease keyword
+    if (decreaseKeywords.test(trimmedLine)) {
+      if (!neutralKeywords.test(trimmedLine)) {
+        depth = Math.max(0, depth - 1);
+      } else {
+        // elsif, else, when, rescue, ensure - temporarily decrease for this line
+        result.push(PADDING.repeat(Math.max(0, depth - 1)) + trimmedLine);
+        continue;
+      }
+    }
+
+    result.push(PADDING.repeat(depth) + trimmedLine);
+
+    // Check if line increases depth
+    if (increaseKeywords.test(trimmedLine)) {
+      // Don't increase for single-line blocks
+      if (!trimmedLine.includes(' end') && !trimmedLine.endsWith('}')) {
+        depth++;
+      }
+    }
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Format Bash/Shell script with proper indentation
+ */
+function formatBash(input: string, indent = 2): string {
+  const PADDING = ' '.repeat(indent);
+  const lines = input.split('\n');
+  const result: string[] = [];
+  let depth = 0;
+  let inHeredoc = false;
+  let heredocEnd = '';
+
+  for (let line of lines) {
+    let trimmedLine = line.trim();
+
+    // Handle heredoc
+    if (inHeredoc) {
+      result.push(line); // Preserve original formatting in heredoc
+      if (trimmedLine === heredocEnd) {
+        inHeredoc = false;
+      }
+      continue;
+    }
+
+    // Check for heredoc start
+    const heredocMatch = trimmedLine.match(/<<-?\s*['"]?(\w+)['"]?/);
+    if (heredocMatch) {
+      inHeredoc = true;
+      heredocEnd = heredocMatch[1];
+    }
+
+    if (!trimmedLine) {
+      result.push('');
+      continue;
+    }
+
+    // Keywords that decrease indentation
+    const decreasePatterns = /^(fi|done|esac|elif|else|\}|\]\]|then)\b/;
+    // Keywords that increase indentation for next line
+    const increasePatterns = /\b(then|do|else|in|\{)\s*$|^(if|while|until|for|case|select)\b.*\bthen\s*$|\bdo\s*$/;
+    // Keywords that are neutral (decrease then increase)
+    const neutralPatterns = /^(elif|else)\b/;
+
+    if (decreasePatterns.test(trimmedLine) && !neutralPatterns.test(trimmedLine)) {
+      depth = Math.max(0, depth - 1);
+    }
+
+    result.push(PADDING.repeat(depth) + trimmedLine);
+
+    if (increasePatterns.test(trimmedLine)) {
+      depth++;
+    }
+
+    // Handle case patterns (word) which increase depth
+    if (/^\w+\)/.test(trimmedLine) || /^["'].*["']\)/.test(trimmedLine) || /^\*\)/.test(trimmedLine)) {
+      depth++;
+    }
+
+    // ;; decreases depth
+    if (/;;\s*$/.test(trimmedLine)) {
+      depth = Math.max(0, depth - 1);
+    }
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Format PowerShell script with proper indentation
+ */
+function formatPowerShell(input: string, indent = 4): string {
+  const PADDING = ' '.repeat(indent);
+  const lines = input.split('\n');
+  const result: string[] = [];
+  let depth = 0;
+  let inHereString = false;
+
+  for (let line of lines) {
+    let trimmedLine = line.trim();
+
+    // Handle here-strings
+    if (inHereString) {
+      result.push(line);
+      if (trimmedLine === '"@' || trimmedLine === "'@") {
+        inHereString = false;
+      }
+      continue;
+    }
+
+    if (trimmedLine.includes('@"') || trimmedLine.includes("@'")) {
+      inHereString = true;
+    }
+
+    if (!trimmedLine) {
+      result.push('');
+      continue;
+    }
+
+    // Count braces for indentation
+    const openBraces = (trimmedLine.match(/\{/g) || []).length;
+    const closeBraces = (trimmedLine.match(/\}/g) || []).length;
+
+    // If line starts with closing brace, decrease first
+    if (trimmedLine.startsWith('}')) {
+      depth = Math.max(0, depth - 1);
+    }
+
+    result.push(PADDING.repeat(depth) + trimmedLine);
+
+    // Adjust depth for next line
+    depth = Math.max(0, depth + openBraces - closeBraces);
+
+    // If we already decreased for starting }, don't double-count
+    if (trimmedLine.startsWith('}') && closeBraces > openBraces) {
+      depth = Math.max(0, depth + 1); // Compensate
+    }
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Format TOML with proper indentation and spacing
+ */
+function formatToml(input: string, _indent = 2): string {
+  const lines = input.split('\n');
+  const result: string[] = [];
+
+  for (let line of lines) {
+    let trimmedLine = line.trim();
+
+    if (!trimmedLine) {
+      if (result.length > 0 && result[result.length - 1] !== '') {
+        result.push('');
+      }
+      continue;
+    }
+
+    // Section headers
+    if (trimmedLine.startsWith('[')) {
+      if (result.length > 0 && result[result.length - 1] !== '') {
+        result.push('');
+      }
+      result.push(trimmedLine);
+      continue;
+    }
+
+    // Key-value pairs - normalize spacing around =
+    if (trimmedLine.includes('=')) {
+      const eqIndex = trimmedLine.indexOf('=');
+      const key = trimmedLine.slice(0, eqIndex).trim();
+      const value = trimmedLine.slice(eqIndex + 1).trim();
+      result.push(`${key} = ${value}`);
+    } else {
+      result.push(trimmedLine);
+    }
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Format INI with proper spacing
+ */
+function formatIni(input: string, _indent = 0): string {
+  const lines = input.split('\n');
+  const result: string[] = [];
+
+  for (let line of lines) {
+    let trimmedLine = line.trim();
+
+    if (!trimmedLine) {
+      if (result.length > 0 && result[result.length - 1] !== '') {
+        result.push('');
+      }
+      continue;
+    }
+
+    // Comments
+    if (trimmedLine.startsWith(';') || trimmedLine.startsWith('#')) {
+      result.push(trimmedLine);
+      continue;
+    }
+
+    // Section headers
+    if (trimmedLine.startsWith('[') && trimmedLine.endsWith(']')) {
+      if (result.length > 0 && result[result.length - 1] !== '') {
+        result.push('');
+      }
+      result.push(trimmedLine);
+      continue;
+    }
+
+    // Key-value pairs
+    if (trimmedLine.includes('=')) {
+      const eqIndex = trimmedLine.indexOf('=');
+      const key = trimmedLine.slice(0, eqIndex).trim();
+      const value = trimmedLine.slice(eqIndex + 1).trim();
+      result.push(`${key}=${value}`);
+    } else {
+      result.push(trimmedLine);
+    }
+  }
+
+  return result.join('\n');
+}
+
+/**
+ * Format Dockerfile with proper structure
+ */
+function formatDockerfile(input: string, indent = 4): string {
+  const PADDING = ' '.repeat(indent);
+  const lines = input.split('\n');
+  const result: string[] = [];
+  let inContinuation = false;
+
+  for (let line of lines) {
+    let trimmedLine = line.trim();
+
+    if (!trimmedLine) {
+      result.push('');
+      inContinuation = false;
+      continue;
+    }
+
+    // Dockerfile instructions
+    const instructions = ['FROM', 'RUN', 'CMD', 'LABEL', 'MAINTAINER', 'EXPOSE', 'ENV',
+                          'ADD', 'COPY', 'ENTRYPOINT', 'VOLUME', 'USER', 'WORKDIR',
+                          'ARG', 'ONBUILD', 'STOPSIGNAL', 'HEALTHCHECK', 'SHELL'];
+
+    const startsWithInstruction = instructions.some(inst =>
+      trimmedLine.toUpperCase().startsWith(inst + ' ') || trimmedLine.toUpperCase() === inst
+    );
+
+    if (startsWithInstruction && !inContinuation) {
+      // Add blank line before certain instructions for readability
+      const needsSpaceBefore = ['FROM', 'RUN', 'COPY', 'ADD', 'CMD', 'ENTRYPOINT'];
+      if (result.length > 0 && needsSpaceBefore.some(inst => trimmedLine.toUpperCase().startsWith(inst))) {
+        if (result[result.length - 1] !== '' && !result[result.length - 1].toUpperCase().startsWith('FROM')) {
+          // result.push(''); // Optional: add blank lines between major sections
+        }
+      }
+      result.push(trimmedLine);
+    } else if (inContinuation) {
+      result.push(PADDING + trimmedLine);
+    } else {
+      result.push(trimmedLine);
+    }
+
+    // Check for line continuation
+    inContinuation = trimmedLine.endsWith('\\');
+  }
+
+  return result.join('\n');
+}
+
+/**
  * Format code based on the selected format
  */
 export async function formatCode(
@@ -1092,22 +1568,33 @@ export async function formatCode(
       return await formatMarkdown(trimmed, indent);
     case 'mdx':
       return await formatMdx(trimmed, indent);
-    // Highlight-only formats (no formatting support)
+    // C-style languages (brace-based)
     case 'c':
     case 'cpp':
     case 'csharp':
     case 'go':
     case 'rust':
-    case 'python':
-    case 'ruby':
-    case 'php':
     case 'swift':
     case 'kotlin':
+    case 'php':
+      return formatCStyleGeneric(trimmed, indent);
+    // Indentation-based languages
+    case 'python':
+      return formatPython(trimmed, indent === 2 ? 4 : indent); // Python typically uses 4 spaces
+    case 'ruby':
+      return formatRuby(trimmed, indent);
+    // Shell languages
     case 'bash':
+      return formatBash(trimmed, indent);
     case 'powershell':
+      return formatPowerShell(trimmed, indent === 2 ? 4 : indent);
+    // Config formats
     case 'dockerfile':
+      return formatDockerfile(trimmed, indent === 2 ? 4 : indent);
     case 'toml':
+      return formatToml(trimmed, indent);
     case 'ini':
+      return formatIni(trimmed, indent);
     default:
       return trimmed;
   }

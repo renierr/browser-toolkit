@@ -50,16 +50,16 @@ export default function init() {
 
   const updateButtonStates = (format: SupportedFormat) => {
     const hasText = input.value.trim() !== '';
-    // Some formats might not support minification (like yaml/markdown)
-    const noMinify = ['yaml', 'markdown', 'mdx', 'graphql', 'text'].includes(format);
-    // Highlight-only formats (no formatting support)
-    const highlightOnly = [
-      'c', 'cpp', 'csharp', 'go', 'rust', 'python', 'ruby', 'php',
-      'swift', 'kotlin', 'bash', 'powershell', 'dockerfile', 'toml', 'ini', 'text'
+    // Disable format/minify for plain text
+    const isText = format === 'text';
+    // Some formats don't support minification
+    const noMinify = [
+      'yaml', 'markdown', 'mdx', 'graphql', 'text',
+      'python', 'ruby', 'bash', 'powershell', 'dockerfile', 'toml', 'ini'
     ].includes(format);
 
-    if (btnFormat) btnFormat.disabled = !hasText || highlightOnly;
-    if (btnMinify) btnMinify.disabled = !hasText || noMinify || highlightOnly;
+    if (btnFormat) btnFormat.disabled = !hasText || isText;
+    if (btnMinify) btnMinify.disabled = !hasText || noMinify;
   };
 
   const clearState = () => {
