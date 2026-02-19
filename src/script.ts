@@ -302,11 +302,18 @@ async function boot() {
   initScrollToTop();
   setupLucideCreateIcons();
 
+  // Subscribe to router changes
+  router.subscribe(handleRoute);
+
   // Cleanup old shared files in background
   cleanupOldSharedFiles().catch((e) => console.warn('Cleanup shared files failed', e));
 
   // Helper to route files to the appropriate tool
-  const routeFilesToTool = async (files: File[], mimeTypes: string[], text?: string): Promise<boolean> => {
+  const routeFilesToTool = async (
+    files: File[],
+    mimeTypes: string[],
+    text?: string
+  ): Promise<boolean> => {
     if (files.length === 0) return false;
 
     const matchingTools = findAllToolsForMimeTypes(tools, mimeTypes);
@@ -329,7 +336,6 @@ async function boot() {
         mimeTypes,
         text,
       };
-      router.subscribe(handleRoute);
       router.goTo(targetTool.path, payload);
       return true;
     }
@@ -361,9 +367,6 @@ async function boot() {
       console.warn('[script] No tool found for shared MIME types:', sharedInfo.mimeTypes);
     }
   }
-
-  // Subscribe to router changes
-  router.subscribe(handleRoute);
 
   // Initial route
   handleRoute(router.getCurrentPath());
