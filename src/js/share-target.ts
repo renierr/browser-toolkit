@@ -171,7 +171,7 @@ export function findToolForMimeTypes(tools: Tool[], mimeTypes: string[]): Tool |
 
 /**
  * Find all tools that can handle the given MIME types.
- * Returns an array of matching tools.
+ * Returns an array of matching tools, sorted by order (ascending) then name.
  */
 export function findAllToolsForMimeTypes(tools: Tool[], mimeTypes: string[]): Tool[] {
   if (!mimeTypes.length) return [];
@@ -191,7 +191,11 @@ export function findAllToolsForMimeTypes(tools: Tool[], mimeTypes: string[]): To
     }
   }
 
-  return matches;
+  // Sort by order (ascending) then by name
+  return matches.sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    return a.name.localeCompare(b.name);
+  });
 }
 
 /**

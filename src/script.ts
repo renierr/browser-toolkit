@@ -318,8 +318,8 @@ async function boot() {
       targetTool = matchingTools[0];
     } else {
       // Multiple tools can handle this file type, let user choose
-      const fileName = files[0].name || 'Shared file';
-      targetTool = await showToolChooser(matchingTools, fileName);
+      // Tools are already sorted by order from findAllToolsForMimeTypes
+      targetTool = await showToolChooser(matchingTools, files);
     }
 
     if (targetTool) {

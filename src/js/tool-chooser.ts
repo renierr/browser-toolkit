@@ -4,9 +4,19 @@ import { renderToolIconSvg } from './tool-icons';
 /**
  * Shows a modal dialog for the user to choose which tool to open a shared file with.
  * Returns the selected tool or null if cancelled.
+ *
+ * @param tools - Array of tools that can handle the files (should be pre-sorted by order)
+ * @param files - Array of files being shared
  */
-export function showToolChooser(tools: Tool[], fileName: string): Promise<Tool | null> {
+export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | null> {
   return new Promise((resolve) => {
+    // Build file description
+    const fileCount = files.length;
+    const firstName = files[0]?.name || 'Shared file';
+    const fileDescription = fileCount === 1
+      ? firstName
+      : `${firstName} and ${fileCount - 1} more file${fileCount > 2 ? 's' : ''}`;
+
     // Create modal backdrop
     const backdrop = document.createElement('div');
     backdrop.className = 'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4';
@@ -23,9 +33,10 @@ export function showToolChooser(tools: Tool[], fileName: string): Promise<Tool |
     header.className = 'p-4 border-b border-base-300';
     header.innerHTML = `
       <h2 id="tool-chooser-title" class="text-lg font-bold text-heading">Open with...</h2>
-      <p class="text-sm text-muted mt-1 truncate" title="${escapeHtml(fileName)}">
-        ${escapeHtml(fileName)}
+      <p class="text-sm text-muted mt-1 truncate" title="${escapeHtml(fileDescription)}">
+        ${escapeHtml(fileDescription)}
       </p>
+      ${fileCount > 1 ? `<p class="text-xs text-muted/70 mt-0.5">${fileCount} files selected</p>` : ''}
     `;
 
     // Tool list
