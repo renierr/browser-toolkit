@@ -1,18 +1,18 @@
 # 🛠️ Browser Toolkit
 
+**Fast, offline, browser-only utilities.**  
+No servers · 100% client-side · Installable PWA
+
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 [![Live Demo](https://img.shields.io/badge/Live-Demo-success)](https://renierr.github.io/browser-toolkit/)
 
-**Fast, offline, browser-only utilities.** No heavy frameworks · Built with Vite + TypeScript + Tailwind + daisyUI.  
-Fully installable as a PWA – works 100% offline.
-
-→ **[Try the Live Demo](https://renierr.github.io/browser-toolkit/)**
+→ **[Try it live](https://renierr.github.io/browser-toolkit/)**
 
 ---
 
 ## 💡 What is it?
 
-A growing, searchable collection of small, focused tools that run entirely in your browser. 
+A growing, searchable collection of focused tools that run entirely in your browser. 
 
 - **Privacy-First:** Zero server dependency. Your data never leaves your device.
 - **Developer-Friendly:** Add your own tools in ~30 seconds.
@@ -22,21 +22,24 @@ A growing, searchable collection of small, focused tools that run entirely in yo
 
 *More tools are added regularly. Check the [live version](https://renierr.github.io/browser-toolkit/) for the complete list.*
 
-- 📝 **Code Formatter**
-- 🎨 **Color Picker**
-- 🔀 **Base64 Encoder/Decoder**
-- 🕵️ **Image Redactor**
-- 📄 **PDF Viewer**
-- *...and more!*
+- Code Formatter
+- Color Picker & Checker
+- Base64 Encoder/Decoder
+- Image Redactor (crop, blur, pixel areas)
+- PDF Viewer
+- PDF Organizer 
+- QR code generator/reader
+- … (see live demo for newest)
 
 ## ✨ Features
 
 - **🔍 Instant Search:** Live filtering to find the exact tool you need.
 - **📦 100% Offline (PWA):** Install it once, use it anywhere without an internet connection.
 - **🛠️ Auto-Detecting Tools:** Simply create a folder to add a new tool—the app handles the rest.
-- **🎨 Clean UI:** Consistent, beautiful design powered by daisyUI and Tailwind.
-- **🔗 Share Target API:** Share files (images, text, PDFs) directly from your OS into the tools.
+- **🎨 Modern UI:** Consistent, beautiful design powered by daisyUI and Tailwind.
+- **🔗 Share Target:** Share files (images, text, PDFs) directly from your OS into the tools.
 - **🧹 Workspace Isolation:** Per-tool isolated dependencies using `pnpm` workspaces.
+
 
 ## 🚀 Getting Started (Local Development)
 
