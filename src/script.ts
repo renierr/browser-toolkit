@@ -13,6 +13,7 @@ import {
   findToolForMimeTypes,
   getSharedContentInfo,
   loadSharedFiles,
+  setupLaunchHandler,
   type SharedFilesPayload,
 } from './js/share-target.ts';
 
@@ -302,31 +303,42 @@ async function boot() {
   // Cleanup old shared files in background
   cleanupOldSharedFiles().catch((e) => console.warn('Cleanup shared files failed', e));
 
-  // Check for shared content
+  // Helper to route files to the appropriate tool
+  const routeFilesToTool = (files: File[], mimeTypes: string[], text?: string) => {
+    const targetTool = findToolForMimeTypes(tools, mimeTypes);
+    if (targetTool && files.length > 0) {
+      const payload: SharedFilesPayload = {
+        sharedFiles: files,
+        mimeTypes,
+        text,
+      };
+      router.subscribe(handleRoute);
+      router.goTo(targetTool.path, payload);
+      return true;
+    }
+    return false;
+  };
+
+  // 1. Check for Launch Handler API (Windows/macOS "Open with")
+  const launchFiles = await setupLaunchHandler();
+  if (launchFiles && launchFiles.length > 0) {
+    const mimeTypes = launchFiles.map((f) => f.type || '');
+    if (routeFilesToTool(launchFiles, mimeTypes)) {
+      return;
+    }
+  }
+
+  // 2. Check for shared content from Service Worker (Android share)
   const sharedInfo = getSharedContentInfo();
   if (sharedInfo) {
-    const targetTool = findToolForMimeTypes(tools, sharedInfo.mimeTypes);
+    const sharedFiles = await loadSharedFiles(sharedInfo.keys);
+    clearSharedParams();
 
-    if (targetTool) {
-      // Load the shared files and route to the tool
-      const sharedFiles = await loadSharedFiles(sharedInfo.keys);
-      clearSharedParams();
-
-      if (sharedFiles.length > 0) {
-        const payload: SharedFilesPayload = {
-          sharedFiles,
-          mimeTypes: sharedInfo.mimeTypes,
-          text: sharedInfo.text,
-        };
-
-        // Subscribe to router and navigate to the tool with the payload
-        router.subscribe(handleRoute);
-        router.goTo(targetTool.path, payload);
+    if (sharedFiles.length > 0) {
+      if (routeFilesToTool(sharedFiles, sharedInfo.mimeTypes, sharedInfo.text)) {
         return;
       }
     } else {
-      // No matching tool found, just clear the params and continue
-      clearSharedParams();
       console.warn('[script] No tool found for shared MIME types:', sharedInfo.mimeTypes);
     }
   }

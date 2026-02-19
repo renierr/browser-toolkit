@@ -192,3 +192,50 @@ export interface SharedFilesPayload {
   text?: string;
 }
 
+/**
+ * Setup the Launch Handler API for file_handlers (Windows/macOS "Open with").
+ * Returns a promise that resolves with the files when they are received,
+ * or null if no files are pending.
+ */
+export function setupLaunchHandler(): Promise<File[] | null> {
+  return new Promise((resolve) => {
+    if (!('launchQueue' in window)) {
+      resolve(null);
+      return;
+    }
+
+    let resolved = false;
+
+    // Set a timeout - if no files arrive quickly, assume none are coming
+    const timeout = setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        resolve(null);
+      }
+    }, 500);
+
+    (window as any).launchQueue.setConsumer(async (launchParams: any) => {
+      clearTimeout(timeout);
+
+      if (resolved) return;
+
+      if (launchParams.files && launchParams.files.length > 0) {
+        const files: File[] = [];
+        for (const fileHandle of launchParams.files) {
+          try {
+            const file = await fileHandle.getFile();
+            files.push(file);
+          } catch (e) {
+            console.error('Failed to get file from handle:', e);
+          }
+        }
+        resolved = true;
+        resolve(files.length > 0 ? files : null);
+      } else {
+        resolved = true;
+        resolve(null);
+      }
+    });
+  });
+}
+
