@@ -1,4 +1,4 @@
-# 🛠️ <img src="https://raw.githubusercontent.com/renierr/browser-toolkit/main/public/favicon.svg" alt="Logo" width="30"> Browser Toolkit
+# <img src="https://raw.githubusercontent.com/renierr/browser-toolkit/main/public/favicon.svg" alt="Logo" width="35"> Browser Toolkit
 
 **Fast, offline, browser-only utilities.**  
 No servers · 100% client-side · Installable PWA
