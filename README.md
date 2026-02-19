@@ -49,7 +49,7 @@ Make sure you have [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) i
 
 ```bash
 # Clone the repository
-git clone [https://github.com/renierr/browser-toolkit.git](https://github.com/renierr/browser-toolkit.git)
+git clone https://github.com/renierr/browser-toolkit.git
 
 # Navigate into the directory
 cd browser-toolkit
@@ -58,16 +58,16 @@ cd browser-toolkit
 pnpm install
 
 # Start the development server
-pnpm dev
+pnpm run dev
 ```
 
 ## 🏗️ How to add a new tool
 
-Adding a tool takes about 30 seconds thanks to the auto-detection feature. 
+Adding a tool takes about 30 seconds thanks to the auto-detection feature.    
 See a more detailed instruction inside the repositories 'docs' folder.
 
 1. Create a new folder in the `src/tools/` directory (or your specific tools folder).
-2. Add your `index.html` and necessary logic/styles.
+2. Add your `index.ts`, `template.html` and `config.json` logic/styles.
 3. The Vite configuration will automatically detect the new folder and add it to the main dashboard!
 
 > **Note:** If your tool requires specific dependencies, you can manage them within that tool's folder utilizing the `pnpm` workspaces setup.
