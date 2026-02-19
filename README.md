@@ -1,40 +1,85 @@
-# Browser Toolkit
+# 🛠️ Browser Toolkit
 
-**Fast, offline, browser-only utilities**  
-No frameworks · Vite + TypeScript + Tailwind + daisyUI  
-Installable PWA – works 100% offline
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
+[![Live Demo](https://img.shields.io/badge/Live-Demo-success)](https://renierr.github.io/browser-toolkit/)
 
-→ **[Live Demo](https://renierr.github.io/browser-toolkit/)**
+**Fast, offline, browser-only utilities.** No heavy frameworks · Built with Vite + TypeScript + Tailwind + daisyUI.  
+Fully installable as a PWA – works 100% offline.
 
-## What is it?
+→ **[Try the Live Demo](https://renierr.github.io/browser-toolkit/)**
 
-A growing collection of small, focused tools that run entirely in your browser.
+---
 
-- Zero server dependency
-- Privacy-friendly (nothing leaves your device)
-- Add your own tools in \~30 seconds
-- Searchable · themable · mobile-friendly
+## 💡 What is it?
 
-## Included Tools
+A growing, searchable collection of small, focused tools that run entirely in your browser. 
 
- Base64 Encoder, Code Formatter, Color Picker, Image Redactor, PDF viewer…
+- **Privacy-First:** Zero server dependency. Your data never leaves your device.
+- **Developer-Friendly:** Add your own tools in ~30 seconds.
+- **Accessible:** Fully responsive, themable, and mobile-friendly.
 
-See live version for the current list.
+## 🧰 Included Tools
 
-## Features
+*More tools are added regularly. Check the [live version](https://renierr.github.io/browser-toolkit/) for the complete list.*
 
-- 🔍 Instant search & live filtering
-- 📦 Fully offline-capable (PWA)
-- 🛠 Add tools by creating a folder — auto-detected
-- 🎨 Clean, consistent UI (daisyUI + Tailwind)
-- 🔗 Share files directly to tools (images, text, pdf…)
-- 🧹 Per-tool isolated dependencies possible (pnpm workspaces)
+- 📝 **Code Formatter**
+- 🎨 **Color Picker**
+- 🔀 **Base64 Encoder/Decoder**
+- 🕵️ **Image Redactor**
+- 📄 **PDF Viewer**
+- *...and more!*
 
+## ✨ Features
 
-## Tech Stack
-- Vite · TypeScript · Tailwind CSS · daisyUI
-- Lucide icons
+- **🔍 Instant Search:** Live filtering to find the exact tool you need.
+- **📦 100% Offline (PWA):** Install it once, use it anywhere without an internet connection.
+- **🛠️ Auto-Detecting Tools:** Simply create a folder to add a new tool—the app handles the rest.
+- **🎨 Clean UI:** Consistent, beautiful design powered by daisyUI and Tailwind.
+- **🔗 Share Target API:** Share files (images, text, PDFs) directly from your OS into the tools.
+- **🧹 Workspace Isolation:** Per-tool isolated dependencies using `pnpm` workspaces.
 
+## 🚀 Getting Started (Local Development)
 
-## License
-AGPL-3.0
+Want to run this locally or add your own tools? Getting started is easy.
+
+### Prerequisites
+Make sure you have [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) installed.
+
+### Installation
+
+```bash
+# Clone the repository
+git clone [https://github.com/renierr/browser-toolkit.git](https://github.com/renierr/browser-toolkit.git)
+
+# Navigate into the directory
+cd browser-toolkit
+
+# Install dependencies
+pnpm install
+
+# Start the development server
+pnpm dev
+```
+
+## 🏗️ How to add a new tool
+
+Adding a tool takes about 30 seconds thanks to the auto-detection feature. 
+See a more detailed instruction inside the repositories 'docs' folder.
+
+1. Create a new folder in the `src/tools/` directory (or your specific tools folder).
+2. Add your `index.html` and necessary logic/styles.
+3. The Vite configuration will automatically detect the new folder and add it to the main dashboard!
+
+> **Note:** If your tool requires specific dependencies, you can manage them within that tool's folder utilizing the `pnpm` workspaces setup.
+
+## 💻 Tech Stack
+
+- **Bundler:** [Vite](https://vitejs.dev/)
+- **Language:** TypeScript
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [daisyUI](https://daisyui.com/)
+- **Icons:** [Lucide Icons](https://lucide.dev/)
+- **Package Manager:** `pnpm` (with workspaces)
+
+## 📄 License
+
+This project is licensed under the **AGPL-3.0 License**. See the [LICENSE](LICENSE) file for more details.
