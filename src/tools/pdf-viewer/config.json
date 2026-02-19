@@ -5,5 +5,8 @@
   "draft": false,
   "example": false,
   "sectionId": "pdf",
-  "order": 1
+  "order": 1,
+  "shareTarget": {
+    "accept": ["application/pdf"]
+  }
 }

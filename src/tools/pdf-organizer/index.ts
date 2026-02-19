@@ -3,6 +3,7 @@ import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.
 import mupdf, { type PDFDocument, type Document } from 'mupdf';
 import Sortable from 'sortablejs';
 import router from '../../js/router.ts';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 interface PageItem {
   id: string;
@@ -13,7 +14,7 @@ interface PageItem {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const pageList = document.getElementById('page-list') as HTMLDivElement;
   const actions = document.getElementById('organizer-actions') as HTMLDivElement;
   const dropzone = document.getElementById('pdf-dropzone') as HTMLDivElement;
@@ -119,7 +120,7 @@ export default function init() {
     }
   });
 
-  setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
+  const loadFiles = async (files: FileList | File[]) => {
     if (files.length === 0) {
       return;
     }
@@ -179,7 +180,17 @@ export default function init() {
     } finally {
       hideProgress();
     }
-  });
+  };
+
+  setupFileDropzone('pdf-dropzone', 'pdf-file', loadFiles);
+
+  // Handle shared PDF files
+  if (payload?.sharedFiles?.length) {
+    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    if (pdfFiles.length > 0) {
+      loadFiles(pdfFiles as unknown as FileList);
+    }
+  }
 
   removeBtn.addEventListener('click', () => {
     pushHistory();

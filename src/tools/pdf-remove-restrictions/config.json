@@ -3,5 +3,8 @@
   "description": "Modify printing, copying, and editing restrictions from PDF files.",
   "icon": "unlock",
   "sectionId": "pdf",
-  "order": 6
+  "order": 6,
+  "shareTarget": {
+    "accept": ["application/pdf"]
+  }
 }

@@ -2,15 +2,24 @@ import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '../../js/
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
 import mupdf, { Image, type Matrix, PDFPage, type Rect, type Document, type Pixmap } from 'mupdf';
 import { hashUint8Array } from '../../js/utils.ts';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 let extractedImages: Array<{ name: string; data: Uint8Array; width: number; height: number; hash: string }> = [];
 const seenHashes = new Set<string>();
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
     await extractImages(files);
   });
+
+  // Handle shared PDF files
+  if (payload?.sharedFiles?.length) {
+    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    if (pdfFiles.length > 0) {
+      extractImages(pdfFiles as unknown as FileList);
+    }
+  }
 
   document.getElementById('clear-btn')?.addEventListener('click', () => {
     extractedImages = [];

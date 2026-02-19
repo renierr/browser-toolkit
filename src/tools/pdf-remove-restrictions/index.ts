@@ -1,9 +1,10 @@
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { showProgress, hideProgress, showMessage } from '../../js/ui.ts';
 import mupdf from 'mupdf';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const startOverBtn = document.getElementById('start-over-btn') as HTMLButtonElement;
   const dropzone = document.getElementById('pdf-dropzone') as HTMLDivElement;
   const restrictionsConfig = document.getElementById('restrictions-config') as HTMLDivElement;
@@ -23,12 +24,12 @@ export default function init() {
   let password : string | null = null;
   let modified : boolean = false;
 
-  setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
+  const loadPdf = async (files: FileList | File[]) => {
     if (files.length === 0) return;
     showProgress('Loading PDF...');
 
     try {
-      const file = files[0];
+      const file = files[0] as File;
       originalPdfBytes = new Uint8Array(await file.arrayBuffer());
       originalFileName = file.name;
 
@@ -80,7 +81,17 @@ export default function init() {
     } finally {
       hideProgress();
     }
-  });
+  };
+
+  setupFileDropzone('pdf-dropzone', 'pdf-file', loadPdf);
+
+  // Handle shared PDF files
+  if (payload?.sharedFiles?.length) {
+    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    if (pdfFiles.length > 0) {
+      loadPdf(pdfFiles);
+    }
+  }
 
   async function processAndDownloadPdf(removeRestrictions: boolean) {
     if (!originalPdfBytes) return;

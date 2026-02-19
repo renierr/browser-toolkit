@@ -9,6 +9,7 @@ import {
   getDocManager,
   injectStyles,
 } from '../../js/embedpdf-utils.ts';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 const toggleToolCard = (show: boolean) => {
   const toolCardElement = document.getElementById('pdf-edit-tool-card');
@@ -101,7 +102,7 @@ const scrollTopOfViewer = (viewerEl: HTMLElement) => {
 };
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: any) {
+export default function init(payload?: SharedFilesPayload | { pdfBytes: ArrayBuffer; fileName: string }) {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files: FileList) => {
     showProgress('Load PDF file...');
     if (await showPdfViewer(files)) {
@@ -116,7 +117,22 @@ export default function init(payload?: any) {
     );
   });
 
-  if (payload && payload.pdfBytes) {
+  // Handle SharedFilesPayload (from PWA share target)
+  if (payload && 'sharedFiles' in payload && payload.sharedFiles?.length) {
+    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    if (pdfFiles.length > 0) {
+      showProgress('Opening shared PDF...');
+      showPdfViewer(pdfFiles as unknown as FileList).then((success) => {
+        if (success) {
+          toggleToolCard(false);
+          showMessage(`PDF "${pdfFiles.map(f => f.name).join(', ')}" loaded.`, { timeoutMs: 5000 });
+        }
+        hideProgress();
+      });
+    }
+  }
+  // Handle legacy payload (from PDF Organizer "Open in Viewer")
+  else if (payload && 'pdfBytes' in payload && payload.pdfBytes) {
     const { pdfBytes, fileName } = payload;
     showProgress('Opening PDF from payload...');
     showPdfViewer([

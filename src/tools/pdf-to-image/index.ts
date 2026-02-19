@@ -2,10 +2,11 @@ import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
 import mupdf, { Pixmap } from 'mupdf';
 import { addImageToPDFDocument } from '../../js/mupdf-utils.ts';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
-  setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
+export default function init(payload?: SharedFilesPayload) {
+  const processFiles = async (files: FileList | File[]) => {
     const dpi = parseInt((document.getElementById('opt-dpi') as HTMLInputElement)?.value);
     const format = (document.getElementById('opt-format') as HTMLSelectElement)?.value as
       | 'jpeg'
@@ -14,15 +15,26 @@ export default function init() {
 
     showProgress('Load PDF file...');
     try {
-      const arrayBuffer = await files[0].arrayBuffer();
-      const name = await flattenAsImage(arrayBuffer, files[0].name, { dpi, format, quality });
+      const file = files[0] as File;
+      const arrayBuffer = await file.arrayBuffer();
+      const name = await flattenAsImage(arrayBuffer, file.name, { dpi, format, quality });
       if (name) {
-        showMessage(`PDF ${files[0].name} converted to ${name} and downloaded.`);
+        showMessage(`PDF ${file.name} converted to ${name} and downloaded.`);
       }
     } finally {
       hideProgress();
     }
-  });
+  };
+
+  setupFileDropzone('pdf-dropzone', 'pdf-file', processFiles);
+
+  // Handle shared PDF files
+  if (payload?.sharedFiles?.length) {
+    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    if (pdfFiles.length > 0) {
+      processFiles(pdfFiles);
+    }
+  }
 }
 
 // ---------------------------------------------------------------

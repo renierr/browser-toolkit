@@ -2,6 +2,7 @@ import { setupFileDropzone } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import mupdf, { type Document } from 'mupdf';
 import { formatPdfDate, parseXmpMetadata, flattenXmpMetadata } from '../../js/pdf-utils.ts';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 // standard metadata info
 const standardKeys = [
@@ -17,7 +18,7 @@ const standardKeys = [
 ];
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const dropzone = document.getElementById('pdf-dropzone');
   const results = document.getElementById('metadata-results');
   const tableBody = document.getElementById('metadata-table-body');
@@ -39,10 +40,7 @@ export default function init() {
 
   resetBtn?.addEventListener('click', reset);
 
-  setupFileDropzone('pdf-dropzone', 'pdf-file', async (files: FileList) => {
-    if (files.length === 0) return;
-    const file = files[0];
-
+  const processFile = async (file: File) => {
     showProgress('Reading PDF metadata...');
     let doc : Document | null = null;
     try {
@@ -149,5 +147,18 @@ export default function init() {
       doc?.destroy();
       hideProgress();
     }
+  };
+
+  setupFileDropzone('pdf-dropzone', 'pdf-file', async (files: FileList) => {
+    if (files.length === 0) return;
+    await processFile(files[0]);
   });
+
+  // Handle shared PDF files
+  if (payload?.sharedFiles?.length) {
+    const pdfFile = payload.sharedFiles.find(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    if (pdfFile) {
+      processFile(pdfFile);
+    }
+  }
 }

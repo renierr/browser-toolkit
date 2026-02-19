@@ -3,5 +3,8 @@
   "description": "Merge, Reorder, remove, or duplicate pages in your PDF documents.",
   "icon": "layout-grid",
   "sectionId": "pdf",
-  "order": 5
+  "order": 5,
+  "shareTarget": {
+    "accept": ["application/pdf"]
+  }
 }
