@@ -21,26 +21,11 @@ async function idbPut(key, value) {
   });
 }
 
-// Helper to determine the MIME type category for routing
-function getMimeCategory(file) {
-  const type = file.type || '';
-  if (type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf')) {
-    return 'pdf';
-  }
-  if (type.startsWith('image/')) {
-    return 'image';
-  }
-  if (type.startsWith('text/') || type === 'application/json') {
-    return 'text';
-  }
-  return 'unknown';
-}
-
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Handle share target POST requests to index.html or pdf.html
+  // Handle share target POST requests - always route to index.html for tool chooser
   if (req.method === 'POST' && (url.pathname.endsWith('/index.html') || url.pathname.endsWith('/pdf.html') || url.pathname === '/' || url.pathname === '')) {
     event.respondWith(
       (async () => {
@@ -60,13 +45,8 @@ self.addEventListener('fetch', (event) => {
 
           const text = encodeURIComponent(form.get('text') || '');
 
-          // Determine target based on first file's MIME type
-          const firstMime = mimeTypes[0] || '';
-          const isPdf = firstMime === 'application/pdf' || (files[0]?.name?.toLowerCase().endsWith('.pdf'));
-
-          // Construct absolute URL for redirection
-          const targetPath = isPdf ? './pdf.html' : './index.html';
-          const redirectUrl = new URL(targetPath, self.location.href);
+          // Always redirect to index.html - the app will show tool chooser if multiple tools match
+          const redirectUrl = new URL('./index.html', self.location.href);
           redirectUrl.searchParams.set('shared', '1');
           redirectUrl.searchParams.set('keys', keys.join(','));
           redirectUrl.searchParams.set('mimes', mimeTypes.join(','));

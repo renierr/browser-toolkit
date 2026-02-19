@@ -80,7 +80,7 @@
   },
   "file_handlers": [
     {
-      "action": "./pdf.html",
+      "action": "./index.html",
       "accept": {
         "application/pdf": [".pdf"]
       }
