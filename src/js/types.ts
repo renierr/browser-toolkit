@@ -1,6 +1,19 @@
 export type ToolScript = (payload?: any) => void | (() => void);
 export type ToolModule = { default?: ToolScript; init?: ToolScript };
 
+/**
+ * Configuration for tools that can act as share targets.
+ * When files are shared to the PWA with matching MIME types,
+ * the app will route to this tool and pass the files as payload.
+ */
+export interface ShareTargetConfig {
+  /**
+   * Array of MIME types this tool accepts (e.g., ["image/*", "image/png"]).
+   * Supports wildcards like "image/*" for all image types.
+   */
+  accept: string[];
+}
+
 export interface Tool {
   name: string;
   description: string;
@@ -33,6 +46,12 @@ export interface Tool {
 
   hideHeader?: boolean;
   hideFooter?: boolean;
+
+  /**
+   * Optional share target configuration.
+   * If defined, this tool will receive shared files matching the specified MIME types.
+   */
+  shareTarget?: ShareTargetConfig;
 }
 
 export type CustomMainContext = {

@@ -7,6 +7,14 @@ import { buildTool, parseToolConfig } from './js/tool-config.ts';
 import { setupLucideCreateIcons } from './js/tool-icons.ts';
 import { getFavorites, toggleFavorite } from './js/favorites.ts';
 import router from './js/router.ts';
+import {
+  cleanupOldSharedFiles,
+  clearSharedParams,
+  findToolForMimeTypes,
+  getSharedContentInfo,
+  loadSharedFiles,
+  type SharedFilesPayload,
+} from './js/share-target.ts';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -290,6 +298,38 @@ async function boot() {
 
   initScrollToTop();
   setupLucideCreateIcons();
+
+  // Cleanup old shared files in background
+  cleanupOldSharedFiles().catch((e) => console.warn('Cleanup shared files failed', e));
+
+  // Check for shared content
+  const sharedInfo = getSharedContentInfo();
+  if (sharedInfo) {
+    const targetTool = findToolForMimeTypes(tools, sharedInfo.mimeTypes);
+
+    if (targetTool) {
+      // Load the shared files and route to the tool
+      const sharedFiles = await loadSharedFiles(sharedInfo.keys);
+      clearSharedParams();
+
+      if (sharedFiles.length > 0) {
+        const payload: SharedFilesPayload = {
+          sharedFiles,
+          mimeTypes: sharedInfo.mimeTypes,
+          text: sharedInfo.text,
+        };
+
+        // Subscribe to router and navigate to the tool with the payload
+        router.subscribe(handleRoute);
+        router.goTo(targetTool.path, payload);
+        return;
+      }
+    } else {
+      // No matching tool found, just clear the params and continue
+      clearSharedParams();
+      console.warn('[script] No tool found for shared MIME types:', sharedInfo.mimeTypes);
+    }
+  }
 
   // Subscribe to router changes
   router.subscribe(handleRoute);

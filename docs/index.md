@@ -204,6 +204,75 @@ you are responsible for managing cleanup yourself — unlike tool `index.ts`,
 which can return a cleanup function.
 
 
+## Share Target for Tools (PWA)
+
+Tools can register as **share targets** to receive files shared from other apps (e.g., via the Android share menu or "Open with" on desktop). When a file is shared to the PWA, the app automatically routes to the appropriate tool based on the file's MIME type.
+
+### How to enable share target for a tool
+
+Add a `shareTarget` field to your tool's `config.json`:
+
+```json
+{
+  "name": "Image Redactor",
+  "description": "Crop, Redact and pixelate Images",
+  "icon": "crop",
+  "sectionId": "images",
+  "shareTarget": {
+    "accept": ["image/*"]
+  }
+}
+```
+
+The `accept` array contains MIME type patterns:
+- Exact types: `"image/png"`, `"application/pdf"`, `"text/plain"`
+- Wildcards: `"image/*"` (matches all image types), `"text/*"` (matches all text types)
+
+### Handling shared files in your tool
+
+When files are shared to your tool, the `init` function receives a payload containing the shared files:
+
+```ts
+import type { SharedFilesPayload } from '../../js/share-target';
+
+export default function init(payload?: SharedFilesPayload) {
+  // Check if files were shared
+  if (payload?.sharedFiles?.length) {
+    const file = payload.sharedFiles[0];
+    // Process the shared file
+    loadFile(file);
+  }
+  
+  // ... rest of your tool logic
+}
+```
+
+The `SharedFilesPayload` interface:
+
+```ts
+interface SharedFilesPayload {
+  sharedFiles: File[];      // Array of shared files
+  mimeTypes: string[];      // MIME types of the shared files
+  text?: string;            // Optional shared text
+}
+```
+
+### How it works
+
+1. When a file is shared to the PWA, the service worker intercepts the request
+2. Files are temporarily stored in IndexedDB
+3. The app reads URL parameters to detect shared content
+4. The app finds the first tool whose `shareTarget.accept` matches the file's MIME type
+5. The app navigates to that tool and passes the files as payload
+
+### Notes
+
+- Only the first matching tool receives the shared files (based on tool load order)
+- PDFs are handled separately by `pdf.html` for the built-in PDF viewer
+- Shared files are automatically cleaned up from IndexedDB after 1 hour
+- Make sure your tool's dropzone/file input accepts the same file types
+
+
 ## Ordering & Section grouping (Overview page)
 
 Tools can be **sorted** and **grouped into sections** on the overview page by adding two optional fields to a tool’s `config.json`:

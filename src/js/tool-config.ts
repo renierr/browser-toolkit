@@ -1,4 +1,4 @@
-import type { Tool } from './types';
+import type { ShareTargetConfig, Tool } from './types';
 
 export type ToolConfig = {
   name: string;
@@ -15,6 +15,12 @@ export type ToolConfig = {
 
   hideHeader?: boolean;
   hideFooter?: boolean;
+
+  /**
+   * Optional share target configuration.
+   * If defined, this tool will receive shared files matching the specified MIME types.
+   */
+  shareTarget?: ShareTargetConfig;
 };
 
 type BuildToolParams = {
@@ -32,6 +38,7 @@ const DEFAULTS: Omit<ToolConfig, 'name'> = {
   keywords: [],
   order: 0,
   sectionId: undefined,
+  shareTarget: undefined,
 };
 
 type ParseOptions = {
@@ -127,10 +134,23 @@ export function parseToolConfig(
       strict
     );
   }
+  if (raw.shareTarget !== undefined) {
+    if (!isRecord(raw.shareTarget)) {
+      failOrSkip(`${ctx}: Field "shareTarget" must be an object, got ${typeOf(raw.shareTarget)}.`, strict);
+    } else if (!asStringArray(raw.shareTarget.accept)) {
+      failOrSkip(`${ctx}: Field "shareTarget.accept" must be a string[], got ${typeOf(raw.shareTarget.accept)}.`, strict);
+    }
+  }
 
   const name = asString(raw.name)?.trim() || fallbackName;
   const description = asString(raw.description)?.trim() || DEFAULTS.description;
   const sectionId = asString(raw.sectionId)?.trim() || undefined;
+
+  // Parse shareTarget config
+  let shareTarget: ShareTargetConfig | undefined = undefined;
+  if (isRecord(raw.shareTarget) && asStringArray(raw.shareTarget.accept)) {
+    shareTarget = { accept: asStringArray(raw.shareTarget.accept)! };
+  }
 
   return {
     name,
@@ -144,6 +164,7 @@ export function parseToolConfig(
     sectionId,
     hideHeader: asBool(raw.hideHeader),
     hideFooter: asBool(raw.hideFooter),
+    shareTarget,
   };
 }
 
@@ -161,5 +182,6 @@ export function buildTool({ folder, html, initScript, config }: BuildToolParams)
     sectionId: config.sectionId,
     hideHeader: config.hideHeader,
     hideFooter: config.hideFooter,
+    shareTarget: config.shareTarget,
   };
 }

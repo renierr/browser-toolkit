@@ -2,5 +2,8 @@
   "name": "Image Redactor",
   "description": "Crop, Redact and pixelate Images",
   "icon": "crop",
-  "sectionId": "images"
+  "sectionId": "images",
+  "shareTarget": {
+    "accept": ["image/*"]
+  }
 }

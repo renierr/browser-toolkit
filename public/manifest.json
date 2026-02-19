@@ -42,7 +42,7 @@
     }
   ],
   "share_target": {
-    "action": "./pdf.html",
+    "action": "./index.html",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
@@ -52,7 +52,28 @@
       "files": [
         {
           "name": "files",
-          "accept": ["application/pdf", ".pdf"]
+          "accept": [
+            "application/pdf",
+            ".pdf",
+            "image/*",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".gif",
+            ".webp",
+            ".svg",
+            ".bmp",
+            ".ico",
+            "text/*",
+            ".txt",
+            ".json",
+            ".xml",
+            ".html",
+            ".css",
+            ".js",
+            ".ts",
+            ".md"
+          ]
         }
       ]
     }
@@ -62,6 +83,12 @@
       "action": "./pdf.html",
       "accept": {
         "application/pdf": [".pdf"]
+      }
+    },
+    {
+      "action": "./index.html",
+      "accept": {
+        "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"]
       }
     }
   ]

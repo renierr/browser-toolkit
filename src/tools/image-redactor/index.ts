@@ -5,11 +5,12 @@ import type { AppState, Operation, ToolType } from './types';
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import { copyCanvasToClipboard, debounce, downloadCanvasAsImage } from '../../js/utils.ts';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 const EXPORT_QUALITY = 0.92;
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const elements = {
     dropzone: document.getElementById('dropzone')!,
     editor: document.getElementById('editor-container')!,
@@ -516,6 +517,14 @@ export default function init() {
       loadImage(file);
     }
   });
+
+  // Handle shared files from PWA share target
+  if (payload?.sharedFiles?.length) {
+    const file = payload.sharedFiles[0];
+    downloadFilename = (file.name || 'shared-image').replace(/\.[^/.]+$/, '') + '-redacted';
+    elements.exportFormat.value = file.type === 'image/jpeg' ? 'image/jpeg' : file.type === 'image/webp' ? 'image/webp' : 'image/png';
+    loadImage(file);
+  }
 
   return () => {
     cleanupWorkCanvases();
