@@ -72,7 +72,12 @@
             ".css",
             ".js",
             ".ts",
-            ".md"
+            ".md",
+            "audio/*",
+            ".wav",
+            ".mp3",
+            ".ogg",
+            ".webm"
           ]
         }
       ]
@@ -90,6 +95,13 @@
       "action": "./index.html",
       "accept": {
         "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"]
+      },
+      "launch_type": "single-client"
+    },
+    {
+      "action": "./index.html",
+      "accept": {
+        "audio/*": [".wav", ".mp3", ".ogg", ".webm"]
       },
       "launch_type": "single-client"
     }

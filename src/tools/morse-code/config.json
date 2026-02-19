@@ -3,5 +3,8 @@
   "description": "Convert text to Morse code and play it as sound or screen flash",
   "icon": "radio",
   "sectionId": "general",
-  "order": 5
+  "order": 5,
+  "shareTarget": {
+    "accept": ["audio/*"]
+  }
 }

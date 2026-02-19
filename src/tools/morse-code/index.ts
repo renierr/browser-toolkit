@@ -102,7 +102,7 @@ function delay(ms: number): Promise<void> {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: any) {
   const input = document.getElementById('input-text') as HTMLTextAreaElement;
   const outputMorse = document.getElementById('output-morse') as HTMLDivElement;
   const btnPlay = document.getElementById('btn-play') as HTMLButtonElement;
@@ -240,6 +240,11 @@ export default function init() {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
+    await handleAudioFile(file);
+    fileInput.value = '';
+  });
+
+  async function handleAudioFile(file: File) {
     showProgress('Decoding audio...');
     btnImport.disabled = true;
 
@@ -253,9 +258,15 @@ export default function init() {
     } finally {
       hideProgress();
       btnImport.disabled = false;
-      fileInput.value = '';
     }
-  });
+  }
+
+  if (payload?.sharedFiles?.length > 0) {
+    const file = payload.sharedFiles[0];
+    if (file.type.startsWith('audio/')) {
+      handleAudioFile(file);
+    }
+  }
 
   return () => {
     if (currentAbortController) currentAbortController.abort();
