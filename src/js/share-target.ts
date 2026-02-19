@@ -230,38 +230,46 @@ export function setupLaunchHandler(): Promise<File[] | null> {
       resolve(files);
     };
 
-    // Set initial timeout - if no files arrive, assume none are coming
+    // Set initial timeout - if no launch event arrives, assume none are coming
     const initialTimeout = setTimeout(() => {
       doResolve(null);
     }, 300);
 
-    (window as any).launchQueue.setConsumer(async (launchParams: any) => {
-      clearTimeout(initialTimeout);
+    try {
+      (window as any).launchQueue.setConsumer(async (launchParams: any) => {
+        clearTimeout(initialTimeout);
 
-      if (!launchParams.files || launchParams.files.length === 0) {
-        // No files in this launch - resolve null
-        doResolve(null);
-        return;
-      }
-
-      // Collect files from this launch event
-      for (const fileHandle of launchParams.files) {
-        try {
-          const file = await fileHandle.getFile();
-          collectedFiles.push(file);
-        } catch (e) {
-          console.error('Failed to get file from handle:', e);
+        // Check if this launch has files
+        const files = launchParams?.files;
+        if (!files || !Array.isArray(files) || files.length === 0) {
+          // No files in this launch - resolve null immediately
+          doResolve(null);
+          return;
         }
-      }
 
-      // Reset the resolve timeout - wait a bit for more files
-      if (resolveTimeout) {
-        clearTimeout(resolveTimeout);
-      }
-      resolveTimeout = setTimeout(() => {
-        doResolve(collectedFiles.length > 0 ? collectedFiles : null);
-      }, 100);
-    });
+        // Collect files from this launch event
+        for (const fileHandle of files) {
+          try {
+            const file = await fileHandle.getFile();
+            collectedFiles.push(file);
+          } catch (e) {
+            console.error('Failed to get file from handle:', e);
+          }
+        }
+
+        // Reset the resolve timeout - wait a bit for more files
+        if (resolveTimeout) {
+          clearTimeout(resolveTimeout);
+        }
+        resolveTimeout = setTimeout(() => {
+          doResolve(collectedFiles.length > 0 ? collectedFiles : null);
+        }, 150);
+      });
+    } catch (e) {
+      // If setConsumer fails, resolve null
+      console.warn('launchQueue.setConsumer failed:', e);
+      doResolve(null);
+    }
   });
 }
 
