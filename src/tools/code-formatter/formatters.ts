@@ -1,3 +1,5 @@
+// noinspection RegExpRedundantEscape
+
 import { format as sqlFormat } from 'sql-formatter';
 import * as prettier from 'prettier/standalone';
 import * as prettierPluginBabel from 'prettier/plugins/babel';
@@ -46,326 +48,362 @@ export type SupportedFormat =
   | 'text';
 
 /**
- * Detect format from input string
+ * Detect format from input string using pattern matching and scoring
  */
 export function detectFormat(input: string): SupportedFormat {
   const trimmed = input.trim();
   if (!trimmed) return 'text';
 
-  const firstLine = trimmed.split('\n')[0].trim();
-  const lowerTrimmed = trimmed.toLowerCase();
+  const lines = trimmed.split('\n');
+  const firstLine = lines[0].trim();
+  const lineCount = lines.length;
 
   // ===== Shebang detection (must be first) =====
   if (firstLine.startsWith('#!')) {
-    if (firstLine.includes('python')) return 'python';
-    if (firstLine.includes('node') || firstLine.includes('bun') || firstLine.includes('deno')) return 'javascript';
-    if (firstLine.includes('ruby')) return 'ruby';
-    if (firstLine.includes('php')) return 'php';
-    if (firstLine.includes('bash') || firstLine.includes('sh') || firstLine.includes('zsh')) return 'bash';
-    if (firstLine.includes('pwsh') || firstLine.includes('powershell')) return 'powershell';
-    if (firstLine.includes('perl')) return 'text'; // Not supported, fallback
-    return 'bash'; // Default shebang to bash
+    if (/python\d?/.test(firstLine)) return 'python';
+    if (/\b(node|bun|deno|ts-node)\b/.test(firstLine)) return 'javascript';
+    if (/\bruby\b/.test(firstLine)) return 'ruby';
+    if (/\bphp\b/.test(firstLine)) return 'php';
+    if (/\b(ba|z|k|c|fi|tc)?sh\b/.test(firstLine)) return 'bash';
+    if (/\b(pwsh|powershell)\b/i.test(firstLine)) return 'powershell';
+    return 'bash';
   }
 
-  // ===== Dockerfile detection =====
-  if (/^FROM\s+\S+/im.test(trimmed) && /^(RUN|COPY|CMD|ENTRYPOINT|WORKDIR|ENV|EXPOSE|ARG|LABEL)\s/im.test(trimmed)) {
+  // ===== Strong indicators (unique to specific formats) =====
+
+  // PHP opening tag
+  if (/^<\?(php)?(\s|$)/i.test(trimmed)) return 'php';
+
+  // Dockerfile - must have FROM and at least one instruction
+  if (/^FROM\s+\S+/im.test(trimmed) &&
+      /^(RUN|COPY|ADD|CMD|ENTRYPOINT|WORKDIR|ENV|EXPOSE|ARG|LABEL|VOLUME|USER|HEALTHCHECK|ONBUILD|STOPSIGNAL|SHELL)\s/im.test(trimmed)) {
     return 'dockerfile';
   }
 
-  // ===== JSON/JSON5 detection =====
-  if (
-    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-    (trimmed.startsWith('[') && trimmed.endsWith(']'))
-  ) {
+  // JSON - strict structure check
+  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
     try {
       JSON.parse(trimmed);
       return 'json';
     } catch {
-      // Check if it looks like JSON5 (has comments or trailing commas or unquoted keys)
-      if (
-        trimmed.includes('//') ||
-        trimmed.includes('/*') ||
-        /,\s*[}\]]/.test(trimmed) ||
-        /^\s*\w+\s*:/m.test(trimmed)
-      ) {
+      // Could be JSON5 or JS object
+      const hasJsonFeatures = /^\s*["']?\w+["']?\s*:/m.test(trimmed);
+      const hasComments = /\/\/|\/\*/.test(trimmed);
+      const hasTrailingComma = /,\s*[}\]]/.test(trimmed);
+      if (hasJsonFeatures && (hasComments || hasTrailingComma)) {
         return 'json5';
       }
     }
   }
 
-  // ===== Vue SFC detection =====
-  if (/<template[\s>]/i.test(trimmed) && (/<script[\s>]/i.test(trimmed) || /<style[\s>]/i.test(trimmed))) {
+  // XML declaration
+  if (trimmed.startsWith('<?xml')) return 'xml';
+
+  // Vue SFC - needs template/script/style combination
+  if (/<template[\s>]/i.test(trimmed) &&
+      (/<script[\s>]/i.test(trimmed) || /<style[\s>]/i.test(trimmed))) {
     return 'vue';
   }
 
-  // ===== Angular template detection =====
-  if (/<[^>]+\*ng(If|For|Switch)|<[^>]+\[(ngClass|ngStyle|ngModel)\]|\{\{[^}]+\}\}/i.test(trimmed)) {
+  // HTML doctype
+  if (/^<!doctype\s+html/i.test(trimmed)) return 'html';
+
+  // Angular directives
+  if (/\*ng(If|For|ForOf|Switch|Class|Style|TemplateOutlet)\b/i.test(trimmed) ||
+      /\[(ng(Class|Style|Model)|formControl|formGroup)\]/i.test(trimmed) ||
+      /\(click\)|\(ngSubmit\)|\(change\)/i.test(trimmed)) {
     return 'angular';
   }
 
-  // ===== XML/HTML detection =====
-  if (trimmed.startsWith('<') && (trimmed.endsWith('>') || /<\/\w+>\s*$/.test(trimmed))) {
-    if (
-      lowerTrimmed.includes('<!doctype html') ||
-      lowerTrimmed.includes('<html') ||
-      /<(head|body|div|span|p|a|img|script|link|meta|nav|section|article|header|footer)[\s>]/i.test(trimmed)
-    ) {
+  // HTML detection
+  if (trimmed.startsWith('<') && /<\/\w+>\s*$/.test(trimmed)) {
+    if (/<(html|head|body|div|span|p|a|img|script|link|style|meta|nav|section|article|header|footer|main|aside|form|input|button|table|ul|ol|li|h[1-6]|canvas|svg)[\s>\/]/i.test(trimmed)) {
       return 'html';
     }
-    if (trimmed.startsWith('<?xml') || /<\w+[^>]*xmlns/i.test(trimmed)) {
+    // XML fallback for other tag-based content
+    if (/<\w+[^>]*>/.test(trimmed)) {
       return 'xml';
     }
-    // Could be HTML or XML - check for common HTML patterns
-    if (/<(br|hr|input|button|form|table|ul|ol|li|h[1-6])[\s>\/]/i.test(trimmed)) {
-      return 'html';
-    }
-    return 'xml';
   }
 
-  // ===== Markdown detection =====
-  if (
-    /^#{1,6}\s+\S/m.test(trimmed) || // Headers
-    /^\s*[-*+]\s+\S/m.test(trimmed) && /^\s*[-*+]\s+\S/m.test(trimmed.split('\n').slice(1).join('\n')) || // Lists
-    /\[.+\]\(.+\)/.test(trimmed) || // Links
-    /^```\w*/m.test(trimmed) || // Code blocks
-    /^\s*>\s+\S/m.test(trimmed) || // Blockquotes
-    /\*\*.+\*\*|__.+__/.test(trimmed) // Bold
-  ) {
-    // Check for MDX (JSX in markdown)
-    if (/<[A-Z]\w*[\s>\/]/.test(trimmed) || /^import\s+.+from\s+['"]/.test(trimmed)) {
+  // SQL - strong keywords at line start
+  if (/^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+(TABLE|DATABASE|INDEX|VIEW|PROCEDURE|FUNCTION)|ALTER\s+TABLE|DROP\s+(TABLE|DATABASE)|WITH\s+\w+\s+AS|TRUNCATE|GRANT|REVOKE|BEGIN|COMMIT|ROLLBACK)\b/im.test(trimmed)) {
+    return 'sql';
+  }
+
+  // GraphQL
+  if (/^\s*(query|mutation|subscription|fragment)\s+\w+/im.test(trimmed) ||
+      /^\s*type\s+\w+\s*(\{|implements)/im.test(trimmed) ||
+      /^\s*(schema|interface|enum|input|scalar|union|directive)\s+/im.test(trimmed)) {
+    return 'graphql';
+  }
+
+  // YAML front matter
+  if (/^---\s*$/m.test(trimmed) && lineCount > 1) {
+    const afterFrontMatter = trimmed.replace(/^---[\s\S]*?^---/m, '').trim();
+    if (!afterFrontMatter || /^#{1,6}\s/.test(afterFrontMatter)) {
+      return 'markdown';
+    }
+    return 'yaml';
+  }
+
+  // TOML - sections with dots or double brackets
+  if (/^\s*\[[\w.-]+\]\s*$/m.test(trimmed) &&
+      /^\s*\w+\s*=\s*(["']|true|false|\d+|\[)/m.test(trimmed)) {
+    if (/^\s*\[\[[\w.-]+\]\]/m.test(trimmed)) return 'toml';
+    // Check for TOML-style values
+    if (/^\s*\w+\s*=\s*\[/m.test(trimmed) || /"""|'''/.test(trimmed)) return 'toml';
+    return 'ini';
+  }
+
+  // Markdown - multiple indicators
+  const mdScore = [
+    /^#{1,6}\s+\S/m.test(trimmed),           // Headers
+    /^\s*[-*+]\s+\S/m.test(trimmed),          // Lists
+    /\[.+?\]\([^)]+\)/.test(trimmed),         // Links
+    /^```(\w+)?$/m.test(trimmed),             // Code blocks
+    /^\s*>\s+\S/m.test(trimmed),              // Blockquotes
+    /\*\*[^*]+\*\*|__[^_]+__/.test(trimmed),  // Bold
+    /\*[^*]+\*|_[^_]+_/.test(trimmed),        // Italic
+    /^\|.+\|$/m.test(trimmed),                // Tables
+    /^[-*_]{3,}\s*$/m.test(trimmed),          // Horizontal rules
+  ].filter(Boolean).length;
+
+  if (mdScore >= 2) {
+    // Check for MDX (JSX components in markdown)
+    if (/<[A-Z]\w*[\s/>]/.test(trimmed) || /^import\s+.+\s+from\s+['"]/.test(trimmed)) {
       return 'mdx';
     }
     return 'markdown';
   }
 
-  // ===== SQL detection =====
-  if (/^(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|WITH|TRUNCATE|GRANT|REVOKE)\s/im.test(trimmed)) {
-    return 'sql';
-  }
+  // ===== Programming Languages =====
 
-  // ===== GraphQL detection =====
-  if (
-    /^(query|mutation|subscription|fragment|type|interface|enum|input|scalar|directive|extend|schema)\s/im.test(trimmed) ||
-    (/^\s*\{\s*\w+/m.test(trimmed) && !trimmed.includes(':') && !trimmed.includes('=') && /\w+\s*\{/.test(trimmed))
-  ) {
-    return 'graphql';
-  }
+  // PowerShell - cmdlets and PS-specific syntax
+  const psScore = [
+    /\b(Get|Set|New|Remove|Add|Clear|Copy|Move|Rename|Start|Stop|Restart|Test|Update|Write|Read|Out|Invoke|Enable|Disable|Register|Unregister|Import|Export|Convert|Format|Select|Where|Sort|Group|Measure)-\w+\b/.test(trimmed),
+    /\$\w+\s*=/.test(trimmed) && !/\$\{/.test(trimmed), // PS vars but not bash
+    /\bparam\s*\(/i.test(trimmed),
+    /\[CmdletBinding\(\)\]|\[Parameter\(/i.test(trimmed),
+    /@\{|\$PSVersionTable|\$env:/.test(trimmed),
+    /\|\s*%\s*\{|\|\s*\?\s*\{/.test(trimmed), // Pipeline shorthand
+    /\b(function|filter)\s+\w+-\w+/i.test(trimmed),
+  ].filter(Boolean).length;
 
-  // ===== TOML detection =====
-  if (/^\s*\[\[?\w+(\.\w+)*\]?\]/m.test(trimmed) && /^\s*\w+\s*=\s*/m.test(trimmed)) {
-    return 'toml';
-  }
+  if (psScore >= 2) return 'powershell';
 
-  // ===== INI detection =====
-  if (/^\s*\[\w+\]\s*$/m.test(trimmed) && /^\s*\w+\s*=\s*\S/m.test(trimmed) && !trimmed.includes('[[')) {
-    return 'ini';
-  }
+  // Bash/Shell
+  const bashScore = [
+    /^\s*(if|then|elif|else|fi|for|in|do|done|while|until|case|esac)\b/m.test(trimmed),
+    /\$\{[\w:#%\/+-]+\}/.test(trimmed), // Parameter expansion
+    /^\s*\w+\s*\(\)\s*\{/m.test(trimmed), // Shell function
+    /\b(echo|printf|read|export|source|alias|unset|declare|local|readonly)\b/.test(trimmed),
+    /\|\s*(grep|sed|awk|sort|uniq|head|tail|cut|tr|wc|xargs|tee)\b/.test(trimmed),
+    /\[\[\s+|\]\]|&&\s*\||;\s*then/.test(trimmed),
+    />\s*\/dev\/null|2>&1|<<EOF|<<-/.test(trimmed),
+  ].filter(Boolean).length;
 
-  // ===== YAML detection =====
-  if (
-    /^---\s*$/m.test(trimmed) || // YAML front matter
-    (/^\s*\w[\w\s-]*:\s*(\S|$)/m.test(trimmed) && !trimmed.includes('{') && !trimmed.includes(';'))
-  ) {
-    return 'yaml';
-  }
+  if (bashScore >= 2) return 'bash';
 
-  // ===== PowerShell detection =====
-  if (
-    /^\s*\$\w+\s*=/m.test(trimmed) && /[-\w]+\s+-\w+/m.test(trimmed) || // Variables + cmdlet params
-    /\b(Get-|Set-|New-|Remove-|Invoke-|Write-Host|Write-Output|ForEach-Object|Where-Object)\b/.test(trimmed) ||
-    /^\s*function\s+\w+-\w+/im.test(trimmed) || // Function with verb-noun
-    /\bparam\s*\(/i.test(trimmed) ||
-    /\|\s*(Select-Object|Where-Object|ForEach-Object|Sort-Object|Group-Object)\b/.test(trimmed)
-  ) {
-    return 'powershell';
-  }
+  // Python
+  const pythonScore = [
+    /^\s*def\s+\w+\s*\([^)]*\)\s*(->[\s\w\[\],|]+)?\s*:/m.test(trimmed),
+    /^\s*class\s+\w+(\([^)]*\))?\s*:/m.test(trimmed),
+    /^\s*(from\s+[\w.]+\s+)?import\s+[\w.,\s]+$/m.test(trimmed) && !/[{};]/.test(trimmed),
+    /^\s*(if|elif|else|for|while|try|except|finally|with|match|case)\b[^{]*:/m.test(trimmed),
+    /__\w+__/.test(trimmed), // Dunder
+    /\bself\.\w+/.test(trimmed),
+    /^\s*@\w+(\.\w+)*(\([^)]*\))?\s*$/m.test(trimmed), // Decorators
+    /\b(print|len|range|str|int|float|list|dict|set|tuple|True|False|None)\b/.test(trimmed) && !/[;{}]/.test(trimmed),
+    /\bdef\s+__init__/.test(trimmed),
+    /:\s*$/.test(firstLine) && /^\s{4}\S/m.test(trimmed), // Indentation-based
+  ].filter(Boolean).length;
 
-  // ===== Bash/Shell detection =====
-  if (
-    /^\s*(if|then|elif|else|fi|for|do|done|while|case|esac|function)\b/m.test(trimmed) &&
-    !/[{};]\s*$/m.test(firstLine) || // Exclude C-style
-    /^\s*\w+\s*\(\)\s*\{/m.test(trimmed) || // Shell function
-    /\$\{?\w+\}?/.test(trimmed) && /\b(echo|export|source|chmod|mkdir|rm|cp|mv|cat|grep|sed|awk|curl|wget)\b/.test(trimmed) ||
-    /^\s*export\s+\w+=/m.test(trimmed) ||
-    /\|\s*(grep|sed|awk|sort|uniq|head|tail|cut|xargs)\b/.test(trimmed)
-  ) {
-    return 'bash';
-  }
+  if (pythonScore >= 2) return 'python';
 
-  // ===== Python detection =====
-  if (
-    /^\s*def\s+\w+\s*\([^)]*\)\s*(->\s*\w+)?\s*:/m.test(trimmed) || // Function def
-    /^\s*class\s+\w+(\([^)]*\))?\s*:/m.test(trimmed) || // Class def
-    /^\s*(import|from)\s+\w+/m.test(trimmed) && !/\bimport\s*\{/.test(trimmed) || // Import (not JS)
-    /^\s*(if|elif|else|for|while|try|except|finally|with|async|await)\s+.+:/m.test(trimmed) ||
-    /\bprint\s*\(/.test(trimmed) && !/console\./.test(trimmed) ||
-    /__\w+__/.test(trimmed) // Dunder methods
-  ) {
-    return 'python';
-  }
+  // Ruby
+  const rubyScore = [
+    /^\s*(def|class|module)\s+\w+/m.test(trimmed) && /^\s*end\s*$/m.test(trimmed),
+    /\bdo\s*\|[\w,\s]+\|/.test(trimmed),
+    /\.(each|map|select|reject|find|reduce|collect|detect|inject)\s*(\{|\bdo\b)/.test(trimmed),
+    /^\s*require(_relative)?\s+['"]/.test(trimmed),
+    /:\w+\s*=>|^\s*:\w+,$|\.to_[sifah]\b/.test(trimmed),
+    /\b(attr_accessor|attr_reader|attr_writer|puts|gets|nil)\b/.test(trimmed),
+    /\bRails\.|ActiveRecord|ApplicationController/.test(trimmed),
+  ].filter(Boolean).length;
 
-  // ===== Ruby detection =====
-  if (
-    /^\s*def\s+\w+/m.test(trimmed) && /^\s*end\s*$/m.test(trimmed) ||
-    /^\s*class\s+\w+(\s*<\s*\w+)?/m.test(trimmed) && /^\s*end\s*$/m.test(trimmed) ||
-    /^\s*module\s+\w+/m.test(trimmed) ||
-    /\bdo\s*\|[^|]+\|/.test(trimmed) ||
-    /\.(each|map|select|reject|find|reduce|collect)\s*(\{|\bdo\b)/.test(trimmed) ||
-    /^\s*require\s+['"]/.test(trimmed) ||
-    /:(\w+|"[^"]+"|'[^']+')(\s*=>|:)/.test(trimmed) // Symbol syntax
-  ) {
-    return 'ruby';
-  }
+  if (rubyScore >= 2) return 'ruby';
 
-  // ===== PHP detection =====
-  if (
-    /^<\?php/i.test(trimmed) ||
-    /\$\w+\s*=/.test(trimmed) && /;\s*$/.test(firstLine) && /->/.test(trimmed) ||
-    /\bfunction\s+\w+\s*\([^)]*\)\s*(:\s*\??\w+)?\s*\{/.test(trimmed) && /\$\w+/.test(trimmed) ||
-    /\b(echo|print_r|var_dump|isset|empty|array|foreach|public|private|protected)\b/.test(trimmed) && /\$\w+/.test(trimmed)
-  ) {
-    return 'php';
-  }
+  // PHP (without opening tag)
+  const phpScore = [
+    /\$\w+\s*(=|->)/.test(trimmed) && /;\s*$/m.test(trimmed),
+    /\bfunction\s+\w+\s*\([^)]*\)\s*(:\s*\??\w+)?\s*\{/.test(trimmed) && /\$/.test(trimmed),
+    /->[\w]+\(/.test(trimmed) && /\$/.test(trimmed),
+    /\b(echo|print_r|var_dump|isset|empty|array|foreach|namespace|use)\b/.test(trimmed),
+    /\bnew\s+\w+\(/.test(trimmed) && /\$/.test(trimmed),
+    /\b(public|private|protected)\s+(static\s+)?function/.test(trimmed),
+  ].filter(Boolean).length;
 
-  // ===== Go detection =====
-  if (
-    /^\s*package\s+\w+/m.test(trimmed) ||
-    /^\s*func\s+(\(\w+\s+\*?\w+\)\s*)?\w+\s*\([^)]*\)\s*(\([^)]*\)|\w+)?\s*\{/m.test(trimmed) ||
-    /^\s*import\s+\(/.test(trimmed) ||
-    /\b(fmt|log|http|os|io|strings|strconv)\.\w+/.test(trimmed) ||
-    /:=/.test(trimmed) && /\bfunc\b/.test(trimmed)
-  ) {
-    return 'go';
-  }
+  if (phpScore >= 2) return 'php';
 
-  // ===== Rust detection =====
-  if (
-    /^\s*fn\s+\w+\s*(<[^>]+>)?\s*\([^)]*\)\s*(->.*?)?\s*\{/m.test(trimmed) ||
-    /^\s*(pub\s+)?(struct|enum|impl|trait|mod|use|const|static|type)\s+/m.test(trimmed) ||
-    /\b(let\s+mut|&mut|&str|Vec<|Option<|Result<|Box<|Rc<|Arc<|impl\s+\w+\s+for)\b/.test(trimmed) ||
-    /!\s*\[|\bmacro_rules!/.test(trimmed) ||
-    /#\[(derive|allow|cfg|test)\b/.test(trimmed)
-  ) {
-    return 'rust';
-  }
+  // Go
+  const goScore = [
+    /^\s*package\s+\w+\s*$/m.test(trimmed),
+    /^\s*func\s+(\(\w+\s+\*?\w+\)\s*)?\w+\s*\([^)]*\)\s*(\([^)]*\)|[\w*]+)?\s*\{/m.test(trimmed),
+    /^\s*import\s+(\(|")/m.test(trimmed),
+    /\b(fmt|log|http|os|io|context|errors|strings|strconv|sync|time)\.\w+/.test(trimmed),
+    /:=/.test(trimmed),
+    /\bgo\s+func\b|\bdefer\s+/.test(trimmed),
+    /\bmake\s*\(\s*(map|chan|\[\])/.test(trimmed),
+    /\binterface\s*\{\s*\}|\bstruct\s*\{/.test(trimmed),
+  ].filter(Boolean).length;
 
-  // ===== Swift detection =====
-  if (
-    /^\s*(func|class|struct|enum|protocol|extension)\s+\w+/m.test(trimmed) && /\{/.test(trimmed) &&
-    (/\b(var|let)\s+\w+\s*:/.test(trimmed) || /\bguard\b|\bif\s+let\b/.test(trimmed)) ||
-    /^\s*import\s+(Foundation|UIKit|SwiftUI|Combine)\b/m.test(trimmed) ||
-    /\b(override|mutating|@\w+)\b/.test(trimmed) && /\bfunc\b/.test(trimmed)
-  ) {
-    return 'swift';
-  }
+  if (goScore >= 2) return 'go';
 
-  // ===== Kotlin detection =====
-  if (
-    /^\s*(fun|class|object|interface|sealed|data\s+class)\s+\w+/m.test(trimmed) ||
-    /^\s*package\s+[\w.]+/m.test(trimmed) && /\b(fun|val|var)\b/.test(trimmed) ||
-    /\b(val|var)\s+\w+\s*:\s*\w+/.test(trimmed) ||
-    /\b(suspend|coroutineScope|launch|async|await)\b/.test(trimmed) ||
-    /\.\blet\s*\{|\.\bapply\s*\{|\.\balso\s*\{/.test(trimmed)
-  ) {
-    return 'kotlin';
-  }
+  // Rust
+  const rustScore = [
+    /^\s*(pub\s+)?fn\s+\w+/m.test(trimmed),
+    /^\s*(pub\s+)?(struct|enum|impl|trait|mod|type)\s+\w+/m.test(trimmed),
+    /\b(let\s+mut|&mut|&str|Vec<|Option<|Result<|Box<|Rc<|Arc<|Some\(|None|Ok\(|Err\()\b/.test(trimmed),
+    /#\[(derive|allow|cfg|test|inline|must_use)\b/.test(trimmed),
+    /\bmatch\s+\w+\s*\{/.test(trimmed),
+    /\.unwrap\(\)|\.expect\(|\.iter\(\)|\.collect\(\)/.test(trimmed),
+    /\buse\s+(std|crate|super|self)::/.test(trimmed),
+    /::\s*<|impl\s+\w+\s+for\s+\w+/.test(trimmed),
+  ].filter(Boolean).length;
 
-  // ===== C# detection =====
-  if (
-    /^\s*using\s+[\w.]+;/m.test(trimmed) ||
-    /^\s*namespace\s+[\w.]+/m.test(trimmed) ||
-    /\b(public|private|protected|internal)\s+(static\s+)?(class|struct|interface|enum|void|async)\b/.test(trimmed) ||
-    /\b(get|set)\s*[{;]/.test(trimmed) && /\bpublic\b/.test(trimmed) ||
-    /\bvar\s+\w+\s*=\s*new\b/.test(trimmed) && /;\s*$/m.test(trimmed) ||
-    /\b(IEnumerable|IList|Task|async\s+Task)\b/.test(trimmed)
-  ) {
-    return 'csharp';
-  }
+  if (rustScore >= 2) return 'rust';
 
-  // ===== C++ detection =====
-  if (
-    /^\s*#include\s*<[\w.\/]+>/m.test(trimmed) ||
-    /\b(std::|cout|cin|endl|vector<|string::)\b/.test(trimmed) ||
-    /^\s*(class|struct)\s+\w+\s*(:\s*(public|private|protected))?\s*\{/m.test(trimmed) && !/^\s*@/m.test(trimmed) ||
-    /\b(template\s*<|nullptr|constexpr|override|virtual\s+\w+|const\s+\w+&)\b/.test(trimmed) ||
-    /^\s*using\s+namespace\s+std;/m.test(trimmed)
-  ) {
-    return 'cpp';
-  }
+  // Swift
+  const swiftScore = [
+    /^\s*(func|class|struct|enum|protocol|extension|actor)\s+\w+/m.test(trimmed),
+    /\b(var|let)\s+\w+\s*:\s*\w+(\s*[?!])?/.test(trimmed),
+    /\bguard\s+let\s+|\bif\s+let\s+/.test(trimmed),
+    /^\s*import\s+(Foundation|UIKit|SwiftUI|Combine|AppKit|CoreData)\b/m.test(trimmed),
+    /@(IBOutlet|IBAction|Published|State|Binding|ObservedObject|Environment)\b/.test(trimmed),
+    /\b(override|mutating|throws|async|await)\b/.test(trimmed) && /\bfunc\b/.test(trimmed),
+    /\?\.|!\./. test(trimmed), // Optional chaining
+  ].filter(Boolean).length;
 
-  // ===== C detection =====
-  if (
-    /^\s*#include\s*<[\w.\/]+>/m.test(trimmed) && !/\b(std::|class|template|cout)\b/.test(trimmed) ||
-    /^\s*(int|void|char|float|double|long)\s+\w+\s*\([^)]*\)\s*\{/m.test(trimmed) ||
-    /\b(printf|scanf|malloc|free|sizeof|NULL)\b/.test(trimmed) ||
-    /^\s*(typedef|struct|enum)\s+\w+\s*\{/m.test(trimmed) && !/\bclass\b/.test(trimmed)
-  ) {
-    return 'c';
-  }
+  if (swiftScore >= 2) return 'swift';
 
-  // ===== Java detection =====
-  if (
-    /^\s*package\s+[\w.]+;/m.test(trimmed) ||
-    /^\s*import\s+[\w.]+(\.\*)?;/m.test(trimmed) ||
-    /\b(public|private|protected)\s+(static\s+)?(class|interface|enum|void)\b/.test(trimmed) ||
-    /\bSystem\.(out|err|in)\b/.test(trimmed) ||
-    /\b(extends|implements)\s+\w+/.test(trimmed) && /\bclass\b/.test(trimmed) ||
-    /@(Override|Deprecated|SuppressWarnings|FunctionalInterface)\b/.test(trimmed)
-  ) {
-    return 'java';
-  }
+  // Kotlin
+  const kotlinScore = [
+    /^\s*(fun|class|object|interface|sealed\s+class|data\s+class|enum\s+class)\s+\w+/m.test(trimmed),
+    /\b(val|var)\s+\w+\s*:\s*\w+/.test(trimmed),
+    /^\s*package\s+[\w.]+\s*$/m.test(trimmed) && /\bfun\b/.test(trimmed),
+    /\b(suspend|override|lateinit|companion\s+object)\b/.test(trimmed),
+    /\.(let|apply|also|run|with)\s*\{/.test(trimmed),
+    /\bwhen\s*\([^)]*\)\s*\{/.test(trimmed),
+    /\b(listOf|mapOf|setOf|arrayOf|mutableListOf)\s*\(/.test(trimmed),
+  ].filter(Boolean).length;
 
-  // ===== TypeScript detection =====
-  if (
-    /\b(interface|type|enum)\s+\w+\s*[{=<]/.test(trimmed) ||
-    /:\s*(string|number|boolean|void|any|never|unknown|null|undefined)\b/.test(trimmed) ||
-    /<[A-Z]\w*>/.test(trimmed) && /\bfunction\b|\bconst\b/.test(trimmed) ||
-    /\bas\s+(string|number|boolean|any|\w+)/.test(trimmed) ||
-    /\b(readonly|keyof|typeof|infer|extends)\b/.test(trimmed) && /:\s*\w+/.test(trimmed)
-  ) {
-    return 'typescript';
-  }
+  if (kotlinScore >= 2) return 'kotlin';
 
-  // ===== SCSS detection =====
-  if (
-    /\$[\w-]+\s*:/.test(trimmed) || // Variables
-    /@(mixin|include|extend|import|use|forward)\b/.test(trimmed) ||
-    /&[.:[\w-]/.test(trimmed) && /\{/.test(trimmed) || // Nesting with &
-    /@(if|else|for|each|while)\b/.test(trimmed)
-  ) {
+  // C#
+  const csharpScore = [
+    /^\s*using\s+[\w.]+;\s*$/m.test(trimmed),
+    /^\s*namespace\s+[\w.]+\s*[{;]/m.test(trimmed),
+    /\b(public|private|protected|internal)\s+(static\s+)?(partial\s+)?(class|struct|interface|enum|record)\s+\w+/.test(trimmed),
+    /\b(get|set)\s*[{;=>]/.test(trimmed),
+    /\basync\s+Task\b|\bawait\s+\w+/.test(trimmed),
+    /\bvar\s+\w+\s*=\s*new\s+\w+/.test(trimmed),
+    /\b(IEnumerable|IList|Dictionary|List|Task|Action|Func)</.test(trimmed),
+    /\bLINQ\b|\.Select\(|\.Where\(|\.OrderBy\(/.test(trimmed),
+  ].filter(Boolean).length;
+
+  if (csharpScore >= 2) return 'csharp';
+
+  // C++ (check before C)
+  const cppScore = [
+    /^\s*#include\s*<[\w./]+>/m.test(trimmed),
+    /\b(std::|cout|cin|endl|cerr|vector<|string::|map<|set<|unique_ptr<|shared_ptr<)\b/.test(trimmed),
+    /^\s*using\s+namespace\s+\w+;/m.test(trimmed),
+    /\b(template\s*<|nullptr|constexpr|noexcept|override|virtual|explicit|mutable)\b/.test(trimmed),
+    /^\s*class\s+\w+\s*(:\s*(public|private|protected)\s+\w+)?\s*\{/m.test(trimmed),
+    /\b(new|delete)\s+\w+/.test(trimmed) && !/\$/.test(trimmed),
+    /::\w+|&\w+|const\s+\w+&/.test(trimmed),
+  ].filter(Boolean).length;
+
+  if (cppScore >= 2) return 'cpp';
+
+  // C
+  const cScore = [
+    /^\s*#include\s*<[\w./]+>/m.test(trimmed) && !/\b(std::|class|template|cout|cin)\b/.test(trimmed),
+    /^\s*(int|void|char|float|double|long|short|unsigned)\s+\w+\s*\([^)]*\)\s*\{/m.test(trimmed),
+    /\b(printf|scanf|fprintf|fscanf|sprintf|sscanf|malloc|calloc|realloc|free|sizeof|NULL)\b/.test(trimmed),
+    /^\s*(typedef|struct|union|enum)\s+\w*\s*\{/m.test(trimmed),
+    /\bFILE\s*\*|\bvoid\s*\*/.test(trimmed),
+    /^\s*#define\s+\w+/m.test(trimmed),
+  ].filter(Boolean).length;
+
+  if (cScore >= 2) return 'c';
+
+  // Java
+  const javaScore = [
+    /^\s*package\s+[\w.]+;\s*$/m.test(trimmed),
+    /^\s*import\s+[\w.*]+;\s*$/m.test(trimmed),
+    /\b(public|private|protected)\s+(static\s+)?(final\s+)?(class|interface|enum|abstract\s+class)\s+\w+/.test(trimmed),
+    /\bSystem\.(out|err|in)\.\w+/.test(trimmed),
+    /@(Override|Deprecated|SuppressWarnings|FunctionalInterface|Autowired|Component|Service|Repository)\b/.test(trimmed),
+    /\b(extends|implements)\s+\w+/.test(trimmed),
+    /\bpublic\s+static\s+void\s+main\s*\(/.test(trimmed),
+  ].filter(Boolean).length;
+
+  if (javaScore >= 2) return 'java';
+
+  // TypeScript
+  const tsScore = [
+    /\b(interface|type)\s+\w+\s*[{=<]/.test(trimmed),
+    /:\s*(string|number|boolean|void|any|never|unknown|null|undefined|object)(\[\])?\b/.test(trimmed),
+    /\bas\s+(const|string|number|boolean|any|\w+)/.test(trimmed),
+    /\b(readonly|keyof|typeof|infer)\b/.test(trimmed),
+    /<\w+(\s*,\s*\w+)*>/.test(trimmed) && /:\s*\w+/.test(trimmed),
+    /\benum\s+\w+\s*\{/.test(trimmed),
+    /!\s*\.|\?\s*\./.test(trimmed), // Non-null assertion or optional chain with type context
+  ].filter(Boolean).length;
+
+  if (tsScore >= 2) return 'typescript';
+
+  // SCSS
+  if (/\$[\w-]+\s*:/.test(trimmed) ||
+      /@(mixin|include|extend|use|forward)\b/.test(trimmed) ||
+      /@(if|else\s+if|else|for|each|while)\b/.test(trimmed)) {
     return 'scss';
   }
 
-  // ===== LESS detection =====
-  if (
-    /@[\w-]+\s*:/.test(trimmed) && !/^@(media|import|keyframes|font-face|supports|charset)\b/m.test(trimmed) ||
-    /\.([\w-]+)\s*\(/.test(trimmed) && /\{/.test(trimmed) || // Mixins
-    /@\{[\w-]+\}/.test(trimmed) // Interpolation
-  ) {
+  // LESS
+  if (/@[\w-]+\s*:/.test(trimmed) && !/^@(media|import|keyframes|font-face|supports|charset|namespace)\b/m.test(trimmed)) {
     return 'less';
   }
 
-  // ===== CSS detection =====
-  if (
-    /^\s*[\w.#\[\]:*,>\+~-]+\s*\{[^}]*\}/m.test(trimmed) ||
-    /@(media|keyframes|font-face|import|supports)\b/.test(trimmed) ||
-    /\b(display|margin|padding|color|background|font-size|width|height|position)\s*:/i.test(trimmed)
-  ) {
+  // CSS
+  if (/^\s*[\w.#\[\]:*,>\+~-]+\s*\{[^}]*\}/m.test(trimmed) ||
+      /@(media|keyframes|font-face|import|supports|layer)\b/.test(trimmed)) {
     return 'css';
   }
 
-  // ===== JavaScript detection (default for code-like content) =====
-  if (
-    /\b(const|let|var|function|class|import|export|async|await|return)\b/.test(trimmed) ||
-    /=>\s*[\{(]/.test(trimmed) || // Arrow functions
-    /\bconsole\.(log|warn|error)\b/.test(trimmed) ||
-    /\b(document|window|require)\b/.test(trimmed) ||
-    /\bnew\s+\w+\s*\(/.test(trimmed)
-  ) {
-    return 'javascript';
+  // YAML (basic)
+  if (/^\s*[\w-]+:\s*(\S|$)/m.test(trimmed) &&
+      !/[{};]/.test(trimmed) &&
+      lineCount > 1) {
+    return 'yaml';
   }
 
-  // ===== Default =====
+  // JavaScript (most permissive, checked last among code)
+  const jsScore = [
+    /\b(const|let|var)\s+\w+\s*=/.test(trimmed),
+    /\bfunction\s+\w*\s*\(/.test(trimmed),
+    /=>\s*[\{(\[]/.test(trimmed),
+    /\b(async|await|class|export|import)\b/.test(trimmed),
+    /\bconsole\.\w+\(/.test(trimmed),
+    /\b(document|window|module|require)\b/.test(trimmed),
+  ].filter(Boolean).length;
+
+  if (jsScore >= 1) return 'javascript';
+
+  // Default
   return 'text';
 }
 
