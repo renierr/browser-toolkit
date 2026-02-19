@@ -3,5 +3,8 @@
   "description": "View and strip EXIF metadata from images.",
   "icon": "image",
   "sectionId": "images",
-  "order": 10
+  "order": 10,
+  "shareTarget": {
+    "accept": ["image/*"]
+  }
 }

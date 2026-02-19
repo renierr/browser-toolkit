@@ -165,22 +165,33 @@ export function mimeTypeMatches(mimeType: string, pattern: string): boolean {
  * Returns the first matching tool or undefined.
  */
 export function findToolForMimeTypes(tools: Tool[], mimeTypes: string[]): Tool | undefined {
-  if (!mimeTypes.length) return undefined;
+  const matches = findAllToolsForMimeTypes(tools, mimeTypes);
+  return matches.length > 0 ? matches[0] : undefined;
+}
+
+/**
+ * Find all tools that can handle the given MIME types.
+ * Returns an array of matching tools.
+ */
+export function findAllToolsForMimeTypes(tools: Tool[], mimeTypes: string[]): Tool[] {
+  if (!mimeTypes.length) return [];
 
   // Use the first file's MIME type to determine the tool
   const primaryMime = mimeTypes[0];
+  const matches: Tool[] = [];
 
   for (const tool of tools) {
     if (!tool.shareTarget?.accept) continue;
 
     for (const pattern of tool.shareTarget.accept) {
       if (mimeTypeMatches(primaryMime, pattern)) {
-        return tool;
+        matches.push(tool);
+        break; // Don't add same tool twice
       }
     }
   }
 
-  return undefined;
+  return matches;
 }
 
 /**

@@ -10,12 +10,13 @@ import router from './js/router.ts';
 import {
   cleanupOldSharedFiles,
   clearSharedParams,
-  findToolForMimeTypes,
+  findAllToolsForMimeTypes,
   getSharedContentInfo,
   loadSharedFiles,
   setupLaunchHandler,
   type SharedFilesPayload,
 } from './js/share-target.ts';
+import { showToolChooser } from './js/tool-chooser.ts';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -304,9 +305,24 @@ async function boot() {
   cleanupOldSharedFiles().catch((e) => console.warn('Cleanup shared files failed', e));
 
   // Helper to route files to the appropriate tool
-  const routeFilesToTool = (files: File[], mimeTypes: string[], text?: string) => {
-    const targetTool = findToolForMimeTypes(tools, mimeTypes);
-    if (targetTool && files.length > 0) {
+  const routeFilesToTool = async (files: File[], mimeTypes: string[], text?: string): Promise<boolean> => {
+    if (files.length === 0) return false;
+
+    const matchingTools = findAllToolsForMimeTypes(tools, mimeTypes);
+    if (matchingTools.length === 0) return false;
+
+    let targetTool: Tool | null;
+
+    if (matchingTools.length === 1) {
+      // Only one matching tool, use it directly
+      targetTool = matchingTools[0];
+    } else {
+      // Multiple tools can handle this file type, let user choose
+      const fileName = files[0].name || 'Shared file';
+      targetTool = await showToolChooser(matchingTools, fileName);
+    }
+
+    if (targetTool) {
       const payload: SharedFilesPayload = {
         sharedFiles: files,
         mimeTypes,
@@ -316,6 +332,8 @@ async function boot() {
       router.goTo(targetTool.path, payload);
       return true;
     }
+
+    // User cancelled the chooser
     return false;
   };
 
@@ -323,7 +341,7 @@ async function boot() {
   const launchFiles = await setupLaunchHandler();
   if (launchFiles && launchFiles.length > 0) {
     const mimeTypes = launchFiles.map((f) => f.type || '');
-    if (routeFilesToTool(launchFiles, mimeTypes)) {
+    if (await routeFilesToTool(launchFiles, mimeTypes)) {
       return;
     }
   }
@@ -335,7 +353,7 @@ async function boot() {
     clearSharedParams();
 
     if (sharedFiles.length > 0) {
-      if (routeFilesToTool(sharedFiles, sharedInfo.mimeTypes, sharedInfo.text)) {
+      if (await routeFilesToTool(sharedFiles, sharedInfo.mimeTypes, sharedInfo.text)) {
         return;
       }
     } else {

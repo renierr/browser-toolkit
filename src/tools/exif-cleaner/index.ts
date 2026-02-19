@@ -11,9 +11,10 @@ import {
   gpsGenerateGoogleMapsLink,
   isImageFile,
 } from '../../js/utils.ts';
+import type { SharedFilesPayload } from '../../js/share-target';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const resultContainer = document.getElementById('result-container');
   const previewImg = document.getElementById('preview-img') as HTMLImageElement;
   const previewVideo = document.getElementById('preview-video') as HTMLVideoElement;
@@ -242,6 +243,14 @@ export default function init() {
     currentFiles = Array.from(files);
     renderFileList();
   });
+
+  // Handle shared files from PWA share target
+  if (payload?.sharedFiles?.length) {
+    currentFiles = payload.sharedFiles.filter((f) => isImageFile(f));
+    if (currentFiles.length > 0) {
+      renderFileList();
+    }
+  }
 
   const cleanImage = async (file: File): Promise<DownloadBuffer> => {
     const img = new Image();
