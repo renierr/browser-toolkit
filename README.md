@@ -33,12 +33,12 @@ A growing, searchable collection of focused tools that run entirely in your brow
 
 ## ✨ Features
 
-- **🔍 Instant Search:** Live filtering to find the exact tool you need.
-- **📦 100% Offline (PWA):** Install it once, use it anywhere without an internet connection.
-- **🛠️ Auto-Detecting Tools:** Simply create a folder to add a new tool—the app handles the rest.
-- **🎨 Modern UI:** Consistent, beautiful design powered by daisyUI and Tailwind.
-- **🔗 Share Target:** Share files (images, text, PDFs) directly from your OS into the tools.
-- **🧹 Workspace Isolation:** Per-tool isolated dependencies using `pnpm` workspaces.
+- **Instant Search:** Live filtering to find the exact tool you need.
+- **100% Offline (PWA):** Install it once, use it anywhere without an internet connection.
+- **Auto-Detecting Tools:** Simply create a folder to add a new tool—the app handles the rest.
+- **Modern UI:** Consistent, beautiful design powered by daisyUI and Tailwind.
+- **Share Target:** Share files (images, text, PDFs) directly from your OS into the tools.
+- **Workspace Isolation:** Per-tool isolated dependencies using `pnpm` workspaces.
 
 
 ## 🚀 Getting Started (Local Development)
