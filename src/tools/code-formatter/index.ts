@@ -66,7 +66,7 @@ export default function init() {
     input.value = '';
     outputCode.innerHTML = '';
     outputContainer.innerHTML =
-      '<pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>';
+      '<pre id="code-output-pre" class=""><code id="code-output-code"></code></pre>';
     currentFormattedCode = '';
     updateDetectedFormatBadge(null);
     updateButtonStates('text');
@@ -104,7 +104,7 @@ export default function init() {
         // Apply the highlighted content
         outputContainer.innerHTML = '';
         outputContainer.appendChild(pre);
-        pre.className = 'whitespace-pre-wrap break-words h-full overflow-auto rounded-lg';
+        pre.className = 'h-full overflow-auto rounded-lg';
         pre.style.margin = '0';
         pre.style.height = '100%';
       } else {

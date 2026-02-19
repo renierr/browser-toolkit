@@ -5,7 +5,7 @@
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div class="form-control w-full">
-        <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center justify-between mb-2 flex-wrap">
           <label class="label py-0" for="code-input">
             <span class="label-text font-semibold">Input</span>
           </label>
@@ -66,11 +66,31 @@
       </div>
 
       <div class="form-control w-full">
-        <label class="label mb-1" for="code-output">
-          <span class="label-text font-semibold">Output (Highlighted)</span>
-        </label>
-        <div id="code-output" class="h-76 font-mono text-sm bg-base-200 w-full border rounded-lg overflow-auto p-3">
-          <pre id="code-output-pre" class="whitespace-pre-wrap wrap-break-word"><code id="code-output-code"></code></pre>
+        <div class="flex items-center justify-between mb-2 flex-wrap">
+          <label class="label mb-1" for="code-output">
+            <span class="label-text font-semibold">Output (Highlighted)</span>
+          </label>
+
+          <div class="flex items-center gap-2">
+            <label class="label py-0" for="theme-select">
+              <span class="label-text text-xs">Theme</span>
+            </label>
+            <select id="theme-select" class="select select-bordered select-sm w-full">
+              <option value="github-dark">GitHub Dark</option>
+              <option value="github-light">GitHub Light</option>
+              <option value="dracula" selected>Dracula</option>
+              <option value="nord">Nord</option>
+              <option value="one-dark-pro">One Dark Pro</option>
+              <option value="vitesse-dark">Vitesse Dark</option>
+              <option value="vitesse-light">Vitesse Light</option>
+              <option value="min-dark">Min Dark</option>
+              <option value="min-light">Min Light</option>
+            </select>
+          </div>
+
+        </div>
+        <div id="code-output" class="h-72 font-mono text-sm bg-base-200 w-full border rounded-lg overflow-auto p-3">
+          <pre id="code-output-pre" class=""><code id="code-output-code"></code></pre>
         </div>
       </div>
     </div>
@@ -86,30 +106,14 @@
       </button>
       <button id="btn-copy" class="btn btn-outline flex-1 sm:flex-none">
         <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
-        Copy
+        Copy Text
       </button>
       <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
     </div>
 
     <div class="divider my-4">Export as Image</div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-      <div class="form-control">
-        <label class="label py-0" for="theme-select">
-          <span class="label-text text-xs">Theme</span>
-        </label>
-        <select id="theme-select" class="select select-bordered select-sm w-full">
-          <option value="github-dark">GitHub Dark</option>
-          <option value="github-light">GitHub Light</option>
-          <option value="dracula" selected>Dracula</option>
-          <option value="nord">Nord</option>
-          <option value="one-dark-pro">One Dark Pro</option>
-          <option value="vitesse-dark">Vitesse Dark</option>
-          <option value="vitesse-light">Vitesse Light</option>
-          <option value="min-dark">Min Dark</option>
-          <option value="min-light">Min Light</option>
-        </select>
-      </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
       <div class="form-control">
         <label class="label py-0" for="export-font-size">
           <span class="label-text text-xs">Font Size</span>
