@@ -13,8 +13,15 @@ const headerFinal = replacePlaceholders(headerHtml, siteContext);
 const footerFinal = replacePlaceholders(footerHtml, siteContext);
 
 let currentToolCleanup: (() => void) | undefined;
+let cancelPendingInit: (() => void) | undefined;
 
 export function renderLayout(content: string, hideHeader?: boolean, hideFooter?: boolean) {
+  // Cancel any pending script initialization from previous navigation
+  if (cancelPendingInit) {
+    cancelPendingInit();
+    cancelPendingInit = undefined;
+  }
+
   // Cleanup previous tool listeners/effects before replacing DOM
   try {
     currentToolCleanup?.();
@@ -48,9 +55,34 @@ export function renderTool(tool: Tool | undefined, payload?: any) {
   }
 
   // call Tool-specific script (if exist) with payload
-  const maybeCleanup = tool?.script?.(payload);
-  if (typeof maybeCleanup === 'function') {
-    currentToolCleanup = maybeCleanup;
+  if (tool?.script) {
+    let isCancelled = false;
+    const myCancel = () => {
+      isCancelled = true;
+    };
+    cancelPendingInit = myCancel;
+
+    // Double requestAnimationFrame to ensure the browser paints the initial HTML
+    // before the script (which might be heavy or paused by debugger) runs.
+    requestAnimationFrame(() => {
+      if (isCancelled) return;
+      requestAnimationFrame(() => {
+        if (isCancelled) return;
+        if (cancelPendingInit === myCancel) {
+          cancelPendingInit = undefined;
+        }
+
+        const maybeCleanup = tool.script!(payload);
+        if (typeof maybeCleanup === 'function') {
+          // If navigation happened during execution
+          if (isCancelled) {
+            maybeCleanup();
+          } else {
+            currentToolCleanup = maybeCleanup;
+          }
+        }
+      });
+    });
   }
 }
 

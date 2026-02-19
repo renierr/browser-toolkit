@@ -274,4 +274,20 @@ export function showMessage(message: string, opts: MessageOptions = { type: 'inf
   return { close };
 }
 
-export const yieldToUI = () => new Promise((r) => setTimeout(r, 0));
+/**
+ * Yields control back to the browser to allow for UI updates or user interaction.
+ *
+ * @param forcePaint - If true, waits for a double requestAnimationFrame to ensure a paint happens.
+ *                     Use this before heavy synchronous work to show a progress indicator.
+ *                     Default: false (uses setTimeout(0) for speed).
+ */
+export const yieldToUI = (forcePaint = false) =>
+  new Promise((resolve) => {
+    if (forcePaint) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve(undefined));
+      });
+    } else {
+      setTimeout(resolve, 0);
+    }
+  });
