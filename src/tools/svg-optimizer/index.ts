@@ -1,9 +1,10 @@
 import { optimize, type Config } from 'svgo';
 import { downloadFile, setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload: SharedFilesPayload) {
   const inputText = document.getElementById('svg-input') as HTMLTextAreaElement;
   const outputText = document.getElementById('svg-output') as HTMLTextAreaElement;
   const btnOptimize = document.getElementById('btn-optimize') as HTMLButtonElement;
@@ -26,28 +27,56 @@ export default function init() {
   const removeMetadataCheckbox = document.getElementById('opt-removeMetadata') as HTMLInputElement;
   const removeTitleCheckbox = document.getElementById('opt-removeTitle') as HTMLInputElement;
   const removeDescCheckbox = document.getElementById('opt-removeDesc') as HTMLInputElement;
-  const removeEditorsNSDataCheckbox = document.getElementById('opt-removeEditorsNSData') as HTMLInputElement;
-  const removeEmptyAttrsCheckbox = document.getElementById('opt-removeEmptyAttrs') as HTMLInputElement;
-  const removeEmptyContainersCheckbox = document.getElementById('opt-removeEmptyContainers') as HTMLInputElement;
-  const removeEmptyTextCheckbox = document.getElementById('opt-removeEmptyText') as HTMLInputElement;
-  const removeHiddenElemsCheckbox = document.getElementById('opt-removeHiddenElems') as HTMLInputElement;
-  const removeUselessDefsCheckbox = document.getElementById('opt-removeUselessDefs') as HTMLInputElement;
-  const removeUselessStrokeAndFillCheckbox = document.getElementById('opt-removeUselessStrokeAndFill') as HTMLInputElement;
+  const removeEditorsNSDataCheckbox = document.getElementById(
+    'opt-removeEditorsNSData'
+  ) as HTMLInputElement;
+  const removeEmptyAttrsCheckbox = document.getElementById(
+    'opt-removeEmptyAttrs'
+  ) as HTMLInputElement;
+  const removeEmptyContainersCheckbox = document.getElementById(
+    'opt-removeEmptyContainers'
+  ) as HTMLInputElement;
+  const removeEmptyTextCheckbox = document.getElementById(
+    'opt-removeEmptyText'
+  ) as HTMLInputElement;
+  const removeHiddenElemsCheckbox = document.getElementById(
+    'opt-removeHiddenElems'
+  ) as HTMLInputElement;
+  const removeUselessDefsCheckbox = document.getElementById(
+    'opt-removeUselessDefs'
+  ) as HTMLInputElement;
+  const removeUselessStrokeAndFillCheckbox = document.getElementById(
+    'opt-removeUselessStrokeAndFill'
+  ) as HTMLInputElement;
   const removeDoctypeCheckbox = document.getElementById('opt-removeDoctype') as HTMLInputElement;
-  const removeXMLProcInstCheckbox = document.getElementById('opt-removeXMLProcInst') as HTMLInputElement;
+  const removeXMLProcInstCheckbox = document.getElementById(
+    'opt-removeXMLProcInst'
+  ) as HTMLInputElement;
   const cleanupIdsCheckbox = document.getElementById('opt-cleanupIds') as HTMLInputElement;
-  const cleanupNumericValuesCheckbox = document.getElementById('opt-cleanupNumericValues') as HTMLInputElement;
+  const cleanupNumericValuesCheckbox = document.getElementById(
+    'opt-cleanupNumericValues'
+  ) as HTMLInputElement;
   const convertColorsCheckbox = document.getElementById('opt-convertColors') as HTMLInputElement;
-  const convertPathDataCheckbox = document.getElementById('opt-convertPathData') as HTMLInputElement;
-  const convertShapeToPathCheckbox = document.getElementById('opt-convertShapeToPath') as HTMLInputElement;
-  const convertTransformCheckbox = document.getElementById('opt-convertTransform') as HTMLInputElement;
+  const convertPathDataCheckbox = document.getElementById(
+    'opt-convertPathData'
+  ) as HTMLInputElement;
+  const convertShapeToPathCheckbox = document.getElementById(
+    'opt-convertShapeToPath'
+  ) as HTMLInputElement;
+  const convertTransformCheckbox = document.getElementById(
+    'opt-convertTransform'
+  ) as HTMLInputElement;
   const mergePathsCheckbox = document.getElementById('opt-mergePaths') as HTMLInputElement;
   const minifyStylesCheckbox = document.getElementById('opt-minifyStyles') as HTMLInputElement;
   const inlineStylesCheckbox = document.getElementById('opt-inlineStyles') as HTMLInputElement;
   const collapseGroupsCheckbox = document.getElementById('opt-collapseGroups') as HTMLInputElement;
   const sortAttrsCheckbox = document.getElementById('opt-sortAttrs') as HTMLInputElement;
-  const sortDefsChildrenCheckbox = document.getElementById('opt-sortDefsChildren') as HTMLInputElement;
-  const removeDimensionsCheckbox = document.getElementById('opt-removeDimensions') as HTMLInputElement;
+  const sortDefsChildrenCheckbox = document.getElementById(
+    'opt-sortDefsChildren'
+  ) as HTMLInputElement;
+  const removeDimensionsCheckbox = document.getElementById(
+    'opt-removeDimensions'
+  ) as HTMLInputElement;
   const removeViewBoxCheckbox = document.getElementById('opt-removeViewBox') as HTMLInputElement;
 
   let currentFileName = 'optimized.svg';
@@ -194,7 +223,9 @@ export default function init() {
 
     // Validate that it's SVG content
     if (!input.includes('<svg') || !input.includes('</svg>')) {
-      showMessage('Invalid SVG content. Make sure it contains valid SVG markup.', { type: 'alert' });
+      showMessage('Invalid SVG content. Make sure it contains valid SVG markup.', {
+        type: 'alert',
+      });
       return;
     }
 
@@ -280,6 +311,11 @@ export default function init() {
   // Setup file dropzone
   setupFileDropzone('dropzone', 'file-input', handleFileUpload);
 
+  if (payload?.sharedFiles?.length) {
+    const files = payload.sharedFiles;
+    handleFileUpload(files as unknown as FileList);
+  }
+
   // Event Listeners
   btnOptimize.addEventListener('click', handleOptimize);
   btnCopy.addEventListener('click', handleCopy);
@@ -305,4 +341,3 @@ export default function init() {
   // Initial stats
   updateStats();
 }
-
