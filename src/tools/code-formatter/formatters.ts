@@ -450,6 +450,18 @@ export function detectFormat(input: string): SupportedFormat {
     return 'yaml';
   }
 
+  // Properties (Java/INI style)
+  // Key=Value or Key:Value, no sections, comments with # or !
+  if (/^[\w.-]+\s*[=:]\s*.+$/m.test(trimmed) && !/^\s*\[.+\]/.test(trimmed)) {
+    const propScore = [
+      /^[\w.-]+\s*[=:]\s*.+$/m.test(trimmed),
+      /^\s*[#!]/.test(trimmed), // Comments
+      !/[{};]/.test(trimmed), // No braces/semicolons
+    ].filter(Boolean).length;
+
+    if (propScore >= 2) return 'ini';
+  }
+
   // JavaScript (most permissive, checked last among code)
   const jsScore = [
     /\b(const|let|var)\s+\w+\s*=/.test(trimmed),
