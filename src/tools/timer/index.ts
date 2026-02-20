@@ -71,8 +71,19 @@ export default function init() {
 
     // Create the silent loop if it isn't already running
     if (!silentSource) {
-      // Create a 1-sample empty buffer (virtually zero CPU/memory footprint)
-      const buffer = audioCtx.createBuffer(1, 1, 22050);
+      // Create a longer buffer (1 second at low sample rate) for better device compatibility
+      // Some mobile browsers throttle very short buffers
+      const sampleRate = audioCtx.sampleRate;
+      const bufferLength = sampleRate; // 1 second of audio
+      const buffer = audioCtx.createBuffer(1, bufferLength, sampleRate);
+
+      // Fill buffer with near-silence (tiny amplitude to keep audio pipeline active)
+      const channelData = buffer.getChannelData(0);
+      for (let i = 0; i < bufferLength; i++) {
+        // Imperceptible audio signal that keeps the audio context alive
+        channelData[i] = Math.random() * 0.00001 - 0.000005;
+      }
+
       silentSource = audioCtx.createBufferSource();
       silentSource.buffer = buffer;
       silentSource.loop = true;
@@ -101,26 +112,42 @@ export default function init() {
       audioCtx.resume();
     }
 
-    // Create the oscillator (the sound source) and gain node (the volume control)
-    const oscillator = audioCtx.createOscillator();
-    const gainNode = audioCtx.createGain();
+    // Play a pleasant multi-tone alarm pattern (3 ascending chimes, repeated twice)
+    const frequencies = [523.25, 659.25, 783.99]; // C5, E5, G5 (C major chord - pleasant sound)
+    const beepDuration = 0.15; // Duration of each beep
+    const beepGap = 0.1; // Gap between beeps
+    const patternGap = 0.4; // Gap between pattern repetitions
+    const repetitions = 2;
 
-    // Set the tone type and frequency (800Hz is a classic digital alarm beep)
-    // You can change 'sine' to 'square', 'sawtooth', or 'triangle' for harsher sounds
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+    for (let rep = 0; rep < repetitions; rep++) {
+      const patternStart = rep * (frequencies.length * (beepDuration + beepGap) + patternGap);
 
-    // Connect the nodes: Oscillator -> Gain -> Destination (Speakers)
-    oscillator.connect(gainNode);
-    gainNode.connect(audioCtx.destination);
+      frequencies.forEach((freq, index) => {
+        const startTime = audioCtx!.currentTime + patternStart + index * (beepDuration + beepGap);
 
-    // Set volume to 100% right now, then fade out to near-zero over 1 second
-    gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+        // Create oscillator for this beep
+        const oscillator = audioCtx!.createOscillator();
+        const gainNode = audioCtx!.createGain();
 
-    // Play the beep for exactly 1 second
-    oscillator.start(audioCtx.currentTime);
-    oscillator.stop(audioCtx.currentTime + 1);
+        // Use sine wave for a softer, more pleasant tone
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(freq, startTime);
+
+        // Connect nodes
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx!.destination);
+
+        // Envelope: quick attack, sustain, smooth decay for a chime-like sound
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.6, startTime + 0.02); // Quick attack
+        gainNode.gain.setValueAtTime(0.6, startTime + beepDuration * 0.6); // Sustain
+        gainNode.gain.exponentialRampToValueAtTime(0.001, startTime + beepDuration); // Decay
+
+        // Play the beep
+        oscillator.start(startTime);
+        oscillator.stop(startTime + beepDuration);
+      });
+    }
   }
 
   function updateDisplay() {
