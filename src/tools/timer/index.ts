@@ -81,12 +81,31 @@ export default function init() {
 
   function notify(orgTimerVal: number = 0) {
     const minute = Math.floor(orgTimerVal / 60);
-    const timeoutText = `Your ${minute ? minute + ' minute' : ''} countdown has ended.`
+    const timeoutText = `Your ${minute ? minute + ' minute' : ''} countdown has ended.`;
+
     if (Notification.permission === 'granted') {
-      new Notification('Timer Finished!', {
-        body: timeoutText,
-        icon: './favicon.png',
-      });
+      if ('serviceWorker' in navigator) {
+        // Tap into the Service Worker registered by vite-plugin-pwa
+        navigator.serviceWorker.ready
+          .then((registration) => {
+            registration.showNotification('Timer Finished!', {
+              body: timeoutText,
+              icon: './favicon.png',
+              // @ts-ignore
+              vibrate: [200, 100, 200],
+            });
+          })
+          .catch((err) => {
+            console.error('Service Worker not ready, falling back:', err);
+            new Notification('Timer Finished!', { body: timeoutText, icon: './favicon.png' });
+          });
+      } else {
+        // Fallback for browsers that support Notifications but not Service Workers
+        new Notification('Timer Finished!', {
+          body: timeoutText,
+          icon: './favicon.png',
+        });
+      }
     } else {
       alert(timeoutText);
     }
