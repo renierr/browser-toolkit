@@ -1,6 +1,6 @@
 {
-  "name": "Image Redactor",
-  "description": "Crop, Redact and pixelate Images",
+  "name": "Image Convert / Redact",
+  "description": "Convert, Crop, Redact and pixelate Images",
   "icon": "crop",
   "sectionId": "images",
   "shareTarget": {
