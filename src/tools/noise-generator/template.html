@@ -1,0 +1,68 @@
+<div class="card bg-base-100 shadow-xl border max-w-2xl mx-auto">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">
+      <i data-lucide="waves" class="w-6 h-6"></i>
+      Focus Noise
+    </h2>
+    <p class="text-base-content/70 mb-6">
+      Generate continuous background noise for focus or relaxation.
+    </p>
+
+    <!-- Noise Type Selection -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+      <button class="btn btn-outline noise-btn" data-type="white">
+        <i data-lucide="zap" class="w-4 h-4 mr-1"></i> White
+      </button>
+      <button class="btn btn-outline noise-btn" data-type="pink">
+        <i data-lucide="activity" class="w-4 h-4 mr-1"></i> Pink
+      </button>
+      <button class="btn btn-outline noise-btn" data-type="brown">
+        <i data-lucide="mountain" class="w-4 h-4 mr-1"></i> Brown
+      </button>
+      <button class="btn btn-outline noise-btn" data-type="rain">
+        <i data-lucide="cloud-rain" class="w-4 h-4 mr-1"></i> Rain
+      </button>
+      <button class="btn btn-outline noise-btn" data-type="forest">
+        <i data-lucide="trees" class="w-4 h-4 mr-1"></i> Forest
+      </button>
+      <button class="btn btn-outline noise-btn" data-type="waves">
+        <i data-lucide="waves" class="w-4 h-4 mr-1"></i> Waves
+      </button>
+      <button class="btn btn-outline noise-btn" data-type="fire">
+        <i data-lucide="flame" class="w-4 h-4 mr-1"></i> Fire
+      </button>
+      <button class="btn btn-outline noise-btn" data-type="night">
+        <i data-lucide="moon" class="w-4 h-4 mr-1"></i> Night
+      </button>
+      <button class="btn btn-outline noise-btn" data-type="fan">
+        <i data-lucide="fan" class="w-4 h-4 mr-1"></i> Fan
+      </button>
+    </div>
+
+    <!-- Volume Control -->
+    <div class="form-control mb-6">
+      <label class="label">
+        <span class="label-text font-semibold">Volume</span>
+        <span class="label-text-alt" id="noise-volume-display">50%</span>
+      </label>
+      <input
+        type="range"
+        id="noise-volume"
+        min="0" max="100" value="50"
+        class="range range-primary range-sm"
+      />
+    </div>
+
+    <!-- Play/Stop Controls -->
+    <div class="card-actions justify-center">
+      <button id="btn-noise-toggle" class="btn btn-primary w-full sm:w-auto">
+        <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+        Start Noise
+      </button>
+    </div>
+
+    <div class="mt-4 text-center text-sm text-base-content/60">
+      <span id="current-noise-status">Select a noise type to start</span>
+    </div>
+  </div>
+</div>
