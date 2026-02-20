@@ -1,9 +1,6 @@
-<div class="card bg-base-100 shadow-xl border max-w-2xl mx-auto">
+<div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">
-      <i data-lucide="waves" class="w-6 h-6"></i>
-      Focus Noise
-    </h2>
+    <h2 class="card-title text-2xl font-bold mb-4">Focus Noise</h2>
     <p class="text-base-content/70 mb-6">
       Generate continuous background noise for focus or relaxation.
     </p>
@@ -54,15 +51,15 @@
     </div>
 
     <!-- Play/Stop Controls -->
-    <div class="card-actions justify-center">
-      <button id="btn-noise-toggle" class="btn btn-primary w-full sm:w-auto">
+    <div class="card-actions justify-center gap-2">
+      <button id="btn-noise-toggle" class="btn btn-primary flex-1">
         <i data-lucide="play" class="w-4 h-4 mr-2"></i>
         Start Noise
       </button>
     </div>
 
-    <div class="mt-4 text-center text-sm text-base-content/60">
-      <span id="current-noise-status">Select a noise type to start</span>
+    <div class="mt-4 text-center text-sm text-base-content/60" id="current-noise-status">
+      Select a noise type to start
     </div>
   </div>
 </div>

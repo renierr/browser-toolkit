@@ -1,11 +1,8 @@
-<div class="card bg-base-100 shadow-xl border max-w-2xl mx-auto">
+<div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">
-      <i data-lucide="mic" class="w-6 h-6"></i>
-      Audio Recorder
-    </h2>
+    <h2 class="card-title text-2xl font-bold mb-4">Audio Recorder</h2>
     <p class="text-base-content/70 mb-6">
-      Record voice/audio, visualize waveform, and save as WebM/WAV.
+      Record voice/audio, visualize waveform, and save as WebM.
     </p>
 
     <!-- Visualizer Canvas -->
@@ -18,12 +15,12 @@
     </div>
 
     <!-- Controls -->
-    <div class="flex flex-wrap gap-2 justify-center mb-4">
-      <button id="btn-record" class="btn btn-error w-full sm:w-auto">
+    <div class="card-actions justify-center gap-2">
+      <button id="btn-record" class="btn btn-error flex-1">
         <i data-lucide="mic" class="w-4 h-4 mr-2"></i>
         Start Recording
       </button>
-      <button id="btn-stop-record" class="btn btn-outline w-full sm:w-auto hidden">
+      <button id="btn-stop-record" class="btn btn-outline flex-1 hidden">
         <i data-lucide="square" class="w-4 h-4 mr-2"></i>
         Stop
       </button>
