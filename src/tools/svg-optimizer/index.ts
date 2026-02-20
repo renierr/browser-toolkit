@@ -1,7 +1,15 @@
 import { optimize, type Config } from 'svgo';
-import { downloadFile, setupFileDropzone } from '../../js/file-utils';
+import { downloadAsZip, downloadFile, setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
+
+interface OptimizedFile {
+  name: string;
+  originalSize: number;
+  optimizedSize: number;
+  content: string;
+  originalContent: string;
+}
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -18,6 +26,11 @@ export default function init(payload?: SharedFilesPayload) {
   const previewOptimized = document.getElementById('preview-optimized') as HTMLDivElement;
   const savingsInfo = document.getElementById('savings-info') as HTMLDivElement;
   const savingsText = document.getElementById('savings-text') as HTMLSpanElement;
+
+  // Batch elements
+  const batchSection = document.getElementById('batch-section') as HTMLDivElement;
+  const batchList = document.getElementById('batch-list') as HTMLTableSectionElement;
+  const btnDownloadAll = document.getElementById('btn-download-all') as HTMLButtonElement;
 
   // Option checkboxes
   const keepXmlnsCheckbox = document.getElementById('keep-xmlns') as HTMLInputElement;
@@ -80,6 +93,7 @@ export default function init(payload?: SharedFilesPayload) {
   const removeViewBoxCheckbox = document.getElementById('opt-removeViewBox') as HTMLInputElement;
 
   let currentFileName = 'optimized.svg';
+  let batchFiles: OptimizedFile[] = [];
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 bytes';
@@ -214,7 +228,66 @@ export default function init(payload?: SharedFilesPayload) {
     };
   };
 
+  const optimizeContent = (content: string): string => {
+    const config = buildSvgoConfig();
+    const result = optimize(content, config);
+    return result.data;
+  };
+
   const handleOptimize = () => {
+    // If we have batch files, re-optimize all of them
+    if (batchFiles.length > 0) {
+      const newBatchFiles: OptimizedFile[] = [];
+      for (const file of batchFiles) {
+        try {
+          const optimizedContent = optimizeContent(file.originalContent);
+          const optimizedSize = new TextEncoder().encode(optimizedContent).length;
+          newBatchFiles.push({
+            ...file,
+            content: optimizedContent,
+            optimizedSize,
+          });
+        } catch (e) {
+          console.error(`Failed to re-optimize ${file.name}`, e);
+          newBatchFiles.push(file);
+        }
+      }
+      batchFiles = newBatchFiles;
+      renderBatchList();
+
+      // Also update the main view if it's showing one of the files
+      if (inputText.value) {
+        // Find which file is currently displayed
+        const currentFile = batchFiles.find(
+          (f) => f.name.replace(/-optimized\.svg$/i, '.svg') === currentFileName.replace(/-optimized\.svg$/i, '.svg')
+        );
+        if (currentFile) {
+          inputText.value = currentFile.originalContent;
+          outputText.value = currentFile.content;
+          updateStats();
+          updatePreview(currentFile.originalContent, currentFile.content);
+          showSavings(currentFile.originalSize, currentFile.optimizedSize);
+        } else {
+            // Fallback for single file mode or pasted content
+            const input = inputText.value.trim();
+            if (input) {
+                try {
+                    const originalSize = new TextEncoder().encode(input).length;
+                    const optimizedContent = optimizeContent(input);
+                    outputText.value = optimizedContent;
+                    const optimizedSize = new TextEncoder().encode(optimizedContent).length;
+                    updateStats();
+                    updatePreview(input, optimizedContent);
+                    showSavings(originalSize, optimizedSize);
+                } catch (e: any) {
+                    showMessage(`Optimization failed: ${e.message}`, { type: 'alert' });
+                }
+            }
+        }
+      }
+      return;
+    }
+
     const input = inputText.value.trim();
     if (!input) {
       showMessage('Please enter or upload SVG content', { type: 'warning' });
@@ -231,14 +304,13 @@ export default function init(payload?: SharedFilesPayload) {
 
     try {
       const originalSize = new TextEncoder().encode(input).length;
-      const config = buildSvgoConfig();
-      const result = optimize(input, config);
+      const optimizedContent = optimizeContent(input);
 
-      outputText.value = result.data;
-      const optimizedSize = new TextEncoder().encode(result.data).length;
+      outputText.value = optimizedContent;
+      const optimizedSize = new TextEncoder().encode(optimizedContent).length;
 
       updateStats();
-      updatePreview(input, result.data);
+      updatePreview(input, optimizedContent);
       showSavings(originalSize, optimizedSize);
     } catch (e: any) {
       showMessage(`Optimization failed: ${e.message}`, { type: 'alert' });
@@ -288,23 +360,147 @@ export default function init(payload?: SharedFilesPayload) {
     previewOriginal.innerHTML = '';
     previewOptimized.innerHTML = '';
     currentFileName = 'optimized.svg';
+    batchFiles = [];
+    batchSection.classList.add('hidden');
+    batchList.innerHTML = '';
     updateStats();
     inputText.focus();
   };
 
-  const handleFileUpload = async (files: FileList | File[]) => {
-    const file = files[0];
-    if (!file) return;
+  const renderBatchList = () => {
+    batchList.innerHTML = '';
+    if (batchFiles.length === 0) {
+      batchSection.classList.add('hidden');
+      return;
+    }
 
-    currentFileName = file.name.replace(/\.svg$/i, '-optimized.svg');
+    batchSection.classList.remove('hidden');
+
+    batchFiles.forEach((file, index) => {
+      const row = document.createElement('tr');
+      const saved = file.originalSize - file.optimizedSize;
+      const percent = ((saved / file.originalSize) * 100).toFixed(1);
+
+      row.innerHTML = `
+        <td>
+          <div class="font-bold truncate max-w-xs" title="${file.name}">${file.name}</div>
+        </td>
+        <td>${formatBytes(file.originalSize)}</td>
+        <td>${formatBytes(file.optimizedSize)}</td>
+        <td class="text-success">-${percent}%</td>
+        <td>
+          <button class="btn btn-xs btn-ghost btn-view" data-index="${index}">View</button>
+          <button class="btn btn-xs btn-ghost btn-download-single" data-index="${index}">
+            <i data-lucide="download" class="w-3 h-3"></i>
+          </button>
+        </td>
+      `;
+      batchList.appendChild(row);
+    });
+
+    // Add event listeners for view buttons
+    document.querySelectorAll('.btn-view').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const index = parseInt((e.currentTarget as HTMLElement).dataset.index || '0');
+        const file = batchFiles[index];
+        if (file) {
+          currentFileName = file.name;
+          inputText.value = file.originalContent;
+          outputText.value = file.content;
+          updateStats();
+          updatePreview(file.originalContent, file.content);
+          showSavings(file.originalSize, file.optimizedSize);
+
+          // Scroll to editor
+          document.getElementById('svg-input')?.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    });
+
+    // Add event listeners for single download buttons
+    document.querySelectorAll('.btn-download-single').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const index = parseInt((e.currentTarget as HTMLElement).dataset.index || '0');
+        const file = batchFiles[index];
+        if (file) {
+          const blob = new Blob([file.content], { type: 'image/svg+xml' });
+          await downloadFile(blob, file.name, 'image/svg+xml');
+        }
+      });
+    });
+  };
+
+  const handleDownloadAll = async () => {
+    if (batchFiles.length === 0) return;
 
     try {
-      inputText.value = await file.text();
-      updateStats();
-      // Auto-optimize on file upload
-      handleOptimize();
+      const files = batchFiles.map((f) => ({
+        name: f.name,
+        data: new TextEncoder().encode(f.content),
+      }));
+      await downloadAsZip(files, 'optimized-svgs.zip');
     } catch (err) {
-      showMessage('Failed to read file', { type: 'alert' });
+      showMessage('Failed to create ZIP file', { type: 'alert' });
+      console.error(err);
+    }
+  };
+
+  const handleFileUpload = async (files: FileList | File[]) => {
+    if (files.length === 0) return;
+
+    // If multiple files, handle batch mode
+    if (files.length > 1) {
+      batchFiles = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.name.toLowerCase().endsWith('.svg') && file.type !== 'image/svg+xml') continue;
+
+        try {
+          const text = await file.text();
+          const originalSize = new TextEncoder().encode(text).length;
+          const optimizedContent = optimizeContent(text);
+          const optimizedSize = new TextEncoder().encode(optimizedContent).length;
+
+          batchFiles.push({
+            name: file.name.replace(/\.svg$/i, '-optimized.svg'),
+            originalSize,
+            optimizedSize,
+            content: optimizedContent,
+            originalContent: text,
+          });
+        } catch (e) {
+          console.error(`Failed to process ${file.name}`, e);
+        }
+      }
+      renderBatchList();
+
+      // Show the first file in the editor
+      if (batchFiles.length > 0) {
+        const first = batchFiles[0];
+        currentFileName = first.name;
+        inputText.value = first.originalContent;
+        outputText.value = first.content;
+        updateStats();
+        updatePreview(first.originalContent, first.content);
+        showSavings(first.originalSize, first.optimizedSize);
+      }
+    } else {
+      // Single file mode
+      batchFiles = [];
+      batchSection.classList.add('hidden');
+      batchList.innerHTML = '';
+
+      const file = files[0];
+      currentFileName = file.name.replace(/\.svg$/i, '-optimized.svg');
+
+      try {
+        inputText.value = await file.text();
+        updateStats();
+        // Auto-optimize on file upload
+        handleOptimize();
+      } catch (err) {
+        showMessage('Failed to read file', { type: 'alert' });
+      }
     }
   };
 
@@ -325,6 +521,7 @@ export default function init(payload?: SharedFilesPayload) {
   btnCopy.addEventListener('click', handleCopy);
   btnDownload.addEventListener('click', handleDownload);
   btnClear.addEventListener('click', handleClear);
+  btnDownloadAll.addEventListener('click', handleDownloadAll);
   inputText.addEventListener('input', updateStats);
 
   // Re-optimize when any option changes (live update)

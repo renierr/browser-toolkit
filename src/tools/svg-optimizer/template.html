@@ -10,10 +10,37 @@
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
         </div>
-        <p class="text-lg font-medium">Click or drag SVG file here</p>
+        <p class="text-lg font-medium">Click or drag SVG file(s) here</p>
         <p class="text-sm text-base-content/50">Supports .svg files</p>
       </div>
-      <input type="file" id="file-input" class="hidden" accept=".svg,image/svg+xml" />
+      <input type="file" id="file-input" class="hidden" accept=".svg,image/svg+xml" multiple />
+    </div>
+
+    <!-- Batch Results Section -->
+    <div id="batch-section" class="hidden mb-6">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-lg font-semibold">Batch Results</h3>
+        <button id="btn-download-all" class="btn btn-sm btn-primary">
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+          Download All (ZIP)
+        </button>
+      </div>
+      <div class="overflow-x-auto border rounded-lg max-h-60 overflow-y-auto">
+        <table class="table table-zebra w-full table-pin-rows">
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>Original</th>
+              <th>Optimized</th>
+              <th>Savings</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="batch-list">
+            <!-- Rows will be added here -->
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -41,7 +68,7 @@
     <!-- Options -->
     <div class="mt-4">
       <div class="collapse collapse-arrow bg-base-200 border">
-        <input type="checkbox" id="options-toggle" checked />
+        <input type="checkbox" id="options-toggle" />
         <div class="collapse-title font-semibold">Optimization Options</div>
         <div class="collapse-content">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-1">
@@ -278,4 +305,3 @@
     </div>
   </div>
 </div>
-
