@@ -46,7 +46,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Input Section -->
       <div class="form-control w-full">
-        <label class="label">
+        <label class="label" for="svg-input">
           <span class="label-text font-semibold">Input SVG</span>
           <span class="label-text-alt" id="input-stats">0 bytes</span>
         </label>
@@ -56,7 +56,7 @@
 
       <!-- Output Section -->
       <div class="form-control w-full">
-        <label class="label">
+        <label class="label" for="svg-output">
           <span class="label-text font-semibold">Optimized SVG</span>
           <span class="label-text-alt" id="output-stats">0 bytes</span>
         </label>
@@ -68,6 +68,7 @@
     <!-- Options -->
     <div class="mt-4">
       <div class="collapse collapse-arrow bg-base-200 border">
+        <!--suppress HtmlFormInputWithoutLabel -->
         <input type="checkbox" id="options-toggle" />
         <div class="collapse-title font-semibold">Optimization Options</div>
         <div class="collapse-content">

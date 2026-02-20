@@ -378,6 +378,9 @@ export default function init(payload?: SharedFilesPayload) {
 
     batchFiles.forEach((file, index) => {
       const row = document.createElement('tr');
+      if (file.name === currentFileName) {
+        row.classList.add('bg-base-300');
+      }
       const saved = file.originalSize - file.optimizedSize;
       const percent = ((saved / file.originalSize) * 100).toFixed(1);
 
@@ -405,6 +408,7 @@ export default function init(payload?: SharedFilesPayload) {
         const file = batchFiles[index];
         if (file) {
           currentFileName = file.name;
+          renderBatchList();
           inputText.value = file.originalContent;
           outputText.value = file.content;
           updateStats();
@@ -472,7 +476,6 @@ export default function init(payload?: SharedFilesPayload) {
           console.error(`Failed to process ${file.name}`, e);
         }
       }
-      renderBatchList();
 
       // Show the first file in the editor
       if (batchFiles.length > 0) {
@@ -484,6 +487,7 @@ export default function init(payload?: SharedFilesPayload) {
         updatePreview(first.originalContent, first.content);
         showSavings(first.originalSize, first.optimizedSize);
       }
+      renderBatchList();
     } else {
       // Single file mode
       batchFiles = [];
