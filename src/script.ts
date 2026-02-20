@@ -344,32 +344,48 @@ async function boot() {
     return false;
   };
 
-  // 1. Check for Launch Handler API (Windows/macOS "Open with")
-  const launchFiles = await setupLaunchHandler();
-  if (launchFiles && launchFiles.length > 0) {
-    const mimeTypes = launchFiles.map((f) => f.type || '');
-    if (await routeFilesToTool(launchFiles, mimeTypes)) {
-      return;
-    }
-  }
+  // Check for launch/share content with timeout protection
+  // We wrap each check in a try-catch to ensure one failure doesn't block the app
+  let handledByLaunchOrShare = false;
 
-  // 2. Check for shared content from Service Worker (Android share)
-  const sharedInfo = getSharedContentInfo();
-  if (sharedInfo) {
-    const sharedFiles = await loadSharedFiles(sharedInfo.keys);
-    clearSharedParams();
-
-    if (sharedFiles.length > 0) {
-      if (await routeFilesToTool(sharedFiles, sharedInfo.mimeTypes, sharedInfo.text)) {
-        return;
+  try {
+    // 1. Check for Launch Handler API (Windows/macOS "Open with")
+    const launchFiles = await setupLaunchHandler();
+    if (launchFiles && launchFiles.length > 0) {
+      const mimeTypes = launchFiles.map((f) => f.type || '');
+      if (await routeFilesToTool(launchFiles, mimeTypes)) {
+        handledByLaunchOrShare = true;
       }
-    } else {
-      console.warn('[script] No tool found for shared MIME types:', sharedInfo.mimeTypes);
+    }
+  } catch (e) {
+    console.warn('[script] Launch handler failed:', e);
+  }
+
+  if (!handledByLaunchOrShare) {
+    try {
+      // 2. Check for shared content from Service Worker (Android share)
+      const sharedInfo = getSharedContentInfo();
+      if (sharedInfo) {
+        const sharedFiles = await loadSharedFiles(sharedInfo.keys);
+        clearSharedParams();
+
+        if (sharedFiles.length > 0) {
+          if (await routeFilesToTool(sharedFiles, sharedInfo.mimeTypes, sharedInfo.text)) {
+            handledByLaunchOrShare = true;
+          }
+        } else {
+          console.warn('[script] No tool found for shared MIME types:', sharedInfo.mimeTypes);
+        }
+      }
+    } catch (e) {
+      console.warn('[script] Share target handling failed:', e);
     }
   }
 
-  // Initial route
-  handleRoute(router.getCurrentPath());
+  // Always render the initial route if not handled by launch/share
+  if (!handledByLaunchOrShare) {
+    handleRoute(router.getCurrentPath());
+  }
 }
 
 void boot();

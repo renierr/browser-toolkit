@@ -22,8 +22,8 @@ let timerState = {
 let activeCheckPromise = null;
 
 // Skip waiting to activate new SW immediately
-self.addEventListener('install', (event) => {
-  event.waitUntil(self.skipWaiting());
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
 // Load state from IndexedDB (more reliable than localStorage in SW)

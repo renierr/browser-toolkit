@@ -98,14 +98,25 @@ export function getSharedContentInfo(): SharedContent | null {
 }
 
 /**
- * Load shared files from IndexedDB.
+ * Load shared files from IndexedDB with timeout protection.
  */
 export async function loadSharedFiles(keys: string[]): Promise<File[]> {
   const files: File[] = [];
 
+  // Add timeout protection - if loading takes too long, return what we have
+  const timeoutMs = 5000;
+  const timeoutPromise = new Promise<'timeout'>((resolve) =>
+    setTimeout(() => resolve('timeout'), timeoutMs)
+  );
+
   for (const key of keys) {
     try {
-      const fileOrBlob = await idbGet(key);
+      const result = await Promise.race([idbGet(key), timeoutPromise]);
+      if (result === 'timeout') {
+        console.warn(`[share-target] Timeout loading shared file with key ${key}`);
+        break;
+      }
+      const fileOrBlob = result;
       if (fileOrBlob) {
         // Convert Blob to File if necessary
         if (fileOrBlob instanceof File) {
@@ -116,7 +127,7 @@ export async function loadSharedFiles(keys: string[]): Promise<File[]> {
           files.push(file);
         }
         // Clean up after loading
-        await idbDelete(key);
+        await idbDelete(key).catch(() => {});
       }
     } catch (e) {
       console.error(`Failed to load shared file with key ${key}`, e);
@@ -247,7 +258,7 @@ export function setupLaunchHandler(): Promise<File[] | null> {
           return;
         }
 
-        // Collect files from this launch event
+        // Collect files from this launch event with individual error handling
         for (const fileHandle of files) {
           try {
             const file = await fileHandle.getFile();
@@ -267,6 +278,7 @@ export function setupLaunchHandler(): Promise<File[] | null> {
       });
     } catch (e) {
       // If setConsumer fails, resolve null
+      clearTimeout(initialTimeout);
       console.warn('launchQueue.setConsumer failed:', e);
       doResolve(null);
     }
