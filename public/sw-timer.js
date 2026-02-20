@@ -21,6 +21,11 @@ let timerState = {
 // We track active promise chains to extend SW lifetime
 let activeCheckPromise = null;
 
+// Skip waiting to activate new SW immediately
+self.addEventListener('install', (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
 // Load state from IndexedDB (more reliable than localStorage in SW)
 function openTimerDb() {
   return new Promise((resolve, reject) => {
@@ -262,9 +267,12 @@ self.addEventListener('message', (event) => {
   })());
 });
 
-// On SW activation, restore timer state
-self.addEventListener('activate', async (event) => {
+// On SW activation, restore timer state and claim clients immediately
+self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
+    // Claim all clients immediately so controller is available on refresh
+    await self.clients.claim();
+
     await loadTimerState();
 
     // If timer was running, check if it's still valid

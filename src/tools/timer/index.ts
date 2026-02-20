@@ -59,8 +59,24 @@ export default function init() {
     }
   }
 
-  function requestStateFromSW() {
-    sendToSW('timer-get-state');
+  async function requestStateFromSW() {
+    // Wait for controller if not available yet (race condition on page refresh)
+    if ('serviceWorker' in navigator) {
+      if (!navigator.serviceWorker.controller) {
+        // Wait for the controllerchange event or timeout after 2 seconds
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            const handler = () => {
+              navigator.serviceWorker.removeEventListener('controllerchange', handler);
+              resolve();
+            };
+            navigator.serviceWorker.addEventListener('controllerchange', handler);
+          }),
+          new Promise<void>((resolve) => setTimeout(resolve, 2000)),
+        ]);
+      }
+      sendToSW('timer-get-state');
+    }
   }
 
   function handleSWMessage(event: MessageEvent) {
