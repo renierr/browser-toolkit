@@ -41,6 +41,13 @@ export default function init() {
   // Fallback interval to check timer completion (in case SW doesn't respond)
   let fallbackCheckId: number | null = null;
 
+  // SW keepalive interval (sends periodic messages to keep SW alive)
+  let swKeepaliveId: number | null = null;
+
+  // Silent audio keep-alive for mobile (prevents browser from suspending)
+  let silentAudioOsc: OscillatorNode | null = null;
+  let silentAudioGain: GainNode | null = null;
+
   // ==================== Service Worker Communication ====================
 
   function sendToSW(type: string, data: Record<string, unknown> = {}) {
@@ -82,9 +89,13 @@ export default function init() {
         if (isRunning) {
           startDisplayInterval();
           startFallbackCheck();
+          startSWKeepalive();
+          startSilentAudio();
         } else {
           stopDisplayInterval();
           stopFallbackCheck();
+          stopSWKeepalive();
+          stopSilentAudio();
         }
         break;
 
@@ -92,11 +103,15 @@ export default function init() {
       case 'timer-reset':
         stopDisplayInterval();
         stopFallbackCheck();
+        stopSWKeepalive();
+        stopSilentAudio();
         break;
 
       case 'timer-finished':
         stopDisplayInterval();
         stopFallbackCheck();
+        stopSWKeepalive();
+        stopSilentAudio();
         playAlarmSound();
         status.textContent = 'Finished';
         break;
@@ -128,6 +143,75 @@ export default function init() {
     if (fallbackCheckId) {
       clearInterval(fallbackCheckId);
       fallbackCheckId = null;
+    }
+  }
+
+  // ==================== SW Keepalive ====================
+  // Sends periodic messages to SW to keep it alive and restart check loop if needed
+
+  function startSWKeepalive() {
+    if (swKeepaliveId) return;
+    // Send keepalive every 20 seconds to ensure SW stays active
+    swKeepaliveId = window.setInterval(() => {
+      if (isRunning) {
+        sendToSW('timer-keepalive');
+      }
+    }, 20000);
+  }
+
+  function stopSWKeepalive() {
+    if (swKeepaliveId) {
+      clearInterval(swKeepaliveId);
+      swKeepaliveId = null;
+    }
+  }
+
+  // ==================== Silent Audio Keep-alive (Mobile) ====================
+  // Plays inaudible audio to prevent mobile browsers from suspending the page
+
+  function startSilentAudio() {
+    // Only needed on mobile/touch devices
+    if (!('ontouchstart' in window) && !navigator.maxTouchPoints) return;
+    if (silentAudioOsc) return; // Already running
+
+    ensureAudioContext();
+    if (!audioCtx) return;
+
+    try {
+      // Create an oscillator at 1Hz (inaudible) with zero gain
+      silentAudioOsc = audioCtx.createOscillator();
+      silentAudioGain = audioCtx.createGain();
+
+      silentAudioOsc.frequency.setValueAtTime(1, audioCtx.currentTime);
+      silentAudioGain.gain.setValueAtTime(0.001, audioCtx.currentTime); // Near-silent
+
+      silentAudioOsc.connect(silentAudioGain);
+      silentAudioGain.connect(audioCtx.destination);
+      silentAudioOsc.start();
+
+      console.log('[Timer] Started silent audio keep-alive for mobile');
+    } catch (e) {
+      console.warn('[Timer] Failed to start silent audio:', e);
+    }
+  }
+
+  function stopSilentAudio() {
+    if (silentAudioOsc) {
+      try {
+        silentAudioOsc.stop();
+        silentAudioOsc.disconnect();
+      } catch {
+        // Ignore errors on stop
+      }
+      silentAudioOsc = null;
+    }
+    if (silentAudioGain) {
+      try {
+        silentAudioGain.disconnect();
+      } catch {
+        // Ignore errors on disconnect
+      }
+      silentAudioGain = null;
     }
   }
 
@@ -246,6 +330,8 @@ export default function init() {
     updateUI();
     startDisplayInterval();
     startFallbackCheck();
+    startSWKeepalive();
+    startSilentAudio();
   }
 
   function pauseTimer() {
@@ -256,6 +342,8 @@ export default function init() {
     endTime = null;
     updateUI();
     stopDisplayInterval();
+    stopSWKeepalive();
+    stopSilentAudio();
   }
 
   function resetTimer() {
@@ -268,6 +356,8 @@ export default function init() {
     updateDisplay();
     updateUI();
     stopDisplayInterval();
+    stopSWKeepalive();
+    stopSilentAudio();
   }
 
   function setTime(seconds: number) {
@@ -280,6 +370,8 @@ export default function init() {
     updateDisplay();
     updateUI();
     stopDisplayInterval();
+    stopSWKeepalive();
+    stopSilentAudio();
   }
 
   // ==================== Notifications ====================
@@ -351,6 +443,8 @@ export default function init() {
   return () => {
     stopDisplayInterval();
     stopFallbackCheck();
+    stopSWKeepalive();
+    stopSilentAudio();
     document.title = storedDocTitle;
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     if ('serviceWorker' in navigator) {

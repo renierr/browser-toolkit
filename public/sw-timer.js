@@ -1,5 +1,13 @@
 // Timer Service Worker - Runs independently of page lifecycle
 // Handles timer countdown in the background, survives navigation/refresh
+//
+// IMPORTANT: Service Workers can be terminated at any time by the browser.
+// We use multiple strategies to ensure reliable timer completion:
+// 1. Persistent state in IndexedDB (survives SW restart)
+// 2. self.registration.showNotification() for completion notification
+// 3. event.waitUntil() with promise chains to extend SW lifetime
+// 4. Client-side SW keepalive messages every 20s
+// 5. Silent audio keep-alive on mobile (client-side) to prevent suspension
 
 const TIMER_STATE_KEY = 'sw-timer-state';
 
@@ -10,7 +18,8 @@ let timerState = {
   timeLeft: 0,
 };
 
-let checkTimeoutId = null;
+// We track active promise chains to extend SW lifetime
+let activeCheckPromise = null;
 
 // Load state from IndexedDB (more reliable than localStorage in SW)
 function openTimerDb() {
@@ -109,8 +118,7 @@ async function checkTimer() {
 
   if (!timerState.isRunning || !timerState.endTime) {
     console.log('[Timer SW] Timer not running, stopping check');
-    stopTimerCheck();
-    return;
+    return false; // Not running
   }
 
   const now = Date.now();
@@ -126,98 +134,132 @@ async function checkTimer() {
     await saveTimerState();
     await broadcastState('timer-finished');
     await showTimerNotification();
-    stopTimerCheck();
+    return false; // Done
   } else {
-    // Still running, broadcast update and schedule next check
+    // Still running, broadcast update
     await broadcastState('timer-tick');
-    scheduleNextCheck();
+    return true; // Continue
   }
 }
 
-// Use recursive setTimeout instead of setInterval for better reliability
-function scheduleNextCheck() {
-  stopTimerCheck(); // Clear any existing timeout
-  checkTimeoutId = setTimeout(() => {
-    checkTimer();
-  }, 1000);
+// Schedule next check using a self-extending promise chain
+// This keeps the SW alive while the timer is running
+function scheduleNextCheck(extendWith = null) {
+  const checkAndReschedule = async () => {
+    const shouldContinue = await checkTimer();
+    if (shouldContinue) {
+      // Schedule next check with a small delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      return checkAndReschedule();
+    }
+  };
+
+  // Create the promise chain
+  activeCheckPromise = checkAndReschedule().catch(err => {
+    console.error('[Timer SW] Check loop error:', err);
+  });
+
+  // If we have an event to extend, use waitUntil
+  if (extendWith && extendWith.waitUntil) {
+    extendWith.waitUntil(activeCheckPromise);
+  }
 }
 
-function startTimerCheck() {
+function startTimerCheck(extendWith = null) {
   console.log('[Timer SW] Starting timer check');
-  // Immediate check, then schedule
-  checkTimer();
+  scheduleNextCheck(extendWith);
 }
 
-function stopTimerCheck() {
-  if (checkTimeoutId) {
-    clearTimeout(checkTimeoutId);
-    checkTimeoutId = null;
-  }
-}
+// No need for stopTimerCheck - the loop self-terminates when timer stops
 
 // Handle messages from pages
-self.addEventListener('message', async (event) => {
+self.addEventListener('message', (event) => {
   const { type, data } = event.data || {};
 
   console.log('[Timer SW] Received message:', type, data);
 
-  switch (type) {
-    case 'timer-start': {
-      console.log('[Timer SW] Starting timer, endTime:', data.endTime);
-      timerState.isRunning = true;
-      timerState.endTime = data.endTime;
-      timerState.originalTimeSet = data.originalTimeSet;
-      timerState.timeLeft = data.timeLeft;
-      await saveTimerState();
-      startTimerCheck();
-      await broadcastState('timer-started');
-      break;
-    }
+  // Use waitUntil to keep SW alive during message processing
+  event.waitUntil((async () => {
+    switch (type) {
+      case 'timer-start': {
+        console.log('[Timer SW] Starting timer, endTime:', data.endTime);
+        timerState.isRunning = true;
+        timerState.endTime = data.endTime;
+        timerState.originalTimeSet = data.originalTimeSet;
+        timerState.timeLeft = data.timeLeft;
+        await saveTimerState();
+        await broadcastState('timer-started');
+        // Start the check loop - pass event so waitUntil extends lifetime
+        startTimerCheck(event);
+        break;
+      }
 
-    case 'timer-pause': {
-      timerState.isRunning = false;
-      timerState.timeLeft = data.timeLeft;
-      timerState.endTime = null;
-      await saveTimerState();
-      stopTimerCheck();
-      await broadcastState('timer-paused');
-      break;
-    }
+      case 'timer-pause': {
+        timerState.isRunning = false;
+        timerState.timeLeft = data.timeLeft;
+        timerState.endTime = null;
+        await saveTimerState();
+        // Loop will self-terminate since isRunning is false
+        await broadcastState('timer-paused');
+        break;
+      }
 
-    case 'timer-reset': {
-      timerState.isRunning = false;
-      timerState.endTime = null;
-      timerState.timeLeft = 0;
-      timerState.originalTimeSet = 0;
-      await saveTimerState();
-      stopTimerCheck();
-      await broadcastState('timer-reset');
-      break;
-    }
+      case 'timer-reset': {
+        timerState.isRunning = false;
+        timerState.endTime = null;
+        timerState.timeLeft = 0;
+        timerState.originalTimeSet = 0;
+        await saveTimerState();
+        // Loop will self-terminate since isRunning is false
+        await broadcastState('timer-reset');
+        break;
+      }
 
-    case 'timer-set': {
-      timerState.timeLeft = data.timeLeft;
-      timerState.isRunning = false;
-      timerState.endTime = null;
-      await saveTimerState();
-      await broadcastState('timer-update');
-      break;
-    }
+      case 'timer-set': {
+        timerState.timeLeft = data.timeLeft;
+        timerState.isRunning = false;
+        timerState.endTime = null;
+        await saveTimerState();
+        await broadcastState('timer-update');
+        break;
+      }
 
-    case 'timer-get-state': {
-      // Client requesting current state
-      event.source?.postMessage({
-        type: 'timer-state',
-        state: {
-          ...timerState,
-          timeLeft: timerState.endTime
-            ? Math.max(0, Math.round((timerState.endTime - Date.now()) / 1000))
-            : timerState.timeLeft,
-        },
-      });
-      break;
+      case 'timer-get-state': {
+        // Client requesting current state
+        event.source?.postMessage({
+          type: 'timer-state',
+          state: {
+            ...timerState,
+            timeLeft: timerState.endTime
+              ? Math.max(0, Math.round((timerState.endTime - Date.now()) / 1000))
+              : timerState.timeLeft,
+          },
+        });
+        break;
+      }
+
+      case 'timer-keepalive': {
+        // Client is keeping us alive - check if timer should still be running
+        await loadTimerState();
+        if (timerState.isRunning && timerState.endTime) {
+          const remaining = Math.round((timerState.endTime - Date.now()) / 1000);
+          if (remaining <= 0) {
+            // Timer finished!
+            timerState.isRunning = false;
+            timerState.timeLeft = 0;
+            timerState.endTime = null;
+            await saveTimerState();
+            await broadcastState('timer-finished');
+            await showTimerNotification();
+          } else {
+            // Restart the check loop
+            startTimerCheck(event);
+          }
+        }
+        break;
+      }
     }
-  }
+  })());
 });
 
 // On SW activation, restore timer state
