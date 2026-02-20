@@ -3,5 +3,31 @@
   "description": "Format, minify and highlight code and data formats",
   "icon": "code",
   "sectionId": "utilities",
-  "order": 10
+  "order": 10,
+  "shareTarget": {
+    "accept": [
+      "text/*",
+      "application/json",
+      "application/xml",
+      "application/javascript",
+      "application/typescript",
+      "application/yaml",
+      "application/toml",
+      "application/sql",
+      "application/ld+json",
+      "application/rtf",
+      "application/xhtml+xml",
+      "application/manifest+json",
+      "application/xslt+xml",
+      "application/atom+xml",
+      "application/rss+xml",
+      "application/x-httpd-php",
+      "application/x-sh",
+      "application/x-csh",
+      "application/x-latex",
+      "application/x-tcl",
+      "application/x-perl",
+      "application/x-python"
+    ]
+  }
 }

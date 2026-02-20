@@ -7,9 +7,10 @@ import {
   type ExportOptions,
 } from './export.ts';
 import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const input = document.getElementById('code-input') as HTMLTextAreaElement;
   const outputContainer = document.getElementById('code-output') as HTMLDivElement;
   const outputCode = document.getElementById('code-output-code') as HTMLElement;
@@ -54,8 +55,18 @@ export default function init() {
     const isText = format === 'text';
     // Some formats don't support minification
     const noMinify = [
-      'yaml', 'markdown', 'mdx', 'graphql', 'text',
-      'python', 'ruby', 'bash', 'powershell', 'dockerfile', 'toml', 'ini'
+      'yaml',
+      'markdown',
+      'mdx',
+      'graphql',
+      'text',
+      'python',
+      'ruby',
+      'bash',
+      'powershell',
+      'dockerfile',
+      'toml',
+      'ini',
     ].includes(format);
 
     if (btnFormat) btnFormat.disabled = !hasText || isText;
@@ -276,6 +287,23 @@ export default function init() {
   input?.addEventListener('paste', () => {
     setTimeout(() => processCode('format'), 0);
   });
+
+  // Handle shared content
+  if (payload) {
+    if (payload.sharedFiles && payload.sharedFiles.length > 0) {
+      // Read the first file as text
+      const file = payload.sharedFiles[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target?.result as string;
+        if (text) {
+          input.value = text;
+          updateHighlightedPreview(text);
+        }
+      };
+      reader.readAsText(file);
+    }
+  }
 
   updateButtonStates('text');
 }
