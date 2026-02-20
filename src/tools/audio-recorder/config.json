@@ -1,0 +1,10 @@
+{
+  "name": "Audio Recorder & Noise Generator",
+  "description": "Record audio, visualize waveforms, and generate focus noise (White, Pink, Brown, Rain, Forest).",
+  "icon": "mic",
+  "sectionId": "general",
+  "order": 6,
+  "shareTarget": {
+    "accept": ["audio/*"]
+  }
+}

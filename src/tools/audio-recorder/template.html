@@ -1,0 +1,104 @@
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Audio Recorder Section -->
+  <div class="card bg-base-100 shadow-xl border">
+    <div class="card-body">
+      <h2 class="card-title text-2xl font-bold mb-4">
+        <i data-lucide="mic" class="w-6 h-6"></i>
+        Audio Recorder
+      </h2>
+      <p class="text-base-content/70 mb-6">
+        Record voice/audio, visualize waveform, and save as WebM/WAV.
+      </p>
+
+      <!-- Visualizer Canvas -->
+      <div class="w-full h-32 bg-base-200 rounded-xl overflow-hidden relative mb-6 border border-base-300">
+        <canvas id="visualizer-canvas" class="w-full h-full"></canvas>
+        <div id="recording-indicator" class="absolute top-3 right-3 flex items-center gap-2 hidden">
+          <span class="w-3 h-3 bg-error rounded-full animate-pulse"></span>
+          <span class="text-xs font-bold text-error" id="recording-timer">00:00</span>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="flex flex-wrap gap-2 justify-center mb-4">
+        <button id="btn-record" class="btn btn-error w-full sm:w-auto">
+          <i data-lucide="mic" class="w-4 h-4 mr-2"></i>
+          Start Recording
+        </button>
+        <button id="btn-stop-record" class="btn btn-outline w-full sm:w-auto hidden">
+          <i data-lucide="square" class="w-4 h-4 mr-2"></i>
+          Stop
+        </button>
+      </div>
+
+      <!-- Recordings List -->
+      <div id="recordings-list" class="flex flex-col gap-2 mt-4 max-h-60 overflow-y-auto">
+        <!-- Recordings will appear here -->
+        <div class="text-center text-base-content/50 text-sm py-4" id="no-recordings-msg">
+          No recordings yet.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Noise Generator Section -->
+  <div class="card bg-base-100 shadow-xl border">
+    <div class="card-body">
+      <h2 class="card-title text-2xl font-bold mb-4">
+        <i data-lucide="waves" class="w-6 h-6"></i>
+        Focus Noise
+      </h2>
+      <p class="text-base-content/70 mb-6">
+        Generate continuous background noise for focus or relaxation.
+      </p>
+
+      <!-- Noise Type Selection -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
+        <button class="btn btn-outline noise-btn" data-type="white">
+          <i data-lucide="zap" class="w-4 h-4 mr-1"></i> White
+        </button>
+        <button class="btn btn-outline noise-btn" data-type="pink">
+          <i data-lucide="activity" class="w-4 h-4 mr-1"></i> Pink
+        </button>
+        <button class="btn btn-outline noise-btn" data-type="brown">
+          <i data-lucide="mountain" class="w-4 h-4 mr-1"></i> Brown
+        </button>
+        <button class="btn btn-outline noise-btn" data-type="rain">
+          <i data-lucide="cloud-rain" class="w-4 h-4 mr-1"></i> Rain
+        </button>
+        <button class="btn btn-outline noise-btn" data-type="forest">
+          <i data-lucide="trees" class="w-4 h-4 mr-1"></i> Forest
+        </button>
+        <button class="btn btn-outline noise-btn" data-type="waves">
+          <i data-lucide="waves" class="w-4 h-4 mr-1"></i> Waves
+        </button>
+      </div>
+
+      <!-- Volume Control -->
+      <div class="form-control mb-6">
+        <label class="label">
+          <span class="label-text font-semibold">Volume</span>
+          <span class="label-text-alt" id="noise-volume-display">50%</span>
+        </label>
+        <input
+          type="range"
+          id="noise-volume"
+          min="0" max="100" value="50"
+          class="range range-primary range-sm"
+        />
+      </div>
+
+      <!-- Play/Stop Controls -->
+      <div class="card-actions justify-center">
+        <button id="btn-noise-toggle" class="btn btn-primary w-full sm:w-auto">
+          <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+          Start Noise
+        </button>
+      </div>
+
+      <div class="mt-4 text-center text-sm text-base-content/60">
+        <span id="current-noise-status">Select a noise type to start</span>
+      </div>
+    </div>
+  </div>
+</div>
