@@ -1,5 +1,3 @@
-import type { Point } from './perspective';
-
 export function applyFilters(
   originalImage: HTMLImageElement,
   canvas: HTMLCanvasElement,

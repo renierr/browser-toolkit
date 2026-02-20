@@ -2,6 +2,7 @@ import type { SharedFilesPayload } from '../../js/share-target';
 import { getPerspectiveTransform, type Point } from './utils/perspective';
 import { applyFilters as applyFiltersUtil } from './utils/filters';
 import { startCamera as startCameraUtil, stopCamera as stopCameraUtil } from './utils/camera';
+import { detectDocumentCorners } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
@@ -34,12 +35,70 @@ export default function init(payload?: SharedFilesPayload) {
 
   // --- Camera Logic ---
 
+  let detectionInterval: number | null = null;
+  const cameraOverlay = document.getElementById('camera-overlay') as HTMLCanvasElement;
+
   async function startCamera() {
     stream = await startCameraUtil(video, currentFacingMode, stream);
+    startLiveDetection();
   }
 
   function stopCamera() {
     stream = stopCameraUtil(stream);
+    stopLiveDetection();
+  }
+
+  function startLiveDetection() {
+    if (detectionInterval) return;
+    detectionInterval = window.setInterval(() => {
+      if (video.paused || video.ended) return;
+
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      if (!width || !height) return;
+
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = width;
+      tempCanvas.height = height;
+      const tCtx = tempCanvas.getContext('2d')!;
+      tCtx.drawImage(video, 0, 0);
+
+      const detected = detectDocumentCorners(tempCanvas);
+      drawLiveOverlay(detected, width, height);
+    }, 200);
+  }
+
+  function stopLiveDetection() {
+    if (detectionInterval) {
+      clearInterval(detectionInterval);
+      detectionInterval = null;
+    }
+    const oCtx = cameraOverlay.getContext('2d');
+    if (oCtx && cameraOverlay) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+  }
+
+  function drawLiveOverlay(detectedCorners: Point[] | null, vWidth: number, vHeight: number) {
+    if (!cameraOverlay) return;
+    cameraOverlay.width = video.clientWidth;
+    cameraOverlay.height = video.clientHeight;
+    const oCtx = cameraOverlay.getContext('2d')!;
+    oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+
+    if (!detectedCorners) return;
+
+    const scaleX = cameraOverlay.width / vWidth;
+    const scaleY = cameraOverlay.height / vHeight;
+
+    oCtx.strokeStyle = '#3b82f6';
+    oCtx.lineWidth = 3;
+    oCtx.setLineDash([5, 5]);
+    oCtx.beginPath();
+    oCtx.moveTo(detectedCorners[0].x * scaleX, detectedCorners[0].y * scaleY);
+    for (let i = 1; i < 4; i++) {
+      oCtx.lineTo(detectedCorners[i].x * scaleX, detectedCorners[i].y * scaleY);
+    }
+    oCtx.closePath();
+    oCtx.stroke();
   }
 
   btnCapture.addEventListener('click', () => {
@@ -74,12 +133,21 @@ export default function init(payload?: SharedFilesPayload) {
 
     // Initial corners (rectangle with margin)
     const margin = 0.1;
-    corners = [
+    const defaultCorners = [
       { x: img.width * margin, y: img.height * margin },
       { x: img.width * (1 - margin), y: img.height * margin },
       { x: img.width * (1 - margin), y: img.height * (1 - margin) },
       { x: img.width * margin, y: img.height * (1 - margin) },
     ];
+
+    // Try auto-detection
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = img.width;
+    tempCanvas.height = img.height;
+    const tCtx = tempCanvas.getContext('2d')!;
+    tCtx.drawImage(img, 0, 0);
+    const detected = detectDocumentCorners(tempCanvas);
+    corners = detected || defaultCorners;
 
     enterPerspectiveMode();
   }
