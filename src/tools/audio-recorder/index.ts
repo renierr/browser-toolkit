@@ -1,4 +1,11 @@
 import { AudioRecorder, NoiseGenerator } from './audio-utils';
+import { registerToolIcons } from '../../js/tool-icons';
+import { Mic, Square, Play, Pause, Download, Trash2, Zap, Activity, Mountain, CloudRain, Trees, Waves, Flame, Moon, Fan } from 'lucide';
+
+// Register icons
+registerToolIcons({
+  Mic, Square, Play, Pause, Download, Trash2, Zap, Activity, Mountain, CloudRain, Trees, Waves, Flame, Moon, Fan
+});
 
 export default function init() {
   const btnRecord = document.getElementById('btn-record') as HTMLButtonElement;

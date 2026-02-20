@@ -298,7 +298,7 @@ export class NoiseGenerator {
         osc.start(t);
         osc.stop(t + duration + 0.1);
 
-        // Cleanup node references after playing (not strictly necessary for GC but good for tracking)
+        // Cleanup node references after playing
         setTimeout(() => {
             osc.disconnect();
             gain.disconnect();
@@ -317,6 +317,216 @@ export class NoiseGenerator {
     };
 
     scheduleNextChirp();
+  }
+
+  private playFire() {
+    if (!this.ctx || !this.masterGain) return;
+
+    // 1. Rumble (Brown Noise)
+    const brownBuffer = this.createNoiseBuffer('brown');
+    if (brownBuffer) {
+        const source = this.ctx.createBufferSource();
+        source.buffer = brownBuffer;
+        source.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 500; // Deep rumble
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.8;
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        source.start();
+        this.activeNodes.push(source, filter, gain);
+    }
+
+    // 2. Crackling (Random clicks)
+    const playCrackle = () => {
+        if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+
+        const t = this.ctx.currentTime;
+        const buffer = this.createNoiseBuffer('white'); // Use white noise for sharp clicks
+        if (!buffer) return;
+
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 1000;
+
+        const gain = this.ctx.createGain();
+        // Short envelope
+        const duration = 0.05 + Math.random() * 0.05;
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.5 + Math.random() * 0.5, t + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain!);
+
+        source.start(t);
+        source.stop(t + duration + 0.1);
+
+        // Cleanup
+        setTimeout(() => {
+            source.disconnect();
+            filter.disconnect();
+            gain.disconnect();
+        }, (duration + 0.2) * 1000);
+    };
+
+    const scheduleCrackle = () => {
+        if (!this.isPlaying) return;
+        // Random interval between crackles
+        const delay = Math.random() * 200; // Frequent crackles
+        const id = window.setTimeout(() => {
+            if (Math.random() > 0.3) playCrackle(); // 70% chance
+            scheduleCrackle();
+        }, delay);
+        this.activeIntervals.push(id);
+    };
+    scheduleCrackle();
+  }
+
+  private playNight() {
+    if (!this.ctx || !this.masterGain) return;
+
+    // 1. Background Wind (Highpass Pink Noise)
+    const pinkBuffer = this.createNoiseBuffer('pink');
+    if (pinkBuffer) {
+        const source = this.ctx.createBufferSource();
+        source.buffer = pinkBuffer;
+        source.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.value = 800;
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.1; // Very quiet
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        source.start();
+        this.activeNodes.push(source, filter, gain);
+    }
+
+    // 2. Crickets
+    const playCricket = () => {
+        if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+        const t = this.ctx.currentTime;
+
+        // Carrier (High pitch)
+        const carrier = this.ctx.createOscillator();
+        carrier.type = 'sine';
+        carrier.frequency.value = 4500 + Math.random() * 200;
+
+        // Modulator (Rapid amplitude modulation for the "trill")
+        const modulator = this.ctx.createOscillator();
+        modulator.type = 'square';
+        modulator.frequency.value = 30; // 30Hz trill
+
+        const modGain = this.ctx.createGain();
+        modGain.gain.value = 1000; // Depth
+
+        const mainGain = this.ctx.createGain();
+
+        // Envelope for the chirp
+        const duration = 0.15;
+        mainGain.gain.setValueAtTime(0, t);
+        mainGain.gain.linearRampToValueAtTime(0.15, t + 0.02);
+        mainGain.gain.linearRampToValueAtTime(0, t + duration);
+
+        // Connections: Modulator -> ModGain -> Carrier.frequency (FM synthesis for texture)
+        // Or AM synthesis: Modulator -> GainNode controlling Carrier volume.
+        // Let's do simple AM: Carrier -> Gain -> Destination. Gain controlled by Modulator.
+        // Actually, simple sine wave with envelope is often enough, but let's add FM for texture.
+
+        modulator.connect(modGain);
+        modGain.connect(carrier.frequency);
+
+        carrier.connect(mainGain);
+        mainGain.connect(this.masterGain!);
+
+        carrier.start(t);
+        modulator.start(t);
+        carrier.stop(t + duration + 0.1);
+        modulator.stop(t + duration + 0.1);
+
+        setTimeout(() => {
+            carrier.disconnect();
+            modulator.disconnect();
+            modGain.disconnect();
+            mainGain.disconnect();
+        }, (duration + 0.2) * 1000);
+    };
+
+    const scheduleCricket = () => {
+        if (!this.isPlaying) return;
+        const delay = 500 + Math.random() * 1500;
+        const id = window.setTimeout(() => {
+            // Play a few chirps in a row
+            const chirps = 1 + Math.floor(Math.random() * 3);
+            for(let i=0; i<chirps; i++) {
+                setTimeout(playCricket, i * 200);
+            }
+            scheduleCricket();
+        }, delay);
+        this.activeIntervals.push(id);
+    };
+    scheduleCricket();
+  }
+
+  private playFan() {
+    if (!this.ctx || !this.masterGain) return;
+
+    // 1. Air flow (Brown + Lowpass)
+    const brownBuffer = this.createNoiseBuffer('brown');
+    if (brownBuffer) {
+        const source = this.ctx.createBufferSource();
+        source.buffer = brownBuffer;
+        source.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400;
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.6;
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        source.start();
+        this.activeNodes.push(source, filter, gain);
+    }
+
+    // 2. Motor Hum (Sine waves)
+    const hum1 = this.ctx.createOscillator();
+    hum1.frequency.value = 100; // 100Hz hum
+    const hum1Gain = this.ctx.createGain();
+    hum1Gain.gain.value = 0.05;
+
+    const hum2 = this.ctx.createOscillator();
+    hum2.frequency.value = 50; // Sub hum
+    const hum2Gain = this.ctx.createGain();
+    hum2Gain.gain.value = 0.05;
+
+    hum1.connect(hum1Gain);
+    hum1Gain.connect(this.masterGain);
+    hum1.start();
+
+    hum2.connect(hum2Gain);
+    hum2Gain.connect(this.masterGain);
+    hum2.start();
+
+    this.activeNodes.push(hum1, hum1Gain, hum2, hum2Gain);
   }
 
   // --- Main Control ---
@@ -346,6 +556,15 @@ export class NoiseGenerator {
         break;
       case 'waves':
         this.playWaves();
+        break;
+      case 'fire':
+        this.playFire();
+        break;
+      case 'night':
+        this.playNight();
+        break;
+      case 'fan':
+        this.playFan();
         break;
       default:
         this.playNoiseSource('white');
