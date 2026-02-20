@@ -83,9 +83,10 @@ export class AudioRecorder {
 }
 
 export class NoiseGenerator {
-  private noiseContext: AudioContext | null = null;
-  private noiseSource: AudioBufferSourceNode | null = null;
-  private noiseGain: GainNode | null = null;
+  private ctx: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private activeNodes: AudioNode[] = [];
+  private activeIntervals: number[] = [];
   private currentNoiseType: string | null = null;
   private isPlaying = false;
   private volume: number = 0.5;
@@ -95,19 +96,19 @@ export class NoiseGenerator {
   }
 
   private initContext() {
-    if (!this.noiseContext) {
-      this.noiseContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      this.noiseGain = this.noiseContext.createGain();
-      this.noiseGain.connect(this.noiseContext.destination);
-      this.noiseGain.gain.value = this.volume;
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.connect(this.ctx.destination);
+      this.masterGain.gain.value = this.volume;
     }
   }
 
-  private createBuffer(type: string): AudioBuffer | null {
-    if (!this.noiseContext) return null;
+  private createNoiseBuffer(type: 'white' | 'pink' | 'brown'): AudioBuffer | null {
+    if (!this.ctx) return null;
 
-    const bufferSize = 2 * this.noiseContext.sampleRate; // 2 seconds buffer
-    const buffer = this.noiseContext.createBuffer(1, bufferSize, this.noiseContext.sampleRate);
+    const bufferSize = 2 * this.ctx.sampleRate; // 2 seconds buffer
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const output = buffer.getChannelData(0);
 
     if (type === 'white') {
@@ -137,50 +138,245 @@ export class NoiseGenerator {
         lastOut = output[i];
         output[i] *= 3.5; // (roughly) compensate for gain
       }
-    } else {
-      // Fallback for now:
-      if (type === 'rain') return this.createBuffer('pink'); // Rain is close to pink
-      if (type === 'forest') return this.createBuffer('pink'); // Wind in trees is pink-ish
-      if (type === 'waves') return this.createBuffer('brown'); // Waves are brown-ish
     }
-
     return buffer;
   }
 
+  private playNoiseSource(type: 'white' | 'pink' | 'brown', gainVal: number = 1.0): AudioNode | null {
+    if (!this.ctx || !this.masterGain) return null;
+    const buffer = this.createNoiseBuffer(type);
+    if (!buffer) return null;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    const gain = this.ctx.createGain();
+    gain.gain.value = gainVal;
+
+    source.connect(gain);
+    gain.connect(this.masterGain);
+    source.start();
+
+    this.activeNodes.push(source, gain);
+    return gain; // Return the gain node so we can connect filters to it if needed
+  }
+
+  // --- Specific Soundscapes ---
+
+  private playRain() {
+    if (!this.ctx || !this.masterGain) return;
+
+    // Layer 1: Pink noise (Hiss)
+    const pinkBuffer = this.createNoiseBuffer('pink');
+    if (pinkBuffer) {
+        const source = this.ctx.createBufferSource();
+        source.buffer = pinkBuffer;
+        source.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 800; // Muffle it a bit
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.6;
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        source.start();
+        this.activeNodes.push(source, filter, gain);
+    }
+
+    // Layer 2: Brown noise (Rumble)
+    const brownBuffer = this.createNoiseBuffer('brown');
+    if (brownBuffer) {
+        const source = this.ctx.createBufferSource();
+        source.buffer = brownBuffer;
+        source.loop = true;
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.3;
+
+        source.connect(gain);
+        gain.connect(this.masterGain);
+        source.start();
+        this.activeNodes.push(source, gain);
+    }
+  }
+
+  private playWaves() {
+    if (!this.ctx || !this.masterGain) return;
+
+    const buffer = this.createNoiseBuffer('brown');
+    if (!buffer) return;
+
+    const source = this.ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+
+    // Filter to smooth out the brown noise
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = 1000;
+
+    // Gain node to be modulated
+    const waveGain = this.ctx.createGain();
+    waveGain.gain.value = 0.4; // Base gain
+
+    // LFO to modulate volume
+    const lfo = this.ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.15; // ~6.6 seconds period
+
+    // Scale LFO output to affect gain
+    // We want gain to oscillate between ~0.1 and ~0.7
+    const lfoGain = this.ctx.createGain();
+    lfoGain.gain.value = 0.3; // Modulation depth
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(waveGain.gain);
+
+    source.connect(filter);
+    filter.connect(waveGain);
+    waveGain.connect(this.masterGain);
+
+    source.start();
+    lfo.start();
+
+    this.activeNodes.push(source, filter, waveGain, lfo, lfoGain);
+  }
+
+  private playForest() {
+    if (!this.ctx || !this.masterGain) return;
+
+    // 1. Wind (Filtered Pink Noise)
+    const buffer = this.createNoiseBuffer('pink');
+    if (buffer) {
+        const source = this.ctx.createBufferSource();
+        source.buffer = buffer;
+        source.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 400; // Low rumble wind
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.2;
+
+        source.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+        source.start();
+        this.activeNodes.push(source, filter, gain);
+    }
+
+    // 2. Birds (Random Chirps)
+    const playChirp = () => {
+        if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        // Randomize bird properties
+        const startFreq = 1500 + Math.random() * 1000;
+        const endFreq = startFreq + (Math.random() * 500 - 250);
+        const duration = 0.1 + Math.random() * 0.1;
+
+        osc.type = Math.random() > 0.5 ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(startFreq, t);
+        osc.frequency.linearRampToValueAtTime(endFreq, t + duration);
+
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(0.1, t + 0.02); // Attack
+        gain.gain.linearRampToValueAtTime(0, t + duration); // Decay
+
+        osc.connect(gain);
+        gain.connect(this.masterGain!);
+
+        osc.start(t);
+        osc.stop(t + duration + 0.1);
+
+        // Cleanup node references after playing (not strictly necessary for GC but good for tracking)
+        setTimeout(() => {
+            osc.disconnect();
+            gain.disconnect();
+        }, (duration + 0.2) * 1000);
+    };
+
+    // Schedule random chirps
+    const scheduleNextChirp = () => {
+        if (!this.isPlaying) return;
+        const delay = 1000 + Math.random() * 4000; // 1s to 5s
+        const id = window.setTimeout(() => {
+            playChirp();
+            scheduleNextChirp();
+        }, delay);
+        this.activeIntervals.push(id);
+    };
+
+    scheduleNextChirp();
+  }
+
+  // --- Main Control ---
+
   play(type: string) {
     this.initContext();
-    if (!this.noiseContext || !this.noiseGain) return;
+    if (!this.ctx || !this.masterGain) return;
 
     if (this.isPlaying) {
       this.stop();
     }
 
-    const buffer = this.createBuffer(type);
-    if (!buffer) return;
-
-    this.noiseSource = this.noiseContext.createBufferSource();
-    this.noiseSource.buffer = buffer;
-    this.noiseSource.loop = true;
-    this.noiseSource.connect(this.noiseGain);
-    this.noiseSource.start();
-
     this.isPlaying = true;
     this.currentNoiseType = type;
+
+    switch (type) {
+      case 'white':
+      case 'pink':
+      case 'brown':
+        this.playNoiseSource(type as 'white' | 'pink' | 'brown');
+        break;
+      case 'rain':
+        this.playRain();
+        break;
+      case 'forest':
+        this.playForest();
+        break;
+      case 'waves':
+        this.playWaves();
+        break;
+      default:
+        this.playNoiseSource('white');
+    }
   }
 
   stop() {
-    if (this.noiseSource) {
-      this.noiseSource.stop();
-      this.noiseSource.disconnect();
-      this.noiseSource = null;
-    }
+    // Stop all audio nodes
+    this.activeNodes.forEach(node => {
+        try {
+            if ((node as any).stop) {
+                (node as any).stop();
+            }
+            node.disconnect();
+        } catch (e) {
+            // Ignore errors if already stopped
+        }
+    });
+    this.activeNodes = [];
+
+    // Clear all intervals/timeouts
+    this.activeIntervals.forEach(id => clearTimeout(id));
+    this.activeIntervals = [];
+
     this.isPlaying = false;
   }
 
   setVolume(value: number) {
     this.volume = value;
-    if (this.noiseGain) {
-      this.noiseGain.gain.value = this.volume;
+    if (this.masterGain) {
+      this.masterGain.gain.value = this.volume;
     }
   }
 
@@ -194,9 +390,9 @@ export class NoiseGenerator {
 
   cleanup() {
     this.stop();
-    if (this.noiseContext) {
-      this.noiseContext.close();
-      this.noiseContext = null;
+    if (this.ctx) {
+      this.ctx.close();
+      this.ctx = null;
     }
   }
 }
