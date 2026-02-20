@@ -1,12 +1,6 @@
 import { AudioRecorder, NoiseGenerator } from './audio-utils';
-import { registerToolIcons } from '../../js/tool-icons';
-import { Mic, Square, Play, Pause, Download, Trash2, Zap, Activity, Mountain, CloudRain, Trees, Waves, Flame, Moon, Fan } from 'lucide';
 
-// Register icons
-registerToolIcons({
-  Mic, Square, Play, Pause, Download, Trash2, Zap, Activity, Mountain, CloudRain, Trees, Waves, Flame, Moon, Fan
-});
-
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const btnRecord = document.getElementById('btn-record') as HTMLButtonElement;
   const btnStopRecord = document.getElementById('btn-stop-record') as HTMLButtonElement;
@@ -52,7 +46,6 @@ export default function init() {
       recordingIndicator.classList.remove('hidden');
 
       drawVisualizer(canvas);
-
     } catch (err) {
       console.error('Error accessing microphone:', err);
       alert('Could not access microphone. Please ensure you have granted permission.');
@@ -91,12 +84,12 @@ export default function init() {
       ctx.strokeStyle = '#ef4444'; // Red color (Tailwind red-500)
       ctx.beginPath();
 
-      const sliceWidth = canvas.width * 1.0 / bufferLength;
+      const sliceWidth = (canvas.width * 1.0) / bufferLength;
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
         const v = dataArray[i] / 128.0;
-        const y = v * canvas.height / 2;
+        const y = (v * canvas.height) / 2;
 
         if (i === 0) {
           ctx.moveTo(x, y);
@@ -128,49 +121,42 @@ export default function init() {
     noRecordingsMsg.classList.add('hidden');
 
     const item = document.createElement('div');
-    item.className = 'flex items-center gap-3 p-3 bg-base-200 rounded-lg border border-base-300';
+    item.className = 'flex flex-col gap-2 p-3 bg-base-200 rounded-lg border border-base-300';
 
     const name = `Recording ${date.toLocaleTimeString()}`;
 
     item.innerHTML = `
-      <div class="flex-1 min-w-0">
-        <div class="font-medium text-sm truncate">${name}</div>
-        <div class="text-xs text-base-content/60">${date.toLocaleDateString()}</div>
+      <div class="flex items-center justify-between w-full">
+        <div class="min-w-0 overflow-hidden mr-2">
+          <div class="font-medium text-sm truncate" title="${name}">${name}</div>
+          <div class="text-xs text-base-content/60">${date.toLocaleDateString()}</div>
+        </div>
+        <div class="flex items-center gap-1 shrink-0">
+          <a href="${url}" download="recording-${date.getTime()}.webm" class="btn btn-ghost btn-xs btn-square" title="Download">
+            <i data-lucide="download" class="w-4 h-4"></i>
+          </a>
+          <button class="btn btn-ghost btn-xs btn-square text-error btn-delete" title="Delete">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+          </button>
+        </div>
       </div>
-      <audio src="${url}" controls class="h-8 w-32 sm:w-48"></audio>
-      <a href="${url}" download="recording-${date.getTime()}.webm" class="btn btn-ghost btn-xs btn-square" title="Download">
-        <i data-lucide="download" class="w-4 h-4"></i>
-      </a>
-      <button class="btn btn-ghost btn-xs btn-square text-error btn-delete" title="Delete">
-        <i data-lucide="trash-2" class="w-4 h-4"></i>
-      </button>
+      <audio src="${url}" controls class="w-full h-8"></audio>
     `;
 
     // Delete handler
     const deleteBtn = item.querySelector('.btn-delete');
     deleteBtn?.addEventListener('click', () => {
       item.remove();
-      if (recordingsList.children.length === 1) { // Only the "no recordings" message left
+      if (recordingsList.children.length === 1) {
         noRecordingsMsg.classList.remove('hidden');
       }
     });
 
-    recordingsList.insertBefore(item, recordingsList.firstChild?.nextSibling || null);
-
-    // Re-scan for icons in the new element
-    // (In a real framework this is automatic, here we might need to trigger icon replacement if not using an observer)
-    // For now, Lucide icons are replaced on load. Dynamic content needs manual replacement or an observer.
-    // We'll assume the main app handles this or we can manually trigger it if we had access to the lucide createIcons function.
-    // Since we don't have direct access to `lucide.createIcons` here easily without importing it,
-    // we rely on the fact that we used innerHTML with <i> tags.
-    // Ideally we should use `lucide.createIcons({ root: item })` but let's see if the template handles it.
-    // The template likely runs createIcons once. We might need to import `createIcons` from lucide.
+    recordingsList.insertBefore(item, recordingsList.firstElementChild?.nextElementSibling || null);
   };
-
 
   btnRecord.addEventListener('click', startRecording);
   btnStopRecord.addEventListener('click', stopRecording);
-
 
   // --- Noise Generator Logic ---
 
@@ -187,7 +173,7 @@ export default function init() {
     const currentNoiseType = noiseGenerator.getCurrentType();
 
     // Update buttons state
-    noiseBtns.forEach(btn => {
+    noiseBtns.forEach((btn) => {
       const type = btn.getAttribute('data-type');
       if (type === currentNoiseType) {
         btn.classList.add('btn-active', 'btn-primary');
@@ -210,11 +196,6 @@ export default function init() {
         ? `Selected: ${currentNoiseType.charAt(0).toUpperCase() + currentNoiseType.slice(1)} (Paused)`
         : 'Select a noise type to start';
     }
-
-    // We need to re-render icons because we changed innerHTML
-    // In a real app we'd import createIcons from lucide.
-    // For now, we rely on the fact that the user will likely click buttons which don't need immediate icon refresh
-    // OR we can try to trigger a refresh if we had the function.
   };
 
   const toggleNoise = () => {
@@ -233,7 +214,7 @@ export default function init() {
   };
 
   // Event Listeners for Noise
-  noiseBtns.forEach(btn => {
+  noiseBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const type = btn.getAttribute('data-type');
       if (type) {
