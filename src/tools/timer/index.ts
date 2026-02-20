@@ -2,13 +2,11 @@
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   let timeLeft = 0;
-  let timerId: number | null = null;
   let isRunning = false;
   let endTime: number | null = null;
   let audioCtx: AudioContext | null = null;
   let silentSource: AudioBufferSourceNode | null = null;
-
-  const STORAGE_KEY = 'tool-timer-state';
+  let displayIntervalId: number | null = null;
 
   const display = document.getElementById('timer-display') as HTMLElement;
   const status = document.getElementById('timer-status') as HTMLElement;
@@ -21,39 +19,109 @@ export default function init() {
 
   const storedDocTitle = document.title;
 
-  function saveState() {
-    const state = {
-      timeLeft,
-      isRunning,
-      endTime: isRunning ? endTime : null,
-      lastUpdate: Date.now(),
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  // Send message to service worker
+  function sendToSW(type: string, data: any = {}) {
+    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type, data });
+    }
   }
 
-  function loadState() {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
+  // Request state from service worker
+  function requestStateFromSW() {
+    sendToSW('timer-get-state');
+  }
 
-    try {
-      const state = JSON.parse(saved);
-      const now = Date.now();
+  // Handle messages from service worker
+  function handleSWMessage(event: MessageEvent) {
+    const { type, state } = event.data || {};
 
-      if (state.isRunning && state.endTime) {
-        const remaining = Math.round((state.endTime - now) / 1000);
-        if (remaining > 0) {
-          timeLeft = remaining;
-          endTime = state.endTime;
-          startTimer(true);
-        } else {
-          timeLeft = 0;
-          status.textContent = 'Finished while away';
+    switch (type) {
+      case 'timer-state':
+      case 'timer-update':
+      case 'timer-started':
+      case 'timer-tick':
+        timeLeft = state.timeLeft;
+        isRunning = state.isRunning;
+        endTime = state.endTime;
+        updateDisplay();
+        updateUI();
+        if (isRunning) {
+          startSilentAudio();
+          startDisplayInterval();
         }
+        break;
+
+      case 'timer-paused':
+        timeLeft = state.timeLeft;
+        isRunning = false;
+        endTime = null;
+        updateDisplay();
+        updateUI();
+        stopSilentAudio();
+        stopDisplayInterval();
+        break;
+
+      case 'timer-reset':
+        timeLeft = 0;
+        isRunning = false;
+        endTime = null;
+        updateDisplay();
+        updateUI();
+        stopSilentAudio();
+        stopDisplayInterval();
+        break;
+
+      case 'timer-finished':
+        timeLeft = 0;
+        isRunning = false;
+        endTime = null;
+        updateDisplay();
+        updateUI();
+        stopSilentAudio();
+        stopDisplayInterval();
+        playAlarmSound();
+        status.textContent = 'Finished';
+        break;
+    }
+  }
+
+  function updateUI() {
+    if (isRunning) {
+      startStopBtn.textContent = 'Pause';
+      startStopBtn.classList.remove('btn-primary');
+      startStopBtn.classList.add('btn-warning');
+      status.textContent = 'Running...';
+    } else {
+      startStopBtn.textContent = 'Start';
+      startStopBtn.classList.remove('btn-warning');
+      startStopBtn.classList.add('btn-primary');
+      if (timeLeft > 0) {
+        status.textContent = 'Paused';
       } else {
-        timeLeft = state.timeLeft || 0;
+        status.textContent = 'Ready';
       }
-    } catch (e) {
-      console.error('Failed to load timer state', e);
+    }
+  }
+
+  // Local display interval for smooth UI updates (SW only ticks every second)
+  function startDisplayInterval() {
+    if (displayIntervalId) return;
+
+    displayIntervalId = window.setInterval(() => {
+      if (endTime) {
+        const remaining = Math.round((endTime - Date.now()) / 1000);
+        if (remaining >= 0) {
+          timeLeft = remaining;
+          updateDisplay();
+        }
+      }
+    }, 100); // Update display 10x per second for smooth countdown
+  }
+
+  function stopDisplayInterval() {
+    if (displayIntervalId) {
+      clearInterval(displayIntervalId);
+      displayIntervalId = null;
     }
   }
 
@@ -174,99 +242,45 @@ export default function init() {
     }
   }
 
-  function notify(orgTimerVal: number = 0) {
-    const minute = Math.floor(orgTimerVal / 60);
-    const timeoutText = `Your ${minute ? minute + ' minute' : ''} countdown has ended.`;
-
-    if (Notification.permission === 'granted') {
-      if ('serviceWorker' in navigator) {
-        // Tap into the Service Worker registered by vite-plugin-pwa
-        navigator.serviceWorker.ready
-          .then((registration) => {
-            registration.showNotification('Timer Finished!', {
-              body: timeoutText,
-              icon: './favicon.png',
-              // @ts-ignore
-              vibrate: [200, 100, 200],
-            });
-          })
-          .catch((err) => {
-            console.error('Service Worker not ready, falling back:', err);
-            new Notification('Timer Finished!', { body: timeoutText, icon: './favicon.png' });
-          });
-      } else {
-        // Fallback for browsers that support Notifications but not Service Workers
-        new Notification('Timer Finished!', {
-          body: timeoutText,
-          icon: './favicon.png',
-        });
-      }
-    } else {
-      alert(timeoutText);
-    }
-  }
-
-  function stopTimer(isFinished = false) {
-    if (timerId) {
-      clearInterval(timerId);
-      timerId = null;
-    }
+  function stopTimer() {
+    // Send pause to service worker
+    sendToSW('timer-pause', { timeLeft });
     isRunning = false;
     endTime = null;
-    startStopBtn.textContent = 'Start';
-    startStopBtn.classList.remove('btn-warning');
-    startStopBtn.classList.add('btn-primary');
-    status.textContent = isFinished ? 'Finished' : 'Paused';
     stopSilentAudio();
-    saveState();
+    stopDisplayInterval();
+    updateUI();
   }
 
-  function startTimer(isResuming = false) {
+  function startTimer() {
     if (timeLeft <= 0) return;
 
+    const newEndTime = Date.now() + timeLeft * 1000;
+    endTime = newEndTime;
     isRunning = true;
-    if (!isResuming) {
-      endTime = Date.now() + timeLeft * 1000;
-    }
 
-    startStopBtn.textContent = 'Pause';
-    startStopBtn.classList.remove('btn-primary');
-    startStopBtn.classList.add('btn-warning');
-    status.textContent = 'Running...';
-
-    const orgTimerVal = isResuming ? 0 : timeLeft;
+    // Send start to service worker
+    sendToSW('timer-start', {
+      endTime: newEndTime,
+      originalTimeSet: timeLeft,
+      timeLeft,
+    });
 
     startSilentAudio();
-
-    timerId = window.setInterval(() => {
-      const now = Date.now();
-      if (endTime) {
-        timeLeft = Math.round((endTime - now) / 1000);
-      } else {
-        timeLeft--;
-      }
-
-      if (timeLeft <= 0) {
-        timeLeft = 0;
-        updateDisplay();
-        stopTimer(true);
-        playAlarmSound();
-        notify(orgTimerVal);
-      } else {
-        updateDisplay();
-        saveState();
-      }
-    }, 1000);
-
-    saveState();
+    startDisplayInterval();
+    updateUI();
   }
 
   function setTime(seconds: number) {
-    stopTimer();
+    sendToSW('timer-set', { timeLeft: seconds });
     timeLeft = seconds;
+    isRunning = false;
+    endTime = null;
+    stopSilentAudio();
+    stopDisplayInterval();
     updateDisplay();
+    updateUI();
     status.textContent = 'Ready';
-    saveState();
   }
 
   startStopBtn.addEventListener('click', () => {
@@ -278,11 +292,15 @@ export default function init() {
   });
 
   resetBtn.addEventListener('click', () => {
-    stopTimer();
+    sendToSW('timer-reset');
     timeLeft = 0;
+    isRunning = false;
+    endTime = null;
+    stopSilentAudio();
+    stopDisplayInterval();
     updateDisplay();
+    updateUI();
     status.textContent = 'Ready';
-    localStorage.removeItem(STORAGE_KEY);
   });
 
   setCustomBtn.addEventListener('click', () => {
@@ -299,13 +317,41 @@ export default function init() {
     });
   });
 
+  // Setup service worker message listener
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', handleSWMessage);
+
+    // Request current state when page loads
+    navigator.serviceWorker.ready.then(() => {
+      requestStateFromSW();
+    });
+  }
+
   requestNotificationPermission();
-  loadState();
   updateDisplay();
+
+  // Handle visibility changes - request state from SW when page becomes visible
+  function handleVisibilityChange() {
+    if (document.visibilityState === 'visible') {
+      requestStateFromSW();
+    }
+  }
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  // Handle focus events (additional reliability for some browsers)
+  function handleFocus() {
+    requestStateFromSW();
+  }
+  window.addEventListener('focus', handleFocus);
 
   return () => {
     stopSilentAudio();
-    if (timerId) clearInterval(timerId);
+    stopDisplayInterval();
     document.title = storedDocTitle;
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('focus', handleFocus);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+    }
   };
 }
