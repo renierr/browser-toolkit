@@ -165,6 +165,14 @@ export default function init(payload?: SharedFilesPayload) {
 
     const file = files[0];
     try {
+      // Check for binary content (null bytes) in the first 8KB
+      const buffer = await file.slice(0, 8192).arrayBuffer();
+      const view = new Uint8Array(buffer);
+      if (view.some((b) => b === 0)) {
+        showMessage('Binary file detected. Please upload a text file.', { type: 'warning' });
+        return;
+      }
+
       const text = await file.text();
       input.value = text;
       await updateHighlightedPreview(text);
