@@ -67,6 +67,10 @@ export default function init(payload?: SharedFilesPayload) {
     stopCamera();
     captureContainer.classList.add('hidden');
     editorContainer.classList.remove('hidden');
+    const dropzone = document.getElementById('dropzone');
+    if (dropzone) dropzone.classList.add('hidden');
+    const divider = document.querySelector('.divider');
+    if (divider) (divider as HTMLElement).style.display = 'none';
 
     // Initial corners (rectangle with margin)
     const margin = 0.1;
@@ -116,6 +120,7 @@ export default function init(payload?: SharedFilesPayload) {
     filterControls.classList.remove('hidden');
     perspectiveActions.classList.add('hidden');
     hintText.textContent = 'Choose a filter to enhance your document.';
+    cornerHandles.innerHTML = '';
     applyFilters();
   }
 
@@ -151,14 +156,18 @@ export default function init(payload?: SharedFilesPayload) {
   function updateHandles() {
     cornerHandles.innerHTML = '';
     const rect = canvas.getBoundingClientRect();
+    const wrapperRect = canvas.parentElement!.getBoundingClientRect();
     const scaleX = rect.width / canvas.width;
     const scaleY = rect.height / canvas.height;
+
+    const offsetX = rect.left - wrapperRect.left;
+    const offsetY = rect.top - wrapperRect.top;
 
     corners.forEach((p, i) => {
       const handle = document.createElement('div');
       handle.className = 'corner-handle';
-      handle.style.left = `${p.x * scaleX}px`;
-      handle.style.top = `${p.y * scaleY}px`;
+      handle.style.left = `${offsetX + p.x * scaleX}px`;
+      handle.style.top = `${offsetY + p.y * scaleY}px`;
 
       handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i));
 
@@ -207,6 +216,9 @@ export default function init(payload?: SharedFilesPayload) {
   // Simple bilinear interpolation approach for perspective warping
   function warpImage() {
     if (!originalImage) return;
+
+    // Redraw without overlay before reading pixels
+    ctx.drawImage(originalImage, 0, 0);
 
     // Define output size (estimate from average width/height of corners)
     const w1 = Math.hypot(corners[1].x - corners[0].x, corners[1].y - corners[0].y);
@@ -299,6 +311,10 @@ export default function init(payload?: SharedFilesPayload) {
     stopCamera();
     captureContainer.classList.remove('hidden');
     editorContainer.classList.add('hidden');
+    const dropzone = document.getElementById('dropzone');
+    if (dropzone) dropzone.classList.remove('hidden');
+    const divider = document.querySelector('.divider');
+    if (divider) (divider as HTMLElement).style.display = 'flex';
     cornerHandles.innerHTML = '';
     originalImage = null;
     startCamera();
