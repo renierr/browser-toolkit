@@ -157,6 +157,20 @@ export function detectFormat(input: string): SupportedFormat {
     return 'ini';
   }
 
+  // Python (calculated early to resolve conflicts with Markdown)
+  const pythonScore = [
+    /^\s*def\s+\w+\s*\([^)]*\)\s*(->[\s\w\[\],|]+)?\s*:/m.test(trimmed),
+    /^\s*class\s+\w+(\([^)]*\))?\s*:/m.test(trimmed),
+    /^\s*(from\s+[\w.]+\s+)?import\s+[\w.,\s]+$/m.test(trimmed) && !/[{};]/.test(trimmed),
+    /^\s*(if|elif|else|for|while|try|except|finally|with|match|case)\b[^{]*:/m.test(trimmed),
+    /__\w+__/.test(trimmed), // Dunder
+    /\bself\.\w+/.test(trimmed),
+    /^\s*@\w+(\.\w+)*(\([^)]*\))?\s*$/m.test(trimmed), // Decorators
+    /\b(print|len|range|str|int|float|list|dict|set|tuple|True|False|None)\b/.test(trimmed) && !/[;{}]/.test(trimmed),
+    /\bdef\s+__init__/.test(trimmed),
+    /:\s*$/.test(firstLine) && /^\s{4}\S/m.test(trimmed), // Indentation-based
+  ].filter(Boolean).length;
+
   // Markdown - multiple indicators
   const mdScore = [
     /^#{1,6}\s+\S/m.test(trimmed),           // Headers
@@ -175,6 +189,15 @@ export function detectFormat(input: string): SupportedFormat {
     if (/<[A-Z]\w*[\s/>]/.test(trimmed) || /^import\s+.+\s+from\s+['"]/.test(trimmed)) {
       return 'mdx';
     }
+
+    // Check for Python conflict
+    // Python comments (#) look like Markdown headers
+    // Python dunders (__init__) look like Markdown bold
+    // If it looks like Python and doesn't have explicit Markdown code blocks, prefer Python
+    if (pythonScore >= 2 && !/^```/m.test(trimmed)) {
+      return 'python';
+    }
+
     return 'markdown';
   }
 
@@ -206,20 +229,7 @@ export function detectFormat(input: string): SupportedFormat {
 
   if (bashScore >= 2) return 'bash';
 
-  // Python
-  const pythonScore = [
-    /^\s*def\s+\w+\s*\([^)]*\)\s*(->[\s\w\[\],|]+)?\s*:/m.test(trimmed),
-    /^\s*class\s+\w+(\([^)]*\))?\s*:/m.test(trimmed),
-    /^\s*(from\s+[\w.]+\s+)?import\s+[\w.,\s]+$/m.test(trimmed) && !/[{};]/.test(trimmed),
-    /^\s*(if|elif|else|for|while|try|except|finally|with|match|case)\b[^{]*:/m.test(trimmed),
-    /__\w+__/.test(trimmed), // Dunder
-    /\bself\.\w+/.test(trimmed),
-    /^\s*@\w+(\.\w+)*(\([^)]*\))?\s*$/m.test(trimmed), // Decorators
-    /\b(print|len|range|str|int|float|list|dict|set|tuple|True|False|None)\b/.test(trimmed) && !/[;{}]/.test(trimmed),
-    /\bdef\s+__init__/.test(trimmed),
-    /:\s*$/.test(firstLine) && /^\s{4}\S/m.test(trimmed), // Indentation-based
-  ].filter(Boolean).length;
-
+  // Python (score calculated earlier)
   if (pythonScore >= 2) return 'python';
 
   // Ruby
