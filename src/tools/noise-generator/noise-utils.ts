@@ -121,12 +121,22 @@ export class NoiseGenerator {
       const gain = this.ctx.createGain();
       gain.gain.value = 0.4;
 
+      // Slow modulation for intensity shifts
+      const intensityLfo = this.ctx.createOscillator();
+      intensityLfo.type = 'sine';
+      intensityLfo.frequency.value = 0.05;
+      const intensityGain = this.ctx.createGain();
+      intensityGain.gain.value = 0.15;
+      intensityLfo.connect(intensityGain);
+      intensityGain.connect(gain.gain);
+      intensityLfo.start();
+
       source.connect(filter);
       filter.connect(panner);
       panner.connect(gain);
       gain.connect(this.masterGain);
       source.start();
-      this.activeNodes.push(source, filter, panner, gain);
+      this.activeNodes.push(source, filter, panner, gain, intensityLfo, intensityGain);
     }
 
     // Layer 2: Brown noise (Deep Rumble)
@@ -154,37 +164,70 @@ export class NoiseGenerator {
       this.activeNodes.push(source, filter, panner, gain);
     }
 
-    // Layer 3: High-frequency "patter" (Filtered White Noise)
-    const whiteBuffer = this.createNoiseBuffer('white');
-    if (whiteBuffer) {
+    // Layer 3: Discrete Droplets (Simulated with short noise bursts)
+    const playDroplet = () => {
+      if (
+        !this.ctx ||
+        !this.masterGain ||
+        !this.isPlaying ||
+        (this.currentNoiseType !== 'rain' && this.currentNoiseType !== 'thunder')
+      )
+        return;
+
+      const t = this.ctx.currentTime;
+      const whiteBuffer = this.createNoiseBuffer('white');
+      if (!whiteBuffer) return;
+
       const source = this.ctx.createBufferSource();
       source.buffer = whiteBuffer;
-      source.loop = true;
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.value = 3000;
-      filter.Q.value = 1.0;
+      filter.frequency.setValueAtTime(2000 + Math.random() * 3000, t);
+      filter.Q.value = 2.0;
+
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = Math.random() * 1.8 - 0.9;
 
       const gain = this.ctx.createGain();
-      gain.gain.value = 0.05;
-
-      // Modulate the patter slightly
-      const lfo = this.ctx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.5;
-      const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = 0.02;
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-      lfo.start();
+      const duration = 0.01 + Math.random() * 0.03;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.05 + Math.random() * 0.1, t + 0.002);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
       source.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.masterGain);
-      source.start();
-      this.activeNodes.push(source, filter, gain, lfo, lfoGain);
-    }
+      filter.connect(panner);
+      panner.connect(gain);
+      gain.connect(this.masterGain!);
+
+      source.start(t, Math.random() * 9);
+      source.stop(t + duration + 0.1);
+
+      setTimeout(
+        () => {
+          source.disconnect();
+          filter.disconnect();
+          panner.disconnect();
+          gain.disconnect();
+        },
+        (duration + 0.2) * 1000
+      );
+    };
+
+    const scheduleDroplets = () => {
+      if (
+        !this.isPlaying ||
+        (this.currentNoiseType !== 'rain' && this.currentNoiseType !== 'thunder')
+      )
+        return;
+      const delay = 50 + Math.random() * 150;
+      const id = window.setTimeout(() => {
+        playDroplet();
+        scheduleDroplets();
+      }, delay);
+      this.activeIntervals.push(id);
+    };
+    scheduleDroplets();
   }
 
   private playWaves() {
@@ -641,29 +684,218 @@ export class NoiseGenerator {
     // 1. Rain (Base Layer)
     this.playRain();
 
-    // 2. Thunder (Random Deep Rumbling)
+    // 2. Thunder (Improved with Crack and Rumble)
     const playThunder = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying) return;
 
       const t = this.ctx.currentTime;
-      const buffer = this.createNoiseBuffer('brown');
-      if (!buffer) return;
+      const brownBuffer = this.createNoiseBuffer('brown');
+      const whiteBuffer = this.createNoiseBuffer('white');
+      if (!brownBuffer || !whiteBuffer) return;
 
-      const source = this.ctx.createBufferSource();
-      source.buffer = buffer;
+      const panValue = Math.random() * 1.6 - 0.8;
+      const duration = 6 + Math.random() * 8;
 
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(400, t);
-      filter.frequency.exponentialRampToValueAtTime(100, t + 4);
+      // Crack (Sharp initial burst)
+      if (Math.random() > 0.4) {
+        const crackSource = this.ctx.createBufferSource();
+        crackSource.buffer = whiteBuffer;
+        const crackFilter = this.ctx.createBiquadFilter();
+        crackFilter.type = 'bandpass';
+        crackFilter.frequency.setValueAtTime(800, t);
+        crackFilter.Q.value = 0.5;
+
+        const crackGain = this.ctx.createGain();
+        crackGain.gain.setValueAtTime(0, t);
+        crackGain.gain.linearRampToValueAtTime(0.3 + Math.random() * 0.3, t + 0.01);
+        crackGain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+
+        const crackPanner = this.ctx.createStereoPanner();
+        crackPanner.pan.value = panValue;
+
+        crackSource.connect(crackFilter);
+        crackFilter.connect(crackPanner);
+        crackPanner.connect(crackGain);
+        crackGain.connect(this.masterGain!);
+        crackSource.start(t, Math.random() * 5);
+        crackSource.stop(t + 0.6);
+      }
+
+      // Rumble (Deep rolling sound)
+      const rumbleSource = this.ctx.createBufferSource();
+      rumbleSource.buffer = brownBuffer;
+
+      const rumbleFilter = this.ctx.createBiquadFilter();
+      rumbleFilter.type = 'lowpass';
+      rumbleFilter.frequency.setValueAtTime(400, t);
+      rumbleFilter.frequency.exponentialRampToValueAtTime(80, t + duration);
+
+      const rumblePanner = this.ctx.createStereoPanner();
+      rumblePanner.pan.value = panValue;
+
+      const rumbleGain = this.ctx.createGain();
+      rumbleGain.gain.setValueAtTime(0, t);
+      rumbleGain.gain.linearRampToValueAtTime(0.5 + Math.random() * 0.5, t + 1.5);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      rumbleSource.connect(rumbleFilter);
+      rumbleFilter.connect(rumblePanner);
+      rumblePanner.connect(rumbleGain);
+      rumbleGain.connect(this.masterGain!);
+
+      rumbleSource.start(t, Math.random() * 5);
+      rumbleSource.stop(t + duration + 0.1);
+
+      setTimeout(
+        () => {
+          rumbleSource.disconnect();
+          rumbleFilter.disconnect();
+          rumblePanner.disconnect();
+          rumbleGain.disconnect();
+        },
+        (duration + 1) * 1000
+      );
+    };
+
+    const scheduleThunder = () => {
+      if (!this.isPlaying) return;
+      const delay = 12000 + Math.random() * 25000;
+      const id = window.setTimeout(() => {
+        playThunder();
+        scheduleThunder();
+      }, delay);
+      this.activeIntervals.push(id);
+    };
+
+    scheduleThunder();
+  }
+
+  private playCafe() {
+    if (!this.ctx || !this.masterGain) return;
+
+    // 1. Background Murmur (Simulated with multiple filtered noise layers)
+    const pinkBuffer = this.createNoiseBuffer('pink');
+    if (pinkBuffer) {
+      // Create 5 layers of murmur with different formant-like filters
+      for (let i = 0; i < 5; i++) {
+        const source = this.ctx.createBufferSource();
+        source.buffer = pinkBuffer;
+        source.loop = true;
+
+        const filter1 = this.ctx.createBiquadFilter();
+        filter1.type = 'bandpass';
+        filter1.frequency.value = 400 + Math.random() * 300;
+        filter1.Q.value = 2.0;
+
+        const filter2 = this.ctx.createBiquadFilter();
+        filter2.type = 'bandpass';
+        filter2.frequency.value = 1000 + Math.random() * 1000;
+        filter2.Q.value = 3.0;
+
+        const panner = this.ctx.createStereoPanner();
+        panner.pan.value = Math.random() * 1.6 - 0.8;
+
+        const gain = this.ctx.createGain();
+        gain.gain.value = 0.03;
+
+        // More complex modulation for each voice layer
+        const lfo1 = this.ctx.createOscillator();
+        lfo1.type = 'sine';
+        lfo1.frequency.value = 0.2 + Math.random() * 0.5;
+        const lfo2 = this.ctx.createOscillator();
+        lfo2.type = 'sine';
+        lfo2.frequency.value = 1.0 + Math.random() * 2.0;
+
+        const lfoGain1 = this.ctx.createGain();
+        lfoGain1.gain.value = 0.02;
+        const lfoGain2 = this.ctx.createGain();
+        lfoGain2.gain.value = 0.01;
+
+        lfo1.connect(lfoGain1);
+        lfoGain1.connect(gain.gain);
+        lfo2.connect(lfoGain2);
+        lfoGain2.connect(gain.gain);
+
+        lfo1.start();
+        lfo2.start();
+
+        source.connect(filter1);
+        filter1.connect(filter2);
+        filter2.connect(panner);
+        panner.connect(gain);
+        gain.connect(this.masterGain);
+        source.start(0, Math.random() * 10);
+        this.activeNodes.push(
+          source,
+          filter1,
+          filter2,
+          panner,
+          gain,
+          lfo1,
+          lfo2,
+          lfoGain1,
+          lfoGain2
+        );
+      }
+    }
+
+    // 2. Clinking sounds (Random oscillators + noise)
+    const playClink = () => {
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cafe')
+        return;
+
+      const t = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(2500 + Math.random() * 4000, t);
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.6 - 0.8;
 
       const gain = this.ctx.createGain();
-      const duration = 5 + Math.random() * 5;
+      const duration = 0.03 + Math.random() * 0.07;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.4 + Math.random() * 0.4, t + 1);
+      gain.gain.linearRampToValueAtTime(0.01 + Math.random() * 0.02, t + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      osc.connect(panner);
+      panner.connect(gain);
+      gain.connect(this.masterGain!);
+
+      osc.start(t);
+      osc.stop(t + duration + 0.1);
+
+      setTimeout(
+        () => {
+          osc.disconnect();
+          panner.disconnect();
+          gain.disconnect();
+        },
+        (duration + 0.2) * 1000
+      );
+    };
+
+    // 3. Muffled thuds/chair moves (Brown noise)
+    const playThud = () => {
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cafe')
+        return;
+      const t = this.ctx.currentTime;
+      const brownBuffer = this.createNoiseBuffer('brown');
+      if (!brownBuffer) return;
+
+      const source = this.ctx.createBufferSource();
+      source.buffer = brownBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 200 + Math.random() * 300;
+
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = Math.random() * 1.4 - 0.7;
+
+      const gain = this.ctx.createGain();
+      const duration = 0.2 + Math.random() * 0.4;
+      gain.gain.setValueAtTime(0, t);
+      gain.gain.linearRampToValueAtTime(0.05 + Math.random() * 0.05, t + 0.05);
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
       source.connect(filter);
@@ -685,105 +917,17 @@ export class NoiseGenerator {
       );
     };
 
-    const scheduleThunder = () => {
-      if (!this.isPlaying) return;
-      const delay = 10000 + Math.random() * 20000; // 10s to 30s
+    const scheduleCafeEvents = () => {
+      if (!this.isPlaying || this.currentNoiseType !== 'cafe') return;
+      const delay = 1000 + Math.random() * 5000;
       const id = window.setTimeout(() => {
-        playThunder();
-        scheduleThunder();
+        if (Math.random() > 0.4) playClink();
+        if (Math.random() > 0.7) playThud();
+        scheduleCafeEvents();
       }, delay);
       this.activeIntervals.push(id);
     };
-
-    scheduleThunder();
-  }
-
-  private playCafe() {
-    if (!this.ctx || !this.masterGain) return;
-
-    // 1. Background Murmur (Pink Noise with modulation to simulate speech)
-    const pinkBuffer = this.createNoiseBuffer('pink');
-    if (pinkBuffer) {
-      for (let i = 0; i < 3; i++) {
-        const source = this.ctx.createBufferSource();
-        source.buffer = pinkBuffer;
-        source.loop = true;
-
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'bandpass';
-        filter.frequency.value = 500 + i * 400;
-        filter.Q.value = 1.0;
-
-        const panner = this.ctx.createStereoPanner();
-        panner.pan.value = (i - 1) * 0.5;
-
-        const gain = this.ctx.createGain();
-        gain.gain.value = 0.05;
-
-        // Modulate gain to simulate voices
-        const lfo = this.ctx.createOscillator();
-        lfo.type = 'sine';
-        lfo.frequency.value = 0.5 + Math.random() * 1.5;
-        const lfoGain = this.ctx.createGain();
-        lfoGain.gain.value = 0.03;
-        lfo.connect(lfoGain);
-        lfoGain.connect(gain.gain);
-        lfo.start();
-
-        source.connect(filter);
-        filter.connect(panner);
-        panner.connect(gain);
-        gain.connect(this.masterGain);
-        source.start(0, Math.random() * 10);
-        this.activeNodes.push(source, filter, panner, gain, lfo, lfoGain);
-      }
-    }
-
-    // 2. Clinking sounds (Random oscillators)
-    const playClink = () => {
-      if (!this.ctx || !this.masterGain || !this.isPlaying) return;
-
-      const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2000 + Math.random() * 3000, t);
-
-      const panner = this.ctx.createStereoPanner();
-      panner.pan.value = Math.random() * 1.6 - 0.8;
-
-      const gain = this.ctx.createGain();
-      const duration = 0.05 + Math.random() * 0.1;
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.02 + Math.random() * 0.03, t + 0.005);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-      osc.connect(panner);
-      panner.connect(gain);
-      gain.connect(this.masterGain!);
-
-      osc.start(t);
-      osc.stop(t + duration + 0.1);
-
-      setTimeout(
-        () => {
-          osc.disconnect();
-          panner.disconnect();
-          gain.disconnect();
-        },
-        (duration + 0.2) * 1000
-      );
-    };
-
-    const scheduleClink = () => {
-      if (!this.isPlaying) return;
-      const delay = 2000 + Math.random() * 8000;
-      const id = window.setTimeout(() => {
-        playClink();
-        scheduleClink();
-      }, delay);
-      this.activeIntervals.push(id);
-    };
-    scheduleClink();
+    scheduleCafeEvents();
   }
 
   private playUnderwater() {
