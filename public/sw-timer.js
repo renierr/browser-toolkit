@@ -10,7 +10,7 @@ let timerState = {
   timeLeft: 0,
 };
 
-let checkIntervalId = null;
+let checkTimeoutId = null;
 
 // Load state from IndexedDB (more reliable than localStorage in SW)
 function openTimerDb() {
@@ -37,7 +37,7 @@ async function saveTimerState() {
       tx.onerror = () => reject(tx.error);
     });
   } catch (e) {
-    console.error('Failed to save timer state:', e);
+    console.error('[Timer SW] Failed to save timer state:', e);
   }
 }
 
@@ -56,7 +56,7 @@ async function loadTimerState() {
       req.onerror = () => reject(req.error);
     });
   } catch (e) {
-    console.error('Failed to load timer state:', e);
+    console.error('[Timer SW] Failed to load timer state:', e);
     return timerState;
   }
 }
@@ -82,6 +82,8 @@ async function showTimerNotification() {
   const minute = Math.floor(timerState.originalTimeSet / 60);
   const timeoutText = `Your ${minute ? minute + ' minute' : ''} countdown has ended.`;
 
+  console.log('[Timer SW] Showing notification');
+
   try {
     await self.registration.showNotification('Timer Finished!', {
       body: timeoutText,
@@ -94,14 +96,19 @@ async function showTimerNotification() {
         { action: 'dismiss', title: 'Dismiss' },
       ],
     });
+    console.log('[Timer SW] Notification shown successfully');
   } catch (e) {
-    console.error('Failed to show notification:', e);
+    console.error('[Timer SW] Failed to show notification:', e);
   }
 }
 
 // Check timer and handle completion
 async function checkTimer() {
+  // Reload state in case SW was restarted
+  await loadTimerState();
+
   if (!timerState.isRunning || !timerState.endTime) {
+    console.log('[Timer SW] Timer not running, stopping check');
     stopTimerCheck();
     return;
   }
@@ -111,6 +118,7 @@ async function checkTimer() {
 
   if (remaining <= 0) {
     // Timer finished!
+    console.log('[Timer SW] Timer finished!');
     timerState.isRunning = false;
     timerState.timeLeft = 0;
     timerState.endTime = null;
@@ -120,27 +128,30 @@ async function checkTimer() {
     await showTimerNotification();
     stopTimerCheck();
   } else {
-    // Still running, broadcast update
+    // Still running, broadcast update and schedule next check
     await broadcastState('timer-tick');
+    scheduleNextCheck();
   }
 }
 
-function startTimerCheck() {
-  if (checkIntervalId) return;
-
-  // Check every second
-  checkIntervalId = setInterval(() => {
+// Use recursive setTimeout instead of setInterval for better reliability
+function scheduleNextCheck() {
+  stopTimerCheck(); // Clear any existing timeout
+  checkTimeoutId = setTimeout(() => {
     checkTimer();
   }, 1000);
+}
 
-  // Immediate check
+function startTimerCheck() {
+  console.log('[Timer SW] Starting timer check');
+  // Immediate check, then schedule
   checkTimer();
 }
 
 function stopTimerCheck() {
-  if (checkIntervalId) {
-    clearInterval(checkIntervalId);
-    checkIntervalId = null;
+  if (checkTimeoutId) {
+    clearTimeout(checkTimeoutId);
+    checkTimeoutId = null;
   }
 }
 
@@ -148,8 +159,11 @@ function stopTimerCheck() {
 self.addEventListener('message', async (event) => {
   const { type, data } = event.data || {};
 
+  console.log('[Timer SW] Received message:', type, data);
+
   switch (type) {
     case 'timer-start': {
+      console.log('[Timer SW] Starting timer, endTime:', data.endTime);
       timerState.isRunning = true;
       timerState.endTime = data.endTime;
       timerState.originalTimeSet = data.originalTimeSet;

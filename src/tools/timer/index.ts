@@ -38,11 +38,17 @@ export default function init() {
   // Display update interval for smooth countdown
   let displayIntervalId: number | null = null;
 
+  // Fallback interval to check timer completion (in case SW doesn't respond)
+  let fallbackCheckId: number | null = null;
+
   // ==================== Service Worker Communication ====================
 
   function sendToSW(type: string, data: Record<string, unknown> = {}) {
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+      console.log('[Timer] Sending to SW:', type, data);
       navigator.serviceWorker.controller.postMessage({ type, data });
+    } else {
+      console.warn('[Timer] No SW controller available');
     }
   }
 
@@ -52,6 +58,10 @@ export default function init() {
 
   function handleSWMessage(event: MessageEvent) {
     const { type, state } = event.data || {};
+
+    // Only handle timer-related messages
+    if (!type || !type.startsWith('timer-')) return;
+
     if (!state) return;
 
     // Update local state from SW
@@ -69,20 +79,55 @@ export default function init() {
       case 'timer-tick':
       case 'timer-state':
       case 'timer-update':
-        if (isRunning) startDisplayInterval();
-        else stopDisplayInterval();
+        if (isRunning) {
+          startDisplayInterval();
+          startFallbackCheck();
+        } else {
+          stopDisplayInterval();
+          stopFallbackCheck();
+        }
         break;
 
       case 'timer-paused':
       case 'timer-reset':
         stopDisplayInterval();
+        stopFallbackCheck();
         break;
 
       case 'timer-finished':
         stopDisplayInterval();
+        stopFallbackCheck();
         playAlarmSound();
         status.textContent = 'Finished';
         break;
+    }
+  }
+
+  // Fallback: Check timer completion on client side in case SW misses it
+  function startFallbackCheck() {
+    if (fallbackCheckId) return;
+    fallbackCheckId = window.setInterval(() => {
+      if (endTime && Date.now() >= endTime) {
+        console.log('[Timer] Fallback: Timer finished on client side');
+        timeLeft = 0;
+        isRunning = false;
+        endTime = null;
+        updateDisplay();
+        updateUI();
+        stopDisplayInterval();
+        stopFallbackCheck();
+        playAlarmSound();
+        status.textContent = 'Finished';
+        // Also tell SW to update its state
+        sendToSW('timer-reset');
+      }
+    }, 500);
+  }
+
+  function stopFallbackCheck() {
+    if (fallbackCheckId) {
+      clearInterval(fallbackCheckId);
+      fallbackCheckId = null;
     }
   }
 
@@ -187,6 +232,8 @@ export default function init() {
     ensureAudioContext(); // Initialize audio on user gesture
 
     const newEndTime = Date.now() + timeLeft * 1000;
+    console.log('[Timer] Starting timer, endTime:', newEndTime);
+
     sendToSW('timer-start', {
       endTime: newEndTime,
       originalTimeSet: timeLeft,
@@ -198,6 +245,7 @@ export default function init() {
     endTime = newEndTime;
     updateUI();
     startDisplayInterval();
+    startFallbackCheck();
   }
 
   function pauseTimer() {
@@ -302,6 +350,7 @@ export default function init() {
 
   return () => {
     stopDisplayInterval();
+    stopFallbackCheck();
     document.title = storedDocTitle;
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     if ('serviceWorker' in navigator) {
