@@ -1,5 +1,5 @@
 import { showMessage } from '../../js/ui.ts';
-import { formatCode, minifyCode, detectFormat, type SupportedFormat } from './formatters.ts';
+import { formatCode, minifyCode, detectFormat, detectFormatFromExtension, type SupportedFormat } from './formatters.ts';
 import {
   generateHighlightedHtml,
   renderCodeToCanvasSimple,
@@ -175,7 +175,18 @@ export default function init(payload?: SharedFilesPayload) {
 
       const text = await file.text();
       input.value = text;
-      await updateHighlightedPreview(text);
+
+      // Try to detect format from extension
+      const detectedFormat = detectFormatFromExtension(file.name);
+      if (detectedFormat) {
+        formatSelect.value = detectedFormat;
+        updateButtonStates(detectedFormat);
+        updateDetectedFormatBadge(null); // Hide auto badge since we selected a format
+      } else {
+        formatSelect.value = 'auto';
+        // Let auto-detection happen in processCode or updateHighlightedPreview
+      }
+
       // Auto-format on upload
       setTimeout(() => processCode('format'), 0);
     } catch (err) {

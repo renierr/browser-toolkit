@@ -48,6 +48,55 @@ export type SupportedFormat =
   | 'text';
 
 /**
+ * Detect format from filename extension
+ */
+export function detectFormatFromExtension(filename: string): SupportedFormat | null {
+  const parts = filename.split('.');
+  if (parts.length === 1) {
+    if (filename.toLowerCase() === 'dockerfile') return 'dockerfile';
+    return null;
+  }
+
+  const ext = parts.pop()?.toLowerCase();
+  if (!ext) return null;
+
+  switch (ext) {
+    case 'json': return 'json';
+    case 'json5': return 'json5';
+    case 'xml': case 'svg': return 'xml';
+    case 'html': case 'htm': return 'html';
+    case 'vue': return 'vue';
+    case 'ts': case 'tsx': case 'mts': case 'cts': return 'typescript';
+    case 'js': case 'jsx': case 'mjs': case 'cjs': return 'javascript';
+    case 'css': return 'css';
+    case 'scss': case 'sass': return 'scss';
+    case 'less': return 'less';
+    case 'sql': return 'sql';
+    case 'java': return 'java';
+    case 'yaml': case 'yml': return 'yaml';
+    case 'md': case 'markdown': return 'markdown';
+    case 'mdx': return 'mdx';
+    case 'graphql': case 'gql': return 'graphql';
+    case 'c': case 'h': return 'c';
+    case 'cpp': case 'hpp': case 'cc': case 'cxx': return 'cpp';
+    case 'cs': return 'csharp';
+    case 'go': return 'go';
+    case 'rs': return 'rust';
+    case 'py': case 'pyw': return 'python';
+    case 'rb': return 'ruby';
+    case 'php': return 'php';
+    case 'swift': return 'swift';
+    case 'kt': case 'kts': return 'kotlin';
+    case 'sh': case 'bash': case 'zsh': return 'bash';
+    case 'ps1': case 'psm1': case 'psd1': return 'powershell';
+    case 'toml': return 'toml';
+    case 'ini': case 'cfg': case 'conf': case 'properties': return 'ini';
+    case 'txt': return 'text';
+    default: return null;
+  }
+}
+
+/**
  * Detect format from input string using pattern matching and scoring
  */
 export function detectFormat(input: string): SupportedFormat {
