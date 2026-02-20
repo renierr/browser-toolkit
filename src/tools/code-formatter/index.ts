@@ -7,6 +7,7 @@ import {
   type ExportOptions,
 } from './export.ts';
 import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
+import { setupFileDropzone } from '../../js/file-utils.ts';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 // noinspection JSUnusedGlobalSymbols
@@ -159,6 +160,24 @@ export default function init(payload?: SharedFilesPayload) {
     }
   };
 
+  const handleFileUpload = async (files: FileList | File[]) => {
+    if (files.length === 0) return;
+
+    const file = files[0];
+    try {
+      const text = await file.text();
+      input.value = text;
+      await updateHighlightedPreview(text);
+      // Auto-format on upload
+      setTimeout(() => processCode('format'), 0);
+    } catch (err) {
+      showMessage('Failed to read file', { type: 'alert' });
+    }
+  };
+
+  // Setup file dropzone
+  setupFileDropzone('dropzone', 'file-input', handleFileUpload);
+
   // Event listeners for format/minify buttons
   btnFormat?.addEventListener('click', () => processCode('format'));
   btnMinify?.addEventListener('click', () => processCode('minify'));
@@ -291,17 +310,7 @@ export default function init(payload?: SharedFilesPayload) {
   // Handle shared content
   if (payload) {
     if (payload.sharedFiles && payload.sharedFiles.length > 0) {
-      // Read the first file as text
-      const file = payload.sharedFiles[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const text = e.target?.result as string;
-        if (text) {
-          input.value = text;
-          updateHighlightedPreview(text);
-        }
-      };
-      reader.readAsText(file);
+      handleFileUpload(payload.sharedFiles);
     }
   }
 
