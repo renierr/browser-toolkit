@@ -1,0 +1,121 @@
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body p-2 md:p-4">
+    <h2 class="card-title text-2xl font-bold mb-4">
+      <i data-lucide="scan" class="w-6 h-6"></i>
+      Document Scanner
+    </h2>
+    <p class="text-sm opacity-70 mb-6">
+      Capture or upload a document to crop, fix perspective, and enhance.
+    </p>
+
+    <div id="capture-container" class="flex flex-col gap-4">
+      <div id="camera-view" class="relative bg-black rounded-lg overflow-hidden aspect-[3/4] max-h-[60vh] flex items-center justify-center">
+        <video id="video" class="w-full max-h-72 object-contain" autoplay playsinline></video>
+        <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
+        <div id="camera-error" class="absolute inset-0 flex flex-col items-center justify-center bg-base-300 text-center p-4 hidden">
+          <i data-lucide="camera-off" class="w-12 h-12 mb-2 opacity-50"></i>
+          <p class="font-bold">Camera access denied or unavailable</p>
+          <p class="text-sm opacity-70">Please check permissions or use the upload option below.</p>
+        </div>
+      </div>
+
+      <div class="flex gap-2 justify-center">
+        <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg">
+          <i data-lucide="camera" class="w-8 h-8"></i>
+        </button>
+        <button id="btn-switch-camera" class="btn btn-ghost btn-circle shadow-md">
+          <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+        </button>
+      </div>
+
+    </div>
+
+    <div class="divider">OR</div>
+
+    <div id="dropzone"
+         class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 transition-colors p-6 hover:bg-base-300">
+      <div class="flex flex-col items-center gap-2 text-center">
+        <i data-lucide="upload-cloud" class="w-10 h-10 opacity-30"></i>
+        <p class="text-lg font-medium">Upload Image</p>
+        <p class="text-sm opacity-50">Click or drag images here</p>
+      </div>
+      <input type="file" id="image-input" class="hidden" accept="image/*" />
+    </div>
+
+
+    <div id="editor-container" class="hidden flex flex-col gap-4">
+      <div class="flex flex-wrap gap-2 justify-between items-center">
+        <div class="flex gap-2">
+          <button id="btn-reset" class="btn btn-sm btn-ghost text-error">
+            <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Start Over
+          </button>
+        </div>
+        <div class="flex gap-2">
+          <button id="btn-download" class="btn btn-sm btn-primary">
+            <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download
+          </button>
+        </div>
+      </div>
+
+      <div class="sticky top-0 z-20 bg-base-200/95 backdrop-blur p-2 rounded-box shadow-md flex flex-wrap gap-2 items-center justify-center border border-base-300">
+        <div class="join">
+          <button class="btn btn-sm join-item btn-active" id="btn-mode-perspective" title="Fix Perspective">
+            <i data-lucide="box" class="w-4 h-4 mr-1"></i> Perspective
+          </button>
+          <button class="btn btn-sm join-item" id="btn-mode-filter" title="Enhance Colors">
+            <i data-lucide="wand-2" class="w-4 h-4 mr-1"></i> Enhance
+          </button>
+        </div>
+
+        <div id="filter-controls" class="hidden flex items-center gap-4 px-2">
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-bold uppercase opacity-50">Filter:</label>
+            <select id="filter-select" class="select select-bordered select-xs">
+              <option value="none">Original</option>
+              <option value="grayscale">Grayscale</option>
+              <option value="b&w">High Contrast B&W</option>
+              <option value="clean">Clean White</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="relative bg-base-300 rounded-xl overflow-hidden flex items-center justify-center border border-base-300 shadow-inner min-h-[300px]" id="canvas-wrapper">
+        <canvas id="editor-canvas" class="max-w-full max-h-[70vh] shadow-2xl transition-all duration-300"></canvas>
+        <div id="corner-handles" class="absolute inset-0 pointer-events-none">
+          <!-- Handles will be injected here by TS -->
+        </div>
+      </div>
+
+      <div id="perspective-actions" class="flex justify-center p-2">
+        <button id="btn-apply-perspective" class="btn btn-sm btn-success text-white gap-2 px-8">
+          <i data-lucide="check" class="w-4 h-4"></i> Apply Perspective
+        </button>
+      </div>
+
+      <div class="text-center text-xs opacity-50 pb-2" id="hint-text">
+        Drag the corners to match the document boundaries.
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .corner-handle {
+    width: 24px;
+    height: 24px;
+    background: white;
+    border: 3px solid #3b82f6; /* primary color */
+    border-radius: 50%;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    cursor: move;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    z-index: 30;
+  }
+  .corner-handle:active {
+    scale: 1.2;
+    background: #3b82f6;
+  }
+</style>

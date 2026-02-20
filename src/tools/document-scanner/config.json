@@ -1,0 +1,10 @@
+{
+  "name": "Document Scanner",
+  "description": "Scan documents, correct perspective, and apply clean filters",
+  "icon": "scan",
+  "sectionId": "images",
+  "order": 10,
+  "shareTarget": {
+    "accept": ["image/*"]
+  }
+}
