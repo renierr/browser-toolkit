@@ -1,8 +1,8 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">Focus Noise</h2>
+    <h2 class="card-title text-2xl font-bold mb-4">Focus Noise & Breathing</h2>
     <p class="text-base-content/70 mb-6">
-      Generate continuous background noise for focus or relaxation.
+      Generate continuous background noise for focus or relaxation, with a guided breathing tool.
     </p>
 
     <!-- Noise Type Selection -->
@@ -66,10 +66,36 @@
     </div>
 
     <!-- Play/Stop Controls -->
-    <div class="card-actions justify-center gap-2">
+    <div class="card-actions justify-center gap-2 mb-8">
       <button id="btn-noise-toggle" class="btn btn-primary flex-1">
         <i data-lucide="play" class="w-4 h-4 mr-2"></i>
         Start Noise
+      </button>
+    </div>
+
+    <!-- Breathing Guide -->
+    <div class="divider">Breathing Guide</div>
+    <div class="flex flex-col items-center gap-6 mt-4">
+      <!-- Mode Selection -->
+      <div class="flex flex-wrap justify-center gap-2">
+        <button class="btn btn-sm btn-outline breathing-mode-btn" data-mode="box">Box (4-4-4-4)</button>
+        <button class="btn btn-sm btn-outline breathing-mode-btn" data-mode="relax">Relax (4-7-8)</button>
+        <button class="btn btn-sm btn-outline breathing-mode-btn" data-mode="calm">Calm (5-5)</button>
+      </div>
+
+      <!-- Visualization Circle -->
+      <div class="relative flex items-center justify-center w-48 h-48">
+        <!-- Outer Circle (Guideline) -->
+        <div class="absolute inset-0 rounded-full border-4 border-primary/20 scale-100"></div>
+        <!-- Inner Circle (Expanding) -->
+        <div id="breathing-circle" class="w-24 h-24 rounded-full bg-primary/60 transition-all flex items-center justify-center">
+          <span id="breathing-text" class="text-primary-content font-bold text-lg pointer-events-none">Start</span>
+        </div>
+      </div>
+
+      <!-- Toggle Button -->
+      <button id="btn-breathing-toggle" class="btn btn-outline btn-sm">
+        <i data-lucide="wind" class="w-4 h-4 mr-1"></i> Enable Breathing Guide
       </button>
     </div>
 
