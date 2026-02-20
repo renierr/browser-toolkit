@@ -2,6 +2,6 @@
   "name": "Focus Noise Generator",
   "description": "Generate continuous background noise for focus or relaxation (White, Pink, Brown, Rain, Forest, etc.).",
   "icon": "waves",
-  "sectionId": "general",
+  "sectionId": "audio",
   "order": 7
 }

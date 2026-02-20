@@ -2,7 +2,7 @@
   "name": "Audio Recorder",
   "description": "Record audio, visualize waveforms, and save as WebM/WAV.",
   "icon": "mic",
-  "sectionId": "general",
+  "sectionId": "audio",
   "order": 6,
   "shareTarget": {
     "accept": ["audio/*"]
