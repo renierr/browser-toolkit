@@ -5,6 +5,8 @@ export default function init() {
   let timerId: number | null = null;
   let isRunning = false;
   let endTime: number | null = null;
+  let audioCtx: AudioContext | null = null;
+  let silentSource: AudioBufferSourceNode | null = null;
 
   const STORAGE_KEY = 'tool-timer-state';
 
@@ -53,6 +55,72 @@ export default function init() {
     } catch (e) {
       console.error('Failed to load timer state', e);
     }
+  }
+
+  function startSilentAudio() {
+    // Initialize AudioContext on first user interaction (required by browsers)
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      audioCtx = new AudioContext();
+    }
+
+    // If it was suspended, wake it up
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    // Create the silent loop if it isn't already running
+    if (!silentSource) {
+      // Create a 1-sample empty buffer (virtually zero CPU/memory footprint)
+      const buffer = audioCtx.createBuffer(1, 1, 22050);
+      silentSource = audioCtx.createBufferSource();
+      silentSource.buffer = buffer;
+      silentSource.loop = true;
+      silentSource.connect(audioCtx.destination);
+      silentSource.start();
+    }
+  }
+
+  function stopSilentAudio() {
+    if (silentSource) {
+      silentSource.stop();
+      silentSource.disconnect();
+      silentSource = null;
+    }
+    // Suspend the context to save battery when the timer isn't running
+    if (audioCtx && audioCtx.state === 'running') {
+      audioCtx.suspend();
+    }
+  }
+
+  function playAlarmSound() {
+    if (!audioCtx) return;
+
+    // Wake up the context just in case it was suspended
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    // Create the oscillator (the sound source) and gain node (the volume control)
+    const oscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    // Set the tone type and frequency (800Hz is a classic digital alarm beep)
+    // You can change 'sine' to 'square', 'sawtooth', or 'triangle' for harsher sounds
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
+
+    // Connect the nodes: Oscillator -> Gain -> Destination (Speakers)
+    oscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    // Set volume to 100% right now, then fade out to near-zero over 1 second
+    gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 1);
+
+    // Play the beep for exactly 1 second
+    oscillator.start(audioCtx.currentTime);
+    oscillator.stop(audioCtx.currentTime + 1);
   }
 
   function updateDisplay() {
@@ -122,6 +190,7 @@ export default function init() {
     startStopBtn.classList.remove('btn-warning');
     startStopBtn.classList.add('btn-primary');
     status.textContent = isFinished ? 'Finished' : 'Paused';
+    stopSilentAudio();
     saveState();
   }
 
@@ -140,6 +209,8 @@ export default function init() {
 
     const orgTimerVal = isResuming ? 0 : timeLeft;
 
+    startSilentAudio();
+
     timerId = window.setInterval(() => {
       const now = Date.now();
       if (endTime) {
@@ -152,6 +223,7 @@ export default function init() {
         timeLeft = 0;
         updateDisplay();
         stopTimer(true);
+        playAlarmSound();
         notify(orgTimerVal);
       } else {
         updateDisplay();
@@ -205,6 +277,7 @@ export default function init() {
   updateDisplay();
 
   return () => {
+    stopSilentAudio();
     if (timerId) clearInterval(timerId);
     document.title = storedDocTitle;
   };
