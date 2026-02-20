@@ -4,7 +4,7 @@ import { showMessage } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload: SharedFilesPayload) {
+export default function init(payload?: SharedFilesPayload) {
   const inputText = document.getElementById('svg-input') as HTMLTextAreaElement;
   const outputText = document.getElementById('svg-output') as HTMLTextAreaElement;
   const btnOptimize = document.getElementById('btn-optimize') as HTMLButtonElement;
@@ -292,7 +292,7 @@ export default function init(payload: SharedFilesPayload) {
     inputText.focus();
   };
 
-  const handleFileUpload = async (files: FileList) => {
+  const handleFileUpload = async (files: FileList | File[]) => {
     const file = files[0];
     if (!file) return;
 
@@ -312,8 +312,12 @@ export default function init(payload: SharedFilesPayload) {
   setupFileDropzone('dropzone', 'file-input', handleFileUpload);
 
   if (payload?.sharedFiles?.length) {
-    const files = payload.sharedFiles;
-    handleFileUpload(files as unknown as FileList);
+    const svgFiles = payload.sharedFiles.filter(
+      (f) => f.type === 'image/svg+xml' || f.name?.toLowerCase().endsWith('.svg')
+    );
+    if (svgFiles.length > 0) {
+      handleFileUpload(svgFiles);
+    }
   }
 
   // Event Listeners
