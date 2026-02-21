@@ -1,3 +1,4 @@
+import { acquireWakeLock } from '../../js/utils';
 
 // noinspection JSUnusedGlobalSymbols
 /**
@@ -31,6 +32,9 @@ export default function init() {
   let timeLeft = 0;
   let isRunning = false;
   let endTime: number | null = null;
+
+  // Wake Lock State
+  let releaseWakeLock: (() => void) | null = null;
 
   // Audio context for alarm (lazily initialized on user interaction)
   let audioCtx: AudioContext | null = null;
@@ -107,11 +111,13 @@ export default function init() {
           startFallbackCheck();
           startSWKeepalive();
           startSilentAudio();
+          updateWakeLock();
         } else {
           stopDisplayInterval();
           stopFallbackCheck();
           stopSWKeepalive();
           stopSilentAudio();
+          updateWakeLock();
         }
         break;
 
@@ -121,6 +127,7 @@ export default function init() {
         stopFallbackCheck();
         stopSWKeepalive();
         stopSilentAudio();
+        updateWakeLock();
         break;
 
       case 'timer-finished':
@@ -128,6 +135,7 @@ export default function init() {
         stopFallbackCheck();
         stopSWKeepalive();
         stopSilentAudio();
+        updateWakeLock();
         playAlarmSound();
         status.textContent = 'Finished';
         break;
@@ -147,6 +155,7 @@ export default function init() {
         updateUI();
         stopDisplayInterval();
         stopFallbackCheck();
+        updateWakeLock();
         playAlarmSound();
         status.textContent = 'Finished';
         // Also tell SW to update its state
@@ -228,6 +237,17 @@ export default function init() {
         // Ignore errors on disconnect
       }
       silentAudioGain = null;
+    }
+  }
+
+  // ==================== Wake Lock ====================
+
+  function updateWakeLock() {
+    if (isRunning && !releaseWakeLock) {
+      releaseWakeLock = acquireWakeLock();
+    } else if (!isRunning && releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
     }
   }
 
@@ -348,6 +368,7 @@ export default function init() {
     startFallbackCheck();
     startSWKeepalive();
     startSilentAudio();
+    updateWakeLock();
   }
 
   function pauseTimer() {
@@ -360,6 +381,7 @@ export default function init() {
     stopDisplayInterval();
     stopSWKeepalive();
     stopSilentAudio();
+    updateWakeLock();
   }
 
   function resetTimer() {
@@ -374,6 +396,7 @@ export default function init() {
     stopDisplayInterval();
     stopSWKeepalive();
     stopSilentAudio();
+    updateWakeLock();
   }
 
   function setTime(seconds: number) {
@@ -388,6 +411,7 @@ export default function init() {
     stopDisplayInterval();
     stopSWKeepalive();
     stopSilentAudio();
+    updateWakeLock();
   }
 
   // ==================== Notifications ====================
@@ -461,6 +485,7 @@ export default function init() {
     stopFallbackCheck();
     stopSWKeepalive();
     stopSilentAudio();
+    if (releaseWakeLock) releaseWakeLock();
     document.title = storedDocTitle;
     document.removeEventListener('visibilitychange', handleVisibilityChange);
     if ('serviceWorker' in navigator) {

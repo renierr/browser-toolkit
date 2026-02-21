@@ -330,13 +330,13 @@ export function debounce<T extends (...args: any[]) => any>(fn: T, wait = 0, imm
       clearTimeout(timer);
       timer = null;
       if (lastArgs) {
-        result = fn.apply(lastThis, lastArgs);
+        const res = fn.apply(lastThis, lastArgs);
         lastArgs = null;
         lastThis = null;
-        return result;
+        return res;
       }
     }
-    return result;
+    return undefined;
   };
 
   return debounced as ((...args: Parameters<T>) => ReturnType<T> | undefined) & {
@@ -391,5 +391,63 @@ export function throttleTrailing<T extends (...args: any[]) => any>(fn: T, wait 
   return throttled as ((...args: Parameters<T>) => void) & {
     cancel: () => void;
     flush: () => ReturnType<T> | undefined;
+  };
+}
+
+let wakeLockSentinel: WakeLockSentinel | null = null;
+let wakeLockCount = 0;
+
+async function requestWakeLockInternal() {
+  if (!('wakeLock' in navigator) || wakeLockCount === 0 || wakeLockSentinel) return;
+  try {
+    const lock = await navigator.wakeLock.request('screen');
+    // Check again after await to prevent race conditions
+    if (wakeLockCount === 0) {
+      lock.release();
+      return;
+    }
+    wakeLockSentinel = lock;
+    wakeLockSentinel.addEventListener('release', () => {
+      wakeLockSentinel = null;
+    });
+    console.log('Wake Lock acquired');
+  } catch (err: any) {
+    console.warn(`Wake Lock failed: ${err.name}, ${err.message}`);
+  }
+}
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible' && wakeLockCount > 0) {
+    requestWakeLockInternal();
+  }
+};
+
+/**
+ * Acquires a screen wake lock, preventing the device from sleeping.
+ * Returns a function to release the wake lock.
+ * Safe to call multiple times; the lock is only released when all callers have released it.
+ */
+export function acquireWakeLock(): () => void {
+  wakeLockCount++;
+
+  if (wakeLockCount === 1) {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    requestWakeLockInternal();
+  }
+
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    wakeLockCount--;
+
+    if (wakeLockCount === 0) {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      if (wakeLockSentinel) {
+        wakeLockSentinel.release();
+        wakeLockSentinel = null;
+      }
+      console.log('Wake Lock fully released');
+    }
   };
 }

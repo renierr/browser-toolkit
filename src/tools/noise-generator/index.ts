@@ -1,4 +1,5 @@
 import { NoiseGenerator } from './noise-utils';
+import { acquireWakeLock } from '../../js/utils';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -16,9 +17,12 @@ export default function init() {
 
   const noiseGenerator = new NoiseGenerator(parseInt(noiseVolumeSlider.value) / 100);
 
+  // Wake Lock State
+  let releaseWakeLock: (() => void) | null = null;
+
   // Breathing Guide State
   let isBreathingActive = false;
-  let breathingMode: 'box' | 'relax' | 'calm' = 'box';
+  let breathingMode: 'box' | 'relax' | 'calm' = 'relax';
   let breathingTimeout: number | null = null;
 
   const breathingPatterns = {
@@ -37,6 +41,15 @@ export default function init() {
       { text: 'Inhale', duration: 5000, scale: 2 },
       { text: 'Exhale', duration: 5000, scale: 1 },
     ],
+  };
+
+  const updateWakeLock = () => {
+    if (isBreathingActive && !releaseWakeLock) {
+      releaseWakeLock = acquireWakeLock();
+    } else if (!isBreathingActive && releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+    }
   };
 
   const updateBreathingUI = () => {
@@ -93,6 +106,7 @@ export default function init() {
       }
     }
     updateBreathingUI();
+    updateWakeLock();
   };
 
   const updateNoiseVolume = () => {
@@ -190,6 +204,7 @@ export default function init() {
   // Cleanup
   return () => {
     if (breathingTimeout) clearTimeout(breathingTimeout);
+    if (releaseWakeLock) releaseWakeLock();
     noiseGenerator.cleanup();
   };
 }
