@@ -1,6 +1,31 @@
 import type { Point } from './perspective';
 
 /**
+ * Applies a simple 3x3 box blur to a grayscale image.
+ */
+function boxBlur(pixels: Uint8Array, width: number, height: number): Uint8Array {
+  const blurred = new Uint8Array(width * height);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0;
+      let count = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+            sum += pixels[ny * width + nx];
+            count++;
+          }
+        }
+      }
+      blurred[y * width + x] = sum / count;
+    }
+  }
+  return blurred;
+}
+
+/**
  * Finds the corners of a document-like shape in an image.
  * This is a simplified version of document detection.
  * It uses color/intensity thresholding and basic contour analysis.
@@ -20,26 +45,27 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
     grayscale[i / 4] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
   }
 
-  // Step 2: Simple Sobel-ish edge detection
+  // Step 1.5: Apply a small blur to reduce noise
+  const blurredGrayscale = boxBlur(grayscale, width, height);
+
+  // Step 2: Simple Sobel-ish edge detection (using abs(gx) + abs(gy) for speed)
   const edges = new Uint8Array(width * height);
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
       const idx = y * width + x;
-      const gx =
-        -grayscale[idx - width - 1] +
-        grayscale[idx - width + 1] -
-        2 * grayscale[idx - 1] +
-        2 * grayscale[idx + 1] -
-        grayscale[idx + width - 1] +
-        grayscale[idx + width + 1];
-      const gy =
-        -grayscale[idx - width - 1] -
-        2 * grayscale[idx - width] -
-        grayscale[idx - width + 1] +
-        grayscale[idx + width - 1] +
-        2 * grayscale[idx + width] +
-        grayscale[idx + width + 1];
-      edges[idx] = Math.min(255, Math.sqrt(gx * gx + gy * gy));
+      const p00 = blurredGrayscale[idx - width - 1];
+      const p01 = blurredGrayscale[idx - width];
+      const p02 = blurredGrayscale[idx - width + 1];
+      const p10 = blurredGrayscale[idx - 1];
+      const p12 = blurredGrayscale[idx + 1];
+      const p20 = blurredGrayscale[idx + width - 1];
+      const p21 = blurredGrayscale[idx + width];
+      const p22 = blurredGrayscale[idx + width + 1];
+
+      const gx = (p02 + 2 * p12 + p22) - (p00 + 2 * p10 + p20);
+      const gy = (p20 + 2 * p21 + p22) - (p00 + 2 * p01 + p02);
+
+      edges[idx] = Math.min(255, Math.abs(gx) + Math.abs(gy)); // Faster approximation
     }
   }
 

@@ -7,8 +7,12 @@ export function drawLiveOverlay(
   vWidth: number,
   vHeight: number
 ) {
-  canvas.width = video.clientWidth;
-  canvas.height = video.clientHeight;
+  // Only resize if dimensions actually changed
+  if (canvas.width !== video.clientWidth || canvas.height !== video.clientHeight) {
+    canvas.width = video.clientWidth;
+    canvas.height = video.clientHeight;
+  }
+
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -19,11 +23,9 @@ export function drawLiveOverlay(
 
   let scale, offsetX = 0, offsetY = 0;
   if (vAspect > cAspect) {
-    // Video is wider than container (object-cover scales by height)
     scale = canvas.height / vHeight;
     offsetX = (canvas.width - vWidth * scale) / 2;
   } else {
-    // Video is taller than container (object-cover scales by width)
     scale = canvas.width / vWidth;
     offsetY = (canvas.height - vHeight * scale) / 2;
   }

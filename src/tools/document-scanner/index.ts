@@ -38,6 +38,8 @@ export default function init(payload?: SharedFilesPayload) {
 
   let detectionInterval: number | null = null;
   const cameraOverlay = document.getElementById('camera-overlay') as HTMLCanvasElement;
+  const detectionCanvas = document.createElement('canvas');
+  const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
 
   async function startCamera() {
     stream = await startCameraUtil(video, currentFacingMode, stream);
@@ -59,17 +61,18 @@ export default function init(payload?: SharedFilesPayload) {
       if (!vWidth || !vHeight) return;
 
       // Downscale for detection performance
-      const scale = Math.min(1, 400 / Math.max(vWidth, vHeight));
+      const scale = Math.min(1, 300 / Math.max(vWidth, vHeight));
       const dWidth = Math.floor(vWidth * scale);
       const dHeight = Math.floor(vHeight * scale);
 
-      const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = dWidth;
-      tempCanvas.height = dHeight;
-      const tCtx = tempCanvas.getContext('2d')!;
-      tCtx.drawImage(video, 0, 0, dWidth, dHeight);
+      if (detectionCanvas.width !== dWidth || detectionCanvas.height !== dHeight) {
+        detectionCanvas.width = dWidth;
+        detectionCanvas.height = dHeight;
+      }
 
-      const detected = detectDocumentCorners(tempCanvas);
+      dCtx.drawImage(video, 0, 0, dWidth, dHeight);
+
+      const detected = detectDocumentCorners(detectionCanvas);
 
       // Upscale corners back to video resolution
       const upscaled = detected?.map(p => ({
@@ -78,7 +81,7 @@ export default function init(payload?: SharedFilesPayload) {
       })) || null;
 
       drawLiveOverlay(cameraOverlay, video, upscaled, vWidth, vHeight);
-    }, 150);
+    }, 100); // Increased frequency for smoother preview
   }
 
   function stopLiveDetection() {
