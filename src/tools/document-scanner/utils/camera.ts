@@ -8,7 +8,12 @@ export async function startCamera(
   }
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode },
+      video: {
+        facingMode,
+        width: { ideal: 2160 },
+        height: { ideal: 3840 },
+        aspectRatio: { ideal: 0.707 } // A4 Aspect Ratio
+      },
       audio: false,
     });
     videoEl.srcObject = stream;

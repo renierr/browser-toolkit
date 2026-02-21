@@ -14,16 +14,27 @@ export function drawLiveOverlay(
 
   if (!detectedCorners) return;
 
-  const scaleX = canvas.width / vWidth;
-  const scaleY = canvas.height / vHeight;
+  const vAspect = vWidth / vHeight;
+  const cAspect = canvas.width / canvas.height;
+
+  let scale, offsetX = 0, offsetY = 0;
+  if (vAspect > cAspect) {
+    // Video is wider than container (object-cover scales by height)
+    scale = canvas.height / vHeight;
+    offsetX = (canvas.width - vWidth * scale) / 2;
+  } else {
+    // Video is taller than container (object-cover scales by width)
+    scale = canvas.width / vWidth;
+    offsetY = (canvas.height - vHeight * scale) / 2;
+  }
 
   ctx.strokeStyle = '#3b82f6';
   ctx.lineWidth = 3;
   ctx.setLineDash([5, 5]);
   ctx.beginPath();
-  ctx.moveTo(detectedCorners[0].x * scaleX, detectedCorners[0].y * scaleY);
+  ctx.moveTo(detectedCorners[0].x * scale + offsetX, detectedCorners[0].y * scale + offsetY);
   for (let i = 1; i < 4; i++) {
-    ctx.lineTo(detectedCorners[i].x * scaleX, detectedCorners[i].y * scaleY);
+    ctx.lineTo(detectedCorners[i].x * scale + offsetX, detectedCorners[i].y * scale + offsetY);
   }
   ctx.closePath();
   ctx.stroke();

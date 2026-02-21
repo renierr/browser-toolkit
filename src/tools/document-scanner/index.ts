@@ -54,19 +54,31 @@ export default function init(payload?: SharedFilesPayload) {
     detectionInterval = window.setInterval(() => {
       if (video.paused || video.ended) return;
 
-      const width = video.videoWidth;
-      const height = video.videoHeight;
-      if (!width || !height) return;
+      const vWidth = video.videoWidth;
+      const vHeight = video.videoHeight;
+      if (!vWidth || !vHeight) return;
+
+      // Downscale for detection performance
+      const scale = Math.min(1, 400 / Math.max(vWidth, vHeight));
+      const dWidth = Math.floor(vWidth * scale);
+      const dHeight = Math.floor(vHeight * scale);
 
       const tempCanvas = document.createElement('canvas');
-      tempCanvas.width = width;
-      tempCanvas.height = height;
+      tempCanvas.width = dWidth;
+      tempCanvas.height = dHeight;
       const tCtx = tempCanvas.getContext('2d')!;
-      tCtx.drawImage(video, 0, 0);
+      tCtx.drawImage(video, 0, 0, dWidth, dHeight);
 
       const detected = detectDocumentCorners(tempCanvas);
-      drawLiveOverlay(cameraOverlay, video, detected, width, height);
-    }, 200);
+
+      // Upscale corners back to video resolution
+      const upscaled = detected?.map(p => ({
+        x: p.x / scale,
+        y: p.y / scale
+      })) || null;
+
+      drawLiveOverlay(cameraOverlay, video, upscaled, vWidth, vHeight);
+    }, 150);
   }
 
   function stopLiveDetection() {
@@ -79,11 +91,36 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   btnCapture.addEventListener('click', () => {
+    const vWidth = video.videoWidth;
+    const vHeight = video.videoHeight;
+    const cWidth = video.clientWidth;
+    const cHeight = video.clientHeight;
+
+    const vAspect = vWidth / vHeight;
+    const cAspect = cWidth / cHeight;
+
+    let sWidth, sHeight, sx, sy;
+
+    if (vAspect > cAspect) {
+      // Video is wider than container (object-cover crops sides)
+      sHeight = vHeight;
+      sWidth = vHeight * cAspect;
+      sx = (vWidth - sWidth) / 2;
+      sy = 0;
+    } else {
+      // Video is taller than container (object-cover crops top/bottom)
+      sWidth = vWidth;
+      sHeight = vWidth / cAspect;
+      sx = 0;
+      sy = (vHeight - sHeight) / 2;
+    }
+
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = video.videoWidth;
-    tempCanvas.height = video.videoHeight;
+    tempCanvas.width = sWidth;
+    tempCanvas.height = sHeight;
     const tCtx = tempCanvas.getContext('2d')!;
-    tCtx.drawImage(video, 0, 0);
+    tCtx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+
     const img = new Image();
     img.src = tempCanvas.toDataURL('image/png');
     img.onload = () => {
@@ -119,12 +156,14 @@ export default function init(payload?: SharedFilesPayload) {
 
     // Try auto-detection
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = img.width;
-    tempCanvas.height = img.height;
+    const scale = Math.min(1, 800 / Math.max(img.width, img.height));
+    tempCanvas.width = img.width * scale;
+    tempCanvas.height = img.height * scale;
     const tCtx = tempCanvas.getContext('2d')!;
-    tCtx.drawImage(img, 0, 0);
+    tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
     const detected = detectDocumentCorners(tempCanvas);
-    corners = detected || defaultCorners;
+
+    corners = detected?.map(p => ({ x: p.x / scale, y: p.y / scale })) || defaultCorners;
 
     enterPerspectiveMode();
   }
