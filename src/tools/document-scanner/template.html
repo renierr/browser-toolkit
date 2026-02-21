@@ -11,7 +11,7 @@
     <div id="capture-container" class="flex flex-col gap-4">
       <!-- Forced Portrait Aspect Ratio (A4: 1/1.414) -->
       <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden aspect-[1/1.414] max-h-[70vh] w-full max-w-sm mx-auto flex items-center justify-center shadow-inner border border-base-300">
-        <video id="video" class="w-full h-full object-cover" autoplay playsinline></video>
+        <video id="video" class="w-full h-full object-cover" autoplay playsinline style="will-change: transform;"></video>
         <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
         <div id="camera-error" class="absolute inset-0 flex flex-col items-center justify-center bg-base-300 text-center p-4 hidden">
           <i data-lucide="camera-off" class="w-12 h-12 mb-2 opacity-50"></i>
