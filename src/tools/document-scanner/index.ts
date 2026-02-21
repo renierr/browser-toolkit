@@ -64,7 +64,6 @@ export default function init(payload?: SharedFilesPayload) {
   async function startCamera() {
     stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
 
-    // Adjust container aspect ratio to match video stream
     video.onloadedmetadata = () => {
       const aspect = video.videoWidth / video.videoHeight;
       cameraView.style.aspectRatio = aspect.toString();
@@ -191,15 +190,17 @@ export default function init(payload?: SharedFilesPayload) {
     const tempCanvas = document.createElement('canvas');
     const tCtx = tempCanvas.getContext('2d')!;
 
-    // Fix for mobile devices where video might be landscape but UI is portrait
-    if (isPortrait && vWidth > vHeight) {
+    // If we requested portrait but got landscape (common on Android), rotate it.
+    // Also rotate if we requested landscape but got portrait.
+    const needsRotation = (isPortrait && vWidth > vHeight) || (!isPortrait && vHeight > vWidth);
+
+    if (needsRotation) {
       tempCanvas.width = vHeight;
       tempCanvas.height = vWidth;
       tCtx.translate(vHeight / 2, vWidth / 2);
       tCtx.rotate(Math.PI / 2);
       tCtx.drawImage(video, -vWidth / 2, -vHeight / 2);
 
-      // Rotate corners if they were detected
       if (lastDetectedCorners) {
         lastDetectedCorners = lastDetectedCorners.map(p => ({
           x: vHeight - p.y,

@@ -8,18 +8,23 @@ export async function startCamera(
     prevStream.getTracks().forEach((t) => t.stop());
   }
   try {
-    const width = isPortrait ? 2160 : 3840;
-    const height = isPortrait ? 3840 : 2160;
+    // Requesting specific dimensions and aspect ratio hints the browser
+    // to provide the stream in the desired orientation.
+    const width = isPortrait ? { ideal: 2160, min: 720 } : { ideal: 3840, min: 1280 };
+    const height = isPortrait ? { ideal: 3840, min: 1280 } : { ideal: 2160, min: 720 };
+    const aspectRatio = isPortrait ? { ideal: 9/16 } : { ideal: 16/9 };
 
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode,
-        width: { ideal: width },
-        height: { ideal: height },
+        width,
+        height,
+        aspectRatio,
         frameRate: { ideal: 30, max: 60 }
       },
       audio: false,
     });
+
     videoEl.srcObject = stream;
     // Explicitly play to ensure the smoothest start
     videoEl.play().catch(e => console.warn("Auto-play prevented:", e));
