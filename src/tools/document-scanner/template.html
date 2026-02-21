@@ -15,22 +15,22 @@
         <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
 
         <!-- Guided Lines Overlay -->
-        <div id="guided-lines" class="absolute inset-0 pointer-events-none opacity-30">
-          <div class="absolute top-1/4 left-0 w-full h-px bg-white"></div>
-          <div class="absolute top-1/2 left-0 w-full h-px bg-white"></div>
-          <div class="absolute top-3/4 left-0 w-full h-px bg-white"></div>
-          <div class="absolute left-1/4 top-0 h-full w-px bg-white"></div>
-          <div class="absolute left-1/2 top-0 h-full w-px bg-white"></div>
-          <div class="absolute left-3/4 top-0 h-full w-px bg-white"></div>
+        <div id="guided-lines" class="absolute inset-0 pointer-events-none opacity-40">
+          <div class="absolute top-1/4 left-0 w-full border-t-2 border-dashed border-white/40"></div>
+          <div class="absolute top-1/2 left-0 w-full border-t-2 border-dashed border-white/40"></div>
+          <div class="absolute top-3/4 left-0 w-full border-t-2 border-dashed border-white/40"></div>
+          <div class="absolute left-1/4 top-0 h-full border-l-2 border-dashed border-white/40"></div>
+          <div class="absolute left-1/2 top-0 h-full border-l-2 border-dashed border-white/40"></div>
+          <div class="absolute left-3/4 top-0 h-full border-l-2 border-dashed border-white/40"></div>
         </div>
 
         <!-- Level Indicator -->
         <div id="level-indicator" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none transition-opacity duration-300 opacity-0 z-10">
-          <div class="relative w-20 h-20 border border-white/30 rounded-full flex items-center justify-center">
-            <div class="absolute inset-0 border border-white/10 rounded-full scale-50"></div>
-            <div class="absolute w-full h-px bg-white/20"></div>
-            <div class="absolute h-full w-px bg-white/20"></div>
-            <div id="level-dot" class="w-5 h-5 bg-success rounded-full transition-transform duration-75 shadow-lg border border-white/50"></div>
+          <div class="relative w-24 h-24 border-2 border-white/40 rounded-full flex items-center justify-center">
+            <div class="absolute inset-0 border-2 border-white/20 rounded-full scale-50"></div>
+            <div class="absolute w-full h-0.5 bg-white/30"></div>
+            <div class="absolute h-full w-0.5 bg-white/30"></div>
+            <div id="level-dot" class="w-6 h-6 bg-success rounded-full transition-transform duration-75 shadow-lg border-2 border-white/60"></div>
           </div>
         </div>
 
@@ -126,6 +126,14 @@
           <div id="corner-handles" class="relative pointer-events-none w-full h-full" style="grid-area: 1/1;">
             <!-- Handles will be injected here by TS -->
           </div>
+          <!-- Magnifier -->
+          <div id="magnifier" class="absolute w-32 h-32 rounded-full border-4 border-primary shadow-2xl overflow-hidden pointer-events-none hidden z-50 bg-white">
+            <canvas id="magnifier-canvas" class="w-full h-full"></canvas>
+            <div class="absolute inset-0 flex items-center justify-center">
+              <div class="w-full h-px bg-primary/50"></div>
+              <div class="h-full w-px bg-primary/50 absolute"></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -149,22 +157,49 @@
 
 <style>
   .corner-handle {
-    width: 32px;
-    height: 32px;
-    background: white;
-    border: 3px solid #3b82f6; /* primary color */
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: 2px solid #3b82f6; /* primary color */
     border-radius: 50%;
     position: absolute;
     transform: translate(-50%, -50%);
     pointer-events: auto;
     cursor: move;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
     z-index: 30;
     touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .corner-handle:active {
-    scale: 1.2;
+
+  .corner-handle::before,
+  .corner-handle::after {
+    content: '';
+    position: absolute;
     background: #3b82f6;
+  }
+
+  .corner-handle::before {
+    width: 100%;
+    height: 1px;
+  }
+
+  .corner-handle::after {
+    width: 1px;
+    height: 100%;
+  }
+
+  .corner-handle:active {
+    scale: 1.5;
+    border-color: white;
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+  }
+
+  .corner-handle:active::before,
+  .corner-handle:active::after {
+    background: white;
   }
 
   /* Orientation classes */

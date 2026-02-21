@@ -20,7 +20,7 @@ export function drawLiveOverlay(
 
   // Draw the border with a glow effect
   ctx.strokeStyle = '#3b82f6';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 6; // Thicker
   ctx.lineJoin = 'round';
   ctx.shadowBlur = 10;
   ctx.shadowColor = '#3b82f6';
@@ -36,12 +36,20 @@ export function drawLiveOverlay(
   // Reset shadow for other drawings
   ctx.shadowBlur = 0;
 
-  // Draw corner points
-  ctx.fillStyle = 'white';
+  // Draw corner points (matching the new handle style: hollow with cross)
   corners.forEach(p => {
+    ctx.strokeStyle = 'white';
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.arc(p.x, p.y, 8, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Crosshair
+    ctx.beginPath();
+    ctx.moveTo(p.x - 12, p.y);
+    ctx.lineTo(p.x + 12, p.y);
+    ctx.moveTo(p.x, p.y - 12);
+    ctx.lineTo(p.x, p.y + 12);
     ctx.stroke();
   });
 }
@@ -50,9 +58,14 @@ export function drawPerspectiveOverlay(
   ctx: CanvasRenderingContext2D,
   corners: Point[]
 ) {
+  ctx.save();
   ctx.strokeStyle = '#3b82f6';
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 6; // Thicker
   ctx.lineJoin = 'round';
+
+  // Make perspective lines dotted/dashed
+  ctx.setLineDash([15, 10]);
+
   ctx.beginPath();
   ctx.moveTo(corners[0].x, corners[0].y);
   for (let i = 1; i < 4; i++) {
@@ -63,6 +76,7 @@ export function drawPerspectiveOverlay(
 
   ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
   ctx.fill();
+  ctx.restore();
 }
 
 export function updateCornerHandles(

@@ -46,6 +46,9 @@ export default function init(payload?: SharedFilesPayload) {
   const levelDot = document.getElementById('level-dot')!;
   const pageList = document.getElementById('page-list')!;
   const dropzoneContainer = document.getElementById('dropzone-container')!;
+  const magnifier = document.getElementById('magnifier')!;
+  const magnifierCanvas = document.getElementById('magnifier-canvas') as HTMLCanvasElement;
+  const mCtx = magnifierCanvas.getContext('2d')!;
 
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
@@ -184,10 +187,10 @@ export default function init(payload?: SharedFilesPayload) {
     levelDot.style.transform = `translate(${xPos}px, ${yPos}px)`;
 
     if (Math.abs(xTilt) < 2 && Math.abs(yTilt) < 2) {
-      levelDot.classList.replace('bg-success', 'bg-primary');
+      levelDot.classList.replace('bg-primary', 'bg-success');
       levelDot.classList.add('scale-125');
     } else {
-      levelDot.classList.replace('bg-primary', 'bg-success');
+      levelDot.classList.replace('bg-success', 'bg-primary');
       levelDot.classList.remove('scale-125');
     }
   }
@@ -443,6 +446,38 @@ export default function init(payload?: SharedFilesPayload) {
     target.addEventListener('pointermove', onMove);
     target.addEventListener('pointerup', onEnd);
     target.addEventListener('pointercancel', onEnd);
+
+    magnifier.classList.remove('hidden');
+    updateMagnifier(e);
+  }
+
+  function updateMagnifier(e: PointerEvent) {
+    if (activeHandle === null || currentPageIndex === -1) return;
+    const page = pages[currentPageIndex];
+    const rect = canvas.getBoundingClientRect();
+
+    // Calculate position on canvas
+    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+    // Position magnifier above the finger/cursor
+    const magSize = 128;
+    const zoom = 2;
+    magnifier.style.left = `${e.clientX - rect.left}px`;
+    magnifier.style.top = `${e.clientY - rect.top - magSize}px`;
+
+    magnifierCanvas.width = magSize;
+    magnifierCanvas.height = magSize;
+
+    mCtx.clearRect(0, 0, magSize, magSize);
+    mCtx.drawImage(
+      page.originalImage,
+      x - (magSize / 2) / zoom,
+      y - (magSize / 2) / zoom,
+      magSize / zoom,
+      magSize / zoom,
+      0, 0, magSize, magSize
+    );
   }
 
   function onMove(e: PointerEvent) {
@@ -461,6 +496,7 @@ export default function init(payload?: SharedFilesPayload) {
     };
 
     updateEditor();
+    updateMagnifier(e);
   }
 
   function onEnd(e: PointerEvent) {
@@ -471,6 +507,7 @@ export default function init(payload?: SharedFilesPayload) {
     target.removeEventListener('pointercancel', onEnd);
     activeHandle = null;
     activePointerId = null;
+    magnifier.classList.add('hidden');
   }
 
   function warpImage() {
