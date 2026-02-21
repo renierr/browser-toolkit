@@ -44,7 +44,9 @@ export default function init(payload?: SharedFilesPayload) {
 
   async function startCamera() {
     stream = await startCameraUtil(video, currentFacingMode, stream);
-    startLiveDetection();
+    if (checkLiveDetection.checked) {
+      startLiveDetection();
+    }
   }
 
   function stopCamera() {
@@ -58,6 +60,7 @@ export default function init(payload?: SharedFilesPayload) {
       if (video.paused || video.ended || !checkLiveDetection.checked) {
         const oCtx = cameraOverlay.getContext('2d');
         if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+        if (!checkLiveDetection.checked) stopLiveDetection();
         return;
       }
 
@@ -123,6 +126,14 @@ export default function init(payload?: SharedFilesPayload) {
     const oCtx = cameraOverlay.getContext('2d');
     if (oCtx && cameraOverlay) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
   }
+
+  checkLiveDetection.addEventListener('change', () => {
+    if (checkLiveDetection.checked) {
+      startLiveDetection();
+    } else {
+      stopLiveDetection();
+    }
+  });
 
   btnCapture.addEventListener('click', () => {
     const vWidth = video.videoWidth;
