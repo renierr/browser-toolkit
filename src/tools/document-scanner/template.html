@@ -29,17 +29,15 @@
         </div>
 
         <div class="flex gap-2 justify-center">
-          <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg">
+          <button id="btn-switch-camera" class="btn btn-ghost btn-circle shadow-md" title="Switch Camera">
+            <i data-lucide="switch-camera" class="w-6 h-6"></i>
+          </button>
+          <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg" title="Capture">
             <i data-lucide="camera" class="w-8 h-8"></i>
           </button>
-          <div class="flex flex-col gap-2">
-            <button id="btn-switch-camera" class="btn btn-ghost btn-circle shadow-md" title="Switch Camera">
-              <i data-lucide="refresh-cw" class="w-6 h-6"></i>
-            </button>
-            <button id="btn-rotate-view" class="btn btn-ghost btn-circle shadow-md" title="Toggle Orientation">
-              <i data-lucide="rotate-cw" class="w-6 h-6"></i>
-            </button>
-          </div>
+          <button id="btn-rotate-view" class="btn btn-ghost btn-circle shadow-md" title="Toggle Orientation">
+            <i data-lucide="rotate-cw" class="w-6 h-6"></i>
+          </button>
         </div>
       </div>
 
@@ -84,7 +82,7 @@
 
         <div id="filter-controls" class="hidden flex items-center gap-4 px-2">
           <div class="flex items-center gap-2">
-            <label class="text-xs font-bold uppercase opacity-50">Filter:</label>
+            <label class="text-xs font-bold uppercase opacity-50" for="filter-select">Filter:</label>
             <select id="filter-select" class="select select-bordered select-xs">
               <option value="none">Original</option>
               <option value="grayscale">Grayscale</option>
@@ -95,7 +93,7 @@
         </div>
       </div>
 
-      <div class="checkerboard-bg relative bg-base-300 rounded-xl flex items-center justify-center border border-base-300 shadow-inner min-h-[300px] touch-none p-8" id="canvas-wrapper">
+      <div class="checkerboard-bg relative bg-base-300 rounded-xl flex items-center justify-center border border-base-300 shadow-inner min-h-75 touch-none p-8" id="canvas-wrapper">
         <div class="grid place-items-center relative">
           <canvas id="editor-canvas" class="max-w-full max-h-[70vh] shadow-2xl block" style="grid-area: 1/1;"></canvas>
           <div id="corner-handles" class="relative pointer-events-none w-full h-full" style="grid-area: 1/1;">
