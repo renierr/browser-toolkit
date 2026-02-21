@@ -2,21 +2,13 @@ import type { SharedFilesPayload } from '../../js/share-target';
 import { warp, type Point } from './utils/perspective';
 import { applyFilters as applyFiltersUtil } from './utils/filters';
 import { startCamera as startCameraUtil, stopCamera as stopCameraUtil } from './utils/camera';
-import { detectDocumentCorners } from './utils/detection';
-import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
-import { drawLiveOverlay, drawPerspectiveOverlay, updateCornerHandles } from './utils/ui';
+import { detectDocumentCorners, detectCornersOnImage } from './utils/detection';
+import { setupFileDropzone } from '../../js/file-utils.ts';
+import { drawLiveOverlay, drawPerspectiveOverlay, updateCornerHandles, updateMagnifier, renderPageList as renderPageListUtil } from './utils/ui';
+import { startLevelSensor } from './utils/sensors';
+import { generateAndDownloadPDF } from './utils/pdf';
+import type { ScannedPage } from './types';
 import Sortable from 'sortablejs';
-import mupdf from 'mupdf';
-import { addImageToPDFDocument } from '../../js/mupdf-utils.ts';
-import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
-
-interface ScannedPage {
-  id: string;
-  originalImage: HTMLImageElement;
-  processedCanvas: HTMLCanvasElement;
-  corners: Point[];
-  filter: 'none' | 'grayscale' | 'b&w' | 'clean';
-}
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -59,6 +51,7 @@ export default function init(payload?: SharedFilesPayload) {
   let activePointerId: number | null = null;
   let isFilterMode = false;
   let lastDetectedCorners: Point[] | null = null;
+  let stopLevelSensor: (() => void) | null = null;
 
   // --- Camera Logic ---
 
@@ -75,13 +68,30 @@ export default function init(payload?: SharedFilesPayload) {
     if (checkLiveDetection.checked) {
       startLiveDetection();
     }
-    startLevelSensor();
+    stopLevelSensor = startLevelSensor(
+      isPortrait,
+      (xPos, yPos, isLevel) => {
+        levelDot.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        if (isLevel) {
+          levelDot.classList.replace('bg-primary', 'bg-success');
+          levelDot.classList.add('scale-125');
+        } else {
+          levelDot.classList.replace('bg-success', 'bg-primary');
+          levelDot.classList.remove('scale-125');
+        }
+      },
+      () => levelIndicator.classList.remove('opacity-0')
+    );
   }
 
   function stopCamera() {
     stream = stopCameraUtil(stream);
     stopLiveDetection();
-    stopLevelSensor();
+    if (stopLevelSensor) {
+      stopLevelSensor();
+      stopLevelSensor = null;
+    }
+    levelIndicator.classList.add('opacity-0');
   }
 
   function startLiveDetection() {
@@ -160,59 +170,6 @@ export default function init(payload?: SharedFilesPayload) {
     if (oCtx && cameraOverlay) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
   }
 
-  // --- Level Sensor Logic ---
-
-  function handleOrientation(event: DeviceOrientationEvent) {
-    const beta = event.beta;
-    const gamma = event.gamma;
-    if (beta === null || gamma === null) return;
-
-    levelIndicator.classList.remove('opacity-0');
-
-    let xTilt = gamma;
-    let yTilt = beta;
-
-    if (!isPortrait) {
-      xTilt = beta;
-      yTilt = -gamma;
-    }
-
-    const maxTilt = 20;
-    const xPerc = Math.max(-maxTilt, Math.min(maxTilt, xTilt)) / maxTilt;
-    const yPerc = Math.max(-maxTilt, Math.min(maxTilt, yTilt)) / maxTilt;
-
-    const xPos = xPerc * 40;
-    const yPos = yPerc * 40;
-
-    levelDot.style.transform = `translate(${xPos}px, ${yPos}px)`;
-
-    if (Math.abs(xTilt) < 2 && Math.abs(yTilt) < 2) {
-      levelDot.classList.replace('bg-primary', 'bg-success');
-      levelDot.classList.add('scale-125');
-    } else {
-      levelDot.classList.replace('bg-success', 'bg-primary');
-      levelDot.classList.remove('scale-125');
-    }
-  }
-
-  function startLevelSensor() {
-    if (typeof DeviceOrientationEvent !== 'undefined' && typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-      (DeviceOrientationEvent as any).requestPermission()
-        .then((response: string) => {
-          if (response === 'granted') {
-            window.addEventListener('deviceorientation', handleOrientation);
-          }
-        });
-    } else {
-      window.addEventListener('deviceorientation', handleOrientation);
-    }
-  }
-
-  function stopLevelSensor() {
-    window.removeEventListener('deviceorientation', handleOrientation);
-    levelIndicator.classList.add('opacity-0');
-  }
-
   checkLiveDetection.addEventListener('change', () => {
     if (checkLiveDetection.checked) {
       startLiveDetection();
@@ -262,26 +219,13 @@ export default function init(payload?: SharedFilesPayload) {
     if (detectedCorners) {
       initialCorners = detectedCorners;
     } else {
-      // Default to whole image if no edges found
-      const defaultCorners = [
+      const detected = detectCornersOnImage(img);
+      initialCorners = detected || [
         { x: 0, y: 0 },
         { x: img.width, y: 0 },
         { x: img.width, y: img.height },
         { x: 0, y: img.height },
       ];
-
-      const tempCanvas = document.createElement('canvas');
-      const scale = Math.min(1, 800 / Math.max(img.width, img.height));
-      tempCanvas.width = img.width * scale;
-      tempCanvas.height = img.height * scale;
-      const tCtx = tempCanvas.getContext('2d')!;
-      tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-      const detected = detectDocumentCorners(tempCanvas);
-
-      initialCorners = detected?.map(p => ({
-        x: (p.x / tempCanvas.width) * img.width,
-        y: (p.y / tempCanvas.height) * img.height
-      })) || defaultCorners;
     }
 
     const newPage: ScannedPage = {
@@ -305,41 +249,11 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function renderPageList() {
-    pageList.innerHTML = '';
-    pages.forEach((page, index) => {
-      const card = document.createElement('div');
-      card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${
-        index === currentPageIndex ? 'active border-primary ring-2 ring-primary/20' : 'border-base-300'
-      }`;
-      card.dataset.index = index.toString();
-
-      const thumb = document.createElement('img');
-      thumb.src = page.processedCanvas.toDataURL('image/jpeg', 0.5);
-      thumb.className = 'w-full h-full object-contain pointer-events-none bg-white';
-
-      card.innerHTML = `
-        <div class="absolute top-1 right-1 z-10">
-          <button class="btn btn-circle btn-error btn-xs btn-remove-page" data-index="${index}">
-            <i data-lucide="x" class="w-3 h-3"></i>
-          </button>
-        </div>
-        <div class="absolute bottom-1 right-1 bg-base-300/90 px-1.5 rounded text-[10px] font-bold z-10">
-          ${index + 1}
-        </div>
-      `;
-      card.prepend(thumb);
-
-      card.addEventListener('click', (e) => {
-        if ((e.target as HTMLElement).closest('.btn-remove-page')) return;
-        currentPageIndex = index;
-        renderPageList();
-        enterPerspectiveMode();
-      });
-
-      pageList.appendChild(card);
+    renderPageListUtil(pageList, pages, currentPageIndex, (index) => {
+      currentPageIndex = index;
+      renderPageList();
+      enterPerspectiveMode();
     });
-
-    (window as any).lucide?.createIcons();
   }
 
   const sortable = Sortable.create(pageList, {
@@ -452,36 +366,7 @@ export default function init(payload?: SharedFilesPayload) {
     target.addEventListener('pointercancel', onEnd);
 
     magnifier.classList.remove('hidden');
-    updateMagnifier(e);
-  }
-
-  function updateMagnifier(e: PointerEvent) {
-    if (activeHandle === null || currentPageIndex === -1) return;
-    const page = pages[currentPageIndex];
-    const rect = canvas.getBoundingClientRect();
-
-    // Calculate position on canvas
-    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-
-    // Position magnifier above the finger/cursor
-    const magSize = 128;
-    const zoom = 2;
-    magnifier.style.left = `${e.clientX - rect.left}px`;
-    magnifier.style.top = `${e.clientY - rect.top - magSize}px`;
-
-    magnifierCanvas.width = magSize;
-    magnifierCanvas.height = magSize;
-
-    mCtx.clearRect(0, 0, magSize, magSize);
-    mCtx.drawImage(
-      page.originalImage,
-      x - (magSize / 2) / zoom,
-      y - (magSize / 2) / zoom,
-      magSize / zoom,
-      magSize / zoom,
-      0, 0, magSize, magSize
-    );
+    updateMagnifier(e, canvas, pages[currentPageIndex].originalImage, magnifier, magnifierCanvas, mCtx, activeHandle);
   }
 
   function onMove(e: PointerEvent) {
@@ -500,7 +385,7 @@ export default function init(payload?: SharedFilesPayload) {
     };
 
     updateEditor();
-    updateMagnifier(e);
+    updateMagnifier(e, canvas, page.originalImage, magnifier, magnifierCanvas, mCtx, activeHandle);
   }
 
   function onEnd(e: PointerEvent) {
@@ -535,8 +420,6 @@ export default function init(payload?: SharedFilesPayload) {
     enterFilterMode();
   }
 
-  // --- Filtering Logic ---
-
   function applyFilters() {
     const page = pages[currentPageIndex];
     if (!page) return;
@@ -565,8 +448,6 @@ export default function init(payload?: SharedFilesPayload) {
     }
   }
 
-  // --- Event Listeners ---
-
   btnApplyPerspective.addEventListener('click', warpImage);
   btnModePerspective.addEventListener('click', enterPerspectiveMode);
   btnModeFilter.addEventListener('click', enterFilterMode);
@@ -591,37 +472,7 @@ export default function init(payload?: SharedFilesPayload) {
     link.click();
   });
 
-  btnDownloadPdf.addEventListener('click', async () => {
-    if (pages.length === 0) return;
-
-    showProgress('Generating PDF...');
-    const pdfDoc = new mupdf.PDFDocument();
-
-    try {
-      for (let i = 0; i < pages.length; i++) {
-        const page = pages[i];
-        showProgress(`Processing page ${i + 1} of ${pages.length}...`);
-        await yieldToUI();
-
-        const imgData = page.processedCanvas.toDataURL('image/jpeg', 0.9);
-        const response = await fetch(imgData);
-        const imageBytes = await response.arrayBuffer();
-
-        addImageToPDFDocument(pdfDoc, `Page_${i}`, new Uint8Array(imageBytes));
-      }
-
-      const pdfBytes = pdfDoc.saveToBuffer('compress,compress-images,garbage');
-      await downloadFile(pdfBytes.asUint8Array(), `scanned-doc-${Date.now()}.pdf`, 'application/pdf');
-
-      showMessage('PDF created successfully!', { type: 'info', timeoutMs: 5000 });
-    } catch (error) {
-      console.error('Failed to generate PDF', error);
-      showMessage('Failed to generate PDF.', { type: 'alert' });
-    } finally {
-      pdfDoc.destroy();
-      hideProgress();
-    }
-  });
+  btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(pages));
 
   if (payload?.sharedFiles?.length) {
     Array.from(payload.sharedFiles).forEach(handleFile);

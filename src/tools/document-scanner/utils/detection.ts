@@ -116,3 +116,18 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
     { x: bl.x, y: bl.y },
   ];
 }
+
+export function detectCornersOnImage(img: HTMLImageElement | HTMLCanvasElement, maxDim = 800): Point[] | null {
+  const tempCanvas = document.createElement('canvas');
+  const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+  tempCanvas.width = img.width * scale;
+  tempCanvas.height = img.height * scale;
+  const tCtx = tempCanvas.getContext('2d')!;
+  tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+  const detected = detectDocumentCorners(tempCanvas);
+
+  return detected?.map(p => ({
+    x: (p.x / tempCanvas.width) * img.width,
+    y: (p.y / tempCanvas.height) * img.height
+  })) || null;
+}

@@ -1,4 +1,5 @@
 import type { Point } from './perspective';
+import type { ScannedPage } from '../types';
 
 export function drawLiveOverlay(
   canvas: HTMLCanvasElement,
@@ -104,4 +105,79 @@ export function updateCornerHandles(
     handle.style.left = `${(p.x / canvas.width) * 100}%`;
     handle.style.top = `${(p.y / canvas.height) * 100}%`;
   });
+}
+
+export function updateMagnifier(
+  e: PointerEvent,
+  canvas: HTMLCanvasElement,
+  originalImage: HTMLImageElement,
+  magnifier: HTMLElement,
+  magnifierCanvas: HTMLCanvasElement,
+  mCtx: CanvasRenderingContext2D,
+  activeHandle: number | null
+) {
+  if (activeHandle === null) return;
+  const rect = canvas.getBoundingClientRect();
+
+  const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+  const magSize = 128;
+  const zoom = 2;
+  magnifier.style.left = `${e.clientX - rect.left}px`;
+  magnifier.style.top = `${e.clientY - rect.top - magSize}px`;
+
+  magnifierCanvas.width = magSize;
+  magnifierCanvas.height = magSize;
+
+  mCtx.clearRect(0, 0, magSize, magSize);
+  mCtx.drawImage(
+    originalImage,
+    x - (magSize / 2) / zoom,
+    y - (magSize / 2) / zoom,
+    magSize / zoom,
+    magSize / zoom,
+    0, 0, magSize, magSize
+  );
+}
+
+export function renderPageList(
+  container: HTMLElement,
+  pages: ScannedPage[],
+  currentPageIndex: number,
+  onSelect: (index: number) => void
+) {
+  container.innerHTML = '';
+  pages.forEach((page, index) => {
+    const card = document.createElement('div');
+    card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${
+      index === currentPageIndex ? 'active border-primary ring-2 ring-primary/20' : 'border-base-300'
+    }`;
+    card.dataset.index = index.toString();
+
+    const thumb = document.createElement('img');
+    thumb.src = page.processedCanvas.toDataURL('image/jpeg', 0.5);
+    thumb.className = 'w-full h-full object-contain pointer-events-none bg-white';
+
+    card.innerHTML = `
+      <div class="absolute top-1 right-1 z-10">
+        <button class="btn btn-circle btn-error btn-xs btn-remove-page" data-index="${index}">
+          <i data-lucide="x" class="w-3 h-3"></i>
+        </button>
+      </div>
+      <div class="absolute bottom-1 right-1 bg-base-300/90 px-1.5 rounded text-[10px] font-bold z-10">
+        ${index + 1}
+      </div>
+    `;
+    card.prepend(thumb);
+
+    card.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('.btn-remove-page')) return;
+      onSelect(index);
+    });
+
+    container.appendChild(card);
+  });
+
+  (window as any).lucide?.createIcons();
 }
