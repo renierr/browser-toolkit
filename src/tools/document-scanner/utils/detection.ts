@@ -70,7 +70,7 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
   }
 
   // Step 3: Find points that maximize/minimize x+y and x-y to find corners
-  const threshold = 50; // edge intensity threshold
+  const threshold = 30; // edge intensity threshold (reduced for sensitivity)
   let foundAny = false;
 
   let minSum = { x: 0, y: 0, val: Infinity };

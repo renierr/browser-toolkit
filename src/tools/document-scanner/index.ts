@@ -25,6 +25,7 @@ export default function init(payload?: SharedFilesPayload) {
   const btnModeFilter = document.getElementById('btn-mode-filter')!;
   const filterSelect = document.getElementById('filter-select') as HTMLSelectElement;
   const hintText = document.getElementById('hint-text')!;
+  const checkLiveDetection = document.getElementById('check-live-detection') as HTMLInputElement;
 
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
@@ -54,34 +55,64 @@ export default function init(payload?: SharedFilesPayload) {
   function startLiveDetection() {
     if (detectionInterval) return;
     detectionInterval = window.setInterval(() => {
-      if (video.paused || video.ended) return;
+      if (video.paused || video.ended || !checkLiveDetection.checked) {
+        const oCtx = cameraOverlay.getContext('2d');
+        if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+        return;
+      }
 
       const vWidth = video.videoWidth;
       const vHeight = video.videoHeight;
-      if (!vWidth || !vHeight) return;
+      const cWidth = video.clientWidth;
+      const cHeight = video.clientHeight;
+      if (!vWidth || !vHeight || !cWidth || !cHeight) return;
+
+      // Calculate the visible crop (object-cover)
+      const vAspect = vWidth / vHeight;
+      const cAspect = cWidth / cHeight;
+
+      let sWidth, sHeight, sx, sy;
+      if (vAspect > cAspect) {
+        sHeight = vHeight;
+        sWidth = vHeight * cAspect;
+        sx = (vWidth - sWidth) / 2;
+        sy = 0;
+      } else {
+        sWidth = vWidth;
+        sHeight = vWidth / cAspect;
+        sx = 0;
+        sy = (vHeight - sHeight) / 2;
+      }
 
       // Downscale for detection performance
-      const scale = Math.min(1, 300 / Math.max(vWidth, vHeight));
-      const dWidth = Math.floor(vWidth * scale);
-      const dHeight = Math.floor(vHeight * scale);
+      const scale = Math.min(1, 300 / Math.max(sWidth, sHeight));
+      const dWidth = Math.floor(sWidth * scale);
+      const dHeight = Math.floor(sHeight * scale);
 
       if (detectionCanvas.width !== dWidth || detectionCanvas.height !== dHeight) {
         detectionCanvas.width = dWidth;
         detectionCanvas.height = dHeight;
       }
 
-      dCtx.drawImage(video, 0, 0, dWidth, dHeight);
+      // Draw ONLY the visible part of the video to the detection canvas
+      dCtx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
 
       const detected = detectDocumentCorners(detectionCanvas);
 
-      // Upscale corners back to video resolution
+      // Upscale corners back to the visible container resolution
       const upscaled = detected?.map(p => ({
         x: p.x / scale,
         y: p.y / scale
       })) || null;
 
-      drawLiveOverlay(cameraOverlay, video, upscaled, vWidth, vHeight);
-    }, 100); // Increased frequency for smoother preview
+      // Ensure overlay canvas matches container size
+      if (cameraOverlay.width !== cWidth || cameraOverlay.height !== cHeight) {
+        cameraOverlay.width = cWidth;
+        cameraOverlay.height = cHeight;
+      }
+
+      drawLiveOverlay(cameraOverlay, upscaled);
+    }, 500);
   }
 
   function stopLiveDetection() {
@@ -105,13 +136,11 @@ export default function init(payload?: SharedFilesPayload) {
     let sWidth, sHeight, sx, sy;
 
     if (vAspect > cAspect) {
-      // Video is wider than container (object-cover crops sides)
       sHeight = vHeight;
       sWidth = vHeight * cAspect;
       sx = (vWidth - sWidth) / 2;
       sy = 0;
     } else {
-      // Video is taller than container (object-cover crops top/bottom)
       sWidth = vWidth;
       sHeight = vWidth / cAspect;
       sx = 0;

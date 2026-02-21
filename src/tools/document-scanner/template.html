@@ -20,13 +20,22 @@
         </div>
       </div>
 
-      <div class="flex gap-2 justify-center">
-        <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg">
-          <i data-lucide="camera" class="w-8 h-8"></i>
-        </button>
-        <button id="btn-switch-camera" class="btn btn-ghost btn-circle shadow-md">
-          <i data-lucide="refresh-cw" class="w-6 h-6"></i>
-        </button>
+      <div class="flex flex-col items-center gap-4">
+        <div class="form-control">
+          <label class="label cursor-pointer gap-2">
+            <span class="label-text text-xs font-bold uppercase opacity-70">Live Detection</span>
+            <input type="checkbox" id="check-live-detection" class="toggle toggle-primary toggle-sm" />
+          </label>
+        </div>
+
+        <div class="flex gap-2 justify-center">
+          <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg">
+            <i data-lucide="camera" class="w-8 h-8"></i>
+          </button>
+          <button id="btn-switch-camera" class="btn btn-ghost btn-circle shadow-md">
+            <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+          </button>
+        </div>
       </div>
 
     </div>
