@@ -30,6 +30,7 @@ export default function init(payload?: SharedFilesPayload) {
   const video = document.getElementById('video') as HTMLVideoElement;
   const cameraView = document.getElementById('camera-view')!;
   const captureContainer = document.getElementById('capture-container')!;
+  const cameraControls = document.getElementById('camera-controls-sticky')!;
   const editorContainer = document.getElementById('editor-container')!;
   const canvas = document.getElementById('editor-canvas') as HTMLCanvasElement;
   const ctx = canvas.getContext('2d')!;
@@ -236,6 +237,7 @@ export default function init(payload?: SharedFilesPayload) {
 
     stopCamera();
     captureContainer.classList.add('hidden');
+    cameraControls.classList.add('hidden');
     editorContainer.classList.remove('hidden');
     dropzoneContainer.classList.add('hidden');
 
@@ -287,6 +289,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   btnAddPage.addEventListener('click', async () => {
     captureContainer.classList.remove('hidden');
+    cameraControls.classList.remove('hidden');
     editorContainer.classList.add('hidden');
     dropzoneContainer.classList.remove('hidden');
     await startCamera();
@@ -542,6 +545,7 @@ export default function init(payload?: SharedFilesPayload) {
       pages = [];
       currentPageIndex = -1;
       captureContainer.classList.remove('hidden');
+      cameraControls.classList.remove('hidden');
       editorContainer.classList.add('hidden');
       dropzoneContainer.classList.remove('hidden');
       cornerHandles.innerHTML = '';

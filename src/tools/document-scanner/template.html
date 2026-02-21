@@ -42,27 +42,35 @@
         </div>
       </div>
 
-      <div class="flex flex-col items-center gap-4">
-        <div class="form-control">
-          <label class="label cursor-pointer gap-2">
-            <span class="label-text text-xs font-bold uppercase opacity-70">Live Detection</span>
-            <input type="checkbox" id="check-live-detection" checked class="toggle toggle-primary toggle-sm" />
-          </label>
+      <div id="camera-controls-sticky" class="fixed bottom-0 left-0 right-0 p-4 pb-8 z-50 pointer-events-none flex flex-col items-center gap-4 bg-gradient-to-t from-black/20 to-transparent">
+        <div class="pointer-events-auto">
+          <div class="form-control bg-base-100/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-lg">
+            <label class="label cursor-pointer gap-2 p-0">
+              <span class="label-text text-[10px] font-bold uppercase opacity-70">Live Detection</span>
+              <input type="checkbox" id="check-live-detection" checked class="toggle toggle-primary toggle-xs" />
+            </label>
+          </div>
         </div>
 
-        <div class="flex gap-2 justify-center">
-          <button id="btn-switch-camera" class="btn btn-ghost btn-circle shadow-md" title="Switch Camera">
-            <i data-lucide="switch-camera" class="w-6 h-6"></i>
-          </button>
+        <div class="flex items-center gap-4 pointer-events-auto bg-base-100/60 backdrop-blur-md p-4 rounded-full shadow-2xl border border-white/20">
+          <div class="flex gap-2 w-24 justify-end">
+            <button id="btn-switch-camera" class="btn btn-ghost btn-circle" title="Switch Camera">
+              <i data-lucide="switch-camera" class="w-6 h-6"></i>
+            </button>
+            <button id="btn-flash" class="btn btn-ghost btn-circle hidden" title="Toggle Flash">
+              <i data-lucide="zap" class="w-6 h-6"></i>
+            </button>
+          </div>
           <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg" title="Capture">
-            <i data-lucide="camera" class="w-8 h-8"></i>
+            <div class="w-10 h-10 rounded-full border-2 border-white/30 flex items-center justify-center">
+              <i data-lucide="camera" class="w-8 h-8"></i>
+            </div>
           </button>
-          <button id="btn-flash" class="btn btn-ghost btn-circle shadow-md hidden" title="Toggle Flash">
-            <i data-lucide="zap" class="w-6 h-6"></i>
-          </button>
-          <button id="btn-rotate-view" class="btn btn-ghost btn-circle shadow-md" title="Toggle Orientation">
-            <i data-lucide="rotate-cw" class="w-6 h-6"></i>
-          </button>
+          <div class="flex gap-2 w-24 justify-start">
+            <button id="btn-rotate-view" class="btn btn-ghost btn-circle" title="Toggle Orientation">
+              <i data-lucide="rotate-cw" class="w-6 h-6"></i>
+            </button>
+          </div>
         </div>
       </div>
 
