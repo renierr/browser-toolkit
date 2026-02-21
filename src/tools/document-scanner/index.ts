@@ -28,6 +28,8 @@ export default function init(payload?: SharedFilesPayload) {
   const filterSelect = document.getElementById('filter-select') as HTMLSelectElement;
   const hintText = document.getElementById('hint-text')!;
   const checkLiveDetection = document.getElementById('check-live-detection') as HTMLInputElement;
+  const levelIndicator = document.getElementById('level-indicator')!;
+  const levelBar = document.getElementById('level-bar')!;
 
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
@@ -37,6 +39,7 @@ export default function init(payload?: SharedFilesPayload) {
   let activeHandle: number | null = null;
   let activePointerId: number | null = null;
   let isFilterMode = false;
+  let lastDetectedCorners: Point[] | null = null;
 
   // --- Camera Logic ---
 
@@ -54,11 +57,13 @@ export default function init(payload?: SharedFilesPayload) {
     if (checkLiveDetection.checked) {
       startLiveDetection();
     }
+    startLevelSensor();
   }
 
   function stopCamera() {
     stream = stopCameraUtil(stream);
     stopLiveDetection();
+    stopLevelSensor();
   }
 
   function startLiveDetection() {
@@ -91,6 +96,16 @@ export default function init(payload?: SharedFilesPayload) {
 
       const detected = detectDocumentCorners(detectionCanvas);
 
+      // Store raw detected corners for capture
+      if (detected) {
+        lastDetectedCorners = detected.map(p => ({
+          x: (p.x / dWidth) * vWidth,
+          y: (p.y / dHeight) * vHeight
+        }));
+      } else {
+        lastDetectedCorners = null;
+      }
+
       // Map detected corners to container space taking object-contain into account
       const vAspect = vWidth / vHeight;
       const cAspect = cWidth / cHeight;
@@ -120,7 +135,7 @@ export default function init(payload?: SharedFilesPayload) {
       }
 
       drawLiveOverlay(cameraOverlay, upscaled);
-    }, 500);
+    }, 200); // Increased frequency for better responsiveness
   }
 
   function stopLiveDetection() {
@@ -130,6 +145,49 @@ export default function init(payload?: SharedFilesPayload) {
     }
     const oCtx = cameraOverlay.getContext('2d');
     if (oCtx && cameraOverlay) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+  }
+
+  // --- Level Sensor Logic ---
+
+  function handleOrientation(event: DeviceOrientationEvent) {
+    const beta = event.beta; // -180 to 180
+    const gamma = event.gamma; // -90 to 90
+    if (beta === null || gamma === null) return;
+
+    levelIndicator.classList.remove('opacity-0');
+
+    // Calculate tilt based on orientation
+    const tilt = isPortrait ? gamma : beta;
+    const normalizedTilt = Math.max(-30, Math.min(30, tilt));
+    const percentage = (normalizedTilt / 30) * 50; // -50% to 50%
+
+    levelBar.style.transform = `translateX(${percentage}px) translateX(-50%)`;
+
+    if (Math.abs(tilt) < 2) {
+      levelBar.classList.replace('bg-success', 'bg-primary');
+      levelBar.classList.add('scale-y-150');
+    } else {
+      levelBar.classList.replace('bg-primary', 'bg-success');
+      levelBar.classList.remove('scale-y-150');
+    }
+  }
+
+  function startLevelSensor() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
+      (DeviceOrientationEvent as any).requestPermission()
+        .then((response: string) => {
+          if (response === 'granted') {
+            window.addEventListener('deviceorientation', handleOrientation);
+          }
+        });
+    } else {
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+  }
+
+  function stopLevelSensor() {
+    window.removeEventListener('deviceorientation', handleOrientation);
+    levelIndicator.classList.add('opacity-0');
   }
 
   checkLiveDetection.addEventListener('change', () => {
@@ -155,7 +213,7 @@ export default function init(payload?: SharedFilesPayload) {
     const img = new Image();
     img.src = tempCanvas.toDataURL('image/png');
     img.onload = () => {
-      loadCapturedImage(img);
+      loadCapturedImage(img, lastDetectedCorners);
     };
   });
 
@@ -171,7 +229,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   // --- Image Loading ---
 
-  function loadCapturedImage(img: HTMLImageElement) {
+  function loadCapturedImage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
     originalImage = img;
     stopCamera();
     captureContainer.classList.add('hidden');
@@ -181,25 +239,28 @@ export default function init(payload?: SharedFilesPayload) {
     const divider = document.querySelector('.divider');
     if (divider) (divider as HTMLElement).style.display = 'none';
 
-    // Initial corners (rectangle with margin)
-    const margin = 0.1;
-    const defaultCorners = [
-      { x: img.width * margin, y: img.height * margin },
-      { x: img.width * (1 - margin), y: img.height * margin },
-      { x: img.width * (1 - margin), y: img.height * (1 - margin) },
-      { x: img.width * margin, y: img.height * (1 - margin) },
-    ];
+    if (detectedCorners) {
+      corners = detectedCorners;
+    } else {
+      // Initial corners (rectangle with margin)
+      const margin = 0.1;
+      const defaultCorners = [
+        { x: img.width * margin, y: img.height * margin },
+        { x: img.width * (1 - margin), y: img.height * margin },
+        { x: img.width * (1 - margin), y: img.height * (1 - margin) },
+        { x: img.width * margin, y: img.height * (1 - margin) },
+      ];
 
-    // Try auto-detection
-    const tempCanvas = document.createElement('canvas');
-    const scale = Math.min(1, 800 / Math.max(img.width, img.height));
-    tempCanvas.width = img.width * scale;
-    tempCanvas.height = img.height * scale;
-    const tCtx = tempCanvas.getContext('2d')!;
-    tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-    const detected = detectDocumentCorners(tempCanvas);
-
-    corners = detected?.map(p => ({ x: p.x / scale, y: p.y / scale })) || defaultCorners;
+      // Try auto-detection if not provided from live
+      const tempCanvas = document.createElement('canvas');
+      const scale = Math.min(1, 800 / Math.max(img.width, img.height));
+      tempCanvas.width = img.width * scale;
+      tempCanvas.height = img.height * scale;
+      const tCtx = tempCanvas.getContext('2d')!;
+      tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
+      const detected = detectDocumentCorners(tempCanvas);
+      corners = detected?.map(p => ({ x: p.x / scale, y: p.y / scale })) || defaultCorners;
+    }
 
     enterPerspectiveMode();
   }

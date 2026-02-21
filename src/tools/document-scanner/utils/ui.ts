@@ -8,9 +8,23 @@ export function drawLiveOverlay(
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!corners) return;
 
+  // Draw a semi-transparent fill for the detected area
+  ctx.fillStyle = 'rgba(59, 130, 246, 0.15)';
+  ctx.beginPath();
+  ctx.moveTo(corners[0].x, corners[0].y);
+  for (let i = 1; i < 4; i++) {
+    ctx.lineTo(corners[i].x, corners[i].y);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Draw the border with a glow effect
   ctx.strokeStyle = '#3b82f6';
-  ctx.lineWidth = 3;
-  ctx.setLineDash([5, 5]);
+  ctx.lineWidth = 4;
+  ctx.lineJoin = 'round';
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = '#3b82f6';
+
   ctx.beginPath();
   ctx.moveTo(corners[0].x, corners[0].y);
   for (let i = 1; i < 4; i++) {
@@ -18,6 +32,18 @@ export function drawLiveOverlay(
   }
   ctx.closePath();
   ctx.stroke();
+
+  // Reset shadow for other drawings
+  ctx.shadowBlur = 0;
+
+  // Draw corner points
+  ctx.fillStyle = 'white';
+  corners.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
 }
 
 export function drawPerspectiveOverlay(

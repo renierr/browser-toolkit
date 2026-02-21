@@ -13,6 +13,25 @@
       <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden aspect-portrait max-h-[85dvh] w-full mx-auto flex items-center justify-center shadow-inner border border-base-300 transition-all duration-300">
         <video id="video" class="w-full h-full object-contain" autoplay playsinline style="will-change: transform; transform: translateZ(0);"></video>
         <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
+
+        <!-- Guided Lines Overlay -->
+        <div id="guided-lines" class="absolute inset-0 pointer-events-none opacity-30">
+          <div class="absolute top-1/4 left-0 w-full h-px bg-white"></div>
+          <div class="absolute top-1/2 left-0 w-full h-px bg-white"></div>
+          <div class="absolute top-3/4 left-0 w-full h-px bg-white"></div>
+          <div class="absolute left-1/4 top-0 h-full w-px bg-white"></div>
+          <div class="absolute left-1/2 top-0 h-full w-px bg-white"></div>
+          <div class="absolute left-3/4 top-0 h-full w-px bg-white"></div>
+        </div>
+
+        <!-- Level Indicator -->
+        <div id="level-indicator" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 pointer-events-none transition-opacity duration-300 opacity-0">
+          <div class="w-32 h-1 bg-white/30 rounded-full overflow-hidden relative">
+            <div id="level-bar" class="absolute top-0 left-1/2 h-full w-1 bg-success -translate-x-1/2 transition-transform duration-75"></div>
+          </div>
+          <span class="text-[10px] font-bold text-white uppercase tracking-widest">Level</span>
+        </div>
+
         <div id="camera-error" class="absolute inset-0 flex flex-col items-center justify-center bg-base-300 text-center p-4 hidden">
           <i data-lucide="camera-off" class="w-12 h-12 mb-2 opacity-50"></i>
           <p class="font-bold">Camera access denied or unavailable</p>

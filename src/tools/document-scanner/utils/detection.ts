@@ -27,8 +27,7 @@ function boxBlur(pixels: Uint8Array, width: number, height: number): Uint8Array 
 
 /**
  * Finds the corners of a document-like shape in an image.
- * This is a simplified version of document detection.
- * It uses color/intensity thresholding and basic contour analysis.
+ * Improved version with adaptive thresholding and better corner finding.
  */
 export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -48,8 +47,9 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
   // Step 1.5: Apply a small blur to reduce noise
   const blurredGrayscale = boxBlur(grayscale, width, height);
 
-  // Step 2: Simple Sobel-ish edge detection (using abs(gx) + abs(gy) for speed)
+  // Step 2: Sobel edge detection
   const edges = new Uint8Array(width * height);
+  let maxEdge = 0;
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
       const idx = y * width + x;
@@ -65,41 +65,54 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
       const gx = (p02 + 2 * p12 + p22) - (p00 + 2 * p10 + p20);
       const gy = (p20 + 2 * p21 + p22) - (p00 + 2 * p01 + p02);
 
-      edges[idx] = Math.min(255, Math.abs(gx) + Math.abs(gy)); // Faster approximation
+      const val = Math.sqrt(gx * gx + gy * gy);
+      edges[idx] = Math.min(255, val);
+      if (val > maxEdge) maxEdge = val;
     }
   }
 
-  // Step 3: Find points that maximize/minimize x+y and x-y to find corners
-  const threshold = 30; // edge intensity threshold (reduced for sensitivity)
+  // Step 3: Find corners using a more robust approach
+  // We look for points that are far from the center and have high edge intensity
+  const threshold = maxEdge * 0.2; // Adaptive threshold
   let foundAny = false;
 
-  let minSum = { x: 0, y: 0, val: Infinity };
-  let maxSum = { x: 0, y: 0, val: -Infinity };
-  let minDiff = { x: 0, y: 0, val: Infinity };
-  let maxDiff = { x: 0, y: 0, val: -Infinity };
+  // Initialize corners with center-ish values
+  let tl = { x: width, y: height, score: Infinity };
+  let tr = { x: 0, y: height, score: Infinity };
+  let br = { x: 0, y: 0, score: Infinity };
+  let bl = { x: width, y: 0, score: Infinity };
 
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (edges[y * width + x] > threshold) {
         foundAny = true;
-        const sum = x + y;
-        const diff = x - y;
 
-        if (sum < minSum.val) minSum = { x, y, val: sum };
-        if (sum > maxSum.val) maxSum = { x, y, val: sum };
-        if (diff < minDiff.val) minDiff = { x, y, val: diff };
-        if (diff > maxDiff.val) maxDiff = { x, y, val: diff };
+        // Distance to corners
+        const dTL = x * x + y * y;
+        const dTR = (width - x) * (width - x) + y * y;
+        const dBR = (width - x) * (width - x) + (height - y) * (height - y);
+        const dBL = x * x + (height - y) * (height - y);
+
+        if (dTL < tl.score) tl = { x, y, score: dTL };
+        if (dTR < tr.score) tr = { x, y, score: dTR };
+        if (dBR < br.score) br = { x, y, score: dBR };
+        if (dBL < bl.score) bl = { x, y, score: dBL };
       }
     }
   }
 
   if (!foundAny) return null;
 
-  // Expected order: Top-Left, Top-Right, Bottom-Right, Bottom-Left
+  // Basic validation: check if the area is large enough
+  const area = Math.abs((tl.x * (tr.y - bl.y) + tr.x * (bl.y - tl.y) + bl.x * (tl.y - tr.y)) / 2) +
+               Math.abs((br.x * (tr.y - bl.y) + tr.x * (bl.y - br.y) + bl.x * (br.y - tr.y)) / 2);
+
+  if (area < (width * height) * 0.1) return null;
+
   return [
-    { x: minSum.x, y: minSum.y }, // Top-Left (min x+y)
-    { x: maxDiff.x, y: maxDiff.y }, // Top-Right (max x-y)
-    { x: maxSum.x, y: maxSum.y }, // Bottom-Right (max x+y)
-    { x: minDiff.x, y: minDiff.y }, // Bottom-Left (min x-y)
+    { x: tl.x, y: tl.y },
+    { x: tr.x, y: tr.y },
+    { x: br.x, y: br.y },
+    { x: bl.x, y: bl.y },
   ];
 }
