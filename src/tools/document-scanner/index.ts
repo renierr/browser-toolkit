@@ -1,7 +1,7 @@
 import type { SharedFilesPayload } from '../../js/share-target';
 import { warp, type Point } from './utils/perspective';
 import { applyFilters as applyFiltersUtil } from './utils/filters';
-import { startCamera as startCameraUtil, stopCamera as stopCameraUtil } from './utils/camera';
+import { startCamera as startCameraUtil, stopCamera as stopCameraUtil, isTorchSupported, toggleTorch } from './utils/camera';
 import { detectDocumentCorners, detectCornersOnImage } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import {
@@ -30,6 +30,7 @@ export default function init(payload?: SharedFilesPayload) {
   const perspectiveActions = document.getElementById('perspective-actions')!;
   const btnCapture = document.getElementById('btn-capture')!;
   const btnSwitch = document.getElementById('btn-switch-camera')!;
+  const btnFlash = document.getElementById('btn-flash')!;
   const btnRotate = document.getElementById('btn-rotate-view')!;
   const btnReset = document.getElementById('btn-reset')!;
   const btnDownload = document.getElementById('btn-download')!;
@@ -59,6 +60,7 @@ export default function init(payload?: SharedFilesPayload) {
   let isFilterMode = false;
   let lastDetectedCorners: Point[] | null = null;
   let stopLevelSensor: (() => void) | null = null;
+  let isFlashOn = false;
 
   // --- Camera Logic ---
 
@@ -74,6 +76,14 @@ export default function init(payload?: SharedFilesPayload) {
       const aspect = video.videoWidth / video.videoHeight;
       cameraView.style.aspectRatio = aspect.toString();
     };
+
+    if (isTorchSupported(stream)) {
+      btnFlash.classList.remove('hidden');
+      isFlashOn = false;
+      updateFlashButton();
+    } else {
+      btnFlash.classList.add('hidden');
+    }
 
     if (checkLiveDetection.checked) {
       startLiveDetection();
@@ -102,6 +112,8 @@ export default function init(payload?: SharedFilesPayload) {
       stopLevelSensor = null;
     }
     levelIndicator.classList.add('opacity-0');
+    isFlashOn = false;
+    updateFlashButton();
   }
 
   function startLiveDetection() {
@@ -229,6 +241,22 @@ export default function init(payload?: SharedFilesPayload) {
   btnRotate.addEventListener('click', async () => {
     isPortrait = !isPortrait;
     await startCamera();
+  });
+
+  function updateFlashButton() {
+    if (isFlashOn) {
+      btnFlash.classList.add('text-yellow-400');
+      btnFlash.classList.remove('text-base-content');
+    } else {
+      btnFlash.classList.remove('text-yellow-400');
+      btnFlash.classList.add('text-base-content');
+    }
+  }
+
+  btnFlash.addEventListener('click', async () => {
+    isFlashOn = !isFlashOn;
+    await toggleTorch(stream, isFlashOn);
+    updateFlashButton();
   });
 
   // --- Page Management ---

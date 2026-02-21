@@ -52,3 +52,29 @@ export function stopCamera(prevStream: MediaStream | null): null {
   }
   return null;
 }
+
+export function isTorchSupported(stream: MediaStream | null): boolean {
+  if (!stream) return false;
+  const track = stream.getVideoTracks()[0];
+  if (!track) return false;
+  try {
+    const capabilities = track.getCapabilities() as any;
+    return !!capabilities.torch;
+  } catch (e) {
+    return false;
+  }
+}
+
+export async function toggleTorch(stream: MediaStream | null, enable: boolean): Promise<void> {
+  if (!stream) return;
+  const track = stream.getVideoTracks()[0];
+  if (!track) return;
+
+  try {
+    await track.applyConstraints({
+      advanced: [{ torch: enable }]
+    } as any);
+  } catch (e) {
+    console.error('Failed to toggle torch', e);
+  }
+}
