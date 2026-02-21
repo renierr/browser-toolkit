@@ -4,7 +4,13 @@ import { applyFilters as applyFiltersUtil } from './utils/filters';
 import { startCamera as startCameraUtil, stopCamera as stopCameraUtil } from './utils/camera';
 import { detectDocumentCorners, detectCornersOnImage } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
-import { drawLiveOverlay, drawPerspectiveOverlay, updateCornerHandles, updateMagnifier, renderPageList as renderPageListUtil } from './utils/ui';
+import {
+  drawLiveOverlay,
+  drawPerspectiveOverlay,
+  updateCornerHandles,
+  updateMagnifier,
+  renderPageList as renderPageListUtil,
+} from './utils/ui';
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
 import { sourceToCanvas } from './utils/canvas';
@@ -127,9 +133,9 @@ export default function init(payload?: SharedFilesPayload) {
       const detected = detectDocumentCorners(detectionCanvas);
 
       if (detected) {
-        lastDetectedCorners = detected.map(p => ({
+        lastDetectedCorners = detected.map((p) => ({
           x: (p.x / dWidth) * vWidth,
-          y: (p.y / dHeight) * vHeight
+          y: (p.y / dHeight) * vHeight,
         }));
       } else {
         lastDetectedCorners = null;
@@ -151,10 +157,11 @@ export default function init(payload?: SharedFilesPayload) {
         offsetY = 0;
       }
 
-      const upscaled = detected?.map(p => ({
-        x: (p.x / dWidth) * renderWidth + offsetX,
-        y: (p.y / dHeight) * renderHeight + offsetY
-      })) || null;
+      const upscaled =
+        detected?.map((p) => ({
+          x: (p.x / dWidth) * renderWidth + offsetX,
+          y: (p.y / dHeight) * renderHeight + offsetY,
+        })) || null;
 
       if (cameraOverlay.width !== cWidth || cameraOverlay.height !== cHeight) {
         cameraOverlay.width = cWidth;
@@ -182,18 +189,36 @@ export default function init(payload?: SharedFilesPayload) {
     }
   });
 
-  btnCapture.addEventListener('click', () => {
-    const vWidth = video.videoWidth;
-    const vHeight = video.videoHeight;
-    if (!vWidth || !vHeight) return;
+  btnCapture.addEventListener('click', async () => {
+    const track = stream?.getVideoTracks()[0];
+    if (!track) return;
 
-    const tempCanvas = sourceToCanvas(video);
+    let blob: Blob | null = null;
 
-    const img = new Image();
-    img.src = tempCanvas.toDataURL('image/png');
-    img.onload = () => {
-      addPage(img, lastDetectedCorners);
-    };
+    // 1. Try ImageCapture (Photo Mode) - Best resolution, Chrome/Android only
+    if ('ImageCapture' in window) {
+      try {
+        const imageCapture = new ImageCapture(track);
+        blob = await imageCapture.takePhoto();
+      } catch (e) {
+        console.warn('ImageCapture failed, falling back to video frame', e);
+      }
+    }
+
+    // 2. Fallback to Video Frame - Essential for iOS/Safari
+    if (!blob) {
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d')?.drawImage(video, 0, 0);
+      blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+    }
+
+    if (blob) {
+      const img = new Image();
+      img.src = URL.createObjectURL(blob);
+      img.onload = () => addPage(img, lastDetectedCorners);
+    }
   });
 
   btnSwitch.addEventListener('click', async () => {
@@ -229,7 +254,7 @@ export default function init(payload?: SharedFilesPayload) {
       originalImage: img,
       processedCanvas: pCanvas,
       corners: initialCorners,
-      filter: 'none'
+      filter: 'none',
     };
 
     pages.push(newPage);
@@ -268,7 +293,7 @@ export default function init(payload?: SharedFilesPayload) {
         }
         renderPageList();
       }
-    }
+    },
   });
 
   pageList.addEventListener('click', (e) => {
@@ -363,7 +388,15 @@ export default function init(payload?: SharedFilesPayload) {
     target.addEventListener('pointercancel', onEnd);
 
     magnifier.classList.remove('hidden');
-    updateMagnifier(e, canvas, pages[currentPageIndex].originalImage, magnifier, magnifierCanvas, mCtx, activeHandle);
+    updateMagnifier(
+      e,
+      canvas,
+      pages[currentPageIndex].originalImage,
+      magnifier,
+      magnifierCanvas,
+      mCtx,
+      activeHandle
+    );
   }
 
   function onMove(e: PointerEvent) {
