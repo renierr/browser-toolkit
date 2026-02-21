@@ -10,7 +10,7 @@
 
     <div id="capture-container" class="flex flex-col gap-4">
       <!-- Camera View Container -->
-      <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden aspect-portrait max-h-[70vh] w-full max-w-sm mx-auto flex items-center justify-center shadow-inner border border-base-300 transition-all duration-300">
+      <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden aspect-portrait max-h-[85dvh] w-full mx-auto flex items-center justify-center shadow-inner border border-base-300 transition-all duration-300">
         <video id="video" class="w-full h-full object-contain" autoplay playsinline style="will-change: transform; transform: translateZ(0);"></video>
         <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
         <div id="camera-error" class="absolute inset-0 flex flex-col items-center justify-center bg-base-300 text-center p-4 hidden">
@@ -95,7 +95,7 @@
 
       <div class="checkerboard-bg relative bg-base-300 rounded-xl flex items-center justify-center border border-base-300 shadow-inner min-h-75 p-8" id="canvas-wrapper">
         <div class="grid place-items-center relative">
-          <canvas id="editor-canvas" class="max-w-full max-h-[70vh] shadow-2xl block" style="grid-area: 1/1;"></canvas>
+          <canvas id="editor-canvas" class="max-w-full max-h-[85vh] shadow-2xl block" style="grid-area: 1/1;"></canvas>
           <div id="corner-handles" class="relative pointer-events-none w-full h-full" style="grid-area: 1/1;">
             <!-- Handles will be injected here by TS -->
           </div>
@@ -136,6 +136,6 @@
   }
 
   /* Orientation classes */
-  .aspect-portrait { aspect-ratio: 1 / 1.414; max-width: 24rem; }
-  .aspect-landscape { aspect-ratio: 1.414 / 1; max-width: 100%; }
+  .aspect-portrait { aspect-ratio: 1 / 1.414; }
+  .aspect-landscape { aspect-ratio: 1.414 / 1; }
 </style>
