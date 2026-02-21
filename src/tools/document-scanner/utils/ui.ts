@@ -114,31 +114,60 @@ export function updateMagnifier(
   magnifier: HTMLElement,
   magnifierCanvas: HTMLCanvasElement,
   mCtx: CanvasRenderingContext2D,
-  activeHandle: number | null
+  point: Point
 ) {
-  if (activeHandle === null) return;
   const rect = canvas.getBoundingClientRect();
-
-  const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-  const y = (e.clientY - rect.top) * (canvas.height / rect.height);
-
   const magSize = 128;
   const zoom = 2;
-  magnifier.style.left = `${e.clientX - rect.left}px`;
-  magnifier.style.top = `${e.clientY - rect.top - magSize}px`;
+
+  // Position magnifier near the pointer, but keep it on screen
+  let left = e.clientX - rect.left;
+  let top = e.clientY - rect.top - magSize;
+
+  // Check viewport boundaries relative to the canvas container
+  // We want to position it relative to the canvas wrapper usually, but here it's absolute to the wrapper
+  // Let's just ensure it doesn't go off the top/left/right/bottom of the visible area if possible.
+  // Since 'magnifier' is absolute positioned inside the relative container, we use local coordinates.
+
+  // Simple boundary check against the canvas container
+  if (top < 0) {
+    top = e.clientY - rect.top + 40; // Move below finger if too close to top
+  }
+  if (left < 0) left = 0;
+  if (left + magSize > rect.width) left = rect.width - magSize;
+
+  magnifier.style.left = `${left}px`;
+  magnifier.style.top = `${top}px`;
 
   magnifierCanvas.width = magSize;
   magnifierCanvas.height = magSize;
 
+  // Draw the magnified area from the original image
+  // point is in image coordinates
   mCtx.clearRect(0, 0, magSize, magSize);
+
+  // Draw white background first (for transparent images)
+  mCtx.fillStyle = 'white';
+  mCtx.fillRect(0, 0, magSize, magSize);
+
   mCtx.drawImage(
     originalImage,
-    x - (magSize / 2) / zoom,
-    y - (magSize / 2) / zoom,
+    point.x - (magSize / 2) / zoom,
+    point.y - (magSize / 2) / zoom,
     magSize / zoom,
     magSize / zoom,
     0, 0, magSize, magSize
   );
+
+  // Draw crosshair on magnifier
+  mCtx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
+  mCtx.lineWidth = 1;
+  mCtx.beginPath();
+  mCtx.moveTo(magSize / 2, 0);
+  mCtx.lineTo(magSize / 2, magSize);
+  mCtx.moveTo(0, magSize / 2);
+  mCtx.lineTo(magSize, magSize / 2);
+  mCtx.stroke();
 }
 
 export function renderPageList(

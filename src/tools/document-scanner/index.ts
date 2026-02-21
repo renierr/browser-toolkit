@@ -471,7 +471,7 @@ export default function init(payload?: SharedFilesPayload) {
       magnifier,
       magnifierCanvas,
       mCtx,
-      activeHandle
+      pages[currentPageIndex].corners[activeHandle]
     );
     updateEditor();
   }
@@ -517,7 +517,15 @@ export default function init(payload?: SharedFilesPayload) {
     };
 
     updateEditor();
-    updateMagnifier(e, canvas, page.originalImage, magnifier, magnifierCanvas, mCtx, activeHandle);
+    updateMagnifier(
+      e,
+      canvas,
+      page.originalImage,
+      magnifier,
+      magnifierCanvas,
+      mCtx,
+      page.corners[activeHandle]
+    );
   }
 
   function onEnd(e: PointerEvent) {
