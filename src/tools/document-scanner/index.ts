@@ -285,6 +285,7 @@ export default function init(payload?: SharedFilesPayload) {
   btnAddPage.addEventListener('click', async () => {
     captureContainer.classList.remove('hidden');
     editorContainer.classList.add('hidden');
+    dropzoneContainer.classList.remove('hidden');
     await startCamera();
   });
 
@@ -434,15 +435,20 @@ export default function init(payload?: SharedFilesPayload) {
   filterSelect.addEventListener('change', applyFilters);
 
   btnReset.addEventListener('click', async () => {
-    stopCamera();
-    pages = [];
-    currentPageIndex = -1;
-    captureContainer.classList.remove('hidden');
-    editorContainer.classList.add('hidden');
-    dropzoneContainer.classList.remove('hidden');
-    cornerHandles.innerHTML = '';
-    pageList.innerHTML = '';
-    await startCamera();
+    if (
+      pages.length === 0 ||
+      confirm('Are you sure you want to start over? All changes will be lost.')
+    ) {
+      stopCamera();
+      pages = [];
+      currentPageIndex = -1;
+      captureContainer.classList.remove('hidden');
+      editorContainer.classList.add('hidden');
+      dropzoneContainer.classList.remove('hidden');
+      cornerHandles.innerHTML = '';
+      pageList.innerHTML = '';
+      await startCamera();
+    }
   });
 
   btnDownload.addEventListener('click', () => {
