@@ -273,7 +273,7 @@ export default function init(payload?: SharedFilesPayload) {
     renderPageListUtil(pageList, pages, currentPageIndex, (index) => {
       currentPageIndex = index;
       renderPageList();
-      enterPerspectiveMode();
+      enterFilterMode();
     });
   }
 
@@ -306,7 +306,7 @@ export default function init(payload?: SharedFilesPayload) {
       } else {
         if (currentPageIndex >= pages.length) currentPageIndex = pages.length - 1;
         renderPageList();
-        enterPerspectiveMode();
+        enterFilterMode();
       }
     }
   });
