@@ -442,11 +442,19 @@ export default function init(payload?: SharedFilesPayload) {
     }
   }
 
+  let isDragging = false;
+  let startX = 0;
+  let startY = 0;
+
   function onStart(e: PointerEvent, index: number) {
     e.preventDefault();
     activeHandle = index;
     selectedHandle = index; // Select the handle for nudging
     activePointerId = e.pointerId;
+
+    isDragging = false;
+    startX = e.clientX;
+    startY = e.clientY;
 
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
@@ -471,6 +479,16 @@ export default function init(payload?: SharedFilesPayload) {
     if (activeHandle === null || currentPageIndex === -1) return;
     if (activePointerId !== null && e.pointerId !== activePointerId) return;
     e.preventDefault();
+
+    // Only start dragging if pointer moved more than 3 pixels
+    if (!isDragging) {
+      const dist = Math.sqrt(Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2));
+      if (dist > 3) {
+        isDragging = true;
+      } else {
+        return;
+      }
+    }
 
     const page = pages[currentPageIndex];
     const rect = canvas.getBoundingClientRect();

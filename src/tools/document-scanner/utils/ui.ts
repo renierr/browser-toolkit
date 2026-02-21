@@ -152,13 +152,20 @@ export function updateMagnifier(
   );
 
   // Draw crosshair on magnifier
-  mCtx.strokeStyle = 'rgba(59, 130, 246, 0.5)';
-  mCtx.lineWidth = 1;
+  mCtx.strokeStyle = 'rgba(59, 130, 246, 0.8)'; // Increased opacity
+  mCtx.lineWidth = 2; // Increased line width
   mCtx.beginPath();
   mCtx.moveTo(magSize / 2, 0);
   mCtx.lineTo(magSize / 2, magSize);
   mCtx.moveTo(0, magSize / 2);
   mCtx.lineTo(magSize, magSize / 2);
+  mCtx.stroke();
+
+  // Draw a small circle at the center of the crosshair for better precision
+  mCtx.beginPath();
+  mCtx.arc(magSize / 2, magSize / 2, 2, 0, Math.PI * 2);
+  mCtx.fillStyle = 'white';
+  mCtx.fill();
   mCtx.stroke();
 }
 
