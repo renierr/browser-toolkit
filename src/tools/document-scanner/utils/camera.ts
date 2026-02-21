@@ -12,11 +12,14 @@ export async function startCamera(
         facingMode,
         width: { ideal: 2160 },
         height: { ideal: 3840 },
-        aspectRatio: { ideal: 0.707 } // A4 Aspect Ratio
+        frameRate: { ideal: 30, max: 60 }
       },
       audio: false,
     });
     videoEl.srcObject = stream;
+    // Explicitly play to ensure the smoothest start
+    videoEl.play().catch(e => console.warn("Auto-play prevented:", e));
+
     document.getElementById('camera-error')?.classList.add('hidden');
     return stream;
   } catch (err) {
