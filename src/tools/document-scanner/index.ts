@@ -1,7 +1,12 @@
 import type { SharedFilesPayload } from '../../js/share-target';
 import { warp, type Point } from './utils/perspective';
 import { applyFilters as applyFiltersUtil } from './utils/filters';
-import { startCamera as startCameraUtil, stopCamera as stopCameraUtil, isTorchSupported, toggleTorch } from './utils/camera';
+import {
+  startCamera as startCameraUtil,
+  stopCamera as stopCameraUtil,
+  isTorchSupported,
+  toggleTorch,
+} from './utils/camera';
 import { detectDocumentCorners, detectCornersOnImage } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import {
@@ -229,7 +234,18 @@ export default function init(payload?: SharedFilesPayload) {
     if (blob) {
       const img = new Image();
       img.src = URL.createObjectURL(blob);
-      img.onload = () => addPage(img, lastDetectedCorners);
+      img.onload = () => {
+        let scaledCorners: Point[] | null = null;
+        if (lastDetectedCorners && video.videoWidth && video.videoHeight) {
+          const scaleX = img.width / video.videoWidth;
+          const scaleY = img.height / video.videoHeight;
+          scaledCorners = lastDetectedCorners.map((p) => ({
+            x: p.x * scaleX,
+            y: p.y * scaleY,
+          }));
+        }
+        addPage(img, scaledCorners);
+      };
     }
   });
 
