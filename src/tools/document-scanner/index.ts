@@ -445,6 +445,9 @@ export default function init(payload?: SharedFilesPayload) {
   let isDragging = false;
   let startX = 0;
   let startY = 0;
+  let smoothedX = 0;
+  let smoothedY = 0;
+  const smoothingFactor = 0.4; // 1.0 = no smoothing, 0.1 = heavy smoothing
 
   function onStart(e: PointerEvent, index: number) {
     e.preventDefault();
@@ -455,6 +458,10 @@ export default function init(payload?: SharedFilesPayload) {
     isDragging = false;
     startX = e.clientX;
     startY = e.clientY;
+
+    const rect = canvas.getBoundingClientRect();
+    smoothedX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    smoothedY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
@@ -492,18 +499,23 @@ export default function init(payload?: SharedFilesPayload) {
 
     const page = pages[currentPageIndex];
     const rect = canvas.getBoundingClientRect();
-    const currentX = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const currentY = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const targetX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const targetY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-    let newX = currentX;
-    let newY = currentY;
+    // Apply smoothing
+    smoothedX = smoothedX + (targetX - smoothedX) * smoothingFactor;
+    smoothedY = smoothedY + (targetY - smoothedY) * smoothingFactor;
+
+    let newX = smoothedX;
+    let newY = smoothedY;
 
     // Apply offset only for touch events to avoid finger obscuring the handle
     if (e.pointerType === 'touch' || e.pointerType === 'pen') {
       // Offset handle position slightly above the finger touch point
       // This ensures the user can see what they are dragging
-      const touchOffset = 40 * (canvas.height / rect.height);
-      newY = currentY - touchOffset;
+      // Using a slightly larger offset for better visibility
+      const touchOffset = 60 * (canvas.height / rect.height);
+      newY = smoothedY - touchOffset;
     }
 
     page.corners[activeHandle] = {

@@ -114,13 +114,16 @@ export function updateMagnifier(
   const magSize = 128;
   const zoom = 2;
 
-  // Position magnifier near the pointer, but keep it on screen
-  let left = e.clientX - rect.left - magSize / 2;
-  let top = e.clientY - rect.top - magSize - 60; // Offset further up to be above finger
+  // Position magnifier relative to the handle's display position
+  const handleDisplayX = (point.x / canvas.width) * rect.width;
+  const handleDisplayY = (point.y / canvas.height) * rect.height;
+
+  let left = handleDisplayX - magSize / 2;
+  let top = handleDisplayY - magSize - 60; // Position above the handle
 
   // Simple boundary check against the canvas container
   if (top < 0) {
-    top = e.clientY - rect.top + 40; // Move below finger if too close to top
+    top = handleDisplayY + 40; // Move below handle if too close to top
   }
   if (left < 0) left = 0;
   if (left + magSize > rect.width) left = rect.width - magSize;
