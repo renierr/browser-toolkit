@@ -9,6 +9,7 @@ import { drawLiveOverlay, drawPerspectiveOverlay, updateCornerHandles } from './
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
   const video = document.getElementById('video') as HTMLVideoElement;
+  const cameraView = document.getElementById('camera-view')!;
   const captureContainer = document.getElementById('capture-container')!;
   const editorContainer = document.getElementById('editor-container')!;
   const canvas = document.getElementById('editor-canvas') as HTMLCanvasElement;
@@ -18,6 +19,7 @@ export default function init(payload?: SharedFilesPayload) {
   const perspectiveActions = document.getElementById('perspective-actions')!;
   const btnCapture = document.getElementById('btn-capture')!;
   const btnSwitch = document.getElementById('btn-switch-camera')!;
+  const btnRotate = document.getElementById('btn-rotate-view')!;
   const btnReset = document.getElementById('btn-reset')!;
   const btnDownload = document.getElementById('btn-download')!;
   const btnApplyPerspective = document.getElementById('btn-apply-perspective')!;
@@ -29,6 +31,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
+  let isPortrait = true;
   let originalImage: HTMLImageElement | null = null;
   let corners: Point[] = [];
   let activeHandle: number | null = null;
@@ -43,7 +46,11 @@ export default function init(payload?: SharedFilesPayload) {
   const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
 
   async function startCamera() {
-    stream = await startCameraUtil(video, currentFacingMode, stream);
+    // Update UI orientation
+    cameraView.classList.toggle('aspect-portrait', isPortrait);
+    cameraView.classList.toggle('aspect-landscape', !isPortrait);
+
+    stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
     if (checkLiveDetection.checked) {
       startLiveDetection();
     }
@@ -70,42 +77,40 @@ export default function init(payload?: SharedFilesPayload) {
       const cHeight = video.clientHeight;
       if (!vWidth || !vHeight || !cWidth || !cHeight) return;
 
-      // Calculate the visible crop (object-cover)
-      const vAspect = vWidth / vHeight;
-      const cAspect = cWidth / cHeight;
-
-      let sWidth, sHeight, sx, sy;
-      if (vAspect > cAspect) {
-        sHeight = vHeight;
-        sWidth = vHeight * cAspect;
-        sx = (vWidth - sWidth) / 2;
-        sy = 0;
-      } else {
-        sWidth = vWidth;
-        sHeight = vWidth / cAspect;
-        sx = 0;
-        sy = (vHeight - sHeight) / 2;
-      }
-
-      // Downscale for detection performance
-      const scale = Math.min(1, 300 / Math.max(sWidth, sHeight));
-      const dWidth = Math.floor(sWidth * scale);
-      const dHeight = Math.floor(sHeight * scale);
+      // Downscale for detection performance (use full video frame)
+      const scale = Math.min(1, 300 / Math.max(vWidth, vHeight));
+      const dWidth = Math.floor(vWidth * scale);
+      const dHeight = Math.floor(vHeight * scale);
 
       if (detectionCanvas.width !== dWidth || detectionCanvas.height !== dHeight) {
         detectionCanvas.width = dWidth;
         detectionCanvas.height = dHeight;
       }
 
-      // Draw ONLY the visible part of the video to the detection canvas
-      dCtx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, dWidth, dHeight);
+      dCtx.drawImage(video, 0, 0, vWidth, vHeight, 0, 0, dWidth, dHeight);
 
       const detected = detectDocumentCorners(detectionCanvas);
 
-      // Upscale corners back to the visible container resolution
+      // Map detected corners to container space taking object-contain into account
+      const vAspect = vWidth / vHeight;
+      const cAspect = cWidth / cHeight;
+
+      let renderWidth, renderHeight, offsetX, offsetY;
+      if (vAspect > cAspect) {
+        renderWidth = cWidth;
+        renderHeight = cWidth / vAspect;
+        offsetX = 0;
+        offsetY = (cHeight - renderHeight) / 2;
+      } else {
+        renderHeight = cHeight;
+        renderWidth = cHeight * vAspect;
+        offsetX = (cWidth - renderWidth) / 2;
+        offsetY = 0;
+      }
+
       const upscaled = detected?.map(p => ({
-        x: p.x / scale,
-        y: p.y / scale
+        x: (p.x / dWidth) * renderWidth + offsetX,
+        y: (p.y / dHeight) * renderHeight + offsetY
       })) || null;
 
       // Ensure overlay canvas matches container size
@@ -138,31 +143,14 @@ export default function init(payload?: SharedFilesPayload) {
   btnCapture.addEventListener('click', () => {
     const vWidth = video.videoWidth;
     const vHeight = video.videoHeight;
-    const cWidth = video.clientWidth;
-    const cHeight = video.clientHeight;
+    if (!vWidth || !vHeight) return;
 
-    const vAspect = vWidth / vHeight;
-    const cAspect = cWidth / cHeight;
-
-    let sWidth, sHeight, sx, sy;
-
-    if (vAspect > cAspect) {
-      sHeight = vHeight;
-      sWidth = vHeight * cAspect;
-      sx = (vWidth - sWidth) / 2;
-      sy = 0;
-    } else {
-      sWidth = vWidth;
-      sHeight = vWidth / cAspect;
-      sx = 0;
-      sy = (vHeight - sHeight) / 2;
-    }
-
+    // Capture the full video frame
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = sWidth;
-    tempCanvas.height = sHeight;
+    tempCanvas.width = vWidth;
+    tempCanvas.height = vHeight;
     const tCtx = tempCanvas.getContext('2d')!;
-    tCtx.drawImage(video, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+    tCtx.drawImage(video, 0, 0, vWidth, vHeight);
 
     const img = new Image();
     img.src = tempCanvas.toDataURL('image/png');
@@ -173,6 +161,11 @@ export default function init(payload?: SharedFilesPayload) {
 
   btnSwitch.addEventListener('click', () => {
     currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+    startCamera();
+  });
+
+  btnRotate.addEventListener('click', () => {
+    isPortrait = !isPortrait;
     startCamera();
   });
 

@@ -1,17 +1,21 @@
 export async function startCamera(
   videoEl: HTMLVideoElement,
   facingMode: 'user' | 'environment',
-  prevStream: MediaStream | null
+  prevStream: MediaStream | null,
+  isPortrait: boolean = true
 ): Promise<MediaStream | null> {
   if (prevStream) {
     prevStream.getTracks().forEach((t) => t.stop());
   }
   try {
+    const width = isPortrait ? 2160 : 3840;
+    const height = isPortrait ? 3840 : 2160;
+
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {
         facingMode,
-        width: { ideal: 2160 },
-        height: { ideal: 3840 },
+        width: { ideal: width },
+        height: { ideal: height },
         frameRate: { ideal: 30, max: 60 }
       },
       audio: false,

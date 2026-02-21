@@ -9,8 +9,8 @@
     </p>
 
     <div id="capture-container" class="flex flex-col gap-4">
-      <!-- Forced Portrait Aspect Ratio (A4: 1/1.414) -->
-      <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden aspect-[1/1.414] max-h-[70vh] w-full max-w-sm mx-auto flex items-center justify-center shadow-inner border border-base-300">
+      <!-- Camera View Container -->
+      <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden aspect-portrait max-h-[70vh] w-full max-w-sm mx-auto flex items-center justify-center shadow-inner border border-base-300 transition-all duration-300">
         <video id="video" class="w-full h-full object-contain" autoplay playsinline style="will-change: transform; transform: translateZ(0);"></video>
         <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
         <div id="camera-error" class="absolute inset-0 flex flex-col items-center justify-center bg-base-300 text-center p-4 hidden">
@@ -32,9 +32,14 @@
           <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg">
             <i data-lucide="camera" class="w-8 h-8"></i>
           </button>
-          <button id="btn-switch-camera" class="btn btn-ghost btn-circle shadow-md">
-            <i data-lucide="refresh-cw" class="w-6 h-6"></i>
-          </button>
+          <div class="flex flex-col gap-2">
+            <button id="btn-switch-camera" class="btn btn-ghost btn-circle shadow-md" title="Switch Camera">
+              <i data-lucide="refresh-cw" class="w-6 h-6"></i>
+            </button>
+            <button id="btn-rotate-view" class="btn btn-ghost btn-circle shadow-md" title="Toggle Orientation">
+              <i data-lucide="rotate-cw" class="w-6 h-6"></i>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -131,4 +136,8 @@
     scale: 1.2;
     background: #3b82f6;
   }
+
+  /* Orientation classes */
+  .aspect-portrait { aspect-ratio: 1 / 1.414; max-width: 24rem; }
+  .aspect-landscape { aspect-ratio: 1.414 / 1; max-width: 100%; }
 </style>
