@@ -223,22 +223,16 @@ export default function init(payload?: SharedFilesPayload) {
 
   function updateHandles() {
     cornerHandles.innerHTML = '';
-    const rect = canvas.getBoundingClientRect();
-    const wrapperRect = canvas.parentElement!.getBoundingClientRect();
-    const scaleX = rect.width / canvas.width;
-    const scaleY = rect.height / canvas.height;
-
-    const offsetX = rect.left - wrapperRect.left;
-    const offsetY = rect.top - wrapperRect.top;
+    if (!canvas.width || !canvas.height) return;
 
     corners.forEach((p, i) => {
       const handle = document.createElement('div');
       handle.className = 'corner-handle';
-      handle.style.left = `${offsetX + p.x * scaleX}px`;
-      handle.style.top = `${offsetY + p.y * scaleY}px`;
+      // Use percentage positioning relative to the canvas container
+      handle.style.left = `${(p.x / canvas.width) * 100}%`;
+      handle.style.top = `${(p.y / canvas.height) * 100}%`;
 
       handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i));
-
       cornerHandles.appendChild(handle);
     });
   }
@@ -352,6 +346,14 @@ export default function init(payload?: SharedFilesPayload) {
     warpedImg.src = outCanvas.toDataURL();
     warpedImg.onload = () => {
       originalImage = warpedImg;
+      // Reset corners for the new image dimensions
+      const margin = 0.05;
+      corners = [
+        { x: warpedImg.width * margin, y: warpedImg.height * margin },
+        { x: warpedImg.width * (1 - margin), y: warpedImg.height * margin },
+        { x: warpedImg.width * (1 - margin), y: warpedImg.height * (1 - margin) },
+        { x: warpedImg.width * margin, y: warpedImg.height * (1 - margin) },
+      ];
       enterFilterMode();
     };
   }
