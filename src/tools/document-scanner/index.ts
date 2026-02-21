@@ -62,10 +62,14 @@ export default function init(payload?: SharedFilesPayload) {
   const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
 
   async function startCamera() {
-    cameraView.classList.toggle('aspect-portrait', isPortrait);
-    cameraView.classList.toggle('aspect-landscape', !isPortrait);
-
     stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
+
+    // Adjust container aspect ratio to match video stream
+    video.onloadedmetadata = () => {
+      const aspect = video.videoWidth / video.videoHeight;
+      cameraView.style.aspectRatio = aspect.toString();
+    };
+
     if (checkLiveDetection.checked) {
       startLiveDetection();
     }
@@ -184,7 +188,30 @@ export default function init(payload?: SharedFilesPayload) {
     const vHeight = video.videoHeight;
     if (!vWidth || !vHeight) return;
 
-    const tempCanvas = sourceToCanvas(video);
+    const tempCanvas = document.createElement('canvas');
+    const tCtx = tempCanvas.getContext('2d')!;
+
+    // Fix for mobile devices where video might be landscape but UI is portrait
+    if (isPortrait && vWidth > vHeight) {
+      tempCanvas.width = vHeight;
+      tempCanvas.height = vWidth;
+      tCtx.translate(vHeight / 2, vWidth / 2);
+      tCtx.rotate(Math.PI / 2);
+      tCtx.drawImage(video, -vWidth / 2, -vHeight / 2);
+
+      // Rotate corners if they were detected
+      if (lastDetectedCorners) {
+        lastDetectedCorners = lastDetectedCorners.map(p => ({
+          x: vHeight - p.y,
+          y: p.x
+        }));
+      }
+    } else {
+      tempCanvas.width = vWidth;
+      tempCanvas.height = vHeight;
+      tCtx.drawImage(video, 0, 0);
+    }
+
     const img = new Image();
     img.src = tempCanvas.toDataURL('image/png');
     img.onload = () => {
