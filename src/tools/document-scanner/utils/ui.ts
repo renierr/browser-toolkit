@@ -213,3 +213,28 @@ export function renderPageList(
 
   (window as any).lucide?.createIcons();
 }
+
+export function calculateSmoothedPosition(
+  targetX: number,
+  targetY: number,
+  currentX: number,
+  currentY: number,
+  smoothingFactor: number
+): { x: number; y: number } {
+  return {
+    x: currentX + (targetX - currentX) * smoothingFactor,
+    y: currentY + (targetY - currentY) * smoothingFactor,
+  };
+}
+
+export function constrainPoint(
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): { x: number; y: number } {
+  return {
+    x: Math.max(0, Math.min(width, x)),
+    y: Math.max(0, Math.min(height, y)),
+  };
+}

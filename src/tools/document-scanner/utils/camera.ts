@@ -72,9 +72,40 @@ export async function toggleTorch(stream: MediaStream | null, enable: boolean): 
 
   try {
     await track.applyConstraints({
-      advanced: [{ torch: enable }]
+      advanced: [{ torch: enable }],
     } as any);
   } catch (e) {
     console.error('Failed to toggle torch', e);
   }
+}
+
+export async function capturePhoto(
+  video: HTMLVideoElement,
+  stream: MediaStream | null
+): Promise<Blob | null> {
+  const track = stream?.getVideoTracks()[0];
+  if (!track) return null;
+
+  let blob: Blob | null = null;
+
+  // 1. Try ImageCapture (Photo Mode) - Best resolution, Chrome/Android only
+  if ('ImageCapture' in window) {
+    try {
+      const imageCapture = new (window as any).ImageCapture(track);
+      blob = await imageCapture.takePhoto();
+    } catch (e) {
+      console.warn('ImageCapture failed, falling back to video frame', e);
+    }
+  }
+
+  // 2. Fallback to Video Frame - Essential for iOS/Safari
+  if (!blob) {
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d')?.drawImage(video, 0, 0);
+    blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
+  }
+
+  return blob;
 }

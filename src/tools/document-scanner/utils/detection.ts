@@ -8,11 +8,7 @@ function gaussianBlur(pixels: Uint8Array, width: number, height: number): Uint8A
   const blurred = new Uint8Array(width * height);
   // 5x5 Gaussian kernel (sigma = 1.0)
   const kernel = [
-    1,  4,  7,  4, 1,
-    4, 16, 26, 16, 4,
-    7, 26, 41, 26, 7,
-    4, 16, 26, 16, 4,
-    1,  4,  7,  4, 1
+    1, 4, 7, 4, 1, 4, 16, 26, 16, 4, 7, 26, 41, 26, 7, 4, 16, 26, 16, 4, 1, 4, 7, 4, 1,
   ];
   const kernelSum = 273;
 
@@ -74,7 +70,8 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
 
   // Step 2: Contrast Stretching
   // Enhances the difference between document and background
-  let min = 255, max = 0;
+  let min = 255,
+    max = 0;
   for (let i = 0; i < grayscale.length; i++) {
     if (grayscale[i] < min) min = grayscale[i];
     if (grayscale[i] > max) max = grayscale[i];
@@ -104,8 +101,8 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
       const p21 = blurred[idx + width];
       const p22 = blurred[idx + width + 1];
 
-      const gx = (p02 + 2 * p12 + p22) - (p00 + 2 * p10 + p20);
-      const gy = (p20 + 2 * p21 + p22) - (p00 + 2 * p01 + p02);
+      const gx = p02 + 2 * p12 + p22 - (p00 + 2 * p10 + p20);
+      const gy = p20 + 2 * p21 + p22 - (p00 + 2 * p01 + p02);
 
       const val = Math.sqrt(gx * gx + gy * gy);
       edges[idx] = Math.min(255, val);
@@ -121,8 +118,10 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
   const threshold = maxEdge * 0.25;
   let foundAny = false;
 
-  let minSum = Infinity, maxSum = -Infinity;
-  let minDiff = Infinity, maxDiff = -Infinity;
+  let minSum = Infinity,
+    maxSum = -Infinity;
+  let minDiff = Infinity,
+    maxDiff = -Infinity;
 
   let tl = { x: 0, y: 0 };
   let tr = { x: width, y: 0 };
@@ -137,10 +136,22 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
         const sum = x + y;
         const diff = x - y;
 
-        if (sum < minSum) { minSum = sum; tl = { x, y }; }
-        if (sum > maxSum) { maxSum = sum; br = { x, y }; }
-        if (diff > maxDiff) { maxDiff = diff; tr = { x, y }; }
-        if (diff < minDiff) { minDiff = diff; bl = { x, y }; }
+        if (sum < minSum) {
+          minSum = sum;
+          tl = { x, y };
+        }
+        if (sum > maxSum) {
+          maxSum = sum;
+          br = { x, y };
+        }
+        if (diff > maxDiff) {
+          maxDiff = diff;
+          tr = { x, y };
+        }
+        if (diff < minDiff) {
+          minDiff = diff;
+          bl = { x, y };
+        }
       }
     }
   }
@@ -153,12 +164,15 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
     (tl.x * (tr.y - bl.y) + tr.x * (br.y - tl.y) + br.x * (bl.y - tr.y) + bl.x * (tl.y - br.y)) / 2
   );
 
-  if (area < (width * height) * 0.05) return null;
+  if (area < width * height * 0.05) return null;
 
   return [tl, tr, br, bl];
 }
 
-export function detectCornersOnImage(img: HTMLImageElement | HTMLCanvasElement, maxDim = 800): Point[] | null {
+export function detectCornersOnImage(
+  img: HTMLImageElement | HTMLCanvasElement,
+  maxDim = 800
+): Point[] | null {
   const tempCanvas = document.createElement('canvas');
   const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
   tempCanvas.width = img.width * scale;
@@ -167,8 +181,73 @@ export function detectCornersOnImage(img: HTMLImageElement | HTMLCanvasElement, 
   tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
   const detected = detectDocumentCorners(tempCanvas);
 
-  return detected?.map(p => ({
-    x: (p.x / tempCanvas.width) * img.width,
-    y: (p.y / tempCanvas.height) * img.height
-  })) || null;
+  return (
+    detected?.map((p) => ({
+      x: (p.x / tempCanvas.width) * img.width,
+      y: (p.y / tempCanvas.height) * img.height,
+    })) || null
+  );
+}
+
+export function calculateLiveDetection(
+  video: HTMLVideoElement,
+  detectionCanvas: HTMLCanvasElement,
+  dCtx: CanvasRenderingContext2D,
+  cameraOverlay: HTMLCanvasElement
+) {
+  const vWidth = video.videoWidth;
+  const vHeight = video.videoHeight;
+  const cWidth = video.clientWidth;
+  const cHeight = video.clientHeight;
+
+  if (!vWidth || !vHeight || !cWidth || !cHeight) return null;
+
+  const scale = Math.min(1, 300 / Math.max(vWidth, vHeight));
+  const dWidth = Math.floor(vWidth * scale);
+  const dHeight = Math.floor(vHeight * scale);
+
+  if (detectionCanvas.width !== dWidth || detectionCanvas.height !== dHeight) {
+    detectionCanvas.width = dWidth;
+    detectionCanvas.height = dHeight;
+  }
+
+  dCtx.drawImage(video, 0, 0, vWidth, vHeight, 0, 0, dWidth, dHeight);
+  const detected = detectDocumentCorners(detectionCanvas);
+
+  let lastDetectedCorners: Point[] | null = null;
+  if (detected) {
+    lastDetectedCorners = detected.map((p) => ({
+      x: (p.x / dWidth) * vWidth,
+      y: (p.y / dHeight) * vHeight,
+    }));
+  }
+
+  const vAspect = vWidth / vHeight;
+  const cAspect = cWidth / cHeight;
+
+  let renderWidth, renderHeight, offsetX, offsetY;
+  if (vAspect > cAspect) {
+    renderWidth = cWidth;
+    renderHeight = cWidth / vAspect;
+    offsetX = 0;
+    offsetY = (cHeight - renderHeight) / 2;
+  } else {
+    renderHeight = cHeight;
+    renderWidth = cHeight * vAspect;
+    offsetX = (cWidth - renderWidth) / 2;
+    offsetY = 0;
+  }
+
+  const upscaled =
+    detected?.map((p) => ({
+      x: (p.x / dWidth) * renderWidth + offsetX,
+      y: (p.y / dHeight) * renderHeight + offsetY,
+    })) || null;
+
+  if (cameraOverlay.width !== cWidth || cameraOverlay.height !== cHeight) {
+    cameraOverlay.width = cWidth;
+    cameraOverlay.height = cHeight;
+  }
+
+  return { lastDetectedCorners, upscaled };
 }

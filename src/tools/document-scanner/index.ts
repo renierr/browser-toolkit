@@ -6,8 +6,9 @@ import {
   stopCamera as stopCameraUtil,
   isTorchSupported,
   toggleTorch,
+  capturePhoto,
 } from './utils/camera';
-import { detectDocumentCorners, detectCornersOnImage } from './utils/detection';
+import { detectCornersOnImage, calculateLiveDetection } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import {
   drawLiveOverlay,
@@ -15,6 +16,8 @@ import {
   updateCornerHandles,
   updateMagnifier,
   renderPageList as renderPageListUtil,
+  calculateSmoothedPosition,
+  constrainPoint,
 } from './utils/ui';
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
@@ -139,61 +142,11 @@ export default function init(payload?: SharedFilesPayload) {
         return;
       }
 
-      const vWidth = video.videoWidth;
-      const vHeight = video.videoHeight;
-      const cWidth = video.clientWidth;
-      const cHeight = video.clientHeight;
-      if (!vWidth || !vHeight || !cWidth || !cHeight) return;
+      const result = calculateLiveDetection(video, detectionCanvas, dCtx, cameraOverlay);
+      if (!result) return;
 
-      const scale = Math.min(1, 300 / Math.max(vWidth, vHeight));
-      const dWidth = Math.floor(vWidth * scale);
-      const dHeight = Math.floor(vHeight * scale);
-
-      if (detectionCanvas.width !== dWidth || detectionCanvas.height !== dHeight) {
-        detectionCanvas.width = dWidth;
-        detectionCanvas.height = dHeight;
-      }
-
-      dCtx.drawImage(video, 0, 0, vWidth, vHeight, 0, 0, dWidth, dHeight);
-      const detected = detectDocumentCorners(detectionCanvas);
-
-      if (detected) {
-        lastDetectedCorners = detected.map((p) => ({
-          x: (p.x / dWidth) * vWidth,
-          y: (p.y / dHeight) * vHeight,
-        }));
-      } else {
-        lastDetectedCorners = null;
-      }
-
-      const vAspect = vWidth / vHeight;
-      const cAspect = cWidth / cHeight;
-
-      let renderWidth, renderHeight, offsetX, offsetY;
-      if (vAspect > cAspect) {
-        renderWidth = cWidth;
-        renderHeight = cWidth / vAspect;
-        offsetX = 0;
-        offsetY = (cHeight - renderHeight) / 2;
-      } else {
-        renderHeight = cHeight;
-        renderWidth = cHeight * vAspect;
-        offsetX = (cWidth - renderWidth) / 2;
-        offsetY = 0;
-      }
-
-      const upscaled =
-        detected?.map((p) => ({
-          x: (p.x / dWidth) * renderWidth + offsetX,
-          y: (p.y / dHeight) * renderHeight + offsetY,
-        })) || null;
-
-      if (cameraOverlay.width !== cWidth || cameraOverlay.height !== cHeight) {
-        cameraOverlay.width = cWidth;
-        cameraOverlay.height = cHeight;
-      }
-
-      drawLiveOverlay(cameraOverlay, upscaled);
+      lastDetectedCorners = result.lastDetectedCorners;
+      drawLiveOverlay(cameraOverlay, result.upscaled);
     }, 200);
   }
 
@@ -215,29 +168,7 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   btnCapture.addEventListener('click', async () => {
-    const track = stream?.getVideoTracks()[0];
-    if (!track) return;
-
-    let blob: Blob | null = null;
-
-    // 1. Try ImageCapture (Photo Mode) - Best resolution, Chrome/Android only
-    if ('ImageCapture' in window) {
-      try {
-        const imageCapture = new ImageCapture(track);
-        blob = await imageCapture.takePhoto();
-      } catch (e) {
-        console.warn('ImageCapture failed, falling back to video frame', e);
-      }
-    }
-
-    // 2. Fallback to Video Frame - Essential for iOS/Safari
-    if (!blob) {
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d')?.drawImage(video, 0, 0);
-      blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.95));
-    }
+    const blob = await capturePhoto(video, stream);
 
     if (blob) {
       const img = new Image();
@@ -502,8 +433,15 @@ export default function init(payload?: SharedFilesPayload) {
     const targetY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
     // Apply smoothing
-    smoothedX = smoothedX + (targetX - smoothedX) * smoothingFactor;
-    smoothedY = smoothedY + (targetY - smoothedY) * smoothingFactor;
+    const smoothed = calculateSmoothedPosition(
+      targetX,
+      targetY,
+      smoothedX,
+      smoothedY,
+      smoothingFactor
+    );
+    smoothedX = smoothed.x;
+    smoothedY = smoothed.y;
 
     let newX = smoothedX;
     let newY = smoothedY;
@@ -517,10 +455,7 @@ export default function init(payload?: SharedFilesPayload) {
       newY = smoothedY - touchOffset;
     }
 
-    page.corners[activeHandle] = {
-      x: Math.max(0, Math.min(canvas.width, newX)),
-      y: Math.max(0, Math.min(canvas.height, newY)),
-    };
+    page.corners[activeHandle] = constrainPoint(newX, newY, canvas.width, canvas.height);
 
     updateEditor();
     updateMagnifier(
@@ -555,10 +490,7 @@ export default function init(payload?: SharedFilesPayload) {
     const newX = corner.x + dx * nudgeAmount;
     const newY = corner.y + dy * nudgeAmount;
 
-    page.corners[selectedHandle] = {
-      x: Math.max(0, Math.min(canvas.width, newX)),
-      y: Math.max(0, Math.min(canvas.height, newY)),
-    };
+    page.corners[selectedHandle] = constrainPoint(newX, newY, canvas.width, canvas.height);
 
     updateEditor();
   }
