@@ -29,7 +29,7 @@ export default function init(payload?: SharedFilesPayload) {
   const hintText = document.getElementById('hint-text')!;
   const checkLiveDetection = document.getElementById('check-live-detection') as HTMLInputElement;
   const levelIndicator = document.getElementById('level-indicator')!;
-  const levelBar = document.getElementById('level-bar')!;
+  const levelDot = document.getElementById('level-dot')!;
 
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
@@ -150,25 +150,41 @@ export default function init(payload?: SharedFilesPayload) {
   // --- Level Sensor Logic ---
 
   function handleOrientation(event: DeviceOrientationEvent) {
-    const beta = event.beta; // -180 to 180
-    const gamma = event.gamma; // -90 to 90
+    const beta = event.beta; // -180 to 180 (tilt forward/backward)
+    const gamma = event.gamma; // -90 to 90 (tilt left/right)
     if (beta === null || gamma === null) return;
 
     levelIndicator.classList.remove('opacity-0');
 
     // Calculate tilt based on orientation
-    const tilt = isPortrait ? gamma : beta;
-    const normalizedTilt = Math.max(-30, Math.min(30, tilt));
-    const percentage = (normalizedTilt / 30) * 50; // -50% to 50%
+    // We want to show how far the device is from being "flat" (parallel to ground)
+    // or "upright" depending on use case. For document scanning, usually flat.
 
-    levelBar.style.transform = `translateX(${percentage}px) translateX(-50%)`;
+    let xTilt = gamma;
+    let yTilt = beta;
 
-    if (Math.abs(tilt) < 2) {
-      levelBar.classList.replace('bg-success', 'bg-primary');
-      levelBar.classList.add('scale-y-150');
+    // Adjust for portrait/landscape
+    if (!isPortrait) {
+      xTilt = beta;
+      yTilt = -gamma;
+    }
+
+    const maxTilt = 20;
+    const xPerc = Math.max(-maxTilt, Math.min(maxTilt, xTilt)) / maxTilt;
+    const yPerc = Math.max(-maxTilt, Math.min(maxTilt, yTilt)) / maxTilt;
+
+    // 40px is half the container width (80px / 2)
+    const xPos = xPerc * 40;
+    const yPos = yPerc * 40;
+
+    levelDot.style.transform = `translate(${xPos}px, ${yPos}px)`;
+
+    if (Math.abs(xTilt) < 2 && Math.abs(yTilt) < 2) {
+      levelDot.classList.replace('bg-success', 'bg-primary');
+      levelDot.classList.add('scale-125');
     } else {
-      levelBar.classList.replace('bg-primary', 'bg-success');
-      levelBar.classList.remove('scale-y-150');
+      levelDot.classList.replace('bg-primary', 'bg-success');
+      levelDot.classList.remove('scale-125');
     }
   }
 
