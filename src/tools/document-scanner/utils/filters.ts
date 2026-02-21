@@ -1,12 +1,12 @@
 export function applyFilters(
-  originalImage: HTMLImageElement,
+  source: HTMLImageElement | HTMLCanvasElement,
   canvas: HTMLCanvasElement,
   ctx: CanvasRenderingContext2D,
   filter: 'none' | 'grayscale' | 'b&w' | 'clean'
 ) {
-  canvas.width = originalImage.width;
-  canvas.height = originalImage.height;
-  ctx.drawImage(originalImage, 0, 0);
+  canvas.width = source.width;
+  canvas.height = source.height;
+  ctx.drawImage(source, 0, 0);
 
   if (filter === 'none') return;
 

@@ -3,8 +3,20 @@ import { warp, type Point } from './utils/perspective';
 import { applyFilters as applyFiltersUtil } from './utils/filters';
 import { startCamera as startCameraUtil, stopCamera as stopCameraUtil } from './utils/camera';
 import { detectDocumentCorners } from './utils/detection';
-import { setupFileDropzone } from '../../js/file-utils.ts';
+import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { drawLiveOverlay, drawPerspectiveOverlay, updateCornerHandles } from './utils/ui';
+import Sortable from 'sortablejs';
+import mupdf from 'mupdf';
+import { addImageToPDFDocument } from '../../js/mupdf-utils.ts';
+import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
+
+interface ScannedPage {
+  id: string;
+  originalImage: HTMLImageElement;
+  processedCanvas: HTMLCanvasElement;
+  corners: Point[];
+  filter: 'none' | 'grayscale' | 'b&w' | 'clean';
+}
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -22,6 +34,8 @@ export default function init(payload?: SharedFilesPayload) {
   const btnRotate = document.getElementById('btn-rotate-view')!;
   const btnReset = document.getElementById('btn-reset')!;
   const btnDownload = document.getElementById('btn-download')!;
+  const btnDownloadPdf = document.getElementById('btn-download-pdf')!;
+  const btnAddPage = document.getElementById('btn-add-page')!;
   const btnApplyPerspective = document.getElementById('btn-apply-perspective')!;
   const btnModePerspective = document.getElementById('btn-mode-perspective')!;
   const btnModeFilter = document.getElementById('btn-mode-filter')!;
@@ -30,12 +44,14 @@ export default function init(payload?: SharedFilesPayload) {
   const checkLiveDetection = document.getElementById('check-live-detection') as HTMLInputElement;
   const levelIndicator = document.getElementById('level-indicator')!;
   const levelDot = document.getElementById('level-dot')!;
+  const pageList = document.getElementById('page-list')!;
+  const dropzoneContainer = document.getElementById('dropzone-container')!;
 
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
   let isPortrait = true;
-  let originalImage: HTMLImageElement | null = null;
-  let corners: Point[] = [];
+  let pages: ScannedPage[] = [];
+  let currentPageIndex: number = -1;
   let activeHandle: number | null = null;
   let activePointerId: number | null = null;
   let isFilterMode = false;
@@ -49,7 +65,6 @@ export default function init(payload?: SharedFilesPayload) {
   const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
 
   async function startCamera() {
-    // Update UI orientation
     cameraView.classList.toggle('aspect-portrait', isPortrait);
     cameraView.classList.toggle('aspect-landscape', !isPortrait);
 
@@ -82,7 +97,6 @@ export default function init(payload?: SharedFilesPayload) {
       const cHeight = video.clientHeight;
       if (!vWidth || !vHeight || !cWidth || !cHeight) return;
 
-      // Downscale for detection performance (use full video frame)
       const scale = Math.min(1, 300 / Math.max(vWidth, vHeight));
       const dWidth = Math.floor(vWidth * scale);
       const dHeight = Math.floor(vHeight * scale);
@@ -93,10 +107,8 @@ export default function init(payload?: SharedFilesPayload) {
       }
 
       dCtx.drawImage(video, 0, 0, vWidth, vHeight, 0, 0, dWidth, dHeight);
-
       const detected = detectDocumentCorners(detectionCanvas);
 
-      // Store raw detected corners for capture
       if (detected) {
         lastDetectedCorners = detected.map(p => ({
           x: (p.x / dWidth) * vWidth,
@@ -106,7 +118,6 @@ export default function init(payload?: SharedFilesPayload) {
         lastDetectedCorners = null;
       }
 
-      // Map detected corners to container space taking object-contain into account
       const vAspect = vWidth / vHeight;
       const cAspect = cWidth / cHeight;
 
@@ -128,14 +139,13 @@ export default function init(payload?: SharedFilesPayload) {
         y: (p.y / dHeight) * renderHeight + offsetY
       })) || null;
 
-      // Ensure overlay canvas matches container size
       if (cameraOverlay.width !== cWidth || cameraOverlay.height !== cHeight) {
         cameraOverlay.width = cWidth;
         cameraOverlay.height = cHeight;
       }
 
       drawLiveOverlay(cameraOverlay, upscaled);
-    }, 200); // Increased frequency for better responsiveness
+    }, 200);
   }
 
   function stopLiveDetection() {
@@ -150,20 +160,15 @@ export default function init(payload?: SharedFilesPayload) {
   // --- Level Sensor Logic ---
 
   function handleOrientation(event: DeviceOrientationEvent) {
-    const beta = event.beta; // -180 to 180 (tilt forward/backward)
-    const gamma = event.gamma; // -90 to 90 (tilt left/right)
+    const beta = event.beta;
+    const gamma = event.gamma;
     if (beta === null || gamma === null) return;
 
     levelIndicator.classList.remove('opacity-0');
 
-    // Calculate tilt based on orientation
-    // We want to show how far the device is from being "flat" (parallel to ground)
-    // or "upright" depending on use case. For document scanning, usually flat.
-
     let xTilt = gamma;
     let yTilt = beta;
 
-    // Adjust for portrait/landscape
     if (!isPortrait) {
       xTilt = beta;
       yTilt = -gamma;
@@ -173,7 +178,6 @@ export default function init(payload?: SharedFilesPayload) {
     const xPerc = Math.max(-maxTilt, Math.min(maxTilt, xTilt)) / maxTilt;
     const yPerc = Math.max(-maxTilt, Math.min(maxTilt, yTilt)) / maxTilt;
 
-    // 40px is half the container width (80px / 2)
     const xPos = xPerc * 40;
     const yPos = yPerc * 40;
 
@@ -219,7 +223,6 @@ export default function init(payload?: SharedFilesPayload) {
     const vHeight = video.videoHeight;
     if (!vWidth || !vHeight) return;
 
-    // Capture the full video frame
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = vWidth;
     tempCanvas.height = vHeight;
@@ -229,7 +232,7 @@ export default function init(payload?: SharedFilesPayload) {
     const img = new Image();
     img.src = tempCanvas.toDataURL('image/png');
     img.onload = () => {
-      loadCapturedImage(img, lastDetectedCorners);
+      addPage(img, lastDetectedCorners);
     };
   });
 
@@ -243,22 +246,19 @@ export default function init(payload?: SharedFilesPayload) {
     startCamera();
   });
 
-  // --- Image Loading ---
+  // --- Page Management ---
 
-  function loadCapturedImage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
-    originalImage = img;
-    stopCamera();
-    captureContainer.classList.add('hidden');
-    editorContainer.classList.remove('hidden');
-    const dropzone = document.getElementById('dropzone');
-    if (dropzone) dropzone.classList.add('hidden');
-    const divider = document.querySelector('.divider');
-    if (divider) (divider as HTMLElement).style.display = 'none';
+  function addPage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
+    const pCanvas = document.createElement('canvas');
+    pCanvas.width = img.width;
+    pCanvas.height = img.height;
+    const pCtx = pCanvas.getContext('2d')!;
+    pCtx.drawImage(img, 0, 0);
 
+    let initialCorners: Point[];
     if (detectedCorners) {
-      corners = detectedCorners;
+      initialCorners = detectedCorners;
     } else {
-      // Initial corners (rectangle with margin)
       const margin = 0.1;
       const defaultCorners = [
         { x: img.width * margin, y: img.height * margin },
@@ -267,7 +267,6 @@ export default function init(payload?: SharedFilesPayload) {
         { x: img.width * margin, y: img.height * (1 - margin) },
       ];
 
-      // Try auto-detection if not provided from live
       const tempCanvas = document.createElement('canvas');
       const scale = Math.min(1, 800 / Math.max(img.width, img.height));
       tempCanvas.width = img.width * scale;
@@ -275,11 +274,108 @@ export default function init(payload?: SharedFilesPayload) {
       const tCtx = tempCanvas.getContext('2d')!;
       tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
       const detected = detectDocumentCorners(tempCanvas);
-      corners = detected?.map(p => ({ x: p.x / scale, y: p.y / scale })) || defaultCorners;
+      initialCorners = detected?.map(p => ({ x: p.x / scale, y: p.y / scale })) || defaultCorners;
     }
 
+    const newPage: ScannedPage = {
+      id: crypto.randomUUID(),
+      originalImage: img,
+      processedCanvas: pCanvas,
+      corners: initialCorners,
+      filter: 'none'
+    };
+
+    pages.push(newPage);
+    currentPageIndex = pages.length - 1;
+
+    stopCamera();
+    captureContainer.classList.add('hidden');
+    editorContainer.classList.remove('hidden');
+    dropzoneContainer.classList.add('hidden');
+
+    renderPageList();
     enterPerspectiveMode();
   }
+
+  function renderPageList() {
+    pageList.innerHTML = '';
+    pages.forEach((page, index) => {
+      const card = document.createElement('div');
+      card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${
+        index === currentPageIndex ? 'active border-primary ring-2 ring-primary/20' : 'border-base-300'
+      }`;
+      card.dataset.index = index.toString();
+
+      const thumb = document.createElement('img');
+      thumb.src = page.processedCanvas.toDataURL('image/jpeg', 0.5);
+      thumb.className = 'w-full h-full object-contain pointer-events-none bg-white';
+
+      card.innerHTML = `
+        <div class="absolute top-1 right-1 z-10">
+          <button class="btn btn-circle btn-error btn-xs btn-remove-page" data-index="${index}">
+            <i data-lucide="x" class="w-3 h-3"></i>
+          </button>
+        </div>
+        <div class="absolute bottom-1 right-1 bg-base-300/90 px-1.5 rounded text-[10px] font-bold z-10">
+          ${index + 1}
+        </div>
+      `;
+      card.prepend(thumb);
+
+      card.addEventListener('click', (e) => {
+        if ((e.target as HTMLElement).closest('.btn-remove-page')) return;
+        currentPageIndex = index;
+        renderPageList();
+        enterPerspectiveMode();
+      });
+
+      pageList.appendChild(card);
+    });
+
+    (window as any).lucide?.createIcons();
+  }
+
+  const sortable = Sortable.create(pageList, {
+    animation: 150,
+    ghostClass: 'opacity-20',
+    onEnd: (evt) => {
+      if (evt.oldIndex !== undefined && evt.newIndex !== undefined) {
+        const [moved] = pages.splice(evt.oldIndex, 1);
+        pages.splice(evt.newIndex, 0, moved);
+        if (currentPageIndex === evt.oldIndex) {
+          currentPageIndex = evt.newIndex;
+        } else if (currentPageIndex > evt.oldIndex && currentPageIndex <= evt.newIndex) {
+          currentPageIndex--;
+        } else if (currentPageIndex < evt.oldIndex && currentPageIndex >= evt.newIndex) {
+          currentPageIndex++;
+        }
+        renderPageList();
+      }
+    }
+  });
+
+  pageList.addEventListener('click', (e) => {
+    const removeBtn = (e.target as HTMLElement).closest('.btn-remove-page') as HTMLElement;
+    if (removeBtn) {
+      const index = parseInt(removeBtn.dataset.index!);
+      pages.splice(index, 1);
+      if (pages.length === 0) {
+        btnReset.click();
+      } else {
+        if (currentPageIndex >= pages.length) currentPageIndex = pages.length - 1;
+        renderPageList();
+        enterPerspectiveMode();
+      }
+    }
+  });
+
+  btnAddPage.addEventListener('click', () => {
+    captureContainer.classList.remove('hidden');
+    editorContainer.classList.add('hidden');
+    startCamera();
+  });
+
+  // --- Image Loading ---
 
   function handleFile(file: File) {
     if (!file.type.startsWith('image/')) return;
@@ -287,15 +383,13 @@ export default function init(payload?: SharedFilesPayload) {
     reader.onload = (e) => {
       const img = new Image();
       img.src = e.target?.result as string;
-      img.onload = () => loadCapturedImage(img);
+      img.onload = () => addPage(img);
     };
     reader.readAsDataURL(file);
   }
 
   setupFileDropzone('dropzone', 'image-input', (files) => {
-    if (files.length > 0) {
-      handleFile(files[0]);
-    }
+    Array.from(files).forEach(handleFile);
   });
 
   // --- Perspective Logic ---
@@ -318,19 +412,25 @@ export default function init(payload?: SharedFilesPayload) {
     perspectiveActions.classList.add('hidden');
     hintText.textContent = 'Choose a filter to enhance your document.';
     cornerHandles.innerHTML = '';
+
+    const page = pages[currentPageIndex];
+    filterSelect.value = page.filter;
     applyFilters();
   }
 
   function updateEditor() {
-    if (!originalImage) return;
+    const page = pages[currentPageIndex];
+    if (!page) return;
 
-    canvas.width = originalImage.width;
-    canvas.height = originalImage.height;
-    ctx.drawImage(originalImage, 0, 0);
+    canvas.width = page.originalImage.width;
+    canvas.height = page.originalImage.height;
+    ctx.drawImage(page.originalImage, 0, 0);
 
     if (!isFilterMode) {
-      drawPerspectiveOverlay(ctx, corners);
-      updateCornerHandles(cornerHandles, corners, canvas, onStart);
+      drawPerspectiveOverlay(ctx, page.corners);
+      updateCornerHandles(cornerHandles, page.corners, canvas, onStart);
+    } else {
+      applyFilters();
     }
   }
 
@@ -346,15 +446,16 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function onMove(e: PointerEvent) {
-    if (activeHandle === null || !originalImage) return;
+    if (activeHandle === null || currentPageIndex === -1) return;
     if (activePointerId !== null && e.pointerId !== activePointerId) return;
     e.preventDefault();
 
+    const page = pages[currentPageIndex];
     const rect = canvas.getBoundingClientRect();
     const x = (e.clientX - rect.left) * (canvas.width / rect.width);
     const y = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-    corners[activeHandle] = {
+    page.corners[activeHandle] = {
       x: Math.max(0, Math.min(canvas.width, x)),
       y: Math.max(0, Math.min(canvas.height, y)),
     };
@@ -373,31 +474,54 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function warpImage() {
-    if (!originalImage) return;
-    ctx.drawImage(originalImage, 0, 0);
-    const outCanvas = warp(canvas, corners);
+    const page = pages[currentPageIndex];
+    if (!page) return;
 
-    const warpedImg = new Image();
-    warpedImg.src = outCanvas.toDataURL();
-    warpedImg.onload = () => {
-      originalImage = warpedImg;
-      const margin = 0.05;
-      corners = [
-        { x: warpedImg.width * margin, y: warpedImg.height * margin },
-        { x: warpedImg.width * (1 - margin), y: warpedImg.height * margin },
-        { x: warpedImg.width * (1 - margin), y: warpedImg.height * (1 - margin) },
-        { x: warpedImg.width * margin, y: warpedImg.height * (1 - margin) },
-      ];
-      enterFilterMode();
-    };
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = page.originalImage.width;
+    tempCanvas.height = page.originalImage.height;
+    const tCtx = tempCanvas.getContext('2d')!;
+    tCtx.drawImage(page.originalImage, 0, 0);
+
+    const outCanvas = warp(tempCanvas, page.corners);
+
+    page.processedCanvas.width = outCanvas.width;
+    page.processedCanvas.height = outCanvas.height;
+    const pCtx = page.processedCanvas.getContext('2d')!;
+    pCtx.drawImage(outCanvas, 0, 0);
+
+    renderPageList();
+    enterFilterMode();
   }
 
   // --- Filtering Logic ---
 
   function applyFilters() {
-    if (!originalImage) return;
-    const filter = filterSelect.value as 'none' | 'grayscale' | 'b&w' | 'clean';
-    applyFiltersUtil(originalImage, canvas, ctx, filter);
+    const page = pages[currentPageIndex];
+    if (!page) return;
+
+    const filter = filterSelect.value as any;
+    page.filter = filter;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = page.originalImage.width;
+    tempCanvas.height = page.originalImage.height;
+    const tCtx = tempCanvas.getContext('2d')!;
+    tCtx.drawImage(page.originalImage, 0, 0);
+
+    const warpedCanvas = warp(tempCanvas, page.corners);
+    applyFiltersUtil(warpedCanvas, canvas, ctx, filter);
+
+    page.processedCanvas.width = canvas.width;
+    page.processedCanvas.height = canvas.height;
+    const pCtx = page.processedCanvas.getContext('2d')!;
+    pCtx.drawImage(canvas, 0, 0);
+
+    const card = pageList.querySelector(`[data-index="${currentPageIndex}"]`);
+    if (card) {
+      const img = card.querySelector('img');
+      if (img) img.src = page.processedCanvas.toDataURL('image/jpeg', 0.5);
+    }
   }
 
   // --- Event Listeners ---
@@ -409,37 +533,69 @@ export default function init(payload?: SharedFilesPayload) {
 
   btnReset.addEventListener('click', () => {
     stopCamera();
+    pages = [];
+    currentPageIndex = -1;
     captureContainer.classList.remove('hidden');
     editorContainer.classList.add('hidden');
-    const dropzone = document.getElementById('dropzone');
-    if (dropzone) dropzone.classList.remove('hidden');
-    const divider = document.querySelector('.divider');
-    if (divider) (divider as HTMLElement).style.display = 'flex';
+    dropzoneContainer.classList.remove('hidden');
     cornerHandles.innerHTML = '';
-    originalImage = null;
+    pageList.innerHTML = '';
     startCamera();
   });
 
   btnDownload.addEventListener('click', () => {
     const link = document.createElement('a');
-    link.download = 'scanned-document.png';
+    link.download = `scanned-page-${currentPageIndex + 1}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
   });
 
+  btnDownloadPdf.addEventListener('click', async () => {
+    if (pages.length === 0) return;
+
+    showProgress('Generating PDF...');
+    const pdfDoc = new mupdf.PDFDocument();
+
+    try {
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        showProgress(`Processing page ${i + 1} of ${pages.length}...`);
+        await yieldToUI();
+
+        const imgData = page.processedCanvas.toDataURL('image/jpeg', 0.9);
+        const response = await fetch(imgData);
+        const imageBytes = await response.arrayBuffer();
+
+        addImageToPDFDocument(pdfDoc, `Page_${i}`, new Uint8Array(imageBytes));
+      }
+
+      const pdfBytes = pdfDoc.saveToBuffer('compress,compress-images,garbage');
+      await downloadFile(pdfBytes.asUint8Array(), `scanned-doc-${Date.now()}.pdf`, 'application/pdf');
+
+      showMessage('PDF created successfully!', { type: 'info', timeoutMs: 5000 });
+    } catch (error) {
+      console.error('Failed to generate PDF', error);
+      showMessage('Failed to generate PDF.', { type: 'alert' });
+    } finally {
+      pdfDoc.destroy();
+      hideProgress();
+    }
+  });
+
   if (payload?.sharedFiles?.length) {
-    handleFile(payload.sharedFiles[0]);
+    Array.from(payload.sharedFiles).forEach(handleFile);
   } else {
     startCamera();
   }
 
   const resizeObserver = new ResizeObserver(() => {
-    if (!isFilterMode && originalImage) updateEditor();
+    if (currentPageIndex !== -1) updateEditor();
   });
   resizeObserver.observe(editorContainer);
 
   return () => {
     stopCamera();
     resizeObserver.disconnect();
+    sortable.destroy();
   };
 }
