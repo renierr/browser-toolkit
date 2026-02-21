@@ -50,6 +50,98 @@ function dilate(pixels: Uint8Array, width: number, height: number): Uint8Array {
 }
 
 /**
+ * Performs a 3x3 erosion to remove small noise.
+ */
+function erode(pixels: Uint8Array, width: number, height: number): Uint8Array {
+  const out = new Uint8Array(width * height);
+  for (let y = 1; y < height - 1; y++) {
+    for (let x = 1; x < width - 1; x++) {
+      const idx = y * width + x;
+      let min = pixels[idx];
+      if (pixels[idx - width] < min) min = pixels[idx - width];
+      if (pixels[idx + width] < min) min = pixels[idx + width];
+      if (pixels[idx - 1] < min) min = pixels[idx - 1];
+      if (pixels[idx + 1] < min) min = pixels[idx + 1];
+      out[idx] = min;
+    }
+  }
+  return out;
+}
+
+/**
+ * Validates if four points form a plausible document rectangle.
+ * Checks for convexity, area, and reasonable aspect ratio.
+ */
+function isValidDocument(points: Point[], width: number, height: number): boolean {
+  const [tl, tr, br, bl] = points;
+
+  // 1. Check Shoelace area
+  const area = Math.abs(
+    (tl.x * (tr.y - bl.y) + tr.x * (br.y - tl.y) + br.x * (bl.y - tr.y) + bl.x * (tl.y - br.y)) / 2
+  );
+  if (area < width * height * 0.1) return false; // Minimum 10% of image
+
+  // 2. Check for convexity (all internal angles < 180 degrees)
+  // For a convex quadrilateral, the cross products of consecutive edges should have the same sign.
+  const crossProduct = (a: Point, b: Point, c: Point) =>
+    (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
+  const cp1 = crossProduct(tl, tr, br);
+  const cp2 = crossProduct(tr, br, bl);
+  const cp3 = crossProduct(br, bl, tl);
+  const cp4 = crossProduct(bl, tl, tr);
+
+  const allPositive = cp1 > 0 && cp2 > 0 && cp3 > 0 && cp4 > 0;
+  const allNegative = cp1 < 0 && cp2 < 0 && cp3 < 0 && cp4 < 0;
+  if (!allPositive && !allNegative) return false;
+
+  // 3. Check aspect ratio (optional but good for documents)
+  // A4 is ~1.41, US Letter is ~1.29. We can allow 0.5 to 2.0
+  const side1 = Math.hypot(tr.x - tl.x, tr.y - tl.y);
+  const side2 = Math.hypot(br.x - tr.x, br.y - tr.y);
+  const ratio = side1 / side2;
+  if (ratio < 0.2 || ratio > 5.0) return false;
+
+  return true;
+}
+
+let history: Point[][] = [];
+const HISTORY_SIZE = 5;
+
+/**
+ * Smooths the detected corners using a simple moving average.
+ */
+function smoothCorners(newCorners: Point[] | null): Point[] | null {
+  if (!newCorners) {
+    history = [];
+    return null;
+  }
+
+  history.push(newCorners);
+  if (history.length > HISTORY_SIZE) history.shift();
+
+  const smoothed: Point[] = [
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+  ];
+
+  for (const entry of history) {
+    for (let i = 0; i < 4; i++) {
+      smoothed[i].x += entry[i].x;
+      smoothed[i].y += entry[i].y;
+    }
+  }
+
+  for (let i = 0; i < 4; i++) {
+    smoothed[i].x /= history.length;
+    smoothed[i].y /= history.length;
+  }
+
+  return smoothed;
+}
+
+/**
  * Finds the corners of a document-like shape in an image.
  * Improved version with Gaussian blur, contrast stretching, and robust corner heuristics.
  */
@@ -110,12 +202,12 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
     }
   }
 
-  // Step 5: Dilation to connect broken edges
-  const dilatedEdges = dilate(edges, width, height);
+  // Step 5: Dilation followed by Erosion (Closing) to connect broken edges and remove noise
+  const closedEdges = erode(dilate(edges, width, height), width, height);
 
   // Step 6: Find corners using extreme points (min/max of x+y and x-y)
   // This is more robust for rotated rectangles than simple distance to image corners.
-  const threshold = maxEdge * 0.25;
+  const threshold = maxEdge * 0.2;
   let foundAny = false;
 
   let minSum = Infinity,
@@ -131,7 +223,7 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
   for (let y = 0; y < height; y++) {
     const yOffset = y * width;
     for (let x = 0; x < width; x++) {
-      if (dilatedEdges[yOffset + x] > threshold) {
+      if (closedEdges[yOffset + x] > threshold) {
         foundAny = true;
         const sum = x + y;
         const diff = x - y;
@@ -158,15 +250,12 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
 
   if (!foundAny) return null;
 
-  // Validation: check if the area is large enough (at least 5% of the image)
-  // Shoelace formula for quadrilateral area
-  const area = Math.abs(
-    (tl.x * (tr.y - bl.y) + tr.x * (br.y - tl.y) + br.x * (bl.y - tr.y) + bl.x * (tl.y - br.y)) / 2
-  );
+  const corners = [tl, tr, br, bl];
 
-  if (area < width * height * 0.05) return null;
+  // Validation: check if the area is large enough and shape is convex
+  if (!isValidDocument(corners, width, height)) return null;
 
-  return [tl, tr, br, bl];
+  return corners;
 }
 
 export function detectCornersOnImage(
@@ -212,7 +301,10 @@ export function calculateLiveDetection(
   }
 
   dCtx.drawImage(video, 0, 0, vWidth, vHeight, 0, 0, dWidth, dHeight);
-  const detected = detectDocumentCorners(detectionCanvas);
+  let detected = detectDocumentCorners(detectionCanvas);
+
+  // Temporal smoothing for live detection
+  detected = smoothCorners(detected);
 
   let lastDetectedCorners: Point[] | null = null;
   if (detected) {
