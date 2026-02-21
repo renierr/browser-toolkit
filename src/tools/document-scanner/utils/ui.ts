@@ -157,7 +157,7 @@ export function renderPageList(
 
     const thumb = document.createElement('img');
     thumb.src = page.processedCanvas.toDataURL('image/jpeg', 0.5);
-    thumb.className = 'w-full h-full object-contain pointer-events-none bg-white';
+    thumb.className = 'checkerboard-bg w-full h-full object-contain pointer-events-none bg-white';
 
     card.innerHTML = `
       <div class="absolute top-1 right-1 z-10">

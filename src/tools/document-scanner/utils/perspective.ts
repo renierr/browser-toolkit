@@ -1,3 +1,5 @@
+import { sourceToCanvas } from './canvas';
+
 export interface Point {
   x: number;
   y: number;
@@ -45,9 +47,10 @@ function solve(matrix: number[][]) {
 }
 
 export function warp(
-  sourceCanvas: HTMLCanvasElement,
+  source: HTMLCanvasElement | HTMLImageElement | HTMLVideoElement,
   corners: Point[]
 ): HTMLCanvasElement {
+  const sourceCanvas = sourceToCanvas(source);
   const w1 = Math.hypot(corners[1].x - corners[0].x, corners[1].y - corners[0].y);
   const w2 = Math.hypot(corners[2].x - corners[3].x, corners[2].y - corners[3].y);
   const h1 = Math.hypot(corners[3].x - corners[0].x, corners[3].y - corners[0].y);

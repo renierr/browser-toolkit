@@ -7,6 +7,7 @@ import { setupFileDropzone } from '../../js/file-utils.ts';
 import { drawLiveOverlay, drawPerspectiveOverlay, updateCornerHandles, updateMagnifier, renderPageList as renderPageListUtil } from './utils/ui';
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
+import { sourceToCanvas } from './utils/canvas';
 import type { ScannedPage } from './types';
 import Sortable from 'sortablejs';
 
@@ -183,12 +184,7 @@ export default function init(payload?: SharedFilesPayload) {
     const vHeight = video.videoHeight;
     if (!vWidth || !vHeight) return;
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = vWidth;
-    tempCanvas.height = vHeight;
-    const tCtx = tempCanvas.getContext('2d')!;
-    tCtx.drawImage(video, 0, 0, vWidth, vHeight);
-
+    const tempCanvas = sourceToCanvas(video);
     const img = new Image();
     img.src = tempCanvas.toDataURL('image/png');
     img.onload = () => {
@@ -196,24 +192,20 @@ export default function init(payload?: SharedFilesPayload) {
     };
   });
 
-  btnSwitch.addEventListener('click', () => {
+  btnSwitch.addEventListener('click', async () => {
     currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-    startCamera();
+    await startCamera();
   });
 
-  btnRotate.addEventListener('click', () => {
+  btnRotate.addEventListener('click', async () => {
     isPortrait = !isPortrait;
-    startCamera();
+    await startCamera();
   });
 
   // --- Page Management ---
 
   function addPage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
-    const pCanvas = document.createElement('canvas');
-    pCanvas.width = img.width;
-    pCanvas.height = img.height;
-    const pCtx = pCanvas.getContext('2d')!;
-    pCtx.drawImage(img, 0, 0);
+    const pCanvas = sourceToCanvas(img);
 
     let initialCorners: Point[];
     if (detectedCorners) {
@@ -290,10 +282,10 @@ export default function init(payload?: SharedFilesPayload) {
     }
   });
 
-  btnAddPage.addEventListener('click', () => {
+  btnAddPage.addEventListener('click', async () => {
     captureContainer.classList.remove('hidden');
     editorContainer.classList.add('hidden');
-    startCamera();
+    await startCamera();
   });
 
   // --- Image Loading ---
@@ -403,13 +395,7 @@ export default function init(payload?: SharedFilesPayload) {
     const page = pages[currentPageIndex];
     if (!page) return;
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = page.originalImage.width;
-    tempCanvas.height = page.originalImage.height;
-    const tCtx = tempCanvas.getContext('2d')!;
-    tCtx.drawImage(page.originalImage, 0, 0);
-
-    const outCanvas = warp(tempCanvas, page.corners);
+    const outCanvas = warp(page.originalImage, page.corners);
 
     page.processedCanvas.width = outCanvas.width;
     page.processedCanvas.height = outCanvas.height;
@@ -427,13 +413,7 @@ export default function init(payload?: SharedFilesPayload) {
     const filter = filterSelect.value as any;
     page.filter = filter;
 
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = page.originalImage.width;
-    tempCanvas.height = page.originalImage.height;
-    const tCtx = tempCanvas.getContext('2d')!;
-    tCtx.drawImage(page.originalImage, 0, 0);
-
-    const warpedCanvas = warp(tempCanvas, page.corners);
+    const warpedCanvas = warp(page.originalImage, page.corners);
     applyFiltersUtil(warpedCanvas, canvas, ctx, filter);
 
     page.processedCanvas.width = canvas.width;
@@ -453,7 +433,7 @@ export default function init(payload?: SharedFilesPayload) {
   btnModeFilter.addEventListener('click', enterFilterMode);
   filterSelect.addEventListener('change', applyFilters);
 
-  btnReset.addEventListener('click', () => {
+  btnReset.addEventListener('click', async () => {
     stopCamera();
     pages = [];
     currentPageIndex = -1;
@@ -462,7 +442,7 @@ export default function init(payload?: SharedFilesPayload) {
     dropzoneContainer.classList.remove('hidden');
     cornerHandles.innerHTML = '';
     pageList.innerHTML = '';
-    startCamera();
+    await startCamera();
   });
 
   btnDownload.addEventListener('click', () => {
@@ -477,6 +457,7 @@ export default function init(payload?: SharedFilesPayload) {
   if (payload?.sharedFiles?.length) {
     Array.from(payload.sharedFiles).forEach(handleFile);
   } else {
+    // noinspection JSIgnoredPromiseFromCall
     startCamera();
   }
 
