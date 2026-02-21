@@ -9,8 +9,8 @@
     </p>
 
     <div id="capture-container" class="flex flex-col gap-4">
-      <div id="camera-view" class="relative bg-black rounded-lg overflow-hidden aspect-[3/4] max-h-[60vh] flex items-center justify-center">
-        <video id="video" class="w-full max-h-72 object-contain" autoplay playsinline></video>
+      <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden aspect-[3/4] max-h-[60vh] flex items-center justify-center">
+        <video id="video" class="max-h-[90dvh] object-contain" autoplay playsinline></video>
         <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
         <div id="camera-error" class="absolute inset-0 flex flex-col items-center justify-center bg-base-300 text-center p-4 hidden">
           <i data-lucide="camera-off" class="w-12 h-12 mb-2 opacity-50"></i>
@@ -80,8 +80,8 @@
         </div>
       </div>
 
-      <div class="relative bg-base-300 rounded-xl overflow-hidden flex items-center justify-center border border-base-300 shadow-inner min-h-[300px]" id="canvas-wrapper">
-        <canvas id="editor-canvas" class="max-w-full max-h-[70vh] shadow-2xl transition-all duration-300"></canvas>
+      <div class="checkerboard-bg relative bg-base-300 rounded-xl overflow-hidden flex items-center justify-center border border-base-300 shadow-inner min-h-[300px] touch-none" id="canvas-wrapper">
+        <canvas id="editor-canvas" class="max-w-full max-h-[80dvh] shadow-2xl transition-all duration-300"></canvas>
         <div id="corner-handles" class="absolute inset-0 pointer-events-none">
           <!-- Handles will be injected here by TS -->
         </div>
@@ -102,8 +102,8 @@
 
 <style>
   .corner-handle {
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     background: white;
     border: 3px solid #3b82f6; /* primary color */
     border-radius: 50%;
@@ -113,6 +113,7 @@
     cursor: move;
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
     z-index: 30;
+    touch-action: none;
   }
   .corner-handle:active {
     scale: 1.2;
