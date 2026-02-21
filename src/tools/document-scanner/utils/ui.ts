@@ -1,10 +1,7 @@
 import type { Point } from './perspective';
 import type { ScannedPage } from '../types';
 
-export function drawLiveOverlay(
-  canvas: HTMLCanvasElement,
-  corners: Point[] | null
-) {
+export function drawLiveOverlay(canvas: HTMLCanvasElement, corners: Point[] | null) {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!corners) return;
@@ -38,7 +35,7 @@ export function drawLiveOverlay(
   ctx.shadowBlur = 0;
 
   // Draw corner points (matching the new handle style: hollow with cross)
-  corners.forEach(p => {
+  corners.forEach((p) => {
     ctx.strokeStyle = 'white';
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -55,10 +52,7 @@ export function drawLiveOverlay(
   });
 }
 
-export function drawPerspectiveOverlay(
-  ctx: CanvasRenderingContext2D,
-  corners: Point[]
-) {
+export function drawPerspectiveOverlay(ctx: CanvasRenderingContext2D, corners: Point[]) {
   ctx.save();
   ctx.strokeStyle = '#3b82f6';
   ctx.lineWidth = 6; // Thicker
@@ -121,13 +115,8 @@ export function updateMagnifier(
   const zoom = 2;
 
   // Position magnifier near the pointer, but keep it on screen
-  let left = e.clientX - rect.left;
-  let top = e.clientY - rect.top - magSize;
-
-  // Check viewport boundaries relative to the canvas container
-  // We want to position it relative to the canvas wrapper usually, but here it's absolute to the wrapper
-  // Let's just ensure it doesn't go off the top/left/right/bottom of the visible area if possible.
-  // Since 'magnifier' is absolute positioned inside the relative container, we use local coordinates.
+  let left = e.clientX - rect.left - magSize / 2;
+  let top = e.clientY - rect.top - magSize - 60; // Offset further up to be above finger
 
   // Simple boundary check against the canvas container
   if (top < 0) {
@@ -152,11 +141,14 @@ export function updateMagnifier(
 
   mCtx.drawImage(
     originalImage,
-    point.x - (magSize / 2) / zoom,
-    point.y - (magSize / 2) / zoom,
+    point.x - magSize / 2 / zoom,
+    point.y - magSize / 2 / zoom,
     magSize / zoom,
     magSize / zoom,
-    0, 0, magSize, magSize
+    0,
+    0,
+    magSize,
+    magSize
   );
 
   // Draw crosshair on magnifier
@@ -180,7 +172,9 @@ export function renderPageList(
   pages.forEach((page, index) => {
     const card = document.createElement('div');
     card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${
-      index === currentPageIndex ? 'active border-primary ring-2 ring-primary/20' : 'border-base-300'
+      index === currentPageIndex
+        ? 'active border-primary ring-2 ring-primary/20'
+        : 'border-base-300'
     }`;
     card.dataset.index = index.toString();
 

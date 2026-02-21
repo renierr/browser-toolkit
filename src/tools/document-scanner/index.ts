@@ -442,20 +442,11 @@ export default function init(payload?: SharedFilesPayload) {
     }
   }
 
-  // Variables for touch throttling
-  let lastTouchX: number | null = null;
-  let lastTouchY: number | null = null;
-
   function onStart(e: PointerEvent, index: number) {
     e.preventDefault();
     activeHandle = index;
     selectedHandle = index; // Select the handle for nudging
     activePointerId = e.pointerId;
-
-    // Initialize last touch position
-    const rect = canvas.getBoundingClientRect();
-    lastTouchX = (e.clientX - rect.left) * (canvas.width / rect.width);
-    lastTouchY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
@@ -489,26 +480,12 @@ export default function init(payload?: SharedFilesPayload) {
     let newX = currentX;
     let newY = currentY;
 
-    // Apply throttling/damping only for touch events
+    // Apply offset only for touch events to avoid finger obscuring the handle
     if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-      if (lastTouchX !== null && lastTouchY !== null) {
-        // Calculate the raw delta
-        const dx = currentX - lastTouchX;
-        const dy = currentY - lastTouchY;
-
-        // Apply damping factor (0.4 means movement is 40% of finger speed)
-        const damping = 0.4;
-
-        // Get current corner position
-        const currentCorner = page.corners[activeHandle];
-
-        newX = currentCorner.x + dx * damping;
-        newY = currentCorner.y + dy * damping;
-      }
-
-      // Update last touch position for next frame
-      lastTouchX = currentX;
-      lastTouchY = currentY;
+      // Offset handle position slightly above the finger touch point
+      // This ensures the user can see what they are dragging
+      const touchOffset = 40 * (canvas.height / rect.height);
+      newY = currentY - touchOffset;
     }
 
     page.corners[activeHandle] = {
@@ -536,8 +513,6 @@ export default function init(payload?: SharedFilesPayload) {
     target.removeEventListener('pointercancel', onEnd);
     activeHandle = null;
     activePointerId = null;
-    lastTouchX = null;
-    lastTouchY = null;
     magnifier.classList.add('hidden');
   }
 
