@@ -21,6 +21,19 @@ export async function startCamera(
 
     const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
+    // Attempt to enable continuous auto-focus if supported by the hardware
+    const track = stream.getVideoTracks()[0];
+    if (track) {
+      const capabilities = track.getCapabilities() as any;
+      if (capabilities.focusMode?.includes('continuous')) {
+        try {
+          await track.applyConstraints({ focusMode: 'continuous' } as any);
+        } catch (e) {
+          console.debug('Focus mode not supported or failed to apply', e);
+        }
+      }
+    }
+
     videoEl.srcObject = stream;
     videoEl.play().catch((e) => console.warn('Auto-play prevented:', e));
 
