@@ -186,9 +186,11 @@ export default function init(payload?: SharedFilesPayload) {
     e.preventDefault();
     activeHandle = index;
     activePointerId = e.pointerId;
-    (e.currentTarget as HTMLElement)?.setPointerCapture?.(e.pointerId);
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onEnd);
+    const target = e.currentTarget as HTMLElement;
+    target.setPointerCapture(e.pointerId);
+    target.addEventListener('pointermove', onMove);
+    target.addEventListener('pointerup', onEnd);
+    target.addEventListener('pointercancel', onEnd);
   }
 
   function onMove(e: PointerEvent) {
@@ -210,10 +212,12 @@ export default function init(payload?: SharedFilesPayload) {
 
   function onEnd(e: PointerEvent) {
     if (activePointerId !== null && e.pointerId !== activePointerId) return;
+    const target = e.currentTarget as HTMLElement;
+    target.removeEventListener('pointermove', onMove);
+    target.removeEventListener('pointerup', onEnd);
+    target.removeEventListener('pointercancel', onEnd);
     activeHandle = null;
     activePointerId = null;
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onEnd);
   }
 
   function warpImage() {
@@ -277,13 +281,13 @@ export default function init(payload?: SharedFilesPayload) {
     startCamera();
   }
 
-  window.addEventListener('resize', () => {
-    if (!isFilterMode) updateEditor();
+  const resizeObserver = new ResizeObserver(() => {
+    if (!isFilterMode && originalImage) updateEditor();
   });
+  resizeObserver.observe(editorContainer);
 
   return () => {
     stopCamera();
-    window.removeEventListener('pointermove', onMove);
-    window.removeEventListener('pointerup', onEnd);
+    resizeObserver.disconnect();
   };
 }

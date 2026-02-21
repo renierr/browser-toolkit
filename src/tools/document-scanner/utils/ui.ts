@@ -54,16 +54,23 @@ export function updateCornerHandles(
   canvas: HTMLCanvasElement,
   onStart: (e: PointerEvent, index: number) => void
 ) {
-  container.innerHTML = '';
   if (!canvas.width || !canvas.height) return;
 
+  let handles = container.querySelectorAll('.corner-handle');
+  if (handles.length !== corners.length) {
+    container.innerHTML = '';
+    corners.forEach((_, i) => {
+      const handle = document.createElement('div');
+      handle.className = 'corner-handle';
+      handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i));
+      container.appendChild(handle);
+    });
+    handles = container.querySelectorAll('.corner-handle');
+  }
+
   corners.forEach((p, i) => {
-    const handle = document.createElement('div');
-    handle.className = 'corner-handle';
+    const handle = handles[i] as HTMLElement;
     handle.style.left = `${(p.x / canvas.width) * 100}%`;
     handle.style.top = `${(p.y / canvas.height) * 100}%`;
-
-    handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i));
-    container.appendChild(handle);
   });
 }
