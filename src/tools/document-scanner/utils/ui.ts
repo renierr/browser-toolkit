@@ -120,12 +120,34 @@ export function updateMagnifier(
   let left = handleDisplayX - magSize / 2;
   let top = handleDisplayY - magSize - 60; // Position above the handle
 
-  // Simple boundary check against the canvas container
-  if (top < 0) {
-    top = handleDisplayY + 40; // Move below handle if too close to top
+  // Viewport-relative boundary check
+  const magRect = {
+    left: rect.left + left,
+    top: rect.top + top,
+    right: rect.left + left + magSize,
+    bottom: rect.top + top + magSize,
+  };
+
+  // Ensure top is visible in viewport
+  if (magRect.top < 0) {
+    // If it's too high, move it below the handle
+    top = handleDisplayY + 40;
   }
+
+  // Ensure left/right are within viewport
+  if (magRect.left < 0) {
+    left = -rect.left; // Align to viewport left
+  } else if (magRect.right > window.innerWidth) {
+    left = window.innerWidth - rect.left - magSize; // Align to viewport right
+  }
+
+  // Final check to keep it within the canvas container if possible (optional but good)
   if (left < 0) left = 0;
   if (left + magSize > rect.width) left = rect.width - magSize;
+  if (top + magSize > rect.height) {
+    // If it's too low and going off the bottom of the canvas, adjust it
+    top = rect.height - magSize;
+  }
 
   magnifier.style.left = `${left}px`;
   magnifier.style.top = `${top}px`;

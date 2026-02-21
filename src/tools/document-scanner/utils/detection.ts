@@ -79,7 +79,7 @@ function isValidDocument(points: Point[], width: number, height: number): boolea
   const area = Math.abs(
     (tl.x * (tr.y - bl.y) + tr.x * (br.y - tl.y) + br.x * (bl.y - tr.y) + bl.x * (tl.y - br.y)) / 2
   );
-  if (area < width * height * 0.1) return false; // Minimum 10% of image
+  if (area < width * height * 0.05) return false;
 
   // 2. Check for convexity (all internal angles < 180 degrees)
   // For a convex quadrilateral, the cross products of consecutive edges should have the same sign.
@@ -146,21 +146,39 @@ function smoothCorners(newCorners: Point[] | null): Point[] | null {
  * Improved version with Gaussian blur, contrast stretching, and robust corner heuristics.
  */
 export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null {
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  if (!ctx) return null;
-
   const width = canvas.width;
   const height = canvas.height;
-  const imgData = ctx.getImageData(0, 0, width, height);
+
+  // Step 1: Downscale for performance if needed
+  let processingCanvas = canvas;
+  let processingWidth = width;
+  let processingHeight = height;
+
+  const maxProcessingDim = 400;
+  if (width > maxProcessingDim || height > maxProcessingDim) {
+    const scale = Math.min(maxProcessingDim / width, maxProcessingDim / height);
+    processingWidth = Math.floor(width * scale);
+    processingHeight = Math.floor(height * scale);
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = processingWidth;
+    tempCanvas.height = processingHeight;
+    const tCtx = tempCanvas.getContext('2d')!;
+    tCtx.drawImage(canvas, 0, 0, processingWidth, processingHeight);
+    processingCanvas = tempCanvas;
+  }
+
+  const pCtx = processingCanvas.getContext('2d', { willReadFrequently: true });
+  if (!pCtx) return null;
+  const imgData = pCtx.getImageData(0, 0, processingWidth, processingHeight);
   const data = imgData.data;
 
-  // Step 1: Grayscale
-  const grayscale = new Uint8Array(width * height);
+  // Step 2: Grayscale
+  const grayscale = new Uint8Array(processingWidth * processingHeight);
   for (let i = 0; i < data.length; i += 4) {
     grayscale[i / 4] = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
   }
 
-  // Step 2: Contrast Stretching
+  // Step 3: Contrast Stretching
   // Enhances the difference between document and background
   let min = 255,
     max = 0;
@@ -175,23 +193,24 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
     }
   }
 
-  // Step 3: Gaussian Blur to reduce noise
-  const blurred = gaussianBlur(grayscale, width, height);
+  // Step 4: Gaussian Blur to reduce noise
+  const blurred = gaussianBlur(grayscale, processingWidth, processingHeight);
 
-  // Step 4: Sobel edge detection
-  const edges = new Uint8Array(width * height);
+  // Step 5: Sobel edge detection
+  const edges = new Uint8Array(processingWidth * processingHeight);
   let maxEdge = 0;
-  for (let y = 1; y < height - 1; y++) {
-    for (let x = 1; x < width - 1; x++) {
-      const idx = y * width + x;
-      const p00 = blurred[idx - width - 1];
-      const p01 = blurred[idx - width];
-      const p02 = blurred[idx - width + 1];
+  for (let y = 1; y < processingHeight - 1; y++) {
+    const yOffset = y * processingWidth;
+    for (let x = 1; x < processingWidth - 1; x++) {
+      const idx = yOffset + x;
+      const p00 = blurred[idx - processingWidth - 1];
+      const p01 = blurred[idx - processingWidth];
+      const p02 = blurred[idx - processingWidth + 1];
       const p10 = blurred[idx - 1];
       const p12 = blurred[idx + 1];
-      const p20 = blurred[idx + width - 1];
-      const p21 = blurred[idx + width];
-      const p22 = blurred[idx + width + 1];
+      const p20 = blurred[idx + processingWidth - 1];
+      const p21 = blurred[idx + processingWidth];
+      const p22 = blurred[idx + processingWidth + 1];
 
       const gx = p02 + 2 * p12 + p22 - (p00 + 2 * p10 + p20);
       const gy = p20 + 2 * p21 + p22 - (p00 + 2 * p01 + p02);
@@ -202,12 +221,15 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
     }
   }
 
-  // Step 5: Dilation followed by Erosion (Closing) to connect broken edges and remove noise
-  const closedEdges = erode(dilate(edges, width, height), width, height);
+  // Step 6: Morphological operations (Closing) to connect broken edges
+  const closedEdges = erode(
+    dilate(edges, processingWidth, processingHeight),
+    processingWidth,
+    processingHeight
+  );
 
-  // Step 6: Find corners using extreme points (min/max of x+y and x-y)
-  // This is more robust for rotated rectangles than simple distance to image corners.
-  const threshold = maxEdge * 0.2;
+  // Step 7: Find corners using extreme points
+  const threshold = maxEdge * 0.15; // Lowered threshold slightly for better sensitivity
   let foundAny = false;
 
   let minSum = Infinity,
@@ -216,13 +238,13 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
     maxDiff = -Infinity;
 
   let tl = { x: 0, y: 0 };
-  let tr = { x: width, y: 0 };
-  let br = { x: width, y: height };
-  let bl = { x: 0, y: height };
+  let tr = { x: processingWidth, y: 0 };
+  let br = { x: processingWidth, y: processingHeight };
+  let bl = { x: 0, y: processingHeight };
 
-  for (let y = 0; y < height; y++) {
-    const yOffset = y * width;
-    for (let x = 0; x < width; x++) {
+  for (let y = 0; y < processingHeight; y++) {
+    const yOffset = y * processingWidth;
+    for (let x = 0; x < processingWidth; x++) {
       if (closedEdges[yOffset + x] > threshold) {
         foundAny = true;
         const sum = x + y;
@@ -250,7 +272,11 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
 
   if (!foundAny) return null;
 
-  const corners = [tl, tr, br, bl];
+  // Scale corners back to original canvas size
+  const corners = [tl, tr, br, bl].map((p) => ({
+    x: (p.x / processingWidth) * width,
+    y: (p.y / processingHeight) * height,
+  }));
 
   // Validation: check if the area is large enough and shape is convex
   if (!isValidDocument(corners, width, height)) return null;
