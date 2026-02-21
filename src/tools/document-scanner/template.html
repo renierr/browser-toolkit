@@ -140,7 +140,28 @@
         </div>
       </div>
 
-      <div id="perspective-actions" class="flex justify-center p-2">
+      <div id="perspective-actions" class="flex flex-col items-center gap-4 p-2">
+        <div id="nudge-controls" class="hidden flex flex-col items-center gap-2">
+          <span class="text-[10px] uppercase font-bold opacity-50">Fine Tune Selected Corner</span>
+          <div class="grid grid-cols-3 gap-1">
+            <div class="w-8"></div>
+            <button id="btn-nudge-up" class="btn btn-sm btn-square btn-outline">
+              <i data-lucide="chevron-up" class="w-4 h-4"></i>
+            </button>
+            <div class="w-8"></div>
+
+            <button id="btn-nudge-left" class="btn btn-sm btn-square btn-outline">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+            </button>
+            <button id="btn-nudge-down" class="btn btn-sm btn-square btn-outline">
+              <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </button>
+            <button id="btn-nudge-right" class="btn btn-sm btn-square btn-outline">
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
         <button id="btn-apply-perspective" class="btn btn-sm btn-success text-white gap-2 px-8">
           <i data-lucide="check" class="w-4 h-4"></i> Apply Perspective
         </button>
@@ -175,6 +196,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: border-color 0.2s, box-shadow 0.2s, scale 0.2s;
   }
 
   .corner-handle::before,
@@ -182,6 +204,7 @@
     content: '';
     position: absolute;
     background: #3b82f6;
+    transition: background-color 0.2s;
   }
 
   .corner-handle::before {
@@ -194,14 +217,18 @@
     height: 100%;
   }
 
-  .corner-handle:active {
-    scale: 1.5;
+  .corner-handle:active,
+  .corner-handle.selected {
+    scale: 1.2;
     border-color: white;
-    box-shadow: 0 0 20px rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+    background: rgba(59, 130, 246, 0.2);
   }
 
   .corner-handle:active::before,
-  .corner-handle:active::after {
+  .corner-handle:active::after,
+  .corner-handle.selected::before,
+  .corner-handle.selected::after {
     background: white;
   }
 

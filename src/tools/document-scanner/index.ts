@@ -55,12 +55,20 @@ export default function init(payload?: SharedFilesPayload) {
   const magnifierCanvas = document.getElementById('magnifier-canvas') as HTMLCanvasElement;
   const mCtx = magnifierCanvas.getContext('2d')!;
 
+  // Nudge controls
+  const nudgeControls = document.getElementById('nudge-controls')!;
+  const btnNudgeUp = document.getElementById('btn-nudge-up')!;
+  const btnNudgeDown = document.getElementById('btn-nudge-down')!;
+  const btnNudgeLeft = document.getElementById('btn-nudge-left')!;
+  const btnNudgeRight = document.getElementById('btn-nudge-right')!;
+
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
   let isPortrait = true;
   let pages: ScannedPage[] = [];
   let currentPageIndex: number = -1;
   let activeHandle: number | null = null;
+  let selectedHandle: number | null = null;
   let activePointerId: number | null = null;
   let isFilterMode = false;
   let lastDetectedCorners: Point[] | null = null;
@@ -387,6 +395,7 @@ export default function init(payload?: SharedFilesPayload) {
     btnModeFilter.classList.remove('btn-active');
     filterControls.classList.add('hidden');
     perspectiveActions.classList.remove('hidden');
+    nudgeControls.classList.remove('hidden');
     hintText.textContent = 'Drag the corners to match the document boundaries.';
     updateEditor();
   }
@@ -397,8 +406,10 @@ export default function init(payload?: SharedFilesPayload) {
     btnModeFilter.classList.add('btn-active');
     filterControls.classList.remove('hidden');
     perspectiveActions.classList.add('hidden');
+    nudgeControls.classList.add('hidden');
     hintText.textContent = 'Choose a filter to enhance your document.';
     cornerHandles.innerHTML = '';
+    selectedHandle = null;
 
     const page = pages[currentPageIndex];
     filterSelect.value = page.filter;
@@ -416,15 +427,36 @@ export default function init(payload?: SharedFilesPayload) {
     if (!isFilterMode) {
       drawPerspectiveOverlay(ctx, page.corners);
       updateCornerHandles(cornerHandles, page.corners, canvas, onStart);
+
+      // Update handle selection state
+      const handles = cornerHandles.querySelectorAll('.corner-handle');
+      handles.forEach((h, i) => {
+        if (i === selectedHandle) {
+          h.classList.add('selected');
+        } else {
+          h.classList.remove('selected');
+        }
+      });
     } else {
       applyFilters();
     }
   }
 
+  // Variables for touch throttling
+  let lastTouchX: number | null = null;
+  let lastTouchY: number | null = null;
+
   function onStart(e: PointerEvent, index: number) {
     e.preventDefault();
     activeHandle = index;
+    selectedHandle = index; // Select the handle for nudging
     activePointerId = e.pointerId;
+
+    // Initialize last touch position
+    const rect = canvas.getBoundingClientRect();
+    lastTouchX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    lastTouchY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
     const target = e.currentTarget as HTMLElement;
     target.setPointerCapture(e.pointerId);
     target.addEventListener('pointermove', onMove);
@@ -441,6 +473,7 @@ export default function init(payload?: SharedFilesPayload) {
       mCtx,
       activeHandle
     );
+    updateEditor();
   }
 
   function onMove(e: PointerEvent) {
@@ -450,12 +483,37 @@ export default function init(payload?: SharedFilesPayload) {
 
     const page = pages[currentPageIndex];
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const currentX = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const currentY = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+    let newX = currentX;
+    let newY = currentY;
+
+    // Apply throttling/damping only for touch events
+    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+      if (lastTouchX !== null && lastTouchY !== null) {
+        // Calculate the raw delta
+        const dx = currentX - lastTouchX;
+        const dy = currentY - lastTouchY;
+
+        // Apply damping factor (0.4 means movement is 40% of finger speed)
+        const damping = 0.4;
+
+        // Get current corner position
+        const currentCorner = page.corners[activeHandle];
+
+        newX = currentCorner.x + dx * damping;
+        newY = currentCorner.y + dy * damping;
+      }
+
+      // Update last touch position for next frame
+      lastTouchX = currentX;
+      lastTouchY = currentY;
+    }
 
     page.corners[activeHandle] = {
-      x: Math.max(0, Math.min(canvas.width, x)),
-      y: Math.max(0, Math.min(canvas.height, y)),
+      x: Math.max(0, Math.min(canvas.width, newX)),
+      y: Math.max(0, Math.min(canvas.height, newY)),
     };
 
     updateEditor();
@@ -470,8 +528,34 @@ export default function init(payload?: SharedFilesPayload) {
     target.removeEventListener('pointercancel', onEnd);
     activeHandle = null;
     activePointerId = null;
+    lastTouchX = null;
+    lastTouchY = null;
     magnifier.classList.add('hidden');
   }
+
+  function nudgeSelectedHandle(dx: number, dy: number) {
+    if (selectedHandle === null || currentPageIndex === -1) return;
+    const page = pages[currentPageIndex];
+    const corner = page.corners[selectedHandle];
+
+    // Nudge amount in image coordinates
+    const nudgeAmount = 2;
+
+    const newX = corner.x + dx * nudgeAmount;
+    const newY = corner.y + dy * nudgeAmount;
+
+    page.corners[selectedHandle] = {
+      x: Math.max(0, Math.min(canvas.width, newX)),
+      y: Math.max(0, Math.min(canvas.height, newY)),
+    };
+
+    updateEditor();
+  }
+
+  btnNudgeUp.addEventListener('click', () => nudgeSelectedHandle(0, -1));
+  btnNudgeDown.addEventListener('click', () => nudgeSelectedHandle(0, 1));
+  btnNudgeLeft.addEventListener('click', () => nudgeSelectedHandle(-1, 0));
+  btnNudgeRight.addEventListener('click', () => nudgeSelectedHandle(1, 0));
 
   function warpImage() {
     const page = pages[currentPageIndex];
