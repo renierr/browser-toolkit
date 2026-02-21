@@ -8,25 +8,22 @@ export async function startCamera(
     prevStream.getTracks().forEach((t) => t.stop());
   }
   try {
-    // Requesting specific dimensions and aspect ratio hints the browser
-    // to provide the stream in the desired orientation.
-    const width = isPortrait ? { ideal: 2160, min: 720 } : { ideal: 3840, min: 1280 };
-    const height = isPortrait ? { ideal: 3840, min: 1280 } : { ideal: 2160, min: 720 };
-    const aspectRatio = isPortrait ? { ideal: 9/16 } : { ideal: 16/9 };
-
-    const stream = await navigator.mediaDevices.getUserMedia({
+    // We use ideal constraints to hint the browser about the desired orientation.
+    // Most modern mobile browsers will rotate the video track to match these.
+    const constraints: MediaStreamConstraints = {
       video: {
         facingMode,
-        width,
-        height,
-        aspectRatio,
+        width: { ideal: isPortrait ? 2160 : 3840 },
+        height: { ideal: isPortrait ? 3840 : 2160 },
+        aspectRatio: { ideal: isPortrait ? 9/16 : 16/9 },
         frameRate: { ideal: 30, max: 60 }
       },
       audio: false,
-    });
+    };
+
+    const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
     videoEl.srcObject = stream;
-    // Explicitly play to ensure the smoothest start
     videoEl.play().catch(e => console.warn("Auto-play prevented:", e));
 
     document.getElementById('camera-error')?.classList.add('hidden');

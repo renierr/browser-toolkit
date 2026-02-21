@@ -187,31 +187,7 @@ export default function init(payload?: SharedFilesPayload) {
     const vHeight = video.videoHeight;
     if (!vWidth || !vHeight) return;
 
-    const tempCanvas = document.createElement('canvas');
-    const tCtx = tempCanvas.getContext('2d')!;
-
-    // If we requested portrait but got landscape (common on Android), rotate it.
-    // Also rotate if we requested landscape but got portrait.
-    const needsRotation = (isPortrait && vWidth > vHeight) || (!isPortrait && vHeight > vWidth);
-
-    if (needsRotation) {
-      tempCanvas.width = vHeight;
-      tempCanvas.height = vWidth;
-      tCtx.translate(vHeight / 2, vWidth / 2);
-      tCtx.rotate(Math.PI / 2);
-      tCtx.drawImage(video, -vWidth / 2, -vHeight / 2);
-
-      if (lastDetectedCorners) {
-        lastDetectedCorners = lastDetectedCorners.map(p => ({
-          x: vHeight - p.y,
-          y: p.x
-        }));
-      }
-    } else {
-      tempCanvas.width = vWidth;
-      tempCanvas.height = vHeight;
-      tCtx.drawImage(video, 0, 0);
-    }
+    const tempCanvas = sourceToCanvas(video);
 
     const img = new Image();
     img.src = tempCanvas.toDataURL('image/png');
