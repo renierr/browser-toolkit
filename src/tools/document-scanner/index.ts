@@ -262,12 +262,12 @@ export default function init(payload?: SharedFilesPayload) {
     if (detectedCorners) {
       initialCorners = detectedCorners;
     } else {
-      const margin = 0.1;
+      // Default to whole image if no edges found
       const defaultCorners = [
-        { x: img.width * margin, y: img.height * margin },
-        { x: img.width * (1 - margin), y: img.height * margin },
-        { x: img.width * (1 - margin), y: img.height * (1 - margin) },
-        { x: img.width * margin, y: img.height * (1 - margin) },
+        { x: 0, y: 0 },
+        { x: img.width, y: 0 },
+        { x: img.width, y: img.height },
+        { x: 0, y: img.height },
       ];
 
       const tempCanvas = document.createElement('canvas');
@@ -277,7 +277,11 @@ export default function init(payload?: SharedFilesPayload) {
       const tCtx = tempCanvas.getContext('2d')!;
       tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
       const detected = detectDocumentCorners(tempCanvas);
-      initialCorners = detected?.map(p => ({ x: p.x / scale, y: p.y / scale })) || defaultCorners;
+
+      initialCorners = detected?.map(p => ({
+        x: (p.x / tempCanvas.width) * img.width,
+        y: (p.y / tempCanvas.height) * img.height
+      })) || defaultCorners;
     }
 
     const newPage: ScannedPage = {
