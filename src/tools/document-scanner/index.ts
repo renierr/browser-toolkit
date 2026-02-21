@@ -471,7 +471,6 @@ export default function init(payload?: SharedFilesPayload) {
 
     magnifier.classList.remove('hidden');
     updateMagnifier(
-      e,
       canvas,
       pages[currentPageIndex].originalImage,
       magnifier,
@@ -525,7 +524,6 @@ export default function init(payload?: SharedFilesPayload) {
 
     updateEditor();
     updateMagnifier(
-      e,
       canvas,
       page.originalImage,
       magnifier,

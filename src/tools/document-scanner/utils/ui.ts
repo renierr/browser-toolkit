@@ -102,7 +102,6 @@ export function updateCornerHandles(
 }
 
 export function updateMagnifier(
-  e: PointerEvent,
   canvas: HTMLCanvasElement,
   originalImage: HTMLImageElement,
   magnifier: HTMLElement,
