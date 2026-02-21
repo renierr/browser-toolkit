@@ -99,9 +99,7 @@ function isValidDocument(points: Point[], width: number, height: number): boolea
   const side1 = Math.hypot(tr.x - tl.x, tr.y - tl.y);
   const side2 = Math.hypot(br.x - tr.x, br.y - tr.y);
   const ratio = side1 / side2;
-  if (ratio < 0.2 || ratio > 5.0) return false;
-
-  return true;
+  return !(ratio < 0.2 || ratio > 5.0);
 }
 
 let history: Point[][] = [];
@@ -145,7 +143,7 @@ function smoothCorners(newCorners: Point[] | null): Point[] | null {
  * Finds the corners of a document-like shape in an image.
  * Improved version with Gaussian blur, contrast stretching, and robust corner heuristics.
  */
-export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null {
+export function detectDocumentCorners(canvas: HTMLCanvasElement, maxDim = 400): Point[] | null {
   const width = canvas.width;
   const height = canvas.height;
 
@@ -154,7 +152,7 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
   let processingWidth = width;
   let processingHeight = height;
 
-  const maxProcessingDim = 400;
+  const maxProcessingDim = maxDim;
   if (width > maxProcessingDim || height > maxProcessingDim) {
     const scale = Math.min(maxProcessingDim / width, maxProcessingDim / height);
     processingWidth = Math.floor(width * scale);
@@ -286,7 +284,7 @@ export function detectDocumentCorners(canvas: HTMLCanvasElement): Point[] | null
 
 export function detectCornersOnImage(
   img: HTMLImageElement | HTMLCanvasElement,
-  maxDim = 800
+  maxDim = 1200
 ): Point[] | null {
   const tempCanvas = document.createElement('canvas');
   const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
@@ -294,7 +292,7 @@ export function detectCornersOnImage(
   tempCanvas.height = img.height * scale;
   const tCtx = tempCanvas.getContext('2d')!;
   tCtx.drawImage(img, 0, 0, tempCanvas.width, tempCanvas.height);
-  const detected = detectDocumentCorners(tempCanvas);
+  const detected = detectDocumentCorners(tempCanvas, maxDim);
 
   return (
     detected?.map((p) => ({
@@ -327,7 +325,7 @@ export function calculateLiveDetection(
   }
 
   dCtx.drawImage(video, 0, 0, vWidth, vHeight, 0, 0, dWidth, dHeight);
-  let detected = detectDocumentCorners(detectionCanvas);
+  let detected = detectDocumentCorners(detectionCanvas, 300);
 
   // Temporal smoothing for live detection
   detected = smoothCorners(detected);
@@ -343,24 +341,35 @@ export function calculateLiveDetection(
   const vAspect = vWidth / vHeight;
   const cAspect = cWidth / cHeight;
 
-  let renderWidth, renderHeight, offsetX, offsetY;
-  if (vAspect > cAspect) {
-    renderWidth = cWidth;
-    renderHeight = cWidth / vAspect;
-    offsetX = 0;
-    offsetY = (cHeight - renderHeight) / 2;
-  } else {
-    renderHeight = cHeight;
-    renderWidth = cHeight * vAspect;
-    offsetX = (cWidth - renderWidth) / 2;
-    offsetY = 0;
-  }
-
   const upscaled =
-    detected?.map((p) => ({
-      x: (p.x / dWidth) * renderWidth + offsetX,
-      y: (p.y / dHeight) * renderHeight + offsetY,
-    })) || null;
+    detected?.map((p) => {
+      // p is in [0, dWidth] x [0, dHeight]
+      // First scale to [0, 1]
+      const nx = p.x / dWidth;
+      const ny = p.y / dHeight;
+
+      // When object-cover is used, the video is scaled to fill the container.
+      // One dimension is filled completely, the other is cropped.
+      if (vAspect > cAspect) {
+        // Video is wider than container, height matches, sides are cropped
+        const visibleWidthAtVideoScale = vHeight * cAspect;
+        const cropX = (vWidth - visibleWidthAtVideoScale) / 2;
+        const vx = nx * vWidth;
+        return {
+          x: ((vx - cropX) / visibleWidthAtVideoScale) * cWidth,
+          y: ny * cHeight,
+        };
+      } else {
+        // Video is taller than container, width matches, top/bottom are cropped
+        const visibleHeightAtVideoScale = vWidth / cAspect;
+        const cropY = (vHeight - visibleHeightAtVideoScale) / 2;
+        const vy = ny * vHeight;
+        return {
+          x: nx * cWidth,
+          y: ((vy - cropY) / visibleHeightAtVideoScale) * cHeight,
+        };
+      }
+    }) || null;
 
   if (cameraOverlay.width !== cWidth || cameraOverlay.height !== cHeight) {
     cameraOverlay.width = cWidth;

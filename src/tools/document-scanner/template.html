@@ -1,3 +1,4 @@
+<!--suppress CssUnusedSymbol -->
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body p-2 md:p-4">
     <h2 class="card-title text-2xl font-bold mb-4">
@@ -10,8 +11,8 @@
 
     <div id="capture-container" class="flex flex-col gap-4">
       <!-- Camera View Container -->
-      <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden w-full mx-auto flex items-center justify-center shadow-inner border border-base-300 transition-all duration-300" style="min-height: 300px; max-height: 80dvh;">
-        <video id="video" class="w-full h-full object-contain" autoplay playsinline style="will-change: transform; transform: translateZ(0);"></video>
+      <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden w-full mx-auto flex items-center justify-center shadow-inner border border-base-300 transition-all duration-300" style="min-height: 300px; max-height: 80dvh; aspect-ratio: 9/16;">
+        <video id="video" class="w-full h-full object-cover" autoplay playsinline style="will-change: transform; transform: translateZ(0);"></video>
         <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
 
         <!-- Guided Lines Overlay -->
@@ -168,7 +169,7 @@
       </div>
 
       <div class="divider">Pages</div>
-      <div id="page-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-2 min-h-[100px] bg-base-200 rounded-lg border border-base-300">
+      <div id="page-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 p-2 min-h-25 bg-base-200 rounded-lg border border-base-300">
         <!-- Captured pages will be listed here -->
       </div>
     </div>

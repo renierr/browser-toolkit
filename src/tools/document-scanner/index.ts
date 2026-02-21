@@ -74,7 +74,6 @@ export default function init(payload?: SharedFilesPayload) {
   let selectedHandle: number | null = null;
   let activePointerId: number | null = null;
   let isFilterMode = false;
-  let lastDetectedCorners: Point[] | null = null;
   let stopLevelSensor: (() => void) | null = null;
   let isFlashOn = false;
 
@@ -145,7 +144,6 @@ export default function init(payload?: SharedFilesPayload) {
       const result = calculateLiveDetection(video, detectionCanvas, dCtx, cameraOverlay);
       if (!result) return;
 
-      lastDetectedCorners = result.lastDetectedCorners;
       drawLiveOverlay(cameraOverlay, result.upscaled);
     }, 200);
   }
@@ -174,16 +172,9 @@ export default function init(payload?: SharedFilesPayload) {
       const img = new Image();
       img.src = URL.createObjectURL(blob);
       img.onload = () => {
-        let scaledCorners: Point[] | null = null;
-        if (lastDetectedCorners && video.videoWidth && video.videoHeight) {
-          const scaleX = img.width / video.videoWidth;
-          const scaleY = img.height / video.videoHeight;
-          scaledCorners = lastDetectedCorners.map((p) => ({
-            x: p.x * scaleX,
-            y: p.y * scaleY,
-          }));
-        }
-        addPage(img, scaledCorners);
+        // Redetect corners on the captured image for higher accuracy
+        const corners = detectCornersOnImage(img);
+        addPage(img, corners);
       };
     }
   });
