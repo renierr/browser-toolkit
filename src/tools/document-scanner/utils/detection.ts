@@ -219,79 +219,93 @@ function extractExtremePoints(
     }
   }
   const avgEdge = count > 0 ? sum / count : 0;
-  const thresh = Math.max(40, Math.min(avgEdge * 0.8, maxEdge * 0.25));
+  const thresh = Math.max(30, Math.min(avgEdge * 0.7, maxEdge * 0.2));
 
-  // We'll store the top N most extreme points for each corner.
-  const N = 15;
-  const tlPts: { s: number; x: number; y: number }[] = [];
-  const brPts: { s: number; x: number; y: number }[] = [];
-  const trPts: { d: number; x: number; y: number }[] = [];
-  const blPts: { d: number; x: number; y: number }[] = [];
+  const N = 20;
+  const tlCandidates: { score: number; x: number; y: number }[] = [];
+  const trCandidates: { score: number; x: number; y: number }[] = [];
+  const brCandidates: { score: number; x: number; y: number }[] = [];
+  const blCandidates: { score: number; x: number; y: number }[] = [];
 
   let found = false;
 
-  for (let y = 4; y < sh - 4; y++) {
+  for (let y = 5; y < sh - 5; y++) {
     const yOffset = y * sw;
-    for (let x = 4; x < sw - 4; x++) {
+    for (let x = 5; x < sw - 5; x++) {
       const idx = yOffset + x;
       const val = pixels[idx];
       if (val > thresh) {
         let neighbors = 0;
         for (let ny = -1; ny <= 1; ny++) {
+          const nOffset = (y + ny) * sw;
           for (let nx = -1; nx <= 1; nx++) {
             if (nx === 0 && ny === 0) continue;
-            if (pixels[idx + ny * sw + nx] > thresh) neighbors++;
+            if (pixels[nOffset + (x + nx)] > thresh) neighbors++;
           }
         }
         if (neighbors < 3) continue;
 
         found = true;
-        const s = x + y;
-        const d = x - y;
 
-        // Top-Left (min sum)
-        if (tlPts.length < N || s < tlPts[tlPts.length - 1].s) {
-          tlPts.push({ s, x, y });
-          tlPts.sort((a, b) => a.s - b.s);
-          if (tlPts.length > N) tlPts.pop();
-        }
-        // Bottom-Right (max sum)
-        if (brPts.length < N || s > brPts[brPts.length - 1].s) {
-          brPts.push({ s, x, y });
-          brPts.sort((a, b) => b.s - a.s);
-          if (brPts.length > N) brPts.pop();
-        }
-        // Top-Right (max diff)
-        if (trPts.length < N || d > trPts[trPts.length - 1].d) {
-          trPts.push({ d, x, y });
-          trPts.sort((a, b) => b.d - a.d);
-          if (trPts.length > N) trPts.pop();
-        }
-        // Bottom-Left (min diff)
-        if (blPts.length < N || d < blPts[blPts.length - 1].d) {
-          blPts.push({ d, x, y });
-          blPts.sort((a, b) => a.d - b.d);
-          if (blPts.length > N) blPts.pop();
-        }
+        const tlScore = -x - y; // Maximize -x-y (Min x+y)
+        const trScore = x - y; // Maximize x-y
+        const brScore = x + y; // Maximize x+y
+        const blScore = -x + y; // Maximize -x+y (Min x-y)
+
+        const updateCandidates = (
+          list: { score: number; x: number; y: number }[],
+          score: number
+        ) => {
+          if (list.length < N || score > list[list.length - 1].score) {
+            list.push({ score, x, y });
+            list.sort((a, b) => b.score - a.score);
+            if (list.length > N) list.pop();
+          }
+        };
+
+        updateCandidates(tlCandidates, tlScore);
+        updateCandidates(trCandidates, trScore);
+        updateCandidates(brCandidates, brScore);
+        updateCandidates(blCandidates, blScore);
       }
     }
   }
 
-  if (!found || tlPts.length === 0) return null;
+  if (!found || tlCandidates.length === 0) return null;
 
-  const avg = (pts: { x: number; y: number }[]) => {
-    if (pts.length === 0) return { x: 0, y: 0 };
-    const best = pts[0];
-    const close = pts.filter((p) => Math.hypot(p.x - best.x, p.y - best.y) < 30);
-    if (close.length === 0) return best;
+  const getBestPoint = (candidates: { x: number; y: number }[]) => {
+    if (candidates.length === 0) return { x: 0, y: 0 };
+
+    // Find the largest cluster of candidates
+    const clusters: { x: number; y: number }[][] = [];
+    candidates.forEach((p) => {
+      let added = false;
+      for (const cluster of clusters) {
+        if (Math.hypot(p.x - cluster[0].x, p.y - cluster[0].y) < 25) {
+          cluster.push(p);
+          added = true;
+          break;
+        }
+      }
+      if (!added) clusters.push([p]);
+    });
+
+    clusters.sort((a, b) => b.length - a.length);
+    const bestCluster = clusters[0];
 
     return {
-      x: close.reduce((sum, p) => sum + p.x, 0) / close.length,
-      y: close.reduce((sum, p) => sum + p.y, 0) / close.length,
+      x: bestCluster.reduce((sum, p) => sum + p.x, 0) / bestCluster.length,
+      y: bestCluster.reduce((sum, p) => sum + p.y, 0) / bestCluster.length,
     };
   };
 
-  const pts = [avg(tlPts), avg(trPts), avg(brPts), avg(blPts)];
+  const pts = [
+    getBestPoint(tlCandidates),
+    getBestPoint(trCandidates),
+    getBestPoint(brCandidates),
+    getBestPoint(blCandidates),
+  ];
+
   const unique = new Set(pts.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`));
   if (unique.size < 4) return null;
 
@@ -340,6 +354,8 @@ function detectDocumentCorners(
   // Morphological closing with multiple passes for stronger connectivity
   dilate(workBuffer!, blurBuffer!, processingWidth, processingHeight);
   dilate(blurBuffer!, workBuffer!, processingWidth, processingHeight);
+  dilate(workBuffer!, blurBuffer!, processingWidth, processingHeight);
+  erode(blurBuffer!, workBuffer!, processingWidth, processingHeight);
   erode(workBuffer!, blurBuffer!, processingWidth, processingHeight);
   erode(blurBuffer!, workBuffer!, processingWidth, processingHeight);
   if (debug) drawToDebugCanvas(workBuffer!, processingWidth, processingHeight, 'debug-morph');
