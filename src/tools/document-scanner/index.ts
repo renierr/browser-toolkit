@@ -56,6 +56,8 @@ export default function init(payload?: SharedFilesPayload) {
   const filterSelect = document.getElementById('filter-select') as HTMLSelectElement;
   const hintText = document.getElementById('hint-text')!;
   const checkLiveDetection = document.getElementById('check-live-detection') as HTMLInputElement;
+  const debugView = document.getElementById('debug-view')!;
+  const checkLiveDebug = document.getElementById('check-live-debug') as HTMLInputElement;
   const levelIndicator = document.getElementById('level-indicator')!;
   const levelDot = document.getElementById('level-dot')!;
   const pageList = document.getElementById('page-list')!;
@@ -82,6 +84,7 @@ export default function init(payload?: SharedFilesPayload) {
   let isFilterMode = false;
   let stopLevelSensor: (() => void) | null = null;
   let isFlashOn = false;
+  let isDebugMode = false;
 
   // --- Camera Logic ---
 
@@ -153,12 +156,33 @@ export default function init(payload?: SharedFilesPayload) {
       // Throttle detection to every 4th frame (approx. 15fps on 60fps screen)
       detectionFrameCounter++;
       if (detectionFrameCounter % 4 === 0) {
-        // 2. Run the detection logic from detect.ts
-        const result = calculateLiveDetection(video, detectionCanvas, dCtx, cameraOverlay);
+        // 2. Run the detection logic
+        const result = calculateLiveDetection(
+          video,
+          detectionCanvas,
+          dCtx,
+          cameraOverlay,
+          isDebugMode
+        );
+
+        if (isDebugMode) {
+          const debugView = document.getElementById('debug-view');
+          if (debugView) debugView.classList.remove('hidden');
+          console.log(
+            `[Scanner Debug] Frame ${detectionFrameCounter} | Stable: ${stableCount} | Found: ${!!result}`
+          );
+          if (result && result.lastDetectedCorners) {
+            console.log(
+              '[Scanner Debug] Corners:',
+              result.lastDetectedCorners
+                .map((p) => `(${Math.round(p.x)}, ${Math.round(p.y)})`)
+                .join(', ')
+            );
+          }
+        }
 
         if (result && result.upscaled) {
           // 3. AUTO-SNAP LOGIC: Check stability
-          // Adjusted for lower detection frequency (15fps)
           if (isStable(lastResult, result.lastDetectedCorners, 25)) {
             stableCount++;
           } else {
@@ -168,8 +192,7 @@ export default function init(payload?: SharedFilesPayload) {
 
           // 4. Update UI color based on stability
           // Yellow means "Hold still!", Green means "Found document"
-          // At 15fps, > 2 means ~0.2s of stability
-          const color = stableCount > 2 ? '#FFD700' : '#00FF00';
+          const color = stableCount > 4 ? '#FFD700' : '#00FF00';
           drawLiveOverlay(cameraOverlay, result.upscaled, color);
 
           // 5. Trigger Auto-Snap after ~1.5 seconds of stability
@@ -208,6 +231,15 @@ export default function init(payload?: SharedFilesPayload) {
       startLiveDetection();
     } else {
       stopLiveDetection();
+    }
+  });
+
+  checkLiveDebug.addEventListener('change', () => {
+    isDebugMode = checkLiveDebug.checked;
+    if (isDebugMode) {
+      if (debugView) debugView.classList.remove('hidden');
+    } else {
+      if (debugView) debugView.classList.add('hidden');
     }
   });
 
@@ -489,7 +521,6 @@ export default function init(payload?: SharedFilesPayload) {
     if (e.pointerType === 'touch' || e.pointerType === 'pen') {
       // Offset handle position slightly above the finger touch point
       // This ensures the user can see what they are dragging
-      // Using a slightly larger offset for better visibility
       const touchOffset = 60 * (canvas.height / rect.height);
       newY = smoothedY - touchOffset;
     }

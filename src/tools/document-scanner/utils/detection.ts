@@ -25,6 +25,29 @@ export function releaseBuffers() {
   processingCanvas = null;
 }
 
+// --- Debug Helpers ---
+
+function drawToDebugCanvas(pixels: Uint8Array, width: number, height: number, canvasId: string) {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+  if (!canvas) return;
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const imgData = ctx.createImageData(width, height);
+  for (let i = 0; i < pixels.length; i++) {
+    const i4 = i << 2;
+    const v = pixels[i];
+    imgData.data[i4] = v;
+    imgData.data[i4 + 1] = v;
+    imgData.data[i4 + 2] = v;
+    imgData.data[i4 + 3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
 function prepareCanvas(canvas: HTMLCanvasElement, maxDim: number) {
   const width = canvas.width;
   const height = canvas.height;
@@ -71,8 +94,6 @@ function contrastStretch(pixels: Uint8Array, size: number) {
     if (v > max) max = v;
   }
   const range = max - min;
-  // If the range is too small, it's likely just noise, so skip it.
-  // Using 40 instead of 20 to avoid over-amplifying low-contrast noise.
   if (range > 40) {
     for (let i = 0; i < size; i++) {
       pixels[i] = ((pixels[i] - min) / range) * 255;
@@ -189,8 +210,6 @@ function extractExtremePoints(
   sh: number,
   maxEdge: number
 ): Point[] | null {
-  // 3. Extract Corners (Extreme Points)
-  // Use a more robust threshold: 30% of max edge or at least 50 to avoid noise.
   const thresh = Math.max(50, maxEdge * 0.3);
 
   // We'll store the top N most extreme points for each corner.
@@ -208,8 +227,6 @@ function extractExtremePoints(
       const idx = yOffset + x;
       const val = pixels[idx];
       if (val > thresh) {
-        // Noise filter: must have at least some neighbors also above threshold
-        // This is a simple 3x3 check to skip isolated noise pixels.
         let neighbors = 0;
         if (pixels[idx - 1] > thresh) neighbors++;
         if (pixels[idx + 1] > thresh) neighbors++;
@@ -251,9 +268,7 @@ function extractExtremePoints(
 
   if (!found || tlPts.length === 0) return null;
 
-  // Robust averaging (using the median or trimming outliers could be better, but we'll try mean of top candidates)
   const avg = (pts: { x: number; y: number }[]) => {
-    // Filter to only those close to the most extreme one
     const best = pts[0];
     const close = pts.filter((p) => Math.hypot(p.x - best.x, p.y - best.y) < 20);
     return {
@@ -285,7 +300,11 @@ function smoothCorners(newCorners: Point[] | null): Point[] | null {
 
 // --- Main Detection Function ---
 
-function detectDocumentCorners(canvas: HTMLCanvasElement, maxDim = 400): Point[] | null {
+function detectDocumentCorners(
+  canvas: HTMLCanvasElement,
+  maxDim = 400,
+  debug = false
+): Point[] | null {
   const { width, height, processingWidth, processingHeight, pCtx } = prepareCanvas(canvas, maxDim);
   if (!pCtx) return null;
 
@@ -294,15 +313,22 @@ function detectDocumentCorners(canvas: HTMLCanvasElement, maxDim = 400): Point[]
 
   const imgData = pCtx.getImageData(0, 0, processingWidth, processingHeight);
   toGrayscale(imgData.data, grayscaleBuffer!, size);
+  if (debug)
+    drawToDebugCanvas(grayscaleBuffer!, processingWidth, processingHeight, 'debug-grayscale');
+
   contrastStretch(grayscaleBuffer!, size);
   gaussianBlur(grayscaleBuffer!, blurBuffer!, processingWidth, processingHeight);
+  if (debug) drawToDebugCanvas(blurBuffer!, processingWidth, processingHeight, 'debug-blur');
+
   const maxEdge = applySobel(blurBuffer!, workBuffer!, processingWidth, processingHeight);
+  if (debug) drawToDebugCanvas(workBuffer!, processingWidth, processingHeight, 'debug-edges');
 
   // Morphological closing with multiple passes for stronger connectivity
   dilate(workBuffer!, blurBuffer!, processingWidth, processingHeight);
   dilate(blurBuffer!, workBuffer!, processingWidth, processingHeight);
   erode(workBuffer!, blurBuffer!, processingWidth, processingHeight);
   erode(blurBuffer!, workBuffer!, processingWidth, processingHeight);
+  if (debug) drawToDebugCanvas(workBuffer!, processingWidth, processingHeight, 'debug-morph');
 
   const corners = extractExtremePoints(workBuffer!, processingWidth, processingHeight, maxEdge);
   if (!corners) return null;
@@ -339,7 +365,8 @@ export function calculateLiveDetection(
   video: HTMLVideoElement,
   detectionCanvas: HTMLCanvasElement,
   dCtx: CanvasRenderingContext2D,
-  cameraOverlay: HTMLCanvasElement
+  cameraOverlay: HTMLCanvasElement,
+  debug = false
 ) {
   const vWidth = video.videoWidth;
   const vHeight = video.videoHeight;
@@ -358,7 +385,7 @@ export function calculateLiveDetection(
   }
 
   dCtx.drawImage(video, 0, 0, vWidth, vHeight, 0, 0, dWidth, dHeight);
-  let detected = detectDocumentCorners(detectionCanvas, 300);
+  let detected = detectDocumentCorners(detectionCanvas, 300, debug);
   detected = smoothCorners(detected);
 
   let lastDetectedCorners: Point[] | null = null;

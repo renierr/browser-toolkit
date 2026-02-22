@@ -43,11 +43,35 @@
       </div>
 
       <div id="camera-controls-sticky" class="fixed bottom-0 left-0 right-0 p-4 pb-8 z-50 pointer-events-none flex flex-col items-center gap-4 bg-gradient-to-t from-black/20 to-transparent">
+        <!-- Debug Outputs -->
+        <div id="debug-view" class="hidden pointer-events-auto flex flex-wrap gap-2 bg-black/80 p-2 rounded-lg border border-white/20 mb-2 max-w-full overflow-x-auto shadow-2xl">
+          <div class="flex flex-col items-center gap-1">
+            <span class="text-[8px] text-white uppercase font-bold">Grayscale</span>
+            <canvas id="debug-grayscale" class="max-h-24 bg-gray-800 border border-white/10 rounded"></canvas>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <span class="text-[8px] text-white uppercase font-bold">Blur</span>
+            <canvas id="debug-blur" class="max-h-24 bg-gray-800 border border-white/10 rounded"></canvas>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <span class="text-[8px] text-white uppercase font-bold">Edges</span>
+            <canvas id="debug-edges" class="max-h-24 bg-gray-800 border border-white/10 rounded"></canvas>
+          </div>
+          <div class="flex flex-col items-center gap-1">
+            <span class="text-[8px] text-white uppercase font-bold">Closed</span>
+            <canvas id="debug-morph" class="max-h-24 bg-gray-800 border border-white/10 rounded"></canvas>
+          </div>
+        </div>
+
         <div class="pointer-events-auto">
           <div class="form-control bg-base-100/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-lg">
             <label class="label cursor-pointer gap-2 p-0">
               <span class="label-text text-[10px] font-bold uppercase opacity-70">Live Detection</span>
               <input type="checkbox" id="check-live-detection" checked class="toggle toggle-primary toggle-xs" />
+            </label>
+            <label class="ml-2 label cursor-pointer gap-2 p-0">
+              <span class="label-text text-[10px] font-bold uppercase opacity-70">Debug</span>
+              <input type="checkbox" id="check-live-debug" class="toggle toggle-primary toggle-xs" />
             </label>
           </div>
         </div>
