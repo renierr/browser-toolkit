@@ -142,6 +142,10 @@ export default function init(payload?: SharedFilesPayload) {
     updateFlashButton();
   }
 
+  function handleAutoCapture() {
+    btnCapture.click();
+  }
+
   function startLiveDetection() {
     if (detectionFrameId) return; // Already running
 
@@ -165,10 +169,8 @@ export default function init(payload?: SharedFilesPayload) {
         );
 
         if (isDebugMode) {
-          const debugView = document.getElementById('debug-view');
-          if (debugView) debugView.classList.remove('hidden');
           console.log(
-            `[Scanner Debug] Frame ${detectionFrameCounter} | Stable: ${stableCount} | Found: ${!!result}`
+            `[Scanner Debug] Frame ${detectionFrameCounter} | Stable: ${stableCount} | Found: ${result?.upscaled ? 'yes' : 'no'}`
           );
           if (result && result.lastDetectedCorners) {
             console.log(
@@ -190,7 +192,7 @@ export default function init(payload?: SharedFilesPayload) {
           lastResult = result.lastDetectedCorners;
 
           // 4. Update UI color based on stability
-          // Yellow means "Hold still!", Green means "Found document"
+          // Yellow means "Hold still!"; Green means "Found document"
           const color = stableCount > 4 ? '#FFD700' : '#00FF00';
           drawLiveOverlay(cameraOverlay, result.upscaled, color);
 
@@ -198,8 +200,7 @@ export default function init(payload?: SharedFilesPayload) {
           // 23 detections at 15fps = ~1.5s
           if (stableCount > 23) {
             stableCount = 0;
-            // TODO: handleAutoCapture();
-            console.log('Auto-snap triggered!');
+            handleAutoCapture();
           }
         } else {
           // Clear overlay if nothing is found
@@ -487,7 +488,7 @@ export default function init(payload?: SharedFilesPayload) {
     if (activePointerId !== null && e.pointerId !== activePointerId) return;
     e.preventDefault();
 
-    // Only start dragging if pointer moved more than 3 pixels
+    // Only start dragging if a pointer moved more than 3 pixels
     if (!isDragging) {
       const dist = Math.sqrt(Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2));
       if (dist > 3) {
@@ -518,7 +519,7 @@ export default function init(payload?: SharedFilesPayload) {
 
     // Apply offset only for touch events to avoid finger obscuring the handle
     if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-      // Offset handle position slightly above the finger touch point
+      // Offset handle position slightly above the finger touchpoint
       // This ensures the user can see what they are dragging
       const touchOffset = 60 * (canvas.height / rect.height);
       newY = smoothedY - touchOffset;
