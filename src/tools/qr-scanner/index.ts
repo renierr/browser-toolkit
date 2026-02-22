@@ -10,6 +10,7 @@ export default function init() {
   const videoContainer = document.getElementById('video-container');
   const startBtn = document.getElementById('start-camera');
   const stopBtn = document.getElementById('stop-camera');
+  const toggleFlashBtn = document.getElementById('toggle-flash');
   const fileInput = document.getElementById('qr-input') as HTMLInputElement;
   const pasteBtn = document.getElementById('paste-btn');
   const pasteTarget = document.getElementById('paste-target');
@@ -24,6 +25,7 @@ export default function init() {
   let animationFrameId: number | null = null;
   let lastScanTime = 0;
   const SCAN_INTERVAL = 200;
+  let isFlashOn = false;
 
   let detector: any = null;
 
@@ -47,6 +49,10 @@ export default function init() {
 
   const stopCamera = () => {
     if (stream) {
+      const track = stream.getVideoTracks()[0];
+      if (track && isFlashOn) {
+        track.applyConstraints({ advanced: [{ torch: false }] } as any).catch(() => {});
+      }
       stream.getTracks().forEach((track) => track.stop());
       stream = null;
     }
@@ -54,6 +60,9 @@ export default function init() {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
     }
+    isFlashOn = false;
+    toggleFlashBtn?.classList.add('hidden');
+    toggleFlashBtn?.classList.remove('btn-active');
     videoContainer?.classList.add('hidden');
     stopBtn?.classList.add('hidden');
     startBtn?.classList.remove('hidden');
@@ -191,10 +200,16 @@ export default function init() {
         },
       });
 
-      // Attempt to enable continuous auto-focus if supported by the hardware
       const track = stream.getVideoTracks()[0];
       if (track) {
         const capabilities = track.getCapabilities() as any;
+
+        // Check for torch support
+        if (capabilities.torch) {
+          toggleFlashBtn?.classList.remove('hidden');
+        }
+
+        // Attempt to enable continuous auto-focus
         if (capabilities.focusMode?.includes('continuous')) {
           try {
             await track.applyConstraints({ focusMode: 'continuous' } as any);
@@ -218,6 +233,21 @@ export default function init() {
   });
 
   stopBtn?.addEventListener('click', stopCamera);
+
+  toggleFlashBtn?.addEventListener('click', async () => {
+    const track = stream?.getVideoTracks()[0];
+    if (track) {
+      try {
+        isFlashOn = !isFlashOn;
+        await track.applyConstraints({
+          advanced: [{ torch: isFlashOn }]
+        } as any);
+        toggleFlashBtn.classList.toggle('btn-active', isFlashOn);
+      } catch (e) {
+        console.error('Error toggling flash:', e);
+      }
+    }
+  });
 
   fileInput?.addEventListener('change', (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
