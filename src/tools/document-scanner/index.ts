@@ -29,6 +29,7 @@ import { generateAndDownloadPDF } from './utils/pdf';
 import { sourceToCanvas } from './utils/canvas';
 import type { ScannedPage } from './types';
 import Sortable from 'sortablejs';
+import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -49,6 +50,8 @@ export default function init(payload?: SharedFilesPayload) {
   const btnReset = document.getElementById('btn-reset')!;
   const btnDownload = document.getElementById('btn-download')!;
   const btnDownloadPdf = document.getElementById('btn-download-pdf')!;
+  const btnImageClipboard = document.getElementById('btn-clipboard')!;
+
   const btnAddPage = document.getElementById('btn-add-page')!;
   const btnApplyPerspective = document.getElementById('btn-apply-perspective')!;
   const btnModePerspective = document.getElementById('btn-mode-perspective')!;
@@ -643,14 +646,17 @@ export default function init(payload?: SharedFilesPayload) {
     }
   });
 
-  btnDownload.addEventListener('click', () => {
-    const link = document.createElement('a');
-    link.download = `scanned-page-${currentPageIndex + 1}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+  btnDownload.addEventListener('click', async () => {
+    enterFilterMode();
+    await downloadCanvasAsImage(canvas, `scanned-page-${currentPageIndex + 1}.jpg`, 'jpg', 0.9);
   });
 
   btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(pages));
+
+  btnImageClipboard.addEventListener('click', async () => {
+    enterFilterMode();
+    await copyCanvasToClipboard(canvas, 'jpg', 0.9);
+  });
 
   if (payload?.sharedFiles?.length) {
     Array.from(payload.sharedFiles).forEach(handleFile);

@@ -80,8 +80,6 @@ export async function downloadCanvasAsImage(
         }
         try {
           await downloadFile(blob, `${filename}.${format}`);
-          const data = [new ClipboardItem({ [blob.type]: blob })];
-          await navigator.clipboard.write(data);
           resolve();
         } catch (err) {
           reject(err);
