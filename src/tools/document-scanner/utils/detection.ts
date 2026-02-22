@@ -422,7 +422,7 @@ function detectDocumentCorners(
 
 export function detectCornersOnImage(
   img: HTMLImageElement | HTMLCanvasElement,
-  maxDim = 1200
+  maxDim = 800
 ): Point[] | null {
   const tempCanvas = document.createElement('canvas');
   const scale = Math.min(1, maxDim / Math.max(img.width, img.height));

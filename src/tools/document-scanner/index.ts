@@ -244,14 +244,27 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   btnCapture.addEventListener('click', async () => {
+    const liveCorners = lastResult; // Save the last detected corners from video coordinates
     const blob = await capturePhoto(video, stream);
 
     if (blob) {
       const img = new Image();
       img.src = URL.createObjectURL(blob);
       img.onload = () => {
-        // Redetect corners on the captured image for higher accuracy
-        const corners = detectCornersOnImage(img);
+        // Use live corners if available, they are in video coordinate space
+        let corners: Point[] | null = null;
+        if (liveCorners) {
+          corners = liveCorners.map((p) => ({
+            x: (p.x / video.videoWidth) * img.width,
+            y: (p.y / video.videoHeight) * img.height,
+          }));
+        }
+
+        // If no live corners or they were not stable, try detecting on the image
+        if (!corners) {
+          corners = detectCornersOnImage(img);
+        }
+
         addPage(img, corners);
       };
     }
