@@ -1,5 +1,11 @@
 import type { Point } from './perspective';
 
+interface Line {
+  rho: number;
+  theta: number;
+  score: number;
+}
+
 let grayscaleBuffer: Uint8Array | null = null;
 let blurBuffer: Uint8Array | null = null;
 let workBuffer: Uint8Array | null = null;
@@ -204,6 +210,158 @@ export function isStable(oldPts: Point[] | null, newPts: Point[] | null, thresho
   return dist < threshold;
 }
 
+// --- Hough Line Transform ---
+
+function houghLineTransform(
+  pixels: Uint8Array,
+  width: number,
+  height: number,
+  maxEdge: number
+): Point[] | null {
+  const rhoRes = 1;
+  const thetaRes = Math.PI / 180;
+  const maxRho = Math.hypot(width, height);
+  const numThetas = Math.floor(Math.PI / thetaRes);
+  const numRhos = Math.floor(maxRho / rhoRes) * 2 + 1;
+  const accumulator = new Int32Array(numThetas * numRhos);
+
+  // Precompute cos/sin
+  const cosTable = new Float32Array(numThetas);
+  const sinTable = new Float32Array(numThetas);
+  for (let t = 0; t < numThetas; t++) {
+    const theta = t * thetaRes;
+    cosTable[t] = Math.cos(theta);
+    sinTable[t] = Math.sin(theta);
+  }
+
+  // Thresholding
+  let sum = 0,
+    count = 0;
+  for (let i = 0; i < pixels.length; i++) {
+    if (pixels[i] > 0) {
+      sum += pixels[i];
+      count++;
+    }
+  }
+  const avgEdge = count > 0 ? sum / count : 0;
+  const thresh = Math.max(40, Math.min(avgEdge * 1.2, maxEdge * 0.4));
+
+  // Fill accumulator
+  const stride = 2; // Process every 2nd pixel for performance
+  for (let y = 0; y < height; y += stride) {
+    const offset = y * width;
+    for (let x = 0; x < width; x += stride) {
+      if (pixels[offset + x] > thresh) {
+        // Vote for horizontal-ish and vertical-ish separately to speed up
+        for (let t = 0; t < numThetas; t++) {
+          const rho = x * cosTable[t] + y * sinTable[t];
+          const rhoIdx = Math.floor(rho / rhoRes) + Math.floor(maxRho / rhoRes);
+          accumulator[t * numRhos + rhoIdx]++;
+        }
+      }
+    }
+  }
+
+  // Find local maxima (lines)
+  const lines: Line[] = [];
+  const minVotes = Math.min(width, height) * 0.2;
+
+  for (let t = 0; t < numThetas; t++) {
+    for (let r = 0; r < numRhos; r++) {
+      const idx = t * numRhos + r;
+      const val = accumulator[idx];
+      if (val > minVotes) {
+        // Simple non-maximum suppression
+        let isMax = true;
+        for (let dt = -1; dt <= 1; dt++) {
+          for (let dr = -1; dr <= 1; dr++) {
+            if (dt === 0 && dr === 0) continue;
+            const nt = (t + dt + numThetas) % numThetas;
+            const nr = r + dr;
+            if (nr >= 0 && nr < numRhos) {
+              if (accumulator[nt * numRhos + nr] > val) {
+                isMax = false;
+                break;
+              }
+            }
+          }
+          if (!isMax) break;
+        }
+
+        if (isMax) {
+          lines.push({
+            rho: (r - Math.floor(maxRho / rhoRes)) * rhoRes,
+            theta: t * thetaRes,
+            score: val,
+          });
+        }
+      }
+    }
+  }
+
+  if (lines.length < 4) return null;
+
+  // Sort by score
+  lines.sort((a, b) => b.score - a.score);
+
+  // Take only top 30 lines to speed up quad search
+  const topLines = lines.slice(0, 30);
+
+  // Filter and pick the 4 best lines forming a quad
+  return findBestQuad(topLines, width, height);
+}
+
+function findBestQuad(lines: Line[], width: number, height: number): Point[] | null {
+  // Group into horizontal and vertical lines
+  const horizontal: Line[] = [];
+  const vertical: Line[] = [];
+
+  for (const l of lines) {
+    const deg = (l.theta * 180) / Math.PI;
+    // Horizontal: near 0 or 180 deg (rho = x cos theta + y sin theta)
+    // Actually theta is angle of normal.
+    // Theta ~ 0 or 180 means vertical edge (normal is horizontal)
+    // Theta ~ 90 means horizontal edge (normal is vertical)
+    if (deg > 45 && deg < 135) {
+      horizontal.push(l);
+    } else {
+      vertical.push(l);
+    }
+  }
+
+  if (horizontal.length < 2 || vertical.length < 2) return null;
+
+  // Find two horizontal lines furthest apart
+  horizontal.sort((a, b) => a.rho - b.rho);
+  const top = horizontal[0];
+  const bottom = horizontal[horizontal.length - 1];
+
+  // Find two vertical lines furthest apart
+  vertical.sort((a, b) => a.rho - b.rho);
+  const left = vertical[0];
+  const right = vertical[vertical.length - 1];
+
+  // Intersections
+  const tl = intersect(top, left);
+  const tr = intersect(top, right);
+  const br = intersect(bottom, right);
+  const bl = intersect(bottom, left);
+
+  if (!tl || !tr || !br || !bl) return null;
+
+  return [tl, tr, br, bl];
+}
+
+function intersect(l1: Line, l2: Line): Point | null {
+  const det = Math.cos(l1.theta) * Math.sin(l2.theta) - Math.sin(l1.theta) * Math.cos(l2.theta);
+  if (Math.abs(det) < 0.01) return null;
+  return {
+    x: (Math.sin(l2.theta) * l1.rho - Math.sin(l1.theta) * l2.rho) / det,
+    y: (Math.cos(l1.theta) * l2.rho - Math.cos(l2.theta) * l1.rho) / det,
+  };
+}
+
+// noinspection JSUnusedLocalSymbols
 function extractExtremePoints(
   pixels: Uint8Array,
   sw: number,
@@ -360,7 +518,7 @@ function detectDocumentCorners(
   erode(blurBuffer!, workBuffer!, processingWidth, processingHeight);
   if (debug) drawToDebugCanvas(workBuffer!, processingWidth, processingHeight, 'debug-morph');
 
-  const corners = extractExtremePoints(workBuffer!, processingWidth, processingHeight, maxEdge);
+  const corners = houghLineTransform(workBuffer!, processingWidth, processingHeight, maxEdge);
   if (!corners) return null;
 
   const scaledCorners = corners.map((p) => ({

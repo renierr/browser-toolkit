@@ -198,7 +198,7 @@ export default function init(payload?: SharedFilesPayload) {
 
           // 5. Trigger Auto-Snap after ~1.5 seconds of stability
           // 23 detections at 15fps = ~1.5s
-          if (stableCount > 23) {
+          if (stableCount > 23 && !isDebugMode) {
             stableCount = 0;
             handleAutoCapture();
           }
