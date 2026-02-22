@@ -210,10 +210,19 @@ function extractExtremePoints(
   sh: number,
   maxEdge: number
 ): Point[] | null {
-  const thresh = Math.max(50, maxEdge * 0.3);
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < pixels.length; i++) {
+    if (pixels[i] > 0) {
+      sum += pixels[i];
+      count++;
+    }
+  }
+  const avgEdge = count > 0 ? sum / count : 0;
+  const thresh = Math.max(40, Math.min(avgEdge * 0.8, maxEdge * 0.25));
 
   // We'll store the top N most extreme points for each corner.
-  const N = 10; // Use more candidates for better outlier rejection
+  const N = 15;
   const tlPts: { s: number; x: number; y: number }[] = [];
   const brPts: { s: number; x: number; y: number }[] = [];
   const trPts: { d: number; x: number; y: number }[] = [];
@@ -221,18 +230,20 @@ function extractExtremePoints(
 
   let found = false;
 
-  for (let y = 2; y < sh - 2; y++) {
+  for (let y = 4; y < sh - 4; y++) {
     const yOffset = y * sw;
-    for (let x = 2; x < sw - 2; x++) {
+    for (let x = 4; x < sw - 4; x++) {
       const idx = yOffset + x;
       const val = pixels[idx];
       if (val > thresh) {
         let neighbors = 0;
-        if (pixels[idx - 1] > thresh) neighbors++;
-        if (pixels[idx + 1] > thresh) neighbors++;
-        if (pixels[idx - sw] > thresh) neighbors++;
-        if (pixels[idx + sw] > thresh) neighbors++;
-        if (neighbors < 2) continue;
+        for (let ny = -1; ny <= 1; ny++) {
+          for (let nx = -1; nx <= 1; nx++) {
+            if (nx === 0 && ny === 0) continue;
+            if (pixels[idx + ny * sw + nx] > thresh) neighbors++;
+          }
+        }
+        if (neighbors < 3) continue;
 
         found = true;
         const s = x + y;
@@ -269,8 +280,11 @@ function extractExtremePoints(
   if (!found || tlPts.length === 0) return null;
 
   const avg = (pts: { x: number; y: number }[]) => {
+    if (pts.length === 0) return { x: 0, y: 0 };
     const best = pts[0];
-    const close = pts.filter((p) => Math.hypot(p.x - best.x, p.y - best.y) < 20);
+    const close = pts.filter((p) => Math.hypot(p.x - best.x, p.y - best.y) < 30);
+    if (close.length === 0) return best;
+
     return {
       x: close.reduce((sum, p) => sum + p.x, 0) / close.length,
       y: close.reduce((sum, p) => sum + p.y, 0) / close.length,
