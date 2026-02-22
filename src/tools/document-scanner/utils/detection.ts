@@ -3,6 +3,7 @@ import type { Point } from './perspective';
 let grayscaleBuffer: Uint8Array | null = null;
 let blurBuffer: Uint8Array | null = null;
 let workBuffer: Uint8Array | null = null;
+let tempBuffer: Uint8Array | null = null;
 let processingCanvas: HTMLCanvasElement | null = null;
 let history: Point[][] = [];
 const HISTORY_SIZE = 5;
@@ -12,6 +13,7 @@ function ensureBuffers(size: number) {
     grayscaleBuffer = new Uint8Array(size);
     blurBuffer = new Uint8Array(size);
     workBuffer = new Uint8Array(size);
+    tempBuffer = new Uint8Array(size);
   }
 }
 
@@ -19,6 +21,7 @@ export function releaseBuffers() {
   grayscaleBuffer = null;
   blurBuffer = null;
   workBuffer = null;
+  tempBuffer = null;
   processingCanvas = null;
 }
 
@@ -54,10 +57,8 @@ function prepareCanvas(canvas: HTMLCanvasElement, maxDim: number) {
 
 function toGrayscale(data: Uint8ClampedArray, out: Uint8Array, size: number) {
   for (let i = 0; i < size; i++) {
-    const r = data[i * 4];
-    const g = data[i * 4 + 1];
-    const b = data[i * 4 + 2];
-    out[i] = (r * 299 + g * 587 + b * 114) / 1000;
+    const i4 = i << 2;
+    out[i] = (data[i4] * 299 + data[i4 + 1] * 587 + data[i4 + 2] * 114) / 1000;
   }
 }
 
@@ -70,7 +71,9 @@ function contrastStretch(pixels: Uint8Array, size: number) {
     if (v > max) max = v;
   }
   const range = max - min;
-  if (range > 20) {
+  // If the range is too small, it's likely just noise, so skip it.
+  // Using 40 instead of 20 to avoid over-amplifying low-contrast noise.
+  if (range > 40) {
     for (let i = 0; i < size; i++) {
       pixels[i] = ((pixels[i] - min) / range) * 255;
     }
@@ -78,23 +81,24 @@ function contrastStretch(pixels: Uint8Array, size: number) {
 }
 
 function gaussianBlur(pixels: Uint8Array, out: Uint8Array, width: number, height: number): void {
-  const kernel = [
-    1, 4, 7, 4, 1, 4, 16, 26, 16, 4, 7, 26, 41, 26, 7, 4, 16, 26, 16, 4, 1, 4, 7, 4, 1,
-  ];
-  const kernelSum = 273;
+  const kernelSum = 4;
+  const temp = tempBuffer!;
 
-  for (let y = 2; y < height - 2; y++) {
+  // Horizontal pass
+  for (let y = 0; y < height; y++) {
     const yOffset = y * width;
-    for (let x = 2; x < width - 2; x++) {
-      let sum = 0;
-      for (let ky = -2; ky <= 2; ky++) {
-        const kyOffset = (y + ky) * width;
-        const kRowOffset = (ky + 2) * 5;
-        for (let kx = -2; kx <= 2; kx++) {
-          sum += pixels[kyOffset + (x + kx)] * kernel[kRowOffset + (kx + 2)];
-        }
-      }
-      out[yOffset + x] = sum / kernelSum;
+    for (let x = 1; x < width - 1; x++) {
+      const idx = yOffset + x;
+      temp[idx] = (pixels[idx - 1] + 2 * pixels[idx] + pixels[idx + 1]) / kernelSum;
+    }
+  }
+
+  // Vertical pass
+  for (let y = 1; y < height - 1; y++) {
+    const yOffset = y * width;
+    for (let x = 1; x < width - 1; x++) {
+      const idx = yOffset + x;
+      out[idx] = (temp[idx - width] + 2 * temp[idx] + temp[idx + width]) / kernelSum;
     }
   }
 }
@@ -103,21 +107,22 @@ function applySobel(input: Uint8Array, out: Uint8Array, width: number, height: n
   let maxEdge = 0;
   for (let y = 1; y < height - 1; y++) {
     const yOffset = y * width;
+    const prevRow = yOffset - width;
+    const nextRow = yOffset + width;
     for (let x = 1; x < width - 1; x++) {
-      const idx = yOffset + x;
       const gx =
-        input[idx - width + 1] +
-        2 * input[idx + 1] +
-        input[idx + width + 1] -
-        (input[idx - width - 1] + 2 * input[idx - 1] + input[idx + width - 1]);
+        input[prevRow + x + 1] +
+        2 * input[yOffset + x + 1] +
+        input[nextRow + x + 1] -
+        (input[prevRow + x - 1] + 2 * input[yOffset + x - 1] + input[nextRow + x - 1]);
       const gy =
-        input[idx + width - 1] +
-        2 * input[idx + width] +
-        input[idx + width + 1] -
-        (input[idx - width - 1] + 2 * input[idx - width] + input[idx - width + 1]);
+        input[nextRow + x - 1] +
+        2 * input[nextRow + x] +
+        input[nextRow + x + 1] -
+        (input[prevRow + x - 1] + 2 * input[prevRow + x] + input[prevRow + x + 1]);
 
       const mag = Math.abs(gx) + Math.abs(gy);
-      out[idx] = mag > 255 ? 255 : mag;
+      out[yOffset + x] = mag > 255 ? 255 : mag;
       if (mag > maxEdge) maxEdge = mag;
     }
   }
@@ -185,45 +190,83 @@ function extractExtremePoints(
   maxEdge: number
 ): Point[] | null {
   // 3. Extract Corners (Extreme Points)
-  const thresh = maxEdge * 0.2;
-  let tl = { x: sw, y: sh },
-    tr = { x: 0, y: sh },
-    br = { x: 0, y: 0 },
-    bl = { x: sw, y: 0 };
-  let minS = Infinity,
-    maxS = -Infinity,
-    minD = Infinity,
-    maxD = -Infinity;
+  // Use a more robust threshold: 30% of max edge or at least 50 to avoid noise.
+  const thresh = Math.max(50, maxEdge * 0.3);
+
+  // We'll store the top N most extreme points for each corner.
+  const N = 10; // Use more candidates for better outlier rejection
+  const tlPts: { s: number; x: number; y: number }[] = [];
+  const brPts: { s: number; x: number; y: number }[] = [];
+  const trPts: { d: number; x: number; y: number }[] = [];
+  const blPts: { d: number; x: number; y: number }[] = [];
+
   let found = false;
 
-  for (let y = 0; y < sh; y++) {
-    for (let x = 0; x < sw; x++) {
-      if (pixels[y * sw + x] > thresh) {
+  for (let y = 2; y < sh - 2; y++) {
+    const yOffset = y * sw;
+    for (let x = 2; x < sw - 2; x++) {
+      const idx = yOffset + x;
+      const val = pixels[idx];
+      if (val > thresh) {
+        // Noise filter: must have at least some neighbors also above threshold
+        // This is a simple 3x3 check to skip isolated noise pixels.
+        let neighbors = 0;
+        if (pixels[idx - 1] > thresh) neighbors++;
+        if (pixels[idx + 1] > thresh) neighbors++;
+        if (pixels[idx - sw] > thresh) neighbors++;
+        if (pixels[idx + sw] > thresh) neighbors++;
+        if (neighbors < 2) continue;
+
         found = true;
-        const s = x + y,
-          d = x - y;
-        if (s < minS) {
-          minS = s;
-          tl = { x, y };
+        const s = x + y;
+        const d = x - y;
+
+        // Top-Left (min sum)
+        if (tlPts.length < N || s < tlPts[tlPts.length - 1].s) {
+          tlPts.push({ s, x, y });
+          tlPts.sort((a, b) => a.s - b.s);
+          if (tlPts.length > N) tlPts.pop();
         }
-        if (s > maxS) {
-          maxS = s;
-          br = { x, y };
+        // Bottom-Right (max sum)
+        if (brPts.length < N || s > brPts[brPts.length - 1].s) {
+          brPts.push({ s, x, y });
+          brPts.sort((a, b) => b.s - a.s);
+          if (brPts.length > N) brPts.pop();
         }
-        if (d > maxD) {
-          maxD = d;
-          tr = { x, y };
+        // Top-Right (max diff)
+        if (trPts.length < N || d > trPts[trPts.length - 1].d) {
+          trPts.push({ d, x, y });
+          trPts.sort((a, b) => b.d - a.d);
+          if (trPts.length > N) trPts.pop();
         }
-        if (d < minD) {
-          minD = d;
-          bl = { x, y };
+        // Bottom-Left (min diff)
+        if (blPts.length < N || d < blPts[blPts.length - 1].d) {
+          blPts.push({ d, x, y });
+          blPts.sort((a, b) => a.d - b.d);
+          if (blPts.length > N) blPts.pop();
         }
       }
     }
   }
 
-  if (!found) return null;
-  return [tl, tr, br, bl];
+  if (!found || tlPts.length === 0) return null;
+
+  // Robust averaging (using the median or trimming outliers could be better, but we'll try mean of top candidates)
+  const avg = (pts: { x: number; y: number }[]) => {
+    // Filter to only those close to the most extreme one
+    const best = pts[0];
+    const close = pts.filter((p) => Math.hypot(p.x - best.x, p.y - best.y) < 20);
+    return {
+      x: close.reduce((sum, p) => sum + p.x, 0) / close.length,
+      y: close.reduce((sum, p) => sum + p.y, 0) / close.length,
+    };
+  };
+
+  const pts = [avg(tlPts), avg(trPts), avg(brPts), avg(blPts)];
+  const unique = new Set(pts.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`));
+  if (unique.size < 4) return null;
+
+  return pts;
 }
 
 function smoothCorners(newCorners: Point[] | null): Point[] | null {
@@ -255,8 +298,10 @@ function detectDocumentCorners(canvas: HTMLCanvasElement, maxDim = 400): Point[]
   gaussianBlur(grayscaleBuffer!, blurBuffer!, processingWidth, processingHeight);
   const maxEdge = applySobel(blurBuffer!, workBuffer!, processingWidth, processingHeight);
 
-  // Morphological closing
+  // Morphological closing with multiple passes for stronger connectivity
   dilate(workBuffer!, blurBuffer!, processingWidth, processingHeight);
+  dilate(blurBuffer!, workBuffer!, processingWidth, processingHeight);
+  erode(workBuffer!, blurBuffer!, processingWidth, processingHeight);
   erode(blurBuffer!, workBuffer!, processingWidth, processingHeight);
 
   const corners = extractExtremePoints(workBuffer!, processingWidth, processingHeight, maxEdge);

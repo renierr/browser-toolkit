@@ -89,6 +89,7 @@ export default function init(payload?: SharedFilesPayload) {
   const detectionCanvas = document.createElement('canvas');
   const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
   let detectionFrameId: number | null = null;
+  let detectionFrameCounter = 0;
   let stableCount = 0;
   let lastResult: Point[] | null = null;
 
@@ -149,33 +150,41 @@ export default function init(payload?: SharedFilesPayload) {
         return;
       }
 
-      // 2. Run the detection logic from detect.ts
-      const result = calculateLiveDetection(video, detectionCanvas, dCtx, cameraOverlay);
+      // Throttle detection to every 4th frame (approx. 15fps on 60fps screen)
+      detectionFrameCounter++;
+      if (detectionFrameCounter % 4 === 0) {
+        // 2. Run the detection logic from detect.ts
+        const result = calculateLiveDetection(video, detectionCanvas, dCtx, cameraOverlay);
 
-      if (result && result.upscaled) {
-        // 3. AUTO-SNAP LOGIC: Check stability
-        if (isStable(lastResult, result.lastDetectedCorners, 15)) {
-          stableCount++;
+        if (result && result.upscaled) {
+          // 3. AUTO-SNAP LOGIC: Check stability
+          // Adjusted for lower detection frequency (15fps)
+          if (isStable(lastResult, result.lastDetectedCorners, 25)) {
+            stableCount++;
+          } else {
+            stableCount = 0;
+          }
+          lastResult = result.lastDetectedCorners;
+
+          // 4. Update UI color based on stability
+          // Yellow means "Hold still!", Green means "Found document"
+          // At 15fps, > 2 means ~0.2s of stability
+          const color = stableCount > 2 ? '#FFD700' : '#00FF00';
+          drawLiveOverlay(cameraOverlay, result.upscaled, color);
+
+          // 5. Trigger Auto-Snap after ~1.5 seconds of stability
+          // 23 detections at 15fps = ~1.5s
+          if (stableCount > 23) {
+            stableCount = 0;
+            // TODO: handleAutoCapture();
+            console.log('Auto-snap triggered!');
+          }
         } else {
+          // Clear overlay if nothing is found
+          const oCtx = cameraOverlay.getContext('2d');
+          if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
           stableCount = 0;
         }
-        lastResult = result.lastDetectedCorners;
-
-        // 4. Update UI color based on stability
-        // Yellow means "Hold still!", Green means "Found document"
-        const color = stableCount > 5 ? '#FFD700' : '#00FF00';
-        drawLiveOverlay(cameraOverlay, result.upscaled, color);
-
-        // 5. Trigger Auto-Snap after ~1.5 seconds of stability
-        if (stableCount > 20) {
-          stableCount = 0;
-          // TODO: handleAutoCapture();
-        }
-      } else {
-        // Clear overlay if nothing is found
-        const oCtx = cameraOverlay.getContext('2d');
-        if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
-        stableCount = 0;
       }
 
       // 6. Schedule next frame
