@@ -1,5 +1,4 @@
 export function startLevelSensor(
-  isPortrait: boolean,
   onUpdate: (xPos: number, yPos: number, isLevel: boolean) => void,
   onActive: () => void
 ) {
@@ -13,11 +12,6 @@ export function startLevelSensor(
     let xTilt = gamma;
     let yTilt = beta;
 
-    if (!isPortrait) {
-      xTilt = beta;
-      yTilt = -gamma;
-    }
-
     const maxTilt = 20;
     const xPerc = Math.max(-maxTilt, Math.min(maxTilt, xTilt)) / maxTilt;
     const yPerc = Math.max(-maxTilt, Math.min(maxTilt, yTilt)) / maxTilt;
@@ -29,13 +23,15 @@ export function startLevelSensor(
     onUpdate(xPos, yPos, isLevel);
   };
 
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof (DeviceOrientationEvent as any).requestPermission === 'function') {
-    (DeviceOrientationEvent as any).requestPermission()
-      .then((response: string) => {
-        if (response === 'granted') {
-          window.addEventListener('deviceorientation', handleOrientation);
-        }
-      });
+  if (
+    typeof DeviceOrientationEvent !== 'undefined' &&
+    typeof (DeviceOrientationEvent as any).requestPermission === 'function'
+  ) {
+    (DeviceOrientationEvent as any).requestPermission().then((response: string) => {
+      if (response === 'granted') {
+        window.addEventListener('deviceorientation', handleOrientation);
+      }
+    });
   } else {
     window.addEventListener('deviceorientation', handleOrientation);
   }

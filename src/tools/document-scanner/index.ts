@@ -116,7 +116,6 @@ export default function init(payload?: SharedFilesPayload) {
       startLiveDetection();
     }
     stopLevelSensor = startLevelSensor(
-      isPortrait,
       (xPos, yPos, isLevel) => {
         levelDot.style.transform = `translate(${xPos}px, ${yPos}px)`;
         if (isLevel) {
