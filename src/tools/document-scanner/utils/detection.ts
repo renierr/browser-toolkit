@@ -195,7 +195,7 @@ export function isValidDocument(points: Point[], width: number, height: number):
   const area = Math.abs(
     (tl.x * (tr.y - bl.y) + tr.x * (br.y - tl.y) + br.x * (bl.y - tr.y) + bl.x * (tl.y - br.y)) / 2
   );
-  if (area < width * height * 0.1) return false;
+  if (area < width * height * 0.05) return false;
 
   const cross = (a: Point, b: Point, c: Point) =>
     (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
@@ -308,10 +308,10 @@ function houghLineTransform(
   const topLines = lines.slice(0, 30);
 
   // Filter and pick the 4 best lines forming a quad
-  return findBestQuad(topLines, width, height);
+  return findBestQuad(topLines);
 }
 
-function findBestQuad(lines: Line[], width: number, height: number): Point[] | null {
+function findBestQuad(lines: Line[]): Point[] | null {
   // Group into horizontal and vertical lines
   const horizontal: Line[] = [];
   const vertical: Line[] = [];
@@ -359,115 +359,6 @@ function intersect(l1: Line, l2: Line): Point | null {
     x: (Math.sin(l2.theta) * l1.rho - Math.sin(l1.theta) * l2.rho) / det,
     y: (Math.cos(l1.theta) * l2.rho - Math.cos(l2.theta) * l1.rho) / det,
   };
-}
-
-// noinspection JSUnusedLocalSymbols
-function extractExtremePoints(
-  pixels: Uint8Array,
-  sw: number,
-  sh: number,
-  maxEdge: number
-): Point[] | null {
-  let sum = 0;
-  let count = 0;
-  for (let i = 0; i < pixels.length; i++) {
-    if (pixels[i] > 0) {
-      sum += pixels[i];
-      count++;
-    }
-  }
-  const avgEdge = count > 0 ? sum / count : 0;
-  const thresh = Math.max(30, Math.min(avgEdge * 0.7, maxEdge * 0.2));
-
-  const N = 20;
-  const tlCandidates: { score: number; x: number; y: number }[] = [];
-  const trCandidates: { score: number; x: number; y: number }[] = [];
-  const brCandidates: { score: number; x: number; y: number }[] = [];
-  const blCandidates: { score: number; x: number; y: number }[] = [];
-
-  let found = false;
-
-  for (let y = 5; y < sh - 5; y++) {
-    const yOffset = y * sw;
-    for (let x = 5; x < sw - 5; x++) {
-      const idx = yOffset + x;
-      const val = pixels[idx];
-      if (val > thresh) {
-        let neighbors = 0;
-        for (let ny = -1; ny <= 1; ny++) {
-          const nOffset = (y + ny) * sw;
-          for (let nx = -1; nx <= 1; nx++) {
-            if (nx === 0 && ny === 0) continue;
-            if (pixels[nOffset + (x + nx)] > thresh) neighbors++;
-          }
-        }
-        if (neighbors < 3) continue;
-
-        found = true;
-
-        const tlScore = -x - y; // Maximize -x-y (Min x+y)
-        const trScore = x - y; // Maximize x-y
-        const brScore = x + y; // Maximize x+y
-        const blScore = -x + y; // Maximize -x+y (Min x-y)
-
-        const updateCandidates = (
-          list: { score: number; x: number; y: number }[],
-          score: number
-        ) => {
-          if (list.length < N || score > list[list.length - 1].score) {
-            list.push({ score, x, y });
-            list.sort((a, b) => b.score - a.score);
-            if (list.length > N) list.pop();
-          }
-        };
-
-        updateCandidates(tlCandidates, tlScore);
-        updateCandidates(trCandidates, trScore);
-        updateCandidates(brCandidates, brScore);
-        updateCandidates(blCandidates, blScore);
-      }
-    }
-  }
-
-  if (!found || tlCandidates.length === 0) return null;
-
-  const getBestPoint = (candidates: { x: number; y: number }[]) => {
-    if (candidates.length === 0) return { x: 0, y: 0 };
-
-    // Find the largest cluster of candidates
-    const clusters: { x: number; y: number }[][] = [];
-    candidates.forEach((p) => {
-      let added = false;
-      for (const cluster of clusters) {
-        if (Math.hypot(p.x - cluster[0].x, p.y - cluster[0].y) < 25) {
-          cluster.push(p);
-          added = true;
-          break;
-        }
-      }
-      if (!added) clusters.push([p]);
-    });
-
-    clusters.sort((a, b) => b.length - a.length);
-    const bestCluster = clusters[0];
-
-    return {
-      x: bestCluster.reduce((sum, p) => sum + p.x, 0) / bestCluster.length,
-      y: bestCluster.reduce((sum, p) => sum + p.y, 0) / bestCluster.length,
-    };
-  };
-
-  const pts = [
-    getBestPoint(tlCandidates),
-    getBestPoint(trCandidates),
-    getBestPoint(brCandidates),
-    getBestPoint(blCandidates),
-  ];
-
-  const unique = new Set(pts.map((p) => `${Math.round(p.x)},${Math.round(p.y)}`));
-  if (unique.size < 4) return null;
-
-  return pts;
 }
 
 function smoothCorners(newCorners: Point[] | null): Point[] | null {
