@@ -75,7 +75,7 @@ export default function init() {
 
   const scanImage = (img: HTMLImageElement) => {
     img.onload = async () => {
-      let result: { data: string, format: string } | null = null;
+      let result: { data: string; format: string } | null = null;
 
       if (detector) {
         try {
@@ -138,13 +138,13 @@ export default function init() {
     canvasElement.width = video.videoWidth * scale;
     canvasElement.height = video.videoHeight * scale;
     canvas?.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
-  }
+  };
 
   const tick = async (time: number) => {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
       if (time - lastScanTime >= SCAN_INTERVAL) {
         lastScanTime = time;
-        let result: { data: string, format: string } | null = null;
+        let result: { data: string; format: string } | null = null;
 
         if (detector) {
           try {
@@ -167,7 +167,9 @@ export default function init() {
           // Fallback to jsQR only if native detector is not available
           drawImageToCanvas();
           const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+          const code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: 'dontInvert',
+          });
           if (code) {
             setResult(code.data, 'qr_code', canvasElement.toDataURL('image/png'));
             stopCamera();
@@ -185,9 +187,23 @@ export default function init() {
         video: {
           facingMode: 'environment',
           width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
+          height: { ideal: 720 },
+        },
       });
+
+      // Attempt to enable continuous auto-focus if supported by the hardware
+      const track = stream.getVideoTracks()[0];
+      if (track) {
+        const capabilities = track.getCapabilities() as any;
+        if (capabilities.focusMode?.includes('continuous')) {
+          try {
+            await track.applyConstraints({ focusMode: 'continuous' } as any);
+          } catch (e) {
+            console.debug('Focus mode not supported or failed to apply', e);
+          }
+        }
+      }
+
       video.srcObject = stream;
       video.setAttribute('playsinline', 'true');
       video.play();
