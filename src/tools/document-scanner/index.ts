@@ -8,7 +8,12 @@ import {
   toggleTorch,
   capturePhoto,
 } from './utils/camera';
-import { detectCornersOnImage, calculateLiveDetection } from './utils/detection';
+import {
+  detectCornersOnImage,
+  calculateLiveDetection,
+  releaseBuffers,
+  isStable,
+} from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import {
   drawLiveOverlay,
@@ -80,10 +85,12 @@ export default function init(payload?: SharedFilesPayload) {
 
   // --- Camera Logic ---
 
-  let detectionInterval: number | null = null;
   const cameraOverlay = document.getElementById('camera-overlay') as HTMLCanvasElement;
   const detectionCanvas = document.createElement('canvas');
   const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
+  let detectionFrameId: number | null = null;
+  let stableCount = 0;
+  let lastResult: Point[] | null = null;
 
   async function startCamera() {
     stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
@@ -133,29 +140,58 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function startLiveDetection() {
-    if (detectionInterval) return;
-    detectionInterval = window.setInterval(() => {
+    if (detectionFrameId) return; // Already running
+
+    const loop = () => {
+      // 1. Check if we should stop
       if (video.paused || video.ended || !checkLiveDetection.checked) {
-        const oCtx = cameraOverlay.getContext('2d');
-        if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
-        if (!checkLiveDetection.checked) stopLiveDetection();
+        stopLiveDetection();
         return;
       }
 
+      // 2. Run the detection logic from detect.ts
       const result = calculateLiveDetection(video, detectionCanvas, dCtx, cameraOverlay);
-      if (!result) return;
 
-      drawLiveOverlay(cameraOverlay, result.upscaled);
-    }, 200);
+      if (result && result.upscaled) {
+        // 3. AUTO-SNAP LOGIC: Check stability
+        if (isStable(lastResult, result.lastDetectedCorners, 15)) {
+          stableCount++;
+        } else {
+          stableCount = 0;
+        }
+        lastResult = result.lastDetectedCorners;
+
+        // 4. Update UI color based on stability
+        // Yellow means "Hold still!", Green means "Found document"
+        const color = stableCount > 5 ? '#FFD700' : '#00FF00';
+        drawLiveOverlay(cameraOverlay, result.upscaled, color);
+
+        // 5. Trigger Auto-Snap after ~1.5 seconds of stability
+        if (stableCount > 20) {
+          stableCount = 0;
+          // TODO: handleAutoCapture();
+        }
+      } else {
+        // Clear overlay if nothing is found
+        const oCtx = cameraOverlay.getContext('2d');
+        if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+        stableCount = 0;
+      }
+
+      // 6. Schedule next frame
+      detectionFrameId = requestAnimationFrame(loop);
+    };
+
+    detectionFrameId = requestAnimationFrame(loop);
   }
 
   function stopLiveDetection() {
-    if (detectionInterval) {
-      clearInterval(detectionInterval);
-      detectionInterval = null;
+    if (detectionFrameId) {
+      cancelAnimationFrame(detectionFrameId);
+      detectionFrameId = null;
     }
     const oCtx = cameraOverlay.getContext('2d');
-    if (oCtx && cameraOverlay) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
+    if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
   }
 
   checkLiveDetection.addEventListener('change', () => {
@@ -576,6 +612,7 @@ export default function init(payload?: SharedFilesPayload) {
   resizeObserver.observe(editorContainer);
 
   return () => {
+    releaseBuffers();
     stopCamera();
     resizeObserver.disconnect();
     sortable.destroy();

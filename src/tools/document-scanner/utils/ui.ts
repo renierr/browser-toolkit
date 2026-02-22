@@ -1,7 +1,11 @@
 import type { Point } from './perspective';
 import type { ScannedPage } from '../types';
 
-export function drawLiveOverlay(canvas: HTMLCanvasElement, corners: Point[] | null) {
+export function drawLiveOverlay(
+  canvas: HTMLCanvasElement,
+  corners: Point[] | null,
+  color = '#3b82f6'
+) {
   const ctx = canvas.getContext('2d')!;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!corners) return;
@@ -17,11 +21,11 @@ export function drawLiveOverlay(canvas: HTMLCanvasElement, corners: Point[] | nu
   ctx.fill();
 
   // Draw the border with a glow effect
-  ctx.strokeStyle = '#3b82f6';
+  ctx.strokeStyle = color;
   ctx.lineWidth = 6; // Thicker
   ctx.lineJoin = 'round';
   ctx.shadowBlur = 10;
-  ctx.shadowColor = '#3b82f6';
+  ctx.shadowColor = color;
 
   ctx.beginPath();
   ctx.moveTo(corners[0].x, corners[0].y);
