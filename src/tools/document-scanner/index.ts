@@ -75,7 +75,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
-  let isPortrait = true;
+  let isPortrait = false;
   let pages: ScannedPage[] = [];
   let currentPageIndex: number = -1;
   let activeHandle: number | null = null;
