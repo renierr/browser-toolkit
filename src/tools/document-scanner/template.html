@@ -218,23 +218,34 @@
 </div>
 
 <style>
-  .corner-handle {
-    width: 40px;
-    height: 40px;
+  .corner-handle, .edge-handle {
     background: transparent;
     border: 2px solid #3b82f6; /* primary color */
-    border-radius: 50%;
     position: absolute;
     transform: translate(-50%, -50%);
     pointer-events: auto;
     cursor: move;
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
     z-index: 30;
     touch-action: none;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .corner-handle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+  }
+
+  .edge-handle {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    background: rgba(59, 130, 246, 0.1);
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
   }
 
   .corner-handle::before,
@@ -256,7 +267,8 @@
   }
 
   .corner-handle:active,
-  .corner-handle.selected {
+  .corner-handle.selected,
+  .edge-handle:active {
     border-color: white;
     box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
     background: rgba(59, 130, 246, 0.2);

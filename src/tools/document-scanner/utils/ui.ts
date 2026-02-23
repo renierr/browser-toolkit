@@ -82,27 +82,51 @@ export function updateCornerHandles(
   container: HTMLElement,
   corners: Point[],
   canvas: HTMLCanvasElement,
-  onStart: (e: PointerEvent, index: number) => void
+  onStart: (e: PointerEvent, index: number, isEdge?: boolean) => void
 ) {
   if (!canvas.width || !canvas.height) return;
 
-  let handles = container.querySelectorAll('.corner-handle');
-  if (handles.length !== corners.length) {
+  // Total handles: 4 corners + 4 edges
+  const totalHandles = 8;
+  let handles = container.querySelectorAll('.corner-handle, .edge-handle');
+
+  if (handles.length !== totalHandles) {
     container.innerHTML = '';
-    corners.forEach((_, i) => {
+    // Create 4 corner handles
+    for (let i = 0; i < 4; i++) {
       const handle = document.createElement('div');
       handle.className = 'corner-handle';
-      handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i));
+      handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i, false));
       container.appendChild(handle);
-    });
-    handles = container.querySelectorAll('.corner-handle');
+    }
+    // Create 4 edge handles
+    for (let i = 0; i < 4; i++) {
+      const handle = document.createElement('div');
+      handle.className = 'edge-handle';
+      handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i, true));
+      container.appendChild(handle);
+    }
+    handles = container.querySelectorAll('.corner-handle, .edge-handle');
   }
 
-  corners.forEach((p, i) => {
+  // Update corner handles
+  for (let i = 0; i < 4; i++) {
+    const p = corners[i];
     const handle = handles[i] as HTMLElement;
     handle.style.left = `${(p.x / canvas.width) * 100}%`;
     handle.style.top = `${(p.y / canvas.height) * 100}%`;
-  });
+  }
+
+  // Update edge handles (midpoints)
+  for (let i = 0; i < 4; i++) {
+    const p1 = corners[i];
+    const p2 = corners[(i + 1) % 4];
+    const midX = (p1.x + p2.x) / 2;
+    const midY = (p1.y + p2.y) / 2;
+    const handle = handles[i + 4] as HTMLElement;
+    handle.style.left = `${(midX / canvas.width) * 100}%`;
+    handle.style.top = `${(midY / canvas.height) * 100}%`;
+  }
 }
 
 export function updateMagnifier(

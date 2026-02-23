@@ -84,6 +84,7 @@ export default function init(payload?: SharedFilesPayload) {
   let pages: ScannedPage[] = [];
   let currentPageIndex: number = -1;
   let activeHandle: number | null = null;
+  let isEdgeDragging = false;
   let selectedHandle: number | null = null;
   let activePointerId: number | null = null;
   let isFilterMode = false;
@@ -107,11 +108,6 @@ export default function init(payload?: SharedFilesPayload) {
     cameraControls.classList.remove('hidden');
 
     stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
-
-    video.onloadedmetadata = () => {
-      const aspect = video.videoWidth / video.videoHeight;
-      cameraView.style.aspectRatio = aspect.toString();
-    };
 
     isTorchSupported(stream).then((supported) => {
       if (supported) {
@@ -277,11 +273,9 @@ export default function init(payload?: SharedFilesPayload) {
 
             if (Math.abs(vAspect - iAspect) > 0.01) {
               if (vAspect > iAspect) {
-                // Video is wider than the photo (letterboxed vertically)
                 const scale = iAspect / vAspect;
                 ny = (ny - 0.5) * scale + 0.5;
               } else {
-                // Video is taller than the photo (letterboxed horizontally)
                 const scale = vAspect / iAspect;
                 nx = (nx - 0.5) * scale + 0.5;
               }
@@ -291,7 +285,6 @@ export default function init(payload?: SharedFilesPayload) {
           });
         }
 
-        // If no live corners, or they were not stable, try detecting on the image
         if (!corners) {
           corners = detectCornersOnImage(img);
         }
@@ -495,10 +488,11 @@ export default function init(payload?: SharedFilesPayload) {
   let smoothedY = 0;
   const smoothingFactor = 0.4; // 1.0 = no smoothing, 0.1 = heavy smoothing
 
-  function onStart(e: PointerEvent, index: number) {
+  function onStart(e: PointerEvent, index: number, isEdge: boolean = false) {
     e.preventDefault();
     activeHandle = index;
-    selectedHandle = index; // Select the handle for nudging
+    isEdgeDragging = isEdge;
+    if (!isEdge) selectedHandle = index;
     activePointerId = e.pointerId;
 
     isDragging = false;
@@ -516,14 +510,18 @@ export default function init(payload?: SharedFilesPayload) {
     target.addEventListener('pointercancel', onEnd);
 
     magnifier.classList.remove('hidden');
-    updateMagnifier(
-      canvas,
-      pages[currentPageIndex].originalImage,
-      magnifier,
-      magnifierCanvas,
-      mCtx,
-      pages[currentPageIndex].corners[activeHandle]
-    );
+
+    const page = pages[currentPageIndex];
+    let magPoint: Point;
+    if (isEdge) {
+      const p1 = page.corners[index];
+      const p2 = page.corners[(index + 1) % 4];
+      magPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    } else {
+      magPoint = page.corners[index];
+    }
+
+    updateMagnifier(canvas, page.originalImage, magnifier, magnifierCanvas, mCtx, magPoint);
     updateEditor();
   }
 
@@ -532,7 +530,6 @@ export default function init(payload?: SharedFilesPayload) {
     if (activePointerId !== null && e.pointerId !== activePointerId) return;
     e.preventDefault();
 
-    // Only start dragging if a pointer moved more than 3 pixels
     if (!isDragging) {
       const dist = Math.sqrt(Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2));
       if (dist > 3) {
@@ -547,7 +544,6 @@ export default function init(payload?: SharedFilesPayload) {
     const targetX = (e.clientX - rect.left) * (canvas.width / rect.width);
     const targetY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-    // Apply smoothing
     const smoothed = calculateSmoothedPosition(
       targetX,
       targetY,
@@ -555,31 +551,53 @@ export default function init(payload?: SharedFilesPayload) {
       smoothedY,
       smoothingFactor
     );
+
+    const dx = smoothed.x - smoothedX;
+    const dy = smoothed.y - smoothedY;
+
     smoothedX = smoothed.x;
     smoothedY = smoothed.y;
 
-    let newX = smoothedX;
-    let newY = smoothedY;
+    if (isEdgeDragging) {
+      const i1 = activeHandle;
+      const i2 = (activeHandle + 1) % 4;
 
-    // Apply offset only for touch events to avoid finger obscuring the handle
-    if (e.pointerType === 'touch' || e.pointerType === 'pen') {
-      // Offset handle position slightly above the finger touchpoint
-      // This ensures the user can see what they are dragging
-      const touchOffset = 60 * (canvas.height / rect.height);
-      newY = smoothedY - touchOffset;
+      page.corners[i1] = constrainPoint(
+        page.corners[i1].x + dx,
+        page.corners[i1].y + dy,
+        canvas.width,
+        canvas.height
+      );
+      page.corners[i2] = constrainPoint(
+        page.corners[i2].x + dx,
+        page.corners[i2].y + dy,
+        canvas.width,
+        canvas.height
+      );
+    } else {
+      let newX = smoothedX;
+      let newY = smoothedY;
+
+      if (e.pointerType === 'touch' || e.pointerType === 'pen') {
+        const touchOffset = 60 * (canvas.height / rect.height);
+        newY = smoothedY - touchOffset;
+      }
+
+      page.corners[activeHandle] = constrainPoint(newX, newY, canvas.width, canvas.height);
     }
 
-    page.corners[activeHandle] = constrainPoint(newX, newY, canvas.width, canvas.height);
-
     updateEditor();
-    updateMagnifier(
-      canvas,
-      page.originalImage,
-      magnifier,
-      magnifierCanvas,
-      mCtx,
-      page.corners[activeHandle]
-    );
+
+    let magPoint: Point;
+    if (isEdgeDragging) {
+      const p1 = page.corners[activeHandle];
+      const p2 = page.corners[(activeHandle + 1) % 4];
+      magPoint = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    } else {
+      magPoint = page.corners[activeHandle];
+    }
+
+    updateMagnifier(canvas, page.originalImage, magnifier, magnifierCanvas, mCtx, magPoint);
   }
 
   function onEnd(e: PointerEvent) {
@@ -598,14 +616,11 @@ export default function init(payload?: SharedFilesPayload) {
     const page = pages[currentPageIndex];
     const corner = page.corners[selectedHandle];
 
-    // Nudge amount in image coordinates
     const nudgeAmount = 2;
-
     const newX = corner.x + dx * nudgeAmount;
     const newY = corner.y + dy * nudgeAmount;
 
     page.corners[selectedHandle] = constrainPoint(newX, newY, canvas.width, canvas.height);
-
     updateEditor();
   }
 
@@ -619,7 +634,6 @@ export default function init(payload?: SharedFilesPayload) {
     if (!page) return;
 
     const outCanvas = warp(page.originalImage, page.corners);
-
     page.processedCanvas.width = outCanvas.width;
     page.processedCanvas.height = outCanvas.height;
     const pCtx = page.processedCanvas.getContext('2d')!;
@@ -665,12 +679,9 @@ export default function init(payload?: SharedFilesPayload) {
       pages = [];
       currentPageIndex = -1;
       captureContainer.classList.remove('hidden');
-      cameraControls.classList.remove('hidden');
       editorContainer.classList.add('hidden');
       dropzoneContainer.classList.remove('hidden');
       btnStartScan.classList.remove('hidden');
-      cameraControls.classList.add('hidden');
-
       cornerHandles.innerHTML = '';
       pageList.innerHTML = '';
     }
@@ -693,7 +704,6 @@ export default function init(payload?: SharedFilesPayload) {
   btnStopScan.addEventListener('click', () => {
     stopCamera();
     btnStartScan.classList.remove('hidden');
-    cameraControls.classList.add('hidden');
   });
 
   if (payload?.sharedFiles?.length) {
