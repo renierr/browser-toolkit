@@ -113,13 +113,15 @@ export default function init(payload?: SharedFilesPayload) {
       cameraView.style.aspectRatio = aspect.toString();
     };
 
-    if (isTorchSupported(stream)) {
-      btnFlash.classList.remove('hidden');
-      isFlashOn = false;
-      updateFlashButton();
-    } else {
-      btnFlash.classList.add('hidden');
-    }
+    isTorchSupported(stream).then((supported) => {
+      if (supported) {
+        btnFlash.classList.remove('hidden');
+        isFlashOn = false;
+        updateFlashButton();
+      } else {
+        btnFlash.classList.add('hidden');
+      }
+    });
 
     if (checkLiveDetection.checked) {
       startLiveDetection();

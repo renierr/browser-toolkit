@@ -24,8 +24,8 @@ export async function startCamera(
     // Attempt to enable continuous auto-focus if supported by the hardware
     const track = stream.getVideoTracks()[0];
     if (track) {
-      const capabilities = track.getCapabilities() as any;
-      if (capabilities.focusMode?.includes('continuous')) {
+      const capabilities = track.getCapabilities?.() as any;
+      if (capabilities?.focusMode?.includes('continuous')) {
         try {
           await track.applyConstraints({ focusMode: 'continuous' } as any);
         } catch (e) {
@@ -53,16 +53,35 @@ export function stopCamera(prevStream: MediaStream | null): null {
   return null;
 }
 
-export function isTorchSupported(stream: MediaStream | null): boolean {
+export async function isTorchSupported(stream: MediaStream | null): Promise<boolean> {
   if (!stream) return false;
   const track = stream.getVideoTracks()[0];
   if (!track) return false;
-  try {
-    const capabilities = track.getCapabilities() as any;
-    return !!capabilities.torch;
-  } catch (e) {
-    return false;
+
+  // Check if the browser even supports the torch constraint
+  const supportedConstraints = navigator.mediaDevices.getSupportedConstraints() as any;
+  if (!supportedConstraints.torch) return false;
+
+  // Retry a few times as capabilities might not be immediately available on some Android devices
+  for (let i = 0; i < 3; i++) {
+    try {
+      if (typeof track.getCapabilities === 'function') {
+        const capabilities = track.getCapabilities() as any;
+        if (capabilities && capabilities.torch) return true;
+      }
+
+      const settings = track.getSettings() as any;
+      if (settings && 'torch' in settings) return true;
+    } catch (e) {
+      console.debug('Error checking torch support:', e);
+    }
+
+    if (i < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
   }
+
+  return false;
 }
 
 export async function toggleTorch(stream: MediaStream | null, enable: boolean): Promise<void> {
@@ -75,7 +94,13 @@ export async function toggleTorch(stream: MediaStream | null, enable: boolean): 
       advanced: [{ torch: enable }],
     } as any);
   } catch (e) {
-    console.error('Failed to toggle torch', e);
+    console.warn('Failed to toggle torch with advanced constraints, trying direct fallback', e);
+    try {
+      // Fallback for some non-standard implementations or specific browser versions
+      await track.applyConstraints({ torch: enable } as any);
+    } catch (e2) {
+      console.error('Failed to toggle torch:', e2);
+    }
   }
 }
 
