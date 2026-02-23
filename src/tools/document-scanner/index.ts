@@ -142,6 +142,8 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function stopCamera() {
+    cameraView.classList.add('hidden');
+    cameraControls.classList.add('hidden');
     stream = stopCameraUtil(stream);
     stopLiveDetection();
     if (stopLevelSensor) {
@@ -338,9 +340,8 @@ export default function init(payload?: SharedFilesPayload) {
 
     stopCamera();
     captureContainer.classList.add('hidden');
-    cameraControls.classList.add('hidden');
-    editorContainer.classList.remove('hidden');
     dropzoneContainer.classList.add('hidden');
+    editorContainer.classList.remove('hidden');
 
     renderPageList();
     enterPerspectiveMode();
@@ -650,7 +651,6 @@ export default function init(payload?: SharedFilesPayload) {
       editorContainer.classList.add('hidden');
       dropzoneContainer.classList.remove('hidden');
       btnStartScan.classList.remove('hidden');
-      cameraView.classList.add('hidden');
       cameraControls.classList.add('hidden');
 
       cornerHandles.innerHTML = '';
@@ -676,7 +676,6 @@ export default function init(payload?: SharedFilesPayload) {
     stopCamera();
     btnStartScan.classList.remove('hidden');
     cameraControls.classList.add('hidden');
-    cameraView.classList.add('hidden');
   });
 
   if (payload?.sharedFiles?.length) {
