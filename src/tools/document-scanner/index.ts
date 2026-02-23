@@ -34,6 +34,8 @@ import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts'
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
   const video = document.getElementById('video') as HTMLVideoElement;
+  const btnStartScan = document.getElementById('btn-start-scan')!;
+  const btnStopScan = document.getElementById('btn-stop-scan')!;
   const cameraView = document.getElementById('camera-view')!;
   const captureContainer = document.getElementById('capture-container')!;
   const cameraControls = document.getElementById('camera-controls-sticky')!;
@@ -100,6 +102,10 @@ export default function init(payload?: SharedFilesPayload) {
   let lastResult: Point[] | null = null;
 
   async function startCamera() {
+    btnStartScan.classList.add('hidden');
+    cameraView.classList.remove('hidden');
+    cameraControls.classList.remove('hidden');
+
     stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
 
     video.onloadedmetadata = () => {
@@ -382,10 +388,11 @@ export default function init(payload?: SharedFilesPayload) {
 
   btnAddPage.addEventListener('click', async () => {
     captureContainer.classList.remove('hidden');
-    cameraControls.classList.remove('hidden');
     editorContainer.classList.add('hidden');
     dropzoneContainer.classList.remove('hidden');
-    await startCamera();
+    cameraView.classList.add('hidden');
+    cameraControls.classList.add('hidden');
+    btnStartScan.classList.remove('hidden');
   });
 
   // --- Image Loading ---
@@ -640,9 +647,12 @@ export default function init(payload?: SharedFilesPayload) {
       cameraControls.classList.remove('hidden');
       editorContainer.classList.add('hidden');
       dropzoneContainer.classList.remove('hidden');
+      btnStartScan.classList.remove('hidden');
+      cameraView.classList.add('hidden');
+      cameraControls.classList.add('hidden');
+
       cornerHandles.innerHTML = '';
       pageList.innerHTML = '';
-      await startCamera();
     }
   });
 
@@ -658,11 +668,17 @@ export default function init(payload?: SharedFilesPayload) {
     await copyCanvasToClipboard(canvas, 'jpg', 0.9);
   });
 
+  btnStartScan.addEventListener('click', startCamera);
+
+  btnStopScan.addEventListener('click', () => {
+    stopCamera();
+    btnStartScan.classList.remove('hidden');
+    cameraControls.classList.add('hidden');
+    cameraView.classList.add('hidden');
+  });
+
   if (payload?.sharedFiles?.length) {
     Array.from(payload.sharedFiles).forEach(handleFile);
-  } else {
-    // noinspection JSIgnoredPromiseFromCall
-    startCamera();
   }
 
   const resizeObserver = new ResizeObserver(() => {

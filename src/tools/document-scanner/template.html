@@ -11,8 +11,9 @@
     </p>
 
     <div id="capture-container" class="flex flex-col gap-4">
+
       <!-- Camera View Container -->
-      <div id="camera-view" class="checkerboard-bg relative bg-black rounded-lg overflow-hidden w-full mx-auto flex items-center justify-center shadow-inner border border-base-300 transition-all duration-300" style="min-height: 300px; max-height: 90dvh;">
+      <div id="camera-view" class="checkerboard-bg hidden relative bg-black rounded-lg overflow-hidden w-full mx-auto flex items-center justify-center shadow-inner border border-base-300 transition-all duration-300" style="min-height: 300px; max-height: 90dvh;">
         <video id="video" class="w-full h-full object-cover" autoplay playsinline style="will-change: transform; transform: translateZ(0);"></video>
         <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
 
@@ -43,7 +44,7 @@
         </div>
       </div>
 
-      <div id="camera-controls-sticky" class="fixed bottom-0 left-0 right-0 p-4 pb-8 z-50 pointer-events-none flex flex-col items-center gap-4 bg-linear-to-t from-black/20 to-transparent">
+      <div id="camera-controls-sticky" class="hidden fixed bottom-0 left-0 right-0 p-4 pb-8 z-50 pointer-events-none flex flex-col items-center gap-4 bg-linear-to-t from-black/20 to-transparent">
         <!-- Debug Outputs -->
         <div id="debug-view" class="hidden pointer-events-auto flex flex-wrap gap-2 bg-black/80 p-2 rounded-lg border border-white/20 mb-2 max-w-full overflow-x-auto shadow-2xl">
           <div class="flex flex-col items-center gap-1">
@@ -93,9 +94,14 @@
             <button id="btn-rotate-view" class="btn btn-ghost btn-circle" title="Toggle Orientation">
               <i data-lucide="rotate-cw" class="w-6 h-6"></i>
             </button>
+            <button id="btn-stop-scan" class="btn btn-ghost btn-circle" title="Stop Scanning">
+              <i data-lucide="x" class="w-6 h-6"></i>
+            </button>
           </div>
         </div>
       </div>
+
+      <button id="btn-start-scan" class="w-full btn btn-primary">Start Scan</button>
 
       <div id="dropzone-container">
         <div class="divider">OR</div>
