@@ -189,7 +189,7 @@ export default function init(payload?: SharedFilesPayload) {
             console.log(
               '[Scanner Debug] Corners:',
               result.lastDetectedCorners
-                .map((p) => `(${Math.round(p.x)}, ${Math.round(p.y)})`)
+                .map((p) => `(${p.x.toFixed(3)}, ${p.y.toFixed(3)})`)
                 .join(', ')
             );
           }
@@ -197,7 +197,7 @@ export default function init(payload?: SharedFilesPayload) {
 
         if (result && result.upscaled) {
           // 3. AUTO-SNAP LOGIC: Check stability
-          if (isStable(lastResult, result.lastDetectedCorners, 25)) {
+          if (isStable(lastResult, result.lastDetectedCorners)) {
             stableCount++;
           } else {
             stableCount = 0;
@@ -264,16 +264,34 @@ export default function init(payload?: SharedFilesPayload) {
       const img = new Image();
       img.src = URL.createObjectURL(blob);
       img.onload = () => {
-        // Use live corners if available, they are in video coordinate space
         let corners: Point[] | null = null;
         if (liveCorners) {
-          corners = liveCorners.map((p) => ({
-            x: (p.x / video.videoWidth) * img.width,
-            y: (p.y / video.videoHeight) * img.height,
-          }));
+          const vAspect = video.videoWidth / video.videoHeight;
+          const iAspect = img.width / img.height;
+
+          // Map normalized video coordinates to photo coordinates
+          // accounting for how the browser might have cropped the video stream
+          corners = liveCorners.map((p) => {
+            let nx = p.x;
+            let ny = p.y;
+
+            if (Math.abs(vAspect - iAspect) > 0.01) {
+              if (vAspect > iAspect) {
+                // Video is wider than the photo (letterboxed vertically)
+                const scale = iAspect / vAspect;
+                ny = (ny - 0.5) * scale + 0.5;
+              } else {
+                // Video is taller than the photo (letterboxed horizontally)
+                const scale = vAspect / iAspect;
+                nx = (nx - 0.5) * scale + 0.5;
+              }
+            }
+
+            return { x: nx * img.width, y: ny * img.height };
+          });
         }
 
-        // If no live corners or they were not stable, try detecting on the image
+        // If no live corners, or they were not stable, try detecting on the image
         if (!corners) {
           corners = detectCornersOnImage(img);
         }

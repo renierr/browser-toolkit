@@ -79,7 +79,7 @@ function prepareCanvas(canvas: HTMLCanvasElement, maxDim: number) {
     pCtx.drawImage(canvas, 0, 0, processingWidth, processingHeight);
   }
 
-  return { width, height, processingWidth, processingHeight, pCtx };
+  return { processingWidth, processingHeight, pCtx };
 }
 
 // --- Image Processing Kernels ---
@@ -190,12 +190,12 @@ function erode(input: Uint8Array, out: Uint8Array, width: number, height: number
 
 // --- Heuristics & Validation ---
 
-export function isValidDocument(points: Point[], width: number, height: number): boolean {
+export function isValidDocument(points: Point[]): boolean {
   const [tl, tr, br, bl] = points;
   const area = Math.abs(
     (tl.x * (tr.y - bl.y) + tr.x * (br.y - tl.y) + br.x * (bl.y - tr.y) + bl.x * (tl.y - br.y)) / 2
   );
-  if (area < width * height * 0.05) return false;
+  if (area < 0.05) return false; // 5% of total image area
 
   const cross = (a: Point, b: Point, c: Point) =>
     (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
@@ -203,7 +203,11 @@ export function isValidDocument(points: Point[], width: number, height: number):
   return cp.every((v) => v > 0) || cp.every((v) => v < 0);
 }
 
-export function isStable(oldPts: Point[] | null, newPts: Point[] | null, threshold = 15): boolean {
+export function isStable(
+  oldPts: Point[] | null,
+  newPts: Point[] | null,
+  threshold = 0.02
+): boolean {
   if (!oldPts || !newPts) return false;
   const dist =
     oldPts.reduce((acc, p, i) => acc + Math.hypot(p.x - newPts[i].x, p.y - newPts[i].y), 0) / 4;
@@ -304,7 +308,7 @@ function houghLineTransform(
   // Sort by score
   lines.sort((a, b) => b.score - a.score);
 
-  // Take only top 30 lines to speed up quad search
+  // Take only the top 30 lines to speed up quad search
   const topLines = lines.slice(0, 30);
 
   // Filter and pick the 4 best lines forming a quad
@@ -319,7 +323,6 @@ function findBestQuad(lines: Line[]): Point[] | null {
   for (const l of lines) {
     const deg = (l.theta * 180) / Math.PI;
     // Horizontal: near 0 or 180 deg (rho = x cos theta + y sin theta)
-    // Actually theta is angle of normal.
     // Theta ~ 0 or 180 means vertical edge (normal is horizontal)
     // Theta ~ 90 means horizontal edge (normal is vertical)
     if (deg > 45 && deg < 135) {
@@ -382,7 +385,7 @@ function detectDocumentCorners(
   maxDim = 400,
   debug = false
 ): Point[] | null {
-  const { width, height, processingWidth, processingHeight, pCtx } = prepareCanvas(canvas, maxDim);
+  const { processingWidth, processingHeight, pCtx } = prepareCanvas(canvas, maxDim);
   if (!pCtx) return null;
 
   const size = processingWidth * processingHeight;
@@ -412,12 +415,12 @@ function detectDocumentCorners(
   const corners = houghLineTransform(workBuffer!, processingWidth, processingHeight, maxEdge);
   if (!corners) return null;
 
-  const scaledCorners = corners.map((p) => ({
-    x: (p.x / processingWidth) * width,
-    y: (p.y / processingHeight) * height,
+  const normalizedCorners = corners.map((p) => ({
+    x: p.x / processingWidth,
+    y: p.y / processingHeight,
   }));
 
-  return isValidDocument(scaledCorners, width, height) ? scaledCorners : null;
+  return isValidDocument(normalizedCorners) ? normalizedCorners : null;
 }
 
 export function detectCornersOnImage(
@@ -434,8 +437,8 @@ export function detectCornersOnImage(
 
   return (
     detected?.map((p) => ({
-      x: (p.x / tempCanvas.width) * img.width,
-      y: (p.y / tempCanvas.height) * img.height,
+      x: p.x * img.width,
+      y: p.y * img.height,
     })) || null
   );
 }
@@ -467,21 +470,16 @@ export function calculateLiveDetection(
   let detected = detectDocumentCorners(detectionCanvas, 300, debug);
   detected = smoothCorners(detected);
 
-  let lastDetectedCorners: Point[] | null = null;
-  if (detected) {
-    lastDetectedCorners = detected.map((p) => ({
-      x: (p.x / dWidth) * vWidth,
-      y: (p.y / dHeight) * vHeight,
-    }));
-  }
+  // detected is already normalized (0-1) from detectDocumentCorners
+  const lastDetectedCorners = detected;
 
   const vAspect = vWidth / vHeight;
   const cAspect = cWidth / cHeight;
 
   const upscaled =
     detected?.map((p) => {
-      const nx = p.x / dWidth;
-      const ny = p.y / dHeight;
+      const nx = p.x;
+      const ny = p.y;
       if (vAspect > cAspect) {
         const visibleWidthAtVideoScale = vHeight * cAspect;
         const cropX = (vWidth - visibleWidthAtVideoScale) / 2;
