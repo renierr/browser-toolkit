@@ -7,6 +7,7 @@ import {
   setZoom,
   tapToFocus,
 } from './camera';
+import { clientToNormalizedVideo } from './video-coordinates';
 
 export interface CameraGestureOptions {
   video: HTMLVideoElement;
@@ -18,46 +19,6 @@ export interface CameraGestureOptions {
   setCurrentZoom: (zoom: number) => void;
 }
 
-/**
- * Convert a client-space click position on an `object-contain` video element
- * to normalized (0..1) video-frame coordinates, accounting for letterboxing/pillarboxing.
- * Returns null if the click is outside the displayed video area.
- */
-export function videoClickToNormalized(
-  video: HTMLVideoElement,
-  clientX: number,
-  clientY: number
-): { normX: number; normY: number } | null {
-  const rect = video.getBoundingClientRect();
-  const videoW = video.videoWidth;
-  const videoH = video.videoHeight;
-  if (!videoW || !videoH) return null;
-
-  const elemAspect = rect.width / rect.height;
-  const vidAspect = videoW / videoH;
-
-  let displayX: number, displayY: number;
-  let displayW: number, displayH: number;
-
-  if (vidAspect > elemAspect) {
-    displayW = rect.width;
-    displayH = rect.width / vidAspect;
-    displayX = 0;
-    displayY = (rect.height - displayH) / 2;
-  } else {
-    displayH = rect.height;
-    displayW = rect.height * vidAspect;
-    displayX = (rect.width - displayW) / 2;
-    displayY = 0;
-  }
-
-  const relX = clientX - rect.left - displayX;
-  const relY = clientY - rect.top - displayY;
-
-  if (relX < 0 || relX > displayW || relY < 0 || relY > displayH) return null;
-
-  return { normX: relX / displayW, normY: relY / displayH };
-}
 
 export function createCameraGestures(opts: CameraGestureOptions) {
   const { video, cameraView, focusRing, zoomIndicator, getStream, getZoom, setCurrentZoom } = opts;
@@ -100,7 +61,7 @@ export function createCameraGestures(opts: CameraGestureOptions) {
     const stream = getStream();
     if (!stream) return;
 
-    const norm = videoClickToNormalized(video, e.clientX, e.clientY);
+    const norm = clientToNormalizedVideo(video, e.clientX, e.clientY);
     if (!norm) return;
 
     showFocusRing(e.clientX, e.clientY);
