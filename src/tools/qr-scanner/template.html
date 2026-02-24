@@ -1,13 +1,20 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">QR-Code Scanner</h2>
-    <p class="text-base-content/70 mb-6">Scan QR codes using your camera or by uploading an image.</p>
+    <p class="text-base-content/70 mb-6">
+      Scan QR codes using your camera or by uploading an image.
+    </p>
 
     <div class="flex flex-col gap-6">
-      <div id="video-container" class="relative overflow-hidden rounded-lg bg-black aspect-square max-w-md mx-auto hidden">
-        <video id="qr-video" class="w-full h-full object-cover"></video>
+      <div
+        id="video-container"
+        class="relative overflow-hidden rounded-lg bg-black aspect-square max-w-lg mx-auto hidden"
+      >
+        <video id="qr-video" class="w-full h-full object-contain"></video>
         <div class="absolute inset-0 border-2 border-primary/50 pointer-events-none"></div>
-        <div class="absolute top-0 left-0 w-full h-0.5 bg-primary shadow-[0_0_10px_2px_var(--color-primary)] animate-scanline pointer-events-none"></div>
+        <div
+          class="absolute top-0 left-0 w-full h-0.5 bg-primary shadow-[0_0_10px_2px_var(--color-primary)] animate-scanline pointer-events-none"
+        ></div>
       </div>
 
       <div class="card-actions justify-center gap-2">
@@ -19,11 +26,19 @@
           <i data-lucide="camera-off" class="w-4 h-4 mr-2"></i>
           Stop Camera
         </button>
-        <button id="switch-camera" class="btn btn-outline hidden flex-1 sm:flex-none" aria-label="Switch Camera">
+        <button
+          id="switch-camera"
+          class="btn btn-outline hidden flex-1 sm:flex-none"
+          aria-label="Switch Camera"
+        >
           <i data-lucide="switch-camera" class="w-4 h-4 mr-2"></i>
           Switch
         </button>
-        <button id="toggle-flash" class="btn btn-outline hidden flex-1 sm:flex-none" aria-label="Toggle Flash">
+        <button
+          id="toggle-flash"
+          class="btn btn-outline hidden flex-1 sm:flex-none"
+          aria-label="Toggle Flash"
+        >
           <i data-lucide="zap" class="w-4 h-4 mr-2"></i>
           Flash
         </button>
@@ -38,11 +53,27 @@
         </button>
       </div>
 
-      <div id="paste-target" contenteditable="true" class="hidden p-4 border-2 border-dashed border-base-300 rounded-lg text-center text-sm opacity-70 focus:outline-none focus:border-primary">
+      <div
+        id="paste-target"
+        contenteditable="true"
+        class="hidden p-4 border-2 border-dashed border-base-300 rounded-lg text-center text-sm opacity-70 focus:outline-none focus:border-primary"
+      >
         Tap here and paste image
       </div>
 
-      <p class="text-center text-xs opacity-50">Tip: You can also paste an image from your clipboard (Ctrl+V)</p>
+      <p class="text-center text-xs opacity-50">
+        Tip: You can also paste an image from your clipboard (Ctrl+V)
+      </p>
+
+      <div class="mt-2 text-center border-t border-base-300 pt-4">
+        <label class="cursor-pointer label justify-center gap-4">
+          <span class="label-text text-xs opacity-70"
+            >Show Debug Images (what the detector sees)</span
+          >
+          <input type="checkbox" id="debug-toggle" class="toggle toggle-sm toggle-primary" />
+        </label>
+        <div id="debug-container" class="hidden mt-4 grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+      </div>
     </div>
 
     <div id="result-card" class="mt-8 hidden">
@@ -50,7 +81,11 @@
 
       <div class="flex flex-col md:flex-row gap-4 mb-4">
         <div class="shrink-0 flex justify-center">
-          <img id="qr-captured-image" class="max-h-32 rounded-lg border border-base-300 shadow-sm object-contain bg-base-200" alt="Captured QR Code" />
+          <img
+            id="qr-captured-image"
+            class="max-h-32 rounded-lg border border-base-300 shadow-sm object-contain bg-base-200"
+            alt="Captured QR Code"
+          />
         </div>
         <div class="grow">
           <div class="flex justify-between items-center mb-2">
@@ -77,8 +112,12 @@
 
 <style>
   @keyframes scanline {
-    0% { top: 0; }
-    100% { top: 100%; }
+    0% {
+      top: 0;
+    }
+    100% {
+      top: 100%;
+    }
   }
   .animate-scanline {
     animation: scanline 2s ease-in-out infinite;

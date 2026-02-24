@@ -10,7 +10,7 @@ import {
   getVideoDeviceCount,
 } from '../../js/camera-utils';
 import ScanWorker from './scan.worker?worker';
-import type { WorkerInMessage, WorkerOutMessage } from './worker-protocol';
+import type { WorkerInMessage, WorkerOutMessage, DebugImage } from './worker-protocol';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -31,6 +31,8 @@ export default function init() {
   const copyBtn = document.getElementById('copy-result');
   const openLinkBtn = document.getElementById('open-link') as HTMLAnchorElement;
   const capturedImage = document.getElementById('qr-captured-image') as HTMLImageElement;
+  const debugToggle = document.getElementById('debug-toggle') as HTMLInputElement;
+  const debugContainer = document.getElementById('debug-container') as HTMLDivElement;
 
   let stream: MediaStream | null = null;
   let animationFrameId: number | null = null;
@@ -46,7 +48,9 @@ export default function init() {
   const pendingRequests = new Map<
     number,
     {
-      resolve: (data: { data: string; format: string; provider?: string } | null) => void;
+      resolve: (
+        data: { data: string; format: string; provider?: string; debugImages?: DebugImage[] } | null
+      ) => void;
       reject: (err: Error) => void;
     }
   >();
@@ -55,11 +59,13 @@ export default function init() {
     if (!worker) {
       worker = new ScanWorker();
       worker.addEventListener('message', (event: MessageEvent<WorkerOutMessage>) => {
-        const { id, data, format, provider } = event.data;
+        const { id, data, format, provider, debugImages } = event.data;
         const pending = pendingRequests.get(id);
         if (pending) {
           pendingRequests.delete(id);
-          pending.resolve(data ? { data, format, provider } : null);
+          pending.resolve(
+            data || debugImages?.length ? { data: data!, format, provider, debugImages } : null
+          );
         }
       });
       worker.addEventListener('error', () => {
@@ -76,7 +82,12 @@ export default function init() {
   function sendToWorker(
     msg: WorkerInMessage,
     transfer: Transferable[] = []
-  ): Promise<{ data: string; format: string; provider?: string } | null> {
+  ): Promise<{
+    data: string;
+    format: string;
+    provider?: string;
+    debugImages?: DebugImage[];
+  } | null> {
     return new Promise((resolve, reject) => {
       pendingRequests.set(msg.id, { resolve, reject });
       try {
@@ -164,11 +175,40 @@ export default function init() {
 
   // ── Result display ───────────────────────────────────────────────────
 
+  const renderDebugImages = (debugImages?: DebugImage[]) => {
+    if (debugImages?.length && debugToggle?.checked) {
+      debugContainer.innerHTML = '';
+      for (const img of debugImages) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex flex-col items-center gap-1';
+
+        const canvas = document.createElement('canvas');
+        canvas.className = 'w-full rounded border border-base-300';
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const idata = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
+          ctx.putImageData(idata, 0, 0);
+        }
+
+        const label = document.createElement('span');
+        label.className = 'text-[10px] opacity-70 truncate w-full text-center';
+        label.textContent = img.name;
+
+        wrapper.appendChild(canvas);
+        wrapper.appendChild(label);
+        debugContainer.appendChild(wrapper);
+      }
+    }
+  };
+
   const setResult = (
     data: string,
     format: string = 'qr_code',
     provider: string = 'unknown',
-    imageSrc?: string
+    imageSrc?: string,
+    debugImages?: DebugImage[]
   ) => {
     if (resultText) resultText.textContent = data;
     if (formatText) {
@@ -184,13 +224,29 @@ export default function init() {
     } else {
       openLinkBtn.classList.add('hidden');
     }
+
+    renderDebugImages(debugImages);
   };
+
+  debugToggle?.addEventListener('change', (e) => {
+    const target = e.target as HTMLInputElement;
+    if (target.checked) {
+      debugContainer.classList.remove('hidden');
+    } else {
+      debugContainer.classList.add('hidden');
+    }
+  });
 
   // ── Image scanning (upload / paste) ──────────────────────────────────
 
   const scanImage = (img: HTMLImageElement) => {
     img.onload = async () => {
-      let result: { data: string; format: string; provider: string } | null = null;
+      let result: {
+        data: string;
+        format: string;
+        provider: string;
+        debugImages?: DebugImage[];
+      } | null = null;
 
       // Try native BarcodeDetector first (best quality, supports many formats)
       if (detector) {
@@ -227,7 +283,15 @@ export default function init() {
         const id = ++workerRequestId;
         try {
           const res = await sendToWorker(
-            { type: 'scan-image', id, pixels: pixelsCopy, width: w, height: h, targetSizes: sizes },
+            {
+              type: 'scan-image',
+              id,
+              pixels: pixelsCopy,
+              width: w,
+              height: h,
+              targetSizes: sizes,
+              debug: debugToggle?.checked || false,
+            },
             [pixelsCopy]
           );
           if (res) {
@@ -249,7 +313,8 @@ export default function init() {
           result.data,
           result.format,
           result.provider,
-          canvasElement.toDataURL('image/png')
+          canvasElement.toDataURL('image/png'),
+          result.debugImages
         );
       } else {
         showMessage('No barcode found.', { type: 'alert' });
@@ -297,7 +362,12 @@ export default function init() {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
       if (time - lastScanTime >= SCAN_INTERVAL) {
         lastScanTime = time;
-        let result: { data: string; format: string; provider: string } | null = null;
+        let result: {
+          data: string;
+          format: string;
+          provider: string;
+          debugImages?: DebugImage[];
+        } | null = null;
 
         // Try native BarcodeDetector first
         if (detector) {
@@ -338,21 +408,34 @@ export default function init() {
           const id = ++workerRequestId;
 
           workerScanInFlight = true;
-          sendToWorker({ type: 'scan-frame', id, pixels: pixelsCopy, width: w, height: h }, [
-            pixelsCopy,
-          ])
+          sendToWorker(
+            {
+              type: 'scan-frame',
+              id,
+              pixels: pixelsCopy,
+              width: w,
+              height: h,
+              debug: debugToggle?.checked || false,
+            },
+            [pixelsCopy]
+          )
             .then((res) => {
               workerScanInFlight = false;
               if (res && stream) {
-                // Re-draw the current video frame for the captured image
-                drawVideoToCanvas();
-                setResult(
-                  res.data,
-                  res.format,
-                  res.provider || 'wasm',
-                  canvasElement.toDataURL('image/png')
-                );
-                stopCam();
+                if (res.data) {
+                  // Re-draw the current video frame for the captured image
+                  drawVideoToCanvas();
+                  setResult(
+                    res.data,
+                    res.format,
+                    res.provider || 'wasm',
+                    canvasElement.toDataURL('image/png'),
+                    res.debugImages
+                  );
+                  stopCam();
+                } else if (res.debugImages?.length) {
+                  renderDebugImages(res.debugImages);
+                }
               }
             })
             .catch(() => {

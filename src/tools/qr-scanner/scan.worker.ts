@@ -25,7 +25,7 @@ import {
   prepareZXingModule,
 } from 'barcode-detector/ponyfill';
 import zxingWasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
-import type { WorkerInMessage, WorkerOutMessage } from './worker-protocol';
+import type { WorkerInMessage, WorkerOutMessage, DebugImage } from './worker-protocol';
 
 // ── BarcodeDetector (Native or Polyfill) ───────────────────────────────
 
@@ -238,6 +238,39 @@ function contrastStretch(src: Uint8Array): Uint8Array {
   return dst;
 }
 
+// ── Blur (Low light noise reduction) ───────────────────────────────────
+
+function boxBlur(src: Uint8Array, w: number, h: number): Uint8Array {
+  const dst = new Uint8Array(src.length);
+  // Simple 3x3 box blur, ignoring borders for speed
+  for (let x = 0; x < w; x++) {
+    dst[x] = src[x];
+    dst[(h - 1) * w + x] = src[(h - 1) * w + x];
+  }
+  for (let y = 0; y < h; y++) {
+    dst[y * w] = src[y * w];
+    dst[y * w + w - 1] = src[y * w + w - 1];
+  }
+
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const idx = y * w + x;
+      const sum =
+        src[idx - w - 1] +
+        src[idx - w] +
+        src[idx - w + 1] +
+        src[idx - 1] +
+        src[idx] +
+        src[idx + 1] +
+        src[idx + w - 1] +
+        src[idx + w] +
+        src[idx + w + 1];
+      dst[idx] = sum / 9;
+    }
+  }
+  return dst;
+}
+
 // ── Decoding wrappers ──────────────────────────────────────────────────
 
 interface ScanResult {
@@ -279,53 +312,74 @@ async function scanWithStrategies(
   rgba: Uint8ClampedArray,
   w: number,
   h: number,
-  full: boolean
-): Promise<ScanResult | null> {
+  full: boolean,
+  debug: boolean = false
+): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
+  const debugImages: DebugImage[] = [];
+
+  const addDebug = (name: string, rgbaBuf: Uint8ClampedArray) => {
+    if (!debug) return;
+    // We make a copy of the buffer so it can be transferred without affecting our local processing
+    debugImages.push({
+      name,
+      data: new Uint8ClampedArray(rgbaBuf).buffer,
+      width: w,
+      height: h,
+    });
+  };
+
   // 1. Raw — no processing at all
-  // Try native first on raw image (best for simple barcodes)
+  addDebug('Raw', rgba);
   let d = await tryDetect(rgba, w, h);
-  if (d) return d;
+  if (d) return { result: d, debugImages };
 
   // Convert to grayscale once, reuse for all strategies
   const gray = toGrayscale(rgba, rgba.length);
   const stretched = contrastStretch(gray);
+  if (debug) {
+    addDebug('Grayscale Stretched', grayToRGBA(stretched, w, h));
+  }
 
   // Helper to check a grayscale buffer with both decoders
-  const checkGray = async (g: Uint8Array) => {
+  const checkGray = async (g: Uint8Array, name: string) => {
     const rgbaBuf = grayToRGBA(g, w, h);
-    // Try native first on enhanced image
+    addDebug(name, rgbaBuf);
     const d2 = await tryDetect(rgbaBuf, w, h);
-    if (d2) return d2;
-    return null;
+    return d2;
   };
 
   // 2. Sharpen
   const sharp = sharpen(stretched, w, h, 1.5);
-  let res = await checkGray(sharp);
-  if (res) return res;
+  let res = await checkGray(sharp, 'Sharpen');
+  if (res) return { result: res, debugImages };
 
   // 3. Adaptive threshold (handles uneven lighting, shadows, glare)
-  //    Compute block size relative to image: ~1/10th of shortest dim, odd, min 11
   const blockBase = Math.max(11, (Math.min(w, h) / 10) | 1);
   const blockSize = blockBase % 2 === 0 ? blockBase + 1 : blockBase;
   const adaptive = adaptiveThreshold(stretched, w, h, blockSize, 10);
 
-  res = await checkGray(adaptive);
-  if (res) return res;
+  res = await checkGray(adaptive, 'Adaptive Threshold');
+  if (res) return { result: res, debugImages };
 
-  if (!full) return null;
+  // 4. Low Light (Blur + Adaptive) - New for improving low light scans
+  const blurred = boxBlur(stretched, w, h);
+  const blurredAdaptive = adaptiveThreshold(blurred, w, h, blockSize, 5); // lower C for low contrast
+  res = await checkGray(blurredAdaptive, 'Low Light (Blur + Adaptive)');
+  if (res) return { result: res, debugImages };
 
-  // 4. Sharpen + adaptive threshold combined
+  if (!full) return { result: null, debugImages };
+
+  // 5. Sharpen + adaptive threshold combined
   const sharpAdaptive = adaptiveThreshold(sharp, w, h, blockSize, 8);
-  res = await checkGray(sharpAdaptive);
-  if (res) return res;
+  res = await checkGray(sharpAdaptive, 'Sharpen + Adaptive');
+  if (res) return { result: res, debugImages };
 
-  // 5. Global Otsu binarization (works well for uniform lighting)
+  // 6. Global Otsu binarization (works well for uniform lighting)
   const otsu = otsuThreshold(stretched, w, h);
-  res = await checkGray(otsu);
-  if (res) return res;
+  res = await checkGray(otsu, 'Otsu Global');
+  if (res) return { result: res, debugImages };
 
-  return null;
+  return { result: null, debugImages };
 }
 
 // ── Frame scanning (live camera) ───────────────────────────────────────
@@ -333,10 +387,11 @@ async function scanWithStrategies(
 async function scanFrame(
   pixels: Uint8ClampedArray,
   width: number,
-  height: number
-): Promise<ScanResult | null> {
+  height: number,
+  debug: boolean = false
+): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
   // Fast path: 3 strategies on the received frame
-  return scanWithStrategies(pixels, width, height, false);
+  return scanWithStrategies(pixels, width, height, false, debug);
 }
 
 // ── Image scanning (upload / paste) — multi-scale ──────────────────────
@@ -345,9 +400,11 @@ async function scanImageMultiScale(
   srcPixels: Uint8ClampedArray,
   srcWidth: number,
   srcHeight: number,
-  targetSizes: number[]
-): Promise<ScanResult | null> {
+  targetSizes: number[],
+  debug: boolean = false
+): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
   const hasOffscreen = typeof OffscreenCanvas !== 'undefined';
+  let lastDebugImages: DebugImage[] = [];
 
   for (const targetSize of targetSizes) {
     const scale = Math.min(1, targetSize / Math.max(srcWidth, srcHeight));
@@ -373,13 +430,14 @@ async function scanImageMultiScale(
     }
 
     // Full strategy set for static images (user can wait a bit)
-    const result = await scanWithStrategies(rgba, w, h, true);
-    if (result) return result;
+    const { result, debugImages } = await scanWithStrategies(rgba, w, h, true, debug);
+    lastDebugImages = debugImages;
+    if (result) return { result, debugImages };
 
     if (!hasOffscreen && scale !== 1) break;
   }
 
-  return null;
+  return { result: null, debugImages: lastDebugImages };
 }
 
 // ── Message handler ────────────────────────────────────────────────────
@@ -390,31 +448,41 @@ self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
   switch (msg.type) {
     case 'scan-frame': {
       const pixels = new Uint8ClampedArray(msg.pixels);
-      scanFrame(pixels, msg.width, msg.height).then((res) => {
+      scanFrame(pixels, msg.width, msg.height, msg.debug).then(({ result: res, debugImages }) => {
         const result: WorkerOutMessage = {
           type: 'scan-result',
           id: msg.id,
           data: res?.data ?? null,
           format: res?.format ?? 'qr_code',
           provider: res?.provider,
+          debugImages,
         };
-        (self as unknown as Worker).postMessage(result);
+        (self as unknown as Worker).postMessage(
+          result,
+          debugImages.map((img) => img.data)
+        );
       });
       break;
     }
 
     case 'scan-image': {
       const pixels = new Uint8ClampedArray(msg.pixels);
-      scanImageMultiScale(pixels, msg.width, msg.height, msg.targetSizes).then((res) => {
-        const result: WorkerOutMessage = {
-          type: 'scan-result',
-          id: msg.id,
-          data: res?.data ?? null,
-          format: res?.format ?? 'qr_code',
-          provider: res?.provider,
-        };
-        (self as unknown as Worker).postMessage(result);
-      });
+      scanImageMultiScale(pixels, msg.width, msg.height, msg.targetSizes, msg.debug).then(
+        ({ result: res, debugImages }) => {
+          const result: WorkerOutMessage = {
+            type: 'scan-result',
+            id: msg.id,
+            data: res?.data ?? null,
+            format: res?.format ?? 'qr_code',
+            provider: res?.provider,
+            debugImages,
+          };
+          (self as unknown as Worker).postMessage(
+            result,
+            debugImages.map((img) => img.data)
+          );
+        }
+      );
       break;
     }
   }

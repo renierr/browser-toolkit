@@ -12,6 +12,7 @@ export interface ScanFrameMessage {
   pixels: ArrayBuffer;
   width: number;
   height: number;
+  debug?: boolean;
 }
 
 /** Scan an uploaded/pasted image at multiple scales. */
@@ -23,11 +24,19 @@ export interface ScanImageMessage {
   height: number;
   /** Target sizes to try (largest first). */
   targetSizes: number[];
+  debug?: boolean;
 }
 
 export type WorkerInMessage = ScanFrameMessage | ScanImageMessage;
 
 // --- Outgoing messages (worker → main thread) ---
+
+export interface DebugImage {
+  name: string;
+  data: ArrayBuffer; // RGBA pixels
+  width: number;
+  height: number;
+}
 
 export interface ScanResultMessage {
   type: 'scan-result';
@@ -35,6 +44,7 @@ export interface ScanResultMessage {
   data: string | null;
   format: string;
   provider?: string; // 'native' | 'wasm' | 'jsQR'
+  debugImages?: DebugImage[];
 }
 
 export type WorkerOutMessage = ScanResultMessage;
