@@ -283,8 +283,6 @@ export function renderPageList(
 
     container.appendChild(card);
   });
-
-  (window as any).lucide?.createIcons();
 }
 
 export function calculateSmoothedPosition(
