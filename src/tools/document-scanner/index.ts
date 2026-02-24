@@ -132,7 +132,9 @@ export default function init(payload?: SharedFilesPayload) {
 
     stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
 
-    await checkAndUpdateTorch();
+    // Fire-and-forget: torch check has retries/delays, don't block camera start
+    // noinspection ES6MissingAwait
+    checkAndUpdateTorch();
 
     if (checkLiveDetection.checked) {
       liveDetection.start();
@@ -360,6 +362,7 @@ export default function init(payload?: SharedFilesPayload) {
           corners = await detectCornersOnImage(img);
         }
 
+        // noinspection ES6MissingAwait
         addPage(img, corners);
       };
     }
@@ -370,8 +373,9 @@ export default function init(payload?: SharedFilesPayload) {
     const newStream = await switchToNextCamera(video, stream, isPortrait);
     if (newStream && newStream !== stream) {
       stream = newStream;
-      // Re-check torch support for the new lens
-      await checkAndUpdateTorch();
+      // Re-check torch support for the new lens (fire-and-forget)
+      // noinspection ES6MissingAwait
+      checkAndUpdateTorch();
     }
   });
 

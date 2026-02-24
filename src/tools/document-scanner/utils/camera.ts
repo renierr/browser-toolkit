@@ -7,7 +7,7 @@ let currentDeviceIndex = -1;
  * Enumerate all video input devices. Must be called after at least one
  * getUserMedia call (otherwise labels are empty on many browsers).
  */
-export async function enumerateVideoDevices(): Promise<MediaDeviceInfo[]> {
+async function enumerateVideoDevices(): Promise<MediaDeviceInfo[]> {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
     videoDevices = devices.filter((d) => d.kind === 'videoinput');
@@ -18,15 +18,11 @@ export async function enumerateVideoDevices(): Promise<MediaDeviceInfo[]> {
   return videoDevices;
 }
 
-export function getVideoDevices(): MediaDeviceInfo[] {
-  return videoDevices;
-}
-
 /**
  * Get the next device index for cycling through cameras.
  * Returns the index into the videoDevices array.
  */
-export function getNextDeviceIndex(): number {
+function getNextDeviceIndex(): number {
   if (videoDevices.length === 0) return -1;
   currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
   return currentDeviceIndex;
@@ -80,7 +76,7 @@ export async function startCamera(
       audio: false,
     });
 
-    // Enable continuous auto-focus if supported
+    // Enable continuous autofocus if supported
     const track = stream.getVideoTracks()[0];
     if (track) {
       const capabilities = track.getCapabilities?.() as any;
