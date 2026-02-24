@@ -18,4 +18,6 @@ export interface ScannedPage {
   thumbnailUrl: string | null;
   corners: Point[];
   filter: FilterType;
+  /** Rotation angle in degrees (0, 90, 180, 270) applied during enhance mode */
+  rotation: number;
 }

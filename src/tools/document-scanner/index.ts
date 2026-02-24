@@ -20,7 +20,7 @@ import {
 } from './utils/ui';
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
-import { sourceToCanvas, imageToBlob, imageFromBlob } from './utils/canvas';
+import { sourceToCanvas, imageToBlob, imageFromBlob, rotateCanvas } from './utils/canvas';
 import type { ScannedPage, FilterType } from './types';
 import Sortable from 'sortablejs';
 import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
@@ -57,6 +57,8 @@ export default function init(payload?: SharedFilesPayload) {
   const btnModePerspective = document.getElementById('btn-mode-perspective')!;
   const btnModeFilter = document.getElementById('btn-mode-filter')!;
   const btnUndoCorners = document.getElementById('btn-undo-corners')!;
+  const btnRotateLeft = document.getElementById('btn-rotate-left')!;
+  const btnRotateRight = document.getElementById('btn-rotate-right')!;
   const filterSelect = document.getElementById('filter-select') as HTMLSelectElement;
   const hintText = document.getElementById('hint-text')!;
   const checkLiveDetection = document.getElementById('check-live-detection') as HTMLInputElement;
@@ -104,7 +106,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   function pushCornerHistory(page: ScannedPage) {
     const hist = cornerHistory.get(page.id) || [];
-    hist.push(page.corners.map(p => ({ ...p })));
+    hist.push(page.corners.map((p) => ({ ...p })));
     if (hist.length > MAX_UNDO_STEPS) hist.shift();
     cornerHistory.set(page.id, hist);
     updateUndoButton();
@@ -167,7 +169,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   const getPage = () => pages[currentPageIndex];
   const handleDrag = createHandleDrag({
-    canvas, magnifier, magnifierCanvas, mCtx,
+    canvas,
+    magnifier,
+    magnifierCanvas,
+    mCtx,
     getPage,
     updateEditor,
   });
@@ -175,10 +180,17 @@ export default function init(payload?: SharedFilesPayload) {
   // --- Live Detection Setup ---
 
   const liveDetection = createLiveDetectionLoop({
-    video, detectionCanvas, dCtx, cameraOverlay, checkLiveDetection,
-    autoSnapCountdown, autoSnapNumber,
+    video,
+    detectionCanvas,
+    dCtx,
+    cameraOverlay,
+    checkLiveDetection,
+    autoSnapCountdown,
+    autoSnapNumber,
     isDebugMode: () => isDebugMode,
-    onAutoCapture: () => { btnCapture.click(); },
+    onAutoCapture: () => {
+      btnCapture.click();
+    },
   });
 
   // --- Camera ---
@@ -259,7 +271,11 @@ export default function init(payload?: SharedFilesPayload) {
     await addPage(img, blob, detectedCorners);
   }
 
-  async function addPage(img: HTMLImageElement, blob: Blob | null = null, detectedCorners: Point[] | null = null) {
+  async function addPage(
+    img: HTMLImageElement,
+    blob: Blob | null = null,
+    detectedCorners: Point[] | null = null
+  ) {
     showProgress('Detecting document...');
     try {
       const pCanvas = sourceToCanvas(img);
@@ -278,7 +294,7 @@ export default function init(payload?: SharedFilesPayload) {
       }
 
       // Store as blob for compact memory; keep img as cache for the active page
-      const originalBlob = blob ?? await imageToBlob(img);
+      const originalBlob = blob ?? (await imageToBlob(img));
 
       pages.push({
         id: crypto.randomUUID(),
@@ -291,6 +307,7 @@ export default function init(payload?: SharedFilesPayload) {
         thumbnailUrl: null,
         corners: initialCorners,
         filter: 'none',
+        rotation: 0,
       });
       currentPageIndex = pages.length - 1;
 
@@ -409,7 +426,9 @@ export default function init(payload?: SharedFilesPayload) {
 
     // Use cached warp result instead of re-warping every time
     const warpedCanvas = getWarpedCanvas(page);
-    applyFiltersUtil(warpedCanvas, canvas, ctx, filter);
+    const rotatedCanvas = rotateCanvas(warpedCanvas, page.rotation);
+
+    applyFiltersUtil(rotatedCanvas, canvas, ctx, filter);
 
     page.processedCanvas.width = canvas.width;
     page.processedCanvas.height = canvas.height;
@@ -509,10 +528,15 @@ export default function init(payload?: SharedFilesPayload) {
   // --- Camera Gestures (tap-to-focus, pinch-to-zoom) ---
 
   const cameraGestures = createCameraGestures({
-    video, cameraView, focusRing, zoomIndicator,
+    video,
+    cameraView,
+    focusRing,
+    zoomIndicator,
     getStream: () => stream,
     getZoom: () => currentZoom,
-    setCurrentZoom: (z) => { currentZoom = z; },
+    setCurrentZoom: (z) => {
+      currentZoom = z;
+    },
   });
 
   btnFlash.addEventListener('click', async () => {
@@ -538,6 +562,22 @@ export default function init(payload?: SharedFilesPayload) {
   btnModePerspective.addEventListener('click', enterPerspectiveMode);
   btnModeFilter.addEventListener('click', enterFilterMode);
   filterSelect.addEventListener('change', applyFilters);
+
+  btnRotateLeft.addEventListener('click', () => {
+    const page = pages[currentPageIndex];
+    if (page) {
+      page.rotation = (page.rotation - 90 + 360) % 360;
+      applyFilters();
+    }
+  });
+
+  btnRotateRight.addEventListener('click', () => {
+    const page = pages[currentPageIndex];
+    if (page) {
+      page.rotation = (page.rotation + 90) % 360;
+      applyFilters();
+    }
+  });
 
   if (btnUndoCorners) {
     btnUndoCorners.addEventListener('click', undoCorners);
@@ -574,7 +614,10 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   btnReset.addEventListener('click', async () => {
-    if (pages.length === 0 || confirm('Are you sure you want to start over? All changes will be lost.')) {
+    if (
+      pages.length === 0 ||
+      confirm('Are you sure you want to start over? All changes will be lost.')
+    ) {
       stopCamera();
       pages = [];
       currentPageIndex = -1;
