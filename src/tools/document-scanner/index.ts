@@ -203,7 +203,7 @@ export default function init(payload?: SharedFilesPayload) {
     cameraView.classList.remove('hidden');
     cameraControls.classList.remove('hidden');
 
-    stream = await startCameraUtil(video, 'environment', stream);
+    stream = await startCameraUtil({ videoEl: video, prevStream: stream });
 
     // Fire-and-forget: torch check has retries/delays, don't block camera start
     // noinspection ES6MissingAwait
@@ -431,7 +431,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   function handleFile(file: File) {
     if (!file.type.startsWith('image/')) return;
-    // noinspection ES6MissingAwait
+    // noinspection JSIgnoredPromiseFromCall
     addPageFromBlob(file);
   }
 

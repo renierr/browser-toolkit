@@ -1,6 +1,15 @@
 import jsQR from 'jsqr';
 import { showMessage } from '../../js/ui.ts';
 import { retrieveImageBlobFromClipboard } from '../../js/file-utils.ts';
+import {
+  startCamera,
+  stopCamera,
+  switchToNextCamera,
+  isTorchSupported,
+  toggleTorch,
+  resetCameraState,
+  getVideoDeviceCount,
+} from '../../js/camera-utils';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -11,6 +20,7 @@ export default function init() {
   const startBtn = document.getElementById('start-camera');
   const stopBtn = document.getElementById('stop-camera');
   const toggleFlashBtn = document.getElementById('toggle-flash');
+  const switchCameraBtn = document.getElementById('switch-camera');
   const fileInput = document.getElementById('qr-input') as HTMLInputElement;
   const pasteBtn = document.getElementById('paste-btn');
   const pasteTarget = document.getElementById('paste-target');
@@ -45,17 +55,15 @@ export default function init() {
     }
   };
 
+  // noinspection JSIgnoredPromiseFromCall
   initDetector();
 
-  const stopCamera = () => {
-    if (stream) {
-      const track = stream.getVideoTracks()[0];
-      if (track && isFlashOn) {
-        track.applyConstraints({ advanced: [{ torch: false }] } as any).catch(() => {});
-      }
-      stream.getTracks().forEach((track) => track.stop());
-      stream = null;
+  const stopCam = () => {
+    if (stream && isFlashOn) {
+      // noinspection JSIgnoredPromiseFromCall
+      toggleTorch(stream, false);
     }
+    stream = stopCamera(stream);
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
@@ -63,10 +71,28 @@ export default function init() {
     isFlashOn = false;
     toggleFlashBtn?.classList.add('hidden');
     toggleFlashBtn?.classList.remove('btn-active');
+    switchCameraBtn?.classList.add('hidden');
     videoContainer?.classList.add('hidden');
     stopBtn?.classList.add('hidden');
     startBtn?.classList.remove('hidden');
   };
+
+  async function checkAndShowControls() {
+    // Show switch button if more than 1 camera
+    if (getVideoDeviceCount() > 1) {
+      switchCameraBtn?.classList.remove('hidden');
+    } else {
+      switchCameraBtn?.classList.add('hidden');
+    }
+
+    // Check torch support (fire-and-forget with retries)
+    const torchOk = await isTorchSupported(stream);
+    if (torchOk) {
+      toggleFlashBtn?.classList.remove('hidden');
+    } else {
+      toggleFlashBtn?.classList.add('hidden');
+    }
+  }
 
   const setResult = (data: string, format: string = 'qr_code', imageSrc?: string) => {
     if (resultText) resultText.textContent = data;
@@ -170,7 +196,7 @@ export default function init() {
           // Found via detector, draw once to capture image
           drawImageToCanvas();
           setResult(result.data, result.format, canvasElement.toDataURL('image/png'));
-          stopCamera();
+          stopCam();
           return;
         } else if (!detector) {
           // Fallback to jsQR only if native detector is not available
@@ -181,7 +207,7 @@ export default function init() {
           });
           if (code) {
             setResult(code.data, 'qr_code', canvasElement.toDataURL('image/png'));
-            stopCamera();
+            stopCam();
             return;
           }
         }
@@ -192,61 +218,54 @@ export default function init() {
 
   startBtn?.addEventListener('click', async () => {
     try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'environment',
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
+      stream = await startCamera({
+        videoEl: video,
+        width: 1280,
+        height: 720,
       });
 
-      const track = stream.getVideoTracks()[0];
-      if (track) {
-        const capabilities = track.getCapabilities() as any;
-
-        // Check for torch support
-        if (capabilities.torch) {
-          toggleFlashBtn?.classList.remove('hidden');
-        }
-
-        // Attempt to enable continuous auto-focus
-        if (capabilities.focusMode?.includes('continuous')) {
-          try {
-            await track.applyConstraints({ focusMode: 'continuous' } as any);
-          } catch (e) {
-            console.debug('Focus mode not supported or failed to apply', e);
-          }
-        }
+      if (!stream) {
+        showMessage('Could not access camera.', { type: 'alert' });
+        return;
       }
 
-      video.srcObject = stream;
-      video.setAttribute('playsinline', 'true');
-      video.play();
       videoContainer?.classList.remove('hidden');
       startBtn.classList.add('hidden');
       stopBtn?.classList.remove('hidden');
       animationFrameId = requestAnimationFrame(tick);
+
+      // Fire-and-forget: check torch & device count once camera is up
+      // noinspection ES6MissingAwait
+      checkAndShowControls();
     } catch (err) {
       console.error('Error accessing camera:', err);
       showMessage('Could not access camera.', { type: 'alert' });
     }
   });
 
-  stopBtn?.addEventListener('click', stopCamera);
+  stopBtn?.addEventListener('click', stopCam);
+
+  switchCameraBtn?.addEventListener('click', async () => {
+    switchCameraBtn.classList.add('btn-disabled');
+    const newStream = await switchToNextCamera(video, stream);
+    if (newStream && newStream !== stream) {
+      stream = newStream;
+      isFlashOn = false;
+      toggleFlashBtn?.classList.remove('btn-active');
+      // Re-check torch for the new lens
+      // noinspection ES6MissingAwait
+      checkAndShowControls();
+      showMessage('Camera switched', { type: 'info', timeoutMs: 1500 });
+    } else if (newStream === stream) {
+      showMessage('No other camera available', { type: 'info', timeoutMs: 2000 });
+    }
+    switchCameraBtn.classList.remove('btn-disabled');
+  });
 
   toggleFlashBtn?.addEventListener('click', async () => {
-    const track = stream?.getVideoTracks()[0];
-    if (track) {
-      try {
-        isFlashOn = !isFlashOn;
-        await track.applyConstraints({
-          advanced: [{ torch: isFlashOn }]
-        } as any);
-        toggleFlashBtn.classList.toggle('btn-active', isFlashOn);
-      } catch (e) {
-        console.error('Error toggling flash:', e);
-      }
-    }
+    isFlashOn = !isFlashOn;
+    await toggleTorch(stream, isFlashOn);
+    toggleFlashBtn.classList.toggle('btn-active', isFlashOn);
   });
 
   fileInput?.addEventListener('change', (e) => {
@@ -305,12 +324,14 @@ export default function init() {
 
   copyBtn?.addEventListener('click', () => {
     if (resultText?.textContent) {
+      // noinspection JSIgnoredPromiseFromCall
       navigator.clipboard.writeText(resultText.textContent);
     }
   });
 
   return () => {
-    stopCamera();
+    stopCam();
+    resetCameraState();
     window.removeEventListener('paste', handlePaste);
   };
 }
