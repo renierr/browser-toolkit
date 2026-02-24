@@ -182,7 +182,6 @@ async function scanWithStrategies(
   rgba: Uint8ClampedArray,
   w: number,
   h: number,
-  _full: boolean,
   debug: boolean = false
 ): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
   const debugImages: DebugImage[] = [];
@@ -233,7 +232,7 @@ async function scanFrame(
   debug: boolean = false
 ): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
   // Fast path: 3 strategies on the received frame
-  return scanWithStrategies(pixels, width, height, false, debug);
+  return scanWithStrategies(pixels, width, height, debug);
 }
 
 // ── Image scanning (upload / paste) — multi-scale ──────────────────────
@@ -272,7 +271,7 @@ async function scanImageMultiScale(
     }
 
     // Full strategy set for static images (user can wait a bit)
-    const { result, debugImages } = await scanWithStrategies(rgba, w, h, true, debug);
+    const { result, debugImages } = await scanWithStrategies(rgba, w, h, debug);
     lastDebugImages = debugImages;
     if (result) return { result, debugImages };
 
