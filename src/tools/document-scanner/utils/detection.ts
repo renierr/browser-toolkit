@@ -4,7 +4,6 @@ import {
   smoothCorners as smoothCornersDirect,
   resetHistory as resetHistoryDirect,
   freeBuffers,
-  isValidDocument,
   type DebugBuffers,
 } from './detection-kernels';
 import DetectionWorker from './detection.worker?worker';
@@ -114,7 +113,6 @@ function sendToWorker(
 
 // --- Public API ---
 
-export { isValidDocument };
 
 export function isStable(
   oldPts: Point[] | null,

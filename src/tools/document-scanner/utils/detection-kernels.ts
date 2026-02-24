@@ -455,21 +455,6 @@ function scoreQuad(pts: SimplePoint[], imageArea: number): number {
   return areaScore * 0.3 + angleScore * 0.4 + parallelScore * 0.3;
 }
 
-// --- Heuristics & Validation ---
-
-export function isValidDocument(points: SimplePoint[]): boolean {
-  const [tl, tr, br, bl] = points;
-  const area = Math.abs(
-    (tl.x * (tr.y - bl.y) + tr.x * (br.y - tl.y) + br.x * (bl.y - tr.y) + bl.x * (tl.y - br.y)) / 2
-  );
-  if (area < 0.05) return false;
-
-  const cross = (a: SimplePoint, b: SimplePoint, c: SimplePoint) =>
-    (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
-  const cp = [cross(tl, tr, br), cross(tr, br, bl), cross(br, bl, tl), cross(bl, tl, tr)];
-  return cp.every((v) => v > 0) || cp.every((v) => v < 0);
-}
-
 // --- Smoothing ---
 
 const HISTORY_SIZE = 8;
@@ -566,6 +551,8 @@ export function detectDocumentCorners(
 
   // 3. Sobel with gradient direction
   const maxEdge = applySobelWithDirection(blurBuffer!, workBuffer!, edgeDirBuffer!, width, height);
+  // debug-edges: raw Sobel magnitudes (continuous 0-255, shows edge strength)
+  if (debugData) debugData.edges = new Uint8Array(workBuffer!);
 
   // 4. Non-maximum suppression (thin edges)
   nonMaxSuppression(workBuffer!, edgeDirBuffer!, tempBuffer!, width, height);
@@ -574,12 +561,12 @@ export function detectDocumentCorners(
   const highThresh = Math.max(30, maxEdge * 0.15);
   const lowThresh = highThresh * 0.4;
   hysteresisThreshold(tempBuffer!, workBuffer!, width, height, lowThresh, highThresh);
-  if (debugData) debugData.edges = new Uint8Array(workBuffer!);
 
   // 6. Light dilation to close small gaps
   dilate(workBuffer!, tempBuffer!, width, height);
   // Copy back
   workBuffer!.set(tempBuffer!);
+  // debug-morph: final binary edges after Canny + dilation (input to contour tracing)
   if (debugData) debugData.morph = new Uint8Array(workBuffer!);
 
   // 7. Contour tracing
