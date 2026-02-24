@@ -1,4 +1,3 @@
-import jsQR from 'jsqr';
 import { showMessage } from '../../js/ui.ts';
 import { retrieveImageBlobFromClipboard } from '../../js/file-utils.ts';
 import {
@@ -10,6 +9,8 @@ import {
   resetCameraState,
   getVideoDeviceCount,
 } from '../../js/camera-utils';
+import ScanWorker from './scan.worker?worker';
+import type { WorkerInMessage, WorkerOutMessage } from './worker-protocol';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -34,8 +35,69 @@ export default function init() {
   let stream: MediaStream | null = null;
   let animationFrameId: number | null = null;
   let lastScanTime = 0;
-  const SCAN_INTERVAL = 200;
+  const SCAN_INTERVAL = 150;
   let isFlashOn = false;
+
+  // ── Web Worker for CPU-heavy jsQR + image preprocessing ──────────────
+
+  let worker: Worker | null = null;
+  let workerRequestId = 0;
+  let workerScanInFlight = false;
+  const pendingRequests = new Map<
+    number,
+    { resolve: (data: string | null) => void; reject: (err: Error) => void }
+  >();
+
+  function getWorker(): Worker {
+    if (!worker) {
+      worker = new ScanWorker();
+      worker.addEventListener('message', (event: MessageEvent<WorkerOutMessage>) => {
+        const { id, data } = event.data;
+        const pending = pendingRequests.get(id);
+        if (pending) {
+          pendingRequests.delete(id);
+          pending.resolve(data);
+        }
+      });
+      worker.addEventListener('error', () => {
+        for (const [, req] of pendingRequests) {
+          req.reject(new Error('QR scan worker error'));
+        }
+        pendingRequests.clear();
+        workerScanInFlight = false;
+      });
+    }
+    return worker;
+  }
+
+  function sendToWorker(
+    msg: WorkerInMessage,
+    transfer: Transferable[] = []
+  ): Promise<string | null> {
+    return new Promise((resolve, reject) => {
+      pendingRequests.set(msg.id, { resolve, reject });
+      try {
+        getWorker().postMessage(msg, transfer);
+      } catch (e) {
+        pendingRequests.delete(msg.id);
+        reject(e);
+      }
+    });
+  }
+
+  function terminateWorker() {
+    if (worker) {
+      worker.terminate();
+      worker = null;
+    }
+    for (const [, req] of pendingRequests) {
+      req.reject(new Error('Worker terminated'));
+    }
+    pendingRequests.clear();
+    workerScanInFlight = false;
+  }
+
+  // ── BarcodeDetector (native, if available) ───────────────────────────
 
   let detector: any = null;
 
@@ -58,6 +120,8 @@ export default function init() {
   // noinspection JSIgnoredPromiseFromCall
   initDetector();
 
+  // ── Camera controls ──────────────────────────────────────────────────
+
   const stopCam = () => {
     if (stream && isFlashOn) {
       // noinspection JSIgnoredPromiseFromCall
@@ -69,6 +133,7 @@ export default function init() {
       animationFrameId = null;
     }
     isFlashOn = false;
+    workerScanInFlight = false;
     toggleFlashBtn?.classList.add('hidden');
     toggleFlashBtn?.classList.remove('btn-active');
     switchCameraBtn?.classList.add('hidden');
@@ -94,6 +159,8 @@ export default function init() {
     }
   }
 
+  // ── Result display ───────────────────────────────────────────────────
+
   const setResult = (data: string, format: string = 'qr_code', imageSrc?: string) => {
     if (resultText) resultText.textContent = data;
     if (formatText) formatText.textContent = format.toUpperCase().replace('_', ' ');
@@ -108,10 +175,13 @@ export default function init() {
     }
   };
 
+  // ── Image scanning (upload / paste) ──────────────────────────────────
+
   const scanImage = (img: HTMLImageElement) => {
     img.onload = async () => {
       let result: { data: string; format: string } | null = null;
 
+      // Try native BarcodeDetector first (best quality, supports many formats)
       if (detector) {
         try {
           const barcodes = await detector.detect(img);
@@ -123,31 +193,55 @@ export default function init() {
         }
       }
 
+      // Fallback: jsQR via Web Worker with multi-scale + preprocessing
       if (!result && canvas) {
-        const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
-        canvasElement.width = img.width * scale;
-        canvasElement.height = img.height * scale;
-        canvas.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
-        const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-        const code = jsQR(imageData.data, imageData.width, imageData.height);
-        if (code) {
-          result = { data: code.data, format: 'qr_code' };
+        // Draw at original size to get raw pixels
+        const maxDim = Math.min(Math.max(img.width, img.height), 2048);
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        canvasElement.width = w;
+        canvasElement.height = h;
+        canvas.imageSmoothingEnabled = true;
+        canvas.drawImage(img, 0, 0, w, h);
+        const imageData = canvas.getImageData(0, 0, w, h);
+        const pixelsCopy = imageData.data.buffer.slice(0);
+
+        // Target sizes for multi-scale scan (largest → smallest, no upscale)
+        const targetSizes = [Math.max(w, h), 1600, 1024, 640].filter(
+          (s) => s <= Math.max(w, h) * 1.1
+        );
+        const sizes = [...new Set(targetSizes.map((s) => Math.min(s, 2048)))];
+
+        const id = ++workerRequestId;
+        try {
+          const data = await sendToWorker(
+            { type: 'scan-image', id, pixels: pixelsCopy, width: w, height: h, targetSizes: sizes },
+            [pixelsCopy]
+          );
+          if (data) {
+            result = { data, format: 'qr_code' };
+          }
+        } catch (e) {
+          console.warn('Worker scan-image failed', e);
         }
       }
 
       if (result) {
-        if (canvas && (canvasElement.width !== img.width || canvasElement.height !== img.height)) {
-          const scale = Math.min(1, 1024 / Math.max(img.width, img.height));
-          canvasElement.width = img.width * scale;
-          canvasElement.height = img.height * scale;
-          canvas.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
-        }
+        // Draw final capture image at a reasonable display size
+        const displayScale = Math.min(1, 1024 / Math.max(img.width, img.height));
+        canvasElement.width = Math.round(img.width * displayScale);
+        canvasElement.height = Math.round(img.height * displayScale);
+        canvas!.imageSmoothingEnabled = true;
+        canvas!.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
         setResult(result.data, result.format, canvasElement.toDataURL('image/png'));
       } else {
         showMessage('No barcode found.', { type: 'alert' });
       }
     };
   };
+
+  // ── Clipboard helpers ────────────────────────────────────────────────
 
   const processClipboardItems = (items: DataTransferItemList) => {
     for (let i = 0; i < items.length; i++) {
@@ -168,19 +262,31 @@ export default function init() {
     return false;
   };
 
-  const drawImageToCanvas = () => {
-    const scale = Math.min(1, 640 / Math.max(video.videoWidth, video.videoHeight));
-    canvasElement.width = video.videoWidth * scale;
-    canvasElement.height = video.videoHeight * scale;
-    canvas?.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+  // ── Camera scan loop ─────────────────────────────────────────────────
+
+  const drawVideoToCanvas = () => {
+    const maxDim = 1080;
+    const scale = Math.min(1, maxDim / Math.max(video.videoWidth, video.videoHeight));
+    const w = Math.round(video.videoWidth * scale);
+    const h = Math.round(video.videoHeight * scale);
+    canvasElement.width = w;
+    canvasElement.height = h;
+    if (canvas) {
+      canvas.imageSmoothingEnabled = false; // preserve sharp QR edges
+      canvas.drawImage(video, 0, 0, w, h);
+    }
   };
+
+  let scanAttemptCount = 0;
 
   const tick = async (time: number) => {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
       if (time - lastScanTime >= SCAN_INTERVAL) {
         lastScanTime = time;
+        scanAttemptCount++;
         let result: { data: string; format: string } | null = null;
 
+        // Try native BarcodeDetector first
         if (detector) {
           try {
             const barcodes = await detector.detect(video);
@@ -193,35 +299,54 @@ export default function init() {
         }
 
         if (result) {
-          // Found via detector, draw once to capture image
-          drawImageToCanvas();
+          drawVideoToCanvas();
           setResult(result.data, result.format, canvasElement.toDataURL('image/png'));
           stopCam();
           return;
-        } else if (!detector) {
-          // Fallback to jsQR only if native detector is not available
-          drawImageToCanvas();
-          const imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
-          const code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'dontInvert',
-          });
-          if (code) {
-            setResult(code.data, 'qr_code', canvasElement.toDataURL('image/png'));
-            stopCam();
-            return;
-          }
+        }
+
+        // Fallback to jsQR via Web Worker (skip if previous scan still in flight)
+        if (!result && !workerScanInFlight) {
+          drawVideoToCanvas();
+          const w = canvasElement.width;
+          const h = canvasElement.height;
+          const imageData = canvas.getImageData(0, 0, w, h);
+          const pixelsCopy = imageData.data.buffer.slice(0);
+
+          const useEnhanced = scanAttemptCount % 2 === 0;
+          const id = ++workerRequestId;
+
+          workerScanInFlight = true;
+          sendToWorker(
+            { type: 'scan-frame', id, pixels: pixelsCopy, width: w, height: h, useEnhanced },
+            [pixelsCopy]
+          )
+            .then((data) => {
+              workerScanInFlight = false;
+              if (data && stream) {
+                // Re-draw the current video frame for the captured image
+                drawVideoToCanvas();
+                setResult(data, 'qr_code', canvasElement.toDataURL('image/png'));
+                stopCam();
+              }
+            })
+            .catch(() => {
+              workerScanInFlight = false;
+            });
         }
       }
     }
     animationFrameId = requestAnimationFrame(tick);
   };
 
+  // ── Event listeners ──────────────────────────────────────────────────
+
   startBtn?.addEventListener('click', async () => {
     try {
       stream = await startCamera({
         videoEl: video,
-        width: 1280,
-        height: 720,
+        width: 1920,
+        height: 1080,
       });
 
       if (!stream) {
@@ -232,6 +357,7 @@ export default function init() {
       videoContainer?.classList.remove('hidden');
       startBtn.classList.add('hidden');
       stopBtn?.classList.remove('hidden');
+      scanAttemptCount = 0;
       animationFrameId = requestAnimationFrame(tick);
 
       // Fire-and-forget: check torch & device count once camera is up
@@ -331,6 +457,7 @@ export default function init() {
 
   return () => {
     stopCam();
+    terminateWorker();
     resetCameraState();
     window.removeEventListener('paste', handlePaste);
   };
