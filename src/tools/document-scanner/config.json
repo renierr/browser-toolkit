@@ -4,6 +4,7 @@
   "icon": "scan",
   "sectionId": "images",
   "order": 10,
+  "hideFooter": true,
   "shareTarget": {
     "accept": ["image/*"]
   }
