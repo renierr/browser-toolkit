@@ -79,6 +79,10 @@ export default function init(payload?: SharedFilesPayload) {
   const btnNudgeLeft = document.getElementById('btn-nudge-left')!;
   const btnNudgeRight = document.getElementById('btn-nudge-right')!;
 
+  // Auto-snap countdown
+  const autoSnapCountdown = document.getElementById('auto-snap-countdown')!;
+  const autoSnapNumber = document.getElementById('auto-snap-number')!;
+
   let stream: MediaStream | null = null;
   let currentFacingMode: 'user' | 'environment' = 'environment';
   let isPortrait = false;
@@ -102,6 +106,49 @@ export default function init(payload?: SharedFilesPayload) {
   let detectionFrameCounter = 0;
   let stableCount = 0;
   let lastResult: Point[] | null = null;
+
+  // Display-side interpolation: smoothly animate overlay corners
+  let displayCorners: Point[] | null = null;
+  let targetCorners: Point[] | null = null;
+  let targetColor = '#00FF00';
+  const LERP_SPEED = 0.25; // 0-1, lower = smoother but laggier
+
+  // Auto-snap countdown state
+  let countdownValue = 0; // 0 = not counting, 3/2/1 = active countdown
+  let countdownTimerId: ReturnType<typeof setInterval> | null = null;
+  // Frames of stability needed before countdown starts (~3s at ~15fps detection rate)
+  const STABLE_FRAMES_BEFORE_COUNTDOWN = 45;
+
+  function lerpPoint(a: Point, b: Point, t: number): Point {
+    return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+  }
+
+  function startCountdown() {
+    if (countdownTimerId) return; // already running
+    countdownValue = 3;
+    autoSnapCountdown.classList.remove('hidden');
+    autoSnapNumber.textContent = '3';
+
+    countdownTimerId = setInterval(() => {
+      countdownValue--;
+      if (countdownValue > 0) {
+        autoSnapNumber.textContent = String(countdownValue);
+      } else {
+        cancelCountdown();
+        handleAutoCapture();
+      }
+    }, 1000);
+  }
+
+  function cancelCountdown() {
+    if (countdownTimerId) {
+      clearInterval(countdownTimerId);
+      countdownTimerId = null;
+    }
+    countdownValue = 0;
+    autoSnapCountdown.classList.add('hidden');
+    autoSnapNumber.textContent = '';
+  }
 
   async function startCamera() {
     btnStartScan.classList.add('hidden');
@@ -153,6 +200,8 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function handleAutoCapture() {
+    cancelCountdown();
+    stableCount = 0;
     btnCapture.click();
   }
 
@@ -168,12 +217,23 @@ export default function init(payload?: SharedFilesPayload) {
         return;
       }
 
-      // Throttle detection to every 4th frame (approx. 15fps on 60fps screen)
+      // --- Display-side interpolation: run every frame for smooth overlay ---
+      if (targetCorners && displayCorners) {
+        displayCorners = displayCorners.map((dp, i) =>
+          lerpPoint(dp, targetCorners![i], LERP_SPEED)
+        );
+        drawLiveOverlay(cameraOverlay, displayCorners, targetColor);
+      } else if (targetCorners && !displayCorners) {
+        // First detection — snap immediately
+        displayCorners = targetCorners.map((p) => ({ ...p }));
+        drawLiveOverlay(cameraOverlay, displayCorners, targetColor);
+      }
+
+      // --- Detection: throttle to every 4th frame (~15fps on 60fps) ---
       detectionFrameCounter++;
       if (detectionFrameCounter % 4 === 0 && !detectingInProgress) {
         detectingInProgress = true;
 
-        // 2. Run the detection logic (async — offloaded to SW)
         calculateLiveDetection(
           video,
           detectionCanvas,
@@ -183,41 +243,51 @@ export default function init(payload?: SharedFilesPayload) {
         ).then((result) => {
           detectingInProgress = false;
 
-          // result is null when SW detection is still in-flight (frame skipped)
+          // result is null when worker detection is still in-flight (frame skipped)
           if (result === null) return;
 
+          if (isDebugMode) {
+            console.log(
+              `[Scanner Debug] Frame ${detectionFrameCounter} | Stable: ${stableCount} | Countdown: ${countdownValue} | Found: ${result?.upscaled ? 'yes' : 'no'}`
+            );
+          }
+
           if (result.upscaled) {
-            // 3. AUTO-SNAP LOGIC: Check stability
+            // Update the interpolation target (display loop smoothly animates to it)
+            targetCorners = result.upscaled;
+
+            // Check stability
             if (isStable(lastResult, result.lastDetectedCorners)) {
               stableCount++;
             } else {
               stableCount = 0;
+              cancelCountdown();
             }
             lastResult = result.lastDetectedCorners;
 
-            // 4. Update UI color based on stability
-            // Yellow means "Hold still!"; Green means "Found document"
-            const color = stableCount > 4 ? '#FFD700' : '#00FF00';
-            drawLiveOverlay(cameraOverlay, result.upscaled, color);
+            // Color: green = detected, gold = stable/hold still
+            targetColor = stableCount > 6 ? '#FFD700' : '#00FF00';
 
-            // 5. Trigger Auto-Snap after ~1.5 seconds of stability
-            // 23 detections at 15fps = ~1.5s
-            if (stableCount > 23 && !isDebugMode) {
-              stableCount = 0;
-              handleAutoCapture();
+            // Auto-snap: start 3-2-1 countdown after sustained stability
+            if (!isDebugMode && stableCount >= STABLE_FRAMES_BEFORE_COUNTDOWN && !countdownTimerId) {
+              startCountdown();
             }
           } else {
-            // Clear overlay if nothing is found
+            // Lost detection — clear overlay and cancel countdown
+            targetCorners = null;
+            displayCorners = null;
             const oCtx = cameraOverlay.getContext('2d');
             if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
             stableCount = 0;
+            lastResult = null;
+            cancelCountdown();
           }
         }).catch(() => {
           detectingInProgress = false;
         });
       }
 
-      // 6. Schedule next frame
+      // Schedule next frame
       detectionFrameId = requestAnimationFrame(loop);
     };
 
@@ -230,6 +300,11 @@ export default function init(payload?: SharedFilesPayload) {
       detectionFrameId = null;
     }
     resetDetectionHistory();
+    cancelCountdown();
+    targetCorners = null;
+    displayCorners = null;
+    stableCount = 0;
+    lastResult = null;
     const oCtx = cameraOverlay.getContext('2d');
     if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
   }
