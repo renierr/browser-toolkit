@@ -1,100 +1,270 @@
 /**
- * Dedicated Web Worker for QR code scanning.
+ * Dedicated Web Worker for QR / barcode scanning.
  *
- * Offloads jsQR decoding and Otsu's binarization from the main thread
- * so the camera preview stays smooth while scanning.
+ * The main insight: jsQR is decent at decoding *clean* QR images but
+ * terrible with noisy / blurry / unevenly-lit camera input. A phone's
+ * camera app succeeds because the ISP applies hardware sharpening, HDR,
+ * and noise reduction before the decoder ever sees the frame.
+ *
+ * We replicate that with a multi-strategy preprocessing pipeline:
+ *
+ *   1. Raw — try unmodified pixels (works for clean images)
+ *   2. Sharpen — 3×3 unsharp-mask kernel to counteract camera blur
+ *   3. Adaptive threshold — local mean threshold handles uneven lighting
+ *   4. Sharpen + adaptive threshold — combined
+ *   5. Global Otsu binarization — fallback for uniform lighting
+ *
+ * For live camera frames we try strategies 1-3 (fast path, ~15-25 ms).
+ * For uploaded images we try all 5 at multiple scales.
+ *
+ * All processing operates on a grayscale buffer to halve memory and
+ * computation, then writes back to RGBA for jsQR.
  */
 import jsQR from 'jsqr';
 import type { WorkerInMessage, WorkerOutMessage } from './worker-protocol';
 
-// ---------------------------------------------------------------------------
-// Image enhancement — Otsu's binarization
-// ---------------------------------------------------------------------------
+// ── Grayscale conversion ───────────────────────────────────────────────
 
-function enhanceImageData(data: Uint8ClampedArray, len: number): void {
-  // Pass 1: grayscale + find min/max
-  let min = 255,
-    max = 0;
-  for (let i = 0; i < len; i += 4) {
-    const gray = (data[i] * 299 + data[i + 1] * 587 + data[i + 2] * 114) / 1000;
-    data[i] = data[i + 1] = data[i + 2] = gray;
-    if (gray < min) min = gray;
-    if (gray > max) max = gray;
+/** Convert RGBA → grayscale Uint8Array (1 byte per pixel). */
+function toGrayscale(rgba: Uint8ClampedArray, len: number): Uint8Array {
+  const gray = new Uint8Array(len / 4);
+  for (let i = 0, j = 0; i < len; i += 4, j++) {
+    gray[j] = (rgba[i] * 77 + rgba[i + 1] * 150 + rgba[i + 2] * 29) >> 8;
+  }
+  return gray;
+}
+
+/** Write grayscale buffer back into an RGBA buffer for jsQR. */
+function grayToRGBA(gray: Uint8Array, w: number, h: number): Uint8ClampedArray {
+  const rgba = new Uint8ClampedArray(w * h * 4);
+  for (let i = 0, j = 0; i < gray.length; i++, j += 4) {
+    rgba[j] = rgba[j + 1] = rgba[j + 2] = gray[i];
+    rgba[j + 3] = 255;
+  }
+  return rgba;
+}
+
+// ── Sharpen (3×3 unsharp-mask) ─────────────────────────────────────────
+
+/**
+ * Sharpens a grayscale image using a 3×3 Laplacian-based unsharp mask.
+ * strength controls how aggressively edges are boosted (1.0–2.0 typical).
+ */
+function sharpen(src: Uint8Array, w: number, h: number, strength: number = 1.5): Uint8Array {
+  const dst = new Uint8Array(src.length);
+  // Copy border pixels unchanged
+  for (let x = 0; x < w; x++) {
+    dst[x] = src[x];
+    dst[(h - 1) * w + x] = src[(h - 1) * w + x];
+  }
+  for (let y = 0; y < h; y++) {
+    dst[y * w] = src[y * w];
+    dst[y * w + w - 1] = src[y * w + w - 1];
   }
 
-  // Pass 2: contrast stretch + histogram
-  const range = max - min || 1;
-  const histogram = new Uint32Array(256);
-  for (let i = 0; i < len; i += 4) {
-    const stretched = ((data[i] - min) / range) * 255;
-    const val = Math.max(0, Math.min(255, stretched));
-    data[i] = data[i + 1] = data[i + 2] = val;
-    histogram[Math.round(val)]++;
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const idx = y * w + x;
+      // 3×3 Laplacian
+      const laplacian =
+        -src[idx - w - 1] -
+        src[idx - w] -
+        src[idx - w + 1] -
+        src[idx - 1] +
+        8 * src[idx] -
+        src[idx + 1] -
+        src[idx + w - 1] -
+        src[idx + w] -
+        src[idx + w + 1];
+      const v = src[idx] + strength * (laplacian / 8);
+      dst[idx] = v < 0 ? 0 : v > 255 ? 255 : v | 0;
+    }
   }
+  return dst;
+}
 
-  // Otsu's threshold
-  const totalPixels = len / 4;
-  let sumAll = 0;
-  for (let i = 0; i < 256; i++) sumAll += i * histogram[i];
-  let sumBg = 0,
-    weightBg = 0,
-    bestThreshold = 128,
-    bestVariance = 0;
-  for (let t = 0; t < 256; t++) {
-    weightBg += histogram[t];
-    if (weightBg === 0) continue;
-    const weightFg = totalPixels - weightBg;
-    if (weightFg === 0) break;
-    sumBg += t * histogram[t];
-    const meanBg = sumBg / weightBg;
-    const meanFg = (sumAll - sumBg) / weightFg;
-    const variance = weightBg * weightFg * (meanBg - meanFg) ** 2;
-    if (variance > bestVariance) {
-      bestVariance = variance;
-      bestThreshold = t;
+// ── Adaptive threshold (local mean) ────────────────────────────────────
+
+/**
+ * Binarize using a local mean threshold. For each pixel, compute the
+ * mean of a blockSize×blockSize window and threshold at (mean - C).
+ *
+ * Uses an integral image for O(1) per-pixel mean computation.
+ * This handles shadows, uneven lighting, and glare far better than Otsu.
+ */
+function adaptiveThreshold(
+  src: Uint8Array,
+  w: number,
+  h: number,
+  blockSize: number = 25,
+  C: number = 10
+): Uint8Array {
+  const dst = new Uint8Array(src.length);
+  const half = blockSize >> 1;
+
+  // Build integral image (use Float64 to avoid overflow for large images)
+  const integral = new Float64Array((w + 1) * (h + 1));
+  const iw = w + 1;
+  for (let y = 0; y < h; y++) {
+    let rowSum = 0;
+    for (let x = 0; x < w; x++) {
+      rowSum += src[y * w + x];
+      integral[(y + 1) * iw + (x + 1)] = rowSum + integral[y * iw + (x + 1)];
     }
   }
 
-  // Binarize
-  for (let i = 0; i < len; i += 4) {
-    const v = data[i] >= bestThreshold ? 255 : 0;
-    data[i] = data[i + 1] = data[i + 2] = v;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      // Window bounds (clamped)
+      const y1 = y - half < 0 ? 0 : y - half;
+      const y2 = y + half >= h ? h - 1 : y + half;
+      const x1 = x - half < 0 ? 0 : x - half;
+      const x2 = x + half >= w ? w - 1 : x + half;
+
+      const count = (y2 - y1 + 1) * (x2 - x1 + 1);
+      const sum =
+        integral[(y2 + 1) * iw + (x2 + 1)] -
+        integral[y1 * iw + (x2 + 1)] -
+        integral[(y2 + 1) * iw + x1] +
+        integral[y1 * iw + x1];
+
+      const mean = sum / count;
+      dst[y * w + x] = src[y * w + x] > mean - C ? 255 : 0;
+    }
   }
+  return dst;
 }
 
-// ---------------------------------------------------------------------------
-// Scanning helpers
-// ---------------------------------------------------------------------------
+// ── Global Otsu binarization ───────────────────────────────────────────
 
-function tryJsQR(data: Uint8ClampedArray, width: number, height: number): string | null {
-  const code = jsQR(data, width, height, { inversionAttempts: 'attemptBoth' });
+function otsuThreshold(src: Uint8Array, w: number, h: number): Uint8Array {
+  const histogram = new Uint32Array(256);
+  const total = w * h;
+  for (let i = 0; i < total; i++) histogram[src[i]]++;
+
+  let sumAll = 0;
+  for (let i = 0; i < 256; i++) sumAll += i * histogram[i];
+
+  let sumBg = 0,
+    wBg = 0,
+    best = 128,
+    bestVar = 0;
+  for (let t = 0; t < 256; t++) {
+    wBg += histogram[t];
+    if (wBg === 0) continue;
+    const wFg = total - wBg;
+    if (wFg === 0) break;
+    sumBg += t * histogram[t];
+    const diff = sumBg / wBg - (sumAll - sumBg) / wFg;
+    const variance = wBg * wFg * diff * diff;
+    if (variance > bestVar) {
+      bestVar = variance;
+      best = t;
+    }
+  }
+
+  const dst = new Uint8Array(total);
+  for (let i = 0; i < total; i++) dst[i] = src[i] >= best ? 255 : 0;
+  return dst;
+}
+
+// ── Contrast stretch ───────────────────────────────────────────────────
+
+/** Stretch grayscale to full 0-255 range (helps low-contrast cameras). */
+function contrastStretch(src: Uint8Array): Uint8Array {
+  let min = 255,
+    max = 0;
+  for (let i = 0; i < src.length; i++) {
+    if (src[i] < min) min = src[i];
+    if (src[i] > max) max = src[i];
+  }
+  if (max - min < 30) return src; // already low range, don't stretch noise
+  const range = max - min || 1;
+  const dst = new Uint8Array(src.length);
+  for (let i = 0; i < src.length; i++) {
+    dst[i] = (((src[i] - min) / range) * 255) | 0;
+  }
+  return dst;
+}
+
+// ── jsQR wrapper ───────────────────────────────────────────────────────
+
+function tryDecode(gray: Uint8Array, w: number, h: number): string | null {
+  const rgba = grayToRGBA(gray, w, h);
+  const code = jsQR(rgba, w, h, { inversionAttempts: 'attemptBoth' });
   return code ? code.data : null;
 }
 
-/** Scan a single frame — optionally with enhancement. */
-function scanFrame(
-  pixels: Uint8ClampedArray,
-  width: number,
-  height: number,
-  useEnhanced: boolean
-): string | null {
-  if (useEnhanced) {
-    // Work on a copy so we don't corrupt the raw pixels for future use
-    const copy = new Uint8ClampedArray(pixels);
-    enhanceImageData(copy, copy.length);
-    return tryJsQR(copy, width, height);
-  }
-  return tryJsQR(pixels, width, height);
+function tryDecodeRGBA(rgba: Uint8ClampedArray, w: number, h: number): string | null {
+  const code = jsQR(rgba, w, h, { inversionAttempts: 'attemptBoth' });
+  return code ? code.data : null;
 }
 
-/** Scan an image at multiple resolutions (for uploaded/pasted images). */
+// ── Scan strategies ────────────────────────────────────────────────────
+
+/**
+ * Run multiple preprocessing strategies on a single resolution.
+ * Returns as soon as one succeeds.
+ *
+ * When `full` is true, runs all 5 strategies. Otherwise runs fast 3 only.
+ */
+function scanWithStrategies(
+  rgba: Uint8ClampedArray,
+  w: number,
+  h: number,
+  full: boolean
+): string | null {
+  // 1. Raw — no processing at all
+  let r = tryDecodeRGBA(rgba, w, h);
+  if (r) return r;
+
+  // Convert to grayscale once, reuse for all strategies
+  const gray = toGrayscale(rgba, rgba.length);
+  const stretched = contrastStretch(gray);
+
+  // 2. Sharpen
+  const sharp = sharpen(stretched, w, h, 1.5);
+  r = tryDecode(sharp, w, h);
+  if (r) return r;
+
+  // 3. Adaptive threshold (handles uneven lighting, shadows, glare)
+  //    Compute block size relative to image: ~1/10th of shortest dim, odd, min 11
+  const blockBase = Math.max(11, (Math.min(w, h) / 10) | 1);
+  const blockSize = blockBase % 2 === 0 ? blockBase + 1 : blockBase;
+  const adaptive = adaptiveThreshold(stretched, w, h, blockSize, 10);
+  r = tryDecode(adaptive, w, h);
+  if (r) return r;
+
+  if (!full) return null;
+
+  // 4. Sharpen + adaptive threshold combined
+  const sharpAdaptive = adaptiveThreshold(sharp, w, h, blockSize, 8);
+  r = tryDecode(sharpAdaptive, w, h);
+  if (r) return r;
+
+  // 5. Global Otsu binarization (works well for uniform lighting)
+  const otsu = otsuThreshold(stretched, w, h);
+  r = tryDecode(otsu, w, h);
+  if (r) return r;
+
+  return null;
+}
+
+// ── Frame scanning (live camera) ───────────────────────────────────────
+
+function scanFrame(pixels: Uint8ClampedArray, width: number, height: number): string | null {
+  // Fast path: 3 strategies on the received frame
+  return scanWithStrategies(pixels, width, height, false);
+}
+
+// ── Image scanning (upload / paste) — multi-scale ──────────────────────
+
 function scanImageMultiScale(
   srcPixels: Uint8ClampedArray,
   srcWidth: number,
   srcHeight: number,
   targetSizes: number[]
 ): string | null {
-  // We can only resize using an OffscreenCanvas (available in workers).
   const hasOffscreen = typeof OffscreenCanvas !== 'undefined';
 
   for (const targetSize of targetSizes) {
@@ -102,47 +272,35 @@ function scanImageMultiScale(
     const w = Math.round(srcWidth * scale);
     const h = Math.round(srcHeight * scale);
 
-    let imageData: Uint8ClampedArray;
+    let rgba: Uint8ClampedArray;
 
     if (scale === 1) {
-      imageData = srcPixels;
+      rgba = srcPixels;
     } else if (hasOffscreen) {
-      // Resize via OffscreenCanvas
       const oc = new OffscreenCanvas(srcWidth, srcHeight);
       const ctx = oc.getContext('2d')!;
-      const srcImgData = new ImageData(new Uint8ClampedArray(srcPixels), srcWidth, srcHeight);
-      ctx.putImageData(srcImgData, 0, 0);
+      ctx.putImageData(new ImageData(new Uint8ClampedArray(srcPixels), srcWidth, srcHeight), 0, 0);
 
       const oc2 = new OffscreenCanvas(w, h);
       const ctx2 = oc2.getContext('2d')!;
       ctx2.imageSmoothingEnabled = true;
       ctx2.drawImage(oc, 0, 0, w, h);
-      imageData = ctx2.getImageData(0, 0, w, h).data;
+      rgba = ctx2.getImageData(0, 0, w, h).data;
     } else {
-      // No OffscreenCanvas — just try original size
-      imageData = srcPixels;
+      rgba = srcPixels;
     }
 
-    // Attempt 1: raw
-    const result1 = tryJsQR(imageData, w, h);
-    if (result1) return result1;
+    // Full strategy set for static images (user can wait a bit)
+    const result = scanWithStrategies(rgba, w, h, true);
+    if (result) return result;
 
-    // Attempt 2: enhanced
-    const copy = new Uint8ClampedArray(imageData);
-    enhanceImageData(copy, copy.length);
-    const result2 = tryJsQR(copy, w, h);
-    if (result2) return result2;
-
-    // If we couldn't resize, no point trying other sizes
     if (!hasOffscreen && scale !== 1) break;
   }
 
   return null;
 }
 
-// ---------------------------------------------------------------------------
-// Message handler
-// ---------------------------------------------------------------------------
+// ── Message handler ────────────────────────────────────────────────────
 
 self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
   const msg = event.data;
@@ -150,7 +308,7 @@ self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
   switch (msg.type) {
     case 'scan-frame': {
       const pixels = new Uint8ClampedArray(msg.pixels);
-      const data = scanFrame(pixels, msg.width, msg.height, msg.useEnhanced);
+      const data = scanFrame(pixels, msg.width, msg.height);
       const result: WorkerOutMessage = {
         type: 'scan-result',
         id: msg.id,

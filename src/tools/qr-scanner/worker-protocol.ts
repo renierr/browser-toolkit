@@ -12,7 +12,6 @@ export interface ScanFrameMessage {
   pixels: ArrayBuffer;
   width: number;
   height: number;
-  useEnhanced: boolean;
 }
 
 /** Scan an uploaded/pasted image at multiple scales. */

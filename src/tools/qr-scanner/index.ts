@@ -277,13 +277,10 @@ export default function init() {
     }
   };
 
-  let scanAttemptCount = 0;
-
   const tick = async (time: number) => {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
       if (time - lastScanTime >= SCAN_INTERVAL) {
         lastScanTime = time;
-        scanAttemptCount++;
         let result: { data: string; format: string } | null = null;
 
         // Try native BarcodeDetector first
@@ -313,14 +310,12 @@ export default function init() {
           const imageData = canvas.getImageData(0, 0, w, h);
           const pixelsCopy = imageData.data.buffer.slice(0);
 
-          const useEnhanced = scanAttemptCount % 2 === 0;
           const id = ++workerRequestId;
 
           workerScanInFlight = true;
-          sendToWorker(
-            { type: 'scan-frame', id, pixels: pixelsCopy, width: w, height: h, useEnhanced },
-            [pixelsCopy]
-          )
+          sendToWorker({ type: 'scan-frame', id, pixels: pixelsCopy, width: w, height: h }, [
+            pixelsCopy,
+          ])
             .then((data) => {
               workerScanInFlight = false;
               if (data && stream) {
@@ -357,7 +352,6 @@ export default function init() {
       videoContainer?.classList.remove('hidden');
       startBtn.classList.add('hidden');
       stopBtn?.classList.remove('hidden');
-      scanAttemptCount = 0;
       animationFrameId = requestAnimationFrame(tick);
 
       // Fire-and-forget: check torch & device count once camera is up
