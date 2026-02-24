@@ -38,25 +38,28 @@ export default function init() {
   const SCAN_INTERVAL = 150;
   let isFlashOn = false;
 
-  // ── Web Worker for CPU-heavy jsQR + image preprocessing ──────────────
+  // ── Web Worker for CPU-heavy WASM + image preprocessing ──────────────
 
   let worker: Worker | null = null;
   let workerRequestId = 0;
   let workerScanInFlight = false;
   const pendingRequests = new Map<
     number,
-    { resolve: (data: string | null) => void; reject: (err: Error) => void }
+    {
+      resolve: (data: { data: string; format: string; provider?: string } | null) => void;
+      reject: (err: Error) => void;
+    }
   >();
 
   function getWorker(): Worker {
     if (!worker) {
       worker = new ScanWorker();
       worker.addEventListener('message', (event: MessageEvent<WorkerOutMessage>) => {
-        const { id, data } = event.data;
+        const { id, data, format, provider } = event.data;
         const pending = pendingRequests.get(id);
         if (pending) {
           pendingRequests.delete(id);
-          pending.resolve(data);
+          pending.resolve(data ? { data, format, provider } : null);
         }
       });
       worker.addEventListener('error', () => {
@@ -73,7 +76,7 @@ export default function init() {
   function sendToWorker(
     msg: WorkerInMessage,
     transfer: Transferable[] = []
-  ): Promise<string | null> {
+  ): Promise<{ data: string; format: string; provider?: string } | null> {
     return new Promise((resolve, reject) => {
       pendingRequests.set(msg.id, { resolve, reject });
       try {
@@ -161,9 +164,17 @@ export default function init() {
 
   // ── Result display ───────────────────────────────────────────────────
 
-  const setResult = (data: string, format: string = 'qr_code', imageSrc?: string) => {
+  const setResult = (
+    data: string,
+    format: string = 'qr_code',
+    provider: string = 'unknown',
+    imageSrc?: string
+  ) => {
     if (resultText) resultText.textContent = data;
-    if (formatText) formatText.textContent = format.toUpperCase().replace('_', ' ');
+    if (formatText) {
+      const providerLabel = provider === 'native' ? 'Native' : 'ZXing (WASM)';
+      formatText.textContent = `${format.toUpperCase().replace('_', ' ')} (${providerLabel})`;
+    }
     if (capturedImage && imageSrc) capturedImage.src = imageSrc;
     resultCard?.classList.remove('hidden');
 
@@ -179,21 +190,21 @@ export default function init() {
 
   const scanImage = (img: HTMLImageElement) => {
     img.onload = async () => {
-      let result: { data: string; format: string } | null = null;
+      let result: { data: string; format: string; provider: string } | null = null;
 
       // Try native BarcodeDetector first (best quality, supports many formats)
       if (detector) {
         try {
           const barcodes = await detector.detect(img);
           if (barcodes.length > 0) {
-            result = { data: barcodes[0].rawValue, format: barcodes[0].format };
+            result = { data: barcodes[0].rawValue, format: barcodes[0].format, provider: 'native' };
           }
         } catch (e) {
           console.warn('BarcodeDetector failed', e);
         }
       }
 
-      // Fallback: jsQR via Web Worker with multi-scale + preprocessing
+      // Fallback: WASM Polyfill via Web Worker with multi-scale + preprocessing
       if (!result && canvas) {
         // Draw at original size to get raw pixels
         const maxDim = Math.min(Math.max(img.width, img.height), 2048);
@@ -215,12 +226,12 @@ export default function init() {
 
         const id = ++workerRequestId;
         try {
-          const data = await sendToWorker(
+          const res = await sendToWorker(
             { type: 'scan-image', id, pixels: pixelsCopy, width: w, height: h, targetSizes: sizes },
             [pixelsCopy]
           );
-          if (data) {
-            result = { data, format: 'qr_code' };
+          if (res) {
+            result = { ...res, provider: res.provider || 'wasm' };
           }
         } catch (e) {
           console.warn('Worker scan-image failed', e);
@@ -234,7 +245,12 @@ export default function init() {
         canvasElement.height = Math.round(img.height * displayScale);
         canvas!.imageSmoothingEnabled = true;
         canvas!.drawImage(img, 0, 0, canvasElement.width, canvasElement.height);
-        setResult(result.data, result.format, canvasElement.toDataURL('image/png'));
+        setResult(
+          result.data,
+          result.format,
+          result.provider,
+          canvasElement.toDataURL('image/png')
+        );
       } else {
         showMessage('No barcode found.', { type: 'alert' });
       }
@@ -281,14 +297,18 @@ export default function init() {
     if (video.readyState === video.HAVE_ENOUGH_DATA && canvas) {
       if (time - lastScanTime >= SCAN_INTERVAL) {
         lastScanTime = time;
-        let result: { data: string; format: string } | null = null;
+        let result: { data: string; format: string; provider: string } | null = null;
 
         // Try native BarcodeDetector first
         if (detector) {
           try {
             const barcodes = await detector.detect(video);
             if (barcodes.length > 0) {
-              result = { data: barcodes[0].rawValue, format: barcodes[0].format };
+              result = {
+                data: barcodes[0].rawValue,
+                format: barcodes[0].format,
+                provider: 'native',
+              };
             }
           } catch (e) {
             console.warn('BarcodeDetector detection failed', e);
@@ -297,12 +317,17 @@ export default function init() {
 
         if (result) {
           drawVideoToCanvas();
-          setResult(result.data, result.format, canvasElement.toDataURL('image/png'));
+          setResult(
+            result.data,
+            result.format,
+            result.provider,
+            canvasElement.toDataURL('image/png')
+          );
           stopCam();
           return;
         }
 
-        // Fallback to jsQR via Web Worker (skip if previous scan still in flight)
+        // Fallback to WASM Polyfill via Web Worker (skip if previous scan still in flight)
         if (!result && !workerScanInFlight) {
           drawVideoToCanvas();
           const w = canvasElement.width;
@@ -316,12 +341,17 @@ export default function init() {
           sendToWorker({ type: 'scan-frame', id, pixels: pixelsCopy, width: w, height: h }, [
             pixelsCopy,
           ])
-            .then((data) => {
+            .then((res) => {
               workerScanInFlight = false;
-              if (data && stream) {
+              if (res && stream) {
                 // Re-draw the current video frame for the captured image
                 drawVideoToCanvas();
-                setResult(data, 'qr_code', canvasElement.toDataURL('image/png'));
+                setResult(
+                  res.data,
+                  res.format,
+                  res.provider || 'wasm',
+                  canvasElement.toDataURL('image/png')
+                );
                 stopCam();
               }
             })

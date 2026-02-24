@@ -20,8 +20,59 @@
  * All processing operates on a grayscale buffer to halve memory and
  * computation, then writes back to RGBA for jsQR.
  */
-import jsQR from 'jsqr';
+import {
+  BarcodeDetector as BarcodeDetectorPonyfill,
+  prepareZXingModule,
+} from 'barcode-detector/ponyfill';
+import zxingWasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
 import type { WorkerInMessage, WorkerOutMessage } from './worker-protocol';
+
+// ── BarcodeDetector (Native or Polyfill) ───────────────────────────────
+
+let detector: any = null;
+let providerName: 'native' | 'wasm' = 'wasm';
+
+// Initialize detector (prefer native, fallback to WASM ponyfill)
+(async () => {
+  try {
+    if ('BarcodeDetector' in self) {
+      // @ts-ignore
+      const formats = await BarcodeDetector.getSupportedFormats();
+      if (formats.length > 0) {
+        // @ts-ignore
+        detector = new BarcodeDetector({ formats });
+        providerName = 'native';
+        return;
+      }
+    }
+  } catch (e) {
+    console.warn('Native BarcodeDetector initialization failed, falling back to WASM:', e);
+  }
+
+  // Fallback to WASM ponyfill
+  try {
+    prepareZXingModule({
+      overrides: {
+        locateFile: (path: string, prefix: string) => {
+          if (path.endsWith('.wasm')) {
+            return zxingWasmUrl;
+          }
+          return prefix + path;
+        },
+      },
+    });
+
+    // @ts-ignore
+    const formats = await BarcodeDetectorPonyfill.getSupportedFormats();
+    if (formats.length > 0) {
+      // @ts-ignore
+      detector = new BarcodeDetectorPonyfill({ formats });
+      providerName = 'wasm';
+    }
+  } catch (e) {
+    console.error('WASM BarcodeDetector initialization failed:', e);
+  }
+})();
 
 // ── Grayscale conversion ───────────────────────────────────────────────
 
@@ -187,17 +238,33 @@ function contrastStretch(src: Uint8Array): Uint8Array {
   return dst;
 }
 
-// ── jsQR wrapper ───────────────────────────────────────────────────────
+// ── Decoding wrappers ──────────────────────────────────────────────────
 
-function tryDecode(gray: Uint8Array, w: number, h: number): string | null {
-  const rgba = grayToRGBA(gray, w, h);
-  const code = jsQR(rgba, w, h, { inversionAttempts: 'attemptBoth' });
-  return code ? code.data : null;
+interface ScanResult {
+  data: string;
+  format: string;
+  provider: 'native' | 'wasm';
 }
 
-function tryDecodeRGBA(rgba: Uint8ClampedArray, w: number, h: number): string | null {
-  const code = jsQR(rgba, w, h, { inversionAttempts: 'attemptBoth' });
-  return code ? code.data : null;
+async function tryDetect(
+  rgba: Uint8ClampedArray,
+  w: number,
+  h: number
+): Promise<ScanResult | null> {
+  if (!detector) return null;
+  try {
+    // @ts-ignore
+    const imageData = new ImageData(rgba, w, h);
+
+    // @ts-ignore
+    const barcodes = await detector.detect(imageData);
+    if (barcodes.length > 0) {
+      return { data: barcodes[0].rawValue, format: barcodes[0].format, provider: providerName };
+    }
+  } catch (e) {
+    // ignore
+  }
+  return null;
 }
 
 // ── Scan strategies ────────────────────────────────────────────────────
@@ -208,63 +275,78 @@ function tryDecodeRGBA(rgba: Uint8ClampedArray, w: number, h: number): string | 
  *
  * When `full` is true, runs all 5 strategies. Otherwise runs fast 3 only.
  */
-function scanWithStrategies(
+async function scanWithStrategies(
   rgba: Uint8ClampedArray,
   w: number,
   h: number,
   full: boolean
-): string | null {
+): Promise<ScanResult | null> {
   // 1. Raw — no processing at all
-  let r = tryDecodeRGBA(rgba, w, h);
-  if (r) return r;
+  // Try native first on raw image (best for simple barcodes)
+  let d = await tryDetect(rgba, w, h);
+  if (d) return d;
 
   // Convert to grayscale once, reuse for all strategies
   const gray = toGrayscale(rgba, rgba.length);
   const stretched = contrastStretch(gray);
 
+  // Helper to check a grayscale buffer with both decoders
+  const checkGray = async (g: Uint8Array) => {
+    const rgbaBuf = grayToRGBA(g, w, h);
+    // Try native first on enhanced image
+    const d2 = await tryDetect(rgbaBuf, w, h);
+    if (d2) return d2;
+    return null;
+  };
+
   // 2. Sharpen
   const sharp = sharpen(stretched, w, h, 1.5);
-  r = tryDecode(sharp, w, h);
-  if (r) return r;
+  let res = await checkGray(sharp);
+  if (res) return res;
 
   // 3. Adaptive threshold (handles uneven lighting, shadows, glare)
   //    Compute block size relative to image: ~1/10th of shortest dim, odd, min 11
   const blockBase = Math.max(11, (Math.min(w, h) / 10) | 1);
   const blockSize = blockBase % 2 === 0 ? blockBase + 1 : blockBase;
   const adaptive = adaptiveThreshold(stretched, w, h, blockSize, 10);
-  r = tryDecode(adaptive, w, h);
-  if (r) return r;
+
+  res = await checkGray(adaptive);
+  if (res) return res;
 
   if (!full) return null;
 
   // 4. Sharpen + adaptive threshold combined
   const sharpAdaptive = adaptiveThreshold(sharp, w, h, blockSize, 8);
-  r = tryDecode(sharpAdaptive, w, h);
-  if (r) return r;
+  res = await checkGray(sharpAdaptive);
+  if (res) return res;
 
   // 5. Global Otsu binarization (works well for uniform lighting)
   const otsu = otsuThreshold(stretched, w, h);
-  r = tryDecode(otsu, w, h);
-  if (r) return r;
+  res = await checkGray(otsu);
+  if (res) return res;
 
   return null;
 }
 
 // ── Frame scanning (live camera) ───────────────────────────────────────
 
-function scanFrame(pixels: Uint8ClampedArray, width: number, height: number): string | null {
+async function scanFrame(
+  pixels: Uint8ClampedArray,
+  width: number,
+  height: number
+): Promise<ScanResult | null> {
   // Fast path: 3 strategies on the received frame
   return scanWithStrategies(pixels, width, height, false);
 }
 
 // ── Image scanning (upload / paste) — multi-scale ──────────────────────
 
-function scanImageMultiScale(
+async function scanImageMultiScale(
   srcPixels: Uint8ClampedArray,
   srcWidth: number,
   srcHeight: number,
   targetSizes: number[]
-): string | null {
+): Promise<ScanResult | null> {
   const hasOffscreen = typeof OffscreenCanvas !== 'undefined';
 
   for (const targetSize of targetSizes) {
@@ -291,7 +373,7 @@ function scanImageMultiScale(
     }
 
     // Full strategy set for static images (user can wait a bit)
-    const result = scanWithStrategies(rgba, w, h, true);
+    const result = await scanWithStrategies(rgba, w, h, true);
     if (result) return result;
 
     if (!hasOffscreen && scale !== 1) break;
@@ -308,27 +390,31 @@ self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
   switch (msg.type) {
     case 'scan-frame': {
       const pixels = new Uint8ClampedArray(msg.pixels);
-      const data = scanFrame(pixels, msg.width, msg.height);
-      const result: WorkerOutMessage = {
-        type: 'scan-result',
-        id: msg.id,
-        data,
-        format: 'qr_code',
-      };
-      (self as unknown as Worker).postMessage(result);
+      scanFrame(pixels, msg.width, msg.height).then((res) => {
+        const result: WorkerOutMessage = {
+          type: 'scan-result',
+          id: msg.id,
+          data: res?.data ?? null,
+          format: res?.format ?? 'qr_code',
+          provider: res?.provider,
+        };
+        (self as unknown as Worker).postMessage(result);
+      });
       break;
     }
 
     case 'scan-image': {
       const pixels = new Uint8ClampedArray(msg.pixels);
-      const data = scanImageMultiScale(pixels, msg.width, msg.height, msg.targetSizes);
-      const result: WorkerOutMessage = {
-        type: 'scan-result',
-        id: msg.id,
-        data,
-        format: 'qr_code',
-      };
-      (self as unknown as Worker).postMessage(result);
+      scanImageMultiScale(pixels, msg.width, msg.height, msg.targetSizes).then((res) => {
+        const result: WorkerOutMessage = {
+          type: 'scan-result',
+          id: msg.id,
+          data: res?.data ?? null,
+          format: res?.format ?? 'qr_code',
+          provider: res?.provider,
+        };
+        (self as unknown as Worker).postMessage(result);
+      });
       break;
     }
   }

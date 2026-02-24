@@ -34,6 +34,7 @@ export interface ScanResultMessage {
   id: number;
   data: string | null;
   format: string;
+  provider?: string; // 'native' | 'wasm' | 'jsQR'
 }
 
 export type WorkerOutMessage = ScanResultMessage;

@@ -2,6 +2,7 @@
   "name": "qr-scanner-tool",
   "version": "1.0.0",
   "dependencies": {
-    "jsqr": "^1.4.0"
+    "barcode-detector": "^3.1.0",
+    "zxing-wasm": "^3.0.0"
   }
 }
