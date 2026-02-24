@@ -20,7 +20,7 @@ import {
 } from './utils/ui';
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
-import { sourceToCanvas } from './utils/canvas';
+import { sourceToCanvas, imageToBlob, imageFromBlob } from './utils/canvas';
 import type { ScannedPage, FilterType } from './types';
 import Sortable from 'sortablejs';
 import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
@@ -138,9 +138,27 @@ export default function init(payload?: SharedFilesPayload) {
   /** Get or compute the warped canvas for a page */
   function getWarpedCanvas(page: ScannedPage): HTMLCanvasElement {
     if (!page.warpedCanvas) {
-      page.warpedCanvas = warp(page.originalImage, page.corners);
+      page.warpedCanvas = warp(page.originalImage!, page.corners);
     }
     return page.warpedCanvas;
+  }
+
+  /** Ensure a page's originalImage is decoded and ready. Must be called before any sync access. */
+  async function ensureOriginalImage(page: ScannedPage): Promise<HTMLImageElement> {
+    if (!page.originalImage) {
+      page.originalImage = await imageFromBlob(page.originalBlob);
+    }
+    return page.originalImage;
+  }
+
+  /** Release decoded images for non-active pages to free memory. */
+  function releaseInactiveImages() {
+    for (let i = 0; i < pages.length; i++) {
+      if (i !== currentPageIndex) {
+        pages[i].originalImage = null;
+        pages[i].warpedCanvas = null; // warp cache references the decoded image
+      }
+    }
   }
 
   // --- Handle Drag Setup ---
@@ -233,7 +251,12 @@ export default function init(payload?: SharedFilesPayload) {
 
   // --- Page Management ---
 
-  async function addPage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
+  async function addPageFromBlob(blob: Blob, detectedCorners: Point[] | null = null) {
+    const img = await imageFromBlob(blob);
+    await addPage(img, blob, detectedCorners);
+  }
+
+  async function addPage(img: HTMLImageElement, blob: Blob | null = null, detectedCorners: Point[] | null = null) {
     showProgress('Detecting document...');
     try {
       const pCanvas = sourceToCanvas(img);
@@ -251,9 +274,15 @@ export default function init(payload?: SharedFilesPayload) {
         ];
       }
 
+      // Store as blob for compact memory; keep img as cache for the active page
+      const originalBlob = blob ?? await imageToBlob(img);
+
       pages.push({
         id: crypto.randomUUID(),
-        originalImage: img,
+        originalBlob,
+        originalWidth: img.width,
+        originalHeight: img.height,
+        originalImage: img, // cached — will be released when this page is not active
         processedCanvas: pCanvas,
         warpedCanvas: null,
         thumbnailUrl: null,
@@ -261,6 +290,9 @@ export default function init(payload?: SharedFilesPayload) {
         filter: 'none',
       });
       currentPageIndex = pages.length - 1;
+
+      // Release decoded images for other pages
+      releaseInactiveImages();
 
       stopCamera();
       captureContainer.classList.add('hidden');
@@ -278,8 +310,10 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function renderPageList() {
-    renderPageListUtil(pageList, pages, currentPageIndex, (index) => {
+    renderPageListUtil(pageList, pages, currentPageIndex, async (index) => {
       currentPageIndex = index;
+      releaseInactiveImages();
+      await ensureOriginalImage(pages[currentPageIndex]);
       renderPageList();
       enterFilterMode();
     });
@@ -317,13 +351,13 @@ export default function init(payload?: SharedFilesPayload) {
 
   function updateEditor() {
     const page = pages[currentPageIndex];
-    if (!page) return;
+    if (!page || !page.originalImage) return;
 
     // Invalidate warp cache since corners may have changed
     invalidateWarpCache(page);
 
-    canvas.width = page.originalImage.width;
-    canvas.height = page.originalImage.height;
+    canvas.width = page.originalWidth;
+    canvas.height = page.originalHeight;
     ctx.drawImage(page.originalImage, 0, 0);
 
     if (!isFilterMode) {
@@ -394,13 +428,8 @@ export default function init(payload?: SharedFilesPayload) {
 
   function handleFile(file: File) {
     if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.src = e.target?.result as string;
-      img.onload = () => addPage(img);
-    };
-    reader.readAsDataURL(file);
+    // noinspection ES6MissingAwait
+    addPageFromBlob(file);
   }
 
   // --- Event Listeners ---
@@ -417,36 +446,33 @@ export default function init(payload?: SharedFilesPayload) {
     const blob = await capturePhoto(video, stream);
 
     if (blob) {
-      const img = new Image();
-      img.src = URL.createObjectURL(blob);
-      img.onload = async () => {
-        let corners: Point[] | null = null;
-        if (liveCorners) {
-          const vAspect = video.videoWidth / video.videoHeight;
-          const iAspect = img.width / img.height;
+      const img = await imageFromBlob(blob);
+      let corners: Point[] | null = null;
+      if (liveCorners) {
+        const vAspect = video.videoWidth / video.videoHeight;
+        const iAspect = img.width / img.height;
 
-          corners = liveCorners.map((p) => {
-            let nx = p.x;
-            let ny = p.y;
+        corners = liveCorners.map((p) => {
+          let nx = p.x;
+          let ny = p.y;
 
-            if (Math.abs(vAspect - iAspect) > 0.01) {
-              if (vAspect > iAspect) {
-                ny = (ny - 0.5) * (iAspect / vAspect) + 0.5;
-              } else {
-                nx = (nx - 0.5) * (vAspect / iAspect) + 0.5;
-              }
+          if (Math.abs(vAspect - iAspect) > 0.01) {
+            if (vAspect > iAspect) {
+              ny = (ny - 0.5) * (iAspect / vAspect) + 0.5;
+            } else {
+              nx = (nx - 0.5) * (vAspect / iAspect) + 0.5;
             }
+          }
 
-            return { x: nx * img.width, y: ny * img.height };
-          });
-        }
+          return { x: nx * img.width, y: ny * img.height };
+        });
+      }
 
-        if (!corners) {
-          corners = await detectCornersOnImage(img);
-        }
-        // noinspection ES6MissingAwait
-        addPage(img, corners);
-      };
+      if (!corners) {
+        corners = await detectCornersOnImage(img);
+      }
+      // noinspection ES6MissingAwait
+      addPage(img, blob, corners);
     }
   });
 
@@ -555,19 +581,28 @@ export default function init(payload?: SharedFilesPayload) {
     }
   });
 
+  /** Ensure the editor canvas has the clean processed output (no overlay). */
+  function prepareCanvasForExport() {
+    const page = pages[currentPageIndex];
+    if (!page) return;
+    canvas.width = page.processedCanvas.width;
+    canvas.height = page.processedCanvas.height;
+    ctx.drawImage(page.processedCanvas, 0, 0);
+  }
+
   btnDownload.addEventListener('click', async () => {
-    enterFilterMode();
+    prepareCanvasForExport();
     await downloadCanvasAsImage(canvas, `scanned-page-${currentPageIndex + 1}.jpg`, 'jpg', 0.9);
   });
 
   btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(pages));
 
   btnImageClipboard.addEventListener('click', async () => {
-    enterFilterMode();
+    prepareCanvasForExport();
     await copyCanvasToClipboard(canvas, 'jpg', 0.9);
   });
 
-  pageList.addEventListener('click', (e) => {
+  pageList.addEventListener('click', async (e) => {
     const removeBtn = (e.target as HTMLElement).closest('.btn-remove-page') as HTMLElement;
     if (removeBtn) {
       const index = parseInt(removeBtn.dataset.index!);
@@ -578,6 +613,8 @@ export default function init(payload?: SharedFilesPayload) {
         btnReset.click();
       } else {
         if (currentPageIndex >= pages.length) currentPageIndex = pages.length - 1;
+        releaseInactiveImages();
+        await ensureOriginalImage(pages[currentPageIndex]);
         renderPageList();
         enterFilterMode();
       }

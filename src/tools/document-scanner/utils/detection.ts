@@ -150,6 +150,8 @@ export function releaseBuffers() {
   }
   freeBuffers();
   pendingRequests.clear();
+  workerDetectionInFlight = false;
+  requestIdCounter = 0;
 }
 
 /**

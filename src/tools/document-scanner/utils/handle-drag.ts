@@ -108,7 +108,7 @@ export function createHandleDrag(deps: HandleDragDeps): HandleDrag {
     } else {
       magPoint = page.corners[activeHandle];
     }
-    updateMagnifier(canvas, page.originalImage, magnifier, magnifierCanvas, mCtx, magPoint);
+    updateMagnifier(canvas, page.originalImage!, magnifier, magnifierCanvas, mCtx, magPoint);
   }
 
   function onEnd(e: PointerEvent) {
@@ -146,7 +146,7 @@ export function createHandleDrag(deps: HandleDragDeps): HandleDrag {
     magnifier.classList.remove('hidden');
 
     const page = getPage();
-    if (!page) return;
+    if (!page || !page.originalImage) return;
 
     let magPoint: Point;
     if (isEdge) {

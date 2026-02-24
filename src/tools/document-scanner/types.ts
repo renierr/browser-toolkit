@@ -5,7 +5,12 @@ export type FilterType = (typeof FILTER_OPTIONS)[number];
 
 export interface ScannedPage {
   id: string;
-  originalImage: HTMLImageElement;
+  /** Original image stored as a Blob to avoid holding decoded bitmaps for all pages. */
+  originalBlob: Blob;
+  originalWidth: number;
+  originalHeight: number;
+  /** Lazily decoded image — populated on demand, released when not the active page. */
+  originalImage: HTMLImageElement | null;
   processedCanvas: HTMLCanvasElement;
   /** Cached warp result — invalidated when corners change */
   warpedCanvas: HTMLCanvasElement | null;
