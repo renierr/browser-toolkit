@@ -9,9 +9,6 @@ import {
   capturePhoto,
   switchToNextCamera,
   resetCameraState,
-  getZoomCapabilities,
-  setZoom,
-  tapToFocus,
 } from './utils/camera';
 import { detectCornersOnImage, releaseBuffers } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
@@ -30,6 +27,7 @@ import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts'
 import { showProgress, showMessage, hideProgress } from '../../js/ui.ts';
 import { createLiveDetectionLoop } from './utils/live-detection-loop';
 import { createHandleDrag } from './utils/handle-drag';
+import { createCameraGestures } from './utils/camera-gestures';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -508,108 +506,14 @@ export default function init(payload?: SharedFilesPayload) {
     btnSwitch.classList.remove('btn-disabled');
   });
 
-  // --- Tap-to-focus ---
+  // --- Camera Gestures (tap-to-focus, pinch-to-zoom) ---
 
-  let focusRingTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function showFocusRing(clientX: number, clientY: number) {
-    // Position focus ring relative to camera-view
-    const viewRect = cameraView.getBoundingClientRect();
-    focusRing.style.left = `${clientX - viewRect.left - 32}px`;
-    focusRing.style.top = `${clientY - viewRect.top - 32}px`;
-    focusRing.classList.remove('hidden');
-
-    // Re-trigger animation by cloning the inner div
-    const inner = focusRing.firstElementChild as HTMLElement;
-    const clone = inner.cloneNode(true) as HTMLElement;
-    inner.replaceWith(clone);
-
-    if (focusRingTimer) clearTimeout(focusRingTimer);
-    focusRingTimer = setTimeout(() => focusRing.classList.add('hidden'), 700);
-  }
-
-  video.addEventListener('click', async (e) => {
-    if (!stream) return;
-
-    // Convert click position to normalized video coordinates (0..1)
-    const rect = video.getBoundingClientRect();
-    const videoW = video.videoWidth;
-    const videoH = video.videoHeight;
-
-    // Account for object-contain: calculate the displayed video area within the element
-    const elemAspect = rect.width / rect.height;
-    const vidAspect = videoW / videoH;
-
-    let displayX: number, displayY: number;
-    let displayW: number, displayH: number;
-
-    if (vidAspect > elemAspect) {
-      // Video wider than element → letterboxed top/bottom
-      displayW = rect.width;
-      displayH = rect.width / vidAspect;
-      displayX = 0;
-      displayY = (rect.height - displayH) / 2;
-    } else {
-      // Video taller than element → pillarboxed left/right
-      displayH = rect.height;
-      displayW = rect.height * vidAspect;
-      displayX = (rect.width - displayW) / 2;
-      displayY = 0;
-    }
-
-    const relX = e.clientX - rect.left - displayX;
-    const relY = e.clientY - rect.top - displayY;
-
-    // Check if click is within the video display area
-    if (relX < 0 || relX > displayW || relY < 0 || relY > displayH) return;
-
-    const normX = relX / displayW;
-    const normY = relY / displayH;
-
-    showFocusRing(e.clientX, e.clientY);
-    await tapToFocus(stream, normX, normY);
+  const cameraGestures = createCameraGestures({
+    video, cameraView, focusRing, zoomIndicator,
+    getStream: () => stream,
+    getZoom: () => currentZoom,
+    setCurrentZoom: (z) => { currentZoom = z; },
   });
-
-  // --- Pinch-to-zoom ---
-
-  let pinchStartDist = 0;
-  let pinchStartZoom = 1;
-  let zoomHideTimer: ReturnType<typeof setTimeout> | null = null;
-
-  function showZoomLevel(zoom: number) {
-    zoomIndicator.textContent = `${zoom.toFixed(1)}×`;
-    zoomIndicator.classList.remove('hidden');
-    if (zoomHideTimer) clearTimeout(zoomHideTimer);
-    zoomHideTimer = setTimeout(() => zoomIndicator.classList.add('hidden'), 1500);
-  }
-
-  function getPinchDistance(touches: TouchList): number {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  video.addEventListener('touchstart', (e) => {
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      pinchStartDist = getPinchDistance(e.touches);
-      pinchStartZoom = currentZoom;
-    }
-  }, { passive: false });
-
-  video.addEventListener('touchmove', async (e) => {
-    if (e.touches.length === 2 && stream) {
-      e.preventDefault();
-      const dist = getPinchDistance(e.touches);
-      const scale = dist / pinchStartDist;
-      const zoomCaps = getZoomCapabilities(stream);
-      if (!zoomCaps.supported) return;
-
-      const newZoom = Math.max(zoomCaps.min, Math.min(zoomCaps.max, pinchStartZoom * scale));
-      currentZoom = await setZoom(stream, newZoom);
-      showZoomLevel(currentZoom);
-    }
-  }, { passive: false });
 
   btnFlash.addEventListener('click', async () => {
     isFlashOn = !isFlashOn;
@@ -762,6 +666,7 @@ export default function init(payload?: SharedFilesPayload) {
     releaseBuffers();
     liveDetection.destroy();
     handleDrag.destroy();
+    cameraGestures.destroy();
     resetCameraState();
     resetUiState();
     stopCamera();
