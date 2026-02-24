@@ -11,6 +11,11 @@ function getOverlayCtx(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
   return overlayCtxCache.ctx;
 }
 
+/** Release cached references. Call on tool cleanup / destroy. */
+export function resetUiState() {
+  overlayCtxCache = null;
+}
+
 export function drawLiveOverlay(
   canvas: HTMLCanvasElement,
   corners: Point[] | null,

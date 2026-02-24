@@ -16,6 +16,7 @@ import {
   drawPerspectiveOverlay,
   updateCornerHandles,
   renderPageList as renderPageListUtil,
+  resetUiState,
 } from './utils/ui';
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
@@ -608,6 +609,7 @@ export default function init(payload?: SharedFilesPayload) {
     liveDetection.destroy();
     handleDrag.destroy();
     resetCameraState();
+    resetUiState();
     stopCamera();
     cornerHistory.clear();
     resizeObserver.disconnect();
