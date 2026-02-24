@@ -116,8 +116,8 @@ export default function init(payload?: SharedFilesPayload) {
   // Auto-snap countdown state
   let countdownValue = 0; // 0 = not counting, 3/2/1 = active countdown
   let countdownTimerId: ReturnType<typeof setInterval> | null = null;
-  // Frames of stability needed before countdown starts (~3s at ~15fps detection rate)
-  const STABLE_FRAMES_BEFORE_COUNTDOWN = 45;
+  // Frames of stability needed before countdown starts (~1.3s at ~15fps detection rate)
+  const STABLE_FRAMES_BEFORE_COUNTDOWN = 20;
 
   function lerpPoint(a: Point, b: Point, t: number): Point {
     return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };

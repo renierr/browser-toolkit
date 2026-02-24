@@ -44,9 +44,9 @@ function logTiming(timing: PerformanceTiming) {
   console.log(
     `%c[Scanner Perf]%c ${timing.resolution} | Total: ${fmt(timing.total)} | ` +
     `gray ${fmt(timing.grayscale)} blur ${fmt(timing.blur)} sobel ${fmt(timing.sobel)} ` +
-    `nms ${fmt(timing.nms)} hyst ${fmt(timing.hysteresis)} dilate ${fmt(timing.dilate)} ` +
-    `contour ${fmt(timing.contours)} quad ${fmt(timing.quadSearch)} | ` +
-    `${timing.contourCount} contours, score ${timing.bestScore.toFixed(3)}`,
+    `nms ${fmt(timing.nms)} hyst ${fmt(timing.hysteresis)} morph ${fmt(timing.morphClose)} ` +
+    `contour ${fmt(timing.contours)} hough ${fmt(timing.hough)} | ` +
+    `${timing.contourCount} contours, score ${timing.bestScore.toFixed(3)}, winner: ${timing.winner}`,
     'color: #4fc3f7; font-weight: bold',
     'color: inherit'
   );

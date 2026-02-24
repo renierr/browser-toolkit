@@ -2,11 +2,11 @@
  * Pure image-processing kernels for document detection.
  * No DOM, no Worker/SW APIs — can be imported from anywhere.
  *
- * Detection strategy:
- *   1. Grayscale → adaptive threshold → Canny-style edges
- *   2. Contour tracing on edge map
- *   3. Douglas-Peucker polygon approximation → keep quadrilaterals
- *   4. Score quads by area, convexity, aspect ratio
+ * Detection strategy (dual approach for robustness):
+ *   1. Grayscale → 5×5 Gaussian blur → Canny-style edges
+ *   2. Strategy A: Morphological closing → contour tracing → polygon approx
+ *   3. Strategy B: Hough line transform → best quad from line intersections
+ *   4. Best scored quad from either strategy wins
  *   5. Temporal smoothing with graceful miss handling
  */
 
@@ -22,6 +22,7 @@ let blurBuffer: Uint8Array | null = null;
 let workBuffer: Uint8Array | null = null;
 let tempBuffer: Uint8Array | null = null;
 let edgeDirBuffer: Uint8Array | null = null;
+let morphBuffer: Uint8Array | null = null;
 
 export function ensureBuffers(size: number) {
   if (!grayscaleBuffer || grayscaleBuffer.length !== size) {
@@ -30,6 +31,7 @@ export function ensureBuffers(size: number) {
     workBuffer = new Uint8Array(size);
     tempBuffer = new Uint8Array(size);
     edgeDirBuffer = new Uint8Array(size);
+    morphBuffer = new Uint8Array(size);
   }
 }
 
@@ -39,6 +41,7 @@ export function freeBuffers() {
   workBuffer = null;
   tempBuffer = null;
   edgeDirBuffer = null;
+  morphBuffer = null;
 }
 
 // --- Image Processing Kernels ---
@@ -52,57 +55,42 @@ export function toGrayscale(data: Uint8ClampedArray, out: Uint8Array, size: numb
 
 /**
  * 5×5 Gaussian blur (σ ≈ 1.0), two-pass separable: [1,4,6,4,1]/16
- * Much stronger noise reduction than the old 3-tap blur.
  */
 export function gaussianBlur5x5(pixels: Uint8Array, out: Uint8Array, width: number, height: number): void {
   const temp = tempBuffer!;
 
-  // Horizontal pass: [1,4,6,4,1]/16
   for (let y = 0; y < height; y++) {
     const o = y * width;
     for (let x = 2; x < width - 2; x++) {
       const idx = o + x;
-      temp[idx] = (
-        pixels[idx - 2] + 4 * pixels[idx - 1] + 6 * pixels[idx] + 4 * pixels[idx + 1] + pixels[idx + 2]
-      ) >> 4;
+      temp[idx] = (pixels[idx - 2] + 4 * pixels[idx - 1] + 6 * pixels[idx] + 4 * pixels[idx + 1] + pixels[idx + 2]) >> 4;
     }
-    // Handle edges
     temp[o] = pixels[o];
     temp[o + 1] = pixels[o + 1];
     temp[o + width - 2] = pixels[o + width - 2];
     temp[o + width - 1] = pixels[o + width - 1];
   }
 
-  // Vertical pass: [1,4,6,4,1]/16
   const w2 = width * 2;
   for (let y = 2; y < height - 2; y++) {
     const o = y * width;
     for (let x = 0; x < width; x++) {
       const idx = o + x;
-      out[idx] = (
-        temp[idx - w2] + 4 * temp[idx - width] + 6 * temp[idx] + 4 * temp[idx + width] + temp[idx + w2]
-      ) >> 4;
+      out[idx] = (temp[idx - w2] + 4 * temp[idx - width] + 6 * temp[idx] + 4 * temp[idx + width] + temp[idx + w2]) >> 4;
     }
   }
-  // Handle top/bottom edges
-  for (let y = 0; y < 2; y++) {
+  for (let y = 0; y < 2; y++)
     for (let x = 0; x < width; x++) out[y * width + x] = temp[y * width + x];
-  }
-  for (let y = height - 2; y < height; y++) {
+  for (let y = height - 2; y < height; y++)
     for (let x = 0; x < width; x++) out[y * width + x] = temp[y * width + x];
-  }
 }
 
 /**
- * Sobel edge detection that also stores gradient direction (quantized to 4 directions).
- * Returns max edge magnitude.
+ * Sobel edge detection with gradient direction (quantized to 4 directions).
  */
 export function applySobelWithDirection(
-  input: Uint8Array,
-  magOut: Uint8Array,
-  dirOut: Uint8Array,
-  width: number,
-  height: number
+  input: Uint8Array, magOut: Uint8Array, dirOut: Uint8Array,
+  width: number, height: number
 ): number {
   let maxEdge = 0;
   for (let y = 1; y < height - 1; y++) {
@@ -122,232 +110,146 @@ export function applySobelWithDirection(
       magOut[idx] = mag > 255 ? 255 : mag;
       if (mag > maxEdge) maxEdge = mag;
 
-      // Quantize gradient direction to 0(→), 1(↗), 2(↑), 3(↖)
-      // Uses |gx| vs |gy| comparison instead of atan2 (much faster).
-      // tan(22.5°) ≈ 0.414, tan(67.5°) ≈ 2.414
-      // If |gy| < 0.414*|gx| → horizontal (0)
-      // If |gy| > 2.414*|gx| → vertical (2)
-      // Else diagonal → sign determines 1 vs 3
       const agx = Math.abs(gx);
       const agy = Math.abs(gy);
-      // Multiply instead of divide: agy < 0.414*agx ↔ agy*1000 < 414*agx
-      if (agy * 1000 < 414 * agx) {
-        dirOut[idx] = 0; // horizontal
-      } else if (agy * 1000 > 2414 * agx) {
-        dirOut[idx] = 2; // vertical
-      } else {
-        // Diagonal: same-sign = ↗(1), opposite-sign = ↖(3)
-        dirOut[idx] = ((gx > 0) === (gy > 0)) ? 1 : 3;
-      }
+      if (agy * 1000 < 414 * agx) dirOut[idx] = 0;
+      else if (agy * 1000 > 2414 * agx) dirOut[idx] = 2;
+      else dirOut[idx] = ((gx > 0) === (gy > 0)) ? 1 : 3;
     }
   }
   return maxEdge;
 }
 
-/**
- * Non-Maximum Suppression: thin edges to 1-pixel width.
- * Only keeps pixels that are local maxima along the gradient direction.
- */
 function nonMaxSuppression(
-  mag: Uint8Array,
-  dir: Uint8Array,
-  out: Uint8Array,
-  width: number,
-  height: number
+  mag: Uint8Array, dir: Uint8Array, out: Uint8Array,
+  width: number, height: number
 ) {
   out.fill(0);
-  // Direction offsets: 0(→), 1(↗), 2(↑), 3(↖)
   const dx = [1, 1, 0, -1];
   const dy = [0, -1, -1, -1];
-
   for (let y = 1; y < height - 1; y++) {
     const o = y * width;
     for (let x = 1; x < width - 1; x++) {
       const idx = o + x;
       const m = mag[idx];
       if (m === 0) continue;
-
       const d = dir[idx];
       const n1 = mag[(y + dy[d]) * width + (x + dx[d])];
       const n2 = mag[(y - dy[d]) * width + (x - dx[d])];
-
       out[idx] = (m >= n1 && m >= n2) ? m : 0;
     }
   }
 }
 
-/**
- * Hysteresis thresholding: strong edges (>high) are kept, weak edges (>low)
- * are kept only if connected to a strong edge.
- * Uses stack-based flood fill for O(n) performance.
- */
 function hysteresisThreshold(
-  nms: Uint8Array,
-  out: Uint8Array,
-  width: number,
-  _height: number,
-  low: number,
-  high: number
+  nms: Uint8Array, out: Uint8Array, width: number,
+  low: number, high: number
 ) {
   out.fill(0);
-  const STRONG = 255;
-
-  // Collect strong edge pixels as seeds
   const stack: number[] = [];
   for (let i = 0; i < nms.length; i++) {
-    if (nms[i] >= high) {
-      out[i] = STRONG;
-      stack.push(i);
-    }
+    if (nms[i] >= high) { out[i] = 255; stack.push(i); }
   }
-
-  // Flood fill: propagate from strong edges to connected weak edges
-  const neighborOffsets = [
-    -width - 1, -width, -width + 1,
-    -1, 1,
-    width - 1, width, width + 1,
-  ];
-
+  const offsets = [-width - 1, -width, -width + 1, -1, 1, width - 1, width, width + 1];
   while (stack.length > 0) {
     const idx = stack.pop()!;
-    for (const offset of neighborOffsets) {
+    for (const offset of offsets) {
       const nIdx = idx + offset;
       if (nIdx >= 0 && nIdx < nms.length && out[nIdx] === 0 && nms[nIdx] >= low) {
-        out[nIdx] = STRONG;
+        out[nIdx] = 255;
         stack.push(nIdx);
       }
     }
   }
 }
 
-/**
- * Dilate edges slightly to close small gaps before contour tracing.
- */
-export function dilate(input: Uint8Array, out: Uint8Array, width: number, height: number) {
+function dilate(input: Uint8Array, out: Uint8Array, width: number, height: number) {
   for (let y = 1; y < height - 1; y++) {
     const o = y * width;
     for (let x = 1; x < width - 1; x++) {
       const idx = o + x;
-      out[idx] = Math.max(
-        input[idx],
-        input[idx - width], input[idx + width],
-        input[idx - 1], input[idx + 1]
-      );
+      out[idx] = Math.max(input[idx], input[idx - width], input[idx + width], input[idx - 1], input[idx + 1]);
     }
   }
 }
 
-// --- Contour Tracing ---
+function erode(input: Uint8Array, out: Uint8Array, width: number, height: number) {
+  for (let y = 1; y < height - 1; y++) {
+    const o = y * width;
+    for (let x = 1; x < width - 1; x++) {
+      const idx = o + x;
+      out[idx] = Math.min(input[idx], input[idx - width], input[idx + width], input[idx - 1], input[idx + 1]);
+    }
+  }
+}
 
-/**
- * Simple Moore neighborhood contour tracing.
- * Finds external contours on a binary (0/255) edge image.
- */
+// ==========================================================================
+// Strategy A: Contour-based detection
+// ==========================================================================
+
 function findContours(
-  edge: Uint8Array,
-  width: number,
-  height: number,
-  minLength: number
+  edge: Uint8Array, width: number, height: number, minLength: number
 ): SimplePoint[][] {
-  // Work on a copy so we can mark visited pixels
   const visited = new Uint8Array(edge.length);
   const contours: SimplePoint[][] = [];
-
-  // 8-connected neighbor offsets (clockwise from right)
-  const dx = [1, 1, 0, -1, -1, -1, 0, 1];
-  const dy = [0, 1, 1, 1, 0, -1, -1, -1];
+  const dx8 = [1, 1, 0, -1, -1, -1, 0, 1];
+  const dy8 = [0, 1, 1, 1, 0, -1, -1, -1];
 
   for (let y = 1; y < height - 1; y++) {
     for (let x = 1; x < width - 1; x++) {
       const idx = y * width + x;
       if (edge[idx] === 0 || visited[idx]) continue;
 
-      // Start a new contour
       const contour: SimplePoint[] = [];
-      let cx = x, cy = y;
-      let dir = 0; // start looking right
-
+      let cx = x, cy = y, dir = 0;
       const startX = x, startY = y;
       let steps = 0;
-      const maxSteps = width * height; // safety limit
+      const maxSteps = width * height;
 
       do {
         contour.push({ x: cx, y: cy });
         visited[cy * width + cx] = 1;
-
-        // Look for next edge pixel in Moore neighborhood
-        // Start from (dir + 5) % 8 to prefer continuing along the contour
         let found = false;
         const startDir = (dir + 5) % 8;
         for (let i = 0; i < 8; i++) {
           const d = (startDir + i) % 8;
-          const nx = cx + dx[d];
-          const ny = cy + dy[d];
+          const nx = cx + dx8[d], ny = cy + dy8[d];
           if (nx >= 0 && nx < width && ny >= 0 && ny < height && edge[ny * width + nx] > 0) {
-            cx = nx;
-            cy = ny;
-            dir = d;
-            found = true;
-            break;
+            cx = nx; cy = ny; dir = d; found = true; break;
           }
         }
-
         if (!found) break;
         steps++;
       } while ((cx !== startX || cy !== startY) && steps < maxSteps);
 
-      if (contour.length >= minLength) {
-        contours.push(contour);
-      }
+      if (contour.length >= minLength) contours.push(contour);
     }
   }
-
   return contours;
 }
 
-// --- Polygon Approximation ---
-
-/**
- * Douglas-Peucker algorithm using index ranges to avoid allocations.
- * Collects the indices of kept points into `result`.
- */
 function douglasPeuckerIndices(
-  points: SimplePoint[],
-  start: number,
-  end: number,
-  epsilon: number,
-  result: number[]
+  points: SimplePoint[], start: number, end: number, epsilon: number, result: number[]
 ) {
   if (end - start < 2) return;
-
-  const first = points[start];
-  const last = points[end];
-  const dlx = last.x - first.x;
-  const dly = last.y - first.y;
+  const first = points[start], last = points[end];
+  const dlx = last.x - first.x, dly = last.y - first.y;
   const lineLenSq = dlx * dlx + dly * dly;
-
-  let maxDist = 0;
-  let maxIdx = start;
+  let maxDist = 0, maxIdx = start;
 
   for (let i = start + 1; i < end; i++) {
-    const px = points[i].x - first.x;
-    const py = points[i].y - first.y;
+    const px = points[i].x - first.x, py = points[i].y - first.y;
     let dist: number;
     if (lineLenSq === 0) {
       dist = Math.sqrt(px * px + py * py);
     } else {
       const t = (px * dlx + py * dly) / lineLenSq;
       const tc = t < 0 ? 0 : t > 1 ? 1 : t;
-      const dx = px - tc * dlx;
-      const dy = py - tc * dly;
-      dist = Math.sqrt(dx * dx + dy * dy);
+      const ddx = px - tc * dlx, ddy = py - tc * dly;
+      dist = Math.sqrt(ddx * ddx + ddy * ddy);
     }
-    if (dist > maxDist) {
-      maxDist = dist;
-      maxIdx = i;
-    }
+    if (dist > maxDist) { maxDist = dist; maxIdx = i; }
   }
-
   if (maxDist > epsilon) {
     douglasPeuckerIndices(points, start, maxIdx, epsilon, result);
     result.push(maxIdx);
@@ -355,42 +257,223 @@ function douglasPeuckerIndices(
   }
 }
 
-/**
- * Approximate a contour (accessed via offset for zero-alloc rotation)
- * as a polygon using Douglas-Peucker. Returns 4-point quad or null.
- */
 function approximateQuadFromOffset(
-  contour: SimplePoint[],
-  offset: number,
-  epsilon: number,
-  tempRotated: SimplePoint[]
+  contour: SimplePoint[], offset: number, epsilon: number, tempRotated: SimplePoint[]
 ): SimplePoint[] | null {
   const len = contour.length;
+  for (let i = 0; i < len; i++) tempRotated[i] = contour[(i + offset) % len];
 
-  // Build a rotated view into tempRotated (reuse array)
-  for (let i = 0; i < len; i++) {
-    tempRotated[i] = contour[(i + offset) % len];
-  }
-
-  // Collect simplified point indices
   const indices: number[] = [0];
   douglasPeuckerIndices(tempRotated, 0, len - 1, epsilon, indices);
   indices.push(len - 1);
 
-  // We want exactly 4 or 5 vertices for a quadrilateral
-  if (indices.length === 4 || indices.length === 5) {
-    const count = Math.min(indices.length, 4);
+  if (indices.length >= 4 && indices.length <= 5) {
     const result: SimplePoint[] = [];
-    for (let i = 0; i < count; i++) {
-      result.push(tempRotated[indices[i]]);
-    }
+    for (let i = 0; i < Math.min(indices.length, 4); i++) result.push(tempRotated[indices[i]]);
     return result;
   }
-
   return null;
 }
 
-// --- Quad Scoring & Validation ---
+function findBestQuadFromContours(
+  contours: SimplePoint[][], imageArea: number
+): { corners: SimplePoint[] | null; score: number } {
+  let bestScore = -1;
+  let bestCorners: SimplePoint[] | null = null;
+  let tempRotated: SimplePoint[] = [];
+
+  for (const contour of contours) {
+    let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+    for (const p of contour) {
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const bboxArea = (maxX - minX) * (maxY - minY);
+    if (bboxArea < imageArea * 0.04 || bboxArea > imageArea * 0.98) continue;
+
+    let perimeter = 0;
+    for (let i = 0; i < contour.length; i++) {
+      const next = contour[(i + 1) % contour.length];
+      const ddx = contour[i].x - next.x, ddy = contour[i].y - next.y;
+      perimeter += Math.sqrt(ddx * ddx + ddy * ddy);
+    }
+
+    if (tempRotated.length < contour.length) tempRotated = new Array(contour.length);
+
+    const rotations = [0, contour.length >> 2, contour.length >> 1, (contour.length * 3) >> 2];
+    for (const rot of rotations) {
+      for (const epsFrac of [0.015, 0.02, 0.03, 0.04, 0.05]) {
+        const quad = approximateQuadFromOffset(contour, rot, perimeter * epsFrac, tempRotated);
+        if (!quad) continue;
+        const ordered = orderCorners(quad);
+        const score = scoreQuad(ordered, imageArea);
+        if (score > bestScore) { bestScore = score; bestCorners = ordered; }
+      }
+    }
+  }
+  return { corners: bestCorners, score: bestScore };
+}
+
+// ==========================================================================
+// Strategy B: Hough line detection
+// ==========================================================================
+
+interface HoughLine { rho: number; theta: number; score: number; }
+
+function houghLines(
+  edge: Uint8Array, width: number, height: number
+): HoughLine[] {
+  const thetaRes = Math.PI / 180;
+  const numThetas = 180;
+  const maxRho = Math.sqrt(width * width + height * height);
+  const numRhos = Math.ceil(maxRho) * 2 + 1;
+  const rhoOffset = Math.ceil(maxRho);
+  const accumulator = new Int32Array(numThetas * numRhos);
+
+  const cosTable = new Float32Array(numThetas);
+  const sinTable = new Float32Array(numThetas);
+  for (let t = 0; t < numThetas; t++) {
+    cosTable[t] = Math.cos(t * thetaRes);
+    sinTable[t] = Math.sin(t * thetaRes);
+  }
+
+  // Vote
+  for (let y = 0; y < height; y += 2) {
+    const o = y * width;
+    for (let x = 0; x < width; x += 2) {
+      if (edge[o + x] === 0) continue;
+      for (let t = 0; t < numThetas; t++) {
+        const rho = Math.round(x * cosTable[t] + y * sinTable[t]) + rhoOffset;
+        accumulator[t * numRhos + rho]++;
+      }
+    }
+  }
+
+  // Extract peaks with non-max suppression in 5×5 neighborhood
+  const minVotes = Math.min(width, height) * 0.15;
+  const lines: HoughLine[] = [];
+  const nmsRadius = 3;
+
+  for (let t = 0; t < numThetas; t++) {
+    for (let r = 0; r < numRhos; r++) {
+      const val = accumulator[t * numRhos + r];
+      if (val < minVotes) continue;
+
+      let isMax = true;
+      for (let dt = -nmsRadius; dt <= nmsRadius && isMax; dt++) {
+        for (let dr = -nmsRadius; dr <= nmsRadius; dr++) {
+          if (dt === 0 && dr === 0) continue;
+          const nt = (t + dt + numThetas) % numThetas;
+          const nr = r + dr;
+          if (nr >= 0 && nr < numRhos && accumulator[nt * numRhos + nr] > val) {
+            isMax = false; break;
+          }
+        }
+      }
+      if (isMax) {
+        lines.push({ rho: r - rhoOffset, theta: t * thetaRes, score: val });
+      }
+    }
+  }
+
+  lines.sort((a, b) => b.score - a.score);
+  return lines.slice(0, 40);
+}
+
+function lineIntersect(l1: HoughLine, l2: HoughLine): SimplePoint | null {
+  const det = Math.cos(l1.theta) * Math.sin(l2.theta) - Math.sin(l1.theta) * Math.cos(l2.theta);
+  if (Math.abs(det) < 0.01) return null;
+  return {
+    x: (Math.sin(l2.theta) * l1.rho - Math.sin(l1.theta) * l2.rho) / det,
+    y: (Math.cos(l1.theta) * l2.rho - Math.cos(l2.theta) * l1.rho) / det,
+  };
+}
+
+/**
+ * Given Hough lines, classify into horizontal/vertical groups,
+ * then try all valid pairs of (horizontal, horizontal, vertical, vertical)
+ * to form quads. Score each and return the best.
+ */
+function findBestQuadFromLines(
+  lines: HoughLine[], width: number, height: number
+): { corners: SimplePoint[] | null; score: number } {
+  const imageArea = width * height;
+  const horizontal: HoughLine[] = [];
+  const vertical: HoughLine[] = [];
+
+  for (const l of lines) {
+    const deg = (l.theta * 180) / Math.PI;
+    if (deg > 30 && deg < 150) horizontal.push(l);
+    else vertical.push(l);
+  }
+
+  if (horizontal.length < 2 || vertical.length < 2) return { corners: null, score: -1 };
+
+  // Merge similar lines (within rho tolerance)
+  const mergeLines = (arr: HoughLine[], rhoTol: number): HoughLine[] => {
+    const merged: HoughLine[] = [];
+    const used = new Uint8Array(arr.length);
+    for (let i = 0; i < arr.length; i++) {
+      if (used[i]) continue;
+      let bestLine = arr[i];
+      for (let j = i + 1; j < arr.length; j++) {
+        if (used[j]) continue;
+        if (Math.abs(arr[i].rho - arr[j].rho) < rhoTol && Math.abs(arr[i].theta - arr[j].theta) < 0.15) {
+          used[j] = 1;
+          if (arr[j].score > bestLine.score) bestLine = arr[j];
+        }
+      }
+      merged.push(bestLine);
+    }
+    return merged;
+  };
+
+  const minDim = Math.min(width, height);
+  const hMerged = mergeLines(horizontal, minDim * 0.08);
+  const vMerged = mergeLines(vertical, minDim * 0.08);
+
+  if (hMerged.length < 2 || vMerged.length < 2) return { corners: null, score: -1 };
+
+  let bestScore = -1;
+  let bestCorners: SimplePoint[] | null = null;
+
+  // Try pairs of horizontal lines × pairs of vertical lines
+  const maxH = Math.min(hMerged.length, 6);
+  const maxV = Math.min(vMerged.length, 6);
+
+  for (let hi = 0; hi < maxH; hi++) {
+    for (let hj = hi + 1; hj < maxH; hj++) {
+      for (let vi = 0; vi < maxV; vi++) {
+        for (let vj = vi + 1; vj < maxV; vj++) {
+          const tl = lineIntersect(hMerged[hi], vMerged[vi]);
+          const tr = lineIntersect(hMerged[hi], vMerged[vj]);
+          const br = lineIntersect(hMerged[hj], vMerged[vj]);
+          const bl = lineIntersect(hMerged[hj], vMerged[vi]);
+          if (!tl || !tr || !br || !bl) continue;
+
+          // Check all corners are within image bounds (with margin)
+          const m = minDim * 0.1;
+          const allInBounds = [tl, tr, br, bl].every(
+            p => p.x >= -m && p.x <= width + m && p.y >= -m && p.y <= height + m
+          );
+          if (!allInBounds) continue;
+
+          const ordered = orderCorners([tl, tr, br, bl]);
+          const score = scoreQuad(ordered, imageArea);
+          if (score > bestScore) { bestScore = score; bestCorners = ordered; }
+        }
+      }
+    }
+  }
+
+  return { corners: bestCorners, score: bestScore };
+}
+
+// ==========================================================================
+// Quad Scoring & Utilities
+// ==========================================================================
 
 function quadArea(pts: SimplePoint[]): number {
   const [a, b, c, d] = pts;
@@ -403,39 +486,41 @@ function isConvex(pts: SimplePoint[]): boolean {
   const cross = (a: SimplePoint, b: SimplePoint, c: SimplePoint) =>
     (b.x - a.x) * (c.y - b.y) - (b.y - a.y) * (c.x - b.x);
   const cp = [
-    cross(pts[0], pts[1], pts[2]),
-    cross(pts[1], pts[2], pts[3]),
-    cross(pts[2], pts[3], pts[0]),
-    cross(pts[3], pts[0], pts[1]),
+    cross(pts[0], pts[1], pts[2]), cross(pts[1], pts[2], pts[3]),
+    cross(pts[2], pts[3], pts[0]), cross(pts[3], pts[0], pts[1]),
   ];
-  return cp.every((v) => v > 0) || cp.every((v) => v < 0);
+  return cp.every(v => v > 0) || cp.every(v => v < 0);
 }
 
-/**
- * Order 4 points as: top-left, top-right, bottom-right, bottom-left.
- */
 function orderCorners(pts: SimplePoint[]): SimplePoint[] {
-  // Sort by y, then by x
-  const sorted = [...pts].sort((a, b) => a.y - b.y || a.x - b.x);
-  const top = sorted.slice(0, 2).sort((a, b) => a.x - b.x);
-  const bottom = sorted.slice(2, 4).sort((a, b) => a.x - b.x);
-  return [top[0], top[1], bottom[1], bottom[0]]; // TL, TR, BR, BL
+  // Center-based ordering: compute centroid, then angle from center
+  const cx = (pts[0].x + pts[1].x + pts[2].x + pts[3].x) / 4;
+  const cy = (pts[0].y + pts[1].y + pts[2].y + pts[3].y) / 4;
+  const withAngle = pts.map(p => ({ ...p, angle: Math.atan2(p.y - cy, p.x - cx) }));
+  withAngle.sort((a, b) => a.angle - b.angle);
+  // Now sorted CCW from right. Reorder to TL, TR, BR, BL.
+  // Find top-left: the point in the top-left quadrant (smallest x+y sum)
+  let tlIdx = 0;
+  let minSum = Infinity;
+  for (let i = 0; i < 4; i++) {
+    const s = withAngle[i].x + withAngle[i].y;
+    if (s < minSum) { minSum = s; tlIdx = i; }
+  }
+  const result: SimplePoint[] = [];
+  for (let i = 0; i < 4; i++) {
+    const p = withAngle[(tlIdx + i) % 4];
+    result.push({ x: p.x, y: p.y });
+  }
+  // Should be TL, BL, BR, TR (CCW) — we want TL, TR, BR, BL (CW)
+  return [result[0], result[3], result[2], result[1]];
 }
 
-/**
- * Score a quad candidate. Higher = better document candidate.
- */
 function scoreQuad(pts: SimplePoint[], imageArea: number): number {
   const area = quadArea(pts);
   const areaRatio = area / imageArea;
-
-  // Reject too small or too large
   if (areaRatio < 0.05 || areaRatio > 0.95) return -1;
-
-  // Must be convex
   if (!isConvex(pts)) return -1;
 
-  // Side lengths
   const d01x = pts[1].x - pts[0].x, d01y = pts[1].y - pts[0].y;
   const d12x = pts[2].x - pts[1].x, d12y = pts[2].y - pts[1].y;
   const d23x = pts[3].x - pts[2].x, d23y = pts[3].y - pts[2].y;
@@ -447,18 +532,13 @@ function scoreQuad(pts: SimplePoint[], imageArea: number): number {
     Math.sqrt(d30x * d30x + d30y * d30y),
   ];
 
-  const minSide = Math.min(...sides);
-  const maxSide = Math.max(...sides);
-
-  // Reject very elongated shapes (aspect > 5:1)
+  const minSide = Math.min(sides[0], sides[1], sides[2], sides[3]);
+  const maxSide = Math.max(sides[0], sides[1], sides[2], sides[3]);
   if (minSide < 1 || maxSide / minSide > 5) return -1;
 
-  // Compute interior angles — documents should have angles close to 90°
   let angleScore = 0;
   for (let i = 0; i < 4; i++) {
-    const prev = pts[(i + 3) % 4];
-    const curr = pts[i];
-    const next = pts[(i + 1) % 4];
+    const prev = pts[(i + 3) % 4], curr = pts[i], next = pts[(i + 1) % 4];
     const v1x = prev.x - curr.x, v1y = prev.y - curr.y;
     const v2x = next.x - curr.x, v2y = next.y - curr.y;
     const len1 = Math.sqrt(v1x * v1x + v1y * v1y);
@@ -466,15 +546,11 @@ function scoreQuad(pts: SimplePoint[], imageArea: number): number {
     if (len1 < 1 || len2 < 1) return -1;
     const cosAngle = (v1x * v2x + v1y * v2y) / (len1 * len2);
     const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle))) * (180 / Math.PI);
-    // Ideal angle is 90°, penalize deviation
     angleScore += 1 - Math.min(Math.abs(angle - 90) / 45, 1);
   }
-  angleScore /= 4; // 0 to 1
+  angleScore /= 4;
 
-  // Prefer larger area (documents usually fill a significant portion)
-  const areaScore = Math.min(areaRatio / 0.3, 1); // max at 30%+ of image
-
-  // Opposite sides should be roughly parallel and similar length
+  const areaScore = Math.min(areaRatio / 0.3, 1);
   const topBottom = Math.min(sides[0], sides[2]) / Math.max(sides[0], sides[2]);
   const leftRight = Math.min(sides[1], sides[3]) / Math.max(sides[1], sides[3]);
   const parallelScore = (topBottom + leftRight) / 2;
@@ -491,13 +567,9 @@ let missCount = 0;
 export function smoothCorners(newCorners: SimplePoint[] | null): SimplePoint[] | null {
   if (!newCorners) {
     missCount++;
-    // Allow up to 3 consecutive misses before wiping history (grace period)
-    if (missCount > 3) {
-      history = [];
-    }
-    // If we have history, return last known good position
+    if (missCount > 3) history = [];
     if (history.length > 0) {
-      return [0, 1, 2, 3].map((i) => ({
+      return [0, 1, 2, 3].map(i => ({
         x: history.reduce((sum, h) => sum + h[i].x, 0) / history.length,
         y: history.reduce((sum, h) => sum + h[i].y, 0) / history.length,
       }));
@@ -509,7 +581,7 @@ export function smoothCorners(newCorners: SimplePoint[] | null): SimplePoint[] |
   history.push(newCorners);
   if (history.length > HISTORY_SIZE) history.shift();
 
-  return [0, 1, 2, 3].map((i) => ({
+  return [0, 1, 2, 3].map(i => ({
     x: history.reduce((sum, h) => sum + h[i].x, 0) / history.length,
     y: history.reduce((sum, h) => sum + h[i].y, 0) / history.length,
   }));
@@ -537,12 +609,13 @@ export interface PerformanceTiming {
   sobel: number;
   nms: number;
   hysteresis: number;
-  dilate: number;
+  morphClose: number;
   contours: number;
-  quadSearch: number;
+  hough: number;
   total: number;
   contourCount: number;
   bestScore: number;
+  winner: string;
   resolution: string;
 }
 
@@ -552,18 +625,10 @@ export interface DetectionResult {
   timing?: PerformanceTiming;
 }
 
-// --- Main Detection Pipeline ---
+// ==========================================================================
+// Main Detection Pipeline
+// ==========================================================================
 
-/**
- * Runs the full detection pipeline on raw RGBA pixel data.
- * Pure computation, no DOM access. Safe for Web Workers.
- *
- * Strategy:
- *   1. Grayscale → 5×5 Gaussian blur → Canny edge detection
- *   2. Light dilation to close small gaps
- *   3. Contour tracing → Douglas-Peucker polygon approximation
- *   4. Filter for quadrilaterals, score and pick the best
- */
 export function detectDocumentCorners(
   pixels: Uint8ClampedArray,
   width: number,
@@ -585,11 +650,8 @@ export function detectDocumentCorners(
   if (debug) {
     debugData = {
       grayscale: new Uint8Array(grayscaleBuffer!),
-      blur: new Uint8Array(size),
-      edges: new Uint8Array(size),
-      morph: new Uint8Array(size),
-      width,
-      height,
+      blur: new Uint8Array(size), edges: new Uint8Array(size), morph: new Uint8Array(size),
+      width, height,
     };
   }
 
@@ -608,104 +670,68 @@ export function detectDocumentCorners(
   if (debug) { t.nms = performance.now() - t0; t0 = performance.now(); }
 
   // 5. Hysteresis thresholding (Canny-style)
-  const highThresh = Math.max(30, maxEdge * 0.15);
+  const highThresh = Math.max(25, maxEdge * 0.12);
   const lowThresh = highThresh * 0.4;
-  hysteresisThreshold(tempBuffer!, workBuffer!, width, height, lowThresh, highThresh);
+  hysteresisThreshold(tempBuffer!, workBuffer!, width, lowThresh, highThresh);
   if (debug) { t.hysteresis = performance.now() - t0; t0 = performance.now(); }
 
-  // 6. Light dilation to close small gaps
+  // Save clean Canny output for Hough (before morphological closing)
+  morphBuffer!.set(workBuffer!);
+
+  // 6. Morphological closing (dilate×2 + erode×1) to connect broken edges for contours
   dilate(workBuffer!, tempBuffer!, width, height);
+  dilate(tempBuffer!, workBuffer!, width, height);
+  erode(workBuffer!, tempBuffer!, width, height);
   workBuffer!.set(tempBuffer!);
-  if (debug) { t.dilate = performance.now() - t0; t0 = performance.now(); }
+  if (debug) { t.morphClose = performance.now() - t0; t0 = performance.now(); }
   if (debugData) debugData.morph = new Uint8Array(workBuffer!);
 
-  // 7. Contour tracing
-  const minContourLength = Math.min(width, height) * 0.4;
+  // 7. Strategy A: Contour-based detection (on morphologically closed edges)
+  const minContourLength = Math.min(width, height) * 0.2; // lowered threshold
   const contours = findContours(workBuffer!, width, height, minContourLength);
+  const contourResult = findBestQuadFromContours(contours, width * height);
   if (debug) { t.contours = performance.now() - t0; t0 = performance.now(); }
 
-  // 8. Find best quad from contours
-  const imageArea = width * height;
-  let bestScore = -1;
-  let bestCorners: SimplePoint[] | null = null;
+  // 8. Strategy B: Hough line detection (on clean Canny edges, not morphed)
+  const lines = houghLines(morphBuffer!, width, height);
+  const houghResult = findBestQuadFromLines(lines, width, height);
+  if (debug) { t.hough = performance.now() - t0; }
 
-  // Reusable buffer for rotated contour views
-  let tempRotated: SimplePoint[] = [];
+  // 9. Pick the best result from either strategy
+  let bestCorners: SimplePoint[] | null;
+  let bestScore: number;
+  let winner: string;
 
-  for (const contour of contours) {
-    // Early exit: bounding box area check to skip tiny/huge contours
-    let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
-    for (let i = 0; i < contour.length; i++) {
-      const p = contour[i];
-      if (p.x < minX) minX = p.x;
-      if (p.x > maxX) maxX = p.x;
-      if (p.y < minY) minY = p.y;
-      if (p.y > maxY) maxY = p.y;
-    }
-    const bboxArea = (maxX - minX) * (maxY - minY);
-    if (bboxArea < imageArea * 0.04 || bboxArea > imageArea * 0.98) continue;
-
-    // Compute perimeter once for this contour
-    let perimeter = 0;
-    for (let i = 0; i < contour.length; i++) {
-      const next = contour[(i + 1) % contour.length];
-      const dx = contour[i].x - next.x;
-      const dy = contour[i].y - next.y;
-      perimeter += Math.sqrt(dx * dx + dy * dy);
-    }
-
-    // Ensure temp buffer is big enough
-    if (tempRotated.length < contour.length) {
-      tempRotated = new Array(contour.length);
-    }
-
-    // Try multiple start-point rotations and epsilon values
-    const rotations = [0, contour.length >> 2, contour.length >> 1];
-
-    for (const rot of rotations) {
-      for (const epsFrac of [0.02, 0.03, 0.04, 0.05]) {
-        const epsilon = perimeter * epsFrac;
-        const quad = approximateQuadFromOffset(contour, rot, epsilon, tempRotated);
-        if (!quad) continue;
-
-        const ordered = orderCorners(quad);
-        const score = scoreQuad(ordered, imageArea);
-
-        if (score > bestScore) {
-          bestScore = score;
-          bestCorners = ordered;
-        }
-      }
-    }
+  if (contourResult.score >= houghResult.score && contourResult.score >= 0.3) {
+    bestCorners = contourResult.corners;
+    bestScore = contourResult.score;
+    winner = 'contour';
+  } else if (houghResult.score >= 0.3) {
+    bestCorners = houghResult.corners;
+    bestScore = houghResult.score;
+    winner = 'hough';
+  } else {
+    bestCorners = null;
+    bestScore = Math.max(contourResult.score, houghResult.score);
+    winner = 'none';
   }
 
-  if (debug) { t.quadSearch = performance.now() - t0; }
-
   const timing: PerformanceTiming | undefined = debug ? {
-    grayscale: t.grayscale,
-    blur: t.blur,
-    sobel: t.sobel,
-    nms: t.nms,
-    hysteresis: t.hysteresis,
-    dilate: t.dilate,
-    contours: t.contours,
-    quadSearch: t.quadSearch,
-    total: t.grayscale + t.blur + t.sobel + t.nms + t.hysteresis + t.dilate + t.contours + t.quadSearch,
-    contourCount: contours.length,
-    bestScore,
+    grayscale: t.grayscale, blur: t.blur, sobel: t.sobel, nms: t.nms,
+    hysteresis: t.hysteresis, morphClose: t.morphClose, contours: t.contours,
+    hough: t.hough,
+    total: t.grayscale + t.blur + t.sobel + t.nms + t.hysteresis + t.morphClose + t.contours + t.hough,
+    contourCount: contours.length, bestScore, winner,
     resolution: `${width}×${height}`,
   } : undefined;
 
-  if (!bestCorners || bestScore < 0.3) {
+  if (!bestCorners) {
     return { corners: null, debug: debugData, timing };
   }
 
-  // Normalize to 0-1
-  const normalizedCorners = bestCorners.map((p) => ({
-    x: p.x / width,
-    y: p.y / height,
+  const normalizedCorners = bestCorners.map(p => ({
+    x: p.x / width, y: p.y / height,
   }));
 
   return { corners: normalizedCorners, debug: debugData, timing };
 }
-
