@@ -6,6 +6,17 @@
   <video id="video" class="w-full h-full object-contain" autoplay playsinline style="will-change: transform; transform: translateZ(0);"></video>
   <canvas id="camera-overlay" class="absolute inset-0 pointer-events-none"></canvas>
 
+  <!-- Touch-to-focus indicator -->
+  <div id="focus-ring" class="absolute pointer-events-none hidden z-20">
+    <div class="w-16 h-16 rounded-full border-2 border-white/90 shadow-[0_0_10px_rgba(255,255,255,0.4)]"
+         style="animation: focus-ring-anim 0.6s ease-out forwards;"></div>
+  </div>
+
+  <!-- Zoom level indicator -->
+  <div id="zoom-indicator" class="absolute top-4 left-1/2 -translate-x-1/2 pointer-events-none hidden z-20
+       bg-black/60 backdrop-blur-sm text-white text-sm font-bold px-3 py-1 rounded-full
+       transition-opacity duration-300"></div>
+
   <!-- Guided Lines Overlay -->
   <div id="guided-lines" class="absolute inset-0 pointer-events-none opacity-40">
     <div class="absolute top-1/4 left-0 w-full border-t-2 border-dashed border-white/40"></div>
@@ -307,5 +318,12 @@
 
   .page-card.active {
     @apply ring-4 ring-primary border-primary;
+  }
+
+  @keyframes focus-ring-anim {
+    0% { transform: scale(1.4); opacity: 0; }
+    30% { transform: scale(1); opacity: 1; }
+    70% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(0.85); opacity: 0; }
   }
 </style>

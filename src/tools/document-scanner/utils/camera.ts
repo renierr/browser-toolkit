@@ -226,6 +226,154 @@ export async function toggleTorch(stream: MediaStream | null, enable: boolean): 
   }
 }
 
+// --- Zoom ---
+
+export interface ZoomCapabilities {
+  supported: boolean;
+  min: number;
+  max: number;
+  step: number;
+  current: number;
+}
+
+/** Query the zoom range supported by the current camera track. */
+export function getZoomCapabilities(stream: MediaStream | null): ZoomCapabilities {
+  const none: ZoomCapabilities = { supported: false, min: 1, max: 1, step: 0, current: 1 };
+  if (!stream) return none;
+  const track = stream.getVideoTracks()[0];
+  if (!track) return none;
+
+  try {
+    const caps = track.getCapabilities?.() as any;
+    if (!caps?.zoom) return none;
+    const settings = track.getSettings() as any;
+    return {
+      supported: true,
+      min: caps.zoom.min ?? 1,
+      max: caps.zoom.max ?? 1,
+      step: caps.zoom.step ?? 0.1,
+      current: settings?.zoom ?? caps.zoom.min ?? 1,
+    };
+  } catch {
+    return none;
+  }
+}
+
+/** Set the zoom level on the current camera track. Returns the actual zoom set. */
+export async function setZoom(stream: MediaStream | null, zoom: number): Promise<number> {
+  if (!stream) return 1;
+  const track = stream.getVideoTracks()[0];
+  if (!track) return 1;
+
+  try {
+    const caps = track.getCapabilities?.() as any;
+    if (!caps?.zoom) return 1;
+    const clamped = Math.max(caps.zoom.min, Math.min(caps.zoom.max, zoom));
+    await track.applyConstraints({ advanced: [{ zoom: clamped }] } as any);
+    return clamped;
+  } catch (e) {
+    console.debug('[Zoom] Failed to set zoom:', e);
+    return (track.getSettings() as any)?.zoom ?? 1;
+  }
+}
+
+// --- Focus ---
+
+export interface FocusCapabilities {
+  tapToFocus: boolean;
+  focusModes: string[];
+}
+
+/** Query focus capabilities of the current camera track. */
+export function getFocusCapabilities(stream: MediaStream | null): FocusCapabilities {
+  const none: FocusCapabilities = { tapToFocus: false, focusModes: [] };
+  if (!stream) return none;
+  const track = stream.getVideoTracks()[0];
+  if (!track) return none;
+
+  try {
+    const caps = track.getCapabilities?.() as any;
+    const modes: string[] = caps?.focusMode ?? [];
+    // Tap-to-focus requires 'manual' or 'single-shot' mode + pointOfInterest support
+    // Some devices support pointOfInterest with 'continuous' mode too
+    const hasPointOfInterest = !!caps?.pointOfInterest;
+    const hasSingleShot = modes.includes('single-shot');
+    const hasManual = modes.includes('manual');
+    return {
+      tapToFocus: hasPointOfInterest || hasSingleShot || hasManual,
+      focusModes: modes,
+    };
+  } catch {
+    return none;
+  }
+}
+
+/**
+ * Trigger a tap-to-focus at the given point.
+ * The point is in normalized coordinates (0..1, 0..1) relative to the video frame.
+ * After focusing, switches back to continuous autofocus if supported.
+ */
+export async function tapToFocus(
+  stream: MediaStream | null,
+  normX: number,
+  normY: number
+): Promise<boolean> {
+  if (!stream) return false;
+  const track = stream.getVideoTracks()[0];
+  if (!track || track.readyState !== 'live') return false;
+
+  try {
+    const caps = track.getCapabilities?.() as any;
+
+    // Strategy 1: Use pointOfInterest with single-shot focus (best support on Android Chrome)
+    if (caps?.pointOfInterest) {
+      const constraints: any = {
+        advanced: [{
+          pointOfInterest: { x: normX, y: normY },
+        }],
+      };
+      // Use single-shot if available for a one-time focus lock
+      if (caps?.focusMode?.includes('single-shot')) {
+        constraints.advanced[0].focusMode = 'single-shot';
+      }
+      await track.applyConstraints(constraints);
+      console.debug(`[Focus] Tap-to-focus at (${normX.toFixed(2)}, ${normY.toFixed(2)})`);
+
+      // After 2 seconds, switch back to continuous autofocus
+      setTimeout(async () => {
+        try {
+          if (track.readyState === 'live' && caps?.focusMode?.includes('continuous')) {
+            await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] } as any);
+          }
+        } catch { /* ignore — track may have ended */ }
+      }, 2000);
+
+      return true;
+    }
+
+    // Strategy 2: No pointOfInterest but has single-shot — trigger a re-focus
+    if (caps?.focusMode?.includes('single-shot')) {
+      await track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] } as any);
+      console.debug('[Focus] Triggered single-shot re-focus (no pointOfInterest)');
+
+      setTimeout(async () => {
+        try {
+          if (track.readyState === 'live' && caps?.focusMode?.includes('continuous')) {
+            await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] } as any);
+          }
+        } catch { /* ignore */ }
+      }, 2000);
+
+      return true;
+    }
+
+    return false;
+  } catch (e) {
+    console.debug('[Focus] Tap-to-focus failed:', e);
+    return false;
+  }
+}
+
 // --- Photo Capture ---
 
 export async function capturePhoto(
