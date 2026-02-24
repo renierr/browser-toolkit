@@ -47,7 +47,6 @@ export default function init(payload?: SharedFilesPayload) {
   const btnCapture = document.getElementById('btn-capture')!;
   const btnSwitch = document.getElementById('btn-switch-camera')!;
   const btnFlash = document.getElementById('btn-flash')!;
-  const btnRotate = document.getElementById('btn-rotate-view')!;
   const btnReset = document.getElementById('btn-reset')!;
   const btnDownload = document.getElementById('btn-download')!;
   const btnDownloadPdf = document.getElementById('btn-download-pdf')!;
@@ -81,7 +80,6 @@ export default function init(payload?: SharedFilesPayload) {
   // --- State ---
 
   let stream: MediaStream | null = null;
-  let isPortrait = false;
   let pages: ScannedPage[] = [];
   let currentPageIndex: number = -1;
   let isFilterMode = false;
@@ -201,7 +199,7 @@ export default function init(payload?: SharedFilesPayload) {
     cameraView.classList.remove('hidden');
     cameraControls.classList.remove('hidden');
 
-    stream = await startCameraUtil(video, 'environment', stream, isPortrait);
+    stream = await startCameraUtil(video, 'environment', stream);
 
     // Fire-and-forget: torch check has retries/delays, don't block camera start
     // noinspection ES6MissingAwait
@@ -484,7 +482,7 @@ export default function init(payload?: SharedFilesPayload) {
     // Stop live detection before switching (stale video dimensions)
     liveDetection.stop();
 
-    const newStream = await switchToNextCamera(video, stream, isPortrait);
+    const newStream = await switchToNextCamera(video, stream);
     if (newStream && newStream !== stream) {
       stream = newStream;
       // noinspection ES6MissingAwait
@@ -501,11 +499,6 @@ export default function init(payload?: SharedFilesPayload) {
 
     isSwitchingCamera = false;
     btnSwitch.classList.remove('btn-disabled');
-  });
-
-  btnRotate.addEventListener('click', async () => {
-    isPortrait = !isPortrait;
-    await startCamera();
   });
 
   btnFlash.addEventListener('click', async () => {

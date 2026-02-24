@@ -54,26 +54,26 @@ export async function startCamera(
   videoEl: HTMLVideoElement,
   facingMode: 'user' | 'environment',
   prevStream: MediaStream | null,
-  isPortrait: boolean = true,
   deviceId?: string
 ): Promise<MediaStream | null> {
   if (prevStream) {
     prevStream.getTracks().forEach((t) => t.stop());
   }
   try {
-    // Build constraints: prefer deviceId if provided, otherwise use facingMode
+    // Build constraints: prefer deviceId if provided, otherwise use facingMode.
+    // Request high resolution without orientation bias — the device/browser
+    // handles sensor orientation naturally, and object-contain fits the preview.
     const videoConstraints: MediaTrackConstraints = deviceId
       ? {
           deviceId: { exact: deviceId },
-          width: { ideal: isPortrait ? 1080 : 1920 },
-          height: { ideal: isPortrait ? 1920 : 1080 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
           frameRate: { ideal: 30, max: 60 },
         }
       : {
           facingMode,
-          width: { ideal: isPortrait ? 1080 : 1920 },
-          height: { ideal: isPortrait ? 1920 : 1080 },
-          aspectRatio: { ideal: isPortrait ? 9 / 16 : 16 / 9 },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
           frameRate: { ideal: 30, max: 60 },
         };
 
@@ -119,8 +119,7 @@ export async function startCamera(
  */
 export async function switchToNextCamera(
   videoEl: HTMLVideoElement,
-  prevStream: MediaStream | null,
-  isPortrait: boolean = true
+  prevStream: MediaStream | null
 ): Promise<MediaStream | null> {
   if (videoDevices.length <= 1) {
     // Only one camera, nothing to switch to
@@ -133,7 +132,7 @@ export async function switchToNextCamera(
 
   console.debug(`[Camera] Switching to device ${nextIdx + 1}/${videoDevices.length}: ${nextDevice.label || nextDevice.deviceId}`);
 
-  return startCamera(videoEl, 'environment', prevStream, isPortrait, nextDevice.deviceId);
+  return startCamera(videoEl, 'environment', prevStream, nextDevice.deviceId);
 }
 
 export function stopCamera(prevStream: MediaStream | null): null {
