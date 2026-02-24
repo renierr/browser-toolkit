@@ -13,6 +13,7 @@ import {
   calculateLiveDetection,
   releaseBuffers,
   isStable,
+  resetDetectionHistory,
 } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import {
@@ -158,6 +159,8 @@ export default function init(payload?: SharedFilesPayload) {
   function startLiveDetection() {
     if (detectionFrameId) return; // Already running
 
+    let detectingInProgress = false;
+
     const loop = () => {
       // 1. Check if we should stop
       if (video.paused || video.ended || !checkLiveDetection.checked) {
@@ -167,56 +170,65 @@ export default function init(payload?: SharedFilesPayload) {
 
       // Throttle detection to every 4th frame (approx. 15fps on 60fps screen)
       detectionFrameCounter++;
-      if (detectionFrameCounter % 4 === 0) {
-        // 2. Run the detection logic
-        const result = calculateLiveDetection(
+      if (detectionFrameCounter % 4 === 0 && !detectingInProgress) {
+        detectingInProgress = true;
+
+        // 2. Run the detection logic (async — offloaded to SW)
+        calculateLiveDetection(
           video,
           detectionCanvas,
           dCtx,
           cameraOverlay,
           isDebugMode
-        );
+        ).then((result) => {
+          detectingInProgress = false;
 
-        if (isDebugMode) {
-          console.log(
-            `[Scanner Debug] Frame ${detectionFrameCounter} | Stable: ${stableCount} | Found: ${result?.upscaled ? 'yes' : 'no'}`
-          );
-          if (result && result.lastDetectedCorners) {
+          // result is null when SW detection is still in-flight (frame skipped)
+          if (result === null) return;
+
+          if (isDebugMode) {
             console.log(
-              '[Scanner Debug] Corners:',
-              result.lastDetectedCorners
-                .map((p) => `(${p.x.toFixed(3)}, ${p.y.toFixed(3)})`)
-                .join(', ')
+              `[Scanner Debug] Frame ${detectionFrameCounter} | Stable: ${stableCount} | Found: ${result?.upscaled ? 'yes' : 'no'}`
             );
+            if (result.lastDetectedCorners) {
+              console.log(
+                '[Scanner Debug] Corners:',
+                result.lastDetectedCorners
+                  .map((p) => `(${p.x.toFixed(3)}, ${p.y.toFixed(3)})`)
+                  .join(', ')
+              );
+            }
           }
-        }
 
-        if (result && result.upscaled) {
-          // 3. AUTO-SNAP LOGIC: Check stability
-          if (isStable(lastResult, result.lastDetectedCorners)) {
-            stableCount++;
+          if (result.upscaled) {
+            // 3. AUTO-SNAP LOGIC: Check stability
+            if (isStable(lastResult, result.lastDetectedCorners)) {
+              stableCount++;
+            } else {
+              stableCount = 0;
+            }
+            lastResult = result.lastDetectedCorners;
+
+            // 4. Update UI color based on stability
+            // Yellow means "Hold still!"; Green means "Found document"
+            const color = stableCount > 4 ? '#FFD700' : '#00FF00';
+            drawLiveOverlay(cameraOverlay, result.upscaled, color);
+
+            // 5. Trigger Auto-Snap after ~1.5 seconds of stability
+            // 23 detections at 15fps = ~1.5s
+            if (stableCount > 23 && !isDebugMode) {
+              stableCount = 0;
+              handleAutoCapture();
+            }
           } else {
+            // Clear overlay if nothing is found
+            const oCtx = cameraOverlay.getContext('2d');
+            if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
             stableCount = 0;
           }
-          lastResult = result.lastDetectedCorners;
-
-          // 4. Update UI color based on stability
-          // Yellow means "Hold still!"; Green means "Found document"
-          const color = stableCount > 4 ? '#FFD700' : '#00FF00';
-          drawLiveOverlay(cameraOverlay, result.upscaled, color);
-
-          // 5. Trigger Auto-Snap after ~1.5 seconds of stability
-          // 23 detections at 15fps = ~1.5s
-          if (stableCount > 23 && !isDebugMode) {
-            stableCount = 0;
-            handleAutoCapture();
-          }
-        } else {
-          // Clear overlay if nothing is found
-          const oCtx = cameraOverlay.getContext('2d');
-          if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
-          stableCount = 0;
-        }
+        }).catch(() => {
+          detectingInProgress = false;
+        });
       }
 
       // 6. Schedule next frame
@@ -231,6 +243,7 @@ export default function init(payload?: SharedFilesPayload) {
       cancelAnimationFrame(detectionFrameId);
       detectionFrameId = null;
     }
+    resetDetectionHistory();
     const oCtx = cameraOverlay.getContext('2d');
     if (oCtx) oCtx.clearRect(0, 0, cameraOverlay.width, cameraOverlay.height);
   }
@@ -259,7 +272,7 @@ export default function init(payload?: SharedFilesPayload) {
     if (blob) {
       const img = new Image();
       img.src = URL.createObjectURL(blob);
-      img.onload = () => {
+      img.onload = async () => {
         let corners: Point[] | null = null;
         if (liveCorners) {
           const vAspect = video.videoWidth / video.videoHeight;
@@ -286,7 +299,7 @@ export default function init(payload?: SharedFilesPayload) {
         }
 
         if (!corners) {
-          corners = detectCornersOnImage(img);
+          corners = await detectCornersOnImage(img);
         }
 
         addPage(img, corners);
@@ -322,14 +335,14 @@ export default function init(payload?: SharedFilesPayload) {
 
   // --- Page Management ---
 
-  function addPage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
+  async function addPage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
     const pCanvas = sourceToCanvas(img);
 
     let initialCorners: Point[];
     if (detectedCorners) {
       initialCorners = detectedCorners;
     } else {
-      const detected = detectCornersOnImage(img);
+      const detected = await detectCornersOnImage(img);
       initialCorners = detected || [
         { x: 0, y: 0 },
         { x: img.width, y: 0 },
