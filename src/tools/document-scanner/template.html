@@ -81,15 +81,15 @@
 
         <div class="flex items-center gap-4 pointer-events-auto bg-base-100/60 backdrop-blur-md p-1 rounded-full shadow-2xl border border-white/20">
           <div class="flex gap-2 w-24 justify-end">
-            <button id="btn-switch-camera" class="btn btn-ghost btn-circle" title="Switch Camera">
+            <button id="btn-switch-camera" class="btn btn-ghost btn-circle" title="Switch Camera" aria-label="Switch Camera">
               <i data-lucide="switch-camera" class="w-6 h-6"></i>
             </button>
-            <button id="btn-flash" class="btn btn-ghost btn-circle hidden" title="Toggle Flash">
+            <button id="btn-flash" class="btn btn-ghost btn-circle hidden" title="Toggle Flash" aria-label="Toggle Flash">
               <i data-lucide="zap" class="w-6 h-6"></i>
             </button>
           </div>
           <div class="relative">
-            <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg" title="Capture">
+            <button id="btn-capture" class="btn btn-primary btn-circle btn-lg shadow-lg" title="Capture" aria-label="Capture photo">
               <i data-lucide="camera" class="w-8 h-8"></i>
             </button>
             <div id="auto-snap-countdown" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -99,10 +99,10 @@
             </div>
           </div>
           <div class="flex gap-2 w-24 justify-start">
-            <button id="btn-rotate-view" class="btn btn-ghost btn-circle" title="Toggle Orientation">
+            <button id="btn-rotate-view" class="btn btn-ghost btn-circle" title="Toggle Orientation" aria-label="Toggle Orientation">
               <i data-lucide="rotate-cw" class="w-6 h-6"></i>
             </button>
-            <button id="btn-stop-scan" class="btn btn-ghost btn-circle" title="Stop Scanning">
+            <button id="btn-stop-scan" class="btn btn-ghost btn-circle" title="Stop Scanning" aria-label="Stop Scanning">
               <i data-lucide="x" class="w-6 h-6"></i>
             </button>
           </div>
@@ -199,18 +199,18 @@
           <span class="text-[10px] uppercase font-bold opacity-50">Fine Tune Selected Corner</span>
           <div class="grid grid-cols-3 gap-1">
             <div class="w-8"></div>
-            <button id="btn-nudge-up" class="btn btn-sm btn-square btn-outline">
+            <button id="btn-nudge-up" class="btn btn-sm btn-square btn-outline" aria-label="Nudge corner up">
               <i data-lucide="chevron-up" class="w-4 h-4"></i>
             </button>
             <div class="w-8"></div>
 
-            <button id="btn-nudge-left" class="btn btn-sm btn-square btn-outline">
+            <button id="btn-nudge-left" class="btn btn-sm btn-square btn-outline" aria-label="Nudge corner left">
               <i data-lucide="chevron-left" class="w-4 h-4"></i>
             </button>
-            <button id="btn-nudge-down" class="btn btn-sm btn-square btn-outline">
+            <button id="btn-nudge-down" class="btn btn-sm btn-square btn-outline" aria-label="Nudge corner down">
               <i data-lucide="chevron-down" class="w-4 h-4"></i>
             </button>
-            <button id="btn-nudge-right" class="btn btn-sm btn-square btn-outline">
+            <button id="btn-nudge-right" class="btn btn-sm btn-square btn-outline" aria-label="Nudge corner right">
               <i data-lucide="chevron-right" class="w-4 h-4"></i>
             </button>
           </div>

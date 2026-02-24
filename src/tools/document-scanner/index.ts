@@ -235,40 +235,46 @@ export default function init(payload?: SharedFilesPayload) {
 
   async function addPage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
     showProgress('Detecting document...');
-    const pCanvas = sourceToCanvas(img);
+    try {
+      const pCanvas = sourceToCanvas(img);
 
-    let initialCorners: Point[];
-    if (detectedCorners) {
-      initialCorners = detectedCorners;
-    } else {
-      const detected = await detectCornersOnImage(img);
-      initialCorners = detected || [
-        { x: 0, y: 0 },
-        { x: img.width, y: 0 },
-        { x: img.width, y: img.height },
-        { x: 0, y: img.height },
-      ];
+      let initialCorners: Point[];
+      if (detectedCorners) {
+        initialCorners = detectedCorners;
+      } else {
+        const detected = await detectCornersOnImage(img);
+        initialCorners = detected || [
+          { x: 0, y: 0 },
+          { x: img.width, y: 0 },
+          { x: img.width, y: img.height },
+          { x: 0, y: img.height },
+        ];
+      }
+
+      pages.push({
+        id: crypto.randomUUID(),
+        originalImage: img,
+        processedCanvas: pCanvas,
+        warpedCanvas: null,
+        thumbnailUrl: null,
+        corners: initialCorners,
+        filter: 'none',
+      });
+      currentPageIndex = pages.length - 1;
+
+      stopCamera();
+      captureContainer.classList.add('hidden');
+      dropzoneContainer.classList.add('hidden');
+      editorContainer.classList.remove('hidden');
+
+      renderPageList();
+      enterPerspectiveMode();
+    } catch (error) {
+      console.error('Failed to add page:', error);
+      showMessage('Failed to process image.', { type: 'alert', timeoutMs: 5000 });
+    } finally {
+      hideProgress();
     }
-
-    pages.push({
-      id: crypto.randomUUID(),
-      originalImage: img,
-      processedCanvas: pCanvas,
-      warpedCanvas: null,
-      thumbnailUrl: null,
-      corners: initialCorners,
-      filter: 'none',
-    });
-    currentPageIndex = pages.length - 1;
-
-    stopCamera();
-    captureContainer.classList.add('hidden');
-    dropzoneContainer.classList.add('hidden');
-    editorContainer.classList.remove('hidden');
-
-    hideProgress();
-    renderPageList();
-    enterPerspectiveMode();
   }
 
   function renderPageList() {
@@ -449,6 +455,9 @@ export default function init(payload?: SharedFilesPayload) {
     isSwitchingCamera = true;
     btnSwitch.classList.add('btn-disabled');
 
+    // Stop live detection before switching (stale video dimensions)
+    liveDetection.stop();
+
     const newStream = await switchToNextCamera(video, stream, isPortrait);
     if (newStream && newStream !== stream) {
       stream = newStream;
@@ -457,6 +466,11 @@ export default function init(payload?: SharedFilesPayload) {
       showMessage('Camera switched', { type: 'info', timeoutMs: 1500 });
     } else if (newStream === stream) {
       showMessage('No other camera available', { type: 'info', timeoutMs: 2000 });
+    }
+
+    // Restart live detection with the new video feed
+    if (checkLiveDetection.checked) {
+      liveDetection.start();
     }
 
     isSwitchingCamera = false;
