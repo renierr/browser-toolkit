@@ -130,9 +130,6 @@ importers:
 
   src/tools/qr-scanner:
     dependencies:
-      barcode-detector:
-        specifier: ^3.1.0
-        version: 3.1.0(@types/emscripten@1.41.5)
       zxing-wasm:
         specifier: ^3.0.0
         version: 3.0.0(@types/emscripten@1.41.5)
@@ -1693,9 +1690,6 @@ packages:
 
   balanced-match@1.0.2:
     resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
-
-  barcode-detector@3.1.0:
-    resolution: {integrity: sha512-aQjGxrgsb/WTlw6pHZwFRO6NhFMhwHGEkd0pzV25fBn8dnRA1PA1G7bLeAzvSea646S/96nW5W3jD8wezQZ1vQ==}
 
   base64-arraybuffer@1.0.2:
     resolution: {integrity: sha512-I3yl4r9QB5ZRY3XuJVEPfc2XhZO6YweFPI+UovAzn+8/hb3oJ6lnysaFcjVpkCPfVWFUDvoZ8kmVDP7WyRtYtQ==}
@@ -4938,12 +4932,6 @@ snapshots:
       - supports-color
 
   balanced-match@1.0.2: {}
-
-  barcode-detector@3.1.0(@types/emscripten@1.41.5):
-    dependencies:
-      zxing-wasm: 3.0.0(@types/emscripten@1.41.5)
-    transitivePeerDependencies:
-      - '@types/emscripten'
 
   base64-arraybuffer@1.0.2:
     optional: true

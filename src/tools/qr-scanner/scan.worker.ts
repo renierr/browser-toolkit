@@ -1,38 +1,33 @@
 /**
  * Dedicated Web Worker for QR / barcode scanning.
  *
- * The main insight: jsQR is decent at decoding *clean* QR images but
- * terrible with noisy / blurry / unevenly-lit camera input. A phone's
- * camera app succeeds because the ISP applies hardware sharpening, HDR,
- * and noise reduction before the decoder ever sees the frame.
- *
- * We replicate that with a multi-strategy preprocessing pipeline:
- *
- *   1. Raw — try unmodified pixels (works for clean images)
- *   2. Sharpen — 3×3 unsharp-mask kernel to counteract camera blur
- *   3. Adaptive threshold — local mean threshold handles uneven lighting
- *   4. Sharpen + adaptive threshold — combined
- *   5. Global Otsu binarization — fallback for uniform lighting
- *
- * For live camera frames we try strategies 1-3 (fast path, ~15-25 ms).
- * For uploaded images we try all 5 at multiple scales.
- *
- * All processing operates on a grayscale buffer to halve memory and
- * computation, then writes back to RGBA for jsQR.
+ * Tries the native BarcodeDetector API first (hardware-accelerated, fast).
+ * If that fails or isn't available, falls back to the robust zxing-wasm
+ * C++ engine with the `tryHarder` option enabled, which excels at finding
+ * codes in low-light, blurry, and high-noise environments without the need
+ * for manual destructive preprocessing like blurring or adaptive thresholding.
  */
-import {
-  BarcodeDetector as BarcodeDetectorPonyfill,
-  prepareZXingModule,
-} from 'barcode-detector/ponyfill';
+import { readBarcodes, prepareZXingModule } from 'zxing-wasm/reader';
 import zxingWasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
 import type { WorkerInMessage, WorkerOutMessage, DebugImage } from './worker-protocol';
 
-// ── BarcodeDetector (Native or Polyfill) ───────────────────────────────
+// ── Initialization ───────────────────────────────────────────────────────
 
-let detector: any = null;
-let providerName: 'native' | 'wasm' = 'wasm';
+// noinspection JSUnusedGlobalSymbols
+prepareZXingModule({
+  overrides: {
+    locateFile: (path: string, prefix: string) => {
+      if (path.endsWith('.wasm')) {
+        return zxingWasmUrl;
+      }
+      return prefix + path;
+    },
+  },
+});
 
-// Initialize detector (prefer native, fallback to WASM ponyfill)
+let nativeDetector: any = null;
+
+// Initialize native detector
 (async () => {
   try {
     if ('BarcodeDetector' in self) {
@@ -40,37 +35,11 @@ let providerName: 'native' | 'wasm' = 'wasm';
       const formats = await BarcodeDetector.getSupportedFormats();
       if (formats.length > 0) {
         // @ts-ignore
-        detector = new BarcodeDetector({ formats });
-        providerName = 'native';
-        return;
+        nativeDetector = new BarcodeDetector({ formats });
       }
     }
   } catch (e) {
-    console.warn('Native BarcodeDetector initialization failed, falling back to WASM:', e);
-  }
-
-  // Fallback to WASM ponyfill
-  try {
-    prepareZXingModule({
-      overrides: {
-        locateFile: (path: string, prefix: string) => {
-          if (path.endsWith('.wasm')) {
-            return zxingWasmUrl;
-          }
-          return prefix + path;
-        },
-      },
-    });
-
-    // @ts-ignore
-    const formats = await BarcodeDetectorPonyfill.getSupportedFormats();
-    if (formats.length > 0) {
-      // @ts-ignore
-      detector = new BarcodeDetectorPonyfill({ formats });
-      providerName = 'wasm';
-    }
-  } catch (e) {
-    console.error('WASM BarcodeDetector initialization failed:', e);
+    console.warn('Native BarcodeDetector initialization failed in worker:', e);
   }
 })();
 
@@ -134,91 +103,6 @@ function sharpen(src: Uint8Array, w: number, h: number, strength: number = 1.5):
   return dst;
 }
 
-// ── Adaptive threshold (local mean) ────────────────────────────────────
-
-/**
- * Binarize using a local mean threshold. For each pixel, compute the
- * mean of a blockSize×blockSize window and threshold at (mean - C).
- *
- * Uses an integral image for O(1) per-pixel mean computation.
- * This handles shadows, uneven lighting, and glare far better than Otsu.
- */
-function adaptiveThreshold(
-  src: Uint8Array,
-  w: number,
-  h: number,
-  blockSize: number = 25,
-  C: number = 10
-): Uint8Array {
-  const dst = new Uint8Array(src.length);
-  const half = blockSize >> 1;
-
-  // Build integral image (use Float64 to avoid overflow for large images)
-  const integral = new Float64Array((w + 1) * (h + 1));
-  const iw = w + 1;
-  for (let y = 0; y < h; y++) {
-    let rowSum = 0;
-    for (let x = 0; x < w; x++) {
-      rowSum += src[y * w + x];
-      integral[(y + 1) * iw + (x + 1)] = rowSum + integral[y * iw + (x + 1)];
-    }
-  }
-
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      // Window bounds (clamped)
-      const y1 = y - half < 0 ? 0 : y - half;
-      const y2 = y + half >= h ? h - 1 : y + half;
-      const x1 = x - half < 0 ? 0 : x - half;
-      const x2 = x + half >= w ? w - 1 : x + half;
-
-      const count = (y2 - y1 + 1) * (x2 - x1 + 1);
-      const sum =
-        integral[(y2 + 1) * iw + (x2 + 1)] -
-        integral[y1 * iw + (x2 + 1)] -
-        integral[(y2 + 1) * iw + x1] +
-        integral[y1 * iw + x1];
-
-      const mean = sum / count;
-      dst[y * w + x] = src[y * w + x] > mean - C ? 255 : 0;
-    }
-  }
-  return dst;
-}
-
-// ── Global Otsu binarization ───────────────────────────────────────────
-
-function otsuThreshold(src: Uint8Array, w: number, h: number): Uint8Array {
-  const histogram = new Uint32Array(256);
-  const total = w * h;
-  for (let i = 0; i < total; i++) histogram[src[i]]++;
-
-  let sumAll = 0;
-  for (let i = 0; i < 256; i++) sumAll += i * histogram[i];
-
-  let sumBg = 0,
-    wBg = 0,
-    best = 128,
-    bestVar = 0;
-  for (let t = 0; t < 256; t++) {
-    wBg += histogram[t];
-    if (wBg === 0) continue;
-    const wFg = total - wBg;
-    if (wFg === 0) break;
-    sumBg += t * histogram[t];
-    const diff = sumBg / wBg - (sumAll - sumBg) / wFg;
-    const variance = wBg * wFg * diff * diff;
-    if (variance > bestVar) {
-      bestVar = variance;
-      best = t;
-    }
-  }
-
-  const dst = new Uint8Array(total);
-  for (let i = 0; i < total; i++) dst[i] = src[i] >= best ? 255 : 0;
-  return dst;
-}
-
 // ── Contrast stretch ───────────────────────────────────────────────────
 
 /** Stretch grayscale to full 0-255 range (helps low-contrast cameras). */
@@ -238,39 +122,6 @@ function contrastStretch(src: Uint8Array): Uint8Array {
   return dst;
 }
 
-// ── Blur (Low light noise reduction) ───────────────────────────────────
-
-function boxBlur(src: Uint8Array, w: number, h: number): Uint8Array {
-  const dst = new Uint8Array(src.length);
-  // Simple 3x3 box blur, ignoring borders for speed
-  for (let x = 0; x < w; x++) {
-    dst[x] = src[x];
-    dst[(h - 1) * w + x] = src[(h - 1) * w + x];
-  }
-  for (let y = 0; y < h; y++) {
-    dst[y * w] = src[y * w];
-    dst[y * w + w - 1] = src[y * w + w - 1];
-  }
-
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const idx = y * w + x;
-      const sum =
-        src[idx - w - 1] +
-        src[idx - w] +
-        src[idx - w + 1] +
-        src[idx - 1] +
-        src[idx] +
-        src[idx + 1] +
-        src[idx + w - 1] +
-        src[idx + w] +
-        src[idx + w + 1];
-      dst[idx] = sum / 9;
-    }
-  }
-  return dst;
-}
-
 // ── Decoding wrappers ──────────────────────────────────────────────────
 
 interface ScanResult {
@@ -282,44 +133,62 @@ interface ScanResult {
 async function tryDetect(
   rgba: Uint8ClampedArray,
   w: number,
-  h: number
+  h: number,
+  tryHarder: boolean = false
 ): Promise<ScanResult | null> {
-  if (!detector) return null;
-  try {
-    // @ts-ignore
-    const imageData = new ImageData(rgba, w, h);
+  // 1. Try native first (fastest)
+  if (nativeDetector) {
+    try {
+      // @ts-ignore
+      const imageData = new ImageData(rgba, w, h);
+      // @ts-ignore
+      const barcodes = await nativeDetector.detect(imageData);
+      if (barcodes.length > 0) {
+        return { data: barcodes[0].rawValue, format: barcodes[0].format, provider: 'native' };
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
 
-    // @ts-ignore
-    const barcodes = await detector.detect(imageData);
-    if (barcodes.length > 0) {
-      return { data: barcodes[0].rawValue, format: barcodes[0].format, provider: providerName };
+  // 2. Try WASM fallback with zxing-wasm directly
+  try {
+    const imageData = new ImageData(new Uint8ClampedArray(rgba), w, h);
+    const results = await readBarcodes(imageData, {
+      tryHarder,
+      maxNumberOfSymbols: 1,
+    });
+    if (results && results.length > 0) {
+      return {
+        data: results[0].text,
+        format: results[0].format,
+        provider: 'wasm',
+      };
     }
   } catch (e) {
     // ignore
   }
+
   return null;
 }
 
 // ── Scan strategies ────────────────────────────────────────────────────
 
 /**
- * Run multiple preprocessing strategies on a single resolution.
- * Returns as soon as one succeeds.
- *
- * When `full` is true, runs all 5 strategies. Otherwise runs fast 3 only.
+ * We now rely primarily on zxing-wasm's robust internal `tryHarder` option
+ * instead of manually destroying image data via blur/thresholds.
  */
 async function scanWithStrategies(
   rgba: Uint8ClampedArray,
   w: number,
   h: number,
-  full: boolean,
+  _full: boolean,
   debug: boolean = false
 ): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
   const debugImages: DebugImage[] = [];
 
   const addDebug = (name: string, rgbaBuf: Uint8ClampedArray) => {
     if (!debug) return;
-    // We make a copy of the buffer so it can be transferred without affecting our local processing
     debugImages.push({
       name,
       data: new Uint8ClampedArray(rgbaBuf).buffer,
@@ -328,56 +197,29 @@ async function scanWithStrategies(
     });
   };
 
-  // 1. Raw — no processing at all
-  addDebug('Raw', rgba);
-  let d = await tryDetect(rgba, w, h);
+  // 1. Raw image — fast pass (tryHarder: false)
+  addDebug('Raw (Fast)', rgba);
+  let d = await tryDetect(rgba, w, h, false);
   if (d) return { result: d, debugImages };
 
-  // Convert to grayscale once, reuse for all strategies
+  // 2. Raw image — deep scan (tryHarder: true)
+  // This uses zxing's internal advanced binarizers (Hybrid/Global)
+  // which are much smarter than our manual thresholds.
+  d = await tryDetect(rgba, w, h, true);
+  if (d) return { result: d, debugImages };
+
+  //if (!full) return { result: null, debugImages };
+
+  // 3. Fallback: Sharpened image + tryHarder
+  // Sometimes phone lenses are just too soft, sharpening can still help.
   const gray = toGrayscale(rgba, rgba.length);
   const stretched = contrastStretch(gray);
-  if (debug) {
-    addDebug('Grayscale Stretched', grayToRGBA(stretched, w, h));
-  }
-
-  // Helper to check a grayscale buffer with both decoders
-  const checkGray = async (g: Uint8Array, name: string) => {
-    const rgbaBuf = grayToRGBA(g, w, h);
-    addDebug(name, rgbaBuf);
-    const d2 = await tryDetect(rgbaBuf, w, h);
-    return d2;
-  };
-
-  // 2. Sharpen
   const sharp = sharpen(stretched, w, h, 1.5);
-  let res = await checkGray(sharp, 'Sharpen');
-  if (res) return { result: res, debugImages };
+  const sharpRgba = grayToRGBA(sharp, w, h);
 
-  // 3. Adaptive threshold (handles uneven lighting, shadows, glare)
-  const blockBase = Math.max(11, (Math.min(w, h) / 10) | 1);
-  const blockSize = blockBase % 2 === 0 ? blockBase + 1 : blockBase;
-  const adaptive = adaptiveThreshold(stretched, w, h, blockSize, 10);
-
-  res = await checkGray(adaptive, 'Adaptive Threshold');
-  if (res) return { result: res, debugImages };
-
-  // 4. Low Light (Blur + Adaptive) - New for improving low light scans
-  const blurred = boxBlur(stretched, w, h);
-  const blurredAdaptive = adaptiveThreshold(blurred, w, h, blockSize, 5); // lower C for low contrast
-  res = await checkGray(blurredAdaptive, 'Low Light (Blur + Adaptive)');
-  if (res) return { result: res, debugImages };
-
-  if (!full) return { result: null, debugImages };
-
-  // 5. Sharpen + adaptive threshold combined
-  const sharpAdaptive = adaptiveThreshold(sharp, w, h, blockSize, 8);
-  res = await checkGray(sharpAdaptive, 'Sharpen + Adaptive');
-  if (res) return { result: res, debugImages };
-
-  // 6. Global Otsu binarization (works well for uniform lighting)
-  const otsu = otsuThreshold(stretched, w, h);
-  res = await checkGray(otsu, 'Otsu Global');
-  if (res) return { result: res, debugImages };
+  addDebug('Sharpened Grayscale', sharpRgba);
+  d = await tryDetect(sharpRgba, w, h, true);
+  if (d) return { result: d, debugImages };
 
   return { result: null, debugImages };
 }
