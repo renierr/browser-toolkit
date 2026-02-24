@@ -123,16 +123,21 @@ export function applySobelWithDirection(
       if (mag > maxEdge) maxEdge = mag;
 
       // Quantize gradient direction to 0(→), 1(↗), 2(↑), 3(↖)
-      // Direction is perpendicular to the edge
-      if (mag > 0) {
-        const angle = Math.atan2(gy, gx); // -π to π
-        const a = ((angle < 0 ? angle + Math.PI : angle) * 4) / Math.PI; // 0 to 4
-        if (a < 0.5 || a >= 3.5) dirOut[idx] = 0;
-        else if (a < 1.5) dirOut[idx] = 1;
-        else if (a < 2.5) dirOut[idx] = 2;
-        else dirOut[idx] = 3;
+      // Uses |gx| vs |gy| comparison instead of atan2 (much faster).
+      // tan(22.5°) ≈ 0.414, tan(67.5°) ≈ 2.414
+      // If |gy| < 0.414*|gx| → horizontal (0)
+      // If |gy| > 2.414*|gx| → vertical (2)
+      // Else diagonal → sign determines 1 vs 3
+      const agx = Math.abs(gx);
+      const agy = Math.abs(gy);
+      // Multiply instead of divide: agy < 0.414*agx ↔ agy*1000 < 414*agx
+      if (agy * 1000 < 414 * agx) {
+        dirOut[idx] = 0; // horizontal
+      } else if (agy * 1000 > 2414 * agx) {
+        dirOut[idx] = 2; // vertical
       } else {
-        dirOut[idx] = 0;
+        // Diagonal: same-sign = ↗(1), opposite-sign = ↖(3)
+        dirOut[idx] = ((gx > 0) === (gy > 0)) ? 1 : 3;
       }
     }
   }
@@ -303,30 +308,39 @@ function findContours(
 // --- Polygon Approximation ---
 
 /**
- * Douglas-Peucker algorithm: simplify a contour to fewer points.
+ * Douglas-Peucker algorithm using index ranges to avoid allocations.
+ * Collects the indices of kept points into `result`.
  */
-function douglasPeucker(points: SimplePoint[], epsilon: number): SimplePoint[] {
-  if (points.length <= 2) return points;
+function douglasPeuckerIndices(
+  points: SimplePoint[],
+  start: number,
+  end: number,
+  epsilon: number,
+  result: number[]
+) {
+  if (end - start < 2) return;
 
-  // Find the point with maximum distance from the line between first and last
-  const first = points[0];
-  const last = points[points.length - 1];
+  const first = points[start];
+  const last = points[end];
+  const dlx = last.x - first.x;
+  const dly = last.y - first.y;
+  const lineLenSq = dlx * dlx + dly * dly;
 
   let maxDist = 0;
-  let maxIdx = 0;
-  const lineLenSq = (last.x - first.x) ** 2 + (last.y - first.y) ** 2;
+  let maxIdx = start;
 
-  for (let i = 1; i < points.length - 1; i++) {
+  for (let i = start + 1; i < end; i++) {
+    const px = points[i].x - first.x;
+    const py = points[i].y - first.y;
     let dist: number;
     if (lineLenSq === 0) {
-      dist = Math.hypot(points[i].x - first.x, points[i].y - first.y);
+      dist = Math.sqrt(px * px + py * py);
     } else {
-      const t = Math.max(0, Math.min(1,
-        ((points[i].x - first.x) * (last.x - first.x) + (points[i].y - first.y) * (last.y - first.y)) / lineLenSq
-      ));
-      const projX = first.x + t * (last.x - first.x);
-      const projY = first.y + t * (last.y - first.y);
-      dist = Math.hypot(points[i].x - projX, points[i].y - projY);
+      const t = (px * dlx + py * dly) / lineLenSq;
+      const tc = t < 0 ? 0 : t > 1 ? 1 : t;
+      const dx = px - tc * dlx;
+      const dy = py - tc * dly;
+      dist = Math.sqrt(dx * dx + dy * dy);
     }
     if (dist > maxDist) {
       maxDist = dist;
@@ -335,33 +349,42 @@ function douglasPeucker(points: SimplePoint[], epsilon: number): SimplePoint[] {
   }
 
   if (maxDist > epsilon) {
-    const left = douglasPeucker(points.slice(0, maxIdx + 1), epsilon);
-    const right = douglasPeucker(points.slice(maxIdx), epsilon);
-    return left.slice(0, -1).concat(right);
+    douglasPeuckerIndices(points, start, maxIdx, epsilon, result);
+    result.push(maxIdx);
+    douglasPeuckerIndices(points, maxIdx, end, epsilon, result);
   }
-
-  return [first, last];
 }
 
 /**
- * Approximate a closed contour as a polygon using Douglas-Peucker,
- * then check if it has ~4 vertices.
+ * Approximate a contour (accessed via offset for zero-alloc rotation)
+ * as a polygon using Douglas-Peucker. Returns 4-point quad or null.
  */
-function approximateQuad(contour: SimplePoint[], perimeterFraction: number): SimplePoint[] | null {
-  // Calculate perimeter
-  let perimeter = 0;
-  for (let i = 0; i < contour.length; i++) {
-    const next = contour[(i + 1) % contour.length];
-    perimeter += Math.hypot(contour[i].x - next.x, contour[i].y - next.y);
+function approximateQuadFromOffset(
+  contour: SimplePoint[],
+  offset: number,
+  epsilon: number,
+  tempRotated: SimplePoint[]
+): SimplePoint[] | null {
+  const len = contour.length;
+
+  // Build a rotated view into tempRotated (reuse array)
+  for (let i = 0; i < len; i++) {
+    tempRotated[i] = contour[(i + offset) % len];
   }
 
-  const epsilon = perimeter * perimeterFraction;
-  const simplified = douglasPeucker(contour, epsilon);
+  // Collect simplified point indices
+  const indices: number[] = [0];
+  douglasPeuckerIndices(tempRotated, 0, len - 1, epsilon, indices);
+  indices.push(len - 1);
 
-  // We want exactly 4 vertices for a quadrilateral
-  if (simplified.length === 4 || simplified.length === 5) {
-    // If 5 points, the last might be close to first (closed contour artifact)
-    return simplified.length === 5 ? simplified.slice(0, 4) : simplified;
+  // We want exactly 4 or 5 vertices for a quadrilateral
+  if (indices.length === 4 || indices.length === 5) {
+    const count = Math.min(indices.length, 4);
+    const result: SimplePoint[] = [];
+    for (let i = 0; i < count; i++) {
+      result.push(tempRotated[indices[i]]);
+    }
+    return result;
   }
 
   return null;
@@ -413,11 +436,15 @@ function scoreQuad(pts: SimplePoint[], imageArea: number): number {
   if (!isConvex(pts)) return -1;
 
   // Side lengths
+  const d01x = pts[1].x - pts[0].x, d01y = pts[1].y - pts[0].y;
+  const d12x = pts[2].x - pts[1].x, d12y = pts[2].y - pts[1].y;
+  const d23x = pts[3].x - pts[2].x, d23y = pts[3].y - pts[2].y;
+  const d30x = pts[0].x - pts[3].x, d30y = pts[0].y - pts[3].y;
   const sides = [
-    Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y),
-    Math.hypot(pts[2].x - pts[1].x, pts[2].y - pts[1].y),
-    Math.hypot(pts[3].x - pts[2].x, pts[3].y - pts[2].y),
-    Math.hypot(pts[0].x - pts[3].x, pts[0].y - pts[3].y),
+    Math.sqrt(d01x * d01x + d01y * d01y),
+    Math.sqrt(d12x * d12x + d12y * d12y),
+    Math.sqrt(d23x * d23x + d23y * d23y),
+    Math.sqrt(d30x * d30x + d30y * d30y),
   ];
 
   const minSide = Math.min(...sides);
@@ -434,8 +461,8 @@ function scoreQuad(pts: SimplePoint[], imageArea: number): number {
     const next = pts[(i + 1) % 4];
     const v1x = prev.x - curr.x, v1y = prev.y - curr.y;
     const v2x = next.x - curr.x, v2y = next.y - curr.y;
-    const len1 = Math.hypot(v1x, v1y);
-    const len2 = Math.hypot(v2x, v2y);
+    const len1 = Math.sqrt(v1x * v1x + v1y * v1y);
+    const len2 = Math.sqrt(v2x * v2x + v2y * v2y);
     if (len1 < 1 || len2 < 1) return -1;
     const cosAngle = (v1x * v2x + v1y * v2y) / (len1 * len2);
     const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle))) * (180 / Math.PI);
@@ -578,17 +605,43 @@ export function detectDocumentCorners(
   let bestScore = -1;
   let bestCorners: SimplePoint[] | null = null;
 
+  // Reusable buffer for rotated contour views
+  let tempRotated: SimplePoint[] = [];
+
   for (const contour of contours) {
-    // Try multiple epsilon values and start-point rotations for robustness.
-    // Douglas-Peucker is sensitive to the first/last point, so rotating
-    // the contour start gives different simplification results.
-    const rotations = [0, Math.floor(contour.length / 4), Math.floor(contour.length / 2)];
+    // Early exit: bounding box area check to skip tiny/huge contours
+    let minX = Infinity, minY = Infinity, maxX = 0, maxY = 0;
+    for (let i = 0; i < contour.length; i++) {
+      const p = contour[i];
+      if (p.x < minX) minX = p.x;
+      if (p.x > maxX) maxX = p.x;
+      if (p.y < minY) minY = p.y;
+      if (p.y > maxY) maxY = p.y;
+    }
+    const bboxArea = (maxX - minX) * (maxY - minY);
+    if (bboxArea < imageArea * 0.04 || bboxArea > imageArea * 0.98) continue;
+
+    // Compute perimeter once for this contour
+    let perimeter = 0;
+    for (let i = 0; i < contour.length; i++) {
+      const next = contour[(i + 1) % contour.length];
+      const dx = contour[i].x - next.x;
+      const dy = contour[i].y - next.y;
+      perimeter += Math.sqrt(dx * dx + dy * dy);
+    }
+
+    // Ensure temp buffer is big enough
+    if (tempRotated.length < contour.length) {
+      tempRotated = new Array(contour.length);
+    }
+
+    // Try multiple start-point rotations and epsilon values
+    const rotations = [0, contour.length >> 2, contour.length >> 1];
 
     for (const rot of rotations) {
-      const rotated = rot === 0 ? contour : contour.slice(rot).concat(contour.slice(0, rot));
-
       for (const epsFrac of [0.02, 0.03, 0.04, 0.05]) {
-        const quad = approximateQuad(rotated, epsFrac);
+        const epsilon = perimeter * epsFrac;
+        const quad = approximateQuadFromOffset(contour, rot, epsilon, tempRotated);
         if (!quad) continue;
 
         const ordered = orderCorners(quad);
