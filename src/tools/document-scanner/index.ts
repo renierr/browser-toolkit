@@ -561,15 +561,21 @@ export default function init(payload?: SharedFilesPayload) {
       const i1 = activeHandle;
       const i2 = (activeHandle + 1) % 4;
 
+      // Edge 0 (TL→TR) = top, Edge 2 (BR→BL) = bottom → move Y only
+      // Edge 1 (TR→BR) = right, Edge 3 (BL→TL) = left → move X only
+      const isHorizontalEdge = activeHandle === 0 || activeHandle === 2;
+      const constrainedDx = isHorizontalEdge ? 0 : dx;
+      const constrainedDy = isHorizontalEdge ? dy : 0;
+
       page.corners[i1] = constrainPoint(
-        page.corners[i1].x + dx,
-        page.corners[i1].y + dy,
+        page.corners[i1].x + constrainedDx,
+        page.corners[i1].y + constrainedDy,
         canvas.width,
         canvas.height
       );
       page.corners[i2] = constrainPoint(
-        page.corners[i2].x + dx,
-        page.corners[i2].y + dy,
+        page.corners[i2].x + constrainedDx,
+        page.corners[i2].y + constrainedDy,
         canvas.width,
         canvas.height
       );

@@ -243,31 +243,32 @@ export async function calculateLiveDetection(
 
   const lastDetectedCorners = detected;
 
+  // Map normalized (0-1) corners to overlay canvas pixel coordinates.
   const vAspect = vWidth / vHeight;
   const cAspect = cWidth / cHeight;
 
+  let renderW: number, renderH: number, offsetX: number, offsetY: number;
+
+  if (vAspect > cAspect) {
+    // Video is wider than container → pillarboxed (black bars top/bottom...
+    // actually: video fills width, height is smaller → black bars top & bottom)
+    renderW = cWidth;
+    renderH = cWidth / vAspect;
+    offsetX = 0;
+    offsetY = (cHeight - renderH) / 2;
+  } else {
+    // Video is taller than container → letterboxed (black bars left/right)
+    renderH = cHeight;
+    renderW = cHeight * vAspect;
+    offsetX = (cWidth - renderW) / 2;
+    offsetY = 0;
+  }
+
   const upscaled =
-    detected?.map((p) => {
-      const nx = p.x;
-      const ny = p.y;
-      if (vAspect > cAspect) {
-        const visibleWidthAtVideoScale = vHeight * cAspect;
-        const cropX = (vWidth - visibleWidthAtVideoScale) / 2;
-        const vx = nx * vWidth;
-        return {
-          x: ((vx - cropX) / visibleWidthAtVideoScale) * cWidth,
-          y: ny * cHeight,
-        };
-      } else {
-        const visibleHeightAtVideoScale = vWidth / cAspect;
-        const cropY = (vHeight - visibleHeightAtVideoScale) / 2;
-        const vy = ny * vHeight;
-        return {
-          x: nx * cWidth,
-          y: ((vy - cropY) / visibleHeightAtVideoScale) * cHeight,
-        };
-      }
-    }) || null;
+    detected?.map((p) => ({
+      x: offsetX + p.x * renderW,
+      y: offsetY + p.y * renderH,
+    })) || null;
 
   if (cameraOverlay.width !== cWidth || cameraOverlay.height !== cHeight) {
     cameraOverlay.width = cWidth;

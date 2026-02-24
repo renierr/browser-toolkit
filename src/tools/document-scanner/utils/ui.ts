@@ -103,6 +103,9 @@ export function updateCornerHandles(
     for (let i = 0; i < 4; i++) {
       const handle = document.createElement('div');
       handle.className = 'edge-handle';
+      // Edge 0 (TL→TR) = top, Edge 2 (BR→BL) = bottom → Y axis only
+      // Edge 1 (TR→BR) = right, Edge 3 (BL→TL) = left → X axis only
+      handle.dataset.axis = (i === 0 || i === 2) ? 'y' : 'x';
       handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i, true));
       container.appendChild(handle);
     }

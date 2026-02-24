@@ -248,6 +248,20 @@
     box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
   }
 
+  /* Top/bottom edges: vertical movement only */
+  .edge-handle[data-axis="y"] {
+    cursor: ns-resize;
+    width: 44px;
+    height: 22px;
+  }
+
+  /* Left/right edges: horizontal movement only */
+  .edge-handle[data-axis="x"] {
+    cursor: ew-resize;
+    width: 22px;
+    height: 44px;
+  }
+
   .corner-handle::before,
   .corner-handle::after {
     content: '';
