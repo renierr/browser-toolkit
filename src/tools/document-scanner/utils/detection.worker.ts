@@ -40,6 +40,7 @@ self.addEventListener('message', (event: MessageEvent) => {
         };
         transfers.push(gBuf, bBuf, eBuf, mBuf);
       }
+      if (result.timing) msg.timing = result.timing;
       (self as unknown as Worker).postMessage(msg, transfers);
       break;
     }
@@ -61,6 +62,7 @@ self.addEventListener('message', (event: MessageEvent) => {
         };
         transfers.push(gBuf, bBuf, eBuf, mBuf);
       }
+      if (result.timing) msg.timing = result.timing;
       (self as unknown as Worker).postMessage(msg, transfers);
       break;
     }

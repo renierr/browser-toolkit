@@ -5,6 +5,7 @@ import {
   resetHistory as resetHistoryDirect,
   freeBuffers,
   type DebugBuffers,
+  type PerformanceTiming,
 } from './detection-kernels';
 import DetectionWorker from './detection.worker?worker';
 
@@ -38,6 +39,19 @@ function renderDebugBuffers(debug: DebugBuffers) {
   drawToDebugCanvas(debug.morph, debug.width, debug.height, 'debug-morph');
 }
 
+function logTiming(timing: PerformanceTiming) {
+  const fmt = (ms: number) => ms.toFixed(2).padStart(6) + 'ms';
+  console.log(
+    `%c[Scanner Perf]%c ${timing.resolution} | Total: ${fmt(timing.total)} | ` +
+    `gray ${fmt(timing.grayscale)} blur ${fmt(timing.blur)} sobel ${fmt(timing.sobel)} ` +
+    `nms ${fmt(timing.nms)} hyst ${fmt(timing.hysteresis)} dilate ${fmt(timing.dilate)} ` +
+    `contour ${fmt(timing.contours)} quad ${fmt(timing.quadSearch)} | ` +
+    `${timing.contourCount} contours, score ${timing.bestScore.toFixed(3)}`,
+    'color: #4fc3f7; font-weight: bold',
+    'color: inherit'
+  );
+}
+
 /** Reconstruct DebugBuffers from transferred ArrayBuffers received from the worker. */
 function deserializeDebug(raw: { grayscale: ArrayBuffer; blur: ArrayBuffer; edges: ArrayBuffer; morph: ArrayBuffer; width: number; height: number }): DebugBuffers {
   return {
@@ -57,6 +71,7 @@ let worker: Worker | null = null;
 interface WorkerResult {
   corners: Point[] | null;
   debug?: DebugBuffers;
+  timing?: PerformanceTiming;
 }
 
 let pendingRequests = new Map<string, {
@@ -69,13 +84,13 @@ function getWorker(): Worker {
   if (!worker) {
     worker = new DetectionWorker();
     worker.addEventListener('message', (event: MessageEvent) => {
-      const { type, id, corners, debug: rawDebug } = event.data;
+      const { type, id, corners, debug: rawDebug, timing } = event.data;
       if (type === 'detect-result' || type === 'detect-image-result') {
         const pending = pendingRequests.get(id);
         if (pending) {
           pendingRequests.delete(id);
           const debug = rawDebug ? deserializeDebug(rawDebug) : undefined;
-          pending.resolve({ corners, debug });
+          pending.resolve({ corners, debug, timing });
         }
       }
     });
@@ -213,11 +228,13 @@ export async function calculateLiveDetection(
       workerDetectionInFlight = false;
       detected = result.corners;
       if (result.debug) renderDebugBuffers(result.debug);
+      if (result.timing) logTiming(result.timing);
     } catch {
       workerDetectionInFlight = false;
       const result = detectDocumentCorners(imgData.data, dWidth, dHeight, debug);
       detected = smoothCornersDirect(result.corners);
       if (result.debug) renderDebugBuffers(result.debug);
+      if (result.timing) logTiming(result.timing);
     }
   } else {
     // Worker detection already in flight, skip this frame

@@ -531,9 +531,25 @@ export interface DebugBuffers {
   height: number;
 }
 
+export interface PerformanceTiming {
+  grayscale: number;
+  blur: number;
+  sobel: number;
+  nms: number;
+  hysteresis: number;
+  dilate: number;
+  contours: number;
+  quadSearch: number;
+  total: number;
+  contourCount: number;
+  bestScore: number;
+  resolution: string;
+}
+
 export interface DetectionResult {
   corners: SimplePoint[] | null;
   debug?: DebugBuffers;
+  timing?: PerformanceTiming;
 }
 
 // --- Main Detection Pipeline ---
@@ -557,8 +573,13 @@ export function detectDocumentCorners(
   const size = width * height;
   ensureBuffers(size);
 
+  const t: Record<string, number> = {};
+  let t0 = 0;
+  if (debug) t0 = performance.now();
+
   // 1. Grayscale
   toGrayscale(pixels, grayscaleBuffer!, size);
+  if (debug) { t.grayscale = performance.now() - t0; t0 = performance.now(); }
 
   let debugData: DebugBuffers | undefined;
   if (debug) {
@@ -574,31 +595,34 @@ export function detectDocumentCorners(
 
   // 2. 5×5 Gaussian blur
   gaussianBlur5x5(grayscaleBuffer!, blurBuffer!, width, height);
+  if (debug) { t.blur = performance.now() - t0; t0 = performance.now(); }
   if (debugData) debugData.blur = new Uint8Array(blurBuffer!);
 
   // 3. Sobel with gradient direction
   const maxEdge = applySobelWithDirection(blurBuffer!, workBuffer!, edgeDirBuffer!, width, height);
-  // debug-edges: raw Sobel magnitudes (continuous 0-255, shows edge strength)
+  if (debug) { t.sobel = performance.now() - t0; t0 = performance.now(); }
   if (debugData) debugData.edges = new Uint8Array(workBuffer!);
 
   // 4. Non-maximum suppression (thin edges)
   nonMaxSuppression(workBuffer!, edgeDirBuffer!, tempBuffer!, width, height);
+  if (debug) { t.nms = performance.now() - t0; t0 = performance.now(); }
 
   // 5. Hysteresis thresholding (Canny-style)
   const highThresh = Math.max(30, maxEdge * 0.15);
   const lowThresh = highThresh * 0.4;
   hysteresisThreshold(tempBuffer!, workBuffer!, width, height, lowThresh, highThresh);
+  if (debug) { t.hysteresis = performance.now() - t0; t0 = performance.now(); }
 
   // 6. Light dilation to close small gaps
   dilate(workBuffer!, tempBuffer!, width, height);
-  // Copy back
   workBuffer!.set(tempBuffer!);
-  // debug-morph: final binary edges after Canny + dilation (input to contour tracing)
+  if (debug) { t.dilate = performance.now() - t0; t0 = performance.now(); }
   if (debugData) debugData.morph = new Uint8Array(workBuffer!);
 
   // 7. Contour tracing
   const minContourLength = Math.min(width, height) * 0.4;
   const contours = findContours(workBuffer!, width, height, minContourLength);
+  if (debug) { t.contours = performance.now() - t0; t0 = performance.now(); }
 
   // 8. Find best quad from contours
   const imageArea = width * height;
@@ -655,8 +679,25 @@ export function detectDocumentCorners(
     }
   }
 
+  if (debug) { t.quadSearch = performance.now() - t0; }
+
+  const timing: PerformanceTiming | undefined = debug ? {
+    grayscale: t.grayscale,
+    blur: t.blur,
+    sobel: t.sobel,
+    nms: t.nms,
+    hysteresis: t.hysteresis,
+    dilate: t.dilate,
+    contours: t.contours,
+    quadSearch: t.quadSearch,
+    total: t.grayscale + t.blur + t.sobel + t.nms + t.hysteresis + t.dilate + t.contours + t.quadSearch,
+    contourCount: contours.length,
+    bestScore,
+    resolution: `${width}×${height}`,
+  } : undefined;
+
   if (!bestCorners || bestScore < 0.3) {
-    return { corners: null, debug: debugData };
+    return { corners: null, debug: debugData, timing };
   }
 
   // Normalize to 0-1
@@ -665,6 +706,6 @@ export function detectDocumentCorners(
     y: p.y / height,
   }));
 
-  return { corners: normalizedCorners, debug: debugData };
+  return { corners: normalizedCorners, debug: debugData, timing };
 }
 

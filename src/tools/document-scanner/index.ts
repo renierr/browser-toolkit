@@ -186,20 +186,6 @@ export default function init(payload?: SharedFilesPayload) {
           // result is null when SW detection is still in-flight (frame skipped)
           if (result === null) return;
 
-          if (isDebugMode) {
-            console.log(
-              `[Scanner Debug] Frame ${detectionFrameCounter} | Stable: ${stableCount} | Found: ${result?.upscaled ? 'yes' : 'no'}`
-            );
-            if (result.lastDetectedCorners) {
-              console.log(
-                '[Scanner Debug] Corners:',
-                result.lastDetectedCorners
-                  .map((p) => `(${p.x.toFixed(3)}, ${p.y.toFixed(3)})`)
-                  .join(', ')
-              );
-            }
-          }
-
           if (result.upscaled) {
             // 3. AUTO-SNAP LOGIC: Check stability
             if (isStable(lastResult, result.lastDetectedCorners)) {
