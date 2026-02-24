@@ -16,9 +16,14 @@ export async function generateAndDownloadPDF(pages: ScannedPage[]) {
       showProgress(`Processing page ${i + 1} of ${pages.length}...`);
       await yieldToUI();
 
-      const imgData = page.processedCanvas.toDataURL('image/jpeg', 0.9);
-      const response = await fetch(imgData);
-      const imageBytes = await response.arrayBuffer();
+      const blob: Blob = await new Promise((resolve, reject) => {
+        page.processedCanvas.toBlob(
+          (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
+          'image/jpeg',
+          0.9
+        );
+      });
+      const imageBytes = await blob.arrayBuffer();
 
       addImageToPDFDocument(pdfDoc, `Page_${i}`, new Uint8Array(imageBytes));
     }

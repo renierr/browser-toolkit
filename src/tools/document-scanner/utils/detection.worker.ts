@@ -6,63 +6,55 @@ import {
   smoothCorners,
   resetHistory,
   freeBuffers,
+  type DebugBuffers,
+  type PerformanceTiming,
 } from './detection-kernels';
+import type { WorkerInMessage, WorkerOutMessage, SerializedDebug } from './worker-protocol';
 
-// --- Message protocol ---
-// Incoming:
-//   { type: 'detect',       id: string, pixels: ArrayBuffer, width: number, height: number, debug?: boolean }
-//   { type: 'detect-image', id: string, pixels: ArrayBuffer, width: number, height: number, debug?: boolean }
-//   { type: 'reset-history' }
-//   { type: 'release' }
-// Outgoing:
-//   { type: 'detect-result',       id, corners, debug? }
-//   { type: 'detect-image-result', id, corners, debug? }
+/** Build a detection result message with optional debug buffers for transfer. */
+function buildResultMessage(
+  type: WorkerOutMessage['type'],
+  id: string,
+  corners: { x: number; y: number }[] | null,
+  debug: DebugBuffers | undefined,
+  timing: PerformanceTiming | undefined
+): { msg: WorkerOutMessage; transfers: ArrayBuffer[] } {
+  const transfers: ArrayBuffer[] = [];
+  let serializedDebug: SerializedDebug | undefined;
 
-self.addEventListener('message', (event: MessageEvent) => {
-  const { type, id, pixels, width, height, debug } = event.data;
+  if (debug) {
+    const gBuf = debug.grayscale.buffer as ArrayBuffer;
+    const bBuf = debug.blur.buffer as ArrayBuffer;
+    const eBuf = debug.edges.buffer as ArrayBuffer;
+    const mBuf = debug.morph.buffer as ArrayBuffer;
+    serializedDebug = {
+      grayscale: gBuf, blur: bBuf, edges: eBuf, morph: mBuf,
+      width: debug.width, height: debug.height,
+    };
+    transfers.push(gBuf, bBuf, eBuf, mBuf);
+  }
 
-  switch (type) {
+  const msg = { type, id, corners, debug: serializedDebug, timing } as WorkerOutMessage;
+  return { msg, transfers };
+}
+
+self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
+  const data = event.data;
+
+  switch (data.type) {
     case 'detect': {
-      const data = new Uint8ClampedArray(pixels);
-      const result = detectDocumentCorners(data, width, height, debug);
+      const pixels = new Uint8ClampedArray(data.pixels);
+      const result = detectDocumentCorners(pixels, data.width, data.height, data.debug);
       const smoothed = smoothCorners(result.corners);
-      const msg: Record<string, unknown> = { type: 'detect-result', id, corners: smoothed };
-      const transfers: ArrayBuffer[] = [];
-      if (result.debug) {
-        const d = result.debug;
-        const gBuf = d.grayscale.buffer as ArrayBuffer;
-        const bBuf = d.blur.buffer as ArrayBuffer;
-        const eBuf = d.edges.buffer as ArrayBuffer;
-        const mBuf = d.morph.buffer as ArrayBuffer;
-        msg.debug = {
-          grayscale: gBuf, blur: bBuf, edges: eBuf, morph: mBuf,
-          width: d.width, height: d.height,
-        };
-        transfers.push(gBuf, bBuf, eBuf, mBuf);
-      }
-      if (result.timing) msg.timing = result.timing;
+      const { msg, transfers } = buildResultMessage('detect-result', data.id, smoothed, result.debug, result.timing);
       (self as unknown as Worker).postMessage(msg, transfers);
       break;
     }
 
     case 'detect-image': {
-      const data = new Uint8ClampedArray(pixels);
-      const result = detectDocumentCorners(data, width, height, debug);
-      const msg: Record<string, unknown> = { type: 'detect-image-result', id, corners: result.corners };
-      const transfers: ArrayBuffer[] = [];
-      if (result.debug) {
-        const d = result.debug;
-        const gBuf = d.grayscale.buffer as ArrayBuffer;
-        const bBuf = d.blur.buffer as ArrayBuffer;
-        const eBuf = d.edges.buffer as ArrayBuffer;
-        const mBuf = d.morph.buffer as ArrayBuffer;
-        msg.debug = {
-          grayscale: gBuf, blur: bBuf, edges: eBuf, morph: mBuf,
-          width: d.width, height: d.height,
-        };
-        transfers.push(gBuf, bBuf, eBuf, mBuf);
-      }
-      if (result.timing) msg.timing = result.timing;
+      const pixels = new Uint8ClampedArray(data.pixels);
+      const result = detectDocumentCorners(pixels, data.width, data.height, data.debug);
+      const { msg, transfers } = buildResultMessage('detect-image-result', data.id, result.corners, result.debug, result.timing);
       (self as unknown as Worker).postMessage(msg, transfers);
       break;
     }

@@ -5,7 +5,7 @@
  * Detection strategy (dual approach for robustness):
  *   1. Grayscale → 5×5 Gaussian blur → Canny-style edges
  *   2. Strategy A: Morphological closing → contour tracing → polygon approx
- *   3. Strategy B: Hough line transform → best quad from line intersections
+ *   3. Strategy B: Hough line transform → the best quad from line intersections
  *   4. Best scored quad from either strategy wins
  *   5. Temporal smoothing with graceful miss handling
  */
@@ -42,6 +42,8 @@ export function freeBuffers() {
   tempBuffer = null;
   edgeDirBuffer = null;
   morphBuffer = null;
+  houghAccumulator = null;
+  houghAccumulatorSize = 0;
 }
 
 // --- Image Processing Kernels ---
@@ -322,29 +324,41 @@ function findBestQuadFromContours(
 
 interface HoughLine { rho: number; theta: number; score: number; }
 
+// Reusable Hough buffers — allocated once, reused across frames
+const NUM_THETAS = 180;
+const THETA_RES = Math.PI / 180;
+const cosTable = new Float32Array(NUM_THETAS);
+const sinTable = new Float32Array(NUM_THETAS);
+for (let t = 0; t < NUM_THETAS; t++) {
+  cosTable[t] = Math.cos(t * THETA_RES);
+  sinTable[t] = Math.sin(t * THETA_RES);
+}
+let houghAccumulator: Int32Array | null = null;
+let houghAccumulatorSize = 0;
+
 function houghLines(
   edge: Uint8Array, width: number, height: number
 ): HoughLine[] {
-  const thetaRes = Math.PI / 180;
-  const numThetas = 180;
   const maxRho = Math.sqrt(width * width + height * height);
   const numRhos = Math.ceil(maxRho) * 2 + 1;
   const rhoOffset = Math.ceil(maxRho);
-  const accumulator = new Int32Array(numThetas * numRhos);
+  const accSize = NUM_THETAS * numRhos;
 
-  const cosTable = new Float32Array(numThetas);
-  const sinTable = new Float32Array(numThetas);
-  for (let t = 0; t < numThetas; t++) {
-    cosTable[t] = Math.cos(t * thetaRes);
-    sinTable[t] = Math.sin(t * thetaRes);
+  // Reuse accumulator buffer if large enough, otherwise reallocate
+  if (!houghAccumulator || houghAccumulatorSize < accSize) {
+    houghAccumulator = new Int32Array(accSize);
+    houghAccumulatorSize = accSize;
+  } else {
+    houghAccumulator.fill(0, 0, accSize);
   }
+  const accumulator = houghAccumulator;
 
   // Vote
   for (let y = 0; y < height; y += 2) {
     const o = y * width;
     for (let x = 0; x < width; x += 2) {
       if (edge[o + x] === 0) continue;
-      for (let t = 0; t < numThetas; t++) {
+      for (let t = 0; t < NUM_THETAS; t++) {
         const rho = Math.round(x * cosTable[t] + y * sinTable[t]) + rhoOffset;
         accumulator[t * numRhos + rho]++;
       }
@@ -356,7 +370,7 @@ function houghLines(
   const lines: HoughLine[] = [];
   const nmsRadius = 3;
 
-  for (let t = 0; t < numThetas; t++) {
+  for (let t = 0; t < NUM_THETAS; t++) {
     for (let r = 0; r < numRhos; r++) {
       const val = accumulator[t * numRhos + r];
       if (val < minVotes) continue;
@@ -365,7 +379,7 @@ function houghLines(
       for (let dt = -nmsRadius; dt <= nmsRadius && isMax; dt++) {
         for (let dr = -nmsRadius; dr <= nmsRadius; dr++) {
           if (dt === 0 && dr === 0) continue;
-          const nt = (t + dt + numThetas) % numThetas;
+          const nt = (t + dt + NUM_THETAS) % NUM_THETAS;
           const nr = r + dr;
           if (nr >= 0 && nr < numRhos && accumulator[nt * numRhos + nr] > val) {
             isMax = false; break;
@@ -373,7 +387,7 @@ function houghLines(
         }
       }
       if (isMax) {
-        lines.push({ rho: r - rhoOffset, theta: t * thetaRes, score: val });
+        lines.push({ rho: r - rhoOffset, theta: t * THETA_RES, score: val });
       }
     }
   }

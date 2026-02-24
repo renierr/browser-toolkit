@@ -3,6 +3,12 @@
 let videoDevices: MediaDeviceInfo[] = [];
 let currentDeviceIndex = -1;
 
+/** Reset module-level state. Call on tool cleanup / destroy. */
+export function resetCameraState() {
+  videoDevices = [];
+  currentDeviceIndex = -1;
+}
+
 /**
  * Enumerate all video input devices. Must be called after at least one
  * getUserMedia call (otherwise labels are empty on many browsers).

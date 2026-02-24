@@ -8,6 +8,7 @@ import {
   toggleTorch,
   capturePhoto,
   switchToNextCamera,
+  resetCameraState,
 } from './utils/camera';
 import { detectCornersOnImage, releaseBuffers } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
@@ -19,9 +20,10 @@ import {
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
 import { sourceToCanvas } from './utils/canvas';
-import type { ScannedPage } from './types';
+import type { ScannedPage, FilterType } from './types';
 import Sortable from 'sortablejs';
 import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
+import { showProgress, showMessage, hideProgress } from '../../js/ui.ts';
 import { createLiveDetectionLoop } from './utils/live-detection-loop';
 import { createHandleDrag } from './utils/handle-drag';
 
@@ -53,6 +55,7 @@ export default function init(payload?: SharedFilesPayload) {
   const btnApplyPerspective = document.getElementById('btn-apply-perspective')!;
   const btnModePerspective = document.getElementById('btn-mode-perspective')!;
   const btnModeFilter = document.getElementById('btn-mode-filter')!;
+  const btnUndoCorners = document.getElementById('btn-undo-corners')!;
   const filterSelect = document.getElementById('filter-select') as HTMLSelectElement;
   const hintText = document.getElementById('hint-text')!;
   const checkLiveDetection = document.getElementById('check-live-detection') as HTMLInputElement;
@@ -77,7 +80,6 @@ export default function init(payload?: SharedFilesPayload) {
   // --- State ---
 
   let stream: MediaStream | null = null;
-  let currentFacingMode: 'user' | 'environment' = 'environment';
   let isPortrait = false;
   let pages: ScannedPage[] = [];
   let currentPageIndex: number = -1;
@@ -85,10 +87,60 @@ export default function init(payload?: SharedFilesPayload) {
   let stopLevelSensor: (() => void) | null = null;
   let isFlashOn = false;
   let isDebugMode = false;
+  let isSwitchingCamera = false;
+
+  // Undo history: store previous corner states per page
+  const cornerHistory = new Map<string, Point[][]>();
+  const MAX_UNDO_STEPS = 20;
 
   // Live detection canvas (offscreen, used for downscaled detection input)
   const detectionCanvas = document.createElement('canvas');
   const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
+
+  // --- Undo helpers ---
+
+  function pushCornerHistory(page: ScannedPage) {
+    const hist = cornerHistory.get(page.id) || [];
+    hist.push(page.corners.map(p => ({ ...p })));
+    if (hist.length > MAX_UNDO_STEPS) hist.shift();
+    cornerHistory.set(page.id, hist);
+    updateUndoButton();
+  }
+
+  function undoCorners() {
+    const page = pages[currentPageIndex];
+    if (!page) return;
+    const hist = cornerHistory.get(page.id);
+    if (!hist || hist.length === 0) return;
+    page.corners = hist.pop()!;
+    invalidateWarpCache(page);
+    updateUndoButton();
+    updateEditor();
+  }
+
+  function updateUndoButton() {
+    const page = pages[currentPageIndex];
+    const hist = page ? cornerHistory.get(page.id) : null;
+    const hasHistory = hist && hist.length > 0;
+    if (btnUndoCorners) {
+      btnUndoCorners.classList.toggle('btn-disabled', !hasHistory);
+      btnUndoCorners.toggleAttribute('disabled', !hasHistory);
+    }
+  }
+
+  /** Invalidate warp and thumbnail caches when corners change */
+  function invalidateWarpCache(page: ScannedPage) {
+    page.warpedCanvas = null;
+    page.thumbnailUrl = null;
+  }
+
+  /** Get or compute the warped canvas for a page */
+  function getWarpedCanvas(page: ScannedPage): HTMLCanvasElement {
+    if (!page.warpedCanvas) {
+      page.warpedCanvas = warp(page.originalImage, page.corners);
+    }
+    return page.warpedCanvas;
+  }
 
   // --- Handle Drag Setup ---
 
@@ -130,7 +182,7 @@ export default function init(payload?: SharedFilesPayload) {
     cameraView.classList.remove('hidden');
     cameraControls.classList.remove('hidden');
 
-    stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
+    stream = await startCameraUtil(video, 'environment', stream, isPortrait);
 
     // Fire-and-forget: torch check has retries/delays, don't block camera start
     // noinspection ES6MissingAwait
@@ -181,6 +233,7 @@ export default function init(payload?: SharedFilesPayload) {
   // --- Page Management ---
 
   async function addPage(img: HTMLImageElement, detectedCorners: Point[] | null = null) {
+    showProgress('Detecting document...');
     const pCanvas = sourceToCanvas(img);
 
     let initialCorners: Point[];
@@ -200,6 +253,8 @@ export default function init(payload?: SharedFilesPayload) {
       id: crypto.randomUUID(),
       originalImage: img,
       processedCanvas: pCanvas,
+      warpedCanvas: null,
+      thumbnailUrl: null,
       corners: initialCorners,
       filter: 'none',
     });
@@ -210,6 +265,7 @@ export default function init(payload?: SharedFilesPayload) {
     dropzoneContainer.classList.add('hidden');
     editorContainer.classList.remove('hidden');
 
+    hideProgress();
     renderPageList();
     enterPerspectiveMode();
   }
@@ -232,6 +288,7 @@ export default function init(payload?: SharedFilesPayload) {
     perspectiveActions.classList.remove('hidden');
     nudgeControls.classList.remove('hidden');
     hintText.textContent = 'Drag the corners to match the document boundaries.';
+    updateUndoButton();
     updateEditor();
   }
 
@@ -255,13 +312,20 @@ export default function init(payload?: SharedFilesPayload) {
     const page = pages[currentPageIndex];
     if (!page) return;
 
+    // Invalidate warp cache since corners may have changed
+    invalidateWarpCache(page);
+
     canvas.width = page.originalImage.width;
     canvas.height = page.originalImage.height;
     ctx.drawImage(page.originalImage, 0, 0);
 
     if (!isFilterMode) {
       drawPerspectiveOverlay(ctx, page.corners);
-      updateCornerHandles(cornerHandles, page.corners, canvas, handleDrag.onStart);
+      updateCornerHandles(cornerHandles, page.corners, canvas, (e, index, isEdge) => {
+        // Push undo state before the drag starts
+        pushCornerHistory(page);
+        handleDrag.onStart(e, index, isEdge);
+      });
 
       const handles = cornerHandles.querySelectorAll('.corner-handle');
       const selected = handleDrag.getSelectedHandle();
@@ -277,33 +341,45 @@ export default function init(payload?: SharedFilesPayload) {
     const page = pages[currentPageIndex];
     if (!page) return;
 
-    const outCanvas = warp(page.originalImage, page.corners);
-    page.processedCanvas.width = outCanvas.width;
-    page.processedCanvas.height = outCanvas.height;
-    page.processedCanvas.getContext('2d')!.drawImage(outCanvas, 0, 0);
+    showProgress('Applying perspective correction...');
+    // Use setTimeout to allow the progress message to render before blocking
+    setTimeout(() => {
+      const outCanvas = getWarpedCanvas(page);
+      page.processedCanvas.width = outCanvas.width;
+      page.processedCanvas.height = outCanvas.height;
+      page.processedCanvas.getContext('2d')!.drawImage(outCanvas, 0, 0);
+      page.thumbnailUrl = null;
 
-    renderPageList();
-    enterFilterMode();
+      hideProgress();
+      renderPageList();
+      enterFilterMode();
+    }, 10);
   }
 
   function applyFilters() {
     const page = pages[currentPageIndex];
     if (!page) return;
 
-    const filter = filterSelect.value as any;
+    const filter = filterSelect.value as FilterType;
     page.filter = filter;
 
-    const warpedCanvas = warp(page.originalImage, page.corners);
+    // Use cached warp result instead of re-warping every time
+    const warpedCanvas = getWarpedCanvas(page);
     applyFiltersUtil(warpedCanvas, canvas, ctx, filter);
 
     page.processedCanvas.width = canvas.width;
     page.processedCanvas.height = canvas.height;
     page.processedCanvas.getContext('2d')!.drawImage(canvas, 0, 0);
 
+    // Update thumbnail in-place without re-rendering the whole list
+    page.thumbnailUrl = null; // invalidate cache
     const card = pageList.querySelector(`[data-index="${currentPageIndex}"]`);
     if (card) {
       const img = card.querySelector('img');
-      if (img) img.src = page.processedCanvas.toDataURL('image/jpeg', 0.5);
+      if (img) {
+        page.thumbnailUrl = page.processedCanvas.toDataURL('image/jpeg', 0.5);
+        img.src = page.thumbnailUrl;
+      }
     }
   }
 
@@ -361,7 +437,6 @@ export default function init(payload?: SharedFilesPayload) {
         if (!corners) {
           corners = await detectCornersOnImage(img);
         }
-
         // noinspection ES6MissingAwait
         addPage(img, corners);
       };
@@ -369,14 +444,22 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   btnSwitch.addEventListener('click', async () => {
-    // Cycle through all available camera lenses/devices
+    if (isSwitchingCamera) return;
+    isSwitchingCamera = true;
+    btnSwitch.classList.add('btn-disabled');
+
     const newStream = await switchToNextCamera(video, stream, isPortrait);
     if (newStream && newStream !== stream) {
       stream = newStream;
-      // Re-check torch support for the new lens (fire-and-forget)
       // noinspection ES6MissingAwait
       checkAndUpdateTorch();
+      showMessage('Camera switched', { type: 'info', timeoutMs: 1500 });
+    } else if (newStream === stream) {
+      showMessage('No other camera available', { type: 'info', timeoutMs: 2000 });
     }
+
+    isSwitchingCamera = false;
+    btnSwitch.classList.remove('btn-disabled');
   });
 
   btnRotate.addEventListener('click', async () => {
@@ -408,10 +491,30 @@ export default function init(payload?: SharedFilesPayload) {
   btnModeFilter.addEventListener('click', enterFilterMode);
   filterSelect.addEventListener('change', applyFilters);
 
-  btnNudgeUp.addEventListener('click', () => handleDrag.nudge(0, -1));
-  btnNudgeDown.addEventListener('click', () => handleDrag.nudge(0, 1));
-  btnNudgeLeft.addEventListener('click', () => handleDrag.nudge(-1, 0));
-  btnNudgeRight.addEventListener('click', () => handleDrag.nudge(1, 0));
+  if (btnUndoCorners) {
+    btnUndoCorners.addEventListener('click', undoCorners);
+  }
+
+  btnNudgeUp.addEventListener('click', () => {
+    const page = getPage();
+    if (page) pushCornerHistory(page);
+    handleDrag.nudge(0, -1);
+  });
+  btnNudgeDown.addEventListener('click', () => {
+    const page = getPage();
+    if (page) pushCornerHistory(page);
+    handleDrag.nudge(0, 1);
+  });
+  btnNudgeLeft.addEventListener('click', () => {
+    const page = getPage();
+    if (page) pushCornerHistory(page);
+    handleDrag.nudge(-1, 0);
+  });
+  btnNudgeRight.addEventListener('click', () => {
+    const page = getPage();
+    if (page) pushCornerHistory(page);
+    handleDrag.nudge(1, 0);
+  });
 
   btnAddPage.addEventListener('click', async () => {
     captureContainer.classList.remove('hidden');
@@ -427,6 +530,7 @@ export default function init(payload?: SharedFilesPayload) {
       stopCamera();
       pages = [];
       currentPageIndex = -1;
+      cornerHistory.clear();
       captureContainer.classList.remove('hidden');
       editorContainer.classList.add('hidden');
       dropzoneContainer.classList.remove('hidden');
@@ -452,6 +556,8 @@ export default function init(payload?: SharedFilesPayload) {
     const removeBtn = (e.target as HTMLElement).closest('.btn-remove-page') as HTMLElement;
     if (removeBtn) {
       const index = parseInt(removeBtn.dataset.index!);
+      const removedPage = pages[index];
+      if (removedPage) cornerHistory.delete(removedPage.id);
       pages.splice(index, 1);
       if (pages.length === 0) {
         btnReset.click();
@@ -501,7 +607,9 @@ export default function init(payload?: SharedFilesPayload) {
     releaseBuffers();
     liveDetection.destroy();
     handleDrag.destroy();
+    resetCameraState();
     stopCamera();
+    cornerHistory.clear();
     resizeObserver.disconnect();
     sortable.destroy();
   };

@@ -93,8 +93,9 @@
               <i data-lucide="camera" class="w-8 h-8"></i>
             </button>
             <div id="auto-snap-countdown" class="hidden absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div class="absolute inset-0 rounded-full border-4 border-white animate-ping opacity-30"></div>
-              <span id="auto-snap-number" class="text-2xl font-black text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] z-10"></span>
+              <div class="absolute inset-0 rounded-full bg-black/50 animate-ping opacity-40"></div>
+              <div class="absolute inset-0 rounded-full bg-black/40"></div>
+              <span id="auto-snap-number" class="text-3xl font-black text-white z-10" style="text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 2px 6px rgba(0,0,0,0.7), 0 0 20px rgba(59,130,246,0.5);"></span>
             </div>
           </div>
           <div class="flex gap-2 w-24 justify-start">
@@ -185,6 +186,12 @@
       </div>
 
       <div id="perspective-actions" class="flex flex-col items-center gap-4 p-2">
+        <div class="flex gap-2 items-center">
+          <button id="btn-undo-corners" class="btn btn-sm btn-outline btn-disabled" disabled title="Undo corner change">
+            <i data-lucide="undo-2" class="w-4 h-4 mr-1"></i> Undo
+          </button>
+        </div>
+
         <div id="nudge-controls" class="hidden flex flex-col items-center gap-2">
           <span class="text-[10px] uppercase font-bold opacity-50">Fine Tune Selected Corner</span>
           <div class="grid grid-cols-3 gap-1">

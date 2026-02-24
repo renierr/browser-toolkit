@@ -68,6 +68,9 @@ export function warp(
   const srcData = srcCtx.getImageData(0, 0, sourceCanvas.width, sourceCanvas.height);
   const dstData = outCtx.createImageData(width, height);
 
+  const srcW = sourceCanvas.width;
+  const srcH = sourceCanvas.height;
+
   const transform = getPerspectiveTransform(
     [
       { x: 0, y: 0 },
@@ -78,22 +81,59 @@ export function warp(
     corners
   );
 
+  // Extract transform coefficients for direct access
+  const t0 = transform[0],
+    t1 = transform[1],
+    t2 = transform[2];
+  const t3 = transform[3],
+    t4 = transform[4],
+    t5 = transform[5];
+  const t6 = transform[6],
+    t7 = transform[7];
+
+  // Bilinear interpolation with Uint8 component access
+  const srcBytes = srcData.data;
+
   for (let v = 0; v < height; v++) {
+    // Row-level precomputation: terms that only depend on v
+    const rv1 = t1 * v + t2;
+    const rv4 = t4 * v + t5;
+    const rv7 = t7 * v + 1;
+
+    const rowOff = v * width;
+
     for (let u = 0; u < width; u++) {
-      const den = transform[6] * u + transform[7] * v + 1;
-      const x = (transform[0] * u + transform[1] * v + transform[2]) / den;
-      const y = (transform[3] * u + transform[4] * v + transform[5]) / den;
+      const den = t6 * u + rv7;
+      const invDen = 1 / den;
+      const x = (t0 * u + rv1) * invDen;
+      const y = (t3 * u + rv4) * invDen;
 
-      const ix = Math.floor(x);
-      const iy = Math.floor(y);
+      const ix = x | 0; // fast floor for positive numbers
+      const iy = y | 0;
 
-      if (ix >= 0 && ix < sourceCanvas.width - 1 && iy >= 0 && iy < sourceCanvas.height - 1) {
-        const srcIdx = (iy * sourceCanvas.width + ix) * 4;
-        const dstIdx = (v * width + u) * 4;
-        dstData.data[dstIdx] = srcData.data[srcIdx];
-        dstData.data[dstIdx + 1] = srcData.data[srcIdx + 1];
-        dstData.data[dstIdx + 2] = srcData.data[srcIdx + 2];
-        dstData.data[dstIdx + 3] = srcData.data[srcIdx + 3];
+      if (ix >= 0 && ix < srcW - 1 && iy >= 0 && iy < srcH - 1) {
+        const fx = x - ix;
+        const fy = y - iy;
+
+        // Bilinear interpolation
+        const idx00 = (iy * srcW + ix) << 2;
+        const idx10 = idx00 + 4;
+        const idx01 = idx00 + (srcW << 2);
+        const idx11 = idx01 + 4;
+
+        const w00 = (1 - fx) * (1 - fy);
+        const w10 = fx * (1 - fy);
+        const w01 = (1 - fx) * fy;
+        const w11 = fx * fy;
+
+        const dstIdx = (rowOff + u) << 2;
+        dstData.data[dstIdx] =
+          srcBytes[idx00] * w00 + srcBytes[idx10] * w10 + srcBytes[idx01] * w01 + srcBytes[idx11] * w11;
+        dstData.data[dstIdx + 1] =
+          srcBytes[idx00 + 1] * w00 + srcBytes[idx10 + 1] * w10 + srcBytes[idx01 + 1] * w01 + srcBytes[idx11 + 1] * w11;
+        dstData.data[dstIdx + 2] =
+          srcBytes[idx00 + 2] * w00 + srcBytes[idx10 + 2] * w10 + srcBytes[idx01 + 2] * w01 + srcBytes[idx11 + 2] * w11;
+        dstData.data[dstIdx + 3] = 255;
       }
     }
   }

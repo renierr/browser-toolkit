@@ -1,12 +1,22 @@
 import type { Point } from './perspective';
 import type { ScannedPage } from '../types';
 
+// Cache for live overlay canvas context (called at 60fps)
+let overlayCtxCache: { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } | null = null;
+
+function getOverlayCtx(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
+  if (!overlayCtxCache || overlayCtxCache.canvas !== canvas) {
+    overlayCtxCache = { canvas, ctx: canvas.getContext('2d')! };
+  }
+  return overlayCtxCache.ctx;
+}
+
 export function drawLiveOverlay(
   canvas: HTMLCanvasElement,
   corners: Point[] | null,
   color = '#3b82f6'
 ) {
-  const ctx = canvas.getContext('2d')!;
+  const ctx = getOverlayCtx(canvas);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!corners) return;
 
@@ -232,6 +242,11 @@ export function renderPageList(
 ) {
   container.innerHTML = '';
   pages.forEach((page, index) => {
+    // Use cached thumbnail, or generate and cache it
+    if (!page.thumbnailUrl) {
+      page.thumbnailUrl = page.processedCanvas.toDataURL('image/jpeg', 0.5);
+    }
+
     const card = document.createElement('div');
     card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${
       index === currentPageIndex
@@ -241,7 +256,7 @@ export function renderPageList(
     card.dataset.index = index.toString();
 
     const thumb = document.createElement('img');
-    thumb.src = page.processedCanvas.toDataURL('image/jpeg', 0.5);
+    thumb.src = page.thumbnailUrl;
     thumb.className = 'checkerboard-bg w-full h-full object-contain pointer-events-none bg-white';
 
     card.innerHTML = `

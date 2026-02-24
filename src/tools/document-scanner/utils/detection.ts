@@ -7,6 +7,7 @@ import {
   type DebugBuffers,
   type PerformanceTiming,
 } from './detection-kernels';
+import type { WorkerInMessage, WorkerOutMessage, SerializedDebug } from './worker-protocol';
 import DetectionWorker from './detection.worker?worker';
 
 // --- Debug rendering (main thread only — needs DOM) ---
@@ -53,7 +54,7 @@ function logTiming(timing: PerformanceTiming) {
 }
 
 /** Reconstruct DebugBuffers from transferred ArrayBuffers received from the worker. */
-function deserializeDebug(raw: { grayscale: ArrayBuffer; blur: ArrayBuffer; edges: ArrayBuffer; morph: ArrayBuffer; width: number; height: number }): DebugBuffers {
+function deserializeDebug(raw: SerializedDebug): DebugBuffers {
   return {
     grayscale: new Uint8Array(raw.grayscale),
     blur: new Uint8Array(raw.blur),
@@ -83,7 +84,7 @@ let requestIdCounter = 0;
 function getWorker(): Worker {
   if (!worker) {
     worker = new DetectionWorker();
-    worker.addEventListener('message', (event: MessageEvent) => {
+    worker.addEventListener('message', (event: MessageEvent<WorkerOutMessage>) => {
       const { type, id, corners, debug: rawDebug, timing } = event.data;
       if (type === 'detect-result' || type === 'detect-image-result') {
         const pending = pendingRequests.get(id);
@@ -105,7 +106,7 @@ function getWorker(): Worker {
 }
 
 function sendToWorker(
-  type: string,
+  type: 'detect' | 'detect-image',
   pixels: ArrayBuffer,
   width: number,
   height: number,
@@ -117,8 +118,8 @@ function sendToWorker(
 
     try {
       const w = getWorker();
-      // Transfer the pixel buffer for zero-copy performance
-      w.postMessage({ type, id, pixels, width, height, debug }, [pixels]);
+      const msg: WorkerInMessage = { type, id, pixels, width, height, debug };
+      w.postMessage(msg, [pixels]);
     } catch (e) {
       pendingRequests.delete(id);
       reject(e);
@@ -142,7 +143,8 @@ export function isStable(
 
 export function releaseBuffers() {
   if (worker) {
-    worker.postMessage({ type: 'release' });
+    const msg: WorkerInMessage = { type: 'release' };
+    worker.postMessage(msg);
     worker.terminate();
     worker = null;
   }
@@ -283,7 +285,8 @@ export async function calculateLiveDetection(
  */
 export function resetDetectionHistory() {
   if (worker) {
-    worker.postMessage({ type: 'reset-history' });
+    const msg: WorkerInMessage = { type: 'reset-history' };
+    worker.postMessage(msg);
   }
   resetHistoryDirect();
 }
