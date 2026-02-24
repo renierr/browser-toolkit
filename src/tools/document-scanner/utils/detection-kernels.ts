@@ -493,26 +493,28 @@ function isConvex(pts: SimplePoint[]): boolean {
 }
 
 function orderCorners(pts: SimplePoint[]): SimplePoint[] {
-  // Center-based ordering: compute centroid, then angle from center
+  // Center-based ordering: compute centroid, then angle from center.
+  // With screen coords (y-down), ascending atan2 sort gives clockwise order.
   const cx = (pts[0].x + pts[1].x + pts[2].x + pts[3].x) / 4;
   const cy = (pts[0].y + pts[1].y + pts[2].y + pts[3].y) / 4;
   const withAngle = pts.map(p => ({ ...p, angle: Math.atan2(p.y - cy, p.x - cx) }));
   withAngle.sort((a, b) => a.angle - b.angle);
-  // Now sorted CCW from right. Reorder to TL, TR, BR, BL.
-  // Find top-left: the point in the top-left quadrant (smallest x+y sum)
+
+  // Find top-left: the point with the smallest x+y sum
   let tlIdx = 0;
   let minSum = Infinity;
   for (let i = 0; i < 4; i++) {
     const s = withAngle[i].x + withAngle[i].y;
     if (s < minSum) { minSum = s; tlIdx = i; }
   }
+
+  // Starting from TL, clockwise order is: TL, TR, BR, BL
   const result: SimplePoint[] = [];
   for (let i = 0; i < 4; i++) {
     const p = withAngle[(tlIdx + i) % 4];
     result.push({ x: p.x, y: p.y });
   }
-  // Should be TL, BL, BR, TR (CCW) — we want TL, TR, BR, BL (CW)
-  return [result[0], result[3], result[2], result[1]];
+  return result;
 }
 
 function scoreQuad(pts: SimplePoint[], imageArea: number): number {
