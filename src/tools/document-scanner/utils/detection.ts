@@ -5,14 +5,63 @@ import {
   resetHistory as resetHistoryDirect,
   freeBuffers,
   isValidDocument,
+  type DebugBuffers,
 } from './detection-kernels';
 import DetectionWorker from './detection.worker?worker';
+
+// --- Debug rendering (main thread only — needs DOM) ---
+
+function drawToDebugCanvas(pixels: Uint8Array, width: number, height: number, canvasId: string) {
+  const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+  if (!canvas) return;
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const imgData = ctx.createImageData(width, height);
+  for (let i = 0; i < pixels.length; i++) {
+    const i4 = i << 2;
+    const v = pixels[i];
+    imgData.data[i4] = v;
+    imgData.data[i4 + 1] = v;
+    imgData.data[i4 + 2] = v;
+    imgData.data[i4 + 3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+function renderDebugBuffers(debug: DebugBuffers) {
+  drawToDebugCanvas(debug.grayscale, debug.width, debug.height, 'debug-grayscale');
+  drawToDebugCanvas(debug.blur, debug.width, debug.height, 'debug-blur');
+  drawToDebugCanvas(debug.edges, debug.width, debug.height, 'debug-edges');
+  drawToDebugCanvas(debug.morph, debug.width, debug.height, 'debug-morph');
+}
+
+/** Reconstruct DebugBuffers from transferred ArrayBuffers received from the worker. */
+function deserializeDebug(raw: { grayscale: ArrayBuffer; blur: ArrayBuffer; edges: ArrayBuffer; morph: ArrayBuffer; width: number; height: number }): DebugBuffers {
+  return {
+    grayscale: new Uint8Array(raw.grayscale),
+    blur: new Uint8Array(raw.blur),
+    edges: new Uint8Array(raw.edges),
+    morph: new Uint8Array(raw.morph),
+    width: raw.width,
+    height: raw.height,
+  };
+}
 
 // --- Web Worker management ---
 
 let worker: Worker | null = null;
+
+interface WorkerResult {
+  corners: Point[] | null;
+  debug?: DebugBuffers;
+}
+
 let pendingRequests = new Map<string, {
-  resolve: (corners: Point[] | null) => void;
+  resolve: (result: WorkerResult) => void;
   reject: (err: Error) => void;
 }>();
 let requestIdCounter = 0;
@@ -21,17 +70,17 @@ function getWorker(): Worker {
   if (!worker) {
     worker = new DetectionWorker();
     worker.addEventListener('message', (event: MessageEvent) => {
-      const { type, id, corners } = event.data;
+      const { type, id, corners, debug: rawDebug } = event.data;
       if (type === 'detect-result' || type === 'detect-image-result') {
         const pending = pendingRequests.get(id);
         if (pending) {
           pendingRequests.delete(id);
-          pending.resolve(corners);
+          const debug = rawDebug ? deserializeDebug(rawDebug) : undefined;
+          pending.resolve({ corners, debug });
         }
       }
     });
     worker.addEventListener('error', () => {
-      // If the worker fails, reject all pending and fall back
       for (const [, req] of pendingRequests) {
         req.reject(new Error('Worker error'));
       }
@@ -41,7 +90,13 @@ function getWorker(): Worker {
   return worker;
 }
 
-function sendToWorker(type: string, pixels: ArrayBuffer, width: number, height: number): Promise<Point[] | null> {
+function sendToWorker(
+  type: string,
+  pixels: ArrayBuffer,
+  width: number,
+  height: number,
+  debug: boolean
+): Promise<WorkerResult> {
   return new Promise((resolve, reject) => {
     const id = `det-${requestIdCounter++}`;
     pendingRequests.set(id, { resolve, reject });
@@ -49,7 +104,7 @@ function sendToWorker(type: string, pixels: ArrayBuffer, width: number, height: 
     try {
       const w = getWorker();
       // Transfer the pixel buffer for zero-copy performance
-      w.postMessage({ type, id, pixels, width, height }, [pixels]);
+      w.postMessage({ type, id, pixels, width, height, debug }, [pixels]);
     } catch (e) {
       pendingRequests.delete(id);
       reject(e);
@@ -104,15 +159,10 @@ export async function detectCornersOnImage(
   let detected: Point[] | null;
 
   try {
-    detected = await sendToWorker(
-      'detect-image',
-      imgData.data.buffer,
-      w,
-      h
-    );
+    const result = await sendToWorker('detect-image', imgData.data.buffer, w, h, false);
+    detected = result.corners;
   } catch {
-    // Fallback to main thread
-    detected = detectDocumentCorners(imgData.data, w, h);
+    detected = detectDocumentCorners(imgData.data, w, h).corners;
   }
 
   return (
@@ -135,7 +185,7 @@ export async function calculateLiveDetection(
   detectionCanvas: HTMLCanvasElement,
   dCtx: CanvasRenderingContext2D,
   cameraOverlay: HTMLCanvasElement,
-  _debug = false
+  debug = false
 ): Promise<{ lastDetectedCorners: Point[] | null; upscaled: Point[] | null } | null> {
   const vWidth = video.videoWidth;
   const vHeight = video.videoHeight;
@@ -161,18 +211,15 @@ export async function calculateLiveDetection(
   if (!workerDetectionInFlight) {
     try {
       workerDetectionInFlight = true;
-      detected = await sendToWorker(
-        'detect',
-        imgData.data.buffer,
-        dWidth,
-        dHeight
-      );
+      const result = await sendToWorker('detect', imgData.data.buffer, dWidth, dHeight, debug);
       workerDetectionInFlight = false;
+      detected = result.corners;
+      if (result.debug) renderDebugBuffers(result.debug);
     } catch {
       workerDetectionInFlight = false;
-      // Fallback: run on main thread
-      const fallbackDetected = detectDocumentCorners(imgData.data, dWidth, dHeight);
-      detected = smoothCornersDirect(fallbackDetected);
+      const result = detectDocumentCorners(imgData.data, dWidth, dHeight, debug);
+      detected = smoothCornersDirect(result.corners);
+      if (result.debug) renderDebugBuffers(result.debug);
     }
   } else {
     // Worker detection already in flight, skip this frame

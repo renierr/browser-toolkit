@@ -317,25 +317,61 @@ export function resetHistory() {
   history = [];
 }
 
+// --- Debug output ---
+
+export interface DebugBuffers {
+  grayscale: Uint8Array;
+  blur: Uint8Array;
+  edges: Uint8Array;
+  morph: Uint8Array;
+  width: number;
+  height: number;
+}
+
+export interface DetectionResult {
+  corners: SimplePoint[] | null;
+  debug?: DebugBuffers;
+}
+
 // --- Main Detection Pipeline ---
 
 /**
  * Runs the full detection pipeline on raw RGBA pixel data.
  * Pure computation, no DOM access. Safe for Web Workers.
+ *
+ * When `debug` is true, intermediate buffer snapshots are returned
+ * so the caller can render them to debug canvases.
  */
 export function detectDocumentCorners(
   pixels: Uint8ClampedArray,
   width: number,
-  height: number
-): SimplePoint[] | null {
+  height: number,
+  debug = false
+): DetectionResult {
   const size = width * height;
   ensureBuffers(size);
 
   toGrayscale(pixels, grayscaleBuffer!, size);
   contrastStretch(grayscaleBuffer!, size);
+
+  let debugData: DebugBuffers | undefined;
+  if (debug) {
+    // Snapshot after grayscale + contrast stretch (before blur)
+    debugData = {
+      grayscale: new Uint8Array(grayscaleBuffer!),
+      blur: new Uint8Array(size),
+      edges: new Uint8Array(size),
+      morph: new Uint8Array(size),
+      width,
+      height,
+    };
+  }
+
   gaussianBlur(grayscaleBuffer!, blurBuffer!, width, height);
+  if (debugData) debugData.blur = new Uint8Array(blurBuffer!);
 
   const maxEdge = applySobel(blurBuffer!, workBuffer!, width, height);
+  if (debugData) debugData.edges = new Uint8Array(workBuffer!);
 
   // Morphological closing with multiple passes for stronger connectivity
   dilate(workBuffer!, blurBuffer!, width, height);
@@ -344,15 +380,17 @@ export function detectDocumentCorners(
   erode(blurBuffer!, workBuffer!, width, height);
   erode(workBuffer!, blurBuffer!, width, height);
   erode(blurBuffer!, workBuffer!, width, height);
+  if (debugData) debugData.morph = new Uint8Array(workBuffer!);
 
   const corners = houghLineTransform(workBuffer!, width, height, maxEdge);
-  if (!corners) return null;
+  if (!corners) return { corners: null, debug: debugData };
 
   const normalizedCorners = corners.map((p) => ({
     x: p.x / width,
     y: p.y / height,
   }));
 
-  return isValidDocument(normalizedCorners) ? normalizedCorners : null;
+  const valid = isValidDocument(normalizedCorners) ? normalizedCorners : null;
+  return { corners: valid, debug: debugData };
 }
 

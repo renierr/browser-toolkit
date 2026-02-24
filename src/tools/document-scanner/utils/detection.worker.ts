@@ -10,32 +10,58 @@ import {
 
 // --- Message protocol ---
 // Incoming:
-//   { type: 'detect',       id: string, pixels: ArrayBuffer, width: number, height: number }
-//   { type: 'detect-image', id: string, pixels: ArrayBuffer, width: number, height: number }
+//   { type: 'detect',       id: string, pixels: ArrayBuffer, width: number, height: number, debug?: boolean }
+//   { type: 'detect-image', id: string, pixels: ArrayBuffer, width: number, height: number, debug?: boolean }
 //   { type: 'reset-history' }
 //   { type: 'release' }
 // Outgoing:
-//   { type: 'detect-result',       id: string, corners: SimplePoint[] | null }
-//   { type: 'detect-image-result', id: string, corners: SimplePoint[] | null }
+//   { type: 'detect-result',       id, corners, debug? }
+//   { type: 'detect-image-result', id, corners, debug? }
 
 self.addEventListener('message', (event: MessageEvent) => {
-  const { type, id, pixels, width, height } = event.data;
+  const { type, id, pixels, width, height, debug } = event.data;
 
   switch (type) {
     case 'detect': {
-      // Live detection with smoothing
       const data = new Uint8ClampedArray(pixels);
-      const detected = detectDocumentCorners(data, width, height);
-      const smoothed = smoothCorners(detected);
-      (self as unknown as Worker).postMessage({ type: 'detect-result', id, corners: smoothed });
+      const result = detectDocumentCorners(data, width, height, debug);
+      const smoothed = smoothCorners(result.corners);
+      const msg: Record<string, unknown> = { type: 'detect-result', id, corners: smoothed };
+      const transfers: ArrayBuffer[] = [];
+      if (result.debug) {
+        const d = result.debug;
+        const gBuf = d.grayscale.buffer as ArrayBuffer;
+        const bBuf = d.blur.buffer as ArrayBuffer;
+        const eBuf = d.edges.buffer as ArrayBuffer;
+        const mBuf = d.morph.buffer as ArrayBuffer;
+        msg.debug = {
+          grayscale: gBuf, blur: bBuf, edges: eBuf, morph: mBuf,
+          width: d.width, height: d.height,
+        };
+        transfers.push(gBuf, bBuf, eBuf, mBuf);
+      }
+      (self as unknown as Worker).postMessage(msg, transfers);
       break;
     }
 
     case 'detect-image': {
-      // Static image detection (no smoothing)
       const data = new Uint8ClampedArray(pixels);
-      const detected = detectDocumentCorners(data, width, height);
-      (self as unknown as Worker).postMessage({ type: 'detect-image-result', id, corners: detected });
+      const result = detectDocumentCorners(data, width, height, debug);
+      const msg: Record<string, unknown> = { type: 'detect-image-result', id, corners: result.corners };
+      const transfers: ArrayBuffer[] = [];
+      if (result.debug) {
+        const d = result.debug;
+        const gBuf = d.grayscale.buffer as ArrayBuffer;
+        const bBuf = d.blur.buffer as ArrayBuffer;
+        const eBuf = d.edges.buffer as ArrayBuffer;
+        const mBuf = d.morph.buffer as ArrayBuffer;
+        msg.debug = {
+          grayscale: gBuf, blur: bBuf, edges: eBuf, morph: mBuf,
+          width: d.width, height: d.height,
+        };
+        transfers.push(gBuf, bBuf, eBuf, mBuf);
+      }
+      (self as unknown as Worker).postMessage(msg, transfers);
       break;
     }
 
