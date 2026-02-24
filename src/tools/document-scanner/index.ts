@@ -7,6 +7,7 @@ import {
   isTorchSupported,
   toggleTorch,
   capturePhoto,
+  switchToNextCamera,
 } from './utils/camera';
 import { detectCornersOnImage, releaseBuffers } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
@@ -109,6 +110,21 @@ export default function init(payload?: SharedFilesPayload) {
 
   // --- Camera ---
 
+  async function checkAndUpdateTorch() {
+    if (!stream) {
+      btnFlash.classList.add('hidden');
+      return;
+    }
+    isFlashOn = false;
+    updateFlashButton();
+    const supported = await isTorchSupported(stream);
+    if (supported) {
+      btnFlash.classList.remove('hidden');
+    } else {
+      btnFlash.classList.add('hidden');
+    }
+  }
+
   async function startCamera() {
     btnStartScan.classList.add('hidden');
     cameraView.classList.remove('hidden');
@@ -116,15 +132,7 @@ export default function init(payload?: SharedFilesPayload) {
 
     stream = await startCameraUtil(video, currentFacingMode, stream, isPortrait);
 
-    isTorchSupported(stream).then((supported) => {
-      if (supported) {
-        btnFlash.classList.remove('hidden');
-        isFlashOn = false;
-        updateFlashButton();
-      } else {
-        btnFlash.classList.add('hidden');
-      }
-    });
+    await checkAndUpdateTorch();
 
     if (checkLiveDetection.checked) {
       liveDetection.start();
@@ -358,8 +366,13 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   btnSwitch.addEventListener('click', async () => {
-    currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
-    await startCamera();
+    // Cycle through all available camera lenses/devices
+    const newStream = await switchToNextCamera(video, stream, isPortrait);
+    if (newStream && newStream !== stream) {
+      stream = newStream;
+      // Re-check torch support for the new lens
+      await checkAndUpdateTorch();
+    }
   });
 
   btnRotate.addEventListener('click', async () => {
