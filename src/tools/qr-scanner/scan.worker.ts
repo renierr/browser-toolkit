@@ -30,12 +30,12 @@ let ctx: OffscreenCanvasRenderingContext2D | null = null;
 function ensureCanvas(w: number, h: number) {
   if (!oc || oc.width !== w || oc.height !== h) {
     oc = new OffscreenCanvas(w, h);
-    ctx = oc.getContext('2d')!;
+    ctx = oc.getContext('2d', { willReadFrequently: true });
   }
   if (oc.width < w || oc.height < h) {
     oc.width = Math.max(oc.width, w);
     oc.height = Math.max(oc.height, h);
-    ctx = oc.getContext('2d')!;
+    ctx = oc.getContext('2d', { willReadFrequently: true });
   }
 }
 
@@ -64,7 +64,7 @@ interface ScanResult {
 }
 
 async function tryDetect(
-  source: ImageBitmap | ImageData,
+  source: ImageBitmap | ImageData
 ): Promise<{ result: ScanResult | null; imageData?: ImageData | null }> {
   // 1. Try native first (fastest)
   if (nativeDetector) {
@@ -73,7 +73,10 @@ async function tryDetect(
       // @ts-ignore
       const barcodes = await nativeDetector.detect(source as any);
       if (barcodes && barcodes.length > 0) {
-        return { result: { data: barcodes[0].rawValue, format: barcodes[0].format, provider: 'native' } };
+        if (source instanceof ImageBitmap) source.close();
+        return {
+          result: { data: barcodes[0].rawValue, format: barcodes[0].format, provider: 'native' },
+        };
       }
     } catch (e) {
       // ignore native errors and fall back to wasm
@@ -95,6 +98,7 @@ async function tryDetect(
       ctx!.clearRect(0, 0, w, h);
       ctx!.drawImage(source as ImageBitmap, 0, 0);
       imageData = ctx!.getImageData(0, 0, w, h);
+      (source as ImageBitmap).close();
     }
 
     const results = await readBarcodes(imageData, {
@@ -125,9 +129,7 @@ async function tryDetect(
  * We now rely primarily on zxing-wasm's robust internal `tryHarder` option
  * instead of manually destroying image data via blur/thresholds.
  */
-async function scanWithStrategies(
-  source: ImageBitmap
-): Promise<{ result: ScanResult | null }> {
+async function scanWithStrategies(source: ImageBitmap): Promise<{ result: ScanResult | null }> {
   // 1. Try raw source and capture ImageData when produced
   const first = await tryDetect(source);
   if (first.result) return { result: first.result };

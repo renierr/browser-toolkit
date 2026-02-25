@@ -47,9 +47,7 @@ export default function init() {
   const pendingRequests = new Map<
     number,
     {
-      resolve: (
-        data: { data: string; format: string; provider?: string } | null
-      ) => void;
+      resolve: (data: { data: string; format: string; provider?: string } | null) => void;
       reject: (err: Error) => void;
     }
   >();
@@ -214,22 +212,19 @@ export default function init() {
         }
       }
 
-      // Fallback: WASM Polyfill via Web Worker with multi-scale + preprocessing
+      // Fallback: WASM Polyfill via Web Worker
       if (!result && canvas) {
-        // Draw at original size to get raw pixels
         const maxDim = Math.min(Math.max(img.width, img.height), 2048);
-        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-        const w = Math.round(img.width * scale);
-        const h = Math.round(img.height * scale);
-        canvasElement.width = w;
-        canvasElement.height = h;
-        canvas.imageSmoothingEnabled = true;
-        canvas.drawImage(img, 0, 0, w, h);
+        const w = Math.round(img.width * Math.min(1, maxDim / Math.max(img.width, img.height)));
+        const h = Math.round(img.height * Math.min(1, maxDim / Math.max(img.width, img.height)));
 
         const id = ++workerRequestId;
         try {
-          // createImageBitmap from the canvas gives us a transferable ImageBitmap (no pixel copy on postMessage)
-          const bitmap = await createImageBitmap(canvasElement);
+          const bitmap = await createImageBitmap(img, {
+            resizeWidth: w,
+            resizeHeight: h,
+            resizeQuality: 'high',
+          });
           const res = await sendToWorker(
             {
               type: 'scan-image',
@@ -341,7 +336,7 @@ export default function init() {
 
         // Fallback to WASM Polyfill via Web Worker (skip if previous scan still in flight)
         if (!result && !workerScanInFlight) {
-          const bitmap = await createImageBitmap(video)
+          const bitmap = await createImageBitmap(video);
           const id = ++workerRequestId;
 
           workerScanInFlight = true;
