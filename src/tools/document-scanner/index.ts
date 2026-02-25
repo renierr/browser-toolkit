@@ -9,6 +9,7 @@ import {
   capturePhoto,
   switchToNextCamera,
   resetCameraState,
+  getVideoDeviceCount,
 } from './utils/camera';
 import { detectCornersOnImage, releaseBuffers } from './utils/detection';
 import { setupFileDropzone } from '../../js/file-utils.ts';
@@ -226,6 +227,12 @@ export default function init(payload?: SharedFilesPayload) {
     // Fire-and-forget: torch check has retries/delays, don't block camera start
     // noinspection ES6MissingAwait
     checkAndUpdateTorch();
+
+    if (getVideoDeviceCount() > 1) {
+      btnSwitch.classList.remove('hidden');
+    } else {
+      btnSwitch.classList.add('hidden');
+    }
 
     if (checkLiveDetection.checked) {
       liveDetection.start();
