@@ -28,11 +28,10 @@ let oc: OffscreenCanvas | null = null;
 let ctx: OffscreenCanvasRenderingContext2D | null = null;
 
 function ensureCanvas(w: number, h: number) {
-  if (!oc || oc.width !== w || oc.height !== h) {
+  if (!oc) {
     oc = new OffscreenCanvas(w, h);
     ctx = oc.getContext('2d', { willReadFrequently: true });
-  }
-  if (oc.width < w || oc.height < h) {
+  } else if (oc.width < w || oc.height < h) {
     oc.width = Math.max(oc.width, w);
     oc.height = Math.max(oc.height, h);
     ctx = oc.getContext('2d', { willReadFrequently: true });
