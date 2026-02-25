@@ -267,6 +267,9 @@ export default function init(payload?: SharedFilesPayload) {
       // Store as blob for compact memory; keep img as cache for the active page
       const originalBlob = blob ?? (await imageToBlob(img));
 
+      // Generate initial thumbnail so page list doesn't rely on Data URL
+      const thumbBlob = await new Promise<Blob | null>((resolve) => pCanvas.toBlob(resolve, 'image/jpeg', 0.5));
+
       state.getPages().push({
         id: crypto.randomUUID(),
         originalBlob,
@@ -275,7 +278,7 @@ export default function init(payload?: SharedFilesPayload) {
         originalImage: img, // cached — will be released when this page is not active
         processedCanvas: pCanvas,
         warpedCanvas: null,
-        thumbnailUrl: null,
+        thumbnailUrl: thumbBlob ? URL.createObjectURL(thumbBlob) : null,
         corners: initialCorners,
         filter: 'none',
         rotation: 0,

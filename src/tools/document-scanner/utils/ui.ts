@@ -247,21 +247,16 @@ export function renderPageList(
 ) {
   container.innerHTML = '';
   pages.forEach((page, index) => {
-    // Use cached thumbnail, or generate and cache it
-    if (!page.thumbnailUrl) {
-      page.thumbnailUrl = page.processedCanvas.toDataURL('image/jpeg', 0.5);
-    }
 
     const card = document.createElement('div');
-    card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${
-      index === currentPageIndex
+    card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${index === currentPageIndex
         ? 'active border-primary ring-2 ring-primary/20'
         : 'border-base-300'
-    }`;
+      }`;
     card.dataset.index = index.toString();
 
     const thumb = document.createElement('img');
-    thumb.src = page.thumbnailUrl;
+    thumb.src = page.thumbnailUrl || '';
     thumb.className = 'checkerboard-bg w-full h-full object-contain pointer-events-none bg-white';
 
     card.innerHTML = `

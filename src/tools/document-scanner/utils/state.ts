@@ -45,10 +45,9 @@ export function createScannerState(opts: StateOptions = {}) {
 
   function invalidateWarpCache(page: ScannedPage) {
     page.warpedCanvas = null;
-    if (page.thumbnailUrl) {
-      URL.revokeObjectURL(page.thumbnailUrl);
-      page.thumbnailUrl = null;
-    }
+    // We intentionally do NOT revoke thumbnailUrl here.
+    // Otherwise dragging corners would break the image in the page list.
+    // applyFilters() revokes it when applying the new warp.
   }
 
   function getWarpedCanvas(page: ScannedPage): HTMLCanvasElement {
