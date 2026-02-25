@@ -5,11 +5,7 @@
  * All state is scoped to the instance returned by createLiveDetectionLoop().
  */
 import type { Point } from './perspective';
-import {
-  calculateLiveDetection,
-  isStable,
-  resetDetectionHistory,
-} from './detection';
+import { calculateLiveDetection, isStable, resetDetectionHistory } from './detection';
 import { drawLiveOverlay } from './ui';
 
 // --- Configuration ---
@@ -48,8 +44,15 @@ function lerpPoint(a: Point, b: Point, t: number): Point {
 
 export function createLiveDetectionLoop(deps: LiveDetectionDeps): LiveDetectionLoop {
   const {
-    video, detectionCanvas, dCtx, cameraOverlay, checkLiveDetection,
-    autoSnapCountdown, autoSnapNumber, isDebugMode, onAutoCapture,
+    video,
+    detectionCanvas,
+    dCtx,
+    cameraOverlay,
+    checkLiveDetection,
+    autoSnapCountdown,
+    autoSnapNumber,
+    isDebugMode,
+    onAutoCapture,
   } = deps;
 
   // All state is local to this closure
@@ -59,7 +62,7 @@ export function createLiveDetectionLoop(deps: LiveDetectionDeps): LiveDetectionL
   let lastResult: Point[] | null = null;
   let displayCorners: Point[] | null = null;
   let targetCorners: Point[] | null = null;
-  let targetColor = '#00FF00';
+  let targetColor = '#FFD700';
   let countdownValue = 0;
   let countdownTimerId: ReturnType<typeof setInterval> | null = null;
   let detectingInProgress = false;
@@ -121,9 +124,7 @@ export function createLiveDetectionLoop(deps: LiveDetectionDeps): LiveDetectionL
 
     // Display-side interpolation: run every frame for smooth overlay
     if (targetCorners && displayCorners) {
-      displayCorners = displayCorners.map((dp, i) =>
-        lerpPoint(dp, targetCorners![i], LERP_SPEED)
-      );
+      displayCorners = displayCorners.map((dp, i) => lerpPoint(dp, targetCorners![i], LERP_SPEED));
       drawLiveOverlay(cameraOverlay, displayCorners, targetColor);
     } else if (targetCorners && !displayCorners) {
       displayCorners = targetCorners.map((p) => ({ ...p }));
@@ -157,9 +158,13 @@ export function createLiveDetectionLoop(deps: LiveDetectionDeps): LiveDetectionL
             }
             lastResult = result.lastDetectedCorners;
 
-            targetColor = stableCount > 6 ? '#FFD700' : '#00FF00';
+            targetColor = stableCount > 6 ? '#00FF00' : '#FFD700';
 
-            if (!isDebugMode() && stableCount >= STABLE_FRAMES_BEFORE_COUNTDOWN && !countdownTimerId) {
+            if (
+              !isDebugMode() &&
+              stableCount >= STABLE_FRAMES_BEFORE_COUNTDOWN &&
+              !countdownTimerId
+            ) {
               startCountdown();
             }
           } else {
