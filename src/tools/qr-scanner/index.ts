@@ -10,7 +10,7 @@ import {
   getVideoDeviceCount,
 } from '../../js/camera-utils';
 import ScanWorker from './scan.worker?worker';
-import type { WorkerInMessage, WorkerOutMessage, DebugImage } from './worker-protocol';
+import type { WorkerOutMessage, ScanImageMessage } from './worker-protocol';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -31,8 +31,6 @@ export default function init() {
   const copyBtn = document.getElementById('copy-result');
   const openLinkBtn = document.getElementById('open-link') as HTMLAnchorElement;
   const capturedImage = document.getElementById('qr-captured-image') as HTMLImageElement;
-  const debugToggle = document.getElementById('debug-toggle') as HTMLInputElement;
-  const debugContainer = document.getElementById('debug-container') as HTMLDivElement;
 
   let stream: MediaStream | null = null;
   let animationFrameId: number | null = null;
@@ -45,11 +43,12 @@ export default function init() {
   let worker: Worker | null = null;
   let workerRequestId = 0;
   let workerScanInFlight = false;
+
   const pendingRequests = new Map<
     number,
     {
       resolve: (
-        data: { data: string; format: string; provider?: string; debugImages?: DebugImage[] } | null
+        data: { data: string; format: string; provider?: string } | null
       ) => void;
       reject: (err: Error) => void;
     }
@@ -59,13 +58,11 @@ export default function init() {
     if (!worker) {
       worker = new ScanWorker();
       worker.addEventListener('message', (event: MessageEvent<WorkerOutMessage>) => {
-        const { id, data, format, provider, debugImages } = event.data;
+        const { id, data, format, provider } = event.data;
         const pending = pendingRequests.get(id);
         if (pending) {
           pendingRequests.delete(id);
-          pending.resolve(
-            data || debugImages?.length ? { data: data!, format, provider, debugImages } : null
-          );
+          pending.resolve(data ? { data, format, provider } : null);
         }
       });
       worker.addEventListener('error', () => {
@@ -80,13 +77,12 @@ export default function init() {
   }
 
   function sendToWorker(
-    msg: WorkerInMessage,
+    msg: ScanImageMessage,
     transfer: Transferable[] = []
   ): Promise<{
     data: string;
     format: string;
     provider?: string;
-    debugImages?: DebugImage[];
   } | null> {
     return new Promise((resolve, reject) => {
       pendingRequests.set(msg.id, { resolve, reject });
@@ -175,45 +171,15 @@ export default function init() {
 
   // ── Result display ───────────────────────────────────────────────────
 
-  const renderDebugImages = (debugImages?: DebugImage[]) => {
-    if (debugImages?.length && debugToggle?.checked) {
-      debugContainer.innerHTML = '';
-      for (const img of debugImages) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'flex flex-col items-center gap-1';
-
-        const canvas = document.createElement('canvas');
-        canvas.className = 'w-full rounded border border-base-300';
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const idata = new ImageData(new Uint8ClampedArray(img.data), img.width, img.height);
-          ctx.putImageData(idata, 0, 0);
-        }
-
-        const label = document.createElement('span');
-        label.className = 'text-[10px] opacity-70 truncate w-full text-center';
-        label.textContent = img.name;
-
-        wrapper.appendChild(canvas);
-        wrapper.appendChild(label);
-        debugContainer.appendChild(wrapper);
-      }
-    }
-  };
-
   const setResult = (
     data: string,
     format: string = 'qr_code',
     provider: string = 'unknown',
-    imageSrc?: string,
-    debugImages?: DebugImage[]
+    imageSrc?: string
   ) => {
     if (resultText) resultText.textContent = data;
     if (formatText) {
-      const providerLabel = provider === 'native' ? 'Native' : 'ZXing (WASM)';
-      formatText.textContent = `${format.toUpperCase().replace('_', ' ')} (${providerLabel})`;
+      formatText.textContent = `${format.toUpperCase().replace('_', ' ')} (${provider})`;
     }
     if (capturedImage && imageSrc) capturedImage.src = imageSrc;
     resultCard?.classList.remove('hidden');
@@ -224,18 +190,7 @@ export default function init() {
     } else {
       openLinkBtn.classList.add('hidden');
     }
-
-    renderDebugImages(debugImages);
   };
-
-  debugToggle?.addEventListener('change', (e) => {
-    const target = e.target as HTMLInputElement;
-    if (target.checked) {
-      debugContainer.classList.remove('hidden');
-    } else {
-      debugContainer.classList.add('hidden');
-    }
-  });
 
   // ── Image scanning (upload / paste) ──────────────────────────────────
 
@@ -245,10 +200,9 @@ export default function init() {
         data: string;
         format: string;
         provider: string;
-        debugImages?: DebugImage[];
       } | null = null;
 
-      // Try native BarcodeDetector first (best quality, supports many formats)
+      // Try native BarcodeDetector first
       if (detector) {
         try {
           const barcodes = await detector.detect(img);
@@ -271,28 +225,18 @@ export default function init() {
         canvasElement.height = h;
         canvas.imageSmoothingEnabled = true;
         canvas.drawImage(img, 0, 0, w, h);
-        const imageData = canvas.getImageData(0, 0, w, h);
-        const pixelsCopy = imageData.data.buffer.slice(0);
-
-        // Target sizes for multi-scale scan (largest → smallest, no upscale)
-        const targetSizes = [Math.max(w, h), 1600, 1024, 640].filter(
-          (s) => s <= Math.max(w, h) * 1.1
-        );
-        const sizes = [...new Set(targetSizes.map((s) => Math.min(s, 2048)))];
 
         const id = ++workerRequestId;
         try {
+          // createImageBitmap from the canvas gives us a transferable ImageBitmap (no pixel copy on postMessage)
+          const bitmap = await createImageBitmap(canvasElement);
           const res = await sendToWorker(
             {
               type: 'scan-image',
               id,
-              pixels: pixelsCopy,
-              width: w,
-              height: h,
-              targetSizes: sizes,
-              debug: debugToggle?.checked || false,
+              bitmap,
             },
-            [pixelsCopy]
+            [bitmap]
           );
           if (res) {
             result = { ...res, provider: res.provider || 'wasm' };
@@ -313,8 +257,7 @@ export default function init() {
           result.data,
           result.format,
           result.provider,
-          canvasElement.toDataURL('image/png'),
-          result.debugImages
+          canvasElement.toDataURL('image/png')
         );
       } else {
         showMessage('No barcode found.', { type: 'alert' });
@@ -366,7 +309,6 @@ export default function init() {
           data: string;
           format: string;
           provider: string;
-          debugImages?: DebugImage[];
         } | null = null;
 
         // Try native BarcodeDetector first
@@ -399,25 +341,17 @@ export default function init() {
 
         // Fallback to WASM Polyfill via Web Worker (skip if previous scan still in flight)
         if (!result && !workerScanInFlight) {
-          drawVideoToCanvas();
-          const w = canvasElement.width;
-          const h = canvasElement.height;
-          const imageData = canvas.getImageData(0, 0, w, h);
-          const pixelsCopy = imageData.data.buffer.slice(0);
-
+          const bitmap = await createImageBitmap(video)
           const id = ++workerRequestId;
 
           workerScanInFlight = true;
           sendToWorker(
             {
-              type: 'scan-frame',
+              type: 'scan-image',
               id,
-              pixels: pixelsCopy,
-              width: w,
-              height: h,
-              debug: debugToggle?.checked || false,
+              bitmap: bitmap,
             },
-            [pixelsCopy]
+            [bitmap]
           )
             .then((res) => {
               workerScanInFlight = false;
@@ -429,12 +363,9 @@ export default function init() {
                     res.data,
                     res.format,
                     res.provider || 'wasm',
-                    canvasElement.toDataURL('image/png'),
-                    res.debugImages
+                    canvasElement.toDataURL('image/png')
                   );
                   stopCam();
-                } else if (res.debugImages?.length) {
-                  renderDebugImages(res.debugImages);
                 }
               }
             })

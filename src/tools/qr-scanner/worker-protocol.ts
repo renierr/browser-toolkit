@@ -5,46 +5,23 @@
 
 // --- Incoming messages (main thread → worker) ---
 
-/** Scan a single frame (camera live loop). */
-export interface ScanFrameMessage {
-  type: 'scan-frame';
-  id: number;
-  pixels: ArrayBuffer;
-  width: number;
-  height: number;
-  debug?: boolean;
-}
-
-/** Scan an uploaded/pasted image at multiple scales. */
+/** Scan image */
 export interface ScanImageMessage {
   type: 'scan-image';
   id: number;
-  pixels: ArrayBuffer;
-  width: number;
-  height: number;
-  /** Target sizes to try (largest first). */
-  targetSizes: number[];
-  debug?: boolean;
+  bitmap: ImageBitmap;
 }
 
-export type WorkerInMessage = ScanFrameMessage | ScanImageMessage;
+export type WorkerInMessage = ScanImageMessage;
 
 // --- Outgoing messages (worker → main thread) ---
-
-export interface DebugImage {
-  name: string;
-  data: ArrayBuffer; // RGBA pixels
-  width: number;
-  height: number;
-}
 
 export interface ScanResultMessage {
   type: 'scan-result';
   id: number;
   data: string | null;
   format: string;
-  provider?: string; // 'native' | 'wasm' | 'jsQR'
-  debugImages?: DebugImage[];
+  provider?: string; // 'native' | 'wasm'
 }
 
 export type WorkerOutMessage = ScanResultMessage;

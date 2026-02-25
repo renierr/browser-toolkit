@@ -3,13 +3,11 @@
  *
  * Tries the native BarcodeDetector API first (hardware-accelerated, fast).
  * If that fails or isn't available, falls back to the robust zxing-wasm
- * C++ engine with the `tryHarder` option enabled, which excels at finding
- * codes in low-light, blurry, and high-noise environments without the need
- * for manual destructive preprocessing like blurring or adaptive thresholding.
+ * C++ engine with the `tryHarder` option enabled.
  */
 import { readBarcodes, prepareZXingModule } from 'zxing-wasm/reader';
 import zxingWasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
-import type { WorkerInMessage, WorkerOutMessage, DebugImage } from './worker-protocol';
+import type { WorkerInMessage, WorkerOutMessage } from './worker-protocol';
 
 // ── Initialization ───────────────────────────────────────────────────────
 
@@ -26,6 +24,20 @@ prepareZXingModule({
 });
 
 let nativeDetector: any = null;
+let oc: OffscreenCanvas | null = null;
+let ctx: OffscreenCanvasRenderingContext2D | null = null;
+
+function ensureCanvas(w: number, h: number) {
+  if (!oc || oc.width !== w || oc.height !== h) {
+    oc = new OffscreenCanvas(w, h);
+    ctx = oc.getContext('2d')!;
+  }
+  if (oc.width < w || oc.height < h) {
+    oc.width = Math.max(oc.width, w);
+    oc.height = Math.max(oc.height, h);
+    ctx = oc.getContext('2d')!;
+  }
+}
 
 // Initialize native detector
 (async () => {
@@ -131,31 +143,30 @@ interface ScanResult {
 }
 
 async function tryDetect(
-  rgba: Uint8ClampedArray,
-  w: number,
-  h: number,
-  tryHarder: boolean = false
+  source: ImageBitmap,
 ): Promise<ScanResult | null> {
   // 1. Try native first (fastest)
   if (nativeDetector) {
     try {
       // @ts-ignore
-      const imageData = new ImageData(rgba, w, h);
-      // @ts-ignore
-      const barcodes = await nativeDetector.detect(imageData);
-      if (barcodes.length > 0) {
+      const barcodes = await nativeDetector.detect(source as any);
+      if (barcodes && barcodes.length > 0) {
         return { data: barcodes[0].rawValue, format: barcodes[0].format, provider: 'native' };
       }
     } catch (e) {
-      // ignore
+      // ignore native errors and fall back to wasm
     }
   }
 
-  // 2. Try WASM fallback with zxing-wasm directly
+  // 2. WASM fallback: ensure we have ImageData
   try {
-    const imageData = new ImageData(new Uint8ClampedArray(rgba), w, h);
+    ensureCanvas(source.width, source.height);
+    ctx!.clearRect(0, 0, source.width, source.height);
+    ctx!.drawImage(source as ImageBitmap, 0, 0);
+    const imageData = ctx!.getImageData(0, 0, source.width, source.height);
+
     const results = await readBarcodes(imageData, {
-      tryHarder,
+      tryHarder: true,
       maxNumberOfSymbols: 1,
     });
     if (results && results.length > 0) {
@@ -179,151 +190,58 @@ async function tryDetect(
  * instead of manually destroying image data via blur/thresholds.
  */
 async function scanWithStrategies(
-  rgba: Uint8ClampedArray,
-  w: number,
-  h: number,
-  debug: boolean = false
-): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
-  const debugImages: DebugImage[] = [];
+  source: ImageBitmap
+): Promise<{ result: ScanResult | null }> {
+  // 1. Try raw source
+  let d = await tryDetect(source);
+  if (d) return { result: d };
 
-  const addDebug = (name: string, rgbaBuf: Uint8ClampedArray) => {
-    if (!debug) return;
-    debugImages.push({
-      name,
-      data: new Uint8ClampedArray(rgbaBuf).buffer,
-      width: w,
-      height: h,
-    });
-  };
+  // 2. Prepare ImageData for heavier strategies
+  ensureCanvas(source.width, source.height);
+  ctx!.clearRect(0, 0, source.width, source.height);
+  ctx!.drawImage(source as ImageBitmap, 0, 0);
+  const imageData = ctx!.getImageData(0, 0, source.width, source.height);
 
-  // 1. Raw image — fast pass (tryHarder: false)
-  addDebug('Raw (Fast)', rgba);
-  let d = await tryDetect(rgba, w, h, false);
-  if (d) return { result: d, debugImages };
-
-  // 2. Raw image — deep scan (tryHarder: true)
-  // This uses zxing's internal advanced binarizers (Hybrid/Global)
-  // which are much smarter than our manual thresholds.
-  d = await tryDetect(rgba, w, h, true);
-  if (d) return { result: d, debugImages };
-
-  //if (!full) return { result: null, debugImages };
-
-  // 3. Fallback: Sharpened image + tryHarder
-  // Sometimes phone lenses are just too soft, sharpening can still help.
+  const w = imageData.width;
+  const h = imageData.height;
+  const rgba = imageData.data;
   const gray = toGrayscale(rgba, rgba.length);
   const stretched = contrastStretch(gray);
   const sharp = sharpen(stretched, w, h, 1.5);
   const sharpRgba = grayToRGBA(sharp, w, h);
+  const sharpImageData = new (ImageData as any)(sharpRgba, w, h);
 
-  addDebug('Sharpened Grayscale', sharpRgba);
-  d = await tryDetect(sharpRgba, w, h, true);
-  if (d) return { result: d, debugImages };
+  d = await tryDetect(sharpImageData);
+  if (d) return { result: d };
 
-  return { result: null, debugImages };
+  return { result: null };
 }
 
-// ── Frame scanning (live camera) ───────────────────────────────────────
-
-async function scanFrame(
-  pixels: Uint8ClampedArray,
-  width: number,
-  height: number,
-  debug: boolean = false
-): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
-  // Fast path: 3 strategies on the received frame
-  return scanWithStrategies(pixels, width, height, debug);
-}
-
-// ── Image scanning (upload / paste) — multi-scale ──────────────────────
-
-async function scanImageMultiScale(
-  srcPixels: Uint8ClampedArray,
-  srcWidth: number,
-  srcHeight: number,
-  targetSizes: number[],
-  debug: boolean = false
-): Promise<{ result: ScanResult | null; debugImages: DebugImage[] }> {
-  const hasOffscreen = typeof OffscreenCanvas !== 'undefined';
-  let lastDebugImages: DebugImage[] = [];
-
-  for (const targetSize of targetSizes) {
-    const scale = Math.min(1, targetSize / Math.max(srcWidth, srcHeight));
-    const w = Math.round(srcWidth * scale);
-    const h = Math.round(srcHeight * scale);
-
-    let rgba: Uint8ClampedArray;
-
-    if (scale === 1) {
-      rgba = srcPixels;
-    } else if (hasOffscreen) {
-      const oc = new OffscreenCanvas(srcWidth, srcHeight);
-      const ctx = oc.getContext('2d')!;
-      ctx.putImageData(new ImageData(new Uint8ClampedArray(srcPixels), srcWidth, srcHeight), 0, 0);
-
-      const oc2 = new OffscreenCanvas(w, h);
-      const ctx2 = oc2.getContext('2d')!;
-      ctx2.imageSmoothingEnabled = true;
-      ctx2.drawImage(oc, 0, 0, w, h);
-      rgba = ctx2.getImageData(0, 0, w, h).data;
-    } else {
-      rgba = srcPixels;
-    }
-
-    // Full strategy set for static images (user can wait a bit)
-    const { result, debugImages } = await scanWithStrategies(rgba, w, h, debug);
-    lastDebugImages = debugImages;
-    if (result) return { result, debugImages };
-
-    if (!hasOffscreen && scale !== 1) break;
-  }
-
-  return { result: null, debugImages: lastDebugImages };
+async function scanImage(source: ImageBitmap): Promise<{ result: ScanResult | null }> {
+  return scanWithStrategies(source);
 }
 
 // ── Message handler ────────────────────────────────────────────────────
 
-self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
+self.addEventListener('message', (event: MessageEvent<WorkerInMessage | any>) => {
   const msg = event.data;
 
   switch (msg.type) {
-    case 'scan-frame': {
-      const pixels = new Uint8ClampedArray(msg.pixels);
-      scanFrame(pixels, msg.width, msg.height, msg.debug).then(({ result: res, debugImages }) => {
+    case 'scan-image': {
+      scanImage(msg.bitmap).then(({ result: res }) => {
         const result: WorkerOutMessage = {
           type: 'scan-result',
           id: msg.id,
           data: res?.data ?? null,
           format: res?.format ?? 'qr_code',
           provider: res?.provider,
-          debugImages,
         };
-        (self as unknown as Worker).postMessage(
-          result,
-          debugImages.map((img) => img.data)
-        );
+        self.postMessage(result);
       });
       break;
     }
-
-    case 'scan-image': {
-      const pixels = new Uint8ClampedArray(msg.pixels);
-      scanImageMultiScale(pixels, msg.width, msg.height, msg.targetSizes, msg.debug).then(
-        ({ result: res, debugImages }) => {
-          const result: WorkerOutMessage = {
-            type: 'scan-result',
-            id: msg.id,
-            data: res?.data ?? null,
-            format: res?.format ?? 'qr_code',
-            provider: res?.provider,
-            debugImages,
-          };
-          (self as unknown as Worker).postMessage(
-            result,
-            debugImages.map((img) => img.data)
-          );
-        }
-      );
+    default: {
+      // Unknown message type: ignore
       break;
     }
   }
