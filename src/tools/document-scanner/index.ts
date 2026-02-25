@@ -1,6 +1,6 @@
 import type { SharedFilesPayload } from '../../js/share-target';
-import { warp, type Point } from './utils/perspective';
 import { applyFilters as applyFiltersUtil } from './utils/filters';
+import type { Point } from './utils/perspective';
 import {
   startCamera as startCameraUtil,
   stopCamera as stopCameraUtil,
@@ -22,9 +22,10 @@ import {
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
 import { sourceToCanvas, imageToBlob, imageFromBlob, rotateCanvas } from './utils/canvas';
-import type { ScannedPage, FilterType } from './types';
+import type { FilterType } from './types';
+import { createScannerState } from './utils/state';
 import Sortable from 'sortablejs';
-import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
+import { copyCanvasToClipboard, downloadCanvasAsImage, debounce } from '../../js/utils.ts';
 import { showProgress, showMessage, hideProgress } from '../../js/ui.ts';
 import { createLiveDetectionLoop } from './utils/live-detection-loop';
 import { createHandleDrag } from './utils/handle-drag';
@@ -85,9 +86,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   // --- State ---
 
+  const state = createScannerState({
+    onHistoryChange: () => updateUndoButton(),
+  });
   let stream: MediaStream | null = null;
-  let pages: ScannedPage[] = [];
-  let currentPageIndex: number = -1;
   let isFilterMode = false;
   let stopLevelSensor: (() => void) | null = null;
   let isFlashOn = false;
@@ -95,38 +97,26 @@ export default function init(payload?: SharedFilesPayload) {
   let isSwitchingCamera = false;
   let currentZoom = 1;
 
-  // Undo history: store previous corner states per page
-  const cornerHistory = new Map<string, Point[][]>();
-  const MAX_UNDO_STEPS = 20;
-
   // Live detection canvas (offscreen, used for downscaled detection input)
   const detectionCanvas = document.createElement('canvas');
   const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
 
   // --- Undo helpers ---
 
-  function pushCornerHistory(page: ScannedPage) {
-    const hist = cornerHistory.get(page.id) || [];
-    hist.push(page.corners.map((p) => ({ ...p })));
-    if (hist.length > MAX_UNDO_STEPS) hist.shift();
-    cornerHistory.set(page.id, hist);
-    updateUndoButton();
-  }
-
   function undoCorners() {
-    const page = pages[currentPageIndex];
+    const page = state.getPages()[state.getCurrentPageIndex()];
     if (!page) return;
-    const hist = cornerHistory.get(page.id);
+    const hist = state.getCornerHistory(page.id);
     if (!hist || hist.length === 0) return;
     page.corners = hist.pop()!;
-    invalidateWarpCache(page);
+    state.invalidateWarpCache(page);
     updateUndoButton();
     updateEditor();
   }
 
   function updateUndoButton() {
-    const page = pages[currentPageIndex];
-    const hist = page ? cornerHistory.get(page.id) : null;
+    const page = state.getPages()[state.getCurrentPageIndex()];
+    const hist = page ? state.getCornerHistory(page.id) : null;
     const hasHistory = hist && hist.length > 0;
     if (btnUndoCorners) {
       btnUndoCorners.classList.toggle('btn-disabled', !hasHistory);
@@ -134,41 +124,9 @@ export default function init(payload?: SharedFilesPayload) {
     }
   }
 
-  /** Invalidate warp and thumbnail caches when corners change */
-  function invalidateWarpCache(page: ScannedPage) {
-    page.warpedCanvas = null;
-    page.thumbnailUrl = null;
-  }
-
-  /** Get or compute the warped canvas for a page */
-  function getWarpedCanvas(page: ScannedPage): HTMLCanvasElement {
-    if (!page.warpedCanvas) {
-      page.warpedCanvas = warp(page.originalImage!, page.corners);
-    }
-    return page.warpedCanvas;
-  }
-
-  /** Ensure a page's originalImage is decoded and ready. Must be called before any sync access. */
-  async function ensureOriginalImage(page: ScannedPage): Promise<HTMLImageElement> {
-    if (!page.originalImage) {
-      page.originalImage = await imageFromBlob(page.originalBlob);
-    }
-    return page.originalImage;
-  }
-
-  /** Release decoded images for non-active pages to free memory. */
-  function releaseInactiveImages() {
-    for (let i = 0; i < pages.length; i++) {
-      if (i !== currentPageIndex) {
-        pages[i].originalImage = null;
-        pages[i].warpedCanvas = null; // warp cache references the decoded image
-      }
-    }
-  }
-
   // --- Handle Drag Setup ---
 
-  const getPage = () => pages[currentPageIndex];
+  const getPage = () => state.getPages()[state.getCurrentPageIndex()];
   const handleDrag = createHandleDrag({
     canvas,
     magnifier,
@@ -309,7 +267,7 @@ export default function init(payload?: SharedFilesPayload) {
       // Store as blob for compact memory; keep img as cache for the active page
       const originalBlob = blob ?? (await imageToBlob(img));
 
-      pages.push({
+      state.getPages().push({
         id: crypto.randomUUID(),
         originalBlob,
         originalWidth: img.width,
@@ -322,10 +280,10 @@ export default function init(payload?: SharedFilesPayload) {
         filter: 'none',
         rotation: 0,
       });
-      currentPageIndex = pages.length - 1;
+      state.setCurrentPageIndex(state.getPages().length - 1);
 
       // Release decoded images for other pages
-      releaseInactiveImages();
+      state.releaseInactiveImages();
 
       stopCamera();
       captureContainer.classList.add('hidden');
@@ -343,10 +301,10 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function renderPageList() {
-    renderPageListUtil(pageList, pages, currentPageIndex, async (index) => {
-      currentPageIndex = index;
-      releaseInactiveImages();
-      await ensureOriginalImage(pages[currentPageIndex]);
+    renderPageListUtil(pageList, state.getPages(), state.getCurrentPageIndex(), async (index) => {
+      state.setCurrentPageIndex(index);
+      state.releaseInactiveImages();
+      await state.ensureOriginalImage(state.getPages()[state.getCurrentPageIndex()]);
       renderPageList();
       enterFilterMode();
     });
@@ -377,17 +335,17 @@ export default function init(payload?: SharedFilesPayload) {
     cornerHandles.innerHTML = '';
     handleDrag.clearSelectedHandle();
 
-    const page = pages[currentPageIndex];
+    const page = state.getPages()[state.getCurrentPageIndex()];
     filterSelect.value = page.filter;
     applyFilters();
   }
 
   function updateEditor() {
-    const page = pages[currentPageIndex];
+    const page = state.getPages()[state.getCurrentPageIndex()];
     if (!page || !page.originalImage) return;
 
     // Invalidate warp cache since corners may have changed
-    invalidateWarpCache(page);
+    state.invalidateWarpCache(page);
 
     canvas.width = page.originalWidth;
     canvas.height = page.originalHeight;
@@ -397,7 +355,7 @@ export default function init(payload?: SharedFilesPayload) {
       drawPerspectiveOverlay(ctx, page.corners);
       updateCornerHandles(cornerHandles, page.corners, canvas, (e, index, isEdge) => {
         // Push undo state before the drag starts
-        pushCornerHistory(page);
+        state.pushCornerHistory(page);
         handleDrag.onStart(e, index, isEdge);
       });
 
@@ -412,13 +370,13 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function warpImage() {
-    const page = pages[currentPageIndex];
+    const page = state.getPages()[state.getCurrentPageIndex()];
     if (!page) return;
 
     showProgress('Applying perspective correction...');
     // Use setTimeout to allow the progress message to render before blocking
     setTimeout(() => {
-      const outCanvas = getWarpedCanvas(page);
+      const outCanvas = state.getWarpedCanvas(page);
       page.processedCanvas.width = outCanvas.width;
       page.processedCanvas.height = outCanvas.height;
       page.processedCanvas.getContext('2d')!.drawImage(outCanvas, 0, 0);
@@ -431,14 +389,14 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function applyFilters() {
-    const page = pages[currentPageIndex];
+    const page = state.getPages()[state.getCurrentPageIndex()];
     if (!page) return;
 
     const filter = filterSelect.value as FilterType;
     page.filter = filter;
 
     // Use cached warp result instead of re-warping every time
-    const warpedCanvas = getWarpedCanvas(page);
+    const warpedCanvas = state.getWarpedCanvas(page);
     const rotatedCanvas = rotateCanvas(warpedCanvas, page.rotation);
 
     applyFiltersUtil(rotatedCanvas, canvas, ctx, filter);
@@ -448,15 +406,20 @@ export default function init(payload?: SharedFilesPayload) {
     page.processedCanvas.getContext('2d')!.drawImage(canvas, 0, 0);
 
     // Update thumbnail in-place without re-rendering the whole list
-    page.thumbnailUrl = null; // invalidate cache
-    const card = pageList.querySelector(`[data-index="${currentPageIndex}"]`);
-    if (card) {
-      const img = card.querySelector('img');
-      if (img) {
-        page.thumbnailUrl = page.processedCanvas.toDataURL('image/jpeg', 0.5);
-        img.src = page.thumbnailUrl;
+    const currentFilter = page.filter;
+    page.processedCanvas.toBlob((blob) => {
+      // Race condition safety
+      if (!blob || page.filter !== currentFilter) return;
+      if (page.thumbnailUrl) {
+        URL.revokeObjectURL(page.thumbnailUrl);
       }
-    }
+      page.thumbnailUrl = URL.createObjectURL(blob);
+      const card = pageList.querySelector(`[data-index="${state.getCurrentPageIndex()}"]`);
+      if (card) {
+        const img = card.querySelector('img');
+        if (img) img.src = page.thumbnailUrl;
+      }
+    }, 'image/jpeg', 0.5);
   }
 
   // --- File Handling ---
@@ -592,7 +555,7 @@ export default function init(payload?: SharedFilesPayload) {
   filterSelect.addEventListener('change', applyFilters);
 
   btnRotateLeft.addEventListener('click', () => {
-    const page = pages[currentPageIndex];
+    const page = state.getPages()[state.getCurrentPageIndex()];
     if (page) {
       page.rotation = (page.rotation - 90 + 360) % 360;
       applyFilters();
@@ -600,7 +563,7 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   btnRotateRight.addEventListener('click', () => {
-    const page = pages[currentPageIndex];
+    const page = state.getPages()[state.getCurrentPageIndex()];
     if (page) {
       page.rotation = (page.rotation + 90) % 360;
       applyFilters();
@@ -613,22 +576,22 @@ export default function init(payload?: SharedFilesPayload) {
 
   btnNudgeUp.addEventListener('click', () => {
     const page = getPage();
-    if (page) pushCornerHistory(page);
+    if (page) state.pushCornerHistory(page);
     handleDrag.nudge(0, -1);
   });
   btnNudgeDown.addEventListener('click', () => {
     const page = getPage();
-    if (page) pushCornerHistory(page);
+    if (page) state.pushCornerHistory(page);
     handleDrag.nudge(0, 1);
   });
   btnNudgeLeft.addEventListener('click', () => {
     const page = getPage();
-    if (page) pushCornerHistory(page);
+    if (page) state.pushCornerHistory(page);
     handleDrag.nudge(-1, 0);
   });
   btnNudgeRight.addEventListener('click', () => {
     const page = getPage();
-    if (page) pushCornerHistory(page);
+    if (page) state.pushCornerHistory(page);
     handleDrag.nudge(1, 0);
   });
 
@@ -643,13 +606,11 @@ export default function init(payload?: SharedFilesPayload) {
 
   btnReset.addEventListener('click', async () => {
     if (
-      pages.length === 0 ||
+      state.getPages().length === 0 ||
       confirm('Are you sure you want to start over? All changes will be lost.')
     ) {
       stopCamera();
-      pages = [];
-      currentPageIndex = -1;
-      cornerHistory.clear();
+      state.cleanup();
       captureContainer.classList.remove('hidden');
       editorContainer.classList.add('hidden');
       dropzoneContainer.classList.remove('hidden');
@@ -661,7 +622,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   /** Ensure the editor canvas has the clean processed output (no overlay). */
   function prepareCanvasForExport() {
-    const page = pages[currentPageIndex];
+    const page = state.getPages()[state.getCurrentPageIndex()];
     if (!page) return;
     canvas.width = page.processedCanvas.width;
     canvas.height = page.processedCanvas.height;
@@ -670,10 +631,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   btnDownload.addEventListener('click', async () => {
     prepareCanvasForExport();
-    await downloadCanvasAsImage(canvas, `scanned-page-${currentPageIndex + 1}.jpg`, 'jpg', 0.9);
+    await downloadCanvasAsImage(canvas, `scanned-page-${state.getCurrentPageIndex() + 1}.jpg`, 'jpg', 0.9);
   });
 
-  btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(pages));
+  btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(state.getPages()));
 
   btnImageClipboard.addEventListener('click', async () => {
     prepareCanvasForExport();
@@ -684,15 +645,18 @@ export default function init(payload?: SharedFilesPayload) {
     const removeBtn = (e.target as HTMLElement).closest('.btn-remove-page') as HTMLElement;
     if (removeBtn) {
       const index = parseInt(removeBtn.dataset.index!);
-      const removedPage = pages[index];
-      if (removedPage) cornerHistory.delete(removedPage.id);
-      pages.splice(index, 1);
-      if (pages.length === 0) {
+      const removedPage = state.getPages()[index];
+      if (removedPage) {
+        state.removeCornerHistory(removedPage.id);
+        if (removedPage.thumbnailUrl) URL.revokeObjectURL(removedPage.thumbnailUrl);
+      }
+      state.getPages().splice(index, 1);
+      if (state.getPages().length === 0) {
         btnReset.click();
       } else {
-        if (currentPageIndex >= pages.length) currentPageIndex = pages.length - 1;
-        releaseInactiveImages();
-        await ensureOriginalImage(pages[currentPageIndex]);
+        if (state.getCurrentPageIndex() >= state.getPages().length) state.setCurrentPageIndex(state.getPages().length - 1);
+        state.releaseInactiveImages();
+        await state.ensureOriginalImage(state.getPages()[state.getCurrentPageIndex()]);
         renderPageList();
         enterFilterMode();
       }
@@ -704,14 +668,14 @@ export default function init(payload?: SharedFilesPayload) {
     ghostClass: 'opacity-20',
     onEnd: (evt) => {
       if (evt.oldIndex !== undefined && evt.newIndex !== undefined) {
-        const [moved] = pages.splice(evt.oldIndex, 1);
-        pages.splice(evt.newIndex, 0, moved);
-        if (currentPageIndex === evt.oldIndex) {
-          currentPageIndex = evt.newIndex;
-        } else if (currentPageIndex > evt.oldIndex && currentPageIndex <= evt.newIndex) {
-          currentPageIndex--;
-        } else if (currentPageIndex < evt.oldIndex && currentPageIndex >= evt.newIndex) {
-          currentPageIndex++;
+        const [moved] = state.getPages().splice(evt.oldIndex, 1);
+        state.getPages().splice(evt.newIndex, 0, moved);
+        if (state.getCurrentPageIndex() === evt.oldIndex) {
+          state.setCurrentPageIndex(evt.newIndex);
+        } else if (state.getCurrentPageIndex() > evt.oldIndex && state.getCurrentPageIndex() <= evt.newIndex) {
+          state.setCurrentPageIndex(state.getCurrentPageIndex() - 1);
+        } else if (state.getCurrentPageIndex() < evt.oldIndex && state.getCurrentPageIndex() >= evt.newIndex) {
+          state.setCurrentPageIndex(state.getCurrentPageIndex() + 1);
         }
         renderPageList();
       }
@@ -726,9 +690,10 @@ export default function init(payload?: SharedFilesPayload) {
     Array.from(payload.sharedFiles).forEach(handleFile);
   }
 
-  const resizeObserver = new ResizeObserver(() => {
-    if (currentPageIndex !== -1) updateEditor();
-  });
+  const handleResize = debounce(() => {
+    if (state.getCurrentPageIndex() !== -1) updateEditor();
+  }, 100);
+  const resizeObserver = new ResizeObserver(() => handleResize());
   resizeObserver.observe(editorContainer);
 
   // --- Cleanup ---
@@ -741,7 +706,7 @@ export default function init(payload?: SharedFilesPayload) {
     resetCameraState();
     resetUiState();
     stopCamera();
-    cornerHistory.clear();
+    state.clearCornerHistory();
     resizeObserver.disconnect();
     sortable.destroy();
   };

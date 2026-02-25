@@ -1,11 +1,15 @@
-import type { ScannedPage, FilterType } from '../types';
+import type { ScannedPage } from '../types';
 import type { Point } from './perspective';
 import { warp } from './perspective';
 import { imageFromBlob } from './canvas';
 
 const MAX_UNDO_STEPS = 20;
 
-export function createScannerState() {
+interface StateOptions {
+  onHistoryChange?: () => void;
+}
+
+export function createScannerState(opts: StateOptions = {}) {
   let pages: ScannedPage[] = [];
   let currentPageIndex: number = -1;
   const cornerHistory = new Map<string, Point[][]>();
@@ -24,6 +28,7 @@ export function createScannerState() {
     hist.push(page.corners.map((p) => ({ ...p })));
     if (hist.length > MAX_UNDO_STEPS) hist.shift();
     cornerHistory.set(page.id, hist);
+    if (opts.onHistoryChange) opts.onHistoryChange();
   }
 
   function getCornerHistory(pageId: string) {
