@@ -55,85 +55,6 @@ function ensureCanvas(w: number, h: number) {
   }
 })();
 
-// ── Grayscale conversion ───────────────────────────────────────────────
-
-/** Convert RGBA → grayscale Uint8Array (1 byte per pixel). */
-function toGrayscale(rgba: Uint8ClampedArray, len: number): Uint8Array {
-  const gray = new Uint8Array(len / 4);
-  for (let i = 0, j = 0; i < len; i += 4, j++) {
-    gray[j] = (rgba[i] * 77 + rgba[i + 1] * 150 + rgba[i + 2] * 29) >> 8;
-  }
-  return gray;
-}
-
-/** Write grayscale buffer back into an RGBA buffer for jsQR. */
-function grayToRGBA(gray: Uint8Array, w: number, h: number): Uint8ClampedArray {
-  const rgba = new Uint8ClampedArray(w * h * 4);
-  for (let i = 0, j = 0; i < gray.length; i++, j += 4) {
-    rgba[j] = rgba[j + 1] = rgba[j + 2] = gray[i];
-    rgba[j + 3] = 255;
-  }
-  return rgba;
-}
-
-// ── Sharpen (3×3 unsharp-mask) ─────────────────────────────────────────
-
-/**
- * Sharpens a grayscale image using a 3×3 Laplacian-based unsharp mask.
- * strength controls how aggressively edges are boosted (1.0–2.0 typical).
- */
-function sharpen(src: Uint8Array, w: number, h: number, strength: number = 1.5): Uint8Array {
-  const dst = new Uint8Array(src.length);
-  // Copy border pixels unchanged
-  for (let x = 0; x < w; x++) {
-    dst[x] = src[x];
-    dst[(h - 1) * w + x] = src[(h - 1) * w + x];
-  }
-  for (let y = 0; y < h; y++) {
-    dst[y * w] = src[y * w];
-    dst[y * w + w - 1] = src[y * w + w - 1];
-  }
-
-  for (let y = 1; y < h - 1; y++) {
-    for (let x = 1; x < w - 1; x++) {
-      const idx = y * w + x;
-      // 3×3 Laplacian
-      const laplacian =
-        -src[idx - w - 1] -
-        src[idx - w] -
-        src[idx - w + 1] -
-        src[idx - 1] +
-        8 * src[idx] -
-        src[idx + 1] -
-        src[idx + w - 1] -
-        src[idx + w] -
-        src[idx + w + 1];
-      const v = src[idx] + strength * (laplacian / 8);
-      dst[idx] = v < 0 ? 0 : v > 255 ? 255 : v | 0;
-    }
-  }
-  return dst;
-}
-
-// ── Contrast stretch ───────────────────────────────────────────────────
-
-/** Stretch grayscale to full 0-255 range (helps low-contrast cameras). */
-function contrastStretch(src: Uint8Array): Uint8Array {
-  let min = 255,
-    max = 0;
-  for (let i = 0; i < src.length; i++) {
-    if (src[i] < min) min = src[i];
-    if (src[i] > max) max = src[i];
-  }
-  if (max - min < 30) return src; // already low range, don't stretch noise
-  const range = max - min || 1;
-  const dst = new Uint8Array(src.length);
-  for (let i = 0; i < src.length; i++) {
-    dst[i] = (((src[i] - min) / range) * 255) | 0;
-  }
-  return dst;
-}
-
 // ── Decoding wrappers ──────────────────────────────────────────────────
 
 interface ScanResult {
@@ -211,29 +132,7 @@ async function scanWithStrategies(
   const first = await tryDetect(source);
   if (first.result) return { result: first.result };
 
-  // 2. Reuse imageData from the first attempt if available; otherwise draw the ImageBitmap once.
-  let imageData = first.imageData;
-  if (!imageData) {
-    const w = source.width | 0;
-    const h = source.height | 0;
-    if (w <= 0 || h <= 0) return { result: null };
-    ensureCanvas(w, h);
-    ctx!.clearRect(0, 0, w, h);
-    ctx!.drawImage(source as ImageBitmap, 0, 0);
-    imageData = ctx!.getImageData(0, 0, w, h);
-  }
-
-  const w = imageData.width;
-  const h = imageData.height;
-  const rgba = imageData.data;
-  const gray = toGrayscale(rgba, rgba.length);
-  const stretched = contrastStretch(gray);
-  const sharp = sharpen(stretched, w, h, 1.5);
-  const sharpRgba = grayToRGBA(sharp, w, h);
-  const sharpImageData = new (ImageData as any)(sharpRgba, w, h);
-
-  const second = await tryDetect(sharpImageData);
-  if (second.result) return { result: second.result };
+  // keep this where some own image processing can be done after native and ZXing failed.
 
   return { result: null };
 }
