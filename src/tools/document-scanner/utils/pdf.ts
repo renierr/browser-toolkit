@@ -4,7 +4,10 @@ import { downloadFile } from '../../../js/file-utils.ts';
 import { showProgress, showMessage, hideProgress, yieldToUI } from '../../../js/ui.ts';
 import type { ScannedPage } from '../types';
 
-export async function generateAndDownloadPDF(pages: ScannedPage[]) {
+export async function generateAndDownloadPDF(
+  pages: ScannedPage[],
+  getRenderedCanvas: (page: ScannedPage) => Promise<HTMLCanvasElement>
+) {
   if (pages.length === 0) return;
 
   showProgress('Generating PDF...');
@@ -16,8 +19,9 @@ export async function generateAndDownloadPDF(pages: ScannedPage[]) {
       showProgress(`Processing page ${i + 1} of ${pages.length}...`);
       await yieldToUI();
 
+      const renderCanvas = await getRenderedCanvas(page);
       const blob: Blob = await new Promise((resolve, reject) => {
-        page.processedCanvas.toBlob(
+        renderCanvas.toBlob(
           (b) => (b ? resolve(b) : reject(new Error('toBlob failed'))),
           'image/jpeg',
           0.9

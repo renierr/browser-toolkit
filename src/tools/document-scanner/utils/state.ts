@@ -70,6 +70,10 @@ export function createScannerState(opts: StateOptions = {}) {
       if (i !== currentPageIndex) {
         pages[i].originalImage = null;
         pages[i].warpedCanvas = null; // warp cache references the decoded image
+        if (pages[i].processedCanvas) {
+          pages[i].processedCanvas.width = 0;
+          pages[i].processedCanvas.height = 0;
+        }
       }
     }
   }

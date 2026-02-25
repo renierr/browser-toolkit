@@ -22,7 +22,7 @@ import {
 import { startLevelSensor } from './utils/sensors';
 import { generateAndDownloadPDF } from './utils/pdf';
 import { sourceToCanvas, imageToBlob, imageFromBlob, rotateCanvas } from './utils/canvas';
-import type { FilterType } from './types';
+import type { FilterType, ScannedPage } from './types';
 import { createScannerState } from './utils/state';
 import Sortable from 'sortablejs';
 import { copyCanvasToClipboard, downloadCanvasAsImage, debounce } from '../../js/utils.ts';
@@ -620,6 +620,29 @@ export default function init(payload?: SharedFilesPayload) {
     }
   });
 
+  // --- Export Helpers ---
+
+  async function getRenderedCanvas(page: ScannedPage): Promise<HTMLCanvasElement> {
+    if (page.id === state.getPages()[state.getCurrentPageIndex()]?.id && page.processedCanvas.width > 0) {
+      return page.processedCanvas;
+    }
+
+    await state.ensureOriginalImage(page);
+    const warped = state.getWarpedCanvas(page);
+    const rotated = rotateCanvas(warped, page.rotation);
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d')!;
+    applyFiltersUtil(rotated, tempCanvas, tempCtx, page.filter);
+
+    // Release the original image memory if this is not the active page
+    if (page.id !== state.getPages()[state.getCurrentPageIndex()]?.id) {
+      page.originalImage = null;
+      page.warpedCanvas = null;
+    }
+
+    return tempCanvas;
+  }
+
   /** Ensure the editor canvas has the clean processed output (no overlay). */
   function prepareCanvasForExport() {
     const page = state.getPages()[state.getCurrentPageIndex()];
@@ -634,7 +657,7 @@ export default function init(payload?: SharedFilesPayload) {
     await downloadCanvasAsImage(canvas, `scanned-page-${state.getCurrentPageIndex() + 1}.jpg`, 'jpg', 0.9);
   });
 
-  btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(state.getPages()));
+  btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(state.getPages(), getRenderedCanvas));
 
   btnImageClipboard.addEventListener('click', async () => {
     prepareCanvasForExport();
