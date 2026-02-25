@@ -215,7 +215,13 @@ export default function init(payload?: SharedFilesPayload) {
     cameraView.classList.remove('hidden');
     cameraControls.classList.remove('hidden');
 
-    stream = await startCameraUtil({ videoEl: video, prevStream: stream });
+    const savedDeviceId = localStorage.getItem('document-scanner-device-id') || undefined;
+    stream = await startCameraUtil({ videoEl: video, prevStream: stream, deviceId: savedDeviceId });
+
+    if (!stream && savedDeviceId) {
+      localStorage.removeItem('document-scanner-device-id');
+      stream = await startCameraUtil({ videoEl: video, prevStream: stream });
+    }
 
     // Fire-and-forget: torch check has retries/delays, don't block camera start
     // noinspection ES6MissingAwait
@@ -469,8 +475,13 @@ export default function init(payload?: SharedFilesPayload) {
 
     if (blob) {
       const img = await imageFromBlob(blob);
-      let corners: Point[] | null = null;
-      if (liveCorners) {
+
+      // Always prefer detection on the high-res captured image,
+      // as ImageCapture can return a different aspect ratio or FOV than the video stream.
+      let corners = await detectCornersOnImage(img);
+
+      // Fallback to mapped live corners if detection fails on the captured image
+      if (!corners && liveCorners) {
         const vAspect = video.videoWidth / video.videoHeight;
         const iAspect = img.width / img.height;
 
@@ -490,9 +501,6 @@ export default function init(payload?: SharedFilesPayload) {
         });
       }
 
-      if (!corners) {
-        corners = await detectCornersOnImage(img);
-      }
       // noinspection ES6MissingAwait
       addPage(img, blob, corners);
     }
@@ -511,7 +519,20 @@ export default function init(payload?: SharedFilesPayload) {
       stream = newStream;
       // noinspection ES6MissingAwait
       checkAndUpdateTorch();
-      showMessage('Camera switched', { type: 'info', timeoutMs: 1500 });
+
+      const track = stream.getVideoTracks()[0];
+      const deviceId = track.getSettings().deviceId;
+      const label = track.label;
+      if (deviceId) {
+        localStorage.setItem('document-scanner-device-id', deviceId);
+      }
+
+      const displayId = label
+        ? label.replace(/\s*\([0-9a-fA-F:]+\)$/, '')
+        : deviceId
+          ? deviceId.substring(0, 8)
+          : 'Unknown';
+      showMessage(`Camera switched: ${displayId}`, { type: 'info', timeoutMs: 1500 });
     } else if (newStream === stream) {
       showMessage('No other camera available', { type: 'info', timeoutMs: 2000 });
     }
