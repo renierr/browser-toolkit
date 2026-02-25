@@ -145,7 +145,7 @@ export default function init() {
     isFlashOn = false;
     workerScanInFlight = false;
     toggleFlashBtn?.classList.add('hidden');
-    toggleFlashBtn?.classList.remove('btn-active');
+    toggleFlashBtn?.classList.remove('btn-active', 'text-accent');
     switchCameraBtn?.classList.add('hidden');
     videoContainer?.classList.add('hidden');
     stopBtn?.classList.add('hidden');
@@ -415,7 +415,7 @@ export default function init() {
     if (newStream && newStream !== stream) {
       stream = newStream;
       isFlashOn = false;
-      toggleFlashBtn?.classList.remove('btn-active');
+      toggleFlashBtn?.classList.remove('btn-active', 'text-accent');
       // Re-check torch for the new lens
       // noinspection ES6MissingAwait
       checkAndShowControls();
@@ -430,6 +430,7 @@ export default function init() {
     isFlashOn = !isFlashOn;
     await toggleTorch(stream, isFlashOn);
     toggleFlashBtn.classList.toggle('btn-active', isFlashOn);
+    toggleFlashBtn.classList.toggle('text-accent', isFlashOn);
   });
 
   fileInput?.addEventListener('change', (e) => {
