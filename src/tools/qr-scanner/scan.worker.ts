@@ -143,15 +143,16 @@ interface ScanResult {
 }
 
 async function tryDetect(
-  source: ImageBitmap,
-): Promise<ScanResult | null> {
+  source: ImageBitmap | ImageData,
+): Promise<{ result: ScanResult | null; imageData?: ImageData | null }> {
   // 1. Try native first (fastest)
   if (nativeDetector) {
     try {
+      // BarcodeDetector accepts ImageBitmapSource and ImageData, so pass through.
       // @ts-ignore
       const barcodes = await nativeDetector.detect(source as any);
       if (barcodes && barcodes.length > 0) {
-        return { data: barcodes[0].rawValue, format: barcodes[0].format, provider: 'native' };
+        return { result: { data: barcodes[0].rawValue, format: barcodes[0].format, provider: 'native' } };
       }
     } catch (e) {
       // ignore native errors and fall back to wasm
@@ -160,10 +161,20 @@ async function tryDetect(
 
   // 2. WASM fallback: ensure we have ImageData
   try {
-    ensureCanvas(source.width, source.height);
-    ctx!.clearRect(0, 0, source.width, source.height);
-    ctx!.drawImage(source as ImageBitmap, 0, 0);
-    const imageData = ctx!.getImageData(0, 0, source.width, source.height);
+    let imageData: ImageData;
+
+    if (typeof ImageData !== 'undefined' && source instanceof ImageData) {
+      imageData = source as ImageData;
+    } else {
+      // Source must be ImageBitmap here
+      const w = (source && source.width) | 0;
+      const h = (source && source.height) | 0;
+      if (w <= 0 || h <= 0) return { result: null, imageData: null };
+      ensureCanvas(w, h);
+      ctx!.clearRect(0, 0, w, h);
+      ctx!.drawImage(source as ImageBitmap, 0, 0);
+      imageData = ctx!.getImageData(0, 0, w, h);
+    }
 
     const results = await readBarcodes(imageData, {
       tryHarder: true,
@@ -171,16 +182,20 @@ async function tryDetect(
     });
     if (results && results.length > 0) {
       return {
-        data: results[0].text,
-        format: results[0].format,
-        provider: 'wasm',
+        result: {
+          data: results[0].text,
+          format: results[0].format,
+          provider: 'wasm',
+        },
+        imageData,
       };
     }
+    return { result: null, imageData };
   } catch (e) {
     // ignore
   }
 
-  return null;
+  return { result: null, imageData: null };
 }
 
 // ── Scan strategies ────────────────────────────────────────────────────
@@ -192,15 +207,21 @@ async function tryDetect(
 async function scanWithStrategies(
   source: ImageBitmap
 ): Promise<{ result: ScanResult | null }> {
-  // 1. Try raw source
-  let d = await tryDetect(source);
-  if (d) return { result: d };
+  // 1. Try raw source and capture ImageData when produced
+  const first = await tryDetect(source);
+  if (first.result) return { result: first.result };
 
-  // 2. Prepare ImageData for heavier strategies
-  ensureCanvas(source.width, source.height);
-  ctx!.clearRect(0, 0, source.width, source.height);
-  ctx!.drawImage(source as ImageBitmap, 0, 0);
-  const imageData = ctx!.getImageData(0, 0, source.width, source.height);
+  // 2. Reuse imageData from the first attempt if available; otherwise draw the ImageBitmap once.
+  let imageData = first.imageData;
+  if (!imageData) {
+    const w = source.width | 0;
+    const h = source.height | 0;
+    if (w <= 0 || h <= 0) return { result: null };
+    ensureCanvas(w, h);
+    ctx!.clearRect(0, 0, w, h);
+    ctx!.drawImage(source as ImageBitmap, 0, 0);
+    imageData = ctx!.getImageData(0, 0, w, h);
+  }
 
   const w = imageData.width;
   const h = imageData.height;
@@ -211,8 +232,8 @@ async function scanWithStrategies(
   const sharpRgba = grayToRGBA(sharp, w, h);
   const sharpImageData = new (ImageData as any)(sharpRgba, w, h);
 
-  d = await tryDetect(sharpImageData);
-  if (d) return { result: d };
+  const second = await tryDetect(sharpImageData);
+  if (second.result) return { result: second.result };
 
   return { result: null };
 }
