@@ -104,7 +104,7 @@ export default function init(payload?: SharedFilesPayload) {
   // --- Undo helpers ---
 
   function undoCorners() {
-    const page = state.getPages()[state.getCurrentPageIndex()];
+    const page = state.getCurrentPage();
     if (!page) return;
     const hist = state.getCornerHistory(page.id);
     if (!hist || hist.length === 0) return;
@@ -115,7 +115,7 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function updateUndoButton() {
-    const page = state.getPages()[state.getCurrentPageIndex()];
+    const page = state.getCurrentPage();
     const hist = page ? state.getCornerHistory(page.id) : null;
     const hasHistory = hist && hist.length > 0;
     if (btnUndoCorners) {
@@ -126,13 +126,13 @@ export default function init(payload?: SharedFilesPayload) {
 
   // --- Handle Drag Setup ---
 
-  const getPage = () => state.getPages()[state.getCurrentPageIndex()];
+  const getCurrentPage = () => state.getCurrentPage();
   const handleDrag = createHandleDrag({
     canvas,
     magnifier,
     magnifierCanvas,
     mCtx,
-    getPage,
+    getCurrentPage,
     updateEditor,
   });
 
@@ -307,7 +307,7 @@ export default function init(payload?: SharedFilesPayload) {
     renderPageListUtil(pageList, state.getPages(), state.getCurrentPageIndex(), async (index) => {
       state.setCurrentPageIndex(index);
       state.releaseInactiveImages();
-      await state.ensureOriginalImage(state.getPages()[state.getCurrentPageIndex()]);
+      await state.ensureOriginalImage(state.getCurrentPage());
       renderPageList();
       enterFilterMode();
     });
@@ -338,13 +338,13 @@ export default function init(payload?: SharedFilesPayload) {
     cornerHandles.innerHTML = '';
     handleDrag.clearSelectedHandle();
 
-    const page = state.getPages()[state.getCurrentPageIndex()];
-    filterSelect.value = page.filter;
+    const page = state.getCurrentPage();
+    if (page) filterSelect.value = page.filter;
     applyFilters();
   }
 
   function updateEditor() {
-    const page = state.getPages()[state.getCurrentPageIndex()];
+    const page = state.getCurrentPage();
     if (!page || !page.originalImage) return;
 
     // Invalidate warp cache since corners may have changed
@@ -358,7 +358,7 @@ export default function init(payload?: SharedFilesPayload) {
       drawPerspectiveOverlay(ctx, page.corners);
       updateCornerHandles(cornerHandles, page.corners, canvas, (e, index, isEdge) => {
         // Push undo state before the drag starts
-        state.pushCornerHistory(page);
+        state.pushCornerHistory();
         handleDrag.onStart(e, index, isEdge);
       });
 
@@ -373,14 +373,14 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   function applyPerspective() {
-    const page = state.getPages()[state.getCurrentPageIndex()];
+    const page = state.getCurrentPage();
     if (!page) return;
     enterFilterMode();
     renderPageList();
   }
 
   function applyFilters() {
-    const page = state.getPages()[state.getCurrentPageIndex()];
+    const page = state.getCurrentPage();
     if (!page) return;
 
     const filter = filterSelect.value as FilterType;
@@ -546,7 +546,7 @@ export default function init(payload?: SharedFilesPayload) {
   filterSelect.addEventListener('change', applyFilters);
 
   btnRotateLeft.addEventListener('click', () => {
-    const page = state.getPages()[state.getCurrentPageIndex()];
+    const page = state.getCurrentPage();
     if (page) {
       page.rotation = (page.rotation - 90 + 360) % 360;
       applyFilters();
@@ -554,7 +554,7 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   btnRotateRight.addEventListener('click', () => {
-    const page = state.getPages()[state.getCurrentPageIndex()];
+    const page = state.getCurrentPage();
     if (page) {
       page.rotation = (page.rotation + 90) % 360;
       applyFilters();
@@ -566,23 +566,19 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   btnNudgeUp.addEventListener('click', () => {
-    const page = getPage();
-    if (page) state.pushCornerHistory(page);
+    state.pushCornerHistory();
     handleDrag.nudge(0, -1);
   });
   btnNudgeDown.addEventListener('click', () => {
-    const page = getPage();
-    if (page) state.pushCornerHistory(page);
+    state.pushCornerHistory();
     handleDrag.nudge(0, 1);
   });
   btnNudgeLeft.addEventListener('click', () => {
-    const page = getPage();
-    if (page) state.pushCornerHistory(page);
+    state.pushCornerHistory();
     handleDrag.nudge(-1, 0);
   });
   btnNudgeRight.addEventListener('click', () => {
-    const page = getPage();
-    if (page) state.pushCornerHistory(page);
+    state.pushCornerHistory();
     handleDrag.nudge(1, 0);
   });
 
@@ -614,7 +610,7 @@ export default function init(payload?: SharedFilesPayload) {
   // --- Export Helpers ---
 
   async function getRenderedCanvas(page: ScannedPage): Promise<HTMLCanvasElement> {
-    if (page.id === state.getPages()[state.getCurrentPageIndex()]?.id && page.processedCanvas.width > 0) {
+    if (page.id === state.getCurrentPage()?.id && page.processedCanvas.width > 0) {
       return page.processedCanvas;
     }
 
@@ -626,7 +622,7 @@ export default function init(payload?: SharedFilesPayload) {
     applyFiltersUtil(rotated, tempCanvas, tempCtx, page.filter);
 
     // Release the original image memory if this is not the active page
-    if (page.id !== state.getPages()[state.getCurrentPageIndex()]?.id) {
+    if (page.id !== state.getCurrentPage()?.id) {
       page.originalImage = null;
       page.warpedCanvas = null;
     }
@@ -634,25 +630,18 @@ export default function init(payload?: SharedFilesPayload) {
     return tempCanvas;
   }
 
-  /** Ensure the editor canvas has the clean processed output (no overlay). */
-  function prepareCanvasForExport() {
-    const page = state.getPages()[state.getCurrentPageIndex()];
-    if (!page) return;
-    canvas.width = page.processedCanvas.width;
-    canvas.height = page.processedCanvas.height;
-    ctx.drawImage(page.processedCanvas, 0, 0);
-  }
-
-  btnDownload.addEventListener('click', async () => {
-    prepareCanvasForExport();
-    await downloadCanvasAsImage(canvas, `scanned-page-${state.getCurrentPageIndex() + 1}.jpg`, 'jpg', 0.9);
-  });
-
   btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(state.getPages(), getRenderedCanvas));
 
+  btnDownload.addEventListener('click', async () => {
+    const currentPage = state.getCurrentPage();
+    const exportCanvas = currentPage ? currentPage.processedCanvas : canvas;
+    await downloadCanvasAsImage(exportCanvas, `scanned-page-${state.getCurrentPageIndex() + 1}.jpg`, 'jpg', 0.9);
+  });
+
   btnImageClipboard.addEventListener('click', async () => {
-    prepareCanvasForExport();
-    await copyCanvasToClipboard(canvas, 'jpg', 0.9);
+    const currentPage = state.getCurrentPage();
+    const exportCanvas = currentPage ? currentPage.processedCanvas : canvas;
+    await copyCanvasToClipboard(exportCanvas, 'jpg', 0.9);
   });
 
   pageList.addEventListener('click', async (e) => {
@@ -670,7 +659,7 @@ export default function init(payload?: SharedFilesPayload) {
       } else {
         if (state.getCurrentPageIndex() >= state.getPages().length) state.setCurrentPageIndex(state.getPages().length - 1);
         state.releaseInactiveImages();
-        await state.ensureOriginalImage(state.getPages()[state.getCurrentPageIndex()]);
+        await state.ensureOriginalImage(state.getCurrentPage());
         renderPageList();
         enterFilterMode();
       }

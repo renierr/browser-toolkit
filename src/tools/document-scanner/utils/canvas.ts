@@ -21,16 +21,16 @@ export function sourceToCanvas(
  * (both file upload and camera capture pass their original blobs directly).
  */
 export function imageToBlob(img: HTMLImageElement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const c = document.createElement('canvas');
-    c.width = img.width;
-    c.height = img.height;
-    c.getContext('2d')!.drawImage(img, 0, 0);
-    c.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('imageToBlob: toBlob returned null'))),
-      'image/png'
-    );
-  });
+  const width = img.naturalWidth || img.width;
+  const height = img.naturalHeight || img.height;
+
+  const oc = new OffscreenCanvas(width, height);
+  const ctx = oc.getContext('2d');
+  if (ctx) {
+    ctx.drawImage(img, 0, 0, width, height);
+    return oc.convertToBlob({ type: 'image/png' });
+  }
+  return Promise.reject(new Error('imageToBlob: OffscreenCanvas not supported'));
 }
 
 /** Decode a Blob back into an HTMLImageElement. */

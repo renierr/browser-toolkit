@@ -22,8 +22,11 @@ export function createScannerState(opts: StateOptions = {}) {
   const setCurrentPageIndex = (i: number) => {
     currentPageIndex = i;
   };
+  const getCurrentPage = () => (currentPageIndex >= 0 ? pages[currentPageIndex] : null);
 
-  function pushCornerHistory(page: ScannedPage) {
+  function pushCornerHistory() {
+    const page = getCurrentPage();
+    if (!page) return;
     const hist = cornerHistory.get(page.id) || [];
     hist.push(page.corners.map((p) => ({ ...p })));
     if (hist.length > MAX_UNDO_STEPS) hist.shift();
@@ -46,7 +49,7 @@ export function createScannerState(opts: StateOptions = {}) {
   function invalidateWarpCache(page: ScannedPage) {
     page.warpedCanvas = null;
     // We intentionally do NOT revoke thumbnailUrl here.
-    // Otherwise dragging corners would break the image in the page list.
+    // Otherwise, dragging corners would break the image in the page list.
     // applyFilters() revokes it when applying the new warp.
   }
 
@@ -57,18 +60,18 @@ export function createScannerState(opts: StateOptions = {}) {
     return page.warpedCanvas;
   }
 
-  async function ensureOriginalImage(page: ScannedPage): Promise<HTMLImageElement> {
-    if (!page.originalImage) {
-      page.originalImage = await imageFromBlob(page.originalBlob);
+  async function ensureOriginalImage(page: ScannedPage | null): Promise<HTMLImageElement> {
+    if (!page?.originalImage) {
+      page!.originalImage = await imageFromBlob(page!.originalBlob);
     }
-    return page.originalImage;
+    return page!.originalImage;
   }
 
   function releaseInactiveImages() {
     for (let i = 0; i < pages.length; i++) {
       if (i !== currentPageIndex) {
         pages[i].originalImage = null;
-        pages[i].warpedCanvas = null; // warp cache references the decoded image
+        pages[i].warpedCanvas = null;
         if (pages[i].processedCanvas) {
           pages[i].processedCanvas.width = 0;
           pages[i].processedCanvas.height = 0;
@@ -85,6 +88,7 @@ export function createScannerState(opts: StateOptions = {}) {
   }
 
   return {
+    getCurrentPage,
     getPages,
     getCurrentPageIndex,
     setPages,

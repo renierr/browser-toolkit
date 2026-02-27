@@ -13,7 +13,7 @@ export interface HandleDragDeps {
   magnifier: HTMLElement;
   magnifierCanvas: HTMLCanvasElement;
   mCtx: CanvasRenderingContext2D;
-  getPage: () => ScannedPage | undefined;
+  getCurrentPage: () => ScannedPage | null;
   updateEditor: () => void;
 }
 
@@ -29,7 +29,7 @@ export interface HandleDrag {
 const SMOOTHING_FACTOR = 0.4;
 
 export function createHandleDrag(deps: HandleDragDeps): HandleDrag {
-  const { canvas, magnifier, magnifierCanvas, mCtx, getPage, updateEditor } = deps;
+  const { canvas, magnifier, magnifierCanvas, mCtx, getCurrentPage, updateEditor } = deps;
 
   // All state is local to this closure
   let activeHandle: number | null = null;
@@ -55,7 +55,7 @@ export function createHandleDrag(deps: HandleDragDeps): HandleDrag {
       else return;
     }
 
-    const page = getPage();
+    const page = getCurrentPage();
     if (!page) return;
 
     const rect = canvas.getBoundingClientRect();
@@ -145,7 +145,7 @@ export function createHandleDrag(deps: HandleDragDeps): HandleDrag {
 
     magnifier.classList.remove('hidden');
 
-    const page = getPage();
+    const page = getCurrentPage();
     if (!page || !page.originalImage) return;
 
     let magPoint: Point;
@@ -176,7 +176,7 @@ export function createHandleDrag(deps: HandleDragDeps): HandleDrag {
 
     nudge(dx: number, dy: number) {
       if (selectedHandle === null) return;
-      const page = getPage();
+      const page = getCurrentPage();
       if (!page) return;
 
       const corner = page.corners[selectedHandle];
