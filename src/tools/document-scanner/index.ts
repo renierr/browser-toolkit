@@ -372,23 +372,11 @@ export default function init(payload?: SharedFilesPayload) {
     }
   }
 
-  function warpImage() {
+  function applyPerspective() {
     const page = state.getPages()[state.getCurrentPageIndex()];
     if (!page) return;
-
-    showProgress('Applying perspective correction...');
-    // Use setTimeout to allow the progress message to render before blocking
-    setTimeout(() => {
-      const outCanvas = state.getWarpedCanvas(page);
-      page.processedCanvas.width = outCanvas.width;
-      page.processedCanvas.height = outCanvas.height;
-      page.processedCanvas.getContext('2d')!.drawImage(outCanvas, 0, 0);
-      page.thumbnailUrl = null;
-
-      hideProgress();
-      renderPageList();
-      enterFilterMode();
-    }, 10);
+    enterFilterMode();
+    renderPageList();
   }
 
   function applyFilters() {
@@ -552,7 +540,7 @@ export default function init(payload?: SharedFilesPayload) {
     debugView.classList.toggle('hidden', !isDebugMode);
   });
 
-  btnApplyPerspective.addEventListener('click', warpImage);
+  btnApplyPerspective.addEventListener('click', applyPerspective);
   btnModePerspective.addEventListener('click', enterPerspectiveMode);
   btnModeFilter.addEventListener('click', enterFilterMode);
   filterSelect.addEventListener('change', applyFilters);
