@@ -59,6 +59,7 @@ export default function init(payload?: SharedFilesPayload) {
   const btnModePerspective = document.getElementById('btn-mode-perspective')!;
   const btnModeFilter = document.getElementById('btn-mode-filter')!;
   const btnUndoCorners = document.getElementById('btn-undo-corners')!;
+  const btnResetCorners = document.getElementById('btn-reset-corners')!;
   const btnRotateLeft = document.getElementById('btn-rotate-left')!;
   const btnRotateRight = document.getElementById('btn-rotate-right')!;
   const filterSelect = document.getElementById('filter-select') as HTMLSelectElement;
@@ -101,7 +102,35 @@ export default function init(payload?: SharedFilesPayload) {
   const detectionCanvas = document.createElement('canvas');
   const dCtx = detectionCanvas.getContext('2d', { willReadFrequently: true })!;
 
-  // --- Undo helpers ---
+  // --- Corners / Undo helpers ---
+
+  function cornersAreAtOriginal(page: ScannedPage | null): boolean {
+    if (!page) return true;
+    const w = page.originalWidth;
+    const h = page.originalHeight;
+    const expected: Point[] = [
+      { x: 0, y: 0 },
+      { x: w, y: 0 },
+      { x: w, y: h },
+      { x: 0, y: h },
+    ];
+    if (page.corners.length !== expected.length) return false;
+    return page.corners.every((c, i) => c.x === expected[i].x && c.y === expected[i].y);
+  }
+
+  function resetCorners() {
+    const page = state.getCurrentPage();
+    if (!page) return;
+    state.pushCornerHistory();
+    page.corners = [
+      { x: 0, y: 0 },
+      { x: page.originalWidth, y: 0 },
+      { x: page.originalWidth, y: page.originalHeight },
+      { x: 0, y: page.originalHeight },
+    ];
+    updateUndoButton();
+    updateEditor();
+  }
 
   function undoCorners() {
     const page = state.getCurrentPage();
@@ -118,10 +147,13 @@ export default function init(payload?: SharedFilesPayload) {
     const page = state.getCurrentPage();
     const hist = page ? state.getCornerHistory(page.id) : null;
     const hasHistory = hist && hist.length > 0;
-    if (btnUndoCorners) {
-      btnUndoCorners.classList.toggle('btn-disabled', !hasHistory);
-      btnUndoCorners.toggleAttribute('disabled', !hasHistory);
-    }
+    btnUndoCorners.classList.toggle('btn-disabled', !hasHistory);
+    btnUndoCorners.toggleAttribute('disabled', !hasHistory);
+
+    // Use it to enable/disable reset button
+    const onEdge = cornersAreAtOriginal(page);
+    btnResetCorners.classList.toggle('btn-disabled', onEdge);
+    btnResetCorners.toggleAttribute('disabled', onEdge);
   }
 
   // --- Handle Drag Setup ---
@@ -561,9 +593,8 @@ export default function init(payload?: SharedFilesPayload) {
     }
   });
 
-  if (btnUndoCorners) {
-    btnUndoCorners.addEventListener('click', undoCorners);
-  }
+  btnUndoCorners.addEventListener('click', undoCorners);
+  btnResetCorners.addEventListener('click', resetCorners);
 
   btnNudgeUp.addEventListener('click', () => {
     state.pushCornerHistory();
