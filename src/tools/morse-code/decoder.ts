@@ -285,7 +285,7 @@ function applyBandpassFilter(data: Float32Array, sampleRate: number): Float32Arr
 }
 
 export async function decodeFromFloat32(dataInput: Float32Array, sampleRate: number): Promise<string> {
-  let data: any = new Float32Array(dataInput);
+  let data: any = dataInput;
 
   // 0. Apply automatic gain control (normalize volume)
   data = normalizeAudio(data);
