@@ -284,26 +284,8 @@ function applyBandpassFilter(data: Float32Array, sampleRate: number): Float32Arr
   return filtered;
 }
 
-export async function decodeAudioFile(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
-
-  // Mix all channels to mono
-  let data: Float32Array;
-  if (audioBuffer.numberOfChannels === 1) {
-    data = audioBuffer.getChannelData(0);
-  } else {
-    data = new Float32Array(audioBuffer.length);
-    for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
-      const channelData = audioBuffer.getChannelData(ch);
-      for (let i = 0; i < audioBuffer.length; i++) {
-        data[i] += channelData[i] / audioBuffer.numberOfChannels;
-      }
-    }
-  }
-
-  const sampleRate = audioBuffer.sampleRate;
+export async function decodeFromFloat32(dataInput: Float32Array, sampleRate: number): Promise<string> {
+  let data: any = new Float32Array(dataInput);
 
   // 0. Apply automatic gain control (normalize volume)
   data = normalizeAudio(data);
@@ -346,7 +328,7 @@ export async function decodeAudioFile(file: File): Promise<string> {
   let states = schmittTrigger(envelope, highThreshold, lowThreshold);
 
   // 6. Debounce to remove short glitches (< 10ms equivalent)
-  const minDebounceLength = Math.max(2, Math.floor(10 / (1000 / sampleRate * hopSize)));
+  const minDebounceLength = Math.max(2, Math.floor  (10 / (1000 / sampleRate * hopSize)));
   states = debounceStates(states, minDebounceLength);
 
   // 7. Run Length Encoding
@@ -432,4 +414,33 @@ export async function decodeAudioFile(file: File): Promise<string> {
     })
     .filter((word) => word.length > 0)
     .join(' ');
+}
+
+export async function decodeArrayBufferToMonoPCM(arrayBuffer: ArrayBuffer): Promise<{ audio: Float32Array; sampleRate: number }> {
+  const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+  const ctx = new Ctor();
+  try {
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+    let audio: Float32Array;
+    if (audioBuffer.numberOfChannels === 1) {
+      audio = audioBuffer.getChannelData(0);
+    } else {
+      audio = new Float32Array(audioBuffer.length);
+      for (let ch = 0; ch < audioBuffer.numberOfChannels; ch++) {
+        const channelData = audioBuffer.getChannelData(ch);
+        for (let i = 0; i < audioBuffer.length; i++) {
+          audio[i] += channelData[i] / audioBuffer.numberOfChannels;
+        }
+      }
+    }
+
+    return { audio, sampleRate: audioBuffer.sampleRate };
+  } finally {
+    try {
+      if (typeof ctx.close === 'function') await ctx.close();
+    } catch (e) {
+      // ignore
+    }
+  }
 }

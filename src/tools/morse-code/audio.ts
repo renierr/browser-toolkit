@@ -2,7 +2,8 @@ let audioCtx: AudioContext | null = null;
 
 function getAudioContext(): AudioContext {
   if (!audioCtx || audioCtx.state === 'closed') {
-    audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+    audioCtx = new Ctor();
   }
   return audioCtx;
 }
@@ -192,7 +193,8 @@ async function bufferToWebM(
   onProgress?: (pct: number) => void
 ): Promise<Blob> {
   // Create a new context for recording
-  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+  const ctx = new Ctor();
   if (ctx.state === 'suspended') {
     await ctx.resume();
   }

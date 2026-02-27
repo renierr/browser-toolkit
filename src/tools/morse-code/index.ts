@@ -2,7 +2,9 @@ import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import { downloadFile } from '../../js/file-utils.ts';
 import { ensureAudioContextReady, exportAudio, playTone } from './audio.ts';
 import { textToMorse, textToMorseHtml } from './morsecode.ts';
-import { decodeAudioFile } from './decoder.ts';
+import { decodeArrayBufferToMonoPCM } from './decoder.ts';
+import DecodeWorker from './decode.worker?worker';
+import type { WorkerOutMessage } from './worker-protocol';
 
 let currentAbortController: AbortController | null = null;
 let isPlaying = false;
@@ -249,9 +251,46 @@ export default function init(payload?: any) {
     btnImport.disabled = true;
 
     try {
-      input.value = await decodeAudioFile(file);
-      updatePreview();
-      showMessage('Audio decoded!', { timeoutMs: 3000 });
+      const arrayBuffer = await file.arrayBuffer();
+
+      const { audio: audioForWorker, sampleRate } = await decodeArrayBufferToMonoPCM(arrayBuffer);
+
+      const worker = new DecodeWorker();
+      const id = 1;
+
+      const resultObj = await new Promise<{ text: string | null; reason?: string }>((resolve, reject) => {
+        const onmsg = (ev: MessageEvent<WorkerOutMessage>) => {
+          const m = ev.data;
+          if (m.id === id && m.type === 'decode-result') {
+            worker.removeEventListener('message', onmsg);
+            worker.terminate();
+            resolve({ text: m.text ?? null, reason: m.reason });
+          }
+        };
+        worker.addEventListener('message', onmsg);
+        const msg = { type: 'decode-pcm', id, audio: audioForWorker, sampleRate } as const;
+        try {
+          // Transfer the underlying ArrayBuffer of the Float32Array to avoid copy when possible
+          worker.postMessage(msg, [audioForWorker.buffer]);
+        } catch (e) {
+          worker.terminate();
+          reject(e);
+        }
+      });
+
+
+      // If decode failed and we have a reason from the worker, show it
+      if (resultObj.text) {
+        input.value = resultObj.text;
+        updatePreview();
+        showMessage('Audio decoded!', { timeoutMs: 3000 });
+      } else if (resultObj.reason) {
+        console.warn('Worker decode failed:', resultObj.reason);
+        showMessage(`Decoding failed: ${resultObj.reason}`, { type: 'alert' });
+      } else {
+        showMessage('No Morse detected in audio.', { type: 'info' });
+      }
+
     } catch (err) {
       console.error(err);
       showMessage('Error decoding audio', { type: 'alert' });
