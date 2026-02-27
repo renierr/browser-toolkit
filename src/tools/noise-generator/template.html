@@ -66,11 +66,33 @@
     </div>
 
     <!-- Play/Stop Controls -->
-    <div class="card-actions justify-center gap-2 mb-8">
+    <div class="card-actions justify-center gap-2 mb-2">
       <button id="btn-noise-toggle" class="btn btn-primary flex-1">
         <i data-lucide="play" class="w-4 h-4 mr-2"></i>
         Start Noise
       </button>
+    </div>
+
+    <!-- Timer Controls (hidden by default; shown only when audio is playing) -->
+    <div id="noise-timer-section" class="mb-6 hidden">
+      <label class="label">
+        <span class="label-text font-semibold">Auto-stop Timer</span>
+        <span class="label-text-alt" id="noise-timer-display">No timer set</span>
+      </label>
+
+      <div class="flex flex-wrap gap-2 mb-2">
+        <button class="btn btn-sm btn-outline noise-timer-preset" data-min="30">30m</button>
+        <button class="btn btn-sm btn-outline noise-timer-preset" data-min="60">1h</button>
+        <button class="btn btn-sm btn-outline noise-timer-preset" data-min="120">2h</button>
+        <button class="btn btn-sm btn-outline noise-timer-preset" data-min="240">4h</button>
+        <button class="btn btn-sm btn-outline noise-timer-preset" data-min="480">8h</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <input id="noise-timer-custom-min" type="number" min="1" placeholder="Custom minutes" class="input input-sm input-bordered w-36" />
+        <button id="btn-noise-timer-set" class="btn btn-sm btn-primary">Set Timer</button>
+        <button id="btn-noise-timer-cancel" class="btn btn-sm btn-ghost">Cancel Timer</button>
+      </div>
     </div>
 
     <!-- Breathing Guide -->

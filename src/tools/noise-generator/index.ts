@@ -9,6 +9,14 @@ export default function init() {
   const noiseVolumeDisplay = document.getElementById('noise-volume-display') as HTMLElement;
   const currentNoiseStatus = document.getElementById('current-noise-status') as HTMLElement;
 
+  // Timer Elements
+  const timerSection = document.getElementById('noise-timer-section') as HTMLElement;
+  const timerDisplay = document.getElementById('noise-timer-display') as HTMLElement;
+  const timerPresetBtns = document.querySelectorAll('.noise-timer-preset');
+  const timerCustomInput = document.getElementById('noise-timer-custom-min') as HTMLInputElement;
+  const btnTimerSet = document.getElementById('btn-noise-timer-set') as HTMLButtonElement;
+  const btnTimerCancel = document.getElementById('btn-noise-timer-cancel') as HTMLButtonElement;
+
   // Breathing Guide Elements
   const btnBreathingToggle = document.getElementById('btn-breathing-toggle') as HTMLButtonElement;
   const breathingCircle = document.getElementById('breathing-circle') as HTMLElement;
@@ -24,6 +32,12 @@ export default function init() {
   let isBreathingActive = false;
   let breathingMode: 'box' | 'relax' | 'calm' = 'relax';
   let breathingTimeout: number | null = null;
+
+  // Timer State
+  let timerTarget: number | null = null; // timestamp in ms when audio should stop
+  let timerTimeoutId: number | null = null;
+  let timerUiIntervalId: number | null = null; // dedicated UI refresh interval (1s)
+  const MAX_SAFE_TIMEOUT = 2147483647 - 1000; // setTimeout max on browsers (~2^31-1 ms ~24.8 days). Keep safe margin.
 
   const breathingPatterns = {
     box: [
@@ -115,6 +129,149 @@ export default function init() {
     noiseVolumeDisplay.textContent = `${Math.round(val * 100)}%`;
   };
 
+  const formatRemaining = (ms: number) => {
+    if (ms <= 0) return '00:00:00';
+    const totalSec = Math.floor(ms / 1000);
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    if (hrs > 0) return `${hrs}h ${String(mins).padStart(2, '0')}m`;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const showTimerSection = (show: boolean) => {
+    if (!timerSection) return;
+    if (show) {
+      timerSection.classList.remove('hidden');
+    } else {
+      timerSection.classList.add('hidden');
+    }
+  };
+
+  const setTimerUIActive = (active: boolean) => {
+    // When active: show running text, enable cancel, disable set to avoid duplicates
+    if (active) {
+      btnTimerCancel.classList.remove('btn-ghost');
+      btnTimerCancel.classList.add('btn-sm', 'btn-warning');
+      btnTimerCancel.disabled = false;
+      btnTimerSet.disabled = true;
+      timerCustomInput.disabled = true;
+    } else {
+      btnTimerCancel.classList.remove('btn-warning');
+      btnTimerCancel.classList.add('btn-ghost');
+      btnTimerSet.disabled = false;
+      btnTimerCancel.disabled = true;
+      timerCustomInput.disabled = false;
+    }
+  };
+
+  const clearTimer = () => {
+    if (timerTimeoutId) {
+      clearTimeout(timerTimeoutId);
+      timerTimeoutId = null;
+    }
+    timerTarget = null;
+    timerDisplay.textContent = 'No timer set';
+    // update preset button states
+    timerPresetBtns.forEach((b) => b.classList.remove('btn-active', 'btn-primary'));
+    setTimerUIActive(false);
+    // stop UI updates
+    clearTimerUiUpdates();
+  };
+
+  const stopNoiseAndClearTimer = () => {
+    noiseGenerator.stop();
+    clearTimer();
+    updateUI();
+    showTimerSection(false);
+  };
+
+  const scheduleTimerTick = () => {
+    if (!timerTarget) return;
+    const now = Date.now();
+    const remaining = timerTarget - now;
+    if (remaining <= 0) {
+      stopNoiseAndClearTimer();
+      return;
+    }
+
+    // Update display
+    timerDisplay.textContent = `Will stop in ${formatRemaining(remaining)}`;
+
+    // Schedule next wake: use safe chunking in case of very long durations or platform limitations
+    const delay = Math.min(remaining, MAX_SAFE_TIMEOUT);
+    timerTimeoutId = window.setTimeout(() => {
+      // If there is still time left, schedule again; otherwise stop
+      scheduleTimerTick();
+    }, delay);
+  };
+
+  const startTimerUiUpdates = () => {
+    if (timerUiIntervalId) return;
+    // Immediately update once, then start 1s interval
+    if (timerTarget) {
+      const remaining = Math.max(0, timerTarget - Date.now());
+      timerDisplay.textContent = `Will stop in ${formatRemaining(remaining)}`;
+    }
+    timerUiIntervalId = window.setInterval(() => {
+      if (!timerTarget) return;
+      const remaining = timerTarget - Date.now();
+      if (remaining <= 0) {
+        timerDisplay.textContent = `00:00:00`;
+        // UI update will be cleared by clearTimer when scheduleTimerTick handles stop
+        return;
+      }
+      timerDisplay.textContent = `Will stop in ${formatRemaining(remaining)}`;
+    }, 1000);
+  };
+
+  const clearTimerUiUpdates = () => {
+    if (timerUiIntervalId) {
+      clearInterval(timerUiIntervalId);
+      timerUiIntervalId = null;
+    }
+  };
+
+  const setTimerMinutes = (minutes: number) => {
+    if (!noiseGenerator.getIsPlaying()) {
+      // start playing if not already
+      const currentNoiseType = noiseGenerator.getCurrentType();
+      if (currentNoiseType) {
+        noiseGenerator.play(currentNoiseType);
+      } else {
+        noiseGenerator.play('white');
+      }
+      updateUI();
+    }
+
+    // compute target
+    const now = Date.now();
+    timerTarget = now + minutes * 60 * 1000;
+    if (timerTimeoutId) {
+      clearTimeout(timerTimeoutId);
+      timerTimeoutId = null;
+    }
+
+    // highlight preset if matches one
+    timerPresetBtns.forEach((b) => {
+      const val = parseInt(b.getAttribute('data-min') || '0', 10);
+      if (val === minutes) {
+        b.classList.add('btn-active', 'btn-primary');
+      } else {
+        b.classList.remove('btn-active', 'btn-primary');
+      }
+    });
+
+    // Show timer UI since audio is playing now
+    showTimerSection(true);
+    setTimerUIActive(true);
+
+    // start UI-only updates (1s) for a smooth countdown
+    startTimerUiUpdates();
+
+    scheduleTimerTick();
+  };
+
   const updateUI = () => {
     const isPlaying = noiseGenerator.getIsPlaying();
     const currentNoiseType = noiseGenerator.getCurrentType();
@@ -136,18 +293,31 @@ export default function init() {
       btnNoiseToggle.innerHTML = `<i data-lucide="pause" class="w-4 h-4 mr-2"></i> Stop Noise`;
       btnNoiseToggle.classList.replace('btn-primary', 'btn-secondary');
       currentNoiseStatus.textContent = `Playing: ${currentNoiseType?.charAt(0).toUpperCase() + currentNoiseType?.slice(1)!}`;
+      // Show timer controls when playing
+      showTimerSection(true);
     } else {
       btnNoiseToggle.innerHTML = `<i data-lucide="play" class="w-4 h-4 mr-2"></i> Start Noise`;
       btnNoiseToggle.classList.replace('btn-secondary', 'btn-primary');
       currentNoiseStatus.textContent = currentNoiseType
         ? `Selected: ${currentNoiseType.charAt(0).toUpperCase() + currentNoiseType.slice(1)} (Paused)`
         : 'Select a noise type to start';
+      // Hide timer controls when not playing
+      showTimerSection(false);
+    }
+
+    // If no timer target or timer has passed, show default
+    if (!timerTarget) {
+      timerDisplay.textContent = 'No timer set';
+      setTimerUIActive(false);
     }
   };
 
   const toggleNoise = () => {
     if (noiseGenerator.getIsPlaying()) {
       noiseGenerator.stop();
+      // clear timer when user stops manually
+      clearTimer();
+      showTimerSection(false);
     } else {
       const currentNoiseType = noiseGenerator.getCurrentType();
       if (currentNoiseType) {
@@ -156,6 +326,8 @@ export default function init() {
         // Default to white if nothing selected
         noiseGenerator.play('white');
       }
+      // When starting noise, reveal timer controls (even if no timer yet)
+      showTimerSection(true);
     }
     updateUI();
   };
@@ -168,9 +340,13 @@ export default function init() {
         if (noiseGenerator.getIsPlaying() && noiseGenerator.getCurrentType() === type) {
           // If clicking the same active noise, stop it
           noiseGenerator.stop();
+          // stop timer as well
+          clearTimer();
+          showTimerSection(false);
         } else {
           // If clicking a different noise or starting new, play it
           noiseGenerator.play(type);
+          showTimerSection(true);
         }
         updateUI();
       }
@@ -179,6 +355,23 @@ export default function init() {
 
   btnNoiseToggle.addEventListener('click', toggleNoise);
   noiseVolumeSlider.addEventListener('input', updateNoiseVolume);
+
+  // Timer event wiring
+  timerPresetBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const min = parseInt(btn.getAttribute('data-min') || '0', 10);
+      if (min > 0) setTimerMinutes(min);
+    });
+  });
+
+  btnTimerSet.addEventListener('click', () => {
+    const val = parseInt(timerCustomInput.value || '0', 10);
+    if (val > 0) setTimerMinutes(val);
+  });
+
+  btnTimerCancel.addEventListener('click', () => {
+    clearTimer();
+  });
 
   // Event Listeners for Breathing Guide
   btnBreathingToggle.addEventListener('click', toggleBreathing);
@@ -200,11 +393,14 @@ export default function init() {
 
   // Initial UI state
   updateBreathingUI();
+  updateUI();
 
   // Cleanup
   return () => {
     if (breathingTimeout) clearTimeout(breathingTimeout);
     if (releaseWakeLock) releaseWakeLock();
     noiseGenerator.cleanup();
+    if (timerTimeoutId) clearTimeout(timerTimeoutId);
+    if (timerUiIntervalId) clearInterval(timerUiIntervalId);
   };
 }
