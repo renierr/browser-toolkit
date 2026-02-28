@@ -1465,46 +1465,35 @@ export class NoiseGenerator {
   private playCatPurr() {
     if (!this.ctx || !this.masterGain) return;
 
-    // A real cat purr is created by vocal fold vibrations, not air/wind.
-    // By using a very low-frequency sawtooth wave (~25Hz), we can generate literal "clicks" 
-    // or impulses each vibration cycle, creating a highly realistic rattle/motor sound without the windiness of noise.
-
-    // 1. Core Motor (Vocal Folds)
     const motorFreq = 25 + Math.random() * 2;
-    // Primary vocal fold
     const oscVoice1 = this.ctx.createOscillator();
     oscVoice1.type = 'sawtooth';
     oscVoice1.frequency.value = motorFreq;
 
-    // Secondary slight detune for organic thickness and "beating"
     const oscVoice2 = this.ctx.createOscillator();
     oscVoice2.type = 'sawtooth';
     oscVoice2.frequency.value = motorFreq * 1.02;
 
-    // Muffle the harsh upper frequencies of the sawtooth, leaving just the warm rumble
     const throatFilter = this.ctx.createBiquadFilter();
     throatFilter.type = 'lowpass';
     throatFilter.frequency.value = 160;
-    throatFilter.Q.value = 1.0; // Very slight resonance
+    throatFilter.Q.value = 1.0;
 
-    // 2. Breathing Cycle (Amplitude Modulating the Motor)
-    // Cats purr continuously, but the volume and pitch swell naturally with inhale and exhale.
-    const breathRate = 0.35 + Math.random() * 0.05; // ~2.8s per breath cycle
+    const breathRate = 0.35 + Math.random() * 0.05;
     const breathLfo = this.ctx.createOscillator();
     breathLfo.type = 'sine';
     breathLfo.frequency.value = breathRate;
 
     const masterPurrGain = this.ctx.createGain();
-    masterPurrGain.gain.value = 0.4; // Base resting volume
+    masterPurrGain.gain.value = 0.4;
 
     const breathVolMod = this.ctx.createGain();
-    breathVolMod.gain.value = 0.25; // Volume swings +/- 0.25 around the 0.4 center
+    breathVolMod.gain.value = 0.25;
     breathLfo.connect(breathVolMod);
     breathVolMod.connect(masterPurrGain.gain);
 
-    // Minor pitch modulation during breathing
     const pitchMod = this.ctx.createGain();
-    pitchMod.gain.value = 1.5; // +/- 1.5Hz drift during breath
+    pitchMod.gain.value = 1.5;
     breathLfo.connect(pitchMod);
     pitchMod.connect(oscVoice1.frequency);
     pitchMod.connect(oscVoice2.frequency);
@@ -1521,30 +1510,27 @@ export class NoiseGenerator {
 
     this.activeNodes.push(oscVoice1, oscVoice2, throatFilter, breathLfo, breathVolMod, masterPurrGain, pitchMod);
 
-    // 3. Subtle Organic Meows
+    // Subtle Organic Meows
     const playMeow = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'catPurr') return;
 
       const t = this.ctx.currentTime;
       const duration = 0.5 + Math.random() * 0.4;
 
-      // Combining a sawtooth and a pulse wave (square) provides the rich harmonics needed for vocal sounds
       const osc1 = this.ctx.createOscillator();
       const osc2 = this.ctx.createOscillator();
       osc1.type = 'sawtooth';
       osc2.type = 'square';
 
-      // Very soft vocal pitch envelope: starts mid, slides up slighly, then drops
       const baseFreq = 400 + Math.random() * 80;
 
       [osc1.frequency, osc2.frequency].forEach((freqParam, i) => {
-        const offset = i === 1 ? 1.01 : 1.0; // Detune second oscillator slightly for natural chorusing
+        const offset = i === 1 ? 1.01 : 1.0;
         freqParam.setValueAtTime(baseFreq * offset, t);
         freqParam.exponentialRampToValueAtTime((baseFreq + 100) * offset, t + duration * 0.3);
         freqParam.exponentialRampToValueAtTime((baseFreq * 0.8) * offset, t + duration);
       });
 
-      // Instead of sweeping a single filter, a realistic meow uses dual-formant (vowel) filtering
       const formant1 = this.ctx.createBiquadFilter();
       formant1.type = 'bandpass';
       formant1.frequency.value = 800;
@@ -1558,7 +1544,6 @@ export class NoiseGenerator {
       const meowGain = this.ctx.createGain();
       meowGain.gain.setValueAtTime(0, t);
 
-      // Extremely faint volume so it blends into the background nicely
       const peakVolume = 0.005 + Math.random() * 0.005;
       meowGain.gain.linearRampToValueAtTime(peakVolume, t + duration * 0.2);
       meowGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
@@ -1580,18 +1565,17 @@ export class NoiseGenerator {
 
       this.activeNodes.push(osc1, osc2, formant1, formant2, meowGain);
 
-      // Schedule next meow randomly (30-80 seconds)
       this.activeIntervals.push(
         window.setTimeout(() => {
           if (this.isPlaying && this.currentNoiseType === 'catPurr') {
             playMeow();
           }
-        }, (30 + Math.random() * 50) * 1000)
+        }, (8 + Math.random() * 12) * 1000)
       );
     };
 
-    // Delay the first meow so it doesn't always play instantly
-    this.activeIntervals.push(window.setTimeout(playMeow, (15 + Math.random() * 20) * 1000));
+    // First meow happens very quickly (0.5 to 2.5 seconds)
+    this.activeIntervals.push(window.setTimeout(playMeow, (0.5 + Math.random() * 2) * 1000));
   }
 
   private playASMR() {
