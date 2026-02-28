@@ -122,14 +122,16 @@ export class NoiseGenerator {
       source.loop = true;
 
       const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = isCity ? 800 : 1200;
+      // Even broader highpass for a very light "shhh" (light rain)
+      filter.type = 'highpass';
+      filter.frequency.value = isCity ? 1200 : 1600;
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = -0.2;
 
       const gain = this.ctx.createGain();
-      gain.gain.value = 0.4;
+      // Very low constant hiss volume
+      gain.gain.value = 0.04;
 
       source.connect(filter);
       filter.connect(panner);
@@ -137,7 +139,6 @@ export class NoiseGenerator {
       gain.connect(this.masterGain);
       source.start();
 
-      this.addMicroLFO(gain.gain, 0.05, 0.15);
       this.activeNodes.push(source, filter, panner, gain);
     }
 
@@ -150,19 +151,22 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = isCity ? 250 : 400;
+      // Lower distant hum frequency
+      filter.frequency.value = isCity ? 150 : 200;
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = 0.2;
 
       const gain = this.ctx.createGain();
-      gain.gain.value = 0.2;
+      // Barely noticeable background low-frequency wash
+      gain.gain.value = 0.05;
 
       source.connect(filter);
       filter.connect(panner);
       panner.connect(gain);
       gain.connect(this.masterGain);
       source.start();
+
       this.activeNodes.push(source, filter, panner, gain);
     }
 
@@ -177,32 +181,37 @@ export class NoiseGenerator {
         return;
 
       const t = this.ctx.currentTime;
-      const whiteBuffer = this.createNoiseBuffer('white');
-      if (!whiteBuffer) return;
+      // Use pink noise to avoid the synthetic "laser" sound, giving a softer splash
+      const pinkBuffer = this.createNoiseBuffer('pink');
+      if (!pinkBuffer) return;
 
       const source = this.ctx.createBufferSource();
-      source.buffer = whiteBuffer;
+      source.buffer = pinkBuffer;
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      const baseFreq = isCity ? 800 : 1200;
-      const startFreq = baseFreq + Math.random() * 4000;
-      filter.frequency.setValueAtTime(startFreq, t);
-      // Sweeping frequency down quickly gives a "plop" liquid effect
-      filter.Q.value = isCity ? 5 : 15; // Higher Q for resonant water drop sound
+      // Muted, organic frequencies, but brought up slightly to cut through the noise
+      const baseFreq = isCity ? 1000 + Math.random() * 800 : 1500 + Math.random() * 1200;
+      filter.frequency.setValueAtTime(baseFreq, t);
+      // Sweeping the frequency down very slightly prevents it sounding like a pure tone
+      // but keeping the sweep small prevents the "pew" laser sound.
+      filter.frequency.exponentialRampToValueAtTime(baseFreq * 0.8, t + 0.05);
+
+      filter.Q.value = 8 + Math.random() * 10; // Tighter resonance for a clearer "plop"
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.8 - 0.9;
 
       const gain = this.ctx.createGain();
-      const peak = 0.05 + Math.random() * 0.15;
-      const duration = 0.02 + Math.random() * 0.05;
+      // Decent volume jump so they can be heard over the static bed
+      const peak = 0.2 + Math.random() * 0.3;
+      const duration = 0.04 + Math.random() * 0.06;
 
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(peak, t + 0.002);
+      // Soft but fast attack
+      gain.gain.linearRampToValueAtTime(peak, t + 0.005);
+      // Smooth decay
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-      filter.frequency.exponentialRampToValueAtTime(startFreq * 0.6, t + duration);
 
       source.connect(filter);
       filter.connect(panner);
@@ -659,26 +668,31 @@ export class NoiseGenerator {
       if (!brownBuffer || !whiteBuffer) return;
 
       const panValue = Math.random() * 1.6 - 0.8;
-      const duration = 15 + Math.random() * 20; // Longer rumble tail
+      // Make the duration huge for that distant, endless rolling thunder
+      const duration = 20 + Math.random() * 25;
 
-      // 1. Initial Crack/Strike
+      // 1. Initial Crack/Strike (Distant/Muffled Boom)
       if (Math.random() > 0.4) {
-        // Multi-layered crack
-        for (let c = 0; c < 2; c++) {
+        // Heavy mid-low "boom" (main acoustic shockwave)
+        const pinkBuffer = this.createNoiseBuffer('pink');
+        if (pinkBuffer) {
           const crackSource = this.ctx.createBufferSource();
-          crackSource.buffer = whiteBuffer;
+          crackSource.buffer = pinkBuffer;
+
           const crackFilter = this.ctx.createBiquadFilter();
-          // Lowered the frequency of the crack to give it more "boom" rather than "hiss"
-          crackFilter.type = c === 0 ? 'bandpass' : 'bandpass';
-          crackFilter.frequency.setValueAtTime(c === 0 ? 600 : 200 + Math.random() * 300, t);
-          if (c === 1) crackFilter.Q.value = 2.0;
-          else crackFilter.Q.value = 0.8;
+          crackFilter.type = 'lowpass';
+          // Start much lower so the crack is more of a low boom, never a sharp snap
+          crackFilter.frequency.setValueAtTime(400, t);
+          crackFilter.frequency.exponentialRampToValueAtTime(100, t + 0.3);
 
           const crackGain = this.ctx.createGain();
           crackGain.gain.setValueAtTime(0, t);
-          // Increased initial peak volume
-          crackGain.gain.linearRampToValueAtTime(1.2 / (c + 1), t + 0.005);
-          crackGain.gain.exponentialRampToValueAtTime(0.001, t + 0.8 + c * 0.5); // Longer crack tail
+          // Very high volume for the shockwave, but slightly slower attack so it doesn't "snap"
+          crackGain.gain.linearRampToValueAtTime(2.5, t + 0.05);
+          // Initial heavy decay, stretches out longer
+          crackGain.gain.exponentialRampToValueAtTime(0.4, t + 0.5);
+          // Fade out into rumble smoothly
+          crackGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
 
           const crackPanner = this.ctx.createStereoPanner();
           crackPanner.pan.value = panValue;
@@ -687,36 +701,40 @@ export class NoiseGenerator {
           crackFilter.connect(crackPanner);
           crackPanner.connect(crackGain);
           crackGain.connect(this.masterGain!);
+
           crackSource.start(t, Math.random() * 5);
-          crackSource.stop(t + 2.0);
+          crackSource.stop(t + 3.0);
+
           this.activeNodes.push(crackSource, crackFilter, crackPanner, crackGain);
         }
       }
 
-      // 2. Main Rumble (Multi-layered for depth)
-      for (let i = 0; i < 4; i++) {
+      // 2. Main Rumble (Multi-layered for depth, emphasis on SUSTAIN)
+      for (let i = 0; i < 5; i++) { // Added another layer
         const rumbleSource = this.ctx.createBufferSource();
         rumbleSource.buffer = brownBuffer;
 
         const rumbleFilter = this.ctx.createBiquadFilter();
         rumbleFilter.type = 'lowpass';
-        // Allow slightly higher frequencies initially for a deeper boom before settling to sub-bass
-        const baseFreq = 200 + Math.random() * 200;
+        // Sub-bass emphasis
+        const baseFreq = 80 + Math.random() * 100;
         rumbleFilter.frequency.setValueAtTime(baseFreq, t);
-        rumbleFilter.frequency.exponentialRampToValueAtTime(30 + Math.random() * 20, t + duration);
+        // Slowly lose high-end energy over a very long time
+        rumbleFilter.frequency.exponentialRampToValueAtTime(20 + Math.random() * 10, t + duration);
 
         const rumblePanner = this.ctx.createStereoPanner();
-        rumblePanner.pan.value = panValue + (Math.random() * 0.8 - 0.4);
+        rumblePanner.pan.value = panValue + (Math.random() * 1.0 - 0.5);
 
         const rumbleGain = this.ctx.createGain();
-        const layerDelay = i * (0.3 + Math.random() * 0.9);
+        // Longer layer delays to stretch the rumble out
+        const layerDelay = i * (0.5 + Math.random() * 1.5);
         rumbleGain.gain.setValueAtTime(0, t + layerDelay);
-        // Significantly increased rumble volume overall
-        rumbleGain.gain.linearRampToValueAtTime(1.5 / (i + 1), t + layerDelay + 1.5);
+        // Significantly increased rumble volume overall, peaks slowly
+        rumbleGain.gain.linearRampToValueAtTime(2.0 / (i + 1), t + layerDelay + 2.0 + Math.random() * 2.0);
 
         // Rolling modulation using LFO
-        this.addMicroLFO(rumbleGain.gain, 0.2 + i * 0.15, 0.5); // Increased LFO depth for heavier rolling effect
-        this.addMicroLFO(rumbleFilter.frequency, 0.1 + i * 0.1, 100); // Sweeps the thunder filter wider
+        this.addMicroLFO(rumbleGain.gain, 0.1 + i * 0.1, 0.8); // Huge LFO depth for massive rolling effect
+        this.addMicroLFO(rumbleFilter.frequency, 0.05 + i * 0.05, 120); // Sweeps the thunder filter wider and slower
 
         rumbleGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
