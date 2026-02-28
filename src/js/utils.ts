@@ -71,6 +71,7 @@ export async function downloadCanvasAsImage(
   format: 'jpg' | 'webp' | 'png' = 'png',
   quality?: number
 ): Promise<void> {
+  const mimeType = format === 'jpg' ? 'image/jpeg' : `image/${format}`;
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       async (blob) => {
@@ -85,7 +86,7 @@ export async function downloadCanvasAsImage(
           reject(err);
         }
       },
-      `image/${format}`,
+      mimeType,
       quality
     );
   });
@@ -96,6 +97,7 @@ export async function copyCanvasToClipboard(
   format: 'jpg' | 'webp' | 'png' = 'png',
   quality?: number
 ): Promise<void> {
+  const mimeType = format === 'jpg' ? 'image/jpeg' : `image/${format}`;
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       async (blob) => {
@@ -111,7 +113,7 @@ export async function copyCanvasToClipboard(
           reject(err);
         }
       },
-      `image/${format}`,
+      mimeType,
       quality
     );
   });
