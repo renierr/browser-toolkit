@@ -1733,42 +1733,144 @@ export class NoiseGenerator {
   private playASMR() {
     if (!this.ctx || !this.masterGain) return;
 
-    const playImpulse = () => {
+    const pinkBuf = this.createNoiseBuffer('pink');
+    if (pinkBuf) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = pinkBuf;
+      src.loop = true;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'lowpass';
+      bp.frequency.value = 400;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.05;
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.activeNodes.push(src, bp, g);
+
+      const sweepSrc = this.ctx.createBufferSource();
+      sweepSrc.buffer = pinkBuf;
+      sweepSrc.loop = true;
+      const sweepBp = this.ctx.createBiquadFilter();
+      sweepBp.type = 'bandpass';
+      sweepBp.frequency.value = 3000;
+      sweepBp.Q.value = 0.5;
+
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = 0;
+
+      const sweepG = this.ctx.createGain();
+      sweepG.gain.value = 0.15;
+
+      sweepSrc.connect(sweepBp);
+      sweepBp.connect(panner);
+      panner.connect(sweepG);
+      sweepG.connect(this.masterGain);
+      sweepSrc.start();
+
+      this.addMicroLFO(panner.pan, 0.05, 0.8);
+      this.addMicroLFO(sweepG.gain, 0.1, 0.05);
+
+      this.activeNodes.push(sweepSrc, sweepBp, panner, sweepG);
+    }
+
+    const playScratch = () => {
       if (!this.ctx || !this.isPlaying || this.currentNoiseType !== 'asmr') return;
       const t = this.ctx.currentTime;
       const src = this.ctx.createBufferSource();
       src.buffer = this.createNoiseBuffer('white')!;
+
       const hp = this.ctx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = 5000;
+      hp.type = 'bandpass';
+      hp.frequency.value = 5000 + Math.random() * 2000;
+      hp.Q.value = 0.5;
+
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = (Math.random() > 0.5 ? 1 : -1) * (0.6 + Math.random() * 0.4);
+
       const g = this.ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.02, t + 0.002);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
+      const duration = 0.2 + Math.random() * 0.3;
+      g.gain.linearRampToValueAtTime(0.08 + Math.random() * 0.04, t + duration * 0.2);
+      g.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
       src.connect(hp);
-      hp.connect(g);
+      hp.connect(panner);
+      panner.connect(g);
       g.connect(this.masterGain!);
+
       src.start(t, Math.random() * 9);
-      src.stop(t + 0.05);
+      src.stop(t + duration);
+
       setTimeout(() => {
         src.disconnect();
         hp.disconnect();
+        panner.disconnect();
         g.disconnect();
-      }, 100);
+      }, (duration + 0.1) * 1000);
     };
 
-    const scheduleImpulse = () => {
+    const playTap = () => {
+      if (!this.ctx || !this.isPlaying || this.currentNoiseType !== 'asmr') return;
+      const t = this.ctx.currentTime;
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.createNoiseBuffer('pink')!;
+
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 600 + Math.random() * 400;
+      bp.Q.value = 2.0;
+
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = (Math.random() > 0.5 ? 1 : -1) * (0.4 + Math.random() * 0.6);
+
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.2, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
+
+      src.connect(bp);
+      bp.connect(panner);
+      panner.connect(g);
+      g.connect(this.masterGain!);
+
+      src.start(t, Math.random() * 9);
+      src.stop(t + 0.1);
+
+      setTimeout(() => {
+        src.disconnect();
+        bp.disconnect();
+        panner.disconnect();
+        g.disconnect();
+      }, 150);
+    };
+
+    const scheduleTriggers = () => {
       if (!this.isPlaying || this.currentNoiseType !== 'asmr') return;
+
+      const rand = Math.random();
+      if (rand < 0.3) {
+        playScratch();
+      } else if (rand < 0.6) {
+        playTap();
+      } else {
+        let delay = 0;
+        const count = 3 + Math.floor(Math.random() * 4);
+        for (let i = 0; i < count; i++) {
+          setTimeout(playTap, delay);
+          delay += 100 + Math.random() * 150;
+        }
+      }
+
       const id = window.setTimeout(
-        () => {
-          playImpulse();
-          scheduleImpulse();
-        },
-        100 + Math.random() * 2000
+        scheduleTriggers,
+        1500 + Math.random() * 3000
       );
       this.activeIntervals.push(id);
     };
-    scheduleImpulse();
+
+    scheduleTriggers();
   }
 
   private playSpace() {
