@@ -235,13 +235,138 @@ export class NoiseGenerator {
     const scheduleDroplets = () => {
       if (!this.isPlaying || !['rain', 'thunder', 'cityRain'].includes(this.currentNoiseType!))
         return;
-      const delay = isCity ? 80 + Math.random() * 200 : 50 + Math.random() * 150;
+      const delay = isCity ? 40 + Math.random() * 100 : 50 + Math.random() * 150; // Faster drips in the city
       const id = window.setTimeout(() => {
         playDroplet();
         scheduleDroplets();
       }, delay);
       this.activeIntervals.push(id);
     };
+
+    // Layer 4 & 5: City Elements (Only for City Rain)
+    if (isCity) {
+      // Background Traffic Wash
+      const playTrafficWash = () => {
+        if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cityRain') return;
+
+        const t = this.ctx.currentTime;
+        const pinkBuffer = this.createNoiseBuffer('pink');
+        if (!pinkBuffer) return;
+
+        const source = this.ctx.createBufferSource();
+        source.buffer = pinkBuffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        // Muted, distant "whoosh"
+        filter.type = 'bandpass';
+        filter.frequency.value = 400 + Math.random() * 200;
+        filter.Q.value = 1.0;
+
+        const panner = this.ctx.createStereoPanner();
+        // Cars pass from one side to the other
+        const startPan = Math.random() * 1.6 - 0.8;
+        const endPan = startPan + (Math.random() > 0.5 ? 0.4 : -0.4);
+        panner.pan.setValueAtTime(startPan, t);
+
+        const washDuration = 6 + Math.random() * 8;
+        panner.pan.linearRampToValueAtTime(endPan, t + washDuration);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0, t);
+        // Swells up slowly like a car passing on a wet road
+        const peakGain = 0.04 + Math.random() * 0.04;
+        gain.gain.linearRampToValueAtTime(Math.max(0.01, peakGain - 0.02), t + washDuration / 2);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + washDuration);
+
+        source.connect(filter);
+        filter.connect(panner);
+        panner.connect(gain);
+        gain.connect(this.masterGain!);
+
+        source.start(t);
+        source.stop(t + washDuration + 0.1);
+
+        this.activeNodes.push(source, filter, panner, gain);
+
+        // Schedule next traffic wash
+        this.activeIntervals.push(
+          window.setTimeout(() => {
+            if (this.isPlaying && this.currentNoiseType === 'cityRain') {
+              playTrafficWash();
+            }
+          }, (washDuration + (5 + Math.random() * 15)) * 1000)
+        );
+      };
+
+      // Distant Siren (Very rare)
+      const playSiren = () => {
+        if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cityRain') return;
+
+        const t = this.ctx.currentTime;
+        const duration = 15 + Math.random() * 10;
+
+        const osc = this.ctx.createOscillator();
+        // Triangle is softer than saw/square for distant sirens
+        osc.type = 'triangle';
+
+        const filter = this.ctx.createBiquadFilter();
+        // Heavily muffle the siren so it sounds blocks away through the rain
+        filter.type = 'lowpass';
+        filter.frequency.value = 600;
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0, t);
+        // Swell in and out very slowly
+        gain.gain.linearRampToValueAtTime(0.02, t + duration / 3);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+
+        const panner = this.ctx.createStereoPanner();
+        // Siren moves across the stereo field
+        const startPan = Math.random() > 0.5 ? -1 : 1;
+        panner.pan.setValueAtTime(startPan, t);
+        panner.pan.linearRampToValueAtTime(-startPan, t + duration);
+
+        osc.connect(filter);
+        filter.connect(panner);
+        panner.connect(gain);
+        gain.connect(this.masterGain!);
+
+        // European high-low siren modulation
+        const lfo = this.ctx.createOscillator();
+        lfo.type = 'square';
+        lfo.frequency.value = 0.8; // Slow wail
+
+        const lfoGain = this.ctx.createGain();
+        // Sweep frequency
+        osc.frequency.value = 800;
+        lfoGain.gain.value = 100;
+
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc.frequency);
+
+        osc.start(t);
+        lfo.start(t);
+        osc.stop(t + duration);
+        lfo.stop(t + duration);
+
+        this.activeNodes.push(osc, filter, gain, panner, lfo, lfoGain);
+
+        // Schedule next siren (rare!)
+        this.activeIntervals.push(
+          window.setTimeout(() => {
+            if (this.isPlaying && this.currentNoiseType === 'cityRain') {
+              playSiren();
+            }
+          }, (duration + (20 + Math.random() * 40)) * 1000)
+        );
+      };
+
+      // Start the city elements
+      playTrafficWash();
+      // Delay the first siren so it doesn't always play immediately
+      this.activeIntervals.push(window.setTimeout(playSiren, (10 + Math.random() * 20) * 1000));
+    }
+
     scheduleDroplets();
   }
 
