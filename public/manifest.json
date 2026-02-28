@@ -88,25 +88,19 @@
       "action": "./index.html",
       "accept": {
         "application/pdf": [".pdf"]
-      },
-      "launch_type": "single-client"
+      }
     },
     {
       "action": "./index.html",
       "accept": {
         "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"]
-      },
-      "launch_type": "single-client"
+      }
     },
     {
       "action": "./index.html",
       "accept": {
         "audio/*": [".wav", ".mp3", ".ogg", ".webm"]
-      },
-      "launch_type": "single-client"
+      }
     }
-  ],
-  "launch_handler": {
-    "client_mode": "focus-existing"
-  }
+  ]
 }
