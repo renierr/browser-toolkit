@@ -1465,56 +1465,113 @@ export class NoiseGenerator {
   private playCatPurr() {
     if (!this.ctx || !this.masterGain) return;
 
-    // The breathing/rattle rate
-    const purrRate = 22 + Math.random() * 5;
+    // The breathing cycle (in and out)
+    const breathLfo = this.ctx.createOscillator();
+    breathLfo.type = 'sine';
+    breathLfo.frequency.value = 0.35; // ~2.8s breath cycle
 
-    // Pink noise base for breath
-    const pink = this.createNoiseBuffer('pink');
-    if (pink) {
-      const src = this.ctx.createBufferSource();
-      src.buffer = pink;
-      src.loop = true;
+    const breathGain = this.ctx.createGain();
+    // Swell volume up and down. This will modulate the base purr volume.
+    breathGain.gain.value = 0.3;
 
-      const bp = this.ctx.createBiquadFilter();
-      bp.type = 'bandpass';
-      bp.frequency.value = 150;
-      bp.Q.value = 1.0;
+    // Pitch modulation for breathing (cats purr pitch changes slightly when breathing in vs out)
+    const pitchModGain = this.ctx.createGain();
+    pitchModGain.gain.value = 2; // +/- 2Hz shift
 
-      const gain = this.ctx.createGain();
-      gain.gain.value = 0.6; // Base volume
+    breathLfo.connect(breathGain);
+    breathLfo.connect(pitchModGain);
 
-      // Fast AM for the 'rattle'
-      const rattle = this.ctx.createOscillator();
-      rattle.type = 'triangle';
-      rattle.frequency.value = purrRate;
+    // 1. The Motor (Low frequency oscillators sound exactly like a cat's "engine")
+    const purrFreq = 26 + Math.random() * 2;
 
-      const rattleGain = this.ctx.createGain();
-      rattleGain.gain.value = 0.5; // Depth of rattle
+    const osc1 = this.ctx.createOscillator();
+    osc1.type = 'sawtooth';
+    osc1.frequency.value = purrFreq;
 
-      // Slow AM for the 'breathe in/out'
-      const breath = this.ctx.createOscillator();
-      breath.type = 'sine';
-      breath.frequency.value = 0.4; // 2.5 second breath cycles
+    const osc2 = this.ctx.createOscillator();
+    osc2.type = 'sawtooth';
+    // Slight detune for organic beating, making it less synthetic
+    osc2.frequency.value = purrFreq * 1.05;
 
-      const breathGain = this.ctx.createGain();
-      breathGain.gain.value = 0.3; // Depth of breath
+    pitchModGain.connect(osc1.frequency);
+    pitchModGain.connect(osc2.frequency);
 
-      // Connect AM to master gain of purr
-      rattle.connect(rattleGain);
-      rattleGain.connect(gain.gain);
+    const purrFilter = this.ctx.createBiquadFilter();
+    purrFilter.type = 'lowpass';
+    // Muffle the harsh highs of the saw wave, leaving just the low vibration
+    purrFilter.frequency.value = 250;
 
-      breath.connect(breathGain);
-      breathGain.connect(gain.gain);
+    // Add slight resonance to mimic the throat cavity
+    purrFilter.Q.value = 2;
 
-      src.connect(bp);
-      bp.connect(gain);
-      gain.connect(this.masterGain);
+    const purrVolume = this.ctx.createGain();
+    // Base volume
+    purrVolume.gain.value = 0.4;
 
-      src.start();
-      rattle.start();
-      breath.start();
-      this.activeNodes.push(src, bp, gain, rattle, rattleGain, breath, breathGain);
-    }
+    // Connect breathing volume AM to purr
+    breathGain.connect(purrVolume.gain);
+
+    osc1.connect(purrFilter);
+    osc2.connect(purrFilter);
+    purrFilter.connect(purrVolume);
+    purrVolume.connect(this.masterGain);
+
+    osc1.start();
+    osc2.start();
+    breathLfo.start();
+
+    this.activeNodes.push(osc1, osc2, purrFilter, purrVolume, breathLfo, breathGain, pitchModGain);
+
+    // 2. Subtle Meows
+    const playMeow = () => {
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'catPurr') return;
+
+      const t = this.ctx.currentTime;
+      // Duration of meow
+      const duration = 0.8 + Math.random() * 0.6;
+
+      const meowOsc = this.ctx.createOscillator();
+      // Triangle for a smooth, less synthetic voice
+      meowOsc.type = 'triangle';
+
+      // Pitch contour (Start low, dip up, and go back down)
+      const startFreq = 350 + Math.random() * 100;
+      const peakFreq = startFreq + 100 + Math.random() * 80;
+      const endFreq = startFreq - 50;
+
+      meowOsc.frequency.setValueAtTime(startFreq, t);
+      meowOsc.frequency.exponentialRampToValueAtTime(peakFreq, t + duration * 0.3);
+      meowOsc.frequency.exponentialRampToValueAtTime(endFreq, t + duration);
+
+      // Volume contour (very subtle/soft)
+      const meowGain = this.ctx.createGain();
+      meowGain.gain.setValueAtTime(0, t);
+      // Swell up softly
+      const peakGain = 0.01 + Math.random() * 0.02; // Very quiet!
+      meowGain.gain.linearRampToValueAtTime(peakGain, t + duration * 0.4);
+      // Fade out
+      meowGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      meowOsc.connect(meowGain);
+      meowGain.connect(this.masterGain!);
+
+      meowOsc.start(t);
+      meowOsc.stop(t + duration);
+
+      this.activeNodes.push(meowOsc, meowGain);
+
+      // Schedule next meow
+      this.activeIntervals.push(
+        window.setTimeout(() => {
+          if (this.isPlaying && this.currentNoiseType === 'catPurr') {
+            playMeow();
+          }
+        }, (20 + Math.random() * 60) * 1000) // Occasional, 20-80s
+      );
+    };
+
+    // Delay the first meow
+    this.activeIntervals.push(window.setTimeout(playMeow, (10 + Math.random() * 20) * 1000));
   }
 
   private playASMR() {
