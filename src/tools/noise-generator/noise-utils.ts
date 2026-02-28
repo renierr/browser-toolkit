@@ -1493,7 +1493,7 @@ export class NoiseGenerator {
 
   private playAirplane() {
     if (!this.ctx || !this.masterGain) return;
-    // Low brown engine
+
     const brown = this.createNoiseBuffer('brown');
     if (brown) {
       const src = this.ctx.createBufferSource();
@@ -1501,33 +1501,117 @@ export class NoiseGenerator {
       src.loop = true;
       const lp = this.ctx.createBiquadFilter();
       lp.type = 'lowpass';
-      lp.frequency.value = 150;
+      lp.frequency.value = 160;
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = 0;
       const g = this.ctx.createGain();
-      g.gain.value = 0.4;
+      g.gain.value = 0.6;
       src.connect(lp);
-      lp.connect(g);
+      lp.connect(panner);
+      panner.connect(g);
       g.connect(this.masterGain);
       src.start();
-      this.addMicroLFO(g.gain, 0.05, 0.05);
-      this.activeNodes.push(src, lp, g);
+
+      this.activeNodes.push(src, lp, panner, g);
     }
-    // Pink air hiss
+
     const pink = this.createNoiseBuffer('pink');
     if (pink) {
       const src = this.ctx.createBufferSource();
       src.buffer = pink;
       src.loop = true;
-      const hp = this.ctx.createBiquadFilter();
-      hp.type = 'highpass';
-      hp.frequency.value = 1000;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 1200;
+      bp.Q.value = 0.3;
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = 0;
       const g = this.ctx.createGain();
-      g.gain.value = 0.1;
-      src.connect(hp);
-      hp.connect(g);
+      g.gain.value = 0.08;
+      src.connect(bp);
+      bp.connect(panner);
+      panner.connect(g);
       g.connect(this.masterGain);
       src.start();
-      this.activeNodes.push(src, hp, g);
+
+      this.activeNodes.push(src, bp, panner, g);
     }
+
+    const hum = this.ctx.createOscillator();
+    hum.type = 'sine';
+    hum.frequency.value = 240;
+    const humGain = this.ctx.createGain();
+    humGain.gain.value = 0.02;
+    hum.connect(humGain);
+    humGain.connect(this.masterGain);
+    hum.start();
+
+    this.activeNodes.push(hum, humGain);
+
+    const playAmbiance = () => {
+      if (!this.isPlaying || this.currentNoiseType !== 'airplane') return;
+      if (!this.ctx || !this.masterGain) return;
+
+      if (Math.random() > 0.6) {
+        // Seatbelt tone
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        osc1.frequency.value = 523.25;
+        osc2.frequency.value = 659.25;
+
+        const g = this.ctx.createGain();
+        const t = this.ctx.currentTime;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.02, t + 0.1);
+        g.gain.setValueAtTime(0.02, t + 0.4);
+        g.gain.linearRampToValueAtTime(0, t + 0.8);
+
+        osc1.connect(g);
+        osc2.connect(g);
+        g.connect(this.masterGain);
+
+        osc1.start(t);
+        osc2.start(t);
+        osc1.stop(t + 0.9);
+        osc2.stop(t + 0.9);
+
+        this.activeNodes.push(osc1, osc2, g);
+      } else {
+        // Slight turbulence rumble
+        const brownBuf = this.createNoiseBuffer('brown');
+        if (brownBuf) {
+          const src = this.ctx.createBufferSource();
+          src.buffer = brownBuf;
+          const lp = this.ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.value = 90;
+          const g = this.ctx.createGain();
+          const t = this.ctx.currentTime;
+          g.gain.setValueAtTime(0, t);
+          g.gain.linearRampToValueAtTime(0.3, t + 1);
+          g.gain.linearRampToValueAtTime(0, t + 3);
+
+          src.connect(lp);
+          lp.connect(g);
+          g.connect(this.masterGain);
+
+          src.start(t);
+          src.stop(t + 3.1);
+
+          this.activeNodes.push(src, lp, g);
+        }
+      }
+
+      this.activeIntervals.push(
+        window.setTimeout(playAmbiance, (15 + Math.random() * 45) * 1000)
+      );
+    };
+
+    this.activeIntervals.push(
+      window.setTimeout(playAmbiance, (5 + Math.random() * 15) * 1000)
+    );
   }
 
   private playCatPurr() {
