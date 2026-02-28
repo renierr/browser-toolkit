@@ -94,10 +94,9 @@ export async function downloadCanvasAsImage(
 
 export async function copyCanvasToClipboard(
   canvas: HTMLCanvasElement,
-  format: 'jpg' | 'webp' | 'png' = 'png',
+  _format: 'jpg' | 'webp' | 'png' = 'png',
   quality?: number
 ): Promise<void> {
-  const mimeType = format === 'jpg' ? 'image/jpeg' : `image/${format}`;
   return new Promise((resolve, reject) => {
     canvas.toBlob(
       async (blob) => {
@@ -113,7 +112,7 @@ export async function copyCanvasToClipboard(
           reject(err);
         }
       },
-      mimeType,
+      'image/png', // clipboard can only handle png so ignore param 
       quality
     );
   });
