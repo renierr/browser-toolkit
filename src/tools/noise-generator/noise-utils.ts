@@ -346,50 +346,17 @@ export class NoiseGenerator {
       };
 
       // Passing By Car
-      const playPassingCar = () => {
+      const scheduleCityCar = () => {
         if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cityRain') return;
 
-        const t = this.ctx.currentTime;
-
-        const pinkBuffer = this.createNoiseBuffer('pink');
-        if (!pinkBuffer) return;
-
-        const source = this.ctx.createBufferSource();
-        source.buffer = pinkBuffer;
-
-        const filter = this.ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 800 + Math.random() * 400;
-
-        const panner = this.ctx.createStereoPanner();
-        const dir = Math.random() > 0.5 ? 1 : -1;
-        panner.pan.setValueAtTime(dir, t);
-
-        const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0, t);
-
-        const duration = 2.5 + Math.random() * 2.0;
+        // Pass a slightly louder volume override for city rain
         const vol = 0.08 + Math.random() * 0.04;
-
-        gain.gain.linearRampToValueAtTime(vol, t + duration * 0.4);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-        panner.pan.linearRampToValueAtTime(-dir, t + duration);
-
-        source.connect(filter);
-        filter.connect(panner);
-        panner.connect(gain);
-        gain.connect(this.masterGain!);
-
-        source.start(t);
-        source.stop(t + duration + 0.1);
-
-        this.activeNodes.push(source, filter, panner, gain);
+        this.playPassingCar(vol);
 
         this.activeIntervals.push(
           window.setTimeout(() => {
             if (this.isPlaying && this.currentNoiseType === 'cityRain') {
-              playPassingCar();
+              scheduleCityCar();
             }
           }, (20 + Math.random() * 30) * 1000)
         );
@@ -397,7 +364,7 @@ export class NoiseGenerator {
 
       playTrafficWash();
       this.activeIntervals.push(window.setTimeout(playSiren, (10 + Math.random() * 20) * 1000));
-      this.activeIntervals.push(window.setTimeout(playPassingCar, (5 + Math.random() * 10) * 1000));
+      this.activeIntervals.push(window.setTimeout(scheduleCityCar, (5 + Math.random() * 10) * 1000));
     }
 
     scheduleDroplets();
@@ -664,88 +631,138 @@ export class NoiseGenerator {
   private playNight() {
     if (!this.ctx || !this.masterGain) return;
 
-    const pinkBuffer = this.createNoiseBuffer('pink');
-    if (pinkBuffer) {
+    const brownBuffer = this.createNoiseBuffer('brown');
+    if (brownBuffer) {
       const source = this.ctx.createBufferSource();
-      source.buffer = pinkBuffer;
+      source.buffer = brownBuffer;
       source.loop = true;
 
       const filter = this.ctx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.value = 800;
+      filter.type = 'lowpass';
+      filter.frequency.value = 90;
 
       const gain = this.ctx.createGain();
-      gain.gain.value = 0.08;
+      gain.gain.value = 0.04;
 
       source.connect(filter);
       filter.connect(gain);
       gain.connect(this.masterGain);
       source.start();
 
-      this.addMicroLFO(gain.gain, 0.05, 0.03);
       this.activeNodes.push(source, filter, gain);
     }
 
     const playCricket = () => {
-      if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'night') return;
+
       const t = this.ctx.currentTime;
+      const freq = 4000 + Math.random() * 600;
 
       const carrier = this.ctx.createOscillator();
       carrier.type = 'sine';
-      carrier.frequency.value = 4000 + Math.random() * 500;
-
-      const modulator = this.ctx.createOscillator();
-      modulator.type = 'square';
-      modulator.frequency.value = 25 + Math.random() * 10;
-
-      const modGain = this.ctx.createGain();
-      modGain.gain.value = 500;
+      carrier.frequency.value = freq;
 
       const panner = this.ctx.createStereoPanner();
-      panner.pan.value = Math.random() * 1.8 - 0.9;
+      panner.pan.value = Math.random() * 1.6 - 0.8;
 
-      const mainGain = this.ctx.createGain();
-      const duration = 0.1 + Math.random() * 0.1;
-      mainGain.gain.setValueAtTime(0, t);
-      mainGain.gain.linearRampToValueAtTime(0.05, t + 0.01);
-      mainGain.gain.linearRampToValueAtTime(0, t + duration);
+      const envelope = this.ctx.createGain();
+      envelope.gain.setValueAtTime(0, t);
 
-      modulator.connect(modGain);
-      modGain.connect(carrier.frequency);
-      carrier.connect(panner);
-      panner.connect(mainGain);
-      mainGain.connect(this.masterGain!);
+      const pulses = 2 + Math.floor(Math.random() * 3);
+      let timeOffset = 0;
+      const peakVol = 0.015 + Math.random() * 0.005;
+
+      for (let i = 0; i < pulses; i++) {
+        envelope.gain.setValueAtTime(0, t + timeOffset);
+        envelope.gain.linearRampToValueAtTime(peakVol, t + timeOffset + 0.01);
+        envelope.gain.linearRampToValueAtTime(0, t + timeOffset + 0.04);
+        timeOffset += 0.05;
+      }
+
+      carrier.connect(envelope);
+      envelope.connect(panner);
+      panner.connect(this.masterGain!);
 
       carrier.start(t);
-      modulator.start(t);
-      carrier.stop(t + duration + 0.1);
-      modulator.stop(t + duration + 0.1);
+      carrier.stop(t + timeOffset);
 
-      setTimeout(
-        () => {
-          carrier.disconnect();
-          modulator.disconnect();
-          modGain.disconnect();
-          panner.disconnect();
-          mainGain.disconnect();
-        },
-        (duration + 0.2) * 1000
-      );
+      this.activeNodes.push(carrier, envelope, panner);
     };
 
     const scheduleCricket = () => {
       if (!this.isPlaying || this.currentNoiseType !== 'night') return;
-      const delay = 500 + Math.random() * 1500;
+
+      const delay = 6000 + Math.random() * 12000;
+
       const id = window.setTimeout(() => {
-        const chirps = 1 + Math.floor(Math.random() * 3);
-        for (let i = 0; i < chirps; i++) {
-          setTimeout(playCricket, i * 200);
+        playCricket();
+        if (Math.random() > 0.6) {
+          setTimeout(playCricket, 300);
         }
         scheduleCricket();
       }, delay);
       this.activeIntervals.push(id);
     };
+
     scheduleCricket();
+
+    const playOwl = () => {
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'night') return;
+
+      const t = this.ctx.currentTime;
+      const freq = 360 + Math.random() * 30;
+
+      const owlSource = this.ctx.createOscillator();
+      owlSource.type = 'sine';
+
+      owlSource.frequency.setValueAtTime(freq, t);
+      owlSource.frequency.exponentialRampToValueAtTime(freq * 0.85, t + 0.8);
+
+      const owlGain = this.ctx.createGain();
+      owlGain.gain.setValueAtTime(0, t);
+
+      const peakVol = 0.05 + Math.random() * 0.03;
+      owlGain.gain.linearRampToValueAtTime(peakVol, t + 0.3);
+      owlGain.gain.setValueAtTime(peakVol, t + 0.5);
+      owlGain.gain.linearRampToValueAtTime(0, t + 0.8);
+
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = (Math.random() > 0.5 ? 1 : -1) * (0.5 + Math.random() * 0.3);
+
+      owlSource.connect(owlGain);
+      owlGain.connect(panner);
+      panner.connect(this.masterGain!);
+
+      owlSource.start(t);
+      owlSource.stop(t + 0.9);
+
+      this.activeNodes.push(owlSource, owlGain, panner);
+
+      if (Math.random() > 0.5) {
+        setTimeout(playOwl, 1000);
+      } else {
+        this.activeIntervals.push(
+          window.setTimeout(() => {
+            if (this.isPlaying && this.currentNoiseType === 'night') playOwl();
+          }, (15 + Math.random() * 25) * 1000)
+        );
+      }
+    };
+
+    this.activeIntervals.push(window.setTimeout(playOwl, (2 + Math.random() * 3) * 1000));
+
+    const scheduleCar = () => {
+      if (!this.isPlaying || this.currentNoiseType !== 'night') return;
+
+      const delay = (30 + Math.random() * 30) * 1000;
+      const id = window.setTimeout(() => {
+        this.playPassingCar(0.4);
+        scheduleCar();
+      }, delay);
+      this.activeIntervals.push(id);
+    };
+
+    this.activeIntervals.push(window.setTimeout(scheduleCar, (10 + Math.random() * 15) * 1000));
   }
 
   private playFan() {
@@ -812,6 +829,57 @@ export class NoiseGenerator {
     }
   }
 
+  // Removed playCarHorn
+
+  private playPassingCar(volumeOverride: number = 0.2) {
+    if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+
+    const t = this.ctx.currentTime;
+    const duration = 4.0 + Math.random() * 2.5;
+
+    // Use pink noise to simulate tire swoosh
+    const pinkBuffer = this.createNoiseBuffer('pink');
+    if (!pinkBuffer) return;
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = pinkBuffer;
+
+    // Lowpass filter that opens and closes as the car passes
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(300, t);
+    filter.frequency.exponentialRampToValueAtTime(1500, t + duration / 2); // Approaching
+    filter.frequency.exponentialRampToValueAtTime(200, t + duration); // Receding
+
+    // Bandpass to focus on the 'swoosh'
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1000;
+    bp.Q.value = 0.8;
+
+    // Panner for movement
+    const panner = this.ctx.createStereoPanner();
+    const startPan = Math.random() > 0.5 ? 1 : -1;
+    panner.pan.setValueAtTime(startPan, t);
+    panner.pan.linearRampToValueAtTime(-startPan, t + duration);
+
+    // Volume envelope
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(volumeOverride, t + duration / 2);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+    src.connect(filter);
+    filter.connect(bp);
+    bp.connect(panner);
+    panner.connect(gain);
+    gain.connect(this.masterGain);
+
+    src.start(t);
+    src.stop(t + duration);
+
+    this.activeNodes.push(src, filter, bp, panner, gain);
+  }
   private playThunderstorm() {
     if (!this.ctx || !this.masterGain) return;
 
