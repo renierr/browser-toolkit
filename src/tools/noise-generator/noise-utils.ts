@@ -114,7 +114,7 @@ export class NoiseGenerator {
   private playRain(isCity: boolean = false) {
     if (!this.ctx || !this.masterGain) return;
 
-    // Layer 1: Pink noise (Moderate Hiss/Patter)
+    // Layer 1: Pink noise
     const pinkBuffer = this.createNoiseBuffer('pink');
     if (pinkBuffer) {
       const source = this.ctx.createBufferSource();
@@ -122,7 +122,6 @@ export class NoiseGenerator {
       source.loop = true;
 
       const filter = this.ctx.createBiquadFilter();
-      // Even broader highpass for a very light "shhh" (light rain)
       filter.type = 'highpass';
       filter.frequency.value = isCity ? 1200 : 1600;
 
@@ -130,7 +129,6 @@ export class NoiseGenerator {
       panner.pan.value = -0.2;
 
       const gain = this.ctx.createGain();
-      // Very low constant hiss volume
       gain.gain.value = 0.04;
 
       source.connect(filter);
@@ -142,7 +140,7 @@ export class NoiseGenerator {
       this.activeNodes.push(source, filter, panner, gain);
     }
 
-    // Layer 2: Brown noise (Deep Rumble)
+    // Layer 2: Brown noise
     const brownBuffer = this.createNoiseBuffer('brown');
     if (brownBuffer) {
       const source = this.ctx.createBufferSource();
@@ -151,14 +149,12 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      // Lower distant hum frequency
       filter.frequency.value = isCity ? 150 : 200;
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = 0.2;
 
       const gain = this.ctx.createGain();
-      // Barely noticeable background low-frequency wash
       gain.gain.value = 0.05;
 
       source.connect(filter);
@@ -181,7 +177,6 @@ export class NoiseGenerator {
         return;
 
       const t = this.ctx.currentTime;
-      // Use pink noise to avoid the synthetic "laser" sound, giving a softer splash
       const pinkBuffer = this.createNoiseBuffer('pink');
       if (!pinkBuffer) return;
 
@@ -190,27 +185,22 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      // Muted, organic frequencies, but brought up slightly to cut through the noise
+
       const baseFreq = isCity ? 1000 + Math.random() * 800 : 1500 + Math.random() * 1200;
       filter.frequency.setValueAtTime(baseFreq, t);
-      // Sweeping the frequency down very slightly prevents it sounding like a pure tone
-      // but keeping the sweep small prevents the "pew" laser sound.
       filter.frequency.exponentialRampToValueAtTime(baseFreq * 0.8, t + 0.05);
 
-      filter.Q.value = 8 + Math.random() * 10; // Tighter resonance for a clearer "plop"
+      filter.Q.value = 8 + Math.random() * 10;
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.8 - 0.9;
 
       const gain = this.ctx.createGain();
-      // Decent volume jump so they can be heard over the static bed
       const peak = 0.2 + Math.random() * 0.3;
       const duration = 0.04 + Math.random() * 0.06;
 
       gain.gain.setValueAtTime(0, t);
-      // Soft but fast attack
       gain.gain.linearRampToValueAtTime(peak, t + 0.005);
-      // Smooth decay
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
       source.connect(filter);
@@ -235,7 +225,7 @@ export class NoiseGenerator {
     const scheduleDroplets = () => {
       if (!this.isPlaying || !['rain', 'thunder', 'cityRain'].includes(this.currentNoiseType!))
         return;
-      const delay = isCity ? 40 + Math.random() * 100 : 50 + Math.random() * 150; // Faster drips in the city
+      const delay = isCity ? 40 + Math.random() * 100 : 50 + Math.random() * 150;
       const id = window.setTimeout(() => {
         playDroplet();
         scheduleDroplets();
@@ -243,7 +233,7 @@ export class NoiseGenerator {
       this.activeIntervals.push(id);
     };
 
-    // Layer 4 & 5: City Elements (Only for City Rain)
+    // Layer 4 & 5: City Elements
     if (isCity) {
       // Background Traffic Wash
       const playTrafficWash = () => {
@@ -257,13 +247,11 @@ export class NoiseGenerator {
         source.buffer = pinkBuffer;
 
         const filter = this.ctx.createBiquadFilter();
-        // Muted, distant "whoosh"
         filter.type = 'bandpass';
         filter.frequency.value = 400 + Math.random() * 200;
         filter.Q.value = 1.0;
 
         const panner = this.ctx.createStereoPanner();
-        // Cars pass from one side to the other
         const startPan = Math.random() * 1.6 - 0.8;
         const endPan = startPan + (Math.random() > 0.5 ? 0.4 : -0.4);
         panner.pan.setValueAtTime(startPan, t);
@@ -273,7 +261,7 @@ export class NoiseGenerator {
 
         const gain = this.ctx.createGain();
         gain.gain.setValueAtTime(0, t);
-        // Swells up slowly like a car passing on a wet road
+
         const peakGain = 0.04 + Math.random() * 0.04;
         gain.gain.linearRampToValueAtTime(Math.max(0.01, peakGain - 0.02), t + washDuration / 2);
         gain.gain.exponentialRampToValueAtTime(0.001, t + washDuration);
@@ -288,7 +276,6 @@ export class NoiseGenerator {
 
         this.activeNodes.push(source, filter, panner, gain);
 
-        // Schedule next traffic wash
         this.activeIntervals.push(
           window.setTimeout(() => {
             if (this.isPlaying && this.currentNoiseType === 'cityRain') {
@@ -298,30 +285,29 @@ export class NoiseGenerator {
         );
       };
 
-      // Distant Siren (Very rare)
+      // Distant Siren
       const playSiren = () => {
         if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cityRain') return;
 
         const t = this.ctx.currentTime;
-        const duration = 15 + Math.random() * 10;
+        const duration = 5 + Math.random() * 5;
 
         const osc = this.ctx.createOscillator();
-        // Triangle is softer than saw/square for distant sirens
         osc.type = 'triangle';
 
         const filter = this.ctx.createBiquadFilter();
-        // Heavily muffle the siren so it sounds blocks away through the rain
         filter.type = 'lowpass';
         filter.frequency.value = 600;
 
         const gain = this.ctx.createGain();
         gain.gain.setValueAtTime(0, t);
-        // Swell in and out very slowly
-        gain.gain.linearRampToValueAtTime(0.02, t + duration / 3);
+
+        const peak = 0.01 + Math.random() * 0.01;
+        gain.gain.linearRampToValueAtTime(peak, t + duration / 3);
         gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
 
         const panner = this.ctx.createStereoPanner();
-        // Siren moves across the stereo field
+
         const startPan = Math.random() > 0.5 ? -1 : 1;
         panner.pan.setValueAtTime(startPan, t);
         panner.pan.linearRampToValueAtTime(-startPan, t + duration);
@@ -331,13 +317,12 @@ export class NoiseGenerator {
         panner.connect(gain);
         gain.connect(this.masterGain!);
 
-        // European high-low siren modulation
         const lfo = this.ctx.createOscillator();
         lfo.type = 'square';
-        lfo.frequency.value = 0.8; // Slow wail
+        lfo.frequency.value = 0.8;
 
         const lfoGain = this.ctx.createGain();
-        // Sweep frequency
+
         osc.frequency.value = 800;
         lfoGain.gain.value = 100;
 
@@ -351,20 +336,68 @@ export class NoiseGenerator {
 
         this.activeNodes.push(osc, filter, gain, panner, lfo, lfoGain);
 
-        // Schedule next siren (rare!)
         this.activeIntervals.push(
           window.setTimeout(() => {
             if (this.isPlaying && this.currentNoiseType === 'cityRain') {
               playSiren();
             }
-          }, (duration + (20 + Math.random() * 40)) * 1000)
+          }, (duration + (45 + Math.random() * 60)) * 1000)
         );
       };
 
-      // Start the city elements
+      // Passing By Car
+      const playPassingCar = () => {
+        if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cityRain') return;
+
+        const t = this.ctx.currentTime;
+
+        const pinkBuffer = this.createNoiseBuffer('pink');
+        if (!pinkBuffer) return;
+
+        const source = this.ctx.createBufferSource();
+        source.buffer = pinkBuffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = 800 + Math.random() * 400;
+
+        const panner = this.ctx.createStereoPanner();
+        const dir = Math.random() > 0.5 ? 1 : -1;
+        panner.pan.setValueAtTime(dir, t);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0, t);
+
+        const duration = 2.5 + Math.random() * 2.0;
+        const vol = 0.08 + Math.random() * 0.04;
+
+        gain.gain.linearRampToValueAtTime(vol, t + duration * 0.4);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+        panner.pan.linearRampToValueAtTime(-dir, t + duration);
+
+        source.connect(filter);
+        filter.connect(panner);
+        panner.connect(gain);
+        gain.connect(this.masterGain!);
+
+        source.start(t);
+        source.stop(t + duration + 0.1);
+
+        this.activeNodes.push(source, filter, panner, gain);
+
+        this.activeIntervals.push(
+          window.setTimeout(() => {
+            if (this.isPlaying && this.currentNoiseType === 'cityRain') {
+              playPassingCar();
+            }
+          }, (20 + Math.random() * 30) * 1000)
+        );
+      };
+
       playTrafficWash();
-      // Delay the first siren so it doesn't always play immediately
       this.activeIntervals.push(window.setTimeout(playSiren, (10 + Math.random() * 20) * 1000));
+      this.activeIntervals.push(window.setTimeout(playPassingCar, (5 + Math.random() * 10) * 1000));
     }
 
     scheduleDroplets();
@@ -793,12 +826,10 @@ export class NoiseGenerator {
       if (!brownBuffer || !whiteBuffer) return;
 
       const panValue = Math.random() * 1.6 - 0.8;
-      // Make the duration huge for that distant, endless rolling thunder
       const duration = 20 + Math.random() * 25;
 
-      // 1. Initial Crack/Strike (Distant/Muffled Boom)
+      // 1. Initial Crack/Strike
       if (Math.random() > 0.4) {
-        // Heavy mid-low "boom" (main acoustic shockwave)
         const pinkBuffer = this.createNoiseBuffer('pink');
         if (pinkBuffer) {
           const crackSource = this.ctx.createBufferSource();
@@ -806,17 +837,13 @@ export class NoiseGenerator {
 
           const crackFilter = this.ctx.createBiquadFilter();
           crackFilter.type = 'lowpass';
-          // Start much lower so the crack is more of a low boom, never a sharp snap
           crackFilter.frequency.setValueAtTime(400, t);
           crackFilter.frequency.exponentialRampToValueAtTime(100, t + 0.3);
 
           const crackGain = this.ctx.createGain();
           crackGain.gain.setValueAtTime(0, t);
-          // Very high volume for the shockwave, but slightly slower attack so it doesn't "snap"
           crackGain.gain.linearRampToValueAtTime(2.5, t + 0.05);
-          // Initial heavy decay, stretches out longer
           crackGain.gain.exponentialRampToValueAtTime(0.4, t + 0.5);
-          // Fade out into rumble smoothly
           crackGain.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
 
           const crackPanner = this.ctx.createStereoPanner();
@@ -834,32 +861,27 @@ export class NoiseGenerator {
         }
       }
 
-      // 2. Main Rumble (Multi-layered for depth, emphasis on SUSTAIN)
-      for (let i = 0; i < 5; i++) { // Added another layer
+      // 2. Main Rumble
+      for (let i = 0; i < 5; i++) {
         const rumbleSource = this.ctx.createBufferSource();
         rumbleSource.buffer = brownBuffer;
 
         const rumbleFilter = this.ctx.createBiquadFilter();
         rumbleFilter.type = 'lowpass';
-        // Sub-bass emphasis
         const baseFreq = 80 + Math.random() * 100;
         rumbleFilter.frequency.setValueAtTime(baseFreq, t);
-        // Slowly lose high-end energy over a very long time
         rumbleFilter.frequency.exponentialRampToValueAtTime(20 + Math.random() * 10, t + duration);
 
         const rumblePanner = this.ctx.createStereoPanner();
         rumblePanner.pan.value = panValue + (Math.random() * 1.0 - 0.5);
 
         const rumbleGain = this.ctx.createGain();
-        // Longer layer delays to stretch the rumble out
         const layerDelay = i * (0.5 + Math.random() * 1.5);
         rumbleGain.gain.setValueAtTime(0, t + layerDelay);
-        // Significantly increased rumble volume overall, peaks slowly
         rumbleGain.gain.linearRampToValueAtTime(2.0 / (i + 1), t + layerDelay + 2.0 + Math.random() * 2.0);
 
-        // Rolling modulation using LFO
-        this.addMicroLFO(rumbleGain.gain, 0.1 + i * 0.1, 0.8); // Huge LFO depth for massive rolling effect
-        this.addMicroLFO(rumbleFilter.frequency, 0.05 + i * 0.05, 120); // Sweeps the thunder filter wider and slower
+        this.addMicroLFO(rumbleGain.gain, 0.1 + i * 0.1, 0.8);
+        this.addMicroLFO(rumbleFilter.frequency, 0.05 + i * 0.05, 120);
 
         rumbleGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
