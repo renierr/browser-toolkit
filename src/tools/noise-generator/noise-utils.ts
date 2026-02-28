@@ -111,7 +111,7 @@ export class NoiseGenerator {
 
   // --- Specific Soundscapes ---
 
-  private playRain() {
+  private playRain(isCity: boolean = false) {
     if (!this.ctx || !this.masterGain) return;
 
     // Layer 1: Pink noise (Moderate Hiss/Patter)
@@ -123,7 +123,7 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 1200;
+      filter.frequency.value = isCity ? 800 : 1200;
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = -0.2;
@@ -150,7 +150,7 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 400;
+      filter.frequency.value = isCity ? 250 : 400;
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = 0.2;
@@ -185,20 +185,19 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(1200 + Math.random() * 4800, t);
-      filter.Q.value = 1.8 + Math.random() * 6.2;
+      const baseFreq = isCity ? 800 : 1200;
+      filter.frequency.setValueAtTime(baseFreq + Math.random() * 4000, t);
+      filter.Q.value = isCity ? 1.2 : 2.5;
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.8 - 0.9;
 
       const gain = this.ctx.createGain();
-      const peak = 0.04 + Math.random() * 0.14;
-      const duration = 0.008 + Math.random() * 0.06;
+      const peak = 0.03 + Math.random() * 0.12;
+      const duration = 0.01 + Math.random() * 0.08;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(peak, t + 0.002 + Math.random() * 0.008);
+      gain.gain.linearRampToValueAtTime(peak, t + 0.005);
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-      this.addMicroLFO(filter.frequency, 0.3, 80);
 
       source.connect(filter);
       filter.connect(panner);
@@ -220,12 +219,9 @@ export class NoiseGenerator {
     };
 
     const scheduleDroplets = () => {
-      if (
-        !this.isPlaying ||
-        !['rain', 'thunder', 'cityRain'].includes(this.currentNoiseType!)
-      )
+      if (!this.isPlaying || !['rain', 'thunder', 'cityRain'].includes(this.currentNoiseType!))
         return;
-      const delay = 50 + Math.random() * 150;
+      const delay = isCity ? 80 + Math.random() * 200 : 50 + Math.random() * 150;
       const id = window.setTimeout(() => {
         playDroplet();
         scheduleDroplets();
@@ -632,20 +628,20 @@ export class NoiseGenerator {
       if (!brownBuffer || !whiteBuffer) return;
 
       const panValue = Math.random() * 1.6 - 0.8;
-      const duration = 6 + Math.random() * 8;
+      const duration = 10 + Math.random() * 15;
 
+      // 1. Initial Crack/Strike
       if (Math.random() > 0.4) {
         const crackSource = this.ctx.createBufferSource();
         crackSource.buffer = whiteBuffer;
         const crackFilter = this.ctx.createBiquadFilter();
-        crackFilter.type = 'bandpass';
-        crackFilter.frequency.setValueAtTime(800, t);
-        crackFilter.Q.value = 0.5;
+        crackFilter.type = 'highpass';
+        crackFilter.frequency.setValueAtTime(1200, t);
 
         const crackGain = this.ctx.createGain();
         crackGain.gain.setValueAtTime(0, t);
-        crackGain.gain.linearRampToValueAtTime(0.3 + Math.random() * 0.3, t + 0.01);
-        crackGain.gain.exponentialRampToValueAtTime(0.01, t + 0.5);
+        crackGain.gain.linearRampToValueAtTime(0.5, t + 0.01);
+        crackGain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
 
         const crackPanner = this.ctx.createStereoPanner();
         crackPanner.pan.value = panValue;
@@ -655,47 +651,47 @@ export class NoiseGenerator {
         crackPanner.connect(crackGain);
         crackGain.connect(this.masterGain!);
         crackSource.start(t, Math.random() * 5);
-        crackSource.stop(t + 0.6);
+        crackSource.stop(t + 0.5);
       }
 
-      const rumbleSource = this.ctx.createBufferSource();
-      rumbleSource.buffer = brownBuffer;
+      // 2. Main Rumble (Multi-layered for depth)
+      for (let i = 0; i < 3; i++) {
+        const rumbleSource = this.ctx.createBufferSource();
+        rumbleSource.buffer = brownBuffer;
 
-      const rumbleFilter = this.ctx.createBiquadFilter();
-      rumbleFilter.type = 'lowpass';
-      rumbleFilter.frequency.setValueAtTime(400, t);
-      rumbleFilter.frequency.exponentialRampToValueAtTime(80, t + duration);
+        const rumbleFilter = this.ctx.createBiquadFilter();
+        rumbleFilter.type = 'lowpass';
+        const baseFreq = 200 + Math.random() * 200;
+        rumbleFilter.frequency.setValueAtTime(baseFreq, t);
+        rumbleFilter.frequency.exponentialRampToValueAtTime(30 + Math.random() * 20, t + duration);
 
-      const rumblePanner = this.ctx.createStereoPanner();
-      rumblePanner.pan.value = panValue;
+        const rumblePanner = this.ctx.createStereoPanner();
+        rumblePanner.pan.value = panValue + (Math.random() * 0.4 - 0.2);
 
-      const rumbleGain = this.ctx.createGain();
-      rumbleGain.gain.setValueAtTime(0, t);
-      rumbleGain.gain.linearRampToValueAtTime(0.5 + Math.random() * 0.5, t + 1.5);
-      rumbleGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+        const rumbleGain = this.ctx.createGain();
+        const layerDelay = i * (0.2 + Math.random() * 0.8);
+        rumbleGain.gain.setValueAtTime(0, t + layerDelay);
+        rumbleGain.gain.linearRampToValueAtTime(0.4 / (i + 1), t + layerDelay + 1.5);
 
-      rumbleSource.connect(rumbleFilter);
-      rumbleFilter.connect(rumblePanner);
-      rumblePanner.connect(rumbleGain);
-      rumbleGain.connect(this.masterGain!);
+        // Rolling modulation
+        this.addMicroLFO(rumbleGain.gain, 0.3 + i * 0.2, 0.15);
+        rumbleGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
-      rumbleSource.start(t, Math.random() * 5);
-      rumbleSource.stop(t + duration + 0.1);
+        rumbleSource.connect(rumbleFilter);
+        rumbleFilter.connect(rumblePanner);
+        rumblePanner.connect(rumbleGain);
+        rumbleGain.connect(this.masterGain!);
 
-      setTimeout(
-        () => {
-          rumbleSource.disconnect();
-          rumbleFilter.disconnect();
-          rumblePanner.disconnect();
-          rumbleGain.disconnect();
-        },
-        (duration + 1) * 1000
-      );
+        rumbleSource.start(t + layerDelay, Math.random() * 5);
+        rumbleSource.stop(t + duration + 0.1);
+
+        this.activeNodes.push(rumbleSource, rumbleFilter, rumblePanner, rumbleGain);
+      }
     };
 
     const scheduleThunder = () => {
       if (!this.isPlaying || this.currentNoiseType !== 'thunder') return;
-      const delay = 12000 + Math.random() * 25000;
+      const delay = 10000 + Math.random() * 20000;
       const id = window.setTimeout(() => {
         playThunder();
         scheduleThunder();
@@ -1115,7 +1111,7 @@ export class NoiseGenerator {
   }
 
   private playCityRain() {
-    this.playRain();
+    this.playRain(true);
     if (!this.ctx || !this.masterGain) return;
 
     // Distant traffic whoosh
@@ -1149,17 +1145,26 @@ export class NoiseGenerator {
       src.start(t, Math.random() * 5);
       src.stop(t + dur);
 
-      setTimeout(() => {
-        src.disconnect(); lp.disconnect(); pan.disconnect(); g.disconnect();
-      }, (dur + 0.5) * 1000);
+      setTimeout(
+        () => {
+          src.disconnect();
+          lp.disconnect();
+          pan.disconnect();
+          g.disconnect();
+        },
+        (dur + 0.5) * 1000
+      );
     };
 
     const scheduleWhoosh = () => {
       if (!this.isPlaying || this.currentNoiseType !== 'cityRain') return;
-      const id = window.setTimeout(() => {
-        playWhoosh();
-        scheduleWhoosh();
-      }, 5000 + Math.random() * 10000);
+      const id = window.setTimeout(
+        () => {
+          playWhoosh();
+          scheduleWhoosh();
+        },
+        5000 + Math.random() * 10000
+      );
       this.activeIntervals.push(id);
     };
     scheduleWhoosh();
@@ -1288,16 +1293,21 @@ export class NoiseGenerator {
       src.start(t, Math.random() * 9);
       src.stop(t + 0.05);
       setTimeout(() => {
-        src.disconnect(); hp.disconnect(); g.disconnect();
+        src.disconnect();
+        hp.disconnect();
+        g.disconnect();
       }, 100);
     };
 
     const scheduleImpulse = () => {
       if (!this.isPlaying || this.currentNoiseType !== 'asmr') return;
-      const id = window.setTimeout(() => {
-        playImpulse();
-        scheduleImpulse();
-      }, 100 + Math.random() * 2000);
+      const id = window.setTimeout(
+        () => {
+          playImpulse();
+          scheduleImpulse();
+        },
+        100 + Math.random() * 2000
+      );
       this.activeIntervals.push(id);
     };
     scheduleImpulse();
