@@ -29,8 +29,8 @@ export class NoiseGenerator {
       return this.noiseBuffers.get(cacheKey)!;
     }
 
-    const bufferSize = 10 * this.ctx.sampleRate; // 10 seconds buffer for better quality
-    const buffer = this.ctx.createBuffer(2, bufferSize, this.ctx.sampleRate); // Stereo buffer
+    const bufferSize = 10 * this.ctx.sampleRate;
+    const buffer = this.ctx.createBuffer(2, bufferSize, this.ctx.sampleRate);
 
     for (let channel = 0; channel < 2; channel++) {
       const output = buffer.getChannelData(channel);
@@ -51,29 +51,39 @@ export class NoiseGenerator {
           b4 = 0.55 * b4 + white * 0.5329522;
           b5 = -0.7616 * b5 - white * 0.016898;
           output[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362;
-          output[i] *= 0.11; // (roughly) compensate for gain
+          output[i] *= 0.11;
           b6 = white * 0.115926;
         }
       } else if (type === 'brown') {
-        let lastOut = 0.0;
+        let lastOut = 0;
         for (let i = 0; i < bufferSize; i++) {
           const white = Math.random() * 2 - 1;
           output[i] = (lastOut + 0.02 * white) / 1.02;
           lastOut = output[i];
-          output[i] *= 3.5; // (roughly) compensate for gain
+          output[i] *= 3.5;
         }
       }
-
-      // Apply cross-fade at the end of the buffer to avoid clicks
-      const fadeSize = Math.floor(0.1 * this.ctx.sampleRate); // 100ms fade
+      const fadeSize = Math.floor(0.1 * this.ctx.sampleRate);
       for (let i = 0; i < fadeSize; i++) {
         const alpha = i / fadeSize;
         output[i] = output[i] * alpha + output[bufferSize - fadeSize + i] * (1 - alpha);
       }
     }
-
     this.noiseBuffers.set(cacheKey, buffer);
     return buffer;
+  }
+
+  private addMicroLFO(target: AudioParam, baseRate = 0.08, depth = 0.12) {
+    if (!this.ctx) return;
+    const lfo = this.ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = baseRate + Math.random() * 0.25;
+    const lfoGain = this.ctx.createGain();
+    lfoGain.gain.value = depth * (0.7 + Math.random() * 0.6);
+    lfo.connect(lfoGain);
+    lfoGain.connect(target);
+    lfo.start();
+    this.activeNodes.push(lfo, lfoGain);
   }
 
   private playNoiseSource(
@@ -96,7 +106,7 @@ export class NoiseGenerator {
     source.start();
 
     this.activeNodes.push(source, gain);
-    return gain; // Return the gain node so we can connect filters to it if needed
+    return gain;
   }
 
   // --- Specific Soundscapes ---
@@ -121,22 +131,14 @@ export class NoiseGenerator {
       const gain = this.ctx.createGain();
       gain.gain.value = 0.4;
 
-      // Slow modulation for intensity shifts
-      const intensityLfo = this.ctx.createOscillator();
-      intensityLfo.type = 'sine';
-      intensityLfo.frequency.value = 0.05;
-      const intensityGain = this.ctx.createGain();
-      intensityGain.gain.value = 0.15;
-      intensityLfo.connect(intensityGain);
-      intensityGain.connect(gain.gain);
-      intensityLfo.start();
-
       source.connect(filter);
       filter.connect(panner);
       panner.connect(gain);
       gain.connect(this.masterGain);
       source.start();
-      this.activeNodes.push(source, filter, panner, gain, intensityLfo, intensityGain);
+
+      this.addMicroLFO(gain.gain, 0.05, 0.15);
+      this.activeNodes.push(source, filter, panner, gain);
     }
 
     // Layer 2: Brown noise (Deep Rumble)
@@ -164,13 +166,13 @@ export class NoiseGenerator {
       this.activeNodes.push(source, filter, panner, gain);
     }
 
-    // Layer 3: Discrete Droplets (Simulated with short noise bursts)
+    // Layer 3: Discrete Droplets
     const playDroplet = () => {
       if (
         !this.ctx ||
         !this.masterGain ||
         !this.isPlaying ||
-        (this.currentNoiseType !== 'rain' && this.currentNoiseType !== 'thunder')
+        !['rain', 'thunder', 'cityRain'].includes(this.currentNoiseType!)
       )
         return;
 
@@ -183,17 +185,20 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(2000 + Math.random() * 3000, t);
-      filter.Q.value = 2.0;
+      filter.frequency.setValueAtTime(1200 + Math.random() * 4800, t);
+      filter.Q.value = 1.8 + Math.random() * 6.2;
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.8 - 0.9;
 
       const gain = this.ctx.createGain();
-      const duration = 0.01 + Math.random() * 0.03;
+      const peak = 0.04 + Math.random() * 0.14;
+      const duration = 0.008 + Math.random() * 0.06;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.05 + Math.random() * 0.1, t + 0.002);
+      gain.gain.linearRampToValueAtTime(peak, t + 0.002 + Math.random() * 0.008);
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      this.addMicroLFO(filter.frequency, 0.3, 80);
 
       source.connect(filter);
       filter.connect(panner);
@@ -217,7 +222,7 @@ export class NoiseGenerator {
     const scheduleDroplets = () => {
       if (
         !this.isPlaying ||
-        (this.currentNoiseType !== 'rain' && this.currentNoiseType !== 'thunder')
+        !['rain', 'thunder', 'cityRain'].includes(this.currentNoiseType!)
       )
         return;
       const delay = 50 + Math.random() * 150;
@@ -236,7 +241,6 @@ export class NoiseGenerator {
     const buffer = this.createNoiseBuffer('brown');
     if (!buffer) return;
 
-    // We'll create two layers for stereo width
     [-0.5, 0.5].forEach((pan) => {
       const source = this.ctx!.createBufferSource();
       source.buffer = buffer;
@@ -252,29 +256,17 @@ export class NoiseGenerator {
       const panner = this.ctx!.createStereoPanner();
       panner.pan.value = pan;
 
-      // LFO for the wave cycle
-      const lfo = this.ctx!.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.12 + Math.random() * 0.04; // Slightly different for each side
-
-      const lfoGain = this.ctx!.createGain();
-      lfoGain.gain.value = 0.25;
-
-      lfo.connect(lfoGain);
-      lfoGain.connect(waveGain.gain);
-
       source.connect(filter);
       filter.connect(panner);
       panner.connect(waveGain);
       waveGain.connect(this.masterGain!);
 
-      source.start(0, Math.random() * 10); // Start at random offset
-      lfo.start();
+      source.start(0, Math.random() * 10);
 
-      this.activeNodes.push(source, filter, panner, waveGain, lfo, lfoGain);
+      this.addMicroLFO(waveGain.gain, 0.12 + Math.random() * 0.04, 0.25);
+      this.activeNodes.push(source, filter, panner, waveGain);
     });
 
-    // Add a high-frequency "hiss" for the foam/spray
     const pinkBuffer = this.createNoiseBuffer('pink');
     if (pinkBuffer) {
       const source = this.ctx.createBufferSource();
@@ -288,28 +280,19 @@ export class NoiseGenerator {
       const foamGain = this.ctx.createGain();
       foamGain.gain.value = 0.05;
 
-      // Modulate foam with wave LFO but inverted or shifted
-      const lfo = this.ctx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.14;
-      const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = 0.04;
-      lfo.connect(lfoGain);
-      lfoGain.connect(foamGain.gain);
-
       source.connect(filter);
       filter.connect(foamGain);
       foamGain.connect(this.masterGain);
       source.start();
-      lfo.start();
-      this.activeNodes.push(source, filter, foamGain, lfo, lfoGain);
+
+      this.addMicroLFO(foamGain.gain, 0.14, 0.04);
+      this.activeNodes.push(source, filter, foamGain);
     }
   }
 
   private playForest() {
     if (!this.ctx || !this.masterGain) return;
 
-    // 1. Wind (Filtered Pink Noise)
     const buffer = this.createNoiseBuffer('pink');
     if (buffer) {
       const source = this.ctx.createBufferSource();
@@ -318,29 +301,20 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 400; // Low rumble wind
+      filter.frequency.value = 400;
 
       const gain = this.ctx.createGain();
       gain.gain.value = 0.15;
-
-      // Modulate wind volume for gusts
-      const lfo = this.ctx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.07;
-      const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = 0.1;
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-      lfo.start();
 
       source.connect(filter);
       filter.connect(gain);
       gain.connect(this.masterGain);
       source.start();
-      this.activeNodes.push(source, filter, gain, lfo, lfoGain);
+
+      this.addMicroLFO(gain.gain, 0.07, 0.1);
+      this.activeNodes.push(source, filter, gain);
     }
 
-    // 2. Birds (Random Chirps)
     const playChirp = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying) return;
 
@@ -349,7 +323,6 @@ export class NoiseGenerator {
       const gain = this.ctx.createGain();
       const panner = this.ctx.createStereoPanner();
 
-      // Randomize bird properties
       const isHigh = Math.random() > 0.5;
       const startFreq = isHigh ? 2000 + Math.random() * 2000 : 1000 + Math.random() * 1000;
       const endFreq = startFreq + (Math.random() * 1000 - 500);
@@ -382,24 +355,21 @@ export class NoiseGenerator {
       );
     };
 
-    // Schedule random chirps
     const scheduleNextChirp = () => {
-      if (!this.isPlaying) return;
-      const delay = 1000 + Math.random() * 4000; // 1s to 5s
+      if (!this.isPlaying || this.currentNoiseType !== 'forest') return;
+      const delay = 1000 + Math.random() * 4000;
       const id = window.setTimeout(() => {
         playChirp();
         scheduleNextChirp();
       }, delay);
       this.activeIntervals.push(id);
     };
-
     scheduleNextChirp();
   }
 
   private playFire() {
     if (!this.ctx || !this.masterGain) return;
 
-    // 1. Rumble (Brown Noise)
     const brownBuffer = this.createNoiseBuffer('brown');
     if (brownBuffer) {
       const source = this.ctx.createBufferSource();
@@ -413,24 +383,15 @@ export class NoiseGenerator {
       const gain = this.ctx.createGain();
       gain.gain.value = 0.5;
 
-      // Subtle LFO for the roar of the fire
-      const lfo = this.ctx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.2;
-      const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = 0.15;
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-      lfo.start();
-
       source.connect(filter);
       filter.connect(gain);
       gain.connect(this.masterGain);
       source.start();
-      this.activeNodes.push(source, filter, gain, lfo, lfoGain);
+
+      this.addMicroLFO(gain.gain, 0.2, 0.15);
+      this.activeNodes.push(source, filter, gain);
     }
 
-    // 2. Crackling (Random clicks)
     const playCrackle = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying) return;
 
@@ -473,7 +434,6 @@ export class NoiseGenerator {
       );
     };
 
-    // 3. Hissing (Filtered Pink Noise)
     const pinkBuffer = this.createNoiseBuffer('pink');
     if (pinkBuffer) {
       const source = this.ctx.createBufferSource();
@@ -496,11 +456,10 @@ export class NoiseGenerator {
     }
 
     const scheduleCrackle = () => {
-      if (!this.isPlaying) return;
-      // Random interval between crackles
-      const delay = Math.random() * 200; // Frequent crackles
+      if (!this.isPlaying || this.currentNoiseType !== 'fire') return;
+      const delay = Math.random() * 200;
       const id = window.setTimeout(() => {
-        if (Math.random() > 0.3) playCrackle(); // 70% chance
+        if (Math.random() > 0.3) playCrackle();
         scheduleCrackle();
       }, delay);
       this.activeIntervals.push(id);
@@ -511,7 +470,6 @@ export class NoiseGenerator {
   private playNight() {
     if (!this.ctx || !this.masterGain) return;
 
-    // 1. Background Wind (Highpass Pink Noise)
     const pinkBuffer = this.createNoiseBuffer('pink');
     if (pinkBuffer) {
       const source = this.ctx.createBufferSource();
@@ -525,24 +483,15 @@ export class NoiseGenerator {
       const gain = this.ctx.createGain();
       gain.gain.value = 0.08;
 
-      // Modulate with slow LFO for a gentle night breeze
-      const lfo = this.ctx.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.05;
-      const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = 0.03;
-      lfo.connect(lfoGain);
-      lfoGain.connect(gain.gain);
-      lfo.start();
-
       source.connect(filter);
       filter.connect(gain);
       gain.connect(this.masterGain);
       source.start();
-      this.activeNodes.push(source, filter, gain, lfo, lfoGain);
+
+      this.addMicroLFO(gain.gain, 0.05, 0.03);
+      this.activeNodes.push(source, filter, gain);
     }
 
-    // 2. Crickets
     const playCricket = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying) return;
       const t = this.ctx.currentTime;
@@ -591,10 +540,9 @@ export class NoiseGenerator {
     };
 
     const scheduleCricket = () => {
-      if (!this.isPlaying) return;
+      if (!this.isPlaying || this.currentNoiseType !== 'night') return;
       const delay = 500 + Math.random() * 1500;
       const id = window.setTimeout(() => {
-        // Play a few chirps in a row
         const chirps = 1 + Math.floor(Math.random() * 3);
         for (let i = 0; i < chirps; i++) {
           setTimeout(playCricket, i * 200);
@@ -609,7 +557,6 @@ export class NoiseGenerator {
   private playFan() {
     if (!this.ctx || !this.masterGain) return;
 
-    // 1. Air flow (Brown + Lowpass)
     const brownBuffer = this.createNoiseBuffer('brown');
     if (brownBuffer) {
       const source = this.ctx.createBufferSource();
@@ -623,32 +570,26 @@ export class NoiseGenerator {
       const gain = this.ctx.createGain();
       gain.gain.value = 0.5;
 
-      // Slow LFO to simulate the oscillating fan movement
-      const oscillationLfo = this.ctx.createOscillator();
-      oscillationLfo.type = 'sine';
-      oscillationLfo.frequency.value = 0.2; // 5 seconds per oscillation
-
       const panner = this.ctx.createStereoPanner();
-      oscillationLfo.connect(panner.pan);
 
       source.connect(filter);
       filter.connect(panner);
       panner.connect(gain);
       gain.connect(this.masterGain);
       source.start();
-      oscillationLfo.start();
-      this.activeNodes.push(source, filter, panner, gain, oscillationLfo);
+
+      this.addMicroLFO(panner.pan, 0.2, 0.8);
+      this.activeNodes.push(source, filter, panner, gain);
     }
 
-    // 2. Motor hum (Oscillators)
-    const frequencies = [60, 120, 180]; // Fundamental and harmonics
+    const frequencies = [60, 120, 180];
     frequencies.forEach((freq) => {
       const osc = this.ctx!.createOscillator();
       osc.type = 'sine';
       osc.frequency.value = freq;
 
       const gain = this.ctx!.createGain();
-      gain.gain.value = 0.05 / (freq / 60); // Quieter for higher harmonics
+      gain.gain.value = 0.05 / (freq / 60);
 
       osc.connect(gain);
       gain.connect(this.masterGain!);
@@ -656,7 +597,6 @@ export class NoiseGenerator {
       this.activeNodes.push(osc, gain);
     });
 
-    // 3. Higher frequency air "whir" (Pink Noise)
     const pinkBuffer = this.createNoiseBuffer('pink');
     if (pinkBuffer) {
       const source = this.ctx.createBufferSource();
@@ -681,10 +621,8 @@ export class NoiseGenerator {
   private playThunderstorm() {
     if (!this.ctx || !this.masterGain) return;
 
-    // 1. Rain (Base Layer)
     this.playRain();
 
-    // 2. Thunder (Improved with Crack and Rumble)
     const playThunder = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying) return;
 
@@ -696,7 +634,6 @@ export class NoiseGenerator {
       const panValue = Math.random() * 1.6 - 0.8;
       const duration = 6 + Math.random() * 8;
 
-      // Crack (Sharp initial burst)
       if (Math.random() > 0.4) {
         const crackSource = this.ctx.createBufferSource();
         crackSource.buffer = whiteBuffer;
@@ -721,7 +658,6 @@ export class NoiseGenerator {
         crackSource.stop(t + 0.6);
       }
 
-      // Rumble (Deep rolling sound)
       const rumbleSource = this.ctx.createBufferSource();
       rumbleSource.buffer = brownBuffer;
 
@@ -758,7 +694,7 @@ export class NoiseGenerator {
     };
 
     const scheduleThunder = () => {
-      if (!this.isPlaying) return;
+      if (!this.isPlaying || this.currentNoiseType !== 'thunder') return;
       const delay = 12000 + Math.random() * 25000;
       const id = window.setTimeout(() => {
         playThunder();
@@ -773,73 +709,60 @@ export class NoiseGenerator {
   private playCafe() {
     if (!this.ctx || !this.masterGain) return;
 
-    // 1. Background Murmur (Simulated with multiple filtered noise layers)
-    const pinkBuffer = this.createNoiseBuffer('pink');
-    if (pinkBuffer) {
-      // Create 5 layers of murmur with different formant-like filters
-      for (let i = 0; i < 5; i++) {
-        const source = this.ctx.createBufferSource();
-        source.buffer = pinkBuffer;
-        source.loop = true;
+    const pink = this.createNoiseBuffer('pink');
+    if (pink) {
+      for (let i = 0; i < 4; i++) {
+        const src = this.ctx.createBufferSource();
+        src.buffer = pink;
+        src.loop = true;
+        src.playbackRate.value = 0.96 + Math.random() * 0.08;
 
-        const filter1 = this.ctx.createBiquadFilter();
-        filter1.type = 'bandpass';
-        filter1.frequency.value = 400 + Math.random() * 300;
-        filter1.Q.value = 2.0;
+        const lp = this.ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.value = 1800 + Math.random() * 1400;
 
-        const filter2 = this.ctx.createBiquadFilter();
-        filter2.type = 'bandpass';
-        filter2.frequency.value = 1000 + Math.random() * 1000;
-        filter2.Q.value = 3.0;
+        const bp = this.ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 300 + Math.random() * 900;
+        bp.Q.value = 1.2 + Math.random() * 1.5;
 
-        const panner = this.ctx.createStereoPanner();
-        panner.pan.value = Math.random() * 1.6 - 0.8;
+        const pan = this.ctx.createStereoPanner();
+        pan.pan.value = Math.random() * 1.4 - 0.7;
 
-        const gain = this.ctx.createGain();
-        gain.gain.value = 0.03;
+        const g = this.ctx.createGain();
+        g.gain.value = 0.035 + Math.random() * 0.015;
 
-        // More complex modulation for each voice layer
-        const lfo1 = this.ctx.createOscillator();
-        lfo1.type = 'sine';
-        lfo1.frequency.value = 0.2 + Math.random() * 0.5;
-        const lfo2 = this.ctx.createOscillator();
-        lfo2.type = 'sine';
-        lfo2.frequency.value = 1.0 + Math.random() * 2.0;
+        src.connect(lp);
+        lp.connect(bp);
+        bp.connect(pan);
+        pan.connect(g);
+        g.connect(this.masterGain);
+        src.start(0, Math.random() * 10);
 
-        const lfoGain1 = this.ctx.createGain();
-        lfoGain1.gain.value = 0.02;
-        const lfoGain2 = this.ctx.createGain();
-        lfoGain2.gain.value = 0.01;
-
-        lfo1.connect(lfoGain1);
-        lfoGain1.connect(gain.gain);
-        lfo2.connect(lfoGain2);
-        lfoGain2.connect(gain.gain);
-
-        lfo1.start();
-        lfo2.start();
-
-        source.connect(filter1);
-        filter1.connect(filter2);
-        filter2.connect(panner);
-        panner.connect(gain);
-        gain.connect(this.masterGain);
-        source.start(0, Math.random() * 10);
-        this.activeNodes.push(
-          source,
-          filter1,
-          filter2,
-          panner,
-          gain,
-          lfo1,
-          lfo2,
-          lfoGain1,
-          lfoGain2
-        );
+        this.addMicroLFO(g.gain, 0.15 + Math.random() * 0.4, 0.06);
+        this.activeNodes.push(src, lp, bp, pan, g);
       }
     }
 
-    // 2. Clinking sounds (Random oscillators + noise)
+    const brown = this.createNoiseBuffer('brown');
+    if (brown) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = brown;
+      src.loop = true;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 350;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.18;
+      src.connect(lp);
+      lp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.addMicroLFO(lp.frequency, 0.08, 80);
+      this.addMicroLFO(g.gain, 0.3, 0.1);
+      this.activeNodes.push(src, lp, g);
+    }
+
     const playClink = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cafe')
         return;
@@ -847,15 +770,15 @@ export class NoiseGenerator {
       const t = this.ctx.currentTime;
       const osc = this.ctx.createOscillator();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(2500 + Math.random() * 4000, t);
+      osc.frequency.setValueAtTime(2200 + Math.random() * 3800, t);
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.6 - 0.8;
 
       const gain = this.ctx.createGain();
-      const duration = 0.03 + Math.random() * 0.07;
+      const duration = 0.04 + Math.random() * 0.12;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.01 + Math.random() * 0.02, t + 0.005);
+      gain.gain.linearRampToValueAtTime(0.018 + Math.random() * 0.025, t + 0.015);
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
       osc.connect(panner);
@@ -875,7 +798,6 @@ export class NoiseGenerator {
       );
     };
 
-    // 3. Muffled thuds/chair moves (Brown noise)
     const playThud = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'cafe')
         return;
@@ -887,15 +809,15 @@ export class NoiseGenerator {
       source.buffer = brownBuffer;
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 200 + Math.random() * 300;
+      filter.frequency.value = 180 + Math.random() * 220;
 
       const panner = this.ctx.createStereoPanner();
-      panner.pan.value = Math.random() * 1.4 - 0.7;
+      panner.pan.value = Math.random() * 1.2 - 0.6;
 
       const gain = this.ctx.createGain();
-      const duration = 0.2 + Math.random() * 0.4;
+      const duration = 0.4 + Math.random() * 0.9;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.05 + Math.random() * 0.05, t + 0.05);
+      gain.gain.linearRampToValueAtTime(0.03 + Math.random() * 0.04, t + 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
       source.connect(filter);
@@ -903,8 +825,8 @@ export class NoiseGenerator {
       panner.connect(gain);
       gain.connect(this.masterGain!);
 
-      source.start(t, Math.random() * 5);
-      source.stop(t + duration + 0.1);
+      source.start(t, Math.random() * 9);
+      source.stop(t + duration + 0.2);
 
       setTimeout(
         () => {
@@ -913,16 +835,17 @@ export class NoiseGenerator {
           panner.disconnect();
           gain.disconnect();
         },
-        (duration + 0.5) * 1000
+        (duration + 0.4) * 1000
       );
     };
 
     const scheduleCafeEvents = () => {
       if (!this.isPlaying || this.currentNoiseType !== 'cafe') return;
-      const delay = 1000 + Math.random() * 5000;
+      const delay = 1200 + Math.random() * 9000;
       const id = window.setTimeout(() => {
-        if (Math.random() > 0.4) playClink();
-        if (Math.random() > 0.7) playThud();
+        const roll = Math.random();
+        if (roll < 0.45) playClink();
+        else if (roll < 0.7) playThud();
         scheduleCafeEvents();
       }, delay);
       this.activeIntervals.push(id);
@@ -933,7 +856,6 @@ export class NoiseGenerator {
   private playUnderwater() {
     if (!this.ctx || !this.masterGain) return;
 
-    // 1. Deep Rumble (Brown Noise + Steep Lowpass)
     const brownBuffer = this.createNoiseBuffer('brown');
     if (brownBuffer) {
       const source = this.ctx.createBufferSource();
@@ -954,7 +876,6 @@ export class NoiseGenerator {
       this.activeNodes.push(source, filter, gain);
     }
 
-    // 2. Bubbles (Resonant filters on white noise)
     const playBubble = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying) return;
 
@@ -1001,7 +922,7 @@ export class NoiseGenerator {
     };
 
     const scheduleBubble = () => {
-      if (!this.isPlaying) return;
+      if (!this.isPlaying || this.currentNoiseType !== 'underwater') return;
       const delay = 500 + Math.random() * 2000;
       const id = window.setTimeout(() => {
         playBubble();
@@ -1015,7 +936,6 @@ export class NoiseGenerator {
   private playTrain() {
     if (!this.ctx || !this.masterGain) return;
 
-    // 1. Low hum (Filtered Brown Noise)
     const brownBuffer = this.createNoiseBuffer('brown');
     if (brownBuffer) {
       const source = this.ctx.createBufferSource();
@@ -1036,7 +956,6 @@ export class NoiseGenerator {
       this.activeNodes.push(source, filter, gain);
     }
 
-    // 2. Rhythmic track sounds (Filtered Pink Noise pulses)
     const scheduleClack = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying) return;
 
@@ -1073,8 +992,7 @@ export class NoiseGenerator {
         );
       };
 
-      // Rhythm: "clack-clack ... clack-clack"
-      const tempo = 1.5; // seconds per cycle
+      const tempo = 1.5;
       const id = window.setInterval(() => {
         playPulse(0, 0.1);
         playPulse(0.15, 0.07);
@@ -1091,7 +1009,7 @@ export class NoiseGenerator {
   private playWindChimes() {
     if (!this.ctx || !this.masterGain) return;
 
-    const notes = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51, 1567.98]; // Pentatonic scale (C5-G6)
+    const notes = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51, 1567.98];
 
     const playChime = () => {
       if (!this.ctx || !this.masterGain || !this.isPlaying) return;
@@ -1102,7 +1020,6 @@ export class NoiseGenerator {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(freq, t);
 
-      // Add a slight frequency wobble
       const lfo = this.ctx.createOscillator();
       lfo.frequency.value = 2 + Math.random() * 3;
       const lfoGain = this.ctx.createGain();
@@ -1141,7 +1058,7 @@ export class NoiseGenerator {
     };
 
     const scheduleChime = () => {
-      if (!this.isPlaying) return;
+      if (!this.isPlaying || this.currentNoiseType !== 'chimes') return;
       const delay = 1000 + Math.random() * 4000;
       const id = window.setTimeout(() => {
         playChime();
@@ -1150,6 +1067,278 @@ export class NoiseGenerator {
       this.activeIntervals.push(id);
     };
     scheduleChime();
+  }
+
+  // --- New Scenes ---
+
+  private playWaterfall() {
+    if (!this.ctx || !this.masterGain) return;
+
+    // Brown rush
+    const brown = this.createNoiseBuffer('brown');
+    if (brown) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = brown;
+      src.loop = true;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 400;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.4;
+      src.connect(lp);
+      lp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.addMicroLFO(g.gain, 0.1, 0.1);
+      this.activeNodes.push(src, lp, g);
+    }
+
+    // Pink babble
+    const pink = this.createNoiseBuffer('pink');
+    if (pink) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = pink;
+      src.loop = true;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 1200;
+      bp.Q.value = 0.8;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.15;
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.addMicroLFO(bp.frequency, 0.15, 200);
+      this.activeNodes.push(src, bp, g);
+    }
+  }
+
+  private playCityRain() {
+    this.playRain();
+    if (!this.ctx || !this.masterGain) return;
+
+    // Distant traffic whoosh
+    const playWhoosh = () => {
+      if (!this.ctx || !this.isPlaying || this.currentNoiseType !== 'cityRain') return;
+      const t = this.ctx.currentTime;
+      const brown = this.createNoiseBuffer('brown');
+      if (!brown) return;
+
+      const src = this.ctx.createBufferSource();
+      src.buffer = brown;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 200;
+      const pan = this.ctx.createStereoPanner();
+      const g = this.ctx.createGain();
+      const dur = 4 + Math.random() * 6;
+
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.1, t + dur / 2);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+
+      const startPan = Math.random() > 0.5 ? -1 : 1;
+      pan.pan.setValueAtTime(startPan, t);
+      pan.pan.linearRampToValueAtTime(-startPan, t + dur);
+
+      src.connect(lp);
+      lp.connect(pan);
+      pan.connect(g);
+      g.connect(this.masterGain!);
+      src.start(t, Math.random() * 5);
+      src.stop(t + dur);
+
+      setTimeout(() => {
+        src.disconnect(); lp.disconnect(); pan.disconnect(); g.disconnect();
+      }, (dur + 0.5) * 1000);
+    };
+
+    const scheduleWhoosh = () => {
+      if (!this.isPlaying || this.currentNoiseType !== 'cityRain') return;
+      const id = window.setTimeout(() => {
+        playWhoosh();
+        scheduleWhoosh();
+      }, 5000 + Math.random() * 10000);
+      this.activeIntervals.push(id);
+    };
+    scheduleWhoosh();
+  }
+
+  private playGreenNoise() {
+    if (!this.ctx || !this.masterGain) return;
+    const buffer = this.createNoiseBuffer('pink');
+    if (buffer) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = buffer;
+      src.loop = true;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 1000;
+      bp.Q.value = 1.0;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.6;
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.activeNodes.push(src, bp, g);
+    }
+  }
+
+  private playAirplane() {
+    if (!this.ctx || !this.masterGain) return;
+    // Low brown engine
+    const brown = this.createNoiseBuffer('brown');
+    if (brown) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = brown;
+      src.loop = true;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 150;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.4;
+      src.connect(lp);
+      lp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.addMicroLFO(g.gain, 0.05, 0.05);
+      this.activeNodes.push(src, lp, g);
+    }
+    // Pink air hiss
+    const pink = this.createNoiseBuffer('pink');
+    if (pink) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = pink;
+      src.loop = true;
+      const hp = this.ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 1000;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.1;
+      src.connect(hp);
+      hp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.activeNodes.push(src, hp, g);
+    }
+  }
+
+  private playCatPurr() {
+    if (!this.ctx || !this.masterGain) return;
+    const osc = this.ctx.createOscillator();
+    osc.type = 'sine';
+    osc.frequency.value = 25;
+    const g = this.ctx.createGain();
+    g.gain.value = 0.3;
+
+    const lfo = this.ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = 0.8;
+    const lfoG = this.ctx.createGain();
+    lfoG.gain.value = 0.2;
+    lfo.connect(lfoG);
+    lfoG.connect(g.gain);
+
+    osc.connect(g);
+    g.connect(this.masterGain);
+    osc.start();
+    lfo.start();
+    this.activeNodes.push(osc, g, lfo, lfoG);
+
+    const pink = this.createNoiseBuffer('pink');
+    if (pink) {
+      const pSrc = this.ctx.createBufferSource();
+      pSrc.buffer = pink;
+      pSrc.loop = true;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 200;
+      const pg = this.ctx.createGain();
+      pg.gain.value = 0.05;
+      lfoG.connect(pg.gain);
+      pSrc.connect(lp);
+      lp.connect(pg);
+      pg.connect(this.masterGain);
+      pSrc.start();
+      this.activeNodes.push(pSrc, lp, pg);
+    }
+  }
+
+  private playASMR() {
+    if (!this.ctx || !this.masterGain) return;
+    this.playNoiseSource('pink', 0.05);
+
+    const playImpulse = () => {
+      if (!this.ctx || !this.isPlaying || this.currentNoiseType !== 'asmr') return;
+      const t = this.ctx.currentTime;
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.createNoiseBuffer('white')!;
+      const hp = this.ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.value = 5000;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.02, t + 0.002);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.01);
+      src.connect(hp);
+      hp.connect(g);
+      g.connect(this.masterGain!);
+      src.start(t, Math.random() * 9);
+      src.stop(t + 0.05);
+      setTimeout(() => {
+        src.disconnect(); hp.disconnect(); g.disconnect();
+      }, 100);
+    };
+
+    const scheduleImpulse = () => {
+      if (!this.isPlaying || this.currentNoiseType !== 'asmr') return;
+      const id = window.setTimeout(() => {
+        playImpulse();
+        scheduleImpulse();
+      }, 100 + Math.random() * 2000);
+      this.activeIntervals.push(id);
+    };
+    scheduleImpulse();
+  }
+
+  private playSpace() {
+    if (!this.ctx || !this.masterGain) return;
+    const brown = this.createNoiseBuffer('brown');
+    if (brown) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = brown;
+      src.loop = true;
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = 100;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.5;
+      src.connect(lp);
+      lp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.activeNodes.push(src, lp, g);
+    }
+    const pink = this.createNoiseBuffer('pink');
+    if (pink) {
+      const src = this.ctx.createBufferSource();
+      src.buffer = pink;
+      src.loop = true;
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 500;
+      bp.Q.value = 10;
+      const g = this.ctx.createGain();
+      g.gain.value = 0.05;
+      src.connect(bp);
+      bp.connect(g);
+      g.connect(this.masterGain);
+      src.start();
+      this.addMicroLFO(bp.frequency, 0.05, 400);
+      this.activeNodes.push(src, bp, g);
+    }
   }
 
   // --- Main Control ---
@@ -1204,29 +1393,47 @@ export class NoiseGenerator {
       case 'chimes':
         this.playWindChimes();
         break;
+      case 'waterfall':
+        this.playWaterfall();
+        break;
+      case 'cityRain':
+        this.playCityRain();
+        break;
+      case 'greenNoise':
+        this.playGreenNoise();
+        break;
+      case 'airplane':
+        this.playAirplane();
+        break;
+      case 'catPurr':
+        this.playCatPurr();
+        break;
+      case 'asmr':
+        this.playASMR();
+        break;
+      case 'space':
+        this.playSpace();
+        break;
       default:
-        this.playNoiseSource('white');
+        this.playNoiseSource('pink');
     }
   }
 
   stop() {
-    // Stop all audio nodes
     this.activeNodes.forEach((node) => {
       try {
         if ((node as any).stop) {
           (node as any).stop();
         }
         node.disconnect();
-      } catch (e) {
-        // Ignore errors if already stopped
-      }
+      } catch (e) {}
     });
     this.activeNodes = [];
-
-    // Clear all intervals/timeouts
-    this.activeIntervals.forEach((id) => clearTimeout(id));
+    this.activeIntervals.forEach((id) => {
+      clearTimeout(id);
+      clearInterval(id);
+    });
     this.activeIntervals = [];
-
     this.isPlaying = false;
   }
 
