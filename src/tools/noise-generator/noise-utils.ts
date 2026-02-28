@@ -186,18 +186,23 @@ export class NoiseGenerator {
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'bandpass';
       const baseFreq = isCity ? 800 : 1200;
-      filter.frequency.setValueAtTime(baseFreq + Math.random() * 4000, t);
-      filter.Q.value = isCity ? 1.2 : 2.5;
+      const startFreq = baseFreq + Math.random() * 4000;
+      filter.frequency.setValueAtTime(startFreq, t);
+      // Sweeping frequency down quickly gives a "plop" liquid effect
+      filter.Q.value = isCity ? 5 : 15; // Higher Q for resonant water drop sound
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.8 - 0.9;
 
       const gain = this.ctx.createGain();
-      const peak = 0.03 + Math.random() * 0.12;
-      const duration = 0.01 + Math.random() * 0.08;
+      const peak = 0.05 + Math.random() * 0.15;
+      const duration = 0.02 + Math.random() * 0.05;
+
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(peak, t + 0.005);
+      gain.gain.linearRampToValueAtTime(peak, t + 0.002);
       gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+
+      filter.frequency.exponentialRampToValueAtTime(startFreq * 0.6, t + duration);
 
       source.connect(filter);
       filter.connect(panner);
@@ -234,20 +239,21 @@ export class NoiseGenerator {
   private playWaves() {
     if (!this.ctx || !this.masterGain) return;
 
-    const buffer = this.createNoiseBuffer('brown');
-    if (!buffer) return;
+    const brownBuffer = this.createNoiseBuffer('brown');
+    const pinkBuffer = this.createNoiseBuffer('pink');
+    if (!brownBuffer || !pinkBuffer) return;
 
     [-0.5, 0.5].forEach((pan) => {
       const source = this.ctx!.createBufferSource();
-      source.buffer = buffer;
+      source.buffer = brownBuffer;
       source.loop = true;
 
       const filter = this.ctx!.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 800;
+      filter.frequency.value = 400; // Lower base frequency
 
       const waveGain = this.ctx!.createGain();
-      waveGain.gain.value = 0.3;
+      waveGain.gain.value = 0.2;
 
       const panner = this.ctx!.createStereoPanner();
       panner.pan.value = pan;
@@ -259,29 +265,34 @@ export class NoiseGenerator {
 
       source.start(0, Math.random() * 10);
 
-      this.addMicroLFO(waveGain.gain, 0.12 + Math.random() * 0.04, 0.25);
+      // LFO for both volume and filter frequency (rolling wave)
+      const rate = 0.08 + Math.random() * 0.04;
+      this.addMicroLFO(waveGain.gain, rate, 0.3);
+      this.addMicroLFO(filter.frequency, rate, 600); // Sweep filter up and down
+
       this.activeNodes.push(source, filter, panner, waveGain);
     });
 
-    const pinkBuffer = this.createNoiseBuffer('pink');
     if (pinkBuffer) {
       const source = this.ctx.createBufferSource();
       source.buffer = pinkBuffer;
       source.loop = true;
 
       const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.value = 2000;
+      filter.type = 'bandpass';
+      filter.frequency.value = 1200;
+      filter.Q.value = 0.5;
 
       const foamGain = this.ctx.createGain();
-      foamGain.gain.value = 0.05;
+      foamGain.gain.value = 0.03;
 
       source.connect(filter);
       filter.connect(foamGain);
       foamGain.connect(this.masterGain);
       source.start();
 
-      this.addMicroLFO(foamGain.gain, 0.14, 0.04);
+      this.addMicroLFO(foamGain.gain, 0.06, 0.05);
+      this.addMicroLFO(filter.frequency, 0.06, 500); // Filter sweep for foam
       this.activeNodes.push(source, filter, foamGain);
     }
   }
@@ -312,38 +323,55 @@ export class NoiseGenerator {
     }
 
     const playChirp = () => {
-      if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'forest') return;
 
       const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
+      // FM Synthesis for realistic birds
+      const carrier = this.ctx.createOscillator();
+      const modulator = this.ctx.createOscillator();
+      const modGain = this.ctx.createGain();
       const gain = this.ctx.createGain();
       const panner = this.ctx.createStereoPanner();
 
       const isHigh = Math.random() > 0.5;
-      const startFreq = isHigh ? 2000 + Math.random() * 2000 : 1000 + Math.random() * 1000;
+      const startFreq = isHigh ? 2000 + Math.random() * 1500 : 1000 + Math.random() * 1000;
       const endFreq = startFreq + (Math.random() * 1000 - 500);
-      const duration = 0.05 + Math.random() * 0.2;
+      const duration = 0.1 + Math.random() * 0.2;
 
-      osc.type = Math.random() > 0.3 ? 'sine' : 'triangle';
-      osc.frequency.setValueAtTime(startFreq, t);
-      osc.frequency.exponentialRampToValueAtTime(endFreq, t + duration);
+      carrier.type = 'sine';
+      carrier.frequency.setValueAtTime(startFreq, t);
+      carrier.frequency.exponentialRampToValueAtTime(endFreq, t + duration);
+
+      modulator.type = 'sine';
+      modulator.frequency.value = 10 + Math.random() * 30; // Trill frequency
+
+      modGain.gain.setValueAtTime(0, t);
+      modGain.gain.linearRampToValueAtTime(400, t + duration / 2); // Depth of FM
+      modGain.gain.linearRampToValueAtTime(0, t + duration);
+
+      modulator.connect(modGain);
+      modGain.connect(carrier.frequency);
 
       panner.pan.value = Math.random() * 1.6 - 0.8;
 
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.05 + Math.random() * 0.05, t + 0.02);
+      gain.gain.linearRampToValueAtTime(0.06 + Math.random() * 0.04, t + 0.02);
       gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
 
-      osc.connect(panner);
+      carrier.connect(panner);
       panner.connect(gain);
       gain.connect(this.masterGain!);
 
-      osc.start(t);
-      osc.stop(t + duration + 0.1);
+      carrier.start(t);
+      modulator.start(t);
+      carrier.stop(t + duration + 0.1);
+      modulator.stop(t + duration + 0.1);
 
       setTimeout(
         () => {
-          osc.disconnect();
+          carrier.disconnect();
+          modulator.disconnect();
+          modGain.disconnect();
           panner.disconnect();
           gain.disconnect();
         },
@@ -389,7 +417,7 @@ export class NoiseGenerator {
     }
 
     const playCrackle = () => {
-      if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'fire') return;
 
       const t = this.ctx.currentTime;
       const buffer = this.createNoiseBuffer('white');
@@ -399,17 +427,20 @@ export class NoiseGenerator {
       source.buffer = buffer;
 
       const filter = this.ctx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.value = 800 + Math.random() * 1200;
+      // Bandpass for wooden pop sound
+      filter.type = 'bandpass';
+      filter.frequency.value = 1000 + Math.random() * 3000;
+      filter.Q.value = 0.5 + Math.random();
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 0.6 - 0.3;
 
       const gain = this.ctx.createGain();
-      const duration = 0.01 + Math.random() * 0.04;
+      // Snappier duration and attack
+      const duration = 0.005 + Math.random() * 0.03;
       gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.3 + Math.random() * 0.4, t + 0.002);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+      gain.gain.linearRampToValueAtTime(0.4 + Math.random() * 0.6, t + 0.001);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
       source.connect(filter);
       filter.connect(panner);
@@ -620,7 +651,7 @@ export class NoiseGenerator {
     this.playRain();
 
     const playThunder = () => {
-      if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'thunder') return;
 
       const t = this.ctx.currentTime;
       const brownBuffer = this.createNoiseBuffer('brown');
@@ -628,53 +659,65 @@ export class NoiseGenerator {
       if (!brownBuffer || !whiteBuffer) return;
 
       const panValue = Math.random() * 1.6 - 0.8;
-      const duration = 10 + Math.random() * 15;
+      const duration = 15 + Math.random() * 20; // Longer rumble tail
 
       // 1. Initial Crack/Strike
       if (Math.random() > 0.4) {
-        const crackSource = this.ctx.createBufferSource();
-        crackSource.buffer = whiteBuffer;
-        const crackFilter = this.ctx.createBiquadFilter();
-        crackFilter.type = 'highpass';
-        crackFilter.frequency.setValueAtTime(1200, t);
+        // Multi-layered crack
+        for (let c = 0; c < 2; c++) {
+          const crackSource = this.ctx.createBufferSource();
+          crackSource.buffer = whiteBuffer;
+          const crackFilter = this.ctx.createBiquadFilter();
+          // Lowered the frequency of the crack to give it more "boom" rather than "hiss"
+          crackFilter.type = c === 0 ? 'bandpass' : 'bandpass';
+          crackFilter.frequency.setValueAtTime(c === 0 ? 600 : 200 + Math.random() * 300, t);
+          if (c === 1) crackFilter.Q.value = 2.0;
+          else crackFilter.Q.value = 0.8;
 
-        const crackGain = this.ctx.createGain();
-        crackGain.gain.setValueAtTime(0, t);
-        crackGain.gain.linearRampToValueAtTime(0.5, t + 0.01);
-        crackGain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+          const crackGain = this.ctx.createGain();
+          crackGain.gain.setValueAtTime(0, t);
+          // Increased initial peak volume
+          crackGain.gain.linearRampToValueAtTime(1.2 / (c + 1), t + 0.005);
+          crackGain.gain.exponentialRampToValueAtTime(0.001, t + 0.8 + c * 0.5); // Longer crack tail
 
-        const crackPanner = this.ctx.createStereoPanner();
-        crackPanner.pan.value = panValue;
+          const crackPanner = this.ctx.createStereoPanner();
+          crackPanner.pan.value = panValue;
 
-        crackSource.connect(crackFilter);
-        crackFilter.connect(crackPanner);
-        crackPanner.connect(crackGain);
-        crackGain.connect(this.masterGain!);
-        crackSource.start(t, Math.random() * 5);
-        crackSource.stop(t + 0.5);
+          crackSource.connect(crackFilter);
+          crackFilter.connect(crackPanner);
+          crackPanner.connect(crackGain);
+          crackGain.connect(this.masterGain!);
+          crackSource.start(t, Math.random() * 5);
+          crackSource.stop(t + 2.0);
+          this.activeNodes.push(crackSource, crackFilter, crackPanner, crackGain);
+        }
       }
 
       // 2. Main Rumble (Multi-layered for depth)
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < 4; i++) {
         const rumbleSource = this.ctx.createBufferSource();
         rumbleSource.buffer = brownBuffer;
 
         const rumbleFilter = this.ctx.createBiquadFilter();
         rumbleFilter.type = 'lowpass';
+        // Allow slightly higher frequencies initially for a deeper boom before settling to sub-bass
         const baseFreq = 200 + Math.random() * 200;
         rumbleFilter.frequency.setValueAtTime(baseFreq, t);
         rumbleFilter.frequency.exponentialRampToValueAtTime(30 + Math.random() * 20, t + duration);
 
         const rumblePanner = this.ctx.createStereoPanner();
-        rumblePanner.pan.value = panValue + (Math.random() * 0.4 - 0.2);
+        rumblePanner.pan.value = panValue + (Math.random() * 0.8 - 0.4);
 
         const rumbleGain = this.ctx.createGain();
-        const layerDelay = i * (0.2 + Math.random() * 0.8);
+        const layerDelay = i * (0.3 + Math.random() * 0.9);
         rumbleGain.gain.setValueAtTime(0, t + layerDelay);
-        rumbleGain.gain.linearRampToValueAtTime(0.4 / (i + 1), t + layerDelay + 1.5);
+        // Significantly increased rumble volume overall
+        rumbleGain.gain.linearRampToValueAtTime(1.5 / (i + 1), t + layerDelay + 1.5);
 
-        // Rolling modulation
-        this.addMicroLFO(rumbleGain.gain, 0.3 + i * 0.2, 0.15);
+        // Rolling modulation using LFO
+        this.addMicroLFO(rumbleGain.gain, 0.2 + i * 0.15, 0.5); // Increased LFO depth for heavier rolling effect
+        this.addMicroLFO(rumbleFilter.frequency, 0.1 + i * 0.1, 100); // Sweeps the thunder filter wider
+
         rumbleGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
         rumbleSource.connect(rumbleFilter);
@@ -764,31 +807,36 @@ export class NoiseGenerator {
         return;
 
       const t = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(2200 + Math.random() * 3800, t);
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.6 - 0.8;
 
-      const gain = this.ctx.createGain();
-      const duration = 0.04 + Math.random() * 0.12;
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.018 + Math.random() * 0.025, t + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+      const mainGain = this.ctx.createGain();
+      const duration = 0.06 + Math.random() * 0.15;
+      mainGain.gain.setValueAtTime(0, t);
+      mainGain.gain.linearRampToValueAtTime(0.02 + Math.random() * 0.015, t + 0.005);
+      mainGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
-      osc.connect(panner);
-      panner.connect(gain);
-      gain.connect(this.masterGain!);
+      panner.connect(mainGain);
+      mainGain.connect(this.masterGain!);
 
-      osc.start(t);
-      osc.stop(t + duration + 0.1);
+      const baseFreq = 2000 + Math.random() * 4000;
+      const partials = [1, 2.3 + Math.random() * 0.2, 3.8 + Math.random() * 0.4];
+      const nodesToDisconnect: AudioNode[] = [panner, mainGain];
+
+      partials.forEach(ratio => {
+        const osc = this.ctx!.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq * ratio, t);
+        osc.connect(panner);
+        osc.start(t);
+        osc.stop(t + duration + 0.1);
+        nodesToDisconnect.push(osc);
+      });
 
       setTimeout(
         () => {
-          osc.disconnect();
-          panner.disconnect();
-          gain.disconnect();
+          nodesToDisconnect.forEach(n => n.disconnect());
         },
         (duration + 0.2) * 1000
       );
@@ -940,7 +988,7 @@ export class NoiseGenerator {
 
       const filter = this.ctx.createBiquadFilter();
       filter.type = 'lowpass';
-      filter.frequency.value = 100;
+      filter.frequency.value = 150;
 
       const gain = this.ctx.createGain();
       gain.gain.value = 0.3;
@@ -949,13 +997,16 @@ export class NoiseGenerator {
       filter.connect(gain);
       gain.connect(this.masterGain);
       source.start();
+
+      // Undulating lowpass filter to simulate movement/wind context
+      this.addMicroLFO(filter.frequency, 0.3, 100);
       this.activeNodes.push(source, filter, gain);
     }
 
     const scheduleClack = () => {
-      if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'train') return;
 
-      const playPulse = (delay: number, volume: number) => {
+      const playPulse = (delay: number, volume: number, freq: number) => {
         const t = this.ctx!.currentTime + delay;
         const buffer = this.createNoiseBuffer('pink');
         if (!buffer) return;
@@ -964,36 +1015,44 @@ export class NoiseGenerator {
         source.buffer = buffer;
 
         const filter = this.ctx!.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.value = 1000;
+        filter.type = 'bandpass';
+        filter.frequency.value = freq;
+        filter.Q.value = 0.8;
+
+        const panner = this.ctx!.createStereoPanner();
+        // Slight pan to simulate track sides
+        panner.pan.value = Math.random() * 0.4 - 0.2;
 
         const gain = this.ctx!.createGain();
         gain.gain.setValueAtTime(0, t);
         gain.gain.linearRampToValueAtTime(volume, t + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.15); // Slightly longer decay
 
         source.connect(filter);
-        filter.connect(gain);
+        filter.connect(panner);
+        panner.connect(gain);
         gain.connect(this.masterGain!);
         source.start(t, Math.random() * 9);
-        source.stop(t + 0.2);
+        source.stop(t + 0.3);
 
         setTimeout(
           () => {
             source.disconnect();
             filter.disconnect();
+            panner.disconnect();
             gain.disconnect();
           },
-          (delay + 0.3) * 1000
+          (delay + 0.4) * 1000
         );
       };
 
-      const tempo = 1.5;
+      const tempo = 1.6;
       const id = window.setInterval(() => {
-        playPulse(0, 0.1);
-        playPulse(0.15, 0.07);
-        playPulse(0.4, 0.1);
-        playPulse(0.55, 0.07);
+        // Ta-da, ta-da rhythm
+        playPulse(0, 0.12, 1000);
+        playPulse(0.18, 0.08, 1200);
+        playPulse(0.45, 0.1, 900);
+        playPulse(0.63, 0.07, 1100);
       }, tempo * 1000);
 
       this.activeIntervals.push(id);
@@ -1008,46 +1067,54 @@ export class NoiseGenerator {
     const notes = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5, 1174.66, 1318.51, 1567.98];
 
     const playChime = () => {
-      if (!this.ctx || !this.masterGain || !this.isPlaying) return;
+      if (!this.ctx || !this.masterGain || !this.isPlaying || this.currentNoiseType !== 'chimes') return;
 
       const t = this.ctx.currentTime;
-      const freq = notes[Math.floor(Math.random() * notes.length)];
-      const osc = this.ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, t);
-
-      const lfo = this.ctx.createOscillator();
-      lfo.frequency.value = 2 + Math.random() * 3;
-      const lfoGain = this.ctx.createGain();
-      lfoGain.gain.value = freq * 0.005;
-      lfo.connect(lfoGain);
-      lfoGain.connect(osc.frequency);
-      lfo.start();
+      const rootFreq = notes[Math.floor(Math.random() * notes.length)];
 
       const panner = this.ctx.createStereoPanner();
       panner.pan.value = Math.random() * 1.8 - 0.9;
+      const mainGain = this.ctx.createGain();
 
-      const gain = this.ctx.createGain();
-      const duration = 2 + Math.random() * 3;
-      gain.gain.setValueAtTime(0, t);
-      gain.gain.linearRampToValueAtTime(0.05, t + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+      const duration = 3 + Math.random() * 4;
+      mainGain.gain.setValueAtTime(0, t);
+      mainGain.gain.linearRampToValueAtTime(0.04, t + 0.02);
+      mainGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 
-      osc.connect(panner);
-      panner.connect(gain);
-      gain.connect(this.masterGain!);
+      panner.connect(mainGain);
+      mainGain.connect(this.masterGain!);
 
-      osc.start(t);
-      osc.stop(t + duration + 0.1);
-      lfo.stop(t + duration + 0.1);
+      // Inharmonic partials for bell synthesis
+      const partials = [
+        { ratio: 1, gain: 1, decayMax: duration },
+        { ratio: 2.76, gain: 0.6, decayMax: duration * 0.5 },
+        { ratio: 5.4, gain: 0.4, decayMax: duration * 0.2 },
+        { ratio: 8.93, gain: 0.25, decayMax: duration * 0.1 }
+      ];
+
+      const nodesToCleanup: AudioNode[] = [panner, mainGain];
+
+      partials.forEach(p => {
+        const osc = this.ctx!.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(rootFreq * p.ratio, t);
+
+        const oscGain = this.ctx!.createGain();
+        oscGain.gain.setValueAtTime(p.gain, t);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, t + p.decayMax);
+
+        osc.connect(oscGain);
+        oscGain.connect(panner);
+
+        osc.start(t);
+        osc.stop(t + p.decayMax + 0.1);
+
+        nodesToCleanup.push(osc, oscGain);
+      });
 
       setTimeout(
         () => {
-          osc.disconnect();
-          lfo.disconnect();
-          lfoGain.disconnect();
-          panner.disconnect();
-          gain.disconnect();
+          nodesToCleanup.forEach(n => n.disconnect());
         },
         (duration + 0.2) * 1000
       );
@@ -1232,42 +1299,56 @@ export class NoiseGenerator {
 
   private playCatPurr() {
     if (!this.ctx || !this.masterGain) return;
-    const osc = this.ctx.createOscillator();
-    osc.type = 'sine';
-    osc.frequency.value = 25;
-    const g = this.ctx.createGain();
-    g.gain.value = 0.3;
 
-    const lfo = this.ctx.createOscillator();
-    lfo.type = 'sine';
-    lfo.frequency.value = 0.8;
-    const lfoG = this.ctx.createGain();
-    lfoG.gain.value = 0.2;
-    lfo.connect(lfoG);
-    lfoG.connect(g.gain);
+    // The breathing/rattle rate
+    const purrRate = 22 + Math.random() * 5;
 
-    osc.connect(g);
-    g.connect(this.masterGain);
-    osc.start();
-    lfo.start();
-    this.activeNodes.push(osc, g, lfo, lfoG);
-
+    // Pink noise base for breath
     const pink = this.createNoiseBuffer('pink');
     if (pink) {
-      const pSrc = this.ctx.createBufferSource();
-      pSrc.buffer = pink;
-      pSrc.loop = true;
-      const lp = this.ctx.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 200;
-      const pg = this.ctx.createGain();
-      pg.gain.value = 0.05;
-      lfoG.connect(pg.gain);
-      pSrc.connect(lp);
-      lp.connect(pg);
-      pg.connect(this.masterGain);
-      pSrc.start();
-      this.activeNodes.push(pSrc, lp, pg);
+      const src = this.ctx.createBufferSource();
+      src.buffer = pink;
+      src.loop = true;
+
+      const bp = this.ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = 150;
+      bp.Q.value = 1.0;
+
+      const gain = this.ctx.createGain();
+      gain.gain.value = 0.6; // Base volume
+
+      // Fast AM for the 'rattle'
+      const rattle = this.ctx.createOscillator();
+      rattle.type = 'triangle';
+      rattle.frequency.value = purrRate;
+
+      const rattleGain = this.ctx.createGain();
+      rattleGain.gain.value = 0.5; // Depth of rattle
+
+      // Slow AM for the 'breathe in/out'
+      const breath = this.ctx.createOscillator();
+      breath.type = 'sine';
+      breath.frequency.value = 0.4; // 2.5 second breath cycles
+
+      const breathGain = this.ctx.createGain();
+      breathGain.gain.value = 0.3; // Depth of breath
+
+      // Connect AM to master gain of purr
+      rattle.connect(rattleGain);
+      rattleGain.connect(gain.gain);
+
+      breath.connect(breathGain);
+      breathGain.connect(gain.gain);
+
+      src.connect(bp);
+      bp.connect(gain);
+      gain.connect(this.masterGain);
+
+      src.start();
+      rattle.start();
+      breath.start();
+      this.activeNodes.push(src, bp, gain, rattle, rattleGain, breath, breathGain);
     }
   }
 
@@ -1436,7 +1517,7 @@ export class NoiseGenerator {
           (node as any).stop();
         }
         node.disconnect();
-      } catch (e) {}
+      } catch (e) { }
     });
     this.activeNodes = [];
     this.activeIntervals.forEach((id) => {
