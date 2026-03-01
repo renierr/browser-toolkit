@@ -22,10 +22,19 @@ export function formatOffset(offset: number): string {
 
 /**
  * Formats a byte as an ASCII character, or a dot if non-printable.
+ * Escapes HTML entities to prevent breaking the viewer.
  */
 export function formatAscii(byte: number): string {
   // Printable ASCII range is 32-126
-  return byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : '.';
+  if (byte < 32 || byte > 126) return '.';
+
+  const char = String.fromCharCode(byte);
+  switch (char) {
+    case '<': return '&lt;';
+    case '>': return '&gt;';
+    case '&': return '&amp;';
+    default: return char;
+  }
 }
 
 /**

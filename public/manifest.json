@@ -53,36 +53,7 @@
         {
           "name": "files",
           "accept": [
-            "application/pdf",
-            ".pdf",
-            "image/*",
-            ".png",
-            ".jpg",
-            ".jpeg",
-            ".gif",
-            ".webp",
-            ".svg",
-            ".bmp",
-            ".ico",
-            "text/*",
-            ".txt",
-            ".json",
-            ".xml",
-            ".html",
-            ".css",
-            ".js",
-            ".ts",
-            ".md",
-            "audio/*",
-            ".wav",
-            ".mp3",
-            ".ogg",
-            ".webm",
-            "video/*",
-            ".mp4",
-            ".mov",
-            ".avi",
-            ".mkv"
+            "*/*"
           ]
         }
       ]
@@ -92,25 +63,72 @@
     {
       "action": "./index.html",
       "accept": {
-        "application/pdf": [".pdf"]
-      }
-    },
-    {
-      "action": "./index.html",
-      "accept": {
-        "image/*": [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp", ".ico"]
-      }
-    },
-    {
-      "action": "./index.html",
-      "accept": {
-        "audio/*": [".wav", ".mp3", ".ogg", ".webm"]
-      }
-    },
-    {
-      "action": "./index.html",
-      "accept": {
-        "video/*": [".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"]
+        "application/pdf": [
+          ".pdf"
+        ],
+        "text/*": [
+          ".txt",
+          ".json",
+          ".xml",
+          ".html",
+          ".css",
+          ".js",
+          ".ts",
+          ".md",
+          ".yaml",
+          ".yml",
+          ".py",
+          ".sh",
+          ".php"
+        ],
+        "image/*": [
+          ".png",
+          ".jpg",
+          ".jpeg",
+          ".gif",
+          ".webp",
+          ".svg",
+          ".bmp",
+          ".ico",
+          ".tiff",
+          ".heic",
+          ".avif"
+        ],
+        "audio/*": [
+          ".wav",
+          ".mp3",
+          ".ogg",
+          ".webm",
+          ".flac",
+          ".m4a",
+          ".aac"
+        ],
+        "video/*": [
+          ".mp4",
+          ".webm",
+          ".ogg",
+          ".mov",
+          ".avi",
+          ".mkv"
+        ],
+        "application/octet-stream": [
+          ".bin",
+          ".dat",
+          ".dmp",
+          ".exe",
+          ".dll",
+          ".sys",
+          ".iso",
+          ".img",
+          ".hex",
+          ".vmdk",
+          ".vhd",
+          ".7z",
+          ".zip",
+          ".rar",
+          ".tar",
+          ".gz"
+        ]
       }
     }
   ]

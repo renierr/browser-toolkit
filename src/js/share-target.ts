@@ -127,7 +127,7 @@ export async function loadSharedFiles(keys: string[]): Promise<File[]> {
           files.push(file);
         }
         // Clean up after loading
-        await idbDelete(key).catch(() => {});
+        await idbDelete(key).catch(() => { });
       }
     } catch (e) {
       console.error(`Failed to load shared file with key ${key}`, e);
@@ -162,10 +162,13 @@ export function mimeTypeMatches(mimeType: string, pattern: string): boolean {
   // Exact match
   if (mime === pat) return true;
 
+  // Global wildcard
+  if (pat === '*/*') return true;
+
   // Wildcard match (e.g., "image/*" matches "image/png")
   if (pat.endsWith('/*')) {
-    const prefix = pat.slice(0, -1); // "image/"
-    if (mime.startsWith(prefix)) return true;
+    const category = pat.split('/')[0] + '/';
+    if (mime.startsWith(category)) return true;
   }
 
   return false;
