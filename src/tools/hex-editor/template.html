@@ -1,105 +1,166 @@
-<div class="flex flex-col gap-6 p-4">
-  <div class="card bg-base-100 shadow-xl">
-    <div class="card-body">
-      <h2 class="card-title">Hex Editor</h2>
-      <p class="text-base-content/70">Upload any file to view and edit its hexadecimal content.</p>
+<style>
+  #hex-viewer {
+    height: 60dvh;
+    min-height: 300px;
+    overflow-y: auto;
+    background-color: var(--base-100);
+    outline: none;
+    border: 1px solid var(--base-300);
+    border-radius: var(--rounded-btn);
+  }
 
-      <div id="hex-dropzone"
-        class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-64">
-        <div class="flex flex-col items-center gap-2">
-          <div class="text-base-content/30 text-4xl">
-            <i data-lucide="upload-cloud"></i>
-          </div>
-          <p class="text-lg font-medium">Click or drag a file here</p>
-          <p class="text-sm text-base-content/50 mt-1">Any file type up to several GB supported</p>
+  .hex-byte.focused {
+    background-color: var(--p);
+    color: var(--pc);
+    font-weight: bold;
+    border-radius: 4px;
+    position: relative;
+    z-index: 10;
+  }
+
+  .hex-byte.focused::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: currentColor;
+    opacity: 0.8;
+  }
+
+  .hex-byte.editing-high::after {
+    width: 50%;
+  }
+
+  .hex-byte.editing-low::after {
+    left: 50%;
+    width: 50%;
+  }
+</style>
+
+<div class="flex flex-col gap-6 p-4">
+  <!-- Layout Header: Headline first -->
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body gap-4">
+      <h2 class="card-title text-2xl font-bold">Hex Editor</h2>
+      <p class="text-sm opacity-60">Upload any file to view and edit its hexadecimal contents. Handles multi-GB files
+        with ease.</p>
+
+      <!-- File info below headline when loaded -->
+      <div id="file-info-header"
+        class="hidden flex flex-wrap items-center gap-x-6 gap-y-2 bg-base-200 p-4 rounded-xl text-sm font-mono transition-all">
+        <div class="flex flex-col">
+          <span class="text-[10px] opacity-50 uppercase font-bold tracking-widest">Filename</span>
+          <span id="info-filename" class="text-primary font-bold">file.bin</span>
         </div>
-        <input type="file" id="hex-file-input" class="hidden" />
+        <div class="divider divider-horizontal"></div>
+        <div class="flex flex-col">
+          <span class="text-[10px] opacity-50 uppercase font-bold tracking-widest">Type</span>
+          <span id="info-type" class="badge badge-primary badge-sm mt-1">Binary</span>
+        </div>
+        <div class="divider divider-horizontal"></div>
+        <div class="flex flex-col">
+          <span class="text-[10px] opacity-50 uppercase font-bold tracking-widest">Size</span>
+          <span id="info-size" class="font-bold">0 bytes</span>
+        </div>
       </div>
 
-      <div id="file-info" class="hidden mt-6 bg-base-200 p-4 rounded-lg flex flex-col gap-2">
-        <div class="flex justify-between items-center">
-          <span class="font-bold text-lg" id="info-filename">file.bin</span>
-          <span class="badge badge-primary" id="info-type">Unknown Type</span>
+      <!-- Dropzone: Standard toolkit look -->
+      <div id="hex-dropzone"
+        class="mt-2 flex items-center justify-center border-2 border-dashed rounded-xl cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-48 group hover:bg-base-300">
+        <div class="flex flex-col items-center gap-3 text-center transition-transform group-hover:scale-105">
+          <div class="text-primary/30 text-5xl">
+            <i data-lucide="upload-cloud"></i>
+          </div>
+          <p class="text-lg font-bold">Click or drag any file here</p>
+          <p class="text-xs opacity-50">Instant rendering for small and huge files</p>
         </div>
-        <div class="flex justify-between text-sm opacity-70">
-          <span id="info-size">0 bytes</span>
-          <span id="info-modified">-</span>
-        </div>
+        <input type="file" id="hex-file-input" class="hidden" />
       </div>
     </div>
   </div>
 
+  <!-- Editor Section -->
   <div id="editor-container" class="hidden flex flex-col gap-4">
     <div class="flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <label class="label cursor-pointer gap-2">
-          <span class="label-text">Show Hex</span>
-          <input type="checkbox" id="toggle-hex" class="toggle toggle-primary" checked />
+      <div class="flex flex-wrap items-center gap-6">
+        <label class="label cursor-pointer gap-2 p-0">
+          <input type="checkbox" id="toggle-hex" class="toggle toggle-primary toggle-sm shadow-sm" checked />
+          <span class="label-text font-bold">Hexadecimal</span>
         </label>
-        <label class="label cursor-pointer gap-2">
-          <span class="label-text">Show ASCII</span>
-          <input type="checkbox" id="toggle-ascii" class="toggle toggle-secondary" checked />
+        <label class="label cursor-pointer gap-2 p-0">
+          <input type="checkbox" id="toggle-ascii" class="toggle toggle-secondary toggle-sm shadow-sm" checked />
+          <span class="label-text font-bold">ASCII</span>
         </label>
+        <div
+          class="hidden sm:block text-[10px] opacity-40 uppercase font-black italic tracking-widest bg-base-200 px-3 py-1 rounded-full">
+          Arrows: Navigate • Type 0-9/A-F: Edit • Enter: Edit Modal
+        </div>
       </div>
       <div class="flex items-center gap-2">
-        <button id="btn-reset" class="btn btn-sm btn-ghost text-error">
-          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+        <button id="btn-reset" class="btn btn-sm btn-ghost text-error no-animation">
+          <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i>
           Start Over
         </button>
-        <button id="download-btn" class="btn btn-primary gap-2">
+        <button id="download-btn" class="btn btn-primary btn-sm gap-2 shadow-lg">
           <i data-lucide="download" class="w-4 h-4"></i>
-          Download
+          Export File
         </button>
       </div>
     </div>
 
-    <!-- Hex Editor View -->
-    <div class="card bg-base-100 shadow-xl overflow-hidden">
-      <div class="bg-base-300 px-4 py-2 flex text-xs font-mono font-bold tracking-wider uppercase opacity-70">
-        <div class="w-16 sm:w-20 shrink-0">Offset</div>
-        <div id="hex-header" class="flex-1 text-center">Hexadecimal</div>
-        <div id="ascii-header" class="w-32 sm:w-48 shrink-0 text-center">ASCII</div>
+    <!-- Hex View -->
+    <div class="card shadow-2xl overflow-hidden bg-base-100 border border-base-300">
+      <!-- Fixed Header: Doesn't scroll -->
+      <div
+        class="bg-base-200 px-6 py-3 flex text-xs font-mono font-black uppercase opacity-60 border-b tracking-widest">
+        <div class="w-24 shrink-0">Offset</div>
+        <div class="flex-1 text-center">Hex Representation</div>
+        <div class="w-40 shrink-0 text-center">ASCII Data</div>
       </div>
 
-      <div id="hex-viewer" class="h-[500px] overflow-y-auto font-mono text-xs sm:text-sm">
+      <!-- Scrollable Viewer -->
+      <div id="hex-viewer" tabindex="0" class="select-none font-mono text-sm">
         <div id="hex-content" class="relative">
-          <!-- Lines will be dynamically inserted here -->
-          <div class="flex items-center justify-center h-full opacity-50">
-            Scroll to view content
+          <!-- The content area that is pushed by the stretcher -->
+          <div id="hex-stretcher" style="width: 1px; visibility: hidden;"></div>
+          <!-- The floating window that contains the visible rows -->
+          <div id="hex-visible-rows" class="absolute top-0 left-0 w-full flex flex-col will-change-transform">
+            <!-- Rows injected by index.ts -->
           </div>
         </div>
       </div>
 
-      <div class="bg-base-300 px-4 py-1 flex justify-between items-center text-[10px] sm:text-xs opacity-70">
-        <div id="status-selection">Offset: 0x00000000</div>
-        <div id="status-stats">Visible: 0 bytes</div>
+      <!-- Status Bar -->
+      <div class="bg-base-200 px-6 py-2 flex justify-between items-center text-[10px] sm:text-xs border-t font-mono">
+        <div id="status-selection" class="font-bold text-primary">Offset: 0x00000000</div>
+        <div id="status-stats" class="opacity-50">Size: 0 bytes</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Edit Modal -->
+<!-- Edit Overlay Modal -->
 <dialog id="edit-modal" class="modal">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg">Edit Byte</h3>
-    <div class="py-4">
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text">Hex Value (00-FF)</span>
-        </label>
-        <input type="text" id="edit-hex-input" class="input input-bordered w-full font-mono" maxlength="2" />
+  <div class="modal-box max-w-sm border-2 border-primary">
+    <h3 class="font-bold text-lg mb-4 text-center">Byte Modification</h3>
+    <div class="bg-base-300 p-8 rounded-2xl flex items-center justify-around gap-4 group">
+      <div class="text-center">
+        <span class="text-[10px] uppercase font-bold opacity-50 block mb-2">Hex</span>
+        <input type="text" id="edit-hex-input"
+          class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner" maxlength="2" />
       </div>
-      <div class="form-control mt-2">
-        <label class="label">
-          <span class="label-text">ASCII Character</span>
-        </label>
-        <input type="text" id="edit-ascii-input" class="input input-bordered w-full font-mono" maxlength="1" />
+      <div class="divider divider-horizontal mx-0 h-12 self-end pb-4"></div>
+      <div class="text-center">
+        <span class="text-[10px] uppercase font-bold opacity-50 block mb-2">ASCII</span>
+        <input type="text" id="edit-ascii-input"
+          class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner" maxlength="1" />
       </div>
-      <p class="text-xs opacity-50 mt-4">Changing one will update the other.</p>
     </div>
     <div class="modal-action">
-      <button id="cancel-edit" class="btn">Cancel</button>
-      <button id="save-edit" class="btn btn-primary">Apply</button>
+      <button id="cancel-edit" class="btn btn-ghost hover:btn-error">Discard</button>
+      <button id="save-edit" class="btn btn-primary px-8">Update</button>
     </div>
   </div>
 </dialog>
