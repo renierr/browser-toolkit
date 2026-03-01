@@ -131,10 +131,23 @@ export default function init() {
           '-c:a',
           'aac',
           '-b:a',
-          '128k'
+          '128k',
+          '-vf',
+          'scale=trunc(iw/2)*2:trunc(ih/2)*2'
         );
       } else if (format === 'webm') {
-        args.push('-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0', '-c:a', 'libopus');
+        args.push(
+          '-c:v',
+          'libvpx-vp9',
+          '-crf',
+          '30',
+          '-b:v',
+          '0',
+          '-c:a',
+          'libopus',
+          '-vf',
+          'scale=trunc(iw/2)*2:trunc(ih/2)*2'
+        );
       } else if (format === 'gif') {
         args.push('-vf', 'fps=10,scale=480:-1:flags=lanczos', '-f', 'gif');
       } else if (format === 'mp3') {
