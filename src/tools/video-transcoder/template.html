@@ -52,12 +52,18 @@
           </select>
         </div>
 
-        <div id="progress-container" class="hidden mt-4">
-          <div class="flex justify-between mb-1">
-            <span id="status-text" class="text-sm font-medium">Processing...</span>
-            <span id="progress-percent" class="text-sm font-medium">0%</span>
+        <div class="collapse collapse-arrow bg-base-200 mt-2">
+          <input type="checkbox" />
+          <div class="collapse-title font-semibold text-sm">
+            Advanced Options
           </div>
-          <progress id="progress-bar" class="progress progress-primary w-full" value="0" max="100"></progress>
+          <div class="collapse-content">
+            <label class="label">
+              <span class="label-text text-xs">Append Custom FFmpeg Arguments (e.g. <code>-r 30 -crf 18</code>)</span>
+            </label>
+            <input type="text" id="advanced-args" class="input input-bordered input-sm w-full font-mono"
+              placeholder="-threads 2" />
+          </div>
         </div>
 
         <div class="card-actions justify-end mt-auto flex gap-2">
@@ -75,7 +81,9 @@
       <h3 class="text-xl font-bold mb-4">Result</h3>
       <div class="flex flex-col sm:flex-row items-center gap-6">
         <div class="w-full sm:w-1/2 aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
-          <video id="result-video" controls class="max-h-full"></video>
+          <video id="result-video" controls class="max-h-full hidden"></video>
+          <img id="result-image" class="max-h-full object-contain hidden" alt="Transcoded GIF Result" />
+          <audio id="result-audio" controls class="w-full mx-4 hidden"></audio>
         </div>
         <div class="flex-1 flex flex-col gap-4">
           <div class="p-4 bg-success/10 text-success rounded-lg flex items-center gap-3">

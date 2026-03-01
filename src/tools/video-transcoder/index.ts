@@ -1,6 +1,6 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
-import { showMessage } from '../../js/ui.ts';
+import { showMessage, showProgress, hideProgress } from '../../js/ui.ts';
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
@@ -24,20 +24,19 @@ export default function init() {
   const btnDownload = document.getElementById('btn-download') as HTMLButtonElement;
   const outputFormat = document.getElementById('output-format') as HTMLSelectElement;
   const qualityPreset = document.getElementById('quality-preset') as HTMLSelectElement;
-  const progressContainer = document.getElementById('progress-container') as HTMLDivElement;
-  const progressBar = document.getElementById('progress-bar') as HTMLProgressElement;
-  const progressPercent = document.getElementById('progress-percent') as HTMLSpanElement;
-  const statusText = document.getElementById('status-text') as HTMLSpanElement;
+  const advancedArgs = document.getElementById('advanced-args') as HTMLInputElement;
   const resultSection = document.getElementById('result-section') as HTMLDivElement;
   const resultVideo = document.getElementById('result-video') as HTMLVideoElement;
+  const resultImage = document.getElementById('result-image') as HTMLImageElement;
+  const resultAudio = document.getElementById('result-audio') as HTMLAudioElement;
 
   let selectedFile: File | null = null;
   let resultBlob: Blob | null = null;
+  let hasAudio = false;
 
   const loadFFmpeg = async () => {
     if (ffmpegLoaded) return;
-    statusText.innerText = 'Loading FFmpeg...';
-    progressContainer.classList.remove('hidden');
+    showProgress('Loading FFmpeg core...');
 
     try {
       console.log('Attempting to load FFmpeg...', { coreURL, wasmURL, workerURL });
@@ -50,20 +49,21 @@ export default function init() {
 
       ffmpegLoaded = true;
       console.log('FFmpeg loaded successfully');
-      statusText.innerText = 'Ready';
-      progressContainer.classList.add('hidden');
     } catch (error) {
       console.error('Failed to load FFmpeg:', error);
-      statusText.innerText = 'Error loading FFmpeg';
       showMessage('Failed to load video transcoder core. Check console for details.', {
         type: 'alert',
       });
-      progressContainer.classList.add('hidden');
+      hideProgress();
+      throw error;
     }
   };
 
   ffmpeg.on('log', ({ message }) => {
     console.log('[FFmpeg]', message);
+    if (message.includes('Audio:')) {
+      hasAudio = true;
+    }
   });
 
   const updateFileInfo = (file: File) => {
@@ -85,8 +85,13 @@ export default function init() {
     btnConvert.disabled = true;
     btnClear.disabled = true;
     resultSection.classList.add('hidden');
-    progressContainer.classList.add('hidden');
+    hideProgress();
     resultVideo.src = '';
+    resultImage.src = '';
+    resultAudio.src = '';
+    resultVideo.classList.add('hidden');
+    resultImage.classList.add('hidden');
+    resultAudio.classList.add('hidden');
     if (resultBlob) {
       resultBlob = null;
     }
@@ -103,8 +108,7 @@ export default function init() {
       btnConvert.disabled = true;
       btnClear.disabled = true;
       btnRemove.disabled = true;
-      progressContainer.classList.remove('hidden');
-      statusText.innerText = 'Preparing...';
+      showProgress('Preparing FFmpeg...');
 
       await loadFFmpeg();
 
@@ -113,10 +117,14 @@ export default function init() {
       const outputName = `output.${format}`;
       const preset = qualityPreset.value;
 
-      statusText.innerText = 'Writing file to memory...';
+      showProgress('Writing file to memory...', { visible: true });
       await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
 
-      statusText.innerText = 'Transcoding...';
+      showProgress('Probing file streams...');
+      hasAudio = false; // reset
+      await ffmpeg.exec(['-i', inputName, '-f', 'null', '-']);
+
+      showProgress('Transcoding video...', { visible: true });
 
       let args = ['-i', inputName];
 
@@ -127,14 +135,14 @@ export default function init() {
           '-preset',
           preset,
           '-crf',
-          '23',
-          '-c:a',
-          'aac',
-          '-b:a',
-          '128k',
-          '-vf',
-          'scale=trunc(iw/2)*2:trunc(ih/2)*2'
+          '23'
         );
+        if (hasAudio) {
+          args.push('-c:a', 'aac', '-b:a', '128k', '-map', '0:v?', '-map', '0:a?');
+        } else {
+          args.push('-an', '-map', '0:v?');
+        }
+        args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
       } else if (format === 'webm') {
         args.push(
           '-c:v',
@@ -142,16 +150,28 @@ export default function init() {
           '-crf',
           '30',
           '-b:v',
-          '0',
-          '-c:a',
-          'libopus',
-          '-vf',
-          'scale=trunc(iw/2)*2:trunc(ih/2)*2'
+          '0'
         );
+        if (hasAudio) {
+          args.push('-c:a', 'libopus', '-map', '0:v?', '-map', '0:a?');
+        } else {
+          args.push('-an', '-map', '0:v?');
+        }
+        args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
       } else if (format === 'gif') {
         args.push('-vf', 'fps=10,scale=480:-1:flags=lanczos', '-f', 'gif');
       } else if (format === 'mp3') {
+        if (!hasAudio) throw new Error('Source file contains no audio stream to convert.');
         args.push('-vn', '-ab', '192k', '-ar', '44100', '-f', 'mp3');
+      }
+
+      const customArgsRaw = advancedArgs.value.trim();
+      if (customArgsRaw) {
+        // very rudimentary argument string splitter
+        const customArgs = customArgsRaw.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
+        for (const carg of customArgs) {
+          args.push(carg.replace(/^"|"$/g, ''));
+        }
       }
 
       args.push(outputName);
@@ -162,7 +182,7 @@ export default function init() {
         throw new Error(`FFmpeg exited with non-zero code: ${exitCode}`);
       }
 
-      statusText.innerText = 'Reading result...';
+      showProgress('Reading result file...', { visible: true });
       const data = await ffmpeg.readFile(outputName);
       resultBlob = new Blob([data as any], {
         type: format === 'mp3' ? 'audio/mpeg' : format === 'gif' ? 'image/gif' : `video/${format}`,
@@ -173,9 +193,24 @@ export default function init() {
       }
 
       const url = URL.createObjectURL(resultBlob);
-      resultVideo.src = url;
+
+      // Hide all result media elements first
+      resultVideo.classList.add('hidden');
+      resultImage.classList.add('hidden');
+      resultAudio.classList.add('hidden');
+
+      if (format === 'gif') {
+        resultImage.src = url;
+        resultImage.classList.remove('hidden');
+      } else if (format === 'mp3') {
+        resultAudio.src = url;
+        resultAudio.classList.remove('hidden');
+      } else {
+        resultVideo.src = url;
+        resultVideo.classList.remove('hidden');
+      }
+
       resultSection.classList.remove('hidden');
-      statusText.innerText = 'Done!';
 
       await ffmpeg.deleteFile(inputName);
       await ffmpeg.deleteFile(outputName);
@@ -184,6 +219,7 @@ export default function init() {
       showMessage('Transcoding failed. See console for details.', { type: 'alert' });
       resultSection.classList.add('hidden');
     } finally {
+      hideProgress();
       btnConvert.disabled = false;
       btnClear.disabled = false;
       btnRemove.disabled = false;
@@ -197,8 +233,7 @@ export default function init() {
 
   const onProgress = ({ progress }: { progress: number }) => {
     const percent = Math.round(progress * 100);
-    progressBar.value = percent;
-    progressPercent.innerText = `${percent}%`;
+    showProgress(`Transcoding video... ${percent}%`);
   };
 
   btnRemove.addEventListener('click', resetUI);
