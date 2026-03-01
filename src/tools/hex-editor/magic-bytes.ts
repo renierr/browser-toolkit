@@ -23,6 +23,8 @@ export const MAGIC_BYTES = [
   { name: 'OpenEXR Image', type: 'image/x-exr', bytes: [0x76, 0x2F, 0x31, 0x01] },
   { name: 'TGA Image', type: 'image/x-tga', bytes: [0x00, 0x00, 0x02, 0x00, 0x00] },
   { name: 'PCX Image', type: 'image/x-pcx', bytes: [0x0A, 0x05, 0x01, 0x08] },
+  { name: 'Nikon NEF', type: 'image/x-nikon-nef', bytes: [0x4D, 0x4D, 0x00, 0x2A, 0x00, 0x00, 0x00, 0x08, 0x00] },
+  { name: 'Canon CR2', type: 'image/x-canon-cr2', bytes: [0x49, 0x49, 0x2A, 0x00, 0x10, 0x00, 0x00, 0x00, 0x43, 0x52] },
 
   // Documents
   { name: 'PDF Document', type: 'application/pdf', bytes: [0x25, 0x50, 0x44, 0x46, 0x2D] },
@@ -51,8 +53,8 @@ export const MAGIC_BYTES = [
   { name: 'Z Compressed', type: 'application/x-compress', bytes: [0x1F, 0x9D] },
   { name: 'CPIO Archive', type: 'application/x-cpio', bytes: [0x30, 0x37, 0x30, 0x37, 0x30, 0x31] },
   { name: 'Zlib Compressed', type: 'application/zlib', bytes: [0x78, 0x01] },
-  { name: 'Zlib Compressed (Default)', type: 'application/zlib', bytes: [0x78, 0x9C] },
-  { name: 'Zlib Compressed (Best)', type: 'application/zlib', bytes: [0x78, 0xDA] },
+  { name: 'Zlib (Default)', type: 'application/zlib', bytes: [0x78, 0x9C] },
+  { name: 'Zlib (Best)', type: 'application/zlib', bytes: [0x78, 0xDA] },
 
   // Executables / System
   { name: 'EXE / DLL', type: 'application/x-msdownload', bytes: [0x4D, 0x5A] },
@@ -88,9 +90,10 @@ export const MAGIC_BYTES = [
   { name: 'MOV Video', type: 'video/quicktime', bytes: [null, null, null, null, 0x6d, 0x6f, 0x6f, 0x76] },
   { name: 'AVI Video', type: 'video/x-msvideo', bytes: [0x52, 0x49, 0x46, 0x46, null, null, null, null, 0x41, 0x56, 0x49, 0x20] },
   { name: 'MKV Video', type: 'video/x-matroska', bytes: [0x1A, 0x45, 0xDF, 0xA3] },
+  { name: 'WebM Video', type: 'video/webm', bytes: [0x1A, 0x45, 0xDF, 0xA3] },
   { name: 'FLV Video', type: 'video/x-flv', bytes: [0x46, 0x4C, 0x56, 0x01] },
   { name: 'MP3 Audio (ID3)', type: 'audio/mpeg', bytes: [0x49, 0x44, 0x33] },
-  { name: 'MP3 Audio (Heading)', type: 'audio/mpeg', bytes: [0xFF, 0xFB] },
+  { name: 'MP3 Audio (Header)', type: 'audio/mpeg', bytes: [0xFF, 0xFB] },
   { name: 'WAV Audio', type: 'audio/wav', bytes: [0x52, 0x49, 0x46, 0x46, null, null, null, null, 0x57, 0x41, 0x56, 0x45] },
   { name: 'Ogg Media', type: 'application/ogg', bytes: [0x4F, 0x67, 0x67, 0x53] },
   { name: 'FLAC Audio', type: 'audio/x-flac', bytes: [0x66, 0x4C, 0x61, 0x43] },
