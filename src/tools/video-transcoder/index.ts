@@ -3,16 +3,17 @@ import { fetchFile } from '@ffmpeg/util';
 import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui.ts';
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { getFFmpegArgs, FFmpegLogCollector } from './video-utils.ts';
 
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
 import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
-
 import workerURL from '@ffmpeg/ffmpeg/worker?url';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
   const ffmpeg = new FFmpeg();
   let ffmpegLoaded = false;
+  const logCollector = new FFmpegLogCollector();
 
   const dropZone = document.getElementById('drop-zone') as HTMLDivElement;
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -33,7 +34,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   let selectedFile: File | null = null;
   let resultBlob: Blob | null = null;
-  let hasAudio = false;
+  let isTranscodingPhase = false;
 
   const loadFFmpeg = async () => {
     if (ffmpegLoaded) return;
@@ -41,21 +42,15 @@ export default function init(payload?: SharedFilesPayload) {
     await yieldToUI(true);
 
     try {
-      console.log('Attempting to load FFmpeg...', { coreURL, wasmURL, workerURL });
-
       await ffmpeg.load({
         coreURL: coreURL,
         wasmURL: wasmURL,
-        workerURL: workerURL
+        workerURL: workerURL,
       });
-
       ffmpegLoaded = true;
-      console.log('FFmpeg loaded successfully');
     } catch (error) {
       console.error('Failed to load FFmpeg:', error);
-      showMessage('Failed to load video transcoder core. Check console for details.', {
-        type: 'alert',
-      });
+      showMessage('Failed to load video transcoder core.', { type: 'alert' });
       hideProgress();
       throw error;
     }
@@ -63,9 +58,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   ffmpeg.on('log', ({ message }) => {
     console.log('[FFmpeg]', message);
-    if (message.includes('Audio:')) {
-      hasAudio = true;
-    }
+    logCollector.add(message);
   });
 
   const updateFileInfo = (file: File) => {
@@ -94,9 +87,8 @@ export default function init(payload?: SharedFilesPayload) {
     resultVideo.classList.add('hidden');
     resultImage.classList.add('hidden');
     resultAudio.classList.add('hidden');
-    if (resultBlob) {
-      resultBlob = null;
-    }
+    resultBlob = null;
+    logCollector.clear();
   };
 
   setupFileDropzone('drop-zone', 'file-input', (files) => {
@@ -119,85 +111,38 @@ export default function init(payload?: SharedFilesPayload) {
       btnConvert.disabled = true;
       btnClear.disabled = true;
       btnRemove.disabled = true;
+      logCollector.clear();
+
       showProgress('Preparing FFmpeg...');
       await yieldToUI(true);
-
       await loadFFmpeg();
 
-      const inputName = 'input' + selectedFile.name.substring(selectedFile.name.lastIndexOf('.'));
+      const inputExt = selectedFile.name.substring(selectedFile.name.lastIndexOf('.'));
+      const inputName = 'input' + inputExt;
       const format = outputFormat.value;
       const outputName = `output.${format}`;
-      const preset = qualityPreset.value;
 
       showProgress('Writing file to memory...', { visible: true });
       await yieldToUI(true);
       await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
 
-      showProgress('Probing file streams...');
-      hasAudio = false; // reset
-      await ffmpeg.exec(['-i', inputName, '-f', 'null', '-']);
+      showProgress('Converting...', { visible: true });
+      isTranscodingPhase = true;
+      await yieldToUI(true);
 
-      showProgress('Transcoding video...', { visible: true });
-
-      let args = ['-i', inputName];
-
-      if (format === 'mp4') {
-        args.push(
-          '-c:v',
-          'libx264',
-          '-preset',
-          preset,
-          '-crf',
-          '23'
-        );
-        if (hasAudio) {
-          args.push('-c:a', 'aac', '-b:a', '128k', '-map', '0:v?', '-map', '0:a?');
-        } else {
-          args.push('-an', '-map', '0:v?');
-        }
-        args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
-      } else if (format === 'webm') {
-        args.push(
-          '-c:v',
-          'libvpx-vp9',
-          '-crf',
-          '30',
-          '-b:v',
-          '0'
-        );
-        if (hasAudio) {
-          args.push('-c:a', 'libopus', '-map', '0:v?', '-map', '0:a?');
-        } else {
-          args.push('-an', '-map', '0:v?');
-        }
-        args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
-      } else if (format === 'gif') {
-        args.push('-vf', 'fps=10,scale=480:-1:flags=lanczos', '-f', 'gif');
-      } else if (format === 'webp') {
-        args.push('-vf', 'fps=10,scale=480:-1:flags=lanczos', '-c:v', 'libwebp', '-lossless', '0', '-compression_level', '4', '-q:v', '50', '-loop', '0', '-an', '-f', 'webp');
-      } else if (format === 'mp3') {
-        if (!hasAudio) throw new Error('Source file contains no audio stream to convert.');
-        args.push('-vn', '-ab', '192k', '-ar', '44100', '-f', 'mp3');
-      }
-
-      const customArgsRaw = advancedArgs.value.trim();
-      if (customArgsRaw) {
-        // very rudimentary argument string splitter
-        const customArgs = customArgsRaw.match(/(?:[^\s"]+|"[^"]*")+/g) || [];
-        for (const carg of customArgs) {
-          args.push(carg.replace(/^"|"$/g, ''));
-        }
-      }
-
-      args.push(outputName);
+      const args = getFFmpegArgs(inputName, outputName, {
+        format,
+        preset: qualityPreset.value,
+        advancedArgs: advancedArgs.value,
+      });
 
       const exitCode = await ffmpeg.exec(args);
-
       if (exitCode !== 0) {
-        throw new Error(`FFmpeg exited with non-zero code: ${exitCode}`);
+        throw new Error(`FFmpeg error (Exit ${exitCode})`);
       }
 
       showProgress('Reading result file...', { visible: true });
+      await yieldToUI(true);
       const data = await ffmpeg.readFile(outputName);
       let mimeType = `video/${format}`;
       if (format === 'mp3') mimeType = 'audio/mpeg';
@@ -205,14 +150,9 @@ export default function init(payload?: SharedFilesPayload) {
       else if (format === 'webp') mimeType = 'image/webp';
 
       resultBlob = new Blob([data as any], { type: mimeType });
-
-      if (resultBlob.size === 0) {
-        throw new Error('Transcoded file is 0 bytes.');
-      }
+      if (resultBlob.size === 0) throw new Error('Transcoded file is empty.');
 
       const url = URL.createObjectURL(resultBlob);
-
-      // Hide all result media elements first
       resultVideo.classList.add('hidden');
       resultImage.classList.add('hidden');
       resultAudio.classList.add('hidden');
@@ -229,14 +169,18 @@ export default function init(payload?: SharedFilesPayload) {
       }
 
       resultSection.classList.remove('hidden');
-
       await ffmpeg.deleteFile(inputName);
       await ffmpeg.deleteFile(outputName);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Transcoding failed:', error);
-      showMessage('Transcoding failed. See console for details.', { type: 'alert' });
+      const logSummary = logCollector.getSummary();
+      const errorMsg = error.message || 'Unknown error';
+      showMessage(`Transcoding failed: ${errorMsg}\n\nRecent logs:\n${logSummary}`, {
+        type: 'alert',
+      });
       resultSection.classList.add('hidden');
     } finally {
+      isTranscodingPhase = false;
       hideProgress();
       btnConvert.disabled = false;
       btnClear.disabled = false;
@@ -246,12 +190,17 @@ export default function init(payload?: SharedFilesPayload) {
 
   const onDownloadClick = async () => {
     if (!resultBlob) return;
-    await downloadFile(resultBlob, `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`, resultBlob.type);
+    await downloadFile(
+      resultBlob,
+      `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`,
+      resultBlob.type
+    );
   };
 
   const onProgress = ({ progress }: { progress: number }) => {
+    if (!isTranscodingPhase) return;
     const percent = Math.round(progress * 100);
-    showProgress(`Transcoding video... ${percent}%`);
+    showProgress(`Converting... ${percent}%`);
     yieldToUI(true);
   };
 
