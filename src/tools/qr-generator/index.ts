@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
-import { copyCanvasToClipboard } from '../../js/utils';
 import { showMessage } from '../../js/ui.ts';
+import { CanvasExporter } from '../../js/canvas-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -41,7 +41,7 @@ export default function init() {
   };
 
   const inputs = [contentInput, sizeInput, marginInput, colorDarkInput, colorLightInput];
-  inputs.forEach(input => {
+  inputs.forEach((input) => {
     input.addEventListener('input', generateQR);
   });
 
@@ -54,14 +54,14 @@ export default function init() {
 
   copyBtn.addEventListener('click', async () => {
     try {
-      await copyCanvasToClipboard(canvas);
+      await CanvasExporter.copyToClipboard(canvas);
       const originalText = copyBtn.innerHTML;
       copyBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4 mr-2"></i> Copied!';
       setTimeout(() => {
         copyBtn.innerHTML = originalText;
       }, 2000);
     } catch (err) {
-      showMessage('Failed to copy image', { type: 'alert' })
+      showMessage('Failed to copy image', { type: 'alert' });
     }
   });
 

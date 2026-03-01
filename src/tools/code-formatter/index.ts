@@ -1,14 +1,20 @@
 import { showMessage } from '../../js/ui.ts';
-import { formatCode, minifyCode, detectFormat, detectFormatFromExtension, type SupportedFormat } from './formatters.ts';
+import {
+  formatCode,
+  minifyCode,
+  detectFormat,
+  detectFormatFromExtension,
+  type SupportedFormat,
+} from './formatters.ts';
 import {
   generateHighlightedHtml,
   renderCodeToCanvasSimple,
   type ExportTheme,
   type ExportOptions,
 } from './export.ts';
-import { copyCanvasToClipboard, downloadCanvasAsImage } from '../../js/utils.ts';
 import { setupFileDropzone } from '../../js/file-utils.ts';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { CanvasExporter } from '../../js/canvas-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -243,7 +249,7 @@ export default function init(payload?: SharedFilesPayload) {
         format,
         getExportOptions()
       );
-      await copyCanvasToClipboard(canvas);
+      await CanvasExporter.copyToClipboard(canvas);
 
       const originalHtml = btnExportClipboard.innerHTML;
       btnExportClipboard.innerHTML = '<i data-lucide="check" class="w-4 h-4 mr-2"></i>Copied!';
@@ -281,7 +287,7 @@ export default function init(payload?: SharedFilesPayload) {
       );
 
       const timestamp = new Date().toISOString().slice(0, 10);
-      await downloadCanvasAsImage(canvas, `code-${format}-${timestamp}`, 'png');
+      await CanvasExporter.download(canvas, `code-${format}-${timestamp}`, 'png');
 
       btnExportFile.disabled = false;
     } catch (err: any) {

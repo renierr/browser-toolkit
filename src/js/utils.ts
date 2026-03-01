@@ -1,5 +1,3 @@
-import { downloadFile } from './file-utils.ts';
-
 export const isDev = Boolean(import.meta.env.DEV);
 
 export const fuzzyScore = (text: string, term: string): number => {
@@ -64,59 +62,6 @@ export const html = (strings: TemplateStringsArray, ...values: any[]) => {
     return acc + str + (value === false ? '' : value);
   }, '');
 };
-
-export async function downloadCanvasAsImage(
-  canvas: HTMLCanvasElement,
-  filename: string = 'canvas_image',
-  format: 'jpg' | 'webp' | 'png' = 'png',
-  quality?: number
-): Promise<void> {
-  const mimeType = format === 'jpg' ? 'image/jpeg' : `image/${format}`;
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      async (blob) => {
-        if (!blob) {
-          reject(new Error('Failed to create blob from canvas'));
-          return;
-        }
-        try {
-          await downloadFile(blob, `${filename}.${format}`);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      },
-      mimeType,
-      quality
-    );
-  });
-}
-
-export async function copyCanvasToClipboard(
-  canvas: HTMLCanvasElement,
-  _format: 'jpg' | 'webp' | 'png' = 'png',
-  quality?: number
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(
-      async (blob) => {
-        if (!blob) {
-          reject(new Error('Failed to create blob from canvas'));
-          return;
-        }
-        try {
-          const data = [new ClipboardItem({ [blob.type]: blob })];
-          await navigator.clipboard.write(data);
-          resolve();
-        } catch (err) {
-          reject(err);
-        }
-      },
-      'image/png', // clipboard can only handle png so ignore param 
-      quality
-    );
-  });
-}
 
 const parseRational = (v: any): number => {
   if (v === undefined || v === null) return NaN;
@@ -344,6 +289,7 @@ export function debounce<T extends (...args: any[]) => any>(fn: T, wait = 0, imm
   };
 }
 
+// noinspection JSUnusedGlobalSymbols
 export function throttleTrailing<T extends (...args: any[]) => any>(fn: T, wait = 0) {
   let timer: ReturnType<typeof setTimeout> | null = null;
   let lastArgs: Parameters<T> | null = null;

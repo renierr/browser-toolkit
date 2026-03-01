@@ -4,8 +4,9 @@ import { applyEffect, cleanupWorkCanvases, drawCropOverlay, drawRedactPreview } 
 import type { AppState, Operation, ToolType } from './types';
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
-import { copyCanvasToClipboard, debounce, downloadCanvasAsImage } from '../../js/utils.ts';
+import { debounce } from '../../js/utils.ts';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { CanvasExporter } from '../../js/canvas-utils.ts';
 
 const EXPORT_QUALITY = 0.92;
 
@@ -482,7 +483,7 @@ export default function init(payload?: SharedFilesPayload) {
     const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
     const quality = format === 'image/png' ? undefined : EXPORT_QUALITY;
 
-    await downloadCanvasAsImage(elements.canvas, downloadFilename, ext, quality);
+    await CanvasExporter.download(elements.canvas, downloadFilename, ext, quality);
   });
 
   elements.pasteBtn.addEventListener('click', async (e) => {
@@ -498,10 +499,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   elements.btnCopyClipboard.addEventListener('click', async () => {
     try {
-      const format = elements.exportFormat.value;
-      const formatKey = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'jpg' : 'png';
-      const quality = format === 'image/png' ? undefined : EXPORT_QUALITY;
-      await copyCanvasToClipboard(elements.canvas, formatKey, quality);
+      await CanvasExporter.copyToClipboard(elements.canvas);
       showMessage('Copied to clipboard');
       console.log('Copied to clipboard');
     } catch (err) {

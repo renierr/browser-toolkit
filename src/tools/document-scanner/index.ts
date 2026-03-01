@@ -25,11 +25,12 @@ import { sourceToCanvas, imageToBlob, imageFromBlob, rotateCanvas } from './util
 import type { FilterType, ScannedPage } from './types';
 import { createScannerState } from './utils/state';
 import Sortable from 'sortablejs';
-import { copyCanvasToClipboard, downloadCanvasAsImage, debounce } from '../../js/utils.ts';
+import { debounce } from '../../js/utils.ts';
 import { showProgress, showMessage, hideProgress } from '../../js/ui.ts';
 import { createLiveDetectionLoop } from './utils/live-detection-loop';
 import { createHandleDrag } from './utils/handle-drag';
 import { createCameraGestures } from './utils/camera-gestures';
+import { CanvasExporter } from '../../js/canvas-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -300,7 +301,9 @@ export default function init(payload?: SharedFilesPayload) {
       const originalBlob = blob ?? (await imageToBlob(img));
 
       // Generate initial thumbnail so page list doesn't rely on Data URL
-      const thumbBlob = await new Promise<Blob | null>((resolve) => pCanvas.toBlob(resolve, 'image/jpeg', 0.5));
+      const thumbBlob = await new Promise<Blob | null>((resolve) =>
+        pCanvas.toBlob(resolve, 'image/jpeg', 0.5)
+      );
 
       state.getPages().push({
         id: crypto.randomUUID(),
@@ -430,19 +433,23 @@ export default function init(payload?: SharedFilesPayload) {
 
     // Update thumbnail in-place without re-rendering the whole list
     const currentFilter = page.filter;
-    page.processedCanvas.toBlob((blob) => {
-      // Race condition safety
-      if (!blob || page.filter !== currentFilter) return;
-      if (page.thumbnailUrl) {
-        URL.revokeObjectURL(page.thumbnailUrl);
-      }
-      page.thumbnailUrl = URL.createObjectURL(blob);
-      const card = pageList.querySelector(`[data-index="${state.getCurrentPageIndex()}"]`);
-      if (card) {
-        const img = card.querySelector('img');
-        if (img) img.src = page.thumbnailUrl;
-      }
-    }, 'image/jpeg', 0.5);
+    page.processedCanvas.toBlob(
+      (blob) => {
+        // Race condition safety
+        if (!blob || page.filter !== currentFilter) return;
+        if (page.thumbnailUrl) {
+          URL.revokeObjectURL(page.thumbnailUrl);
+        }
+        page.thumbnailUrl = URL.createObjectURL(blob);
+        const card = pageList.querySelector(`[data-index="${state.getCurrentPageIndex()}"]`);
+        if (card) {
+          const img = card.querySelector('img');
+          if (img) img.src = page.thumbnailUrl;
+        }
+      },
+      'image/jpeg',
+      0.5
+    );
   }
 
   // --- File Handling ---
@@ -661,18 +668,25 @@ export default function init(payload?: SharedFilesPayload) {
     return tempCanvas;
   }
 
-  btnDownloadPdf.addEventListener('click', () => generateAndDownloadPDF(state.getPages(), getRenderedCanvas));
+  btnDownloadPdf.addEventListener('click', () =>
+    generateAndDownloadPDF(state.getPages(), getRenderedCanvas)
+  );
 
   btnDownload.addEventListener('click', async () => {
     const currentPage = state.getCurrentPage();
     const exportCanvas = currentPage ? currentPage.processedCanvas : canvas;
-    await downloadCanvasAsImage(exportCanvas, `scanned-page-${state.getCurrentPageIndex() + 1}.jpg`, 'jpg', 0.9);
+    await CanvasExporter.download(
+      exportCanvas,
+      `scanned-page-${state.getCurrentPageIndex() + 1}`,
+      'jpg',
+      0.9
+    );
   });
 
   btnImageClipboard.addEventListener('click', async () => {
     const currentPage = state.getCurrentPage();
     const exportCanvas = currentPage ? currentPage.processedCanvas : canvas;
-    await copyCanvasToClipboard(exportCanvas, 'jpg', 0.9);
+    await CanvasExporter.copyToClipboard(exportCanvas);
   });
 
   pageList.addEventListener('click', async (e) => {
@@ -688,7 +702,8 @@ export default function init(payload?: SharedFilesPayload) {
       if (state.getPages().length === 0) {
         btnReset.click();
       } else {
-        if (state.getCurrentPageIndex() >= state.getPages().length) state.setCurrentPageIndex(state.getPages().length - 1);
+        if (state.getCurrentPageIndex() >= state.getPages().length)
+          state.setCurrentPageIndex(state.getPages().length - 1);
         state.releaseInactiveImages();
         await state.ensureOriginalImage(state.getCurrentPage());
         renderPageList();
@@ -706,9 +721,15 @@ export default function init(payload?: SharedFilesPayload) {
         state.getPages().splice(evt.newIndex, 0, moved);
         if (state.getCurrentPageIndex() === evt.oldIndex) {
           state.setCurrentPageIndex(evt.newIndex);
-        } else if (state.getCurrentPageIndex() > evt.oldIndex && state.getCurrentPageIndex() <= evt.newIndex) {
+        } else if (
+          state.getCurrentPageIndex() > evt.oldIndex &&
+          state.getCurrentPageIndex() <= evt.newIndex
+        ) {
           state.setCurrentPageIndex(state.getCurrentPageIndex() - 1);
-        } else if (state.getCurrentPageIndex() < evt.oldIndex && state.getCurrentPageIndex() >= evt.newIndex) {
+        } else if (
+          state.getCurrentPageIndex() < evt.oldIndex &&
+          state.getCurrentPageIndex() >= evt.newIndex
+        ) {
           state.setCurrentPageIndex(state.getCurrentPageIndex() + 1);
         }
         renderPageList();
