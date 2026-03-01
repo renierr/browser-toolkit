@@ -1,0 +1,132 @@
+/**
+ * Utility functions for hex formatting and processing
+ */
+
+export const BYTES_PER_LINE = 16;
+
+/**
+ * Formats a single byte as a 2-character hex string.
+ */
+export function formatHex(byte: number): string {
+  return byte.toString(16).padStart(2, '0').toUpperCase();
+}
+
+/**
+ * Formats an offset as an 8-character hex string.
+ */
+export function formatOffset(offset: number): string {
+  return offset.toString(16).padStart(8, '0').toUpperCase();
+}
+
+/**
+ * Formats a byte as an ASCII character, or a dot if non-printable.
+ */
+export function formatAscii(byte: number): string {
+  // Printable ASCII range is 32-126
+  return byte >= 32 && byte <= 126 ? String.fromCharCode(byte) : '.';
+}
+
+/**
+ * Reads a chunk from a File or Blob.
+ */
+export async function readChunk(file: File | Blob, offset: number, length: number): Promise<Uint8Array> {
+  const blob = file.slice(offset, offset + length);
+  const buffer = await blob.arrayBuffer();
+  return new Uint8Array(buffer);
+}
+
+/**
+ * Generates a line of hex and ASCII representation.
+ */
+export function generateLine(offset: number, bytes: Uint8Array): {
+  offset: string;
+  hex: string[];
+  ascii: string;
+} {
+  const hex: string[] = [];
+  let ascii = '';
+
+  for (let i = 0; i < BYTES_PER_LINE; i++) {
+    if (i < bytes.length) {
+      hex.push(formatHex(bytes[i]));
+      ascii += formatAscii(bytes[i]);
+    } else {
+      hex.push('');
+      ascii += ' ';
+    }
+  }
+
+  return {
+    offset: formatOffset(offset),
+    hex,
+    ascii
+  };
+}
+
+/**
+ * Manages a mutable buffer for editing.
+ * For very large files, we only keep the modified chunks in memory.
+ */
+export class HexBufferManager {
+  private originalFile: File | null = null;
+  private modifications: Map<number, number> = new Map();
+  private cache: Map<number, Uint8Array> = new Map();
+  private chunkSize = 4096; // 4KB chunks for caching
+
+  constructor(file: File) {
+    this.originalFile = file;
+  }
+
+  async getByte(offset: number): Promise<number> {
+    if (this.modifications.has(offset)) {
+      return this.modifications.get(offset)!;
+    }
+
+    const chunkIndex = Math.floor(offset / this.chunkSize);
+    const chunkOffset = chunkIndex * this.chunkSize;
+
+    let chunk = this.cache.get(chunkIndex);
+    if (!chunk) {
+      chunk = await readChunk(this.originalFile!, chunkOffset, this.chunkSize);
+      this.cache.set(chunkIndex, chunk);
+    }
+
+    const localOffset = offset % this.chunkSize;
+    return chunk[localOffset];
+  }
+
+  setByte(offset: number, value: number) {
+    this.modifications.set(offset, value);
+  }
+
+  async getRange(offset: number, length: number): Promise<Uint8Array> {
+    const result = new Uint8Array(length);
+    for (let i = 0; i < length; i++) {
+      result[i] = await this.getByte(offset + i);
+    }
+    return result;
+  }
+
+  get totalSize(): number {
+    return this.originalFile ? this.originalFile.size : 0;
+  }
+
+  /**
+   * Generates the final full buffer for download.
+   * WARNING: This loads the entire file into memory. 
+   * Only use for download or if file is small.
+   */
+  async getFullBuffer(): Promise<Uint8Array> {
+    const buffer = await readChunk(this.originalFile!, 0, this.originalFile!.size);
+    for (const [offset, value] of this.modifications.entries()) {
+      if (offset < buffer.length) {
+        buffer[offset] = value;
+      }
+    }
+    return buffer;
+  }
+
+  hasModifications(): boolean {
+    return this.modifications.size > 0;
+  }
+}

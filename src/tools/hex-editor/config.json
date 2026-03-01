@@ -1,0 +1,12 @@
+{
+  "name": "Hex Editor",
+  "description": "View and edit files in hex and ASCII formats.",
+  "icon": "binary",
+  "sectionId": "utilities",
+  "order": 10,
+  "shareTarget": {
+    "accept": [
+      "*/*"
+    ]
+  }
+}
