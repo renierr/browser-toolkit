@@ -1,5 +1,5 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
 import { showMessage } from '../../js/ui.ts';
 
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
@@ -36,8 +36,8 @@ export default function init() {
     progressContainer.classList.remove('hidden');
 
     await ffmpeg.load({
-      coreURL: await toBlobURL(coreURL, 'text/javascript'),
-      wasmURL: await toBlobURL(wasmURL, 'application/wasm'),
+      coreURL: coreURL,
+      wasmURL: wasmURL,
     });
 
     ffmpegLoaded = true;

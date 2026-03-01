@@ -54,10 +54,13 @@
           </div>
         </div>
 
-        <div class="card-actions justify-end mt-auto">
-          <button id="btn-vectorize" class="btn btn-primary w-full" disabled>
+        <div class="card-actions justify-end mt-auto flex-nowrap gap-2">
+          <button id="btn-vectorize" class="btn btn-primary flex-1" disabled>
             <i data-lucide="zap" class="w-4 h-4 mr-2"></i>
             Vectorize Image
+          </button>
+          <button id="btn-clear" class="btn btn-ghost">
+            Clear
           </button>
         </div>
       </div>
@@ -68,6 +71,10 @@
       <div class="flex justify-between items-center mb-4">
         <h3 class="text-xl font-bold">Vector Result</h3>
         <div class="flex gap-2">
+          <button id="btn-copy-svg" class="btn btn-outline btn-sm">
+            <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+            Copy SVG
+          </button>
           <button id="btn-download-svg" class="btn btn-outline btn-success btn-sm">
             <i data-lucide="download" class="w-4 h-4 mr-2"></i>
             Download SVG

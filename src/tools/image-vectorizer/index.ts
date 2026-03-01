@@ -10,7 +10,9 @@ export default function init() {
   const fileSize = document.getElementById('file-size') as HTMLParagraphElement;
   const btnRemove = document.getElementById('btn-remove') as HTMLButtonElement;
   const btnVectorize = document.getElementById('btn-vectorize') as HTMLButtonElement;
+  const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
   const btnDownloadSvg = document.getElementById('btn-download-svg') as HTMLButtonElement;
+  const btnCopySvg = document.getElementById('btn-copy-svg') as HTMLButtonElement;
   const tracingPreset = document.getElementById('tracing-preset') as HTMLSelectElement;
   const colorCount = document.getElementById('color-count') as HTMLInputElement;
   const colorCountVal = document.getElementById('color-count-val') as HTMLSpanElement;
@@ -162,15 +164,24 @@ export default function init() {
     URL.revokeObjectURL(url);
   };
 
+  const onCopySvgClick = () => {
+    if (!currentSvgString) return;
+    navigator.clipboard.writeText(currentSvgString).then(() => {
+      showMessage('SVG copied to clipboard!', { type: 'info' });
+    });
+  };
+
   dropZone.addEventListener('click', onDropZoneClick);
   dropZone.addEventListener('dragover', onDragOver);
   dropZone.addEventListener('dragleave', onDragLeave);
   dropZone.addEventListener('drop', onDrop);
   fileInput.addEventListener('change', onFileInputChange);
   btnRemove.addEventListener('click', resetUI);
+  btnClear.addEventListener('click', resetUI);
   colorCount.addEventListener('input', onColorCountInput);
   btnVectorize.addEventListener('click', onVectorizeClick);
   btnDownloadSvg.addEventListener('click', onDownloadClick);
+  btnCopySvg.addEventListener('click', onCopySvgClick);
 
   return () => {
     dropZone.removeEventListener('click', onDropZoneClick);
@@ -179,8 +190,10 @@ export default function init() {
     dropZone.removeEventListener('drop', onDrop);
     fileInput.removeEventListener('change', onFileInputChange);
     btnRemove.removeEventListener('click', resetUI);
+    btnClear.removeEventListener('click', resetUI);
     colorCount.removeEventListener('input', onColorCountInput);
     btnVectorize.removeEventListener('click', onVectorizeClick);
     btnDownloadSvg.removeEventListener('click', onDownloadClick);
+    btnCopySvg.removeEventListener('click', onCopySvgClick);
   };
 }

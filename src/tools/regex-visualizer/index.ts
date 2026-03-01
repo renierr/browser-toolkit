@@ -15,41 +15,109 @@ export default function init() {
   const resultSection = document.getElementById('result-section') as HTMLDivElement;
   const diagramContainer = document.getElementById('diagram-container') as HTMLDivElement;
 
+  const escapeHtml = (unsafe: string) => {
+    return unsafe
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  };
+
   const transform = (node: any): any => {
     if (!node) return Railroad.Comment('empty');
 
     switch (node.type) {
       case 'disjunction':
-        return Railroad.Choice(0, ...node.body.map(transform));
-      case 'alternative':
-        return Railroad.Sequence(...node.body.map(transform));
-      case 'group':
-        return Railroad.Group(transform(node.body[0]), node.name || '');
+      case 'alternative': {
+        const children = node.body ? node.body.map(transform) : [];
+        if (children.length === 0) return Railroad.Comment('empty');
+        if (node.type === 'disjunction') {
+          return children.length === 1 ? children[0] : Railroad.Choice(0, ...children);
+        } else {
+          return children.length === 1 ? children[0] : Railroad.Sequence(...children);
+        }
+      }
+
+      case 'group': {
+        const inner = node.body && node.body.length > 0
+          ? Railroad.Sequence(...node.body.map(transform))
+          : Railroad.Comment('empty');
+
+        if (node.behavior === 'ignore') {
+          return Railroad.Group(inner, 'Non-capturing Group');
+        } else if (node.behavior === 'lookahead') {
+          return Railroad.Group(inner, 'Positive Lookahead');
+        } else if (node.behavior === 'negativeLookahead') {
+          return Railroad.Group(inner, 'Negative Lookahead');
+        } else if (node.behavior === 'lookbehind') {
+          return Railroad.Group(inner, 'Positive Lookbehind');
+        } else if (node.behavior === 'negativeLookbehind') {
+          return Railroad.Group(inner, 'Negative Lookbehind');
+        } else if (node.behavior === 'normal') {
+          return Railroad.Group(inner, node.name ? `Group "${node.name}"` : 'Group');
+        }
+        return Railroad.Group(inner, 'Group');
+      }
+
       case 'quantifier': {
         const inner = transform(node.body[0]);
         if (node.min === 0 && node.max === 1) return Railroad.Optional(inner);
         if (node.min === 0 && node.max === undefined) return Railroad.ZeroOrMore(inner);
         if (node.min === 1 && node.max === undefined) return Railroad.OneOrMore(inner);
+        if (node.min === node.max) {
+          return Railroad.OneOrMore(inner, Railroad.Comment(`${node.min} times`));
+        }
         return Railroad.OneOrMore(inner, Railroad.Comment(`${node.min}..${node.max ?? '∞'}`));
       }
+
       case 'value':
-        return Railroad.Terminal(node.value);
-      case 'characterClass':
-        return Railroad.NonTerminal(
-          (node.negative ? '^' : '') +
-            node.body
-              .map((b: any) => {
-                if (b.type === 'characterClassRange') {
-                  return `${b.min.value}-${b.max.value}`;
-                }
-                return b.value;
-              })
-              .join('')
-        );
+        return Railroad.Terminal(escapeHtml(String.fromCharCode(node.codePoint)));
+
+      case 'characterClass': {
+        if (!node.body || node.body.length === 0) return Railroad.NonTerminal(node.negative ? 'any char except none' : 'empty class');
+
+        const labels: string[] = [];
+        for (const b of node.body) {
+          if (b.type === 'characterClassRange') {
+            labels.push(`${escapeHtml(String.fromCharCode(b.min.codePoint))}-${escapeHtml(String.fromCharCode(b.max.codePoint))}`);
+          } else if (b.type === 'value') {
+            labels.push(escapeHtml(String.fromCharCode(b.codePoint)));
+          } else if (b.type === 'characterClassEscape') {
+            labels.push(`\\${b.value}`);
+          }
+        }
+
+        let label = labels.join('');
+        if (label.length > 20) label = label.substring(0, 17) + '...';
+        return Railroad.NonTerminal((node.negative ? 'NOT [' : '[') + label + ']');
+      }
+
+      case 'characterClassEscape':
+        if (node.value === 'd') return Railroad.NonTerminal('digit');
+        if (node.value === 'D') return Railroad.NonTerminal('non-digit');
+        if (node.value === 'w') return Railroad.NonTerminal('word-char');
+        if (node.value === 'W') return Railroad.NonTerminal('non-word-char');
+        if (node.value === 's') return Railroad.NonTerminal('space');
+        if (node.value === 'S') return Railroad.NonTerminal('non-space');
+        return Railroad.NonTerminal(`\\${node.value}`);
+
       case 'anchor':
-        return Railroad.Comment(node.kind === 'start' ? 'Start' : 'End');
+        if (node.kind === 'start') return Railroad.Comment('Start of line');
+        if (node.kind === 'end') return Railroad.Comment('End of line');
+        if (node.kind === 'boundary') return Railroad.Comment('Word boundary');
+        if (node.kind === 'not-boundary') return Railroad.Comment('Non-word boundary');
+        return Railroad.Comment(node.kind);
+
       case 'dot':
         return Railroad.NonTerminal('any char');
+
+      case 'reference':
+        return Railroad.NonTerminal(`Backref: ${node.name || node.matchIndex}`);
+
+      case 'unicodePropertyEscape':
+        return Railroad.NonTerminal(`\\p{${node.value}}`);
+
       default:
         return Railroad.Comment(node.type);
     }
