@@ -174,7 +174,7 @@ export default function init(payload?: SharedFilesPayload) {
 
           rowsHtml.push(`
             <div class="flex items-center hover:bg-base-200/40 px-6 group" style="height: ${LINE_HEIGHT}px;">
-              <div class="w-24 shrink-0 text-primary opacity-50 text-[10px] font-bold select-none">${lineOffset.toString(16).padStart(8, '0').toUpperCase()}</div>
+              <div class="px-2 shrink-0 text-primary opacity-50 text-[10px] font-bold select-none">${lineOffset.toString(16).padStart(8, '0').toUpperCase()}</div>
               <div class="flex-1 flex justify-center gap-1 sm:gap-2">
                 ${hexCells}
               </div>
