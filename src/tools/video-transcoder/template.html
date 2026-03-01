@@ -1,8 +1,10 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">Video Transcoder</h2>
-    <p class="text-base-content/70 mb-6">Convert video files to different formats or compress them. All processing
-      happens locally in your browser.</p>
+    <p class="text-base-content/70 mb-6">Convert video files to different formats or compress them. All processing happens locally in your browser.<br>
+      Since this is local in your Browser keep in mind that this transcoder is not meant for very large files. It is best suited for small or medium sized files.<br>
+      The transcoder uses <a href="https://ffmpeg.org/" target="_blank">FFmpeg</a> to transcode the video. with the WASM version of FFmpeg. So no GPU acceleration is used, all runs in CPU.
+    </p>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Input Section -->
