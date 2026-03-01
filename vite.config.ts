@@ -15,12 +15,14 @@ export default defineConfig({
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
     },
   },
   preview: {
     headers: {
       'Cross-Origin-Opener-Policy': 'same-origin',
       'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
     },
   },
   plugins: [
@@ -39,7 +41,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
-        importScripts: ['./sw-share-target.js', './sw-timer.js'],
+        importScripts: ['./sw-coi.js', './sw-share-target.js', './sw-timer.js'],
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -87,7 +89,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['lucide'],
-    exclude: ['mupdf', '@ffmpeg/core'],
+    exclude: ['mupdf', '@ffmpeg/core', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
   },
   assetsInclude: ['**/*.wasm'],
 });
