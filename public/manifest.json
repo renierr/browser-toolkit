@@ -77,7 +77,12 @@
             ".wav",
             ".mp3",
             ".ogg",
-            ".webm"
+            ".webm",
+            "video/*",
+            ".mp4",
+            ".mov",
+            ".avi",
+            ".mkv"
           ]
         }
       ]
@@ -100,6 +105,12 @@
       "action": "./index.html",
       "accept": {
         "audio/*": [".wav", ".mp3", ".ogg", ".webm"]
+      }
+    },
+    {
+      "action": "./index.html",
+      "accept": {
+        "video/*": [".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"]
       }
     }
   ]
