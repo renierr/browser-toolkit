@@ -21,11 +21,16 @@ export default function init(payload?: SharedFilesPayload) {
   const infoType = document.getElementById('info-type')!;
   const infoSize = document.getElementById('info-size')!;
 
-  const toggleHex = document.getElementById('toggle-hex') as HTMLInputElement;
   const toggleAscii = document.getElementById('toggle-ascii') as HTMLInputElement;
+  const asciiHeader = document.getElementById('ascii-header')!;
 
   const statusSelection = document.getElementById('status-selection')!;
   const statusStats = document.getElementById('status-stats')!;
+
+  const searchInput = document.getElementById('search-input') as HTMLInputElement;
+  const searchType = document.getElementById('search-type') as HTMLSelectElement;
+  const searchBtn = document.getElementById('search-btn') as HTMLButtonElement;
+  const searchNext = document.getElementById('search-next') as HTMLButtonElement;
 
   const editModal = document.getElementById('edit-modal') as HTMLDialogElement;
   const editHexInput = document.getElementById('edit-hex-input') as HTMLInputElement;
@@ -42,14 +47,14 @@ export default function init(payload?: SharedFilesPayload) {
   let pendingValue: number = 0;
 
   // Virtual Scroll State
-  const LINE_HEIGHT = 21; // Match visual height perfectly
+  const LINE_HEIGHT = 21;
   const ROWS_TO_RENDER = 50;
   let totalLines = 0;
   let lastStartLine = -1;
   let isRendering = false;
 
   const updateFileInfo = async (file: File) => {
-    showProgress('Reading and analyzing file...');
+    showProgress('Analyzing file...');
     await yieldToUI(true);
 
     try {
@@ -66,12 +71,13 @@ export default function init(payload?: SharedFilesPayload) {
         : `${file.size.toLocaleString()} bytes`;
       infoSize.textContent = sizeText;
 
-      const firstChunk = await bufferManager.getRange(0, 32);
-      const id = identifyFileType(firstChunk);
+      // Identify type with a larger buffer for offset-based detection
+      const idBuffer = await bufferManager.getRange(0, 64 * 1024); // Check up to 64KB for ISO/etc
+      const id = identifyFileType(idBuffer);
       if (id) {
         infoType.textContent = id.name;
       } else {
-        infoType.textContent = 'Binary';
+        infoType.textContent = 'Binary / Unknown';
       }
 
       totalLines = Math.ceil(file.size / BYTES_PER_LINE);
@@ -84,11 +90,10 @@ export default function init(payload?: SharedFilesPayload) {
       updateStatus();
       await renderVisibleLines(true);
 
-      // Auto-focus the viewer so arrow keys work immediately
       setTimeout(() => hexViewer.focus(), 100);
     } catch (err) {
       console.error(err);
-      showMessage('Error loading file', { type: 'alert' });
+      showMessage('Error analyzing file', { type: 'alert' });
     } finally {
       hideProgress();
     }
@@ -97,7 +102,6 @@ export default function init(payload?: SharedFilesPayload) {
   const renderVisibleLines = async (force = false) => {
     if (!bufferManager || isRendering) return;
 
-    // Determine the window of lines to show
     const scrollTop = hexViewer.scrollTop;
     const startLine = Math.max(0, Math.floor(scrollTop / LINE_HEIGHT) - 5);
 
@@ -121,21 +125,19 @@ export default function init(payload?: SharedFilesPayload) {
           if (byteChunk.length === 0) break;
 
           let hexCells = '';
-          if (toggleHex.checked) {
-            for (let j = 0; j < BYTES_PER_LINE; j++) {
-              const off = lineOffset + j;
-              if (j < byteChunk.length) {
-                const isSelected = off === selectedOffset;
-                let cls = 'w-6 text-center hex-byte cursor-pointer transition-colors ';
-                if (isSelected) {
-                  cls += 'focused ';
-                  if (editingNybble === 'high') cls += 'editing-high ';
-                  else if (editingNybble === 'low') cls += 'editing-low ';
-                }
-                hexCells += `<span class="${cls}" data-offset="${off}">${formatHex(byteChunk[j])}</span>`;
-              } else {
-                hexCells += `<span class="w-6 opacity-0">  </span>`;
+          for (let j = 0; j < BYTES_PER_LINE; j++) {
+            const off = lineOffset + j;
+            if (j < byteChunk.length) {
+              const isSelected = off === selectedOffset;
+              let cls = 'w-6 text-center hex-byte cursor-pointer transition-colors ';
+              if (isSelected) {
+                cls += 'focused ';
+                if (editingNybble === 'high') cls += 'editing-high ';
+                else if (editingNybble === 'low') cls += 'editing-low ';
               }
+              hexCells += `<span class="${cls}" data-offset="${off}">${formatHex(byteChunk[j])}</span>`;
+            } else {
+              hexCells += `<span class="w-6 opacity-0">  </span>`;
             }
           }
 
@@ -150,7 +152,7 @@ export default function init(payload?: SharedFilesPayload) {
               <div class="flex-1 flex justify-center gap-1 sm:gap-2">
                 ${hexCells}
               </div>
-              <div class="w-40 shrink-0 flex justify-center text-secondary opacity-70 tracking-[0.2em] select-none text-xs">
+              <div class="w-40 shrink-0 flex justify-center text-secondary opacity-70 tracking-[0.2em] select-none text-xs ${toggleAscii.checked ? '' : 'hidden'}">
                 ${asciiStr}
               </div>
             </div>
@@ -171,7 +173,58 @@ export default function init(payload?: SharedFilesPayload) {
     if (selectedOffset !== null) {
       statusSelection.textContent = `Offset: 0x${selectedOffset.toString(16).padStart(8, '0').toUpperCase()} (${selectedOffset.toLocaleString()})`;
     }
-    statusStats.textContent = `File Size: ${currentFile?.size.toLocaleString() ?? 0} bytes`;
+    statusStats.textContent = `Size: ${currentFile?.size.toLocaleString() ?? 0} bytes`;
+  };
+
+  const scrollToOffset = (offset: number) => {
+    selectedOffset = offset;
+    const row = Math.floor(offset / BYTES_PER_LINE);
+    const scrollPos = Math.max(0, (row * LINE_HEIGHT) - (hexViewer.clientHeight / 2));
+    hexViewer.scrollTop = scrollPos;
+    renderVisibleLines(true);
+    updateStatus();
+    hexViewer.focus();
+  };
+
+  const performSearch = async (startAt: number = 0) => {
+    if (!bufferManager || !searchInput.value) return;
+
+    let pattern: Uint8Array;
+    if (searchType.value === 'hex') {
+      const hex = searchInput.value.replace(/[^0-9a-fA-F]/g, '');
+      if (hex.length === 0 || hex.length % 2 !== 0) {
+        showMessage('Invalid hex pattern (must be even length)', { type: 'alert' });
+        return;
+      }
+      pattern = new Uint8Array(hex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+    } else {
+      pattern = new TextEncoder().encode(searchInput.value);
+    }
+
+    showProgress('Searching...');
+    await yieldToUI(true);
+
+    try {
+      const result = await bufferManager.find(pattern, startAt, (percent) => {
+        // Optional: update progress UI if needed
+      });
+
+      if (result !== -1) {
+        scrollToOffset(result);
+      } else {
+        if (startAt > 0) {
+          // Wrap around search
+          const wrapResult = await bufferManager.find(pattern, 0);
+          if (wrapResult !== -1) {
+            scrollToOffset(wrapResult);
+            return;
+          }
+        }
+        showMessage('Pattern not found');
+      }
+    } finally {
+      hideProgress();
+    }
   };
 
   const commitByte = () => {
@@ -179,10 +232,8 @@ export default function init(payload?: SharedFilesPayload) {
       bufferManager.setByte(selectedOffset, pendingValue);
       editingNybble = null;
 
-      // Auto-advance to next byte
       if (selectedOffset < bufferManager.totalSize - 1) {
         selectedOffset++;
-        // Ensure new offset is in view
         const logicalTop = Math.floor(selectedOffset / BYTES_PER_LINE) * LINE_HEIGHT;
         const viewTop = hexViewer.scrollTop;
         const viewBottom = viewTop + hexViewer.clientHeight;
@@ -196,8 +247,7 @@ export default function init(payload?: SharedFilesPayload) {
     }
   };
 
-  // Event Delegation for clicks
-  hexViewer.onclick = (e) => {
+  hexVisibleRows.onclick = (e) => {
     const target = e.target as HTMLElement;
     if (target.classList.contains('hex-byte') && target.dataset.offset) {
       selectedOffset = parseInt(target.dataset.offset);
@@ -208,9 +258,9 @@ export default function init(payload?: SharedFilesPayload) {
     }
   };
 
-  // Keyboard navigation
   hexViewer.onkeydown = async (e) => {
     if (!bufferManager || selectedOffset === null || editModal.open) return;
+    if (e.target instanceof HTMLInputElement) return; // Don't steal search input focus
 
     let handled = true;
     switch (e.key) {
@@ -218,8 +268,8 @@ export default function init(payload?: SharedFilesPayload) {
       case 'ArrowLeft': selectedOffset = Math.max(0, selectedOffset - 1); editingNybble = null; break;
       case 'ArrowDown': selectedOffset = Math.min(bufferManager.totalSize - 1, selectedOffset + BYTES_PER_LINE); editingNybble = null; break;
       case 'ArrowUp': selectedOffset = Math.max(0, selectedOffset - BYTES_PER_LINE); editingNybble = null; break;
-      case 'PageDown': selectedOffset = Math.min(bufferManager.totalSize - 1, selectedOffset + BYTES_PER_LINE * 15); editingNybble = null; break;
-      case 'PageUp': selectedOffset = Math.max(0, selectedOffset - BYTES_PER_LINE * 15); editingNybble = null; break;
+      case 'PageDown': selectedOffset = Math.min(bufferManager.totalSize - 1, selectedOffset + BYTES_PER_LINE * (Math.floor(hexViewer.clientHeight / LINE_HEIGHT) - 2)); editingNybble = null; break;
+      case 'PageUp': selectedOffset = Math.max(0, selectedOffset - BYTES_PER_LINE * (Math.floor(hexViewer.clientHeight / LINE_HEIGHT) - 2)); editingNybble = null; break;
       case 'Home': selectedOffset = 0; editingNybble = null; break;
       case 'End': selectedOffset = bufferManager.totalSize - 1; editingNybble = null; break;
       case 'Enter': openEditModal(selectedOffset); break;
@@ -231,7 +281,6 @@ export default function init(payload?: SharedFilesPayload) {
       e.preventDefault();
       updateStatus();
 
-      // Virtual Scroll Auto-follow
       const logicalTop = Math.floor(selectedOffset / BYTES_PER_LINE) * LINE_HEIGHT;
       const viewTop = hexViewer.scrollTop;
       const viewBottom = viewTop + hexViewer.clientHeight;
@@ -241,7 +290,6 @@ export default function init(payload?: SharedFilesPayload) {
 
       renderVisibleLines(true);
     } else if (/^[0-9a-fA-F]$/.test(e.key)) {
-      // Nybble editing
       const digit = parseInt(e.key, 16);
       if (editingNybble === null) {
         editingNybble = 'high';
@@ -267,17 +315,25 @@ export default function init(payload?: SharedFilesPayload) {
     }, 10);
   };
 
-  let scrollRequest = 0;
+  let scrollReq = 0;
   hexViewer.onscroll = () => {
-    if (scrollRequest) cancelAnimationFrame(scrollRequest);
-    scrollRequest = requestAnimationFrame(() => {
+    if (scrollReq) cancelAnimationFrame(scrollReq);
+    scrollReq = requestAnimationFrame(() => {
       renderVisibleLines();
-      scrollRequest = 0;
+      scrollReq = 0;
     });
   };
 
-  toggleHex.onchange = () => renderVisibleLines(true);
-  toggleAscii.onchange = () => renderVisibleLines(true);
+  toggleAscii.onchange = () => {
+    asciiHeader.classList.toggle('hidden', !toggleAscii.checked);
+    renderVisibleLines(true);
+  };
+
+  searchBtn.onclick = () => performSearch(0);
+  searchNext.onclick = () => performSearch((selectedOffset ?? 0) + 1);
+  searchInput.onkeydown = (e) => {
+    if (e.key === 'Enter') performSearch(0);
+  };
 
   saveEdit.onclick = () => {
     if (selectedOffset !== null && bufferManager) {
@@ -315,8 +371,8 @@ export default function init(payload?: SharedFilesPayload) {
     await yieldToUI(true);
     try {
       const buf = await bufferManager.getFullBuffer();
-      await downloadFile(buf, `edited_${currentFile.name}`);
-      showMessage('Export complete');
+      await downloadFile(buf, currentFile.name);
+      showMessage('Export started');
     } catch (e) {
       showMessage('Export failed', { type: 'alert' });
     } finally {

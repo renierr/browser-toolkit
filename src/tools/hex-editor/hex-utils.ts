@@ -135,6 +135,52 @@ export class HexBufferManager {
     return buffer;
   }
 
+  /**
+   * Searches for a pattern (byte array) in the file.
+   * Streams through the file in chunks to keep memory usage low.
+   * @param pattern The sequence of bytes to find.
+   * @param startOffset Where to start searching.
+   * @param onProgress Optional callback for progress.
+   * @returns The offset of the first match, or -1 if not found.
+   */
+  async find(pattern: Uint8Array, startOffset: number = 0, onProgress?: (percent: number) => void): Promise<number> {
+    if (!this.originalFile || pattern.length === 0) return -1;
+
+    let currentOffset = startOffset;
+    const searchChunkSize = 256 * 1024; // 256KB chunks for searching
+    const totalSize = this.totalSize;
+
+    // Pattern search logic (naive but effective for most cases)
+    while (currentOffset < totalSize) {
+      const readSize = Math.min(searchChunkSize, totalSize - currentOffset);
+      const chunk = await this.getRange(currentOffset, readSize);
+
+      if (onProgress) onProgress((currentOffset / totalSize) * 100);
+
+      // Search within the chunk
+      for (let i = 0; i <= chunk.length - pattern.length; i++) {
+        let match = true;
+        for (let j = 0; j < pattern.length; j++) {
+          if (chunk[i + j] !== pattern[j]) {
+            match = false;
+            break;
+          }
+        }
+        if (match) return currentOffset + i;
+      }
+
+      // Move forward by chunk size minus pattern length to avoid missing matches across boundaries
+      currentOffset += (readSize - pattern.length + 1);
+
+      // Safety break for invalid states
+      if (readSize <= pattern.length && currentOffset < totalSize) {
+        currentOffset = totalSize;
+      }
+    }
+
+    return -1;
+  }
+
   hasModifications(): boolean {
     return this.modifications.size > 0;
   }
