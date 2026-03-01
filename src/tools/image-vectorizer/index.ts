@@ -1,5 +1,6 @@
 import ImageTracer from 'imagetracerjs';
 import { showMessage } from '../../js/ui.ts';
+import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -50,27 +51,9 @@ export default function init() {
     currentSvgString = null;
   };
 
-  const onDropZoneClick = () => fileInput.click();
-  const onDragOver = (e: DragEvent) => {
-    e.preventDefault();
-    dropZone.classList.add('border-primary');
-  };
-  const onDragLeave = () => {
-    dropZone.classList.remove('border-primary');
-  };
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault();
-    dropZone.classList.remove('border-primary');
-    if (e.dataTransfer?.files.length) {
-      updateFileInfo(e.dataTransfer.files[0]);
-    }
-  };
-
-  const onFileInputChange = () => {
-    if (fileInput.files?.length) {
-      updateFileInfo(fileInput.files[0]);
-    }
-  };
+  setupFileDropzone('drop-zone', 'file-input', (files) => {
+    if (files.length) updateFileInfo(files[0]);
+  });
 
   const onColorCountInput = () => {
     colorCountVal.innerText = colorCount.value;
@@ -151,17 +134,10 @@ export default function init() {
     }
   };
 
-  const onDownloadClick = () => {
+  const onDownloadClick = async () => {
     if (!currentSvgString) return;
     const blob = new Blob([currentSvgString], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `vectorized-${selectedFile?.name.split('.')[0]}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    await downloadFile(blob, `vectorized-${selectedFile?.name?.split('.')[0] || 'image'}.svg`, 'image/svg+xml');
   };
 
   const onCopySvgClick = () => {
@@ -171,11 +147,6 @@ export default function init() {
     });
   };
 
-  dropZone.addEventListener('click', onDropZoneClick);
-  dropZone.addEventListener('dragover', onDragOver);
-  dropZone.addEventListener('dragleave', onDragLeave);
-  dropZone.addEventListener('drop', onDrop);
-  fileInput.addEventListener('change', onFileInputChange);
   btnRemove.addEventListener('click', resetUI);
   btnClear.addEventListener('click', resetUI);
   colorCount.addEventListener('input', onColorCountInput);
@@ -184,11 +155,6 @@ export default function init() {
   btnCopySvg.addEventListener('click', onCopySvgClick);
 
   return () => {
-    dropZone.removeEventListener('click', onDropZoneClick);
-    dropZone.removeEventListener('dragover', onDragOver);
-    dropZone.removeEventListener('dragleave', onDragLeave);
-    dropZone.removeEventListener('drop', onDrop);
-    fileInput.removeEventListener('change', onFileInputChange);
     btnRemove.removeEventListener('click', resetUI);
     btnClear.removeEventListener('click', resetUI);
     colorCount.removeEventListener('input', onColorCountInput);

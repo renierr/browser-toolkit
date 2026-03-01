@@ -1,6 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
 import { showMessage } from '../../js/ui.ts';
+import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
 import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
@@ -91,27 +92,9 @@ export default function init() {
     }
   };
 
-  const onDropZoneClick = () => fileInput.click();
-  const onDragOver = (e: DragEvent) => {
-    e.preventDefault();
-    dropZone.classList.add('border-primary');
-  };
-  const onDragLeave = () => {
-    dropZone.classList.remove('border-primary');
-  };
-  const onDrop = (e: DragEvent) => {
-    e.preventDefault();
-    dropZone.classList.remove('border-primary');
-    if (e.dataTransfer?.files.length) {
-      updateFileInfo(e.dataTransfer.files[0]);
-    }
-  };
-
-  const onFileInputChange = () => {
-    if (fileInput.files?.length) {
-      updateFileInfo(fileInput.files[0]);
-    }
-  };
+  setupFileDropzone('drop-zone', 'file-input', (files) => {
+    if (files.length) updateFileInfo(files[0]);
+  });
 
   const onConvertClick = async () => {
     if (!selectedFile) return;
@@ -194,16 +177,9 @@ export default function init() {
     }
   };
 
-  const onDownloadClick = () => {
+  const onDownloadClick = async () => {
     if (!resultBlob) return;
-    const url = URL.createObjectURL(resultBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    await downloadFile(resultBlob, `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`, resultBlob.type);
   };
 
   const onProgress = ({ progress }: { progress: number }) => {
@@ -212,11 +188,6 @@ export default function init() {
     progressPercent.innerText = `${percent}%`;
   };
 
-  dropZone.addEventListener('click', onDropZoneClick);
-  dropZone.addEventListener('dragover', onDragOver);
-  dropZone.addEventListener('dragleave', onDragLeave);
-  dropZone.addEventListener('drop', onDrop);
-  fileInput.addEventListener('change', onFileInputChange);
   btnRemove.addEventListener('click', resetUI);
   btnClear.addEventListener('click', resetUI);
   btnConvert.addEventListener('click', onConvertClick);
@@ -224,11 +195,6 @@ export default function init() {
   ffmpeg.on('progress', onProgress);
 
   return () => {
-    dropZone.removeEventListener('click', onDropZoneClick);
-    dropZone.removeEventListener('dragover', onDragOver);
-    dropZone.removeEventListener('dragleave', onDragLeave);
-    dropZone.removeEventListener('drop', onDrop);
-    fileInput.removeEventListener('change', onFileInputChange);
     btnRemove.removeEventListener('click', resetUI);
     btnClear.removeEventListener('click', resetUI);
     btnConvert.removeEventListener('click', onConvertClick);

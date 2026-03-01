@@ -1,6 +1,7 @@
 import { parse } from 'regjsparser';
 import * as Railroad from 'railroad-diagrams';
 import { showMessage } from '../../js/ui.ts';
+import { downloadFile } from '../../js/file-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -188,12 +189,7 @@ export default function init() {
         ctx.scale(2, 2);
         ctx.drawImage(img, 0, 0);
         const pngUrl = canvas.toDataURL('image/png');
-        const a = document.createElement('a');
-        a.href = pngUrl;
-        a.download = 'regex-diagram.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        downloadFile(pngUrl, 'regex-diagram.png');
       }
     };
 
