@@ -3,5 +3,8 @@
   "description": "Convert and compress video files using FFmpeg.wasm.",
   "draft": false,
   "sectionId": "media",
-  "icon": "video"
+  "icon": "video",
+  "shareTarget": {
+    "accept": ["video/*"]
+  }
 }
