@@ -1,0 +1,55 @@
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">Regex Visualizer</h2>
+    <p class="text-base-content/70 mb-6">Visualize regular expressions as railroad diagrams to understand their matching logic.</p>
+
+    <div class="flex flex-col gap-6">
+      <!-- Input Section -->
+      <div class="form-control w-full">
+        <label class="label">
+          <span class="label-text font-semibold">Regular Expression</span>
+        </label>
+        <div class="join w-full">
+          <span class="join-item btn btn-ghost no-animation text-xl font-mono">/</span>
+          <input type="text" id="regex-input" class="input input-bordered join-item flex-1 font-mono text-lg"
+                 placeholder="Enter regex here... (e.g. ^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$)">
+          <span class="join-item btn btn-ghost no-animation text-xl font-mono">/</span>
+          <input type="text" id="regex-flags" class="input input-bordered join-item w-24 font-mono text-lg"
+                 placeholder="flags" value="g">
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="card-actions justify-center gap-2">
+        <button id="btn-visualize" class="btn btn-primary flex-1 sm:flex-none">
+          Visualize
+          <i data-lucide="eye" class="w-4 h-4 ml-2"></i>
+        </button>
+        <button id="btn-copy-svg" class="btn btn-outline flex-1 sm:flex-none">
+          <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+          Copy SVG
+        </button>
+        <button id="btn-download-png" class="btn btn-outline flex-1 sm:flex-none">
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+          Download PNG
+        </button>
+        <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
+      </div>
+
+      <!-- Error Message -->
+      <div id="error-message" class="hidden alert alert-error">
+        <i data-lucide="alert-circle" class="w-4 h-4"></i>
+        <span id="error-text"></span>
+      </div>
+
+      <!-- Result Section -->
+      <div id="result-section" class="hidden mt-4">
+        <div class="bg-base-200 rounded-xl p-8 flex items-center justify-center overflow-auto min-h-[200px] border border-base-300">
+          <div id="diagram-container" class="bg-white rounded shadow-sm p-4">
+            <!-- Diagram will be injected here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

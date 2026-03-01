@@ -1,0 +1,93 @@
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">Image Vectorizer</h2>
+    <p class="text-base-content/70 mb-6">Convert raster images (PNG, JPG) into scalable SVG vectors using tracing algorithms.</p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Input Section -->
+      <div class="flex flex-col gap-4">
+        <div id="drop-zone" class="border-2 border-dashed border-base-300 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors h-64">
+          <i data-lucide="upload-cloud" class="w-12 h-12 mb-4 text-base-content/30"></i>
+          <p class="text-lg font-medium">Click or drag image here</p>
+          <p class="text-sm text-base-content/50 mt-2">Supports PNG, JPG, WEBP</p>
+          <input type="file" id="file-input" class="hidden" accept="image/*">
+        </div>
+
+        <div id="file-info" class="hidden p-4 bg-base-200 rounded-lg flex items-center gap-3">
+          <i data-lucide="image" class="w-6 h-6 text-primary"></i>
+          <div class="flex-1 overflow-hidden">
+            <p id="file-name" class="font-medium truncate"></p>
+            <p id="file-size" class="text-xs text-base-content/60"></p>
+          </div>
+          <button id="btn-remove" class="btn btn-ghost btn-sm btn-circle">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings Section -->
+      <div class="flex flex-col gap-4">
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text font-semibold">Tracing Preset</span>
+          </label>
+          <select id="tracing-preset" class="select select-bordered w-full">
+            <option value="default">Default (Balanced)</option>
+            <option value="posterized2">Posterized (2 colors)</option>
+            <option value="posterized3">Posterized (3 colors)</option>
+            <option value="curvy">Curvy (Fewer points)</option>
+            <option value="sharp">Sharp (More detail)</option>
+            <option value="detailed">Detailed (High fidelity)</option>
+            <option value="grayscale">Grayscale</option>
+          </select>
+        </div>
+
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text font-semibold">Number of Colors</span>
+          </label>
+          <input type="range" id="color-count" min="2" max="64" value="16" class="range range-primary range-sm">
+          <div class="flex justify-between text-xs px-2 mt-1">
+            <span>2</span>
+            <span id="color-count-val">16</span>
+            <span>64</span>
+          </div>
+        </div>
+
+        <div class="card-actions justify-end mt-auto">
+          <button id="btn-vectorize" class="btn btn-primary w-full" disabled>
+            <i data-lucide="zap" class="w-4 h-4 mr-2"></i>
+            Vectorize Image
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Section -->
+    <div id="result-section" class="hidden mt-8 pt-8 border-t border-base-300">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold">Vector Result</h3>
+        <div class="flex gap-2">
+          <button id="btn-download-svg" class="btn btn-outline btn-success btn-sm">
+            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+            Download SVG
+          </button>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-semibold text-base-content/60">Original</span>
+          <div class="bg-base-200 rounded-lg overflow-hidden flex items-center justify-center p-4 min-h-[300px]">
+            <img id="original-preview" class="max-w-full max-h-[400px] object-contain shadow-lg">
+          </div>
+        </div>
+        <div class="flex flex-col gap-2">
+          <span class="text-sm font-semibold text-base-content/60">SVG Preview</span>
+          <div id="svg-container" class="bg-base-200 rounded-lg overflow-hidden flex items-center justify-center p-4 min-h-[300px] relative">
+            <!-- SVG will be injected here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,7 @@
+{
+  "name": "Video Transcoder",
+  "description": "Convert and compress video files using FFmpeg.wasm.",
+  "draft": false,
+  "sectionId": "media",
+  "icon": "video"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Image Vectorizer",
+  "description": "Convert raster images (PNG, JPG) into scalable SVG vectors.",
+  "draft": false,
+  "sectionId": "images",
+  "icon": "image"
+}

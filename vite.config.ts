@@ -11,6 +11,18 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   base: './',
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+  preview: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
   plugins: [
     wasm(),
     topLevelAwait(),
@@ -28,7 +40,7 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         importScripts: ['./sw-share-target.js', './sw-timer.js'],
-        maximumFileSizeToCacheInBytes: 15 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: ({ url }) =>
@@ -51,6 +63,10 @@ export default defineConfig({
   resolve: {
     alias: [
       {
+        find: /^@ffmpeg\/core\/(.*)$/,
+        replacement: path.resolve(__dirname, 'node_modules/@ffmpeg/core/$1'),
+      },
+      {
         find: 'lucide',
         replacement: path.resolve(__dirname, 'node_modules/lucide/dist/esm/lucide.js'),
       },
@@ -71,7 +87,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['lucide'],
-    exclude: ['mupdf']
+    exclude: ['mupdf', '@ffmpeg/core'],
   },
   assetsInclude: ['**/*.wasm'],
 });

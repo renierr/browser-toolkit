@@ -1,0 +1,9 @@
+{
+  "name": "video-transcoder",
+  "version": "1.0.0",
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "@ffmpeg/core": "^0.12.6"
+  }
+}

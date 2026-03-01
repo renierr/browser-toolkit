@@ -1,0 +1,90 @@
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">Video Transcoder</h2>
+    <p class="text-base-content/70 mb-6">Convert video files to different formats or compress them. All processing happens locally in your browser.</p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <!-- Input Section -->
+      <div class="flex flex-col gap-4">
+        <div id="drop-zone" class="border-2 border-dashed border-base-300 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors h-64">
+          <i data-lucide="upload-cloud" class="w-12 h-12 mb-4 text-base-content/30"></i>
+          <p class="text-lg font-medium">Click or drag video here</p>
+          <p class="text-sm text-base-content/50 mt-2">Supports MP4, WebM, MOV, AVI, etc.</p>
+          <input type="file" id="file-input" class="hidden" accept="video/*">
+        </div>
+
+        <div id="file-info" class="hidden p-4 bg-base-200 rounded-lg flex items-center gap-3">
+          <i data-lucide="file-video" class="w-6 h-6 text-primary"></i>
+          <div class="flex-1 overflow-hidden">
+            <p id="file-name" class="font-medium truncate"></p>
+            <p id="file-size" class="text-xs text-base-content/60"></p>
+          </div>
+          <button id="btn-remove" class="btn btn-ghost btn-sm btn-circle">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings Section -->
+      <div class="flex flex-col gap-4">
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text font-semibold">Output Format</span>
+          </label>
+          <select id="output-format" class="select select-bordered w-full">
+            <option value="mp4">MP4 (H.264)</option>
+            <option value="webm">WebM (VP9)</option>
+            <option value="gif">GIF</option>
+            <option value="mp3">Audio Only (MP3)</option>
+          </select>
+        </div>
+
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text font-semibold">Quality / Preset</span>
+          </label>
+          <select id="quality-preset" class="select select-bordered w-full">
+            <option value="ultrafast">Ultrafast (Lower quality, faster)</option>
+            <option value="medium" selected>Medium (Balanced)</option>
+            <option value="veryslow">Very Slow (Better quality, slower)</option>
+          </select>
+        </div>
+
+        <div id="progress-container" class="hidden mt-4">
+          <div class="flex justify-between mb-1">
+            <span id="status-text" class="text-sm font-medium">Processing...</span>
+            <span id="progress-percent" class="text-sm font-medium">0%</span>
+          </div>
+          <progress id="progress-bar" class="progress progress-primary w-full" value="0" max="100"></progress>
+        </div>
+
+        <div class="card-actions justify-end mt-auto">
+          <button id="btn-convert" class="btn btn-primary w-full" disabled>
+            <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+            Start Transcoding
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Result Section -->
+    <div id="result-section" class="hidden mt-8 pt-8 border-t border-base-300">
+      <h3 class="text-xl font-bold mb-4">Result</h3>
+      <div class="flex flex-col sm:flex-row items-center gap-6">
+        <div class="w-full sm:w-1/2 aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
+          <video id="result-video" controls class="max-h-full"></video>
+        </div>
+        <div class="flex-1 flex flex-col gap-4">
+          <div class="p-4 bg-success/10 text-success rounded-lg flex items-center gap-3">
+            <i data-lucide="check-circle" class="w-6 h-6"></i>
+            <p class="font-medium">Conversion Complete!</p>
+          </div>
+          <button id="btn-download" class="btn btn-outline btn-success w-full">
+            <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+            Download Result
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -17,9 +17,9 @@ export const siteConfig = {
       title: 'Image Tools',
       description: 'Tools for image processing and metadata management.',
     },
-    audio: {
-      title: 'Audio Tools',
-      description: 'Tools for audio processing.',
+    media: {
+      title: 'Media Tools',
+      description: 'Tools for processing videos, and audio.',
     },
     pdf: {
       title: 'PDF Tools',
