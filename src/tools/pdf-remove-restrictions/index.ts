@@ -1,5 +1,5 @@
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
-import { showProgress, hideProgress, showMessage } from '../../js/ui.ts';
+import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
 import mupdf from 'mupdf';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
 
@@ -27,6 +27,7 @@ export default function init(payload?: SharedFilesPayload) {
   const loadPdf = async (files: FileList | File[]) => {
     if (files.length === 0) return;
     showProgress('Loading PDF...');
+    await yieldToUI(true);
 
     try {
       const file = files[0] as File;
@@ -97,6 +98,7 @@ export default function init(payload?: SharedFilesPayload) {
   async function processAndDownloadPdf(removeRestrictions: boolean) {
     if (!originalPdfBytes) return;
     showProgress('Processing PDF...');
+    await yieldToUI(true);
 
     modified = !removeRestrictions;
 

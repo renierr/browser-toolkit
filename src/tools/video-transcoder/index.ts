@@ -1,7 +1,8 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
-import { showMessage, showProgress, hideProgress } from '../../js/ui.ts';
+import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui.ts';
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
 import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
@@ -9,7 +10,7 @@ import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
 import workerURL from '@ffmpeg/ffmpeg/worker?url';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const ffmpeg = new FFmpeg();
   let ffmpegLoaded = false;
 
@@ -37,6 +38,7 @@ export default function init() {
   const loadFFmpeg = async () => {
     if (ffmpegLoaded) return;
     showProgress('Loading FFmpeg core...');
+    await yieldToUI(true);
 
     try {
       console.log('Attempting to load FFmpeg...', { coreURL, wasmURL, workerURL });
@@ -101,6 +103,15 @@ export default function init() {
     if (files.length) updateFileInfo(files[0]);
   });
 
+  if (payload?.sharedFiles?.length) {
+    const videoFiles = payload.sharedFiles.filter(
+      (f) => f.type.startsWith('video/') || f.name?.toLowerCase().match(/\.(mp4|webm|mov|avi|mkv)$/)
+    );
+    if (videoFiles.length > 0) {
+      updateFileInfo(videoFiles[0]);
+    }
+  }
+
   const onConvertClick = async () => {
     if (!selectedFile) return;
 
@@ -109,6 +120,7 @@ export default function init() {
       btnClear.disabled = true;
       btnRemove.disabled = true;
       showProgress('Preparing FFmpeg...');
+      await yieldToUI(true);
 
       await loadFFmpeg();
 
@@ -118,6 +130,7 @@ export default function init() {
       const preset = qualityPreset.value;
 
       showProgress('Writing file to memory...', { visible: true });
+      await yieldToUI(true);
       await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
 
       showProgress('Probing file streams...');
@@ -239,6 +252,7 @@ export default function init() {
   const onProgress = ({ progress }: { progress: number }) => {
     const percent = Math.round(progress * 100);
     showProgress(`Transcoding video... ${percent}%`);
+    yieldToUI(true);
   };
 
   btnRemove.addEventListener('click', resetUI);

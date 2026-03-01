@@ -1,5 +1,5 @@
 import { setupFileDropzone } from '../../js/file-utils.ts';
-import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
+import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
 import mupdf, { type Document } from 'mupdf';
 import { formatPdfDate, parseXmpMetadata, flattenXmpMetadata } from '../../js/pdf-utils.ts';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
@@ -42,6 +42,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   const processFile = async (file: File) => {
     showProgress('Reading PDF metadata...');
+    await yieldToUI(true);
     let doc: Document | null = null;
     try {
       const buffer = await file.arrayBuffer();

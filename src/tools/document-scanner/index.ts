@@ -26,7 +26,7 @@ import type { FilterType, ScannedPage } from './types';
 import { createScannerState } from './utils/state';
 import Sortable from 'sortablejs';
 import { debounce } from '../../js/utils.ts';
-import { showProgress, showMessage, hideProgress } from '../../js/ui.ts';
+import { showProgress, showMessage, hideProgress, yieldToUI } from '../../js/ui.ts';
 import { createLiveDetectionLoop } from './utils/live-detection-loop';
 import { createHandleDrag } from './utils/handle-drag';
 import { createCameraGestures } from './utils/camera-gestures';
@@ -281,6 +281,7 @@ export default function init(payload?: SharedFilesPayload) {
     detectedCorners: Point[] | null = null
   ) {
     showProgress('Detecting document...');
+    await yieldToUI(true);
     try {
       const pCanvas = sourceToCanvas(img);
 
