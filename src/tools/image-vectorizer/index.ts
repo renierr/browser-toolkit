@@ -1,5 +1,5 @@
 import ImageTracer from 'imagetracerjs';
-import { showMessage } from '../../js/ui.ts';
+import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui.ts';
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
@@ -64,8 +64,8 @@ export default function init() {
 
     try {
       btnVectorize.disabled = true;
-      btnVectorize.innerHTML =
-        '<span class="loading loading-spinner loading-xs mr-2"></span> Vectorizing...';
+      showProgress('Vectorizing image...');
+      await yieldToUI(true);
 
       const options: any = {
         numberofcolors: parseInt(colorCount.value),
@@ -100,28 +100,36 @@ export default function init() {
       const reader = new FileReader();
       reader.onload = (e) => {
         const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          if (!ctx) return;
-          ctx.drawImage(img, 0, 0);
-          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        img.onload = async () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-          currentSvgString = ImageTracer.imagedataToSVG(imageData, options);
-          svgContainer.innerHTML = currentSvgString || '';
+            showProgress('Generating SVG...');
+            await yieldToUI(true);
+            currentSvgString = ImageTracer.imagedataToSVG(imageData, options);
+            svgContainer.innerHTML = currentSvgString || '';
 
-          const svg = svgContainer.querySelector('svg');
-          if (svg) {
-            svg.setAttribute('width', '100%');
-            svg.setAttribute('height', '100%');
-            svg.classList.add('max-h-[400px]', 'object-contain');
+            const svg = svgContainer.querySelector('svg');
+            if (svg) {
+              svg.setAttribute('width', '100%');
+              svg.setAttribute('height', '100%');
+              svg.classList.add('max-h-[400px]', 'object-contain');
+            }
+
+            resultSection.classList.remove('hidden');
+          } catch (err) {
+            console.error('Vectorization inner failed:', err);
+            showMessage('Vectorization failed during processing.', { type: 'alert' });
+          } finally {
+            btnVectorize.disabled = false;
+            hideProgress();
           }
-
-          resultSection.classList.remove('hidden');
-          btnVectorize.disabled = false;
-          btnVectorize.innerHTML = '<i data-lucide="zap" class="w-4 h-4 mr-2"></i> Vectorize Image';
         };
         img.src = e.target?.result as string;
       };
@@ -130,7 +138,7 @@ export default function init() {
       console.error('Vectorization failed:', error);
       showMessage('Vectorization failed. See console for details.', { type: 'alert' });
       btnVectorize.disabled = false;
-      btnVectorize.innerHTML = '<i data-lucide="zap" class="w-4 h-4 mr-2"></i> Vectorize Image';
+      hideProgress();
     }
   };
 

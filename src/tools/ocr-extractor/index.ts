@@ -1,5 +1,5 @@
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
-import { showMessage } from '../../js/ui';
+import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui';
 import Tesseract from 'tesseract.js';
 import tesseractWorker from 'tesseract.js/dist/worker.min.js?url';
 import tesseractWasm from 'tesseract.js-core/tesseract-core-simd.wasm.js?url'
@@ -51,17 +51,22 @@ export default function init() {
     reader.readAsDataURL(file);
 
     try {
+      showProgress('Recognizing text...');
+      await yieldToUI(true);
+
       if (!worker) {
         worker = await Tesseract.createWorker(TESSERACT_LANGS, 1, {
           workerPath: tesseractWorker,
           corePath: tesseractWasm,
           langPath: './lib/tesseract/lang-data',
-          logger: (m) => {
+          logger: async (m) => {
             if (m.status === 'recognizing text') {
               const progress = Math.round(m.progress * 100);
               ocrProgress.value = progress;
               if (progressPercent) progressPercent.textContent = `${progress}%`;
               if (statusText) statusText.textContent = 'Recognizing text...';
+              showProgress(`Recognizing text... ${progress}%`);
+              await yieldToUI(true);
             } else if (statusText) {
               statusText.textContent = m.status;
             }
@@ -84,6 +89,8 @@ export default function init() {
       console.error('OCR Error:', error);
       showMessage('Failed to process image.', { type: 'alert' });
       statusContainer?.classList.add('hidden');
+    } finally {
+      hideProgress();
     }
   };
 

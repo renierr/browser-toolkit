@@ -1,15 +1,21 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">Image Vectorizer</h2>
-    <p class="text-base-content/70 mb-6">Convert raster images (PNG, JPG) into scalable SVG vectors using tracing algorithms.</p>
+    <p class="text-base-content/70 mb-6">Convert raster images (PNG, JPG) into scalable SVG vectors using tracing
+      algorithms.</p>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Input Section -->
       <div class="flex flex-col gap-4">
-        <div id="drop-zone" class="border-2 border-dashed border-base-300 rounded-xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-primary transition-colors h-64">
-          <i data-lucide="upload-cloud" class="w-12 h-12 mb-4 text-base-content/30"></i>
-          <p class="text-lg font-medium">Click or drag image here</p>
-          <p class="text-sm text-base-content/50 mt-2">Supports PNG, JPG, WEBP</p>
+        <div id="drop-zone"
+          class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-64">
+          <div class="flex flex-col items-center gap-2">
+            <div class="text-base-content/30 text-4xl">
+              <i data-lucide="upload-cloud"></i>
+            </div>
+            <p class="text-lg font-medium">Click or drag image here</p>
+            <p class="text-sm text-base-content/50 mt-1">Supports PNG, JPG, WEBP</p>
+          </div>
           <input type="file" id="file-input" class="hidden" accept="image/*">
         </div>
 
@@ -90,7 +96,8 @@
         </div>
         <div class="flex flex-col gap-2">
           <span class="text-sm font-semibold text-base-content/60">SVG Preview</span>
-          <div id="svg-container" class="bg-base-200 rounded-lg overflow-hidden flex items-center justify-center p-4 min-h-[300px] relative">
+          <div id="svg-container"
+            class="bg-base-200 rounded-lg overflow-hidden flex items-center justify-center p-4 min-h-[300px] relative">
             <!-- SVG will be injected here -->
           </div>
         </div>

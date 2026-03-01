@@ -3,7 +3,7 @@ import { getHitHandle, normalizeRect, resizeRect } from './crop';
 import { applyEffect, cleanupWorkCanvases, drawCropOverlay, drawRedactPreview } from './graphics';
 import type { AppState, Operation, ToolType } from './types';
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
-import { showMessage } from '../../js/ui.ts';
+import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui.ts';
 import { debounce } from '../../js/utils.ts';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
 import { CanvasExporter } from '../../js/canvas-utils.ts';
@@ -131,27 +131,41 @@ export default function init(payload?: SharedFilesPayload) {
     return off;
   };
 
-  const loadImage = (file: Blob) => {
+  const loadImage = async (file: Blob) => {
+    showProgress('Loading image...');
+    await yieldToUI(true);
     const reader = new FileReader();
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        state.originalImage = img;
-        elements.canvas.width = img.width;
-        elements.canvas.height = img.height;
-        ctx.clearRect(0, 0, img.width, img.height);
-        ctx.drawImage(img, 0, 0);
+        try {
+          state.originalImage = img;
+          elements.canvas.width = img.width;
+          elements.canvas.height = img.height;
+          ctx.clearRect(0, 0, img.width, img.height);
+          ctx.drawImage(img, 0, 0);
 
-        elements.dropzone.classList.add('hidden');
-        elements.editor.classList.remove('hidden');
+          elements.dropzone.classList.add('hidden');
+          elements.editor.classList.remove('hidden');
 
-        state.cropRect = { x: 0, y: 0, w: 0, h: 0 };
-        state.lastOperation = null;
-        state.lastOperationSnapshot = null;
-        history.clear();
-        updateUI();
+          state.cropRect = { x: 0, y: 0, w: 0, h: 0 };
+          state.lastOperation = null;
+          state.lastOperationSnapshot = null;
+          history.clear();
+          updateUI();
+        } finally {
+          hideProgress();
+        }
+      };
+      img.onerror = () => {
+        showMessage('Failed to load image.', { type: 'alert' });
+        hideProgress();
       };
       img.src = e.target?.result as string;
+    };
+    reader.onerror = () => {
+      showMessage('Failed to read file.', { type: 'alert' });
+      hideProgress();
     };
     reader.readAsDataURL(file);
   };
