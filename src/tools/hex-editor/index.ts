@@ -1,8 +1,10 @@
 import { setupFileDropzone, downloadFile } from '../../js/file-utils';
-import { showProgress, showMessage } from '../../js/ui';
+import { showProgress, showMessage, yieldToUI, hideProgress } from '../../js/ui';
 import { identifyFileType } from './magic-bytes';
-import { HexBufferManager, BYTES_PER_LINE, formatHex, formatAscii } from './hex-utils';
+import { HexBufferManager, BYTES_PER_LINE } from './hex-utils';
+import HexWorker from './hex.worker?worker';
 import type { SharedFilesPayload } from '../../js/share-target';
+import type { WorkerInMessage, WorkerOutMessage, HexLine } from './worker-protocol';
 
 export default function init(payload?: SharedFilesPayload) {
   const dropzone = document.getElementById('hex-dropzone')!;
@@ -37,37 +39,64 @@ export default function init(payload?: SharedFilesPayload) {
   let currentFile: File | null = null;
   let selectedOffset: number | null = null;
 
-  // Virtual Scrolling State
+  // Worker for fast formatting
+  const worker = new HexWorker();
+
+  // Browser height limit for scrollable elements (~33M in Chrome, ~17M in FF)
+  const MAX_PHYSICAL_HEIGHT = 10000000;
   const LINE_HEIGHT = 20;
+
   let totalLines = 0;
+  let totalLogicalHeight = 0;
+  let scrollScale = 1;
+  let isRendering = false;
 
   const updateFileInfo = async (file: File) => {
-    currentFile = file;
-    bufferManager = new HexBufferManager(file);
+    showProgress('Analyzing file...');
+    await yieldToUI(true);
 
-    fileInfo.classList.remove('hidden');
-    editorContainer.classList.remove('hidden');
-    dropzone.classList.add('hidden');
+    try {
+      currentFile = file;
+      bufferManager = new HexBufferManager(file);
 
-    infoFilename.textContent = file.name;
-    infoSize.textContent = `${file.size.toLocaleString()} bytes`;
-    infoModified.textContent = new Date(file.lastModified).toLocaleString();
+      fileInfo.classList.remove('hidden');
+      editorContainer.classList.remove('hidden');
+      dropzone.classList.add('hidden');
 
-    // Identify type
-    const firstChunk = await bufferManager.getRange(0, 16);
-    const id = identifyFileType(firstChunk);
-    if (id) {
-      infoType.textContent = id.name;
-      infoType.className = 'badge badge-primary';
-    } else {
-      infoType.textContent = 'Unknown Type';
-      infoType.className = 'badge badge-ghost';
+      infoFilename.textContent = file.name;
+      infoSize.textContent = `${file.size.toLocaleString()} bytes`;
+      infoModified.textContent = new Date(file.lastModified).toLocaleString();
+
+      // Identify type (read first 32 bytes)
+      const firstChunk = await bufferManager.getRange(0, 32);
+      const id = identifyFileType(firstChunk);
+      if (id) {
+        infoType.textContent = id.name;
+        infoType.className = 'badge badge-primary';
+      } else {
+        infoType.textContent = 'Unknown Type';
+        infoType.className = 'badge badge-ghost';
+      }
+
+      totalLines = Math.ceil(file.size / BYTES_PER_LINE);
+      totalLogicalHeight = totalLines * LINE_HEIGHT;
+
+      // Scale height if it exceeds MAX_PHYSICAL_HEIGHT
+      if (totalLogicalHeight > MAX_PHYSICAL_HEIGHT) {
+        scrollScale = MAX_PHYSICAL_HEIGHT / totalLogicalHeight;
+        hexContent.style.height = `${MAX_PHYSICAL_HEIGHT}px`;
+      } else {
+        scrollScale = 1;
+        hexContent.style.height = `${totalLogicalHeight}px`;
+      }
+
+      renderVisibleLines();
+    } catch (err) {
+      console.error(err);
+      showMessage('Error loading file', { type: 'alert' });
+    } finally {
+      hideProgress();
     }
-
-    totalLines = Math.ceil(file.size / BYTES_PER_LINE);
-    hexContent.style.height = `${totalLines * LINE_HEIGHT}px`;
-
-    renderVisibleLines();
   };
 
   const resetTool = () => {
@@ -86,113 +115,118 @@ export default function init(payload?: SharedFilesPayload) {
     statusStats.textContent = 'Visible: 0 bytes';
   };
 
-  const renderLine = (lineIndex: number, bytes: Uint8Array) => {
-    const offset = lineIndex * BYTES_PER_LINE;
-    const lineDiv = document.createElement('div');
-    lineDiv.className = 'flex items-center hover:bg-base-200 px-4 group';
-    lineDiv.style.height = `${LINE_HEIGHT}px`;
-    lineDiv.style.position = 'absolute';
-    lineDiv.style.top = `${lineIndex * LINE_HEIGHT}px`;
-    lineDiv.style.width = '100%';
-
-    // Offset
-    const offsetDiv = document.createElement('div');
-    offsetDiv.className = 'w-16 sm:w-20 shrink-0 text-primary opacity-50 text-[10px] sm:text-xs font-bold';
-    offsetDiv.textContent = offset.toString(16).padStart(8, '0').toUpperCase();
-    lineDiv.appendChild(offsetDiv);
-
-    // Hex
-    const hexContainer = document.createElement('div');
-    hexContainer.className = 'flex-1 flex justify-center gap-1 sm:gap-2 hex-col';
-    if (!toggleHex.checked) hexContainer.classList.add('hidden');
-
-    for (let i = 0; i < BYTES_PER_LINE; i++) {
-      const byteSpan = document.createElement('span');
-      byteSpan.className = 'cursor-pointer hover:text-primary transition-colors w-5 text-center';
-      if (i < bytes.length) {
-        const currentOffset = offset + i;
-        byteSpan.textContent = formatHex(bytes[i]);
-        byteSpan.dataset.offset = currentOffset.toString();
-        byteSpan.onclick = () => openEditModal(currentOffset, bytes[i]);
-      } else {
-        byteSpan.textContent = '  ';
-      }
-      hexContainer.appendChild(byteSpan);
-    }
-    lineDiv.appendChild(hexContainer);
-
-    // ASCII
-    const asciiDiv = document.createElement('div');
-    asciiDiv.className = 'w-32 sm:w-48 shrink-0 flex justify-center text-secondary opacity-70 ascii-col';
-    if (!toggleAscii.checked) asciiDiv.classList.add('hidden');
-
-    let asciiStr = '';
-    for (let i = 0; i < bytes.length; i++) {
-      asciiStr += formatAscii(bytes[i]);
-    }
-    asciiDiv.textContent = asciiStr;
-    lineDiv.appendChild(asciiDiv);
-
-    return lineDiv;
-  };
-
   const renderVisibleLines = async () => {
-    if (!bufferManager) return;
+    if (!bufferManager || isRendering) return;
+    isRendering = true;
 
     const scrollTop = hexViewer.scrollTop;
     const containerHeight = hexViewer.clientHeight;
 
-    const startLine = Math.floor(scrollTop / LINE_HEIGHT);
-    const endLine = Math.min(totalLines, Math.ceil((scrollTop + containerHeight) / LINE_HEIGHT) + 1);
+    // Convert physical scroll position back to logical
+    const logicalScrollTop = scrollTop / scrollScale;
 
-    // Clear content but keep height
-    hexContent.innerHTML = '';
-
-    const linesToRead = endLine - startLine;
-    if (linesToRead <= 0) return;
+    const startLine = Math.floor(logicalScrollTop / LINE_HEIGHT);
+    const visibleLineCount = Math.ceil(containerHeight / LINE_HEIGHT) + 3;
+    const endLine = Math.min(totalLines, startLine + visibleLineCount);
 
     const startOffset = startLine * BYTES_PER_LINE;
-    const bytesToRead = Math.min(linesToRead * BYTES_PER_LINE, bufferManager.totalSize - startOffset);
+    const bytesToRead = Math.min((endLine - startLine) * BYTES_PER_LINE, bufferManager.totalSize - startOffset);
 
-    const buffer = await bufferManager.getRange(startOffset, bytesToRead);
-
-    const fragment = document.createDocumentFragment();
-    for (let i = 0; i < linesToRead; i++) {
-      const lineIndex = startLine + i;
-      const lineOffset = i * BYTES_PER_LINE;
-      if (lineOffset >= buffer.length) break;
-
-      const lineBytes = buffer.slice(lineOffset, lineOffset + BYTES_PER_LINE);
-      fragment.appendChild(renderLine(lineIndex, lineBytes));
+    if (bytesToRead <= 0) {
+      isRendering = false;
+      return;
     }
 
-    hexContent.appendChild(fragment);
-    statusStats.textContent = `Visible: ${buffer.length} bytes (of ${currentFile?.size.toLocaleString()})`;
+    try {
+      const buffer = await bufferManager.getRange(startOffset, bytesToRead);
+
+      worker.onmessage = (e: MessageEvent<WorkerOutMessage>) => {
+        const msg = e.data;
+        if (msg.type !== 'format-result') return;
+
+        const fragment = document.createDocumentFragment();
+        msg.lines.forEach((line: HexLine) => {
+          const lineDiv = document.createElement('div');
+          lineDiv.className = 'flex items-center hover:bg-base-200 px-4 group';
+          lineDiv.style.height = `${LINE_HEIGHT}px`;
+          lineDiv.style.position = 'absolute';
+          // Calculate physical top position
+          lineDiv.style.top = `${Math.floor((line.lineIndex * LINE_HEIGHT) * scrollScale)}px`;
+          lineDiv.style.width = '100%';
+
+          const offsetDiv = document.createElement('div');
+          offsetDiv.className = 'w-16 sm:w-20 shrink-0 text-primary opacity-50 text-[10px] sm:text-xs font-bold';
+          offsetDiv.textContent = line.offset;
+          lineDiv.appendChild(offsetDiv);
+
+          const hexContainer = document.createElement('div');
+          hexContainer.className = 'flex-1 flex justify-center gap-1 sm:gap-2 hex-col';
+          if (!toggleHex.checked) hexContainer.classList.add('hidden');
+
+          line.hex.forEach((h: string, i: number) => {
+            const byteSpan = document.createElement('span');
+            byteSpan.className = h !== '  ' ? 'cursor-pointer hover:text-primary transition-colors w-5 text-center' : 'w-5 text-center';
+            byteSpan.textContent = h;
+            if (h !== '  ') {
+              const currentOffset = line.lineIndex * BYTES_PER_LINE + i;
+              byteSpan.onclick = () => {
+                selectedOffset = currentOffset;
+                editHexInput.value = h;
+                editAsciiInput.value = line.ascii[i];
+                statusSelection.textContent = `Offset: 0x${currentOffset.toString(16).padStart(8, '0').toUpperCase()}`;
+                editModal.showModal();
+              };
+            }
+            hexContainer.appendChild(byteSpan);
+          });
+          lineDiv.appendChild(hexContainer);
+
+          const asciiDiv = document.createElement('div');
+          asciiDiv.className = 'w-32 sm:w-48 shrink-0 flex justify-center text-secondary opacity-70 ascii-col';
+          if (!toggleAscii.checked) asciiDiv.classList.add('hidden');
+          asciiDiv.textContent = line.ascii;
+          lineDiv.appendChild(asciiDiv);
+
+          fragment.appendChild(lineDiv);
+        });
+
+        hexContent.innerHTML = '';
+        hexContent.appendChild(fragment);
+        statusStats.textContent = `Offset Range: 0x${startOffset.toString(16).toUpperCase()} - 0x${(startOffset + bytesToRead - 1).toString(16).toUpperCase()}`;
+        isRendering = false;
+      };
+
+      const workerMsg: WorkerInMessage = {
+        type: 'format-lines',
+        buffer,
+        startLine,
+        bytesPerLine: BYTES_PER_LINE
+      };
+      worker.postMessage(workerMsg);
+    } catch (err) {
+      console.error(err);
+      isRendering = false;
+    }
   };
 
-  const openEditModal = (offset: number, value: number) => {
-    selectedOffset = offset;
-    editHexInput.value = formatHex(value);
-    editAsciiInput.value = formatAscii(value);
-    statusSelection.textContent = `Offset: 0x${offset.toString(16).padStart(8, '0').toUpperCase()}`;
-    editModal.showModal();
-  };
-
-  // Listeners
+  // Simple throttle for scrolling
+  let scrollTimeout: number | null = null;
   hexViewer.addEventListener('scroll', () => {
-    renderVisibleLines();
+    if (scrollTimeout) return;
+    scrollTimeout = window.setTimeout(() => {
+      renderVisibleLines();
+      scrollTimeout = null;
+    }, 16); // ~60fps
   });
 
   toggleHex.addEventListener('change', () => {
-    const cols = document.querySelectorAll('.hex-col');
-    cols.forEach(c => c.classList.toggle('hidden', !toggleHex.checked));
     hexHeader.classList.toggle('hidden', !toggleHex.checked);
+    renderVisibleLines();
   });
 
   toggleAscii.addEventListener('change', () => {
-    const cols = document.querySelectorAll('.ascii-col');
-    cols.forEach(c => c.classList.toggle('hidden', !toggleAscii.checked));
     asciiHeader.classList.toggle('hidden', !toggleAscii.checked);
+    renderVisibleLines();
   });
 
   editHexInput.oninput = () => {
@@ -200,7 +234,7 @@ export default function init(payload?: SharedFilesPayload) {
     if (/^[0-9A-F]{0,2}$/.test(val)) {
       if (val.length === 2) {
         const byte = parseInt(val, 16);
-        editAsciiInput.value = formatAscii(byte);
+        editAsciiInput.value = (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
       }
     } else {
       editHexInput.value = val.replace(/[^0-9A-F]/g, '');
@@ -211,7 +245,7 @@ export default function init(payload?: SharedFilesPayload) {
     const val = editAsciiInput.value;
     if (val.length === 1) {
       const byte = val.charCodeAt(0);
-      editHexInput.value = formatHex(byte);
+      editHexInput.value = byte.toString(16).padStart(2, '0').toUpperCase();
     }
   };
 
@@ -226,25 +260,26 @@ export default function init(payload?: SharedFilesPayload) {
   };
 
   cancelEdit.onclick = () => editModal.close();
-
   btnReset.onclick = resetTool;
 
   downloadBtn.onclick = async () => {
     if (!bufferManager || !currentFile) return;
 
-    showProgress('Preparing download...');
+    showProgress('Creating file...');
+    await yieldToUI(true);
+
     try {
       const buffer = await bufferManager.getFullBuffer();
       await downloadFile(buffer, `edited_${currentFile.name}`);
-      showMessage('File downloaded', { type: 'info' });
+      showMessage('File ready for download', { type: 'info' });
     } catch (e) {
-      showMessage('Download failed', { type: 'alert' });
+      console.error(e);
+      showMessage('Export failed', { type: 'alert' });
     } finally {
-      showProgress('done', { visible: false });
+      hideProgress();
     }
   };
 
-  // Tool Initialization
   setupFileDropzone('hex-dropzone', 'hex-file-input', (files) => {
     if (files.length > 0) updateFileInfo(files[0]);
   });
@@ -253,10 +288,10 @@ export default function init(payload?: SharedFilesPayload) {
     updateFileInfo(payload.sharedFiles[0]);
   }
 
-  // Handle window resize for virtual scroll update
   window.addEventListener('resize', renderVisibleLines);
 
   return () => {
     window.removeEventListener('resize', renderVisibleLines);
+    worker.terminate();
   };
 }

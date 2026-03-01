@@ -100,10 +100,19 @@ export class HexBufferManager {
   }
 
   async getRange(offset: number, length: number): Promise<Uint8Array> {
-    const result = new Uint8Array(length);
-    for (let i = 0; i < length; i++) {
-      result[i] = await this.getByte(offset + i);
+    if (!this.originalFile) return new Uint8Array(0);
+
+    // Fetch the raw data from the file
+    const result = await readChunk(this.originalFile, offset, length);
+
+    // Overlay modifications
+    // We only iterate over modifications that fall within this range
+    for (const [modOffset, value] of this.modifications.entries()) {
+      if (modOffset >= offset && modOffset < offset + length) {
+        result[modOffset - offset] = value;
+      }
     }
+
     return result;
   }
 
