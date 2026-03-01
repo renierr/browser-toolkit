@@ -104,5 +104,29 @@
         </div>
       </div>
     </div>
+    </div>
+
+    <!-- Error Section -->
+    <div id="error-section" class="hidden mt-8 pt-8 border-t border-error/30">
+      <div class="alert alert-error shadow-sm mb-4">
+        <div class="flex items-center gap-2 text-error-content">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+          <div>
+            <h3 class="font-bold">Transcoding Failed</h3>
+            <div id="error-message" class="text-sm"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="collapse collapse-arrow bg-base-200 border border-base-300">
+        <input type="checkbox" />
+        <div class="collapse-title font-semibold text-sm">
+          Execution Logs
+        </div>
+        <div class="collapse-content">
+          <pre id="error-logs" class="text-[10px] leading-tight font-mono p-4 bg-neutral text-neutral-content rounded-lg overflow-auto max-h-64 whitespace-pre-wrap"></pre>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

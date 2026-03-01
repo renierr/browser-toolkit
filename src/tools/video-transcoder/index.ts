@@ -28,6 +28,9 @@ export default function init(payload?: SharedFilesPayload) {
   const qualityPreset = document.getElementById('quality-preset') as HTMLSelectElement;
   const advancedArgs = document.getElementById('advanced-args') as HTMLInputElement;
   const resultSection = document.getElementById('result-section') as HTMLDivElement;
+  const errorSection = document.getElementById('error-section') as HTMLDivElement;
+  const errorMessage = document.getElementById('error-message') as HTMLDivElement;
+  const errorLogs = document.getElementById('error-logs') as HTMLPreElement;
   const resultVideo = document.getElementById('result-video') as HTMLVideoElement;
   const resultImage = document.getElementById('result-image') as HTMLImageElement;
   const resultAudio = document.getElementById('result-audio') as HTMLAudioElement;
@@ -35,6 +38,7 @@ export default function init(payload?: SharedFilesPayload) {
   let selectedFile: File | null = null;
   let resultBlob: Blob | null = null;
   let isTranscodingPhase = false;
+  let hasAudio = false;
 
   const loadFFmpeg = async () => {
     if (ffmpegLoaded) return;
@@ -59,6 +63,9 @@ export default function init(payload?: SharedFilesPayload) {
   ffmpeg.on('log', ({ message }) => {
     console.log('[FFmpeg]', message);
     logCollector.add(message);
+    if (message.includes('Audio:')) {
+      hasAudio = true;
+    }
   });
 
   const updateFileInfo = (file: File) => {
@@ -80,6 +87,7 @@ export default function init(payload?: SharedFilesPayload) {
     btnConvert.disabled = true;
     btnClear.disabled = true;
     resultSection.classList.add('hidden');
+    errorSection.classList.add('hidden');
     hideProgress();
     resultVideo.src = '';
     resultImage.src = '';
@@ -112,6 +120,7 @@ export default function init(payload?: SharedFilesPayload) {
       btnClear.disabled = true;
       btnRemove.disabled = true;
       logCollector.clear();
+      errorSection.classList.add('hidden');
 
       showProgress('Preparing FFmpeg...');
       await yieldToUI(true);
@@ -125,6 +134,18 @@ export default function init(payload?: SharedFilesPayload) {
       showProgress('Writing file to memory...', { visible: true });
       await yieldToUI(true);
       await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
+
+      // Conditional probe for MP3
+      if (format === 'mp3') {
+        showProgress('Analyzing audio streams...');
+        hasAudio = false;
+        isTranscodingPhase = false;
+        await yieldToUI(true);
+        await ffmpeg.exec(['-i', inputName, '-f', 'null', '-']);
+        if (!hasAudio) {
+          throw new Error('This video file contains no audio streams to convert to MP3.');
+        }
+      }
 
       showProgress('Converting...', { visible: true });
       isTranscodingPhase = true;
@@ -175,10 +196,16 @@ export default function init(payload?: SharedFilesPayload) {
       console.error('Transcoding failed:', error);
       const logSummary = logCollector.getSummary();
       const errorMsg = error.message || 'Unknown error';
-      showMessage(`Transcoding failed: ${errorMsg}\n\nRecent logs:\n${logSummary}`, {
-        type: 'alert',
-      });
+
+      errorMessage.innerText = errorMsg;
+      errorLogs.innerText = logSummary;
+      errorSection.classList.remove('hidden');
       resultSection.classList.add('hidden');
+
+      showMessage('Transcoding failed: ' + (errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg), {
+        type: 'alert',
+        timeoutMs: 3000,
+      });
     } finally {
       isTranscodingPhase = false;
       hideProgress();
