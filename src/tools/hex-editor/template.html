@@ -3,30 +3,32 @@
     height: 60dvh;
     min-height: 300px;
     overflow-y: auto;
-    background-color: var(--base-100);
+    background-color: var(--color-base-100);
     outline: none;
-    border: 1px solid var(--base-300);
-    border-radius: var(--rounded-btn);
+    border: 1px solid var(--color-base-300);
+    border-radius: var(--radius-btn);
   }
 
   .hex-byte.focused {
-    background-color: var(--p);
-    color: var(--pc);
+    background-color: var(--color-primary);
+    color: var(--color-primary-content);
     font-weight: bold;
     border-radius: 4px;
     position: relative;
     z-index: 10;
+    box-shadow: 0 0 0 2px var(--color-primary), 0 0 10px var(--color-primary);
   }
 
   .hex-byte.focused::after {
     content: '';
     position: absolute;
-    bottom: -2px;
+    bottom: -3px;
     left: 0;
     width: 100%;
-    height: 2px;
+    height: 3px;
     background: currentColor;
-    opacity: 0.8;
+    opacity: 1;
+    border-radius: 2px;
   }
 
   .hex-byte.editing-high::after {
@@ -36,6 +38,44 @@
   .hex-byte.editing-low::after {
     left: 50%;
     width: 50%;
+  }
+
+  .hex-byte.search-match {
+    background-color: var(--color-accent);
+    color: var(--color-accent-content);
+    border-radius: 4px;
+    font-weight: bold;
+  }
+
+  .search-match-flare {
+    animation: search-flare 1.5s ease-out;
+  }
+
+  @keyframes search-flare {
+    0% {
+      outline: 0px solid var(--color-accent);
+      outline-offset: 0px;
+      box-shadow: 0 0 0 0 var(--color-accent);
+    }
+
+    30% {
+      outline: 4px solid var(--color-accent);
+      outline-offset: 8px;
+      box-shadow: 0 0 40px 10px var(--color-accent);
+    }
+
+    100% {
+      outline: 0px solid transparent;
+      outline-offset: 20px;
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+
+  #hex-viewer-overlay {
+    pointer-events: none;
+    background: color-mix(in srgb, var(--color-base-100), transparent 50%);
+    backdrop-filter: blur(2px);
+    transition: opacity 0.2s;
   }
 </style>
 
@@ -51,7 +91,7 @@
       <div id="file-info-header"
         class="hidden flex flex-wrap items-center gap-x-6 gap-y-2 bg-base-200 p-4 rounded-xl text-sm font-mono border border-base-300">
         <div class="flex flex-col">
-          <span class="text-[10px] opacity-50 uppercase font-black tracking-widest">Filename</span>
+          <span class="text-[10px] opacity-50 uppercase font-black tracking-widest text-primary">Filename</span>
           <span id="info-filename" class="text-primary font-bold">file.bin</span>
         </div>
         <div class="divider divider-horizontal"></div>
@@ -88,7 +128,7 @@
       <div class="flex flex-wrap items-center gap-6">
         <!-- Display Toggles -->
         <label class="label cursor-pointer gap-2 p-0">
-          <input type="checkbox" id="toggle-ascii" class="toggle toggle-secondary toggle-sm" checked />
+          <input type="checkbox" id="toggle-ascii" class="toggle toggle-sm checkbox-secondary" checked />
           <span class="label-text font-bold uppercase text-[10px] tracking-widest">ASCII View</span>
         </label>
 
@@ -103,12 +143,12 @@
             </select>
             <input type="text" id="search-input" placeholder="Search..."
               class="input input-bordered input-sm join-item w-32 sm:w-48 font-mono" />
-            <button id="search-btn" class="btn btn-sm btn-primary join-item">
+            <button id="search-btn" class="btn btn-sm btn-primary join-item px-4">
               <i data-lucide="search" class="w-4 h-4"></i>
             </button>
           </div>
           <button id="search-next" class="btn btn-sm btn-ghost btn-square" title="Find Next">
-            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            <i data-lucide="chevron-down" class="w-4 h-4 text-primary"></i>
           </button>
         </div>
       </div>
@@ -134,11 +174,20 @@
         <div id="ascii-header" class="w-40 shrink-0 text-center">ASCII</div>
       </div>
 
-      <div id="hex-viewer" tabindex="0" class="select-none font-mono">
+      <div id="hex-viewer" tabindex="0" class="select-none font-mono relative">
         <div id="hex-content" class="relative">
           <div id="hex-stretcher" style="width: 1px; visibility: hidden;"></div>
           <div id="hex-visible-rows" class="absolute top-0 left-0 w-full flex flex-col will-change-transform">
             <!-- Rows injected by index.ts -->
+          </div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div id="hex-viewer-overlay"
+          class="absolute inset-0 z-50 flex items-center justify-center opacity-0 transition-opacity">
+          <div class="bg-base-300 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-primary/20">
+            <span class="loading loading-spinner loading-md text-primary"></span>
+            <span class="text-sm font-bold tracking-tight">Loading data...</span>
           </div>
         </div>
       </div>
@@ -154,23 +203,25 @@
 <!-- Modal remains for large/complex edits fallback -->
 <dialog id="edit-modal" class="modal">
   <div class="modal-box max-w-sm border-2 border-primary">
-    <h3 class="font-bold text-lg mb-4 text-center">Byte Modification</h3>
+    <h3 class="font-bold text-lg mb-4 text-center text-primary">Byte Modification</h3>
     <div class="bg-base-300 p-8 rounded-2xl flex items-center justify-around gap-4">
       <div class="text-center">
         <span class="text-[10px] uppercase font-bold opacity-50 block mb-2">Hex</span>
         <input type="text" id="edit-hex-input"
-          class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner" maxlength="2" />
+          class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner focus:input-primary"
+          maxlength="2" />
       </div>
       <div class="divider divider-horizontal mx-0 h-10 self-end mb-4"></div>
       <div class="text-center">
         <span class="text-[10px] uppercase font-bold opacity-50 block mb-2">ASCII</span>
         <input type="text" id="edit-ascii-input"
-          class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner" maxlength="1" />
+          class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner focus:input-primary"
+          maxlength="1" />
       </div>
     </div>
     <div class="modal-action">
       <button id="cancel-edit" class="btn btn-ghost">Discard</button>
-      <button id="save-edit" class="btn btn-primary px-8">Save</button>
+      <button id="save-edit" class="btn btn-primary px-8">Save Change</button>
     </div>
   </div>
 </dialog>

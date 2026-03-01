@@ -1,3 +1,5 @@
+import { yieldToUI } from '../../js/ui';
+
 /**
  * Utility functions for hex formatting and processing
  */
@@ -138,44 +140,61 @@ export class HexBufferManager {
   /**
    * Searches for a pattern (byte array) in the file.
    * Streams through the file in chunks to keep memory usage low.
-   * @param pattern The sequence of bytes to find.
-   * @param startOffset Where to start searching.
-   * @param onProgress Optional callback for progress.
-   * @returns The offset of the first match, or -1 if not found.
    */
-  async find(pattern: Uint8Array, startOffset: number = 0, onProgress?: (percent: number) => void): Promise<number> {
-    if (!this.originalFile || pattern.length === 0) return -1;
+  async find(
+    pattern: Uint8Array,
+    startOffset: number = 0,
+    options: { ignoreCase?: boolean } = {}
+  ): Promise<number> {
+    if (!this.originalFile || pattern.length === 0 || startOffset >= this.totalSize) return -1;
 
     let currentOffset = startOffset;
-    const searchChunkSize = 256 * 1024; // 256KB chunks for searching
+    const searchChunkSize = 256 * 1024; // 256KB
     const totalSize = this.totalSize;
+    let iterations = 0;
+    const ignoreCase = options.ignoreCase;
 
-    // Pattern search logic (naive but effective for most cases)
+    // Pre-calculate common case targets if ignoreCase is on to save time in inner loop
+    // However, since we iterate through the file, we compare pattern[j] to chunk[i+j]
+
     while (currentOffset < totalSize) {
+      if (++iterations % 4 === 0) {
+        await yieldToUI(false);
+      }
+
       const readSize = Math.min(searchChunkSize, totalSize - currentOffset);
       const chunk = await this.getRange(currentOffset, readSize);
-
-      if (onProgress) onProgress((currentOffset / totalSize) * 100);
 
       // Search within the chunk
       for (let i = 0; i <= chunk.length - pattern.length; i++) {
         let match = true;
         for (let j = 0; j < pattern.length; j++) {
-          if (chunk[i + j] !== pattern[j]) {
-            match = false;
-            break;
+          const b1 = chunk[i + j];
+          const b2 = pattern[j];
+
+          if (b1 === b2) continue;
+
+          if (ignoreCase) {
+            // Check if both are ASCII letters and match case-insensitively
+            // 'A' is 65, 'Z' is 90; 'a' is 97, 'z' is 122
+            const isAlpha1 = (b1 >= 65 && b1 <= 90) || (b1 >= 97 && b1 <= 122);
+            const isAlpha2 = (b2 >= 65 && b2 <= 90) || (b2 >= 97 && b2 <= 122);
+
+            if (isAlpha1 && isAlpha2 && (b1 ^ 32) === b2) {
+              continue;
+            }
           }
+
+          match = false;
+          break;
         }
         if (match) return currentOffset + i;
       }
 
-      // Move forward by chunk size minus pattern length to avoid missing matches across boundaries
-      currentOffset += (readSize - pattern.length + 1);
-
-      // Safety break for invalid states
-      if (readSize <= pattern.length && currentOffset < totalSize) {
-        currentOffset = totalSize;
-      }
+      // Move forward, but overlap by pattern length - 1
+      const advance = readSize - pattern.length + 1;
+      if (advance <= 0) break;
+      currentOffset += advance;
     }
 
     return -1;
