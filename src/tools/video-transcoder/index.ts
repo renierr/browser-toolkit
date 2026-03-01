@@ -160,6 +160,8 @@ export default function init() {
         args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
       } else if (format === 'gif') {
         args.push('-vf', 'fps=10,scale=480:-1:flags=lanczos', '-f', 'gif');
+      } else if (format === 'webp') {
+        args.push('-vf', 'fps=10,scale=480:-1:flags=lanczos', '-c:v', 'libwebp', '-lossless', '0', '-compression_level', '4', '-q:v', '50', '-loop', '0', '-an', '-f', 'webp');
       } else if (format === 'mp3') {
         if (!hasAudio) throw new Error('Source file contains no audio stream to convert.');
         args.push('-vn', '-ab', '192k', '-ar', '44100', '-f', 'mp3');
@@ -184,9 +186,12 @@ export default function init() {
 
       showProgress('Reading result file...', { visible: true });
       const data = await ffmpeg.readFile(outputName);
-      resultBlob = new Blob([data as any], {
-        type: format === 'mp3' ? 'audio/mpeg' : format === 'gif' ? 'image/gif' : `video/${format}`,
-      });
+      let mimeType = `video/${format}`;
+      if (format === 'mp3') mimeType = 'audio/mpeg';
+      else if (format === 'gif') mimeType = 'image/gif';
+      else if (format === 'webp') mimeType = 'image/webp';
+
+      resultBlob = new Blob([data as any], { type: mimeType });
 
       if (resultBlob.size === 0) {
         throw new Error('Transcoded file is 0 bytes.');
@@ -199,7 +204,7 @@ export default function init() {
       resultImage.classList.add('hidden');
       resultAudio.classList.add('hidden');
 
-      if (format === 'gif') {
+      if (format === 'gif' || format === 'webp') {
         resultImage.src = url;
         resultImage.classList.remove('hidden');
       } else if (format === 'mp3') {
