@@ -10,7 +10,6 @@
     </p>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <!-- Input Section -->
       <div class="flex flex-col gap-4">
         <div id="drop-zone"
           class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-64">
@@ -37,7 +36,7 @@
       </div>
 
       <!-- Settings Section -->
-      <div class="flex flex-col gap-4">
+      <div id="settings-section" class="hidden flex flex-col gap-4">
         <div class="form-control w-full">
           <label class="label">
             <span class="label-text font-semibold">Output Format</span>
@@ -104,16 +103,17 @@
                 </div>
               </div>
 
-              <div id="video-metadata" class="hidden text-[10px] bg-base-100 p-2 rounded border border-base-content/10">
-                <div class="grid grid-cols-2 gap-x-4 gap-y-1">
-                  <span id="meta-duration" class="font-mono text-primary font-bold"></span>
-                  <span id="meta-resolution" class="font-mono text-right font-bold"></span>
-                  <span id="meta-vcodec" class="font-mono"></span>
-                  <span id="meta-acodec" class="font-mono text-right"></span>
-                  <span id="meta-fps" class="font-mono"></span>
-                  <span id="meta-samplerate" class="font-mono text-right"></span>
-                  <span id="meta-bitrate"
-                    class="font-mono col-span-2 text-center border-t border-base-content/5 mt-1 pt-1"></span>
+              <div id="video-metadata" class="hidden p-3 bg-base-100/50 rounded-lg border border-base-content/5">
+                <h4 class="text-[10px] font-bold uppercase tracking-widest text-base-content/40 mb-2">Source Metadata
+                </h4>
+                <div class="grid grid-cols-2 gap-y-1 gap-x-4 text-[11px] font-medium">
+                  <span id="meta-duration" class="truncate"></span>
+                  <span id="meta-resolution" class="truncate"></span>
+                  <span id="meta-vcodec" class="truncate"></span>
+                  <span id="meta-acodec" class="truncate"></span>
+                  <span id="meta-fps" class="truncate"></span>
+                  <span id="meta-samplerate" class="truncate"></span>
+                  <span id="meta-bitrate" class="truncate"></span>
                 </div>
               </div>
 
@@ -123,6 +123,7 @@
                   height: 1.5rem;
                   width: 100%;
                   user-select: none;
+                  touch-action: none;
                 }
 
                 .slider-track {
@@ -130,36 +131,56 @@
                   top: 50%;
                   left: 0;
                   right: 0;
-                  height: 0.5rem;
-                  background: hsl(var(--bc) / 0.1);
+                  height: 0.625rem;
+                  background: hsl(var(--bc) / 0.15);
                   border-radius: 9999px;
                   transform: translateY(-50%);
                   pointer-events: none;
+                  z-index: 1;
+                }
+
+                .slider-dimmed {
+                  position: absolute;
+                  top: 50%;
+                  height: 0.625rem;
+                  background: rgba(0, 0, 0, 0.7);
+                  border-radius: 9999px;
+                  transform: translateY(-50%);
+                  pointer-events: none;
+                  z-index: 2;
+                  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+                  backdrop-filter: blur(1px);
                 }
 
                 .slider-selection {
                   position: absolute;
                   top: 50%;
-                  height: 0.5rem;
-                  background: hsl(var(--p));
+                  height: 0.875rem;
+                  background: linear-gradient(90deg, hsl(var(--p)), hsl(var(--s)));
                   border-radius: 9999px;
                   transform: translateY(-50%);
                   pointer-events: none;
+                  z-index: 5;
+                  box-shadow: 0 0 15px hsl(var(--p) / 0.4);
                 }
 
                 .slider-handle {
                   position: absolute;
                   top: 50%;
-                  width: 1.25rem;
-                  height: 1.25rem;
+                  width: 1.5rem;
+                  height: 1.5rem;
                   background: white;
-                  border: 2px solid hsl(var(--p));
+                  border: 3px solid hsl(var(--p));
                   border-radius: 50%;
                   transform: translate(-50%, -50%);
                   cursor: grab;
                   z-index: 10;
-                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                  transition: transform 0.1s;
+                  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+                  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s;
+                }
+
+                .slider-handle:hover {
+                  transform: translate(-50%, -50%) scale(1.1);
                 }
 
                 .slider-handle:active {
@@ -185,20 +206,23 @@
                 <div class="w-full aspect-video bg-black rounded-lg overflow-hidden mb-2 hidden" id="preview-container">
                   <video id="cut-preview" class="w-full h-full" muted></video>
                 </div>
-                <div id="slider-container" class="custom-range-slider bg-base-200 rounded-lg p-1">
+                <div id="slider-container"
+                  class="custom-range-slider bg-base-300 rounded-lg p-1 border border-base-content/5">
                   <div class="slider-track"></div>
+                  <div id="slider-before" class="slider-dimmed"></div>
+                  <div id="slider-after" class="slider-dimmed"></div>
                   <div id="slider-selection" class="slider-selection"></div>
                   <div id="handle-start" class="slider-handle handle-start"></div>
                   <div id="handle-end" class="slider-handle handle-end"></div>
                 </div>
-                <p class="text-[10px] text-center text-base-content/50 font-medium pt-1">Drag handles to select
-                  start/end. Selection area is kept.</p>
+                <p class="text-[10px] text-center text-base-content/60 font-semibold pt-1 uppercase tracking-wider">
+                  Highlighted area is kept • Dimmed area is cut</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="collapse collapse-arrow bg-base-200 mt-2">
+        <div id="advanced-card" class="collapse collapse-arrow bg-base-200 mt-2">
           <input type="checkbox" />
           <div class="collapse-title font-semibold text-sm">
             Advanced Options
@@ -212,7 +236,7 @@
           </div>
         </div>
 
-        <div class="card-actions justify-end mt-auto flex gap-2">
+        <div id="convert-actions" class="card-actions justify-end mt-auto flex gap-2 pt-4">
           <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
           <button id="btn-convert" class="btn btn-primary flex-1 sm:flex-none" disabled>
             <i data-lucide="play" class="w-4 h-4 mr-2"></i>
@@ -224,19 +248,26 @@
 
     <!-- Result Section -->
     <div id="result-section" class="hidden mt-8 pt-8 border-t border-base-300">
-      <h3 class="text-xl font-bold mb-4">Result</h3>
-      <div class="flex flex-col sm:flex-row items-center gap-6">
-        <div class="w-full sm:w-1/2 aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold">Result</h3>
+        <div id="result-meta-summary" class="text-[10px] font-mono opacity-60"></div>
+      </div>
+      <div class="flex flex-col sm:flex-row items-stretch gap-6">
+        <div
+          class="w-full sm:w-1/2 aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
           <video id="result-video" controls class="max-h-full hidden"></video>
-          <img id="result-image" class="max-h-full object-contain hidden" alt="Transcoded GIF Result" />
+          <img id="result-image" class="max-h-full object-contain hidden" alt="Transcoding Result" />
           <audio id="result-audio" controls class="w-full mx-4 hidden"></audio>
         </div>
         <div class="flex-1 flex flex-col gap-4">
-          <div class="p-4 bg-success/10 text-success rounded-lg flex items-center gap-3">
+          <div class="p-4 bg-success/10 text-success rounded-lg flex items-center gap-3 border border-success/20">
             <i data-lucide="check-circle" class="w-6 h-6"></i>
-            <p class="font-medium">Conversion Complete!</p>
+            <div>
+              <p class="font-bold">Conversion Complete!</p>
+              <div id="result-details" class="text-[10px] mt-1 space-y-0.5 opacity-80"></div>
+            </div>
           </div>
-          <button id="btn-download" class="btn btn-outline btn-success w-full">
+          <button id="btn-download" class="btn btn-outline btn-success w-full shadow-sm">
             <i data-lucide="download" class="w-4 h-4 mr-2"></i>
             Download Result
           </button>

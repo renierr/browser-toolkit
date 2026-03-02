@@ -9,7 +9,6 @@ import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
 import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
 import workerURL from '@ffmpeg/ffmpeg/worker?url';
 
-// noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
   const ffmpeg = new FFmpeg();
   let ffmpegLoaded = false;
@@ -51,6 +50,15 @@ export default function init(payload?: SharedFilesPayload) {
   const metaFPS = document.getElementById('meta-fps') as HTMLSpanElement;
   const metaSampleRate = document.getElementById('meta-samplerate') as HTMLSpanElement;
   const videoMetadata = document.getElementById('video-metadata') as HTMLDivElement;
+  const resultMetaSummary = document.getElementById('result-meta-summary') as HTMLDivElement;
+  const resultDetails = document.getElementById('result-details') as HTMLDivElement;
+  const settingsSection = document.getElementById('settings-section') as HTMLDivElement;
+  const sliderBefore = document.getElementById('slider-before') as HTMLDivElement;
+  const sliderAfter = document.getElementById('slider-after') as HTMLDivElement;
+  const sliderContainer = document.getElementById('slider-container') as HTMLDivElement;
+  const sliderSelection = document.getElementById('slider-selection') as HTMLDivElement;
+  const handleStart = document.getElementById('handle-start') as HTMLDivElement;
+  const handleEnd = document.getElementById('handle-end') as HTMLDivElement;
 
   let selectedFile: File | null = null;
   let resultBlob: Blob | null = null;
@@ -59,34 +67,74 @@ export default function init(payload?: SharedFilesPayload) {
   let videoDuration = 0;
   let previewUrl: string | null = null;
   let currentMetadata: any = null;
+  let startVal = 0;
+  let endVal = 0;
+  let activeHandle: 'start' | 'end' | null = null;
+
+  const updateSliderUI = () => {
+    if (videoDuration <= 0) return;
+    const startPercent = (startVal / videoDuration) * 100;
+    const endPercent = (endVal / videoDuration) * 100;
+
+    handleStart.style.left = `${startPercent}%`;
+    handleEnd.style.left = `${endPercent}%`;
+    sliderSelection.style.left = `${startPercent}%`;
+    sliderSelection.style.width = `${endPercent - startPercent}%`;
+
+    sliderBefore.style.left = '0';
+    sliderBefore.style.width = `${startPercent}%`;
+    sliderAfter.style.left = `${endPercent}%`;
+    sliderAfter.style.width = `${100 - endPercent}%`;
+
+    cutStartInput.value = startVal.toFixed(2);
+    cutEndInput.value = endVal.toFixed(2);
+  };
+
+  const syncCuttingUI = (source: 'input' | 'slider', event?: PointerEvent) => {
+    if (source === 'input') {
+      let start = parseFloat(cutStartInput.value) || 0;
+      let end = parseFloat(cutEndInput.value) || videoDuration;
+      if (start < 0) start = 0;
+      if (end > videoDuration && videoDuration > 0) end = videoDuration;
+      if (start > end) start = end;
+      startVal = start;
+      endVal = end;
+      updateSliderUI();
+    } else if (event) {
+      const rect = sliderContainer.getBoundingClientRect();
+      let position = (event.clientX - rect.left) / rect.width;
+      if (position < 0) position = 0;
+      if (position > 1) position = 1;
+      const time = position * videoDuration;
+      if (activeHandle === 'start') {
+        startVal = Math.min(time, endVal);
+      } else if (activeHandle === 'end') {
+        endVal = Math.max(time, startVal);
+      }
+      updateSliderUI();
+    }
+
+    if (activeHandle === 'start' || source === 'input') {
+      cutPreview.currentTime = startVal;
+    } else if (activeHandle === 'end') {
+      cutPreview.currentTime = endVal;
+    }
+  };
 
   const loadFFmpeg = async () => {
     if (ffmpegLoaded) return;
     showProgress('Loading FFmpeg core...');
     await yieldToUI(true);
-
     try {
-      await ffmpeg.load({
-        coreURL: coreURL,
-        wasmURL: wasmURL,
-        workerURL: workerURL,
-      });
+      await ffmpeg.load({ coreURL, wasmURL, workerURL });
       ffmpegLoaded = true;
     } catch (error) {
       console.error('Failed to load FFmpeg:', error);
-      showMessage('Failed to load video transcoder core.', { type: 'alert' });
+      showMessage('Failed to load transcoder core.', { type: 'alert' });
       hideProgress();
       throw error;
     }
   };
-
-  ffmpeg.on('log', ({ message }) => {
-    console.log('[FFmpeg]', message);
-    logCollector.add(message);
-    if (message.includes('Audio:')) {
-      hasAudio = true;
-    }
-  });
 
   const updateFileInfo = async (file: File) => {
     selectedFile = file;
@@ -98,14 +146,12 @@ export default function init(payload?: SharedFilesPayload) {
     btnClear.disabled = false;
     resultSection.classList.add('hidden');
 
-    // Reset cutting UI
     enableCutting.checked = false;
     cuttingControls.classList.add('hidden');
     cutStartInput.value = '0';
     cutEndInput.value = '0';
     videoDuration = 0;
 
-    // Setup preview
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     previewUrl = URL.createObjectURL(file);
     cutPreview.src = previewUrl;
@@ -115,8 +161,6 @@ export default function init(payload?: SharedFilesPayload) {
       videoDuration = cutPreview.duration;
       const width = cutPreview.videoWidth;
       const height = cutPreview.videoHeight;
-
-      // Update UI
       metaDuration.innerText = `Duration: ${videoDuration.toFixed(2)}s`;
       metaResolution.innerText = `Resolution: ${width}x${height}`;
       metaVCodec.innerText = '';
@@ -129,9 +173,8 @@ export default function init(payload?: SharedFilesPayload) {
       startVal = 0;
       endVal = videoDuration;
       updateSliderUI();
-
-      cutEndInput.max = videoDuration.toString();
       cutStartInput.max = videoDuration.toString();
+      settingsSection.classList.remove('hidden');
     };
   };
 
@@ -154,6 +197,11 @@ export default function init(payload?: SharedFilesPayload) {
     resultBlob = null;
     logCollector.clear();
 
+    startVal = 0;
+    endVal = 0;
+    videoDuration = 0;
+    updateSliderUI();
+
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
       previewUrl = null;
@@ -161,26 +209,18 @@ export default function init(payload?: SharedFilesPayload) {
     cutPreview.src = '';
     previewContainer.classList.add('hidden');
     videoMetadata.classList.add('hidden');
-    videoDuration = 0;
+    resultMetaSummary.innerText = '';
+    resultDetails.innerHTML = '';
+    settingsSection.classList.add('hidden');
     currentMetadata = null;
     hasAudio = false;
   };
 
-  setupFileDropzone('drop-zone', 'file-input', (files) => {
-    if (files.length) updateFileInfo(files[0]);
-  });
-
-  if (payload?.sharedFiles?.length) {
-    const videoFiles = payload.sharedFiles.filter(
-      (f) => f.type.startsWith('video/') || f.name?.toLowerCase().match(/\.(mp4|webm|mov|avi|mkv)$/)
-    );
-    if (videoFiles.length > 0) {
-      updateFileInfo(videoFiles[0]);
-    }
-  }
-
   const onConvertClick = async () => {
     if (!selectedFile) return;
+    let inputName = '';
+    let outputName = '';
+    let format = outputFormat.value;
 
     try {
       btnConvert.disabled = true;
@@ -194,22 +234,18 @@ export default function init(payload?: SharedFilesPayload) {
       await loadFFmpeg();
 
       const inputExt = selectedFile.name.substring(selectedFile.name.lastIndexOf('.'));
-      const inputName = 'input' + inputExt;
-      const format = outputFormat.value;
-      const outputName = `output.${format}`;
+      inputName = 'input' + inputExt;
+      outputName = `output.${format}`;
 
-      showProgress('Writing file to memory...', { visible: true });
+      showProgress('Writing file...', { visible: true });
       await yieldToUI(true);
       await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
 
-      // Unified probe if needed (Cutting or MP3)
       if (!currentMetadata && (enableCutting.checked || format === 'mp3')) {
-        showProgress('Probing video metadata...');
+        showProgress('Probing metadata...');
         currentMetadata = await getVideoMetadata(ffmpeg, inputName);
         videoDuration = currentMetadata.duration;
         hasAudio = currentMetadata.hasAudio;
-
-        // Update UI with probed metadata
         metaDuration.innerText = `Duration: ${videoDuration.toFixed(2)}s`;
         if (currentMetadata.width && currentMetadata.height) {
           metaResolution.innerText = `Resolution: ${currentMetadata.width}x${currentMetadata.height}`;
@@ -220,18 +256,10 @@ export default function init(payload?: SharedFilesPayload) {
         if (currentMetadata.fps) metaFPS.innerText = `FPS: ${currentMetadata.fps}`;
         if (currentMetadata.sampleRate) metaSampleRate.innerText = `Sample Rate: ${currentMetadata.sampleRate}`;
         videoMetadata.classList.remove('hidden');
-
-        startVal = 0;
-        endVal = videoDuration;
-        updateSliderUI();
-
-        cutEndInput.max = videoDuration.toString();
-        cutStartInput.max = videoDuration.toString();
       }
 
-      // Check for audio if format is MP3
       if (format === 'mp3' && !hasAudio) {
-        throw new Error('This video file contains no audio streams to convert to MP3.');
+        throw new Error('File contains no audio streams.');
       }
 
       showProgress('Converting...', { visible: true });
@@ -247,12 +275,11 @@ export default function init(payload?: SharedFilesPayload) {
         copyCodec: enableCutting.checked && copyCodec.checked,
       });
 
+      console.log('FFmpeg Args:', args.join(' '));
       const exitCode = await ffmpeg.exec(args);
-      if (exitCode !== 0) {
-        throw new Error(`FFmpeg error (Exit ${exitCode})`);
-      }
+      if (exitCode !== 0) throw new Error(`FFmpeg error (Exit ${exitCode})`);
 
-      showProgress('Reading result file...', { visible: true });
+      showProgress('Reading result...', { visible: true });
       await yieldToUI(true);
       const data = await ffmpeg.readFile(outputName);
       let mimeType = `video/${format}`;
@@ -261,7 +288,7 @@ export default function init(payload?: SharedFilesPayload) {
       else if (format === 'webp') mimeType = 'image/webp';
 
       resultBlob = new Blob([data as any], { type: mimeType });
-      if (resultBlob.size === 0) throw new Error('Transcoded file is empty.');
+      if (resultBlob.size === 0) throw new Error('Result file is empty.');
 
       const url = URL.createObjectURL(resultBlob);
       resultVideo.classList.add('hidden');
@@ -271,32 +298,36 @@ export default function init(payload?: SharedFilesPayload) {
       if (format === 'gif' || format === 'webp') {
         resultImage.src = url;
         resultImage.classList.remove('hidden');
-      } else if (format === 'mp3') {
-        resultAudio.src = url;
-        resultAudio.classList.remove('hidden');
       } else {
         resultVideo.src = url;
         resultVideo.classList.remove('hidden');
+        resultVideo.load();
       }
 
+      if (currentMetadata) {
+        const resStr = (currentMetadata.width && currentMetadata.height) ? `${currentMetadata.width}x${currentMetadata.height}` : 'N/A';
+        resultMetaSummary.innerText = `${currentMetadata.vcodec || 'Video'} | ${resStr} | ${currentMetadata.duration.toFixed(2)}s`;
+        let detailsHtml = `<div><strong>Source:</strong> ${selectedFile.name}</div><div><strong>Format:</strong> ${resStr} (${currentMetadata.vcodec || 'N/A'}) @ ${currentMetadata.fps || 'N/A'} fps</div>`;
+        if (currentMetadata.acodec) detailsHtml += `<div><strong>Audio:</strong> ${currentMetadata.acodec} @ ${currentMetadata.sampleRate || 'N/A'}</div>`;
+        if (currentMetadata.bitrate) detailsHtml += `<div><strong>Bitrate:</strong> ${currentMetadata.bitrate}</div>`;
+        if (enableCutting.checked) detailsHtml += `<div class="text-primary font-bold"><strong>Cut:</strong> ${parseFloat(cutStartInput.value).toFixed(2)}s - ${parseFloat(cutEndInput.value).toFixed(2)}s</div>`;
+        resultDetails.innerHTML = detailsHtml;
+      }
       resultSection.classList.remove('hidden');
-      await ffmpeg.deleteFile(inputName);
-      await ffmpeg.deleteFile(outputName);
     } catch (error: any) {
       console.error('Transcoding failed:', error);
-      const logSummary = logCollector.getSummary();
-      const errorMsg = error.message || 'Unknown error';
-
-      errorMessage.innerText = errorMsg;
-      errorLogs.innerText = logSummary;
+      errorMessage.innerText = error.message || 'Unknown error';
+      errorLogs.innerText = logCollector.getSummary();
       errorSection.classList.remove('hidden');
       resultSection.classList.add('hidden');
-
-      showMessage('Transcoding failed: ' + (errorMsg.length > 50 ? errorMsg.substring(0, 50) + '...' : errorMsg), {
-        type: 'alert',
-        timeoutMs: 3000,
-      });
+      const logToggle = errorSection.querySelector('input[type="checkbox"]') as HTMLInputElement;
+      if (logToggle) logToggle.checked = true;
+      showMessage('Transcoding failed.', { type: 'alert' });
     } finally {
+      try {
+        if (inputName) await ffmpeg.deleteFile(inputName);
+        if (outputName) await ffmpeg.deleteFile(outputName);
+      } catch (e) { console.warn('Cleanup error:', e); }
       isTranscodingPhase = false;
       hideProgress();
       btnConvert.disabled = false;
@@ -307,136 +338,80 @@ export default function init(payload?: SharedFilesPayload) {
 
   const onDownloadClick = async () => {
     if (!resultBlob) return;
-    await downloadFile(
-      resultBlob,
-      `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`,
-      resultBlob.type
-    );
+    await downloadFile(resultBlob, `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`, resultBlob.type);
   };
 
   const onProgress = ({ progress }: { progress: number }) => {
     if (!isTranscodingPhase) return;
-    const percent = Math.round(progress * 100);
-    showProgress(`Converting... ${percent}%`);
+    showProgress(`Converting... ${Math.round(progress * 100)}%`);
     yieldToUI(true);
   };
 
-  const sliderContainer = document.getElementById('slider-container') as HTMLDivElement;
-  const sliderSelection = document.getElementById('slider-selection') as HTMLDivElement;
-  const handleStart = document.getElementById('handle-start') as HTMLDivElement;
-  const handleEnd = document.getElementById('handle-end') as HTMLDivElement;
-
-  let startVal = 0;
-  let endVal = 0;
-  let activeHandle: 'start' | 'end' | null = null;
-
-  const updateSliderUI = () => {
-    if (videoDuration <= 0) return;
-    const startPercent = (startVal / videoDuration) * 100;
-    const endPercent = (endVal / videoDuration) * 100;
-
-    handleStart.style.left = `${startPercent}%`;
-    handleEnd.style.left = `${endPercent}%`;
-    sliderSelection.style.left = `${startPercent}%`;
-    sliderSelection.style.width = `${endPercent - startPercent}%`;
-
-    cutStartInput.value = startVal.toFixed(2);
-    cutEndInput.value = endVal.toFixed(2);
-  };
-
-  const syncCuttingUI = (source: 'input' | 'slider', event?: MouseEvent | TouchEvent) => {
-    if (source === 'input') {
-      let start = parseFloat(cutStartInput.value) || 0;
-      let end = parseFloat(cutEndInput.value) || videoDuration;
-
-      if (start < 0) start = 0;
-      if (end > videoDuration && videoDuration > 0) end = videoDuration;
-      if (start > end) start = end;
-
-      startVal = start;
-      endVal = end;
-      updateSliderUI();
-    } else if (event) {
-      const rect = sliderContainer.getBoundingClientRect();
-      const x = ('touches' in event) ? event.touches[0].clientX : event.clientX;
-      let position = (x - rect.left) / rect.width;
-      if (position < 0) position = 0;
-      if (position > 1) position = 1;
-
-      const time = position * videoDuration;
-
-      if (activeHandle === 'start') {
-        startVal = Math.min(time, endVal);
-      } else if (activeHandle === 'end') {
-        endVal = Math.max(time, startVal);
-      }
-      updateSliderUI();
-    }
-
-    // Seek preview
-    if (activeHandle === 'start' || source === 'input') {
-      cutPreview.currentTime = startVal;
-    } else if (activeHandle === 'end') {
-      cutPreview.currentTime = endVal;
-    }
-  };
-
-  const onDragStart = (e: MouseEvent | TouchEvent, handle: 'start' | 'end') => {
+  const onPointerDown = (e: PointerEvent, handle: 'start' | 'end') => {
     e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
     activeHandle = handle;
     handleStart.classList.toggle('active', handle === 'start');
     handleEnd.classList.toggle('active', handle === 'end');
   };
 
-  const onDragEnd = () => {
+  const onPointerUp = (e: PointerEvent) => {
+    if (!activeHandle) return;
+    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     activeHandle = null;
     handleStart.classList.remove('active');
     handleEnd.classList.remove('active');
   };
 
-  const onDragMove = (e: MouseEvent | TouchEvent) => {
+  const onPointerMove = (e: PointerEvent) => {
     if (!activeHandle) return;
     syncCuttingUI('slider', e);
   };
 
+  ffmpeg.on('log', ({ message }) => {
+    console.log('[FFmpeg]', message);
+    logCollector.add(message);
+    if (message.includes('Audio:')) hasAudio = true;
+  });
+
+  setupFileDropzone('drop-zone', 'file-input', (files) => {
+    if (files.length) updateFileInfo(files[0]);
+  });
+
+  if (payload?.sharedFiles?.length) {
+    const videoFiles = payload.sharedFiles.filter(f => f.type.startsWith('video/') || f.name?.toLowerCase().match(/\.(mp4|webm|mov|avi|mkv)$/));
+    if (videoFiles.length > 0) updateFileInfo(videoFiles[0]);
+  }
+
   enableCutting.addEventListener('change', () => {
     const isEnabled = enableCutting.checked;
     cuttingControls.classList.toggle('hidden', !isEnabled);
-
-    // Default to lossless cutting when enabled
     if (isEnabled) {
       copyCodec.checked = true;
-      if (videoDuration === 0 && selectedFile) {
-        toggleCuttingSettings.checked = true;
-      }
+      if (videoDuration === 0 && selectedFile) toggleCuttingSettings.checked = true;
     }
   });
 
   cutStartInput.addEventListener('input', () => syncCuttingUI('input'));
   cutEndInput.addEventListener('input', () => syncCuttingUI('input'));
+  handleStart.addEventListener('pointerdown', (e) => onPointerDown(e, 'start'));
+  handleEnd.addEventListener('pointerdown', (e) => onPointerDown(e, 'end'));
+  handleStart.addEventListener('pointermove', onPointerMove);
+  handleEnd.addEventListener('pointermove', onPointerMove);
+  handleStart.addEventListener('pointerup', onPointerUp);
+  handleEnd.addEventListener('pointerup', onPointerUp);
+  handleStart.addEventListener('pointercancel', onPointerUp);
+  handleEnd.addEventListener('pointercancel', onPointerUp);
 
-  handleStart.addEventListener('mousedown', (e) => onDragStart(e, 'start'));
-  handleEnd.addEventListener('mousedown', (e) => onDragStart(e, 'end'));
-  handleStart.addEventListener('touchstart', (e) => onDragStart(e, 'start'), { passive: false });
-  handleEnd.addEventListener('touchstart', (e) => onDragStart(e, 'end'), { passive: false });
-
-  window.addEventListener('mousemove', onDragMove);
-  window.addEventListener('touchmove', onDragMove, { passive: false });
-  window.addEventListener('mouseup', onDragEnd);
-  window.addEventListener('touchend', onDragEnd);
-
-  // Click on track to focus closest handle
-  sliderContainer.addEventListener('mousedown', (e) => {
+  sliderContainer.addEventListener('pointerdown', (e) => {
     if (e.target !== handleStart && e.target !== handleEnd) {
       const rect = sliderContainer.getBoundingClientRect();
       const position = (e.clientX - rect.left) / rect.width;
       const time = position * videoDuration;
-      const distStart = Math.abs(time - startVal);
-      const distEnd = Math.abs(time - endVal);
-      activeHandle = distStart < distEnd ? 'start' : 'end';
+      const handle = Math.abs(time - startVal) < Math.abs(time - endVal) ? 'start' : 'end';
+      activeHandle = handle;
       syncCuttingUI('slider', e);
-      handleStart.classList.toggle('active', activeHandle === 'start');
-      handleEnd.classList.toggle('active', activeHandle === 'end');
+      onPointerDown(e, handle);
     }
   });
 

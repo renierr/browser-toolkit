@@ -12,25 +12,21 @@ export interface TranscodeOptions {
  */
 export function getFFmpegArgs(inputName: string, outputName: string, options: TranscodeOptions): string[] {
   const { format, preset, advancedArgs, cutStart, cutEnd, copyCodec } = options;
-  let args: string[] = [];
+  let args: string[] = ['-y', '-i', inputName];
 
-  // Add seek argument before input for fast seeking
   if (cutStart !== undefined && cutStart > 0) {
-    args.push('-ss', cutStart.toString());
+    args.push('-ss', cutStart.toFixed(3));
   }
 
-  args.push('-i', inputName);
-
-  // Add duration argument
-  if (cutEnd !== undefined && cutEnd > 0 && cutStart !== undefined) {
-    const duration = cutEnd - cutStart;
+  if (cutEnd !== undefined && cutEnd > 0) {
+    const duration = cutEnd - (cutStart || 0);
     if (duration > 0) {
-      args.push('-t', duration.toString());
+      args.push('-t', duration.toFixed(3));
     }
   }
 
   if (copyCodec) {
-    args.push('-c', 'copy');
+    args.push('-c', 'copy', '-map', '0');
   } else {
     if (format === 'mp4') {
       args.push('-c:v', 'libx264', '-preset', preset, '-crf', '23');
@@ -87,7 +83,6 @@ export async function getVideoMetadata(ffmpeg: any, inputName: string): Promise<
   let hasAudio = false;
 
   const handler = ({ message }: { message: string }) => {
-    // Duration
     const dMatch = message.match(/Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
     if (dMatch) {
       const hours = parseInt(dMatch[1], 10);
@@ -97,23 +92,20 @@ export async function getVideoMetadata(ffmpeg: any, inputName: string): Promise<
       duration = hours * 3600 + minutes * 60 + seconds + hundredths / 100;
     }
 
-    // Video stream info: "Video: h264 (Main) (avc1 / 0x31637661), yuv420p(progressive), 1920x1080 [SAR 1:1 DAR 16:9], 2297 kb/s, 23.98 fps, 23.98 tbr, 24k tbn (default)"
-    const vMatch = message.match(/Video: ([^,]+), [^,]+, (\d{2,})x(\d{2,}).*?, ([\d.]+) fps/);
-    if (vMatch) {
-      vcodec = vMatch[1];
-      width = parseInt(vMatch[2], 10);
-      height = parseInt(vMatch[3], 10);
-      fps = vMatch[4];
-    } else {
-      // Fallback for resolution if FPS match fails
-      const resMatch = message.match(/Video: .*? (\d{2,})x(\d{2,})/);
-      if (resMatch && !width) {
+    if (message.includes('Video:')) {
+      const codecMatch = message.match(/Video:\s+([^, (]+)/);
+      if (codecMatch) vcodec = codecMatch[1];
+
+      const resMatch = message.match(/(\d{3,})x(\d{2,})/);
+      if (resMatch) {
         width = parseInt(resMatch[1], 10);
         height = parseInt(resMatch[2], 10);
       }
+
+      const fpsMatch = message.match(/([\d\.]+)\s+fps/);
+      if (fpsMatch) fps = fpsMatch[1];
     }
 
-    // Audio stream info: "Audio: aac (LC) (mp4a / 0x6134706D), 48000 Hz, stereo, fltp, 128 kb/s (default)"
     const aMatch = message.match(/Audio: ([^,]+), (\d+ Hz)/);
     if (aMatch) {
       acodec = aMatch[1];
@@ -123,8 +115,7 @@ export async function getVideoMetadata(ffmpeg: any, inputName: string): Promise<
       hasAudio = true;
     }
 
-    // Bitrate
-    const bMatch = message.match(/bitrate: (\d+ kb\/s)/);
+    const bMatch = message.match(/bitrate: (\d+ kb\/s)/) || message.match(/, (\d+ kb\/s)/);
     if (bMatch) {
       bitrate = bMatch[1];
     }
@@ -133,8 +124,6 @@ export async function getVideoMetadata(ffmpeg: any, inputName: string): Promise<
   ffmpeg.on('log', handler);
   try {
     await ffmpeg.exec(['-i', inputName]);
-  } catch (e) {
-    // FFmpeg returns error 1 because no output is specified
   } finally {
     ffmpeg.off('log', handler);
   }
@@ -147,7 +136,7 @@ export async function getVideoMetadata(ffmpeg: any, inputName: string): Promise<
  */
 export class FFmpegLogCollector {
   private logs: string[] = [];
-  private maxLines = 20;
+  private maxLines = 200;
 
   add(message: string) {
     this.logs.push(message);
