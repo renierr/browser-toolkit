@@ -33,6 +33,10 @@
           <i data-lucide="download" class="w-4 h-4 mr-2"></i>
           Download PNG
         </button>
+        <button id="btn-download-svg" class="btn btn-outline flex-1 sm:flex-none">
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+          Download SVG
+        </button>
         <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
       </div>
 
@@ -44,10 +48,8 @@
 
       <!-- Result Section -->
       <div id="result-section" class="hidden mt-4">
-        <div class="bg-base-200 rounded-xl p-8 flex items-center justify-center overflow-auto min-h-[200px] border border-base-300">
-          <div id="diagram-container" class="bg-white rounded shadow-sm p-4">
-            <!-- Diagram will be injected here -->
-          </div>
+        <div id="diagram-container" class="bg-white rounded shadow-sm p-4 railroad-background">
+          <!-- Diagram will be injected here -->
         </div>
       </div>
     </div>
