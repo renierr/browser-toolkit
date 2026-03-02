@@ -11,6 +11,7 @@ export default function init(payload?: SharedFilesPayload) {
   const editorContainer = document.getElementById('editor-container')!;
 
   const hexViewer = document.getElementById('hex-viewer')!;
+  const hexKeyboardInput = document.getElementById('hex-keyboard-input') as HTMLInputElement;
   const hexVisibleRows = document.getElementById('hex-visible-rows')!;
   const hexStretcher = document.getElementById('hex-stretcher')!;
   const hexViewerOverlay = document.getElementById('hex-viewer-overlay')!;
@@ -93,7 +94,7 @@ export default function init(payload?: SharedFilesPayload) {
       updateStatus();
       await renderVisibleLines(true);
 
-      setTimeout(() => hexViewer.focus(), 100);
+      setTimeout(() => hexKeyboardInput.focus(), 100);
     } catch (err) {
       console.error(err);
       showMessage('Error analyzing file', { type: 'alert' });
@@ -216,7 +217,7 @@ export default function init(payload?: SharedFilesPayload) {
     hexViewer.scrollTop = scrollPos;
     renderVisibleLines(true);
     updateStatus();
-    hexViewer.focus();
+    hexKeyboardInput.focus();
   };
 
   const performSearch = async (startAt: number = 0) => {
@@ -295,13 +296,15 @@ export default function init(payload?: SharedFilesPayload) {
       searchMatch = null;
       updateStatus();
       renderVisibleLines(true);
-      hexViewer.focus();
+      hexKeyboardInput.focus();
     }
   };
 
-  hexViewer.onkeydown = async (e) => {
+  hexKeyboardInput.onkeydown = async (e) => {
     if (!bufferManager || selectedOffset === null || editModal.open) return;
-    if (e.target instanceof HTMLInputElement) return;
+
+    // Don't intercept if focus is in search input
+    if (document.activeElement === searchInput) return;
 
     let handled = true;
     switch (e.key) {
@@ -343,6 +346,15 @@ export default function init(payload?: SharedFilesPayload) {
       }
       e.preventDefault();
     }
+
+    // Keep input empty to prevent text accumulation
+    hexKeyboardInput.value = '';
+  };
+
+  hexViewer.onclick = () => hexKeyboardInput.focus();
+
+  hexKeyboardInput.oninput = () => {
+    hexKeyboardInput.value = '';
   };
 
   const openEditModal = async (offset: number) => {
@@ -384,14 +396,14 @@ export default function init(payload?: SharedFilesPayload) {
         bufferManager.setByte(selectedOffset, val);
         renderVisibleLines(true);
         editModal.close();
-        hexViewer.focus();
+        hexKeyboardInput.focus();
       }
     }
   };
 
   cancelEdit.onclick = () => {
     editModal.close();
-    hexViewer.focus();
+    hexKeyboardInput.focus();
   };
 
   btnReset.onclick = () => {
@@ -432,8 +444,9 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   return () => {
-    hexViewer.onkeydown = null;
-    hexViewer.onscroll = null;
+    hexKeyboardInput.onkeydown = null;
+    hexKeyboardInput.oninput = null;
     hexViewer.onclick = null;
+    hexViewer.onscroll = null;
   };
 }

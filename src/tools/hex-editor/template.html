@@ -175,6 +175,11 @@
       </div>
 
       <div id="hex-viewer" tabindex="0" class="select-none font-mono relative">
+        <!-- Hidden input to trigger virtual keyboard on mobile and capture desktop keys -->
+        <input type="text" id="hex-keyboard-input" 
+          class="absolute opacity-0 pointer-events-none w-0 h-0" 
+          inputmode="text" autocorrect="off" autocapitalize="none" spellcheck="false" autocomplete="off" />
+
         <div id="hex-content" class="relative">
           <div id="hex-stretcher" style="width: 1px; visibility: hidden;"></div>
           <div id="hex-visible-rows" class="absolute top-0 left-0 w-full flex flex-col will-change-transform">
