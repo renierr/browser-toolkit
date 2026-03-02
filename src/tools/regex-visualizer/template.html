@@ -48,7 +48,9 @@
 
       <!-- Result Section -->
       <div id="result-section" class="hidden mt-4">
-        <div id="diagram-container" class="bg-white rounded shadow-sm p-4 railroad-background">
+        <div id="diagram-container" class="bg-white rounded shadow-sm p-4 grid justify-items-center items-start overflow-auto max-h-[60vh]">
+          <!-- Keep SVG at its intrinsic size so overflow produces scrollbars instead of scaling it down -->
+          <style>#diagram-container svg{display:block;max-width:none;height:auto;} #diagram-container svg *{vector-effect: non-scaling-stroke;}</style>
           <!-- Diagram will be injected here -->
         </div>
       </div>
