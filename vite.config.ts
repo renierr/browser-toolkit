@@ -11,20 +11,6 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   base: './',
-  server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Resource-Policy': 'cross-origin',
-    },
-  },
-  preview: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
-      'Cross-Origin-Resource-Policy': 'cross-origin',
-    },
-  },
   plugins: [
     wasm(),
     topLevelAwait(),
@@ -41,7 +27,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
-        importScripts: ['./sw-coi.js', './sw-share-target.js', './sw-timer.js'],
+        importScripts: ['./sw-share-target.js', './sw-timer.js'],
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
         runtimeCaching: [
           {
