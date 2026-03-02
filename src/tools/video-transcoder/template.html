@@ -1,16 +1,19 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">Video Transcoder</h2>
-    <p class="text-base-content/70 mb-6">Convert video files to different formats or compress them. All processing happens locally in your browser.<br>
-      Since this is local in your Browser keep in mind that this transcoder is not meant for very large files. It is best suited for small or medium sized files.<br>
-      The transcoder uses <a href="https://ffmpeg.org/" target="_blank">FFmpeg</a> to transcode the video. with the WASM version of FFmpeg. So no GPU acceleration is used, all runs in CPU.
+    <p class="text-base-content/70 mb-6">Convert video files to different formats or compress them. All processing
+      happens locally in your browser.<br>
+      Since this is local in your Browser keep in mind that this transcoder is not meant for very large files. It is
+      best suited for small or medium sized files.<br>
+      The transcoder uses <a href="https://ffmpeg.org/" target="_blank">FFmpeg</a> to transcode the video. with the WASM
+      version of FFmpeg. So no GPU acceleration is used, all runs in CPU.
     </p>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <!-- Input Section -->
       <div class="flex flex-col gap-4">
         <div id="drop-zone"
-             class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-64">
+          class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-64">
           <div class="flex flex-col items-center gap-2">
             <div class="text-base-content/30 text-4xl">
               <i data-lucide="upload-cloud"></i>
@@ -60,6 +63,124 @@
         </div>
 
         <div class="collapse collapse-arrow bg-base-200 mt-2">
+          <input type="checkbox" id="toggle-cutting-settings" />
+          <div class="collapse-title font-semibold text-sm">
+            Cutting & Truncating
+          </div>
+          <div class="collapse-content flex flex-col gap-4">
+            <div class="form-control">
+              <label class="label cursor-pointer justify-start gap-3">
+                <input type="checkbox" id="enable-cutting" class="checkbox checkbox-primary" />
+                <span class="label-text">Enable Cutting</span>
+              </label>
+            </div>
+
+            <div id="cutting-controls" class="hidden flex flex-col gap-4 p-4 bg-base-300 rounded-lg">
+              <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-3">
+                  <input type="checkbox" id="copy-codec" class="checkbox checkbox-secondary" />
+                  <span class="label-text">No Transcoding (Lossless Cut)</span>
+                </label>
+                <label class="label pb-0">
+                  <span class="label-text-alt text-base-content/60">Keep original video/audio quality. Much faster, but
+                    may not work with all formats.</span>
+                </label>
+              </div>
+
+              <div class="grid grid-cols-2 gap-4">
+                <div class="form-control w-full">
+                  <label class="label">
+                    <span class="label-text font-semibold text-xs">Start Time (s)</span>
+                  </label>
+                  <input type="number" id="cut-start" class="input input-bordered input-sm w-full" value="0" step="0.1"
+                    min="0" />
+                </div>
+                <div class="form-control w-full">
+                  <label class="label">
+                    <span class="label-text font-semibold text-xs">End Time (s)</span>
+                  </label>
+                  <input type="number" id="cut-end" class="input input-bordered input-sm w-full" value="0" step="0.1"
+                    min="0" />
+                </div>
+              </div>
+
+              <div id="video-metadata" class="hidden text-[10px] bg-base-100 p-2 rounded border border-base-content/10">
+                <div class="grid grid-cols-2 gap-x-4 gap-y-1">
+                  <span id="meta-duration" class="font-mono text-primary font-bold"></span>
+                  <span id="meta-resolution" class="font-mono text-right font-bold"></span>
+                  <span id="meta-vcodec" class="font-mono"></span>
+                  <span id="meta-acodec" class="font-mono text-right"></span>
+                  <span id="meta-fps" class="font-mono"></span>
+                  <span id="meta-samplerate" class="font-mono text-right"></span>
+                  <span id="meta-bitrate"
+                    class="font-mono col-span-2 text-center border-t border-base-content/5 mt-1 pt-1"></span>
+                </div>
+              </div>
+
+              <style>
+                .range-slider-fixed {
+                  position: relative;
+                  height: 1.5rem;
+                  width: 100%;
+                }
+
+                .range-slider-fixed input[type=range] {
+                  position: absolute;
+                  width: 100%;
+                  pointer-events: none;
+                  appearance: none;
+                  background: transparent;
+                  margin: 0;
+                  padding: 0;
+                  height: 100%;
+                }
+
+                /* Thumb pointer events override */
+                .range-slider-fixed input[type=range]::-webkit-slider-thumb {
+                  pointer-events: auto;
+                  cursor: pointer;
+                  z-index: 30;
+                  /* Ensure active thumb is high */
+                  position: relative;
+                }
+
+                .range-slider-fixed input[type=range]::-moz-range-thumb {
+                  pointer-events: auto;
+                  cursor: pointer;
+                  z-index: 30;
+                  position: relative;
+                }
+
+                /* Track styling for daisyUI range */
+                .range-slider-fixed .range-track {
+                  height: 0.25rem;
+                  width: 100%;
+                  background: hsl(var(--bc) / 0.1);
+                  border-radius: 9999px;
+                  position: absolute;
+                  top: calc(50% - 0.125rem);
+                }
+              </style>
+
+              <div class="flex flex-col gap-2 mt-2">
+                <div class="w-full aspect-video bg-black rounded-lg overflow-hidden mb-2 hidden" id="preview-container">
+                  <video id="cut-preview" class="w-full h-full" muted></video>
+                </div>
+                <div id="range-container" class="range-slider-fixed bg-base-200 rounded-full flex items-center px-0">
+                  <div class="range-track mx-1"></div>
+                  <input type="range" id="range-start" class="range range-xs range-primary !static w-full px-1" min="0"
+                    max="100" value="0" step="0.1" />
+                  <input type="range" id="range-end" class="range range-xs range-secondary !static w-full px-1" min="0"
+                    max="100" value="100" step="0.1" />
+                </div>
+                <p class="text-[10px] text-center text-base-content/50 font-medium">Drag markers. The handle closest to
+                  your click will be selected.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="collapse collapse-arrow bg-base-200 mt-2">
           <input type="checkbox" />
           <div class="collapse-title font-semibold text-sm">
             Advanced Options
@@ -104,29 +225,30 @@
         </div>
       </div>
     </div>
-    </div>
+  </div>
 
-    <!-- Error Section -->
-    <div id="error-section" class="hidden mt-8 pt-8 border-t border-error/30">
-      <div class="alert alert-error shadow-sm mb-4">
-        <div class="flex items-center gap-2 text-error-content">
-          <i data-lucide="alert-circle" class="w-6 h-6"></i>
-          <div>
-            <h3 class="font-bold">Transcoding Failed</h3>
-            <div id="error-message" class="text-sm"></div>
-          </div>
+  <!-- Error Section -->
+  <div id="error-section" class="hidden mt-8 pt-8 border-t border-error/30">
+    <div class="alert alert-error shadow-sm mb-4">
+      <div class="flex items-center gap-2 text-error-content">
+        <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        <div>
+          <h3 class="font-bold">Transcoding Failed</h3>
+          <div id="error-message" class="text-sm"></div>
         </div>
       </div>
-      
-      <div class="collapse collapse-arrow bg-base-200 border border-base-300">
-        <input type="checkbox" />
-        <div class="collapse-title font-semibold text-sm">
-          Execution Logs
-        </div>
-        <div class="collapse-content">
-          <pre id="error-logs" class="text-[10px] leading-tight font-mono p-4 bg-neutral text-neutral-content rounded-lg overflow-auto max-h-64 whitespace-pre-wrap"></pre>
-        </div>
+    </div>
+
+    <div class="collapse collapse-arrow bg-base-200 border border-base-300">
+      <input type="checkbox" />
+      <div class="collapse-title font-semibold text-sm">
+        Execution Logs
+      </div>
+      <div class="collapse-content">
+        <pre id="error-logs"
+          class="text-[10px] leading-tight font-mono p-4 bg-neutral text-neutral-content rounded-lg overflow-auto max-h-64 whitespace-pre-wrap"></pre>
       </div>
     </div>
   </div>
+</div>
 </div>
