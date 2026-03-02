@@ -40,10 +40,8 @@ export default function init(payload?: SharedFilesPayload) {
   const cuttingControls = document.getElementById('cutting-controls') as HTMLDivElement;
   const cutStartInput = document.getElementById('cut-start') as HTMLInputElement;
   const cutEndInput = document.getElementById('cut-end') as HTMLInputElement;
-  const rangeStart = document.getElementById('range-start') as HTMLInputElement;
-  const rangeEnd = document.getElementById('range-end') as HTMLInputElement;
-  const toggleCuttingSettings = document.getElementById('toggle-cutting-settings') as HTMLInputElement;
   const cutPreview = document.getElementById('cut-preview') as HTMLVideoElement;
+  const toggleCuttingSettings = document.getElementById('toggle-cutting-settings') as HTMLInputElement;
   const previewContainer = document.getElementById('preview-container') as HTMLDivElement;
   const metaDuration = document.getElementById('meta-duration') as HTMLSpanElement;
   const metaResolution = document.getElementById('meta-resolution') as HTMLSpanElement;
@@ -53,7 +51,6 @@ export default function init(payload?: SharedFilesPayload) {
   const metaFPS = document.getElementById('meta-fps') as HTMLSpanElement;
   const metaSampleRate = document.getElementById('meta-samplerate') as HTMLSpanElement;
   const videoMetadata = document.getElementById('video-metadata') as HTMLDivElement;
-  const rangeContainer = document.getElementById('range-container') as HTMLDivElement;
 
   let selectedFile: File | null = null;
   let resultBlob: Blob | null = null;
@@ -106,8 +103,6 @@ export default function init(payload?: SharedFilesPayload) {
     cuttingControls.classList.add('hidden');
     cutStartInput.value = '0';
     cutEndInput.value = '0';
-    rangeStart.value = '0';
-    rangeEnd.value = '100';
     videoDuration = 0;
 
     // Setup preview
@@ -131,12 +126,12 @@ export default function init(payload?: SharedFilesPayload) {
       metaSampleRate.innerText = '';
       videoMetadata.classList.remove('hidden');
 
-      cutEndInput.value = videoDuration.toFixed(2);
+      startVal = 0;
+      endVal = videoDuration;
+      updateSliderUI();
+
       cutEndInput.max = videoDuration.toString();
       cutStartInput.max = videoDuration.toString();
-      rangeStart.max = videoDuration.toString();
-      rangeEnd.max = videoDuration.toString();
-      rangeEnd.value = videoDuration.toString();
     };
   };
 
@@ -226,12 +221,12 @@ export default function init(payload?: SharedFilesPayload) {
         if (currentMetadata.sampleRate) metaSampleRate.innerText = `Sample Rate: ${currentMetadata.sampleRate}`;
         videoMetadata.classList.remove('hidden');
 
-        cutEndInput.value = videoDuration.toFixed(2);
+        startVal = 0;
+        endVal = videoDuration;
+        updateSliderUI();
+
         cutEndInput.max = videoDuration.toString();
         cutStartInput.max = videoDuration.toString();
-        rangeStart.max = videoDuration.toString();
-        rangeEnd.max = videoDuration.toString();
-        rangeEnd.value = videoDuration.toString();
       }
 
       // Check for audio if format is MP3
@@ -326,96 +321,124 @@ export default function init(payload?: SharedFilesPayload) {
     yieldToUI(true);
   };
 
-  const syncCuttingUI = (source: 'input' | 'range', event?: Event) => {
-    let start = parseFloat(rangeStart.value);
-    let end = parseFloat(rangeEnd.value);
+  const sliderContainer = document.getElementById('slider-container') as HTMLDivElement;
+  const sliderSelection = document.getElementById('slider-selection') as HTMLDivElement;
+  const handleStart = document.getElementById('handle-start') as HTMLDivElement;
+  const handleEnd = document.getElementById('handle-end') as HTMLDivElement;
 
+  let startVal = 0;
+  let endVal = 0;
+  let activeHandle: 'start' | 'end' | null = null;
+
+  const updateSliderUI = () => {
+    if (videoDuration <= 0) return;
+    const startPercent = (startVal / videoDuration) * 100;
+    const endPercent = (endVal / videoDuration) * 100;
+
+    handleStart.style.left = `${startPercent}%`;
+    handleEnd.style.left = `${endPercent}%`;
+    sliderSelection.style.left = `${startPercent}%`;
+    sliderSelection.style.width = `${endPercent - startPercent}%`;
+
+    cutStartInput.value = startVal.toFixed(2);
+    cutEndInput.value = endVal.toFixed(2);
+  };
+
+  const syncCuttingUI = (source: 'input' | 'slider', event?: MouseEvent | TouchEvent) => {
     if (source === 'input') {
-      start = parseFloat(cutStartInput.value) || 0;
-      end = parseFloat(cutEndInput.value) || videoDuration;
+      let start = parseFloat(cutStartInput.value) || 0;
+      let end = parseFloat(cutEndInput.value) || videoDuration;
 
       if (start < 0) start = 0;
       if (end > videoDuration && videoDuration > 0) end = videoDuration;
       if (start > end) start = end;
 
-      rangeStart.value = start.toString();
-      rangeEnd.value = end.toString();
+      startVal = start;
+      endVal = end;
+      updateSliderUI();
     } else if (event) {
-      const target = event.target as HTMLInputElement;
-      if (target === rangeStart) {
-        if (start > end) {
-          start = end;
-          rangeStart.value = start.toString();
-        }
-        // Change order based on which one is active
-        rangeStart.classList.add('z-20');
-        rangeStart.classList.remove('z-10');
-        rangeEnd.classList.add('z-10');
-        rangeEnd.classList.remove('z-20');
-      } else {
-        if (end < start) {
-          end = start;
-          rangeEnd.value = end.toString();
-        }
-        // Change order based on which one is active
-        rangeEnd.classList.add('z-20');
-        rangeEnd.classList.remove('z-10');
-        rangeStart.classList.add('z-10');
-        rangeStart.classList.remove('z-20');
-      }
+      const rect = sliderContainer.getBoundingClientRect();
+      const x = ('touches' in event) ? event.touches[0].clientX : event.clientX;
+      let position = (x - rect.left) / rect.width;
+      if (position < 0) position = 0;
+      if (position > 1) position = 1;
 
-      cutStartInput.value = start.toFixed(2);
-      cutEndInput.value = end.toFixed(2);
+      const time = position * videoDuration;
+
+      if (activeHandle === 'start') {
+        startVal = Math.min(time, endVal);
+      } else if (activeHandle === 'end') {
+        endVal = Math.max(time, startVal);
+      }
+      updateSliderUI();
     }
 
     // Seek preview
-    if (event?.target === rangeStart || source === 'input' && event?.target === cutStartInput) {
-      cutPreview.currentTime = start;
-    } else {
-      cutPreview.currentTime = end;
+    if (activeHandle === 'start' || source === 'input') {
+      cutPreview.currentTime = startVal;
+    } else if (activeHandle === 'end') {
+      cutPreview.currentTime = endVal;
     }
   };
 
-  /**
-   * Proximity-based z-index switching for the dual range slider.
-   */
-  const handleSliderProximity = (e: MouseEvent | TouchEvent) => {
-    if (videoDuration === 0) return;
+  const onDragStart = (e: MouseEvent | TouchEvent, handle: 'start' | 'end') => {
+    e.preventDefault();
+    activeHandle = handle;
+    handleStart.classList.toggle('active', handle === 'start');
+    handleEnd.classList.toggle('active', handle === 'end');
+  };
 
-    const rect = rangeContainer.getBoundingClientRect();
-    const x = ('touches' in e) ? e.touches[0].clientX : e.clientX;
-    const position = (x - rect.left) / rect.width;
-    const currentTime = position * videoDuration;
+  const onDragEnd = () => {
+    activeHandle = null;
+    handleStart.classList.remove('active');
+    handleEnd.classList.remove('active');
+  };
 
-    const startVal = parseFloat(rangeStart.value);
-    const endVal = parseFloat(rangeEnd.value);
-
-    const distStart = Math.abs(currentTime - startVal);
-    const distEnd = Math.abs(currentTime - endVal);
-
-    if (distStart < distEnd) {
-      rangeStart.style.zIndex = '40';
-      rangeEnd.style.zIndex = '30';
-    } else {
-      rangeStart.style.zIndex = '30';
-      rangeEnd.style.zIndex = '40';
-    }
+  const onDragMove = (e: MouseEvent | TouchEvent) => {
+    if (!activeHandle) return;
+    syncCuttingUI('slider', e);
   };
 
   enableCutting.addEventListener('change', () => {
-    cuttingControls.classList.toggle('hidden', !enableCutting.checked);
-    if (enableCutting.checked && videoDuration === 0 && selectedFile) {
-      toggleCuttingSettings.checked = true;
+    const isEnabled = enableCutting.checked;
+    cuttingControls.classList.toggle('hidden', !isEnabled);
+
+    // Default to lossless cutting when enabled
+    if (isEnabled) {
+      copyCodec.checked = true;
+      if (videoDuration === 0 && selectedFile) {
+        toggleCuttingSettings.checked = true;
+      }
     }
   });
 
-  cutStartInput.addEventListener('input', (e) => syncCuttingUI('input', e));
-  cutEndInput.addEventListener('input', (e) => syncCuttingUI('input', e));
-  rangeStart.addEventListener('input', (e) => syncCuttingUI('range', e));
-  rangeEnd.addEventListener('input', (e) => syncCuttingUI('range', e));
+  cutStartInput.addEventListener('input', () => syncCuttingUI('input'));
+  cutEndInput.addEventListener('input', () => syncCuttingUI('input'));
 
-  rangeContainer.addEventListener('mousedown', handleSliderProximity);
-  rangeContainer.addEventListener('touchstart', handleSliderProximity, { passive: true });
+  handleStart.addEventListener('mousedown', (e) => onDragStart(e, 'start'));
+  handleEnd.addEventListener('mousedown', (e) => onDragStart(e, 'end'));
+  handleStart.addEventListener('touchstart', (e) => onDragStart(e, 'start'), { passive: false });
+  handleEnd.addEventListener('touchstart', (e) => onDragStart(e, 'end'), { passive: false });
+
+  window.addEventListener('mousemove', onDragMove);
+  window.addEventListener('touchmove', onDragMove, { passive: false });
+  window.addEventListener('mouseup', onDragEnd);
+  window.addEventListener('touchend', onDragEnd);
+
+  // Click on track to focus closest handle
+  sliderContainer.addEventListener('mousedown', (e) => {
+    if (e.target !== handleStart && e.target !== handleEnd) {
+      const rect = sliderContainer.getBoundingClientRect();
+      const position = (e.clientX - rect.left) / rect.width;
+      const time = position * videoDuration;
+      const distStart = Math.abs(time - startVal);
+      const distEnd = Math.abs(time - endVal);
+      activeHandle = distStart < distEnd ? 'start' : 'end';
+      syncCuttingUI('slider', e);
+      handleStart.classList.toggle('active', activeHandle === 'start');
+      handleEnd.classList.toggle('active', activeHandle === 'end');
+    }
+  });
 
   btnRemove.addEventListener('click', resetUI);
   btnClear.addEventListener('click', resetUI);

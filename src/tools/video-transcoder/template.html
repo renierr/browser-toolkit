@@ -118,47 +118,66 @@
               </div>
 
               <style>
-                .range-slider-fixed {
+                .custom-range-slider {
                   position: relative;
                   height: 1.5rem;
                   width: 100%;
+                  user-select: none;
                 }
 
-                .range-slider-fixed input[type=range] {
+                .slider-track {
                   position: absolute;
-                  width: 100%;
-                  pointer-events: none;
-                  appearance: none;
-                  background: transparent;
-                  margin: 0;
-                  padding: 0;
-                  height: 100%;
-                }
-
-                /* Thumb pointer events override */
-                .range-slider-fixed input[type=range]::-webkit-slider-thumb {
-                  pointer-events: auto;
-                  cursor: pointer;
-                  z-index: 30;
-                  /* Ensure active thumb is high */
-                  position: relative;
-                }
-
-                .range-slider-fixed input[type=range]::-moz-range-thumb {
-                  pointer-events: auto;
-                  cursor: pointer;
-                  z-index: 30;
-                  position: relative;
-                }
-
-                /* Track styling for daisyUI range */
-                .range-slider-fixed .range-track {
-                  height: 0.25rem;
-                  width: 100%;
+                  top: 50%;
+                  left: 0;
+                  right: 0;
+                  height: 0.5rem;
                   background: hsl(var(--bc) / 0.1);
                   border-radius: 9999px;
+                  transform: translateY(-50%);
+                  pointer-events: none;
+                }
+
+                .slider-selection {
                   position: absolute;
-                  top: calc(50% - 0.125rem);
+                  top: 50%;
+                  height: 0.5rem;
+                  background: hsl(var(--p));
+                  border-radius: 9999px;
+                  transform: translateY(-50%);
+                  pointer-events: none;
+                }
+
+                .slider-handle {
+                  position: absolute;
+                  top: 50%;
+                  width: 1.25rem;
+                  height: 1.25rem;
+                  background: white;
+                  border: 2px solid hsl(var(--p));
+                  border-radius: 50%;
+                  transform: translate(-50%, -50%);
+                  cursor: grab;
+                  z-index: 10;
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                  transition: transform 0.1s;
+                }
+
+                .slider-handle:active {
+                  cursor: grabbing;
+                  transform: translate(-50%, -50%) scale(1.1);
+                }
+
+                .slider-handle.handle-end {
+                  border-color: hsl(var(--s));
+                }
+
+                .slider-handle.active {
+                  z-index: 20;
+                  box-shadow: 0 0 0 4px hsl(var(--p) / 0.2);
+                }
+
+                .slider-handle.handle-end.active {
+                  box-shadow: 0 0 0 4px hsl(var(--s) / 0.2);
                 }
               </style>
 
@@ -166,15 +185,14 @@
                 <div class="w-full aspect-video bg-black rounded-lg overflow-hidden mb-2 hidden" id="preview-container">
                   <video id="cut-preview" class="w-full h-full" muted></video>
                 </div>
-                <div id="range-container" class="range-slider-fixed bg-base-200 rounded-full flex items-center px-0">
-                  <div class="range-track mx-1"></div>
-                  <input type="range" id="range-start" class="range range-xs range-primary !static w-full px-1" min="0"
-                    max="100" value="0" step="0.1" />
-                  <input type="range" id="range-end" class="range range-xs range-secondary !static w-full px-1" min="0"
-                    max="100" value="100" step="0.1" />
+                <div id="slider-container" class="custom-range-slider bg-base-200 rounded-lg p-1">
+                  <div class="slider-track"></div>
+                  <div id="slider-selection" class="slider-selection"></div>
+                  <div id="handle-start" class="slider-handle handle-start"></div>
+                  <div id="handle-end" class="slider-handle handle-end"></div>
                 </div>
-                <p class="text-[10px] text-center text-base-content/50 font-medium">Drag markers. The handle closest to
-                  your click will be selected.</p>
+                <p class="text-[10px] text-center text-base-content/50 font-medium pt-1">Drag handles to select
+                  start/end. Selection area is kept.</p>
               </div>
             </div>
           </div>
