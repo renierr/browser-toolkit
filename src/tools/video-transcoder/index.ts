@@ -238,7 +238,7 @@ export default function init(payload?: SharedFilesPayload) {
 
       showProgress('Writing file...', { visible: true });
       await yieldToUI(true);
-      await ffmpeg.writeFile(inputName, selectedFile);
+      await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
 
       if (!currentMetadata && (enableCutting.checked || format === 'mp3')) {
         showProgress('Probing metadata...');
