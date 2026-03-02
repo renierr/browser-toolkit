@@ -34,7 +34,7 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
       args.push('-map', '0:v?', '-map', '0:a?');
       args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
     } else if (format === 'webm') {
-      args.push('-c:v', 'libvpx-vp9', '-crf', '30', '-b:v', '0');
+      args.push('-c:v', 'libvpx-vp9', '-crf', '32', '-b:v', '0', '-row-mt', '1', '-speed', '4', '-deadline', 'realtime');
       args.push('-c:a', 'libopus');
       args.push('-map', '0:v?', '-map', '0:a?');
       args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');

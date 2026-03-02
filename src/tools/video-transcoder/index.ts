@@ -62,6 +62,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   let selectedFile: File | null = null;
   let resultBlob: Blob | null = null;
+  let resultUrl: string | null = null;
   let isTranscodingPhase = false;
   let hasAudio = false;
   let videoDuration = 0;
@@ -188,12 +189,10 @@ export default function init(payload?: SharedFilesPayload) {
     resultSection.classList.add('hidden');
     errorSection.classList.add('hidden');
     hideProgress();
-    resultVideo.src = '';
-    resultImage.src = '';
-    resultAudio.src = '';
-    resultVideo.classList.add('hidden');
-    resultImage.classList.add('hidden');
-    resultAudio.classList.add('hidden');
+    if (resultUrl) {
+      URL.revokeObjectURL(resultUrl);
+      resultUrl = null;
+    }
     resultBlob = null;
     logCollector.clear();
 
@@ -290,16 +289,18 @@ export default function init(payload?: SharedFilesPayload) {
       resultBlob = new Blob([data as any], { type: mimeType });
       if (resultBlob.size === 0) throw new Error('Result file is empty.');
 
-      const url = URL.createObjectURL(resultBlob);
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+      resultUrl = URL.createObjectURL(resultBlob);
+
       resultVideo.classList.add('hidden');
       resultImage.classList.add('hidden');
       resultAudio.classList.add('hidden');
 
       if (format === 'gif' || format === 'webp') {
-        resultImage.src = url;
+        resultImage.src = resultUrl;
         resultImage.classList.remove('hidden');
       } else {
-        resultVideo.src = url;
+        resultVideo.src = resultUrl;
         resultVideo.classList.remove('hidden');
         resultVideo.load();
       }
@@ -316,13 +317,22 @@ export default function init(payload?: SharedFilesPayload) {
       resultSection.classList.remove('hidden');
     } catch (error: any) {
       console.error('Transcoding failed:', error);
-      errorMessage.innerText = error.message || 'Unknown error';
+      let errorMsg = 'Unknown error';
+      if (typeof error === 'string') {
+        errorMsg = error;
+      } else if (error instanceof Error) {
+        errorMsg = error.message || error.toString();
+      } else if (error && typeof error.toString === 'function') {
+        errorMsg = error.toString();
+      }
+
+      errorMessage.innerText = errorMsg;
       errorLogs.innerText = logCollector.getSummary();
       errorSection.classList.remove('hidden');
       resultSection.classList.add('hidden');
       const logToggle = errorSection.querySelector('input[type="checkbox"]') as HTMLInputElement;
       if (logToggle) logToggle.checked = true;
-      showMessage('Transcoding failed.', { type: 'alert' });
+      showMessage('Transcoding failed: ' + (errorMsg.length > 60 ? errorMsg.substring(0, 60) + '...' : errorMsg), { type: 'alert' });
     } finally {
       try {
         if (inputName) await ffmpeg.deleteFile(inputName);
