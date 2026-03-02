@@ -160,10 +160,14 @@ export default function init() {
           setActionButtonsEnabled(true);
         } else {
           // Some renderers insert SVG asynchronously; watch for added nodes as a fallback
-          const mo = new MutationObserver((mutations, obs) => {
+          const mo = new MutationObserver((_mutations, obs) => {
             const s = diagramContainer.querySelector('svg') as SVGElement | null;
             if (s) {
-              try { scopeSvgStyles(s); } catch (e) { /* ignore */ }
+              try {
+                scopeSvgStyles(s);
+              } catch (e) {
+                /* ignore */
+              }
               setActionButtonsEnabled(true);
               obs.disconnect();
             }
