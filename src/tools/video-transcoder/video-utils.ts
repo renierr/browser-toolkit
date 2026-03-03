@@ -13,11 +13,14 @@ export interface TranscodeOptions {
  */
 export function getFFmpegArgs(inputName: string, outputName: string, options: TranscodeOptions): string[] {
   const { format, preset, advancedArgs, cutStart, cutEnd, copyCodec, maxResolution } = options;
-  let args: string[] = ['-y', '-i', inputName];
+  let args: string[] = ['-y'];
 
+  // Place -ss BEFORE -i for fast input seeking (skips decoding prior frames → less memory)
   if (cutStart !== undefined && cutStart > 0) {
     args.push('-ss', cutStart.toFixed(3));
   }
+
+  args.push('-i', inputName);
 
   if (cutEnd !== undefined && cutEnd > 0) {
     const duration = cutEnd - (cutStart || 0);
@@ -38,13 +41,21 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
   } else {
     if (format === 'mp4') {
       args.push('-threads', '1');
-      args.push('-c:v', 'libx264', '-preset', preset, '-crf', '23');
+      args.push('-c:v', 'libx264', '-preset', preset, '-crf', '23', '-pix_fmt', 'yuv420p');
       args.push('-c:a', 'aac', '-b:a', '128k');
       args.push('-map', '0:v?', '-map', '0:a?');
       args.push('-vf', scaleFilter);
     } else if (format === 'webm') {
       args.push('-threads', '1');
-      args.push('-c:v', 'libvpx-vp9', '-crf', '32', '-b:v', '0', '-row-mt', '1', '-speed', '4', '-deadline', 'realtime');
+      // Memory-critical flags for WASM single-threaded build:
+      // -lag-in-frames 0  → disables lookahead (huge memory saver)
+      // -auto-alt-ref 0   → disables alternate reference frames
+      // -row-mt 0         → disables row-based multi-threading
+      // -tile-columns 0 -frame-parallel 0 → minimal tiling
+      args.push('-c:v', 'libvpx-vp9', '-crf', '32', '-b:v', '0');
+      args.push('-lag-in-frames', '0', '-auto-alt-ref', '0');
+      args.push('-row-mt', '0', '-tile-columns', '0', '-frame-parallel', '0');
+      args.push('-speed', '4', '-deadline', 'realtime');
       args.push('-c:a', 'libopus');
       args.push('-map', '0:v?', '-map', '0:a?');
       args.push('-vf', scaleFilter);

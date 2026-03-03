@@ -7,7 +7,14 @@ import { getFFmpegArgs, FFmpegLogCollector, getVideoMetadata } from './video-uti
 
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
 import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
-import workerURL from '@ffmpeg/ffmpeg/worker?url';
+// Multi-threaded core (needs SharedArrayBuffer via COOP/COEP headers from sw-coi.js)
+import mtCoreURL from '@ffmpeg/core-mt/dist/esm/ffmpeg-core.js?url';
+import mtWasmURL from '@ffmpeg/core-mt/dist/esm/ffmpeg-core.wasm?url';
+import mtWorkerURL from '@ffmpeg/core-mt/dist/esm/ffmpeg-core.worker.js?url';
+
+import ffmpegWorkerURL from '@ffmpeg/ffmpeg/worker?url';
+
+
 
 export default function init(payload?: SharedFilesPayload) {
   let ffmpeg: FFmpeg = null!;
@@ -136,19 +143,55 @@ export default function init(payload?: SharedFilesPayload) {
     }
   };
 
+  let ffmpegMode: 'mt' | 'st' | null = null;
+
   const loadFFmpeg = async () => {
     if (ffmpegLoaded) return;
     showProgress('Loading FFmpeg core...');
     await yieldToUI(true);
+
+    const hasSAB = typeof SharedArrayBuffer !== 'undefined';
+
+    // Try multi-threaded core first (requires SharedArrayBuffer via sw-coi.js)
+    if (hasSAB) {
+      try {
+        console.log('[FFmpeg] Trying multi-threaded core (SharedArrayBuffer available)');
+        ffmpeg = new FFmpeg();
+        ffmpeg.on('log', onLog);
+        ffmpeg.on('progress', onProgress);
+        await ffmpeg.load({
+          coreURL: mtCoreURL,
+          wasmURL: mtWasmURL,
+          workerURL: mtWorkerURL,
+          classWorkerURL: ffmpegWorkerURL,
+        });
+        ffmpegLoaded = true;
+        ffmpegMode = 'mt';
+        console.log('[FFmpeg] ✓ Multi-threaded core loaded');
+        return;
+      } catch (e) {
+        console.warn('[FFmpeg] Multi-threaded core failed, falling back to single-threaded:', e);
+        try { ffmpeg.terminate(); } catch { /* ignore */ }
+      }
+    } else {
+      console.log('[FFmpeg] SharedArrayBuffer unavailable (no COOP/COEP headers) — using single-threaded core');
+    }
+
+    // Fallback: single-threaded core
     try {
-      // Create a fresh FFmpeg instance (needed on first load or after a crash/terminate)
       ffmpeg = new FFmpeg();
       ffmpeg.on('log', onLog);
       ffmpeg.on('progress', onProgress);
-      await ffmpeg.load({ coreURL, wasmURL, workerURL });
+      await ffmpeg.load({
+        coreURL,
+        wasmURL,
+        classWorkerURL: ffmpegWorkerURL,
+      });
       ffmpegLoaded = true;
+      ffmpegMode = 'st';
+      console.log('[FFmpeg] ✓ Single-threaded core loaded');
     } catch (error) {
-      console.error('Failed to load FFmpeg:', error);
+      console.error('[FFmpeg] Failed to load any core:', error);
       showMessage('Failed to load transcoder core.', { type: 'alert' });
       hideProgress();
       throw error;
@@ -305,7 +348,7 @@ export default function init(payload?: SharedFilesPayload) {
         maxResolution: parseInt(maxResolution.value, 10) || undefined,
       });
 
-      console.log('FFmpeg Args:', args.join(' '));
+      console.log(`FFmpeg Args (${ffmpegMode}):`, args.join(' '));
       const exitCode = await ffmpeg.exec(args);
 
       // Free input file from VFS immediately — we no longer need it and this
@@ -370,9 +413,10 @@ export default function init(payload?: SharedFilesPayload) {
         || errorMsg.includes('unreachable')
         || errorMsg.includes('abort');
       if (isCrash) {
-        console.warn('WASM crash detected – FFmpeg instance will be re-created on next run.');
+        console.warn(`WASM crash detected (${ffmpegMode} core) – FFmpeg instance will be re-created on next run.`);
         try { ffmpeg.terminate(); } catch { /* ignore */ }
         ffmpegLoaded = false;
+        ffmpegMode = null;
         errorMsg += '\n\nThe FFmpeg instance has been reset. You can try again (consider using a lower max resolution).';
       }
 
