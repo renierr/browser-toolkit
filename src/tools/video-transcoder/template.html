@@ -26,7 +26,7 @@
         <div id="file-info" class="hidden p-4 bg-base-200 rounded-lg flex items-center gap-3">
           <i data-lucide="file-video" class="w-6 h-6 text-primary"></i>
           <div class="flex-1 overflow-hidden">
-            <p id="file-name" class="font-medium truncate"></p>
+            <p id="file-name" class="font-medium"></p>
             <p id="file-size" class="text-xs text-base-content/60"></p>
           </div>
           <button id="btn-remove" class="btn btn-ghost btn-sm btn-circle">
@@ -62,7 +62,7 @@
         </div>
 
         <div class="form-control w-full">
-          <label class="label">
+          <label class="label" for="max-resolution">
             <span class="label-text font-semibold">Max Resolution</span>
           </label>
           <select id="max-resolution" class="select select-bordered w-full">
@@ -72,9 +72,6 @@
             <option value="1920">1920p (Slow, may run out of memory)</option>
             <option value="0">Original (No limit – may crash on large videos)</option>
           </select>
-          <label class="label pb-0">
-            <span class="label-text-alt text-base-content/60">Downscales the video width to this value (height scales proportionally). Lower values use less memory and are faster. Ignored when using lossless cut.</span>
-          </label>
         </div>
 
         <div class="collapse collapse-arrow bg-base-200 mt-2">
@@ -94,10 +91,10 @@
               <div class="form-control">
                 <label class="label cursor-pointer justify-start gap-3">
                   <input type="checkbox" id="copy-codec" class="checkbox checkbox-secondary" />
-                  <span class="label-text">No Transcoding (Lossless Cut)</span>
+                  <span class="label-text whitespace-pre-line">No Transcoding (Lossless Cut)</span>
                 </label>
                 <label class="label pb-0">
-                  <span class="label-text-alt text-base-content/60">Keep original video/audio quality. Much faster, but
+                  <span class="label-text-alt whitespace-pre-line text-base-content/60">Keep original video/audio quality. Much faster, but
                     may not work with all formats.</span>
                 </label>
               </div>
@@ -123,13 +120,13 @@
                 <h4 class="text-[10px] font-bold uppercase tracking-widest text-base-content/40 mb-2">Source Metadata
                 </h4>
                 <div class="grid grid-cols-2 gap-y-1 gap-x-4 text-[11px] font-medium">
-                  <span id="meta-duration" class="truncate"></span>
-                  <span id="meta-resolution" class="truncate"></span>
-                  <span id="meta-vcodec" class="truncate"></span>
-                  <span id="meta-acodec" class="truncate"></span>
-                  <span id="meta-fps" class="truncate"></span>
-                  <span id="meta-samplerate" class="truncate"></span>
-                  <span id="meta-bitrate" class="truncate"></span>
+                  <span id="meta-duration"></span>
+                  <span id="meta-resolution"></span>
+                  <span id="meta-vcodec"></span>
+                  <span id="meta-acodec"></span>
+                  <span id="meta-fps"></span>
+                  <span id="meta-samplerate"></span>
+                  <span id="meta-bitrate"></span>
                 </div>
               </div>
 
@@ -159,7 +156,7 @@
                   position: absolute;
                   top: 50%;
                   height: 0.625rem;
-                  background: rgba(0, 0, 0, 0.7);
+                  background: rgba(89, 46, 46, 0.7);
                   border-radius: 9999px;
                   transform: translateY(-50%);
                   pointer-events: none;
@@ -172,12 +169,12 @@
                   position: absolute;
                   top: 50%;
                   height: 0.875rem;
-                  background: linear-gradient(90deg, hsl(var(--p)), hsl(var(--s)));
+                  background: var(--color-accent);
                   border-radius: 9999px;
                   transform: translateY(-50%);
                   pointer-events: none;
                   z-index: 5;
-                  box-shadow: 0 0 15px hsl(var(--p) / 0.4);
+                  box-shadow: 0 0 15px var(--color-accent);
                 }
 
                 .slider-handle {
@@ -186,7 +183,7 @@
                   width: 1.5rem;
                   height: 1.5rem;
                   background: white;
-                  border: 3px solid hsl(var(--p));
+                  border: 3px solid var(--color-primary);
                   border-radius: 50%;
                   transform: translate(-50%, -50%);
                   cursor: grab;
@@ -205,16 +202,16 @@
                 }
 
                 .slider-handle.handle-end {
-                  border-color: hsl(var(--s));
+                  border-color: var(--color-accent);
                 }
 
                 .slider-handle.active {
                   z-index: 20;
-                  box-shadow: 0 0 0 4px hsl(var(--p) / 0.2);
+                  box-shadow: 0 0 0 4px var(--color-primary);
                 }
 
                 .slider-handle.handle-end.active {
-                  box-shadow: 0 0 0 4px hsl(var(--s) / 0.2);
+                  box-shadow: 0 0 0 4px var(--color-accent);
                 }
               </style>
 
@@ -245,7 +242,7 @@
           </div>
           <div class="collapse-content">
             <label class="label">
-              <span class="label-text text-xs">Append Custom FFmpeg Arguments (e.g. <code>-r 30 -crf 18</code>)</span>
+              <span class="label-text text-xs whitespace-pre-line">Append Custom FFmpeg Arguments (e.g. <code>-r 30 -crf 18</code>)</span>
             </label>
             <input type="text" id="advanced-args" class="input input-bordered input-sm w-full font-mono"
               placeholder="-threads 2" />
