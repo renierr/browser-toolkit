@@ -27,7 +27,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
-        importScripts: ['./sw-coi.js', './sw-share-target.js', './sw-timer.js'],
+        importScripts: ['./sw-share-target.js', './sw-timer.js'],
         maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -51,12 +51,11 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: /^@ffmpeg\/core\/(.*)$/,
-        replacement: path.resolve(__dirname, 'node_modules/@ffmpeg/core/$1'),
-      },
-      {
-        find: /^@ffmpeg\/core-mt\/(.*)$/,
-        replacement: path.resolve(__dirname, 'node_modules/@ffmpeg/core-mt/$1'),
+        find: /^@ffmpeg\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          'src/tools/video-transcoder/node_modules/@ffmpeg/$1'
+        ),
       },
       {
         find: 'lucide',
@@ -79,7 +78,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['lucide'],
-    exclude: ['mupdf', '@ffmpeg/core', '@ffmpeg/core-mt', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
+    exclude: ['mupdf', '@ffmpeg/core', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
   },
   assetsInclude: ['**/*.wasm'],
 });

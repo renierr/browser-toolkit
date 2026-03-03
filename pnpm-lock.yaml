@@ -17,12 +17,6 @@ importers:
       '@embedpdf/snippet':
         specifier: ^2.7.0
         version: 2.7.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)(svelte@5.46.1)(vue@3.5.26(typescript@5.9.3))
-      '@ffmpeg/core':
-        specifier: ^0.12.10
-        version: 0.12.10
-      '@ffmpeg/core-mt':
-        specifier: ^0.12.10
-        version: 0.12.10
       jspdf:
         specifier: ^4.2.0
         version: 4.2.0
@@ -161,9 +155,6 @@ importers:
   src/tools/video-transcoder:
     dependencies:
       '@ffmpeg/core':
-        specifier: ^0.12.10
-        version: 0.12.10
-      '@ffmpeg/core-mt':
         specifier: ^0.12.10
         version: 0.12.10
       '@ffmpeg/ffmpeg':
@@ -1160,10 +1151,6 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
-
-  '@ffmpeg/core-mt@0.12.10':
-    resolution: {integrity: sha512-atyRTOpa58bLCIgd6GXBZAXWyWD3AUoQyzxqjvGhp9MuSzdILtOTI62ffLswBsCnLq15lQ8IETHUpm1oe4V9FQ==}
-    engines: {node: '>=16.x'}
 
   '@ffmpeg/core@0.12.10':
     resolution: {integrity: sha512-dzNplnn2Nxle2c2i2rrDhqcB19q9cglCkWnoMTDN9Q9l3PvdjZWd1HfSPjCNWc/p8Q3CT+Es9fWOR0UhAeYQZA==}
@@ -4460,8 +4447,6 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.3':
     optional: true
-
-  '@ffmpeg/core-mt@0.12.10': {}
 
   '@ffmpeg/core@0.12.10': {}
 

@@ -46,17 +46,11 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
       args.push('-map', '0:v?', '-map', '0:a?');
       args.push('-vf', scaleFilter);
     } else if (format === 'webm') {
+      // Single-threaded WASM: use VP8 — VP9 crashes with memory access out of bounds
       args.push('-threads', '1');
-      // Memory-critical flags for WASM single-threaded build:
-      // -lag-in-frames 0  → disables lookahead (huge memory saver)
-      // -auto-alt-ref 0   → disables alternate reference frames
-      // -row-mt 0         → disables row-based multi-threading
-      // -tile-columns 0 -frame-parallel 0 → minimal tiling
-      args.push('-c:v', 'libvpx-vp9', '-crf', '32', '-b:v', '0');
-      args.push('-lag-in-frames', '0', '-auto-alt-ref', '0');
-      args.push('-row-mt', '0', '-tile-columns', '0', '-frame-parallel', '0');
+      args.push('-c:v', 'libvpx', '-crf', '10', '-b:v', '1M');
       args.push('-speed', '4', '-deadline', 'realtime');
-      args.push('-c:a', 'libopus');
+      args.push('-c:a', 'libvorbis', '-q:a', '4');
       args.push('-map', '0:v?', '-map', '0:a?');
       args.push('-vf', scaleFilter);
     } else if (format === 'gif') {
