@@ -23,7 +23,7 @@ export default defineConfig({
         enabled: true,
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,wasm,onnx}', 'lib/imgly/**/*'],
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,wasm,onnx}'],
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
