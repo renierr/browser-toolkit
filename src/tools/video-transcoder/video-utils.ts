@@ -28,8 +28,10 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
 
   // Build a scale filter that caps resolution while keeping even dimensions (required by most codecs).
   // Uses min() so it only downscales — never upscales.
+  // Note: the \\, escapes the comma in FFmpeg's filter expression parser (not shell escaping).
+  // Do NOT add shell-style quotes – args are passed directly via ffmpeg.exec().
   const maxW = maxResolution || 1280;
-  const scaleFilter = `scale='min(iw\\,${maxW})':'-2':flags=lanczos`;
+  const scaleFilter = `scale=min(iw\\,${maxW}):-2:flags=lanczos`;
 
   if (copyCodec) {
     args.push('-c', 'copy', '-map', '0');

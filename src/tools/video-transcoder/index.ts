@@ -10,9 +10,22 @@ import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
 import workerURL from '@ffmpeg/ffmpeg/worker?url';
 
 export default function init(payload?: SharedFilesPayload) {
-  const ffmpeg = new FFmpeg();
+  let ffmpeg: FFmpeg = null!;
   let ffmpegLoaded = false;
   const logCollector = new FFmpegLogCollector();
+
+  const onLog = ({ message }: { message: string }) => {
+    console.log('[FFmpeg]', message);
+    logCollector.add(message);
+    if (message.includes('Audio:')) hasAudio = true;
+  };
+
+  const onProgress = ({ progress }: { progress: number }) => {
+    if (!isTranscodingPhase) return;
+    showProgress(`Converting... ${Math.round(progress * 100)}%`);
+    yieldToUI(true);
+  };
+
 
   const dropZone = document.getElementById('drop-zone') as HTMLDivElement;
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -128,6 +141,10 @@ export default function init(payload?: SharedFilesPayload) {
     showProgress('Loading FFmpeg core...');
     await yieldToUI(true);
     try {
+      // Create a fresh FFmpeg instance (needed on first load or after a crash/terminate)
+      ffmpeg = new FFmpeg();
+      ffmpeg.on('log', onLog);
+      ffmpeg.on('progress', onProgress);
       await ffmpeg.load({ coreURL, wasmURL, workerURL });
       ffmpegLoaded = true;
     } catch (error) {
@@ -136,6 +153,11 @@ export default function init(payload?: SharedFilesPayload) {
       hideProgress();
       throw error;
     }
+  };
+
+  /** Safely delete a file from FFmpeg's virtual filesystem, ignoring errors. */
+  const safeDeleteFile = async (name: string) => {
+    try { await ffmpeg.deleteFile(name); } catch { /* file may not exist */ }
   };
 
   const updateFileInfo = async (file: File) => {
@@ -237,9 +259,14 @@ export default function init(payload?: SharedFilesPayload) {
       inputName = 'input' + inputExt;
       outputName = `output.${format}`;
 
+      // Clean up any leftover files from previous (possibly crashed) runs
+      await safeDeleteFile(inputName);
+      await safeDeleteFile(outputName);
+
       showProgress('Writing file...', { visible: true });
       await yieldToUI(true);
-      await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
+      const fileData = await fetchFile(selectedFile);
+      await ffmpeg.writeFile(inputName, fileData);
 
       if (!currentMetadata && (enableCutting.checked || format === 'mp3')) {
         showProgress('Probing metadata...');
@@ -328,6 +355,19 @@ export default function init(payload?: SharedFilesPayload) {
         errorMsg = error.toString();
       }
 
+      // If the WASM instance crashed (memory access out of bounds, etc.),
+      // the FFmpeg instance is corrupted and must be re-created on next use.
+      const isCrash = errorMsg.includes('memory access out of bounds')
+        || errorMsg.includes('RuntimeError')
+        || errorMsg.includes('unreachable')
+        || errorMsg.includes('abort');
+      if (isCrash) {
+        console.warn('WASM crash detected – FFmpeg instance will be re-created on next run.');
+        try { ffmpeg.terminate(); } catch { /* ignore */ }
+        ffmpegLoaded = false;
+        errorMsg += '\n\nThe FFmpeg instance has been reset. You can try again (consider using a lower max resolution).';
+      }
+
       errorMessage.innerText = errorMsg;
       errorLogs.innerText = logCollector.getSummary();
       errorSection.classList.remove('hidden');
@@ -336,10 +376,11 @@ export default function init(payload?: SharedFilesPayload) {
       if (logToggle) logToggle.checked = true;
       showMessage('Transcoding failed: ' + (errorMsg.length > 60 ? errorMsg.substring(0, 60) + '...' : errorMsg), { type: 'alert' });
     } finally {
-      try {
-        if (inputName) await ffmpeg.deleteFile(inputName);
-        if (outputName) await ffmpeg.deleteFile(outputName);
-      } catch (e) { console.warn('Cleanup error:', e); }
+      // Only attempt VFS cleanup if FFmpeg is still alive (not crashed)
+      if (ffmpegLoaded) {
+        await safeDeleteFile(inputName);
+        await safeDeleteFile(outputName);
+      }
       isTranscodingPhase = false;
       hideProgress();
       btnConvert.disabled = false;
@@ -353,11 +394,6 @@ export default function init(payload?: SharedFilesPayload) {
     await downloadFile(resultBlob, `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`, resultBlob.type);
   };
 
-  const onProgress = ({ progress }: { progress: number }) => {
-    if (!isTranscodingPhase) return;
-    showProgress(`Converting... ${Math.round(progress * 100)}%`);
-    yieldToUI(true);
-  };
 
   const onPointerDown = (e: PointerEvent, handle: 'start' | 'end') => {
     e.preventDefault();
@@ -380,11 +416,6 @@ export default function init(payload?: SharedFilesPayload) {
     syncCuttingUI('slider', e);
   };
 
-  ffmpeg.on('log', ({ message }) => {
-    console.log('[FFmpeg]', message);
-    logCollector.add(message);
-    if (message.includes('Audio:')) hasAudio = true;
-  });
 
   setupFileDropzone('drop-zone', 'file-input', (files) => {
     if (files.length) updateFileInfo(files[0]);
@@ -431,14 +462,12 @@ export default function init(payload?: SharedFilesPayload) {
   btnClear.addEventListener('click', resetUI);
   btnConvert.addEventListener('click', onConvertClick);
   btnDownload.addEventListener('click', onDownloadClick);
-  ffmpeg.on('progress', onProgress);
 
   return () => {
     btnRemove.removeEventListener('click', resetUI);
     btnClear.removeEventListener('click', resetUI);
     btnConvert.removeEventListener('click', onConvertClick);
     btnDownload.removeEventListener('click', onDownloadClick);
-    ffmpeg.off('progress', onProgress);
-    ffmpeg.terminate();
+    try { ffmpeg.terminate(); } catch { /* ignore if already terminated */ }
   };
 }
