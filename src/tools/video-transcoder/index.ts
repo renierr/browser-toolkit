@@ -25,6 +25,7 @@ export default function init(payload?: SharedFilesPayload) {
   const btnDownload = document.getElementById('btn-download') as HTMLButtonElement;
   const outputFormat = document.getElementById('output-format') as HTMLSelectElement;
   const qualityPreset = document.getElementById('quality-preset') as HTMLSelectElement;
+  const maxResolution = document.getElementById('max-resolution') as HTMLSelectElement;
   const advancedArgs = document.getElementById('advanced-args') as HTMLInputElement;
   const resultSection = document.getElementById('result-section') as HTMLDivElement;
   const errorSection = document.getElementById('error-section') as HTMLDivElement;
@@ -272,6 +273,7 @@ export default function init(payload?: SharedFilesPayload) {
         cutStart: enableCutting.checked ? parseFloat(cutStartInput.value) : undefined,
         cutEnd: enableCutting.checked ? parseFloat(cutEndInput.value) : undefined,
         copyCodec: enableCutting.checked && copyCodec.checked,
+        maxResolution: parseInt(maxResolution.value, 10) || undefined,
       });
 
       console.log('FFmpeg Args:', args.join(' '));

@@ -5,13 +5,14 @@ export interface TranscodeOptions {
   cutStart?: number;
   cutEnd?: number;
   copyCodec?: boolean;
+  maxResolution?: number;
 }
 
 /**
  * Generates the FFmpeg arguments based on user input and detected streams.
  */
 export function getFFmpegArgs(inputName: string, outputName: string, options: TranscodeOptions): string[] {
-  const { format, preset, advancedArgs, cutStart, cutEnd, copyCodec } = options;
+  const { format, preset, advancedArgs, cutStart, cutEnd, copyCodec, maxResolution } = options;
   let args: string[] = ['-y', '-i', inputName];
 
   if (cutStart !== undefined && cutStart > 0) {
@@ -25,6 +26,11 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
     }
   }
 
+  // Build a scale filter that caps resolution while keeping even dimensions (required by most codecs).
+  // Uses min() so it only downscales — never upscales.
+  const maxW = maxResolution || 1280;
+  const scaleFilter = `scale='min(iw\\,${maxW})':'-2':flags=lanczos`;
+
   if (copyCodec) {
     args.push('-c', 'copy', '-map', '0');
   } else {
@@ -33,17 +39,17 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
       args.push('-c:v', 'libx264', '-preset', preset, '-crf', '23');
       args.push('-c:a', 'aac', '-b:a', '128k');
       args.push('-map', '0:v?', '-map', '0:a?');
-      args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
+      args.push('-vf', scaleFilter);
     } else if (format === 'webm') {
       args.push('-threads', '1');
       args.push('-c:v', 'libvpx-vp9', '-crf', '32', '-b:v', '0', '-row-mt', '1', '-speed', '4', '-deadline', 'realtime');
       args.push('-c:a', 'libopus');
       args.push('-map', '0:v?', '-map', '0:a?');
-      args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
+      args.push('-vf', scaleFilter);
     } else if (format === 'gif') {
-      args.push('-vf', 'fps=10,scale=min(iw\\,1280):-2:flags=lanczos', '-f', 'gif');
+      args.push('-vf', `fps=10,scale=min(iw\\,${maxW}):-2:flags=lanczos`, '-f', 'gif');
     } else if (format === 'webp') {
-      args.push('-vf', 'fps=10,scale=min(iw\\,1280):-2:flags=lanczos', '-c:v', 'libwebp', '-lossless', '0', '-compression_level', '4', '-q:v', '50', '-loop', '0', '-an', '-f', 'webp');
+      args.push('-vf', `fps=10,scale=min(iw\\,${maxW}):-2:flags=lanczos`, '-c:v', 'libwebp', '-lossless', '0', '-compression_level', '4', '-q:v', '50', '-loop', '0', '-an', '-f', 'webp');
     } else if (format === 'mp3') {
       args.push('-vn', '-ab', '192k', '-ar', '44100', '-f', 'mp3');
     }

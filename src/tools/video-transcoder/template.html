@@ -61,6 +61,22 @@
           </select>
         </div>
 
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text font-semibold">Max Resolution</span>
+          </label>
+          <select id="max-resolution" class="select select-bordered w-full">
+            <option value="640">640p (Fastest, smallest)</option>
+            <option value="720">720p</option>
+            <option value="1280" selected>1280p (Recommended)</option>
+            <option value="1920">1920p (Slow, may run out of memory)</option>
+            <option value="0">Original (No limit – may crash on large videos)</option>
+          </select>
+          <label class="label pb-0">
+            <span class="label-text-alt text-base-content/60">Downscales the video width to this value (height scales proportionally). Lower values use less memory and are faster. Ignored when using lossless cut.</span>
+          </label>
+        </div>
+
         <div class="collapse collapse-arrow bg-base-200 mt-2">
           <input type="checkbox" id="toggle-cutting-settings" />
           <div class="collapse-title font-semibold text-sm">
