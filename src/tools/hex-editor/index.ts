@@ -1,9 +1,10 @@
-import { setupFileDropzone, downloadFile } from '../../js/file-utils';
-import { showProgress, showMessage, yieldToUI, hideProgress } from '../../js/ui';
+import { downloadFile, setupFileDropzone } from '../../js/file-utils';
+import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui';
 import { identifyFileType } from './magic-bytes';
-import { HexBufferManager, BYTES_PER_LINE, formatHex, formatAscii } from './hex-utils';
+import { BYTES_PER_LINE, formatAscii, formatHex, HexBufferManager } from './hex-utils';
 import type { SharedFilesPayload } from '../../js/share-target';
 
+// noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
   const dropzone = document.getElementById('hex-dropzone')!;
   const fileInput = document.getElementById('hex-file-input') as HTMLInputElement;
@@ -24,7 +25,6 @@ export default function init(payload?: SharedFilesPayload) {
   const infoSize = document.getElementById('info-size')!;
 
   const toggleAscii = document.getElementById('toggle-ascii') as HTMLInputElement;
-  const asciiHeader = document.getElementById('ascii-header')!;
 
   const statusSelection = document.getElementById('status-selection')!;
   const statusStats = document.getElementById('status-stats')!;
@@ -57,6 +57,16 @@ export default function init(payload?: SharedFilesPayload) {
   let isRendering = false;
   let pendingRenderCall: boolean = false;
 
+  const safeFocusNoScroll = (el: HTMLElement) => {
+    try {
+      // try modern API first
+      (el as any).focus({ preventScroll: true });
+    } catch (e) {
+      // fallback
+      el.focus();
+    }
+  };
+
   const updateFileInfo = async (file: File) => {
     showProgress('Analyzing file...');
     await yieldToUI(true);
@@ -70,10 +80,10 @@ export default function init(payload?: SharedFilesPayload) {
       dropzone.classList.add('hidden');
 
       infoFilename.textContent = file.name;
-      const sizeText = file.size > 1024 * 1024
+
+      infoSize.textContent = file.size > 1024 * 1024
         ? `${(file.size / (1024 * 1024)).toFixed(2)} MB`
         : `${file.size.toLocaleString()} bytes`;
-      infoSize.textContent = sizeText;
 
       const idBuffer = await bufferManager.getRange(0, 64 * 1024);
       const id = identifyFileType(idBuffer);
@@ -94,7 +104,7 @@ export default function init(payload?: SharedFilesPayload) {
       updateStatus();
       await renderVisibleLines(true);
 
-      setTimeout(() => hexKeyboardInput.focus(), 100);
+      setTimeout(() => safeFocusNoScroll(hexKeyboardInput), 100);
     } catch (err) {
       console.error(err);
       showMessage('Error analyzing file', { type: 'alert' });
@@ -213,11 +223,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   const scrollToOffset = (offset: number) => {
     const row = Math.floor(offset / BYTES_PER_LINE);
-    const scrollPos = Math.max(0, (row * LINE_HEIGHT) - (hexViewer.clientHeight / 2));
-    hexViewer.scrollTop = scrollPos;
+    hexViewer.scrollTop = Math.max(0, (row * LINE_HEIGHT) - (hexViewer.clientHeight / 2));
     renderVisibleLines(true);
     updateStatus();
-    hexKeyboardInput.focus();
+    safeFocusNoScroll(hexKeyboardInput);
   };
 
   const performSearch = async (startAt: number = 0) => {
@@ -296,15 +305,36 @@ export default function init(payload?: SharedFilesPayload) {
       searchMatch = null;
       updateStatus();
       renderVisibleLines(true);
-      hexKeyboardInput.focus();
+      safeFocusNoScroll(hexKeyboardInput);
     }
   };
 
-  hexKeyboardInput.onkeydown = async (e) => {
-    if (!bufferManager || selectedOffset === null || editModal.open) return;
+  // Open editor on double-click
+  hexVisibleRows.ondblclick = async (e) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains('hex-byte') && target.dataset.offset) {
+      const off = parseInt(target.dataset.offset);
+      selectedOffset = off;
+      searchMatch = null;
+      updateStatus();
+      renderVisibleLines(true);
+      await openEditModal(off);
+    }
+  };
 
-    // Don't intercept if focus is in search input
-    if (document.activeElement === searchInput) return;
+  hexViewer.onclick = (e) => {
+    const target = (e as MouseEvent).target as HTMLElement | null;
+    if (!target) return;
+    if (target.classList && target.classList.contains('hex-byte')) return;
+    safeFocusNoScroll(hexKeyboardInput);
+  };
+
+  const processEditorKey = (e: KeyboardEvent) => {
+    if (!bufferManager || selectedOffset === null || editModal.open) return false;
+
+    const active = document.activeElement as HTMLElement | null;
+    if (active === searchInput) return false;
+    if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && active !== hexKeyboardInput) return false;
 
     let handled = true;
     switch (e.key) {
@@ -333,7 +363,11 @@ export default function init(payload?: SharedFilesPayload) {
       else if (logicalTop + LINE_HEIGHT > viewBottom) hexViewer.scrollTop = (logicalTop + LINE_HEIGHT) - hexViewer.clientHeight;
 
       renderVisibleLines(true);
-    } else if (/^[0-9a-fA-F]$/.test(e.key)) {
+      return true;
+    }
+
+    // Handle hex typing for inline edit
+    if (/^[0-9a-fA-F]$/.test(e.key)) {
       const digit = parseInt(e.key, 16);
       if (editingNybble === null) {
         editingNybble = 'high';
@@ -345,29 +379,15 @@ export default function init(payload?: SharedFilesPayload) {
         commitByte();
       }
       e.preventDefault();
+      return true;
     }
 
-    // Keep input empty to prevent text accumulation
-    hexKeyboardInput.value = '';
+    return false;
   };
 
-  hexViewer.onclick = () => hexKeyboardInput.focus();
-
-  hexKeyboardInput.oninput = () => {
-    hexKeyboardInput.value = '';
-  };
-
-  const openEditModal = async (offset: number) => {
-    if (!bufferManager) return;
-    const byte = await bufferManager.getByte(offset);
-    editHexInput.value = formatHex(byte);
-    editAsciiInput.value = formatAscii(byte);
-    editModal.showModal();
-    setTimeout(() => {
-      editHexInput.focus();
-      editHexInput.select();
-    }, 10);
-  };
+  hexKeyboardInput.onkeydown = (e) => processEditorKey(e as unknown as KeyboardEvent);
+  // Ensure the hidden input stays empty (prevents mobile suggestions/accumulation)
+  hexKeyboardInput.oninput = () => { hexKeyboardInput.value = ''; };
 
   let scrollReq = 0;
   hexViewer.onscroll = () => {
@@ -378,15 +398,17 @@ export default function init(payload?: SharedFilesPayload) {
     });
   };
 
-  toggleAscii.onchange = () => {
-    asciiHeader.classList.toggle('hidden', !toggleAscii.checked);
-    renderVisibleLines(true);
-  };
-
-  searchBtn.onclick = () => performSearch(0);
-  searchNext.onclick = () => performSearch((selectedOffset ?? 0) + 1);
-  searchInput.onkeydown = (e) => {
-    if (e.key === 'Enter') performSearch(0);
+  const openEditModal = async (offset: number) => {
+    if (!bufferManager) return;
+    const byte = await bufferManager.getByte(offset);
+    editHexInput.value = formatHex(byte);
+    editAsciiInput.value = formatAscii(byte);
+    editModal.showModal();
+    setTimeout(() => {
+      try { (editHexInput as any).focus({ preventScroll: true }); }
+      catch (e) { editHexInput.focus(); }
+      editHexInput.select();
+    }, 10);
   };
 
   saveEdit.onclick = () => {
@@ -396,28 +418,26 @@ export default function init(payload?: SharedFilesPayload) {
         bufferManager.setByte(selectedOffset, val);
         renderVisibleLines(true);
         editModal.close();
-        hexKeyboardInput.focus();
+        safeFocusNoScroll(hexKeyboardInput);
       }
     }
   };
 
   cancelEdit.onclick = () => {
     editModal.close();
-    hexKeyboardInput.focus();
+    safeFocusNoScroll(hexKeyboardInput);
   };
 
-  btnReset.onclick = () => {
-    currentFile = null;
-    bufferManager = null;
-    selectedOffset = null;
-    searchMatch = null;
-    lastStartLine = -1;
-    fileInfoHeader.classList.add('hidden');
-    editorContainer.classList.add('hidden');
-    dropzone.classList.remove('hidden');
-    fileInput.value = '';
-    hexVisibleRows.innerHTML = '';
-    hexStretcher.style.height = '0';
+  searchBtn.onclick = () => performSearch(0);
+  searchNext.onclick = () => performSearch((selectedOffset ?? 0) + 1);
+  searchInput.onkeydown = (e) => {
+    if (e.key === 'Enter') performSearch(0);
+  };
+
+  toggleAscii.onchange = () => {
+    const hdr = document.getElementById('ascii-header');
+    if (hdr) hdr.classList.toggle('hidden', !toggleAscii.checked);
+    renderVisibleLines(true);
   };
 
   downloadBtn.onclick = async () => {
@@ -433,6 +453,20 @@ export default function init(payload?: SharedFilesPayload) {
     } finally {
       hideProgress();
     }
+  };
+
+  btnReset.onclick = () => {
+    currentFile = null;
+    bufferManager = null;
+    selectedOffset = null;
+    searchMatch = null;
+    lastStartLine = -1;
+    fileInfoHeader.classList.add('hidden');
+    editorContainer.classList.add('hidden');
+    dropzone.classList.remove('hidden');
+    fileInput.value = '';
+    hexVisibleRows.innerHTML = '';
+    hexStretcher.style.height = '0';
   };
 
   setupFileDropzone('hex-dropzone', 'hex-file-input', (files) => {
