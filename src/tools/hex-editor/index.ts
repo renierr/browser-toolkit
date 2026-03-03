@@ -105,6 +105,7 @@ export default function init(payload?: SharedFilesPayload) {
       await renderVisibleLines(true);
 
       setTimeout(() => safeFocusNoScroll(hexKeyboardInput), 100);
+      fileInfoHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (err) {
       console.error(err);
       showMessage('Error analyzing file', { type: 'alert' });
