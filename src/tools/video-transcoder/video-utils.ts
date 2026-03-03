@@ -29,19 +29,21 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
     args.push('-c', 'copy', '-map', '0');
   } else {
     if (format === 'mp4') {
+      args.push('-threads', '1');
       args.push('-c:v', 'libx264', '-preset', preset, '-crf', '23');
       args.push('-c:a', 'aac', '-b:a', '128k');
       args.push('-map', '0:v?', '-map', '0:a?');
       args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
     } else if (format === 'webm') {
+      args.push('-threads', '1');
       args.push('-c:v', 'libvpx-vp9', '-crf', '32', '-b:v', '0', '-row-mt', '1', '-speed', '4', '-deadline', 'realtime');
       args.push('-c:a', 'libopus');
       args.push('-map', '0:v?', '-map', '0:a?');
       args.push('-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2');
     } else if (format === 'gif') {
-      args.push('-vf', 'fps=10,scale=480:-1:flags=lanczos', '-f', 'gif');
+      args.push('-vf', 'fps=10,scale=min(iw\\,1280):-2:flags=lanczos', '-f', 'gif');
     } else if (format === 'webp') {
-      args.push('-vf', 'fps=10,scale=480:-1:flags=lanczos', '-c:v', 'libwebp', '-lossless', '0', '-compression_level', '4', '-q:v', '50', '-loop', '0', '-an', '-f', 'webp');
+      args.push('-vf', 'fps=10,scale=min(iw\\,1280):-2:flags=lanczos', '-c:v', 'libwebp', '-lossless', '0', '-compression_level', '4', '-q:v', '50', '-loop', '0', '-an', '-f', 'webp');
     } else if (format === 'mp3') {
       args.push('-vn', '-ab', '192k', '-ar', '44100', '-f', 'mp3');
     }
@@ -102,7 +104,7 @@ export async function getVideoMetadata(ffmpeg: any, inputName: string): Promise<
         height = parseInt(resMatch[2], 10);
       }
 
-      const fpsMatch = message.match(/([\d\.]+)\s+fps/);
+      const fpsMatch = message.match(/([\d.]+)\s+fps/);
       if (fpsMatch) fps = fpsMatch[1];
     }
 
