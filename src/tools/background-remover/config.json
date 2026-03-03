@@ -1,0 +1,11 @@
+{
+  "name": "AI Background Remover",
+  "description": "Remove backgrounds from images locally using AI",
+  "icon": "eraser",
+  "sectionId": "images",
+  "shareTarget": {
+    "accept": [
+      "image/*"
+    ]
+  }
+}
