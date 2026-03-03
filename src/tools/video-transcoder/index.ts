@@ -257,6 +257,7 @@ export default function init(payload?: SharedFilesPayload) {
       showProgress('Preparing FFmpeg...');
       await yieldToUI(true);
       await loadFFmpeg();
+      if (ffmpegVersion) showProgress(`${ffmpegVersion} ready – preparing...`);
 
       const inputExt = selectedFile.name.substring(selectedFile.name.lastIndexOf('.'));
       inputName = 'input' + inputExt;
@@ -273,7 +274,7 @@ export default function init(payload?: SharedFilesPayload) {
       // Release the JS-side copy immediately — the data is now in the WASM VFS
       fileData = null;
 
-      if (!currentMetadata && (enableCutting.checked || format === 'mp3')) {
+      if (!currentMetadata) {
         showProgress('Probing metadata...');
         currentMetadata = await getVideoMetadata(ffmpeg, inputName);
         videoDuration = currentMetadata.duration;
@@ -291,7 +292,10 @@ export default function init(payload?: SharedFilesPayload) {
       }
 
       if (format === 'mp3' && !hasAudio) {
-        throw new Error('File contains no audio streams.');
+        await safeDeleteFile(inputName);
+        inputName = ''; // prevent double-delete in finally
+        showMessage('This file contains no audio streams — cannot convert to MP3.', { type: 'alert' });
+        return;
       }
 
       showProgress('Converting...', { visible: true });
@@ -379,9 +383,9 @@ export default function init(payload?: SharedFilesPayload) {
         errorMsg += '\n\nThe FFmpeg instance has been reset. You can try again (consider using a lower max resolution).';
       }
 
-      errorMessage.innerText = errorMsg;
-      // Show version above the logs
-      const coreInfo = `${ffmpegVersion || 'FFmpeg'}${isCrash ? ' (crashed)' : ''}`;
+      // Show version in the error section
+      const coreInfo = `${ffmpegVersion || 'FFmpeg (version unknown)'}${isCrash ? ' (crashed)' : ''}`;
+      errorMessage.innerText = `[${coreInfo}] ${errorMsg}`;
       errorLogs.innerText = `[${coreInfo}]\n\n${logCollector.getSummary()}`;
       errorSection.classList.remove('hidden');
       resultSection.classList.add('hidden');
