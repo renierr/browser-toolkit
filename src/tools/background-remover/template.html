@@ -1,117 +1,126 @@
-<div class="flex flex-col gap-6 p-4 max-w-5xl mx-auto">
-  <!-- Dropzone -->
-  <div id="dropzone"
-    class="border-2 border-dashed border-base-300 rounded-3xl p-12 text-center cursor-pointer hover:border-primary hover:bg-base-200 transition-all group">
-    <div class="flex flex-col items-center gap-4">
-      <div class="p-4 bg-primary/10 rounded-full group-hover:scale-110 transition-transform">
-        <i data-lucide="upload" class="w-10 h-10 text-primary"></i>
-      </div>
-      <div>
-        <h3 class="text-xl font-bold">Remove Image Backgrounds</h3>
-        <p class="text-base-content/60">Drag and drop images here, or click to browse</p>
-      </div>
-    </div>
-    <input type="file" id="image-input" class="hidden" accept="image/*" multiple />
-  </div>
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">AI Background Remover</h2>
+    <p class="text-base-content/70 mb-6">
+      Remove backgrounds from multiple images locally using AI. All processing happens in your browser for maximum
+      privacy.
+    </p>
 
-  <!-- Bulk Actions (Hidden by default) -->
-  <div id="bulk-actions" class="hidden flex justify-between items-center bg-base-200 p-4 rounded-2xl">
-    <div class="flex items-center gap-3 text-sm font-medium">
-      <span id="queue-status">0 images in queue</span>
-    </div>
-    <div class="flex gap-2">
-      <button id="btn-clear" class="btn btn-ghost btn-sm gap-2">
-        <i data-lucide="trash-2" class="w-4 h-4"></i>
-        Clear All
-      </button>
-      <button id="btn-download-all" class="btn btn-primary btn-sm gap-2">
-        <i data-lucide="download" class="w-4 h-4"></i>
-        Download All (.zip)
-      </button>
-    </div>
-  </div>
-
-  <!-- Results Gallery -->
-  <div id="results-gallery" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <!-- Items will be injected here -->
-  </div>
-
-  <!-- Item Template (hidden) -->
-  <template id="result-item-template">
-    <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden group">
-      <div class="relative aspect-square bg-base-200 overflow-hidden flex items-center justify-center">
-        <!-- Background grid for transparency -->
-        <div class="absolute inset-0 checkerboard-bg opacity-10"></div>
-
-        <!-- Previews -->
-        <img
-          class="original-preview absolute inset-0 w-full h-full object-contain transition-opacity duration-300 pointer-events-none" />
-        <img
-          class="result-preview absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300 pointer-events-none" />
-
-        <!-- Status / Progress Overlay -->
-        <div
-          class="status-overlay absolute inset-0 bg-base-300/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
-          <span class="loading loading-spinner loading-lg text-primary mb-2"></span>
-          <span class="status-text font-medium">Pending...</span>
+    <!-- Dropzone -->
+    <div id="dropzone"
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-[160px]">
+      <div class="flex flex-col items-center gap-2 text-center">
+        <div class="text-base-content/30 text-4xl">
+          <i data-lucide="upload-cloud"></i>
         </div>
-
-        <!-- Preview Toggle (top right, only when done) -->
-        <div class="preview-toggle absolute top-2 right-2 hidden">
-          <div class="join shadow-lg">
-            <button class="btn btn-xs join-item btn-primary btn-compare-processed">Processed</button>
-            <button class="btn btn-xs join-item btn-compare-original">Original</button>
-          </div>
-        </div>
+        <p class="text-lg font-medium">Click or drag images here</p>
+        <p class="text-sm text-base-content/50">Supports JPG, PNG, WebP, etc.</p>
       </div>
+      <input type="file" id="image-input" class="hidden" accept="image/*" multiple />
+    </div>
 
-      <div class="p-4 flex flex-col gap-2">
-        <div class="flex justify-between items-start gap-2">
-          <div class="min-w-0">
-            <p class="filename truncate text-sm font-bold"></p>
-            <p class="filesize text-xs opacity-60"></p>
-          </div>
-          <button class="btn btn-ghost btn-xs btn-circle btn-remove-item">
-            <i data-lucide="x" class="w-4 h-4"></i>
+    <!-- Bulk Actions -->
+    <div id="bulk-actions" class="hidden mt-8">
+      <div class="divider">Selected Images & Processing</div>
+      <div class="flex justify-between items-center bg-base-200/50 p-4 rounded-xl mb-6">
+        <div class="flex items-center gap-3 text-sm font-medium">
+          <span id="queue-status">0 images in queue</span>
+        </div>
+        <div class="flex gap-2">
+          <button id="btn-clear" class="btn btn-ghost btn-xs sm:btn-sm gap-2">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            Clear All
           </button>
-        </div>
-
-        <div class="flex gap-2 mt-2">
-          <button class="btn btn-outline btn-sm flex-1 btn-preview-full hidden">
-            <i data-lucide="maximize" class="w-4 h-4"></i>
-            Preview
-          </button>
-          <button class="btn btn-primary btn-sm flex-1 btn-download-item hidden">
+          <button id="btn-download-all" class="btn btn-primary btn-xs sm:btn-sm gap-2">
             <i data-lucide="download" class="w-4 h-4"></i>
-            Download
+            Download All (.zip)
           </button>
         </div>
       </div>
-    </div>
-  </template>
 
-  <!-- Full Preview Modal -->
-  <dialog id="preview-modal" class="modal">
-    <div class="modal-box max-w-5xl w-full h-full max-h-[90vh] p-0 flex flex-col overflow-hidden">
-      <div class="flex justify-between items-center p-4 border-b border-base-200">
-        <h3 id="modal-filename" class="font-bold truncate">Preview</h3>
-        <form method="dialog">
-          <button class="btn btn-sm btn-circle btn-ghost">✕</button>
-        </form>
+      <!-- Results Gallery -->
+      <div id="results-gallery" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Items will be injected here -->
       </div>
-      <div class="flex-1 overflow-auto p-4 bg-base-300 flex items-center justify-center relative">
-        <div class="absolute inset-0 checkerboard-bg opacity-20"></div>
-        <img id="modal-img" class="max-w-full max-h-full object-contain relative z-10" />
+    </div>
+  </div>
+</div>
+
+<!-- Item Template (hidden) -->
+<template id="result-item-template">
+  <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden group">
+    <div class="relative aspect-square bg-base-200 overflow-hidden flex items-center justify-center">
+      <!-- Background grid for transparency -->
+      <div class="absolute inset-0 checkerboard-bg opacity-10"></div>
+
+      <!-- Previews -->
+      <img
+        class="original-preview absolute inset-0 w-full h-full object-contain transition-opacity duration-300 pointer-events-none" />
+      <img
+        class="result-preview absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300 pointer-events-none" />
+
+      <!-- Status / Progress Overlay -->
+      <div
+        class="status-overlay absolute inset-0 bg-base-300/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+        <span class="loading loading-spinner loading-lg text-primary mb-2"></span>
+        <span class="status-text font-medium text-sm">Pending...</span>
       </div>
-      <div class="p-4 border-t border-base-200 flex justify-end gap-2">
-        <button id="modal-download" class="btn btn-primary btn-sm gap-2">
+
+      <!-- Preview Toggle (top right, only when done) -->
+      <div class="preview-toggle absolute top-2 right-2 hidden">
+        <div class="join shadow-lg">
+          <button class="btn btn-xs join-item btn-compare-processed">Processed</button>
+          <button class="btn btn-xs join-item btn-compare-original">Original</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4 flex flex-col gap-2">
+      <div class="flex justify-between items-start gap-2">
+        <div class="min-w-0">
+          <p class="filename truncate text-sm font-bold"></p>
+          <p class="filesize text-xs opacity-60"></p>
+        </div>
+        <button class="btn btn-ghost btn-xs btn-circle btn-remove-item">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex gap-2 mt-2">
+        <button class="btn btn-outline btn-sm flex-1 btn-preview-full hidden">
+          <i data-lucide="maximize" class="w-4 h-4"></i>
+          Preview
+        </button>
+        <button class="btn btn-primary btn-sm flex-1 btn-download-item hidden">
           <i data-lucide="download" class="w-4 h-4"></i>
           Download
         </button>
       </div>
     </div>
-    <form method="dialog" class="modal-backdrop">
-      <button>close</button>
-    </form>
-  </dialog>
-</div>
+  </div>
+</template>
+
+<!-- Full Preview Modal -->
+<dialog id="preview-modal" class="modal">
+  <div class="modal-box max-w-5xl w-full h-full max-h-[90vh] p-0 flex flex-col overflow-hidden">
+    <div class="flex justify-between items-center p-4 border-b border-base-200">
+      <h3 id="modal-filename" class="font-bold truncate text-sm sm:text-base">Preview</h3>
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+      </form>
+    </div>
+    <div class="flex-1 overflow-auto p-4 bg-base-300 flex items-center justify-center relative">
+      <div class="absolute inset-0 checkerboard-bg opacity-20"></div>
+      <img id="modal-img" class="max-w-full max-h-full object-contain relative z-10" />
+    </div>
+    <div class="p-4 border-t border-base-200 flex justify-end gap-2">
+      <button id="modal-download" class="btn btn-primary btn-sm gap-2">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        Download Transparent PNG
+      </button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

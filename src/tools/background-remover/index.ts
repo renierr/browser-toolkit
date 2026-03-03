@@ -1,7 +1,7 @@
 import { setupFileDropzone, downloadFile, downloadAsZip, type DownloadBuffer } from '../../js/file-utils';
-import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui';
+import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target';
-import { removeBackground, type Config } from '@imgly/background-removal';
+import BackgroundRemovalWorker from './worker?worker';
 
 interface ImageQueueItem {
   id: string;
@@ -29,21 +29,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   let queue: ImageQueueItem[] = [];
   let isProcessing = false;
+  let worker: Worker | null = null;
 
-  const config: Config = {
-    progress: (key, current, total) => {
-      // Internal library progress
-      if (key === 'compute:inference') {
-        const progress = Math.round((current / total) * 100);
-        const activeItem = queue.find((i) => i.status === 'processing');
-        if (activeItem) {
-          const statusText = activeItem.element.querySelector('.status-text')!;
-          statusText.textContent = `Processing... ${progress}%`;
-        }
-      }
-    },
-    // For offline support, the user recommended hosting models locally.
-    // However, for the first run, we'll let it use CDN or assuming PWA caches it.
+  const config = {
+    // Config remains empty as defaults are handled in worker
   };
 
   const updateUI = () => {
@@ -51,44 +40,76 @@ export default function init(payload?: SharedFilesPayload) {
     bulkActions.classList.toggle('hidden', queue.length === 0);
   };
 
+  const initWorker = () => {
+    if (!worker) {
+      worker = new BackgroundRemovalWorker();
+      worker.onmessage = (event) => {
+        const { id, status, result, error, progress } = event.data;
+        const item = queue.find((i) => i.id === id);
+        if (!item) return;
+
+        if (status === 'progress') {
+          const statusText = item.element.querySelector('.status-text')!;
+          statusText.textContent = `Processing... ${Math.round(progress)}%`;
+        } else if (status === 'success') {
+          handleSuccess(item, result);
+          isProcessing = false;
+          processQueue();
+        } else if (status === 'error') {
+          handleError(item, error);
+          isProcessing = false;
+          processQueue();
+        }
+      };
+    }
+    return worker;
+  };
+
+  const handleSuccess = (item: ImageQueueItem, result: Blob) => {
+    item.resultBlob = result;
+    item.resultUrl = URL.createObjectURL(result);
+    item.status = 'done';
+
+    const resultPreview = item.element.querySelector('.result-preview') as HTMLImageElement;
+    const statusOverlay = item.element.querySelector('.status-overlay')!;
+
+    resultPreview.src = item.resultUrl;
+    statusOverlay.classList.add('hidden');
+
+    item.element.querySelector('.preview-toggle')?.classList.remove('hidden');
+    item.element.querySelector('.btn-preview-full')?.classList.remove('hidden');
+    item.element.querySelector('.btn-download-item')?.classList.remove('hidden');
+
+    // UI BUG FIX: Trigger the "Processed" button state automatically
+    const btnProcessed = item.element.querySelector('.btn-compare-processed') as HTMLButtonElement;
+    btnProcessed.click();
+  };
+
+  const handleError = (item: ImageQueueItem, error: string) => {
+    console.error('Processing error:', error);
+    item.status = 'error';
+    const statusText = item.element.querySelector('.status-text')!;
+    statusText.textContent = 'Error';
+    item.element.querySelector('.loading')?.classList.add('hidden');
+  };
+
   const processQueue = async () => {
     if (isProcessing) return;
-    isProcessing = true;
 
-    while (true) {
-      const item = queue.find((i) => i.status === 'pending');
-      if (!item) break;
-
-      item.status = 'processing';
-      const statusText = item.element.querySelector('.status-text')!;
-      const statusOverlay = item.element.querySelector('.status-overlay')!;
-      statusText.textContent = 'Removing background...';
-
-      try {
-        const result = await removeBackground(item.file, config);
-        item.resultBlob = result;
-        item.resultUrl = URL.createObjectURL(result);
-        item.status = 'done';
-
-        const resultPreview = item.element.querySelector('.result-preview') as HTMLImageElement;
-        resultPreview.src = item.resultUrl;
-        resultPreview.classList.remove('opacity-0');
-
-        statusOverlay.classList.add('hidden');
-        item.element.querySelector('.preview-toggle')?.classList.remove('hidden');
-        item.element.querySelector('.btn-preview-full')?.classList.remove('hidden');
-        item.element.querySelector('.btn-download-item')?.classList.remove('hidden');
-      } catch (error) {
-        console.error('Processing error:', error);
-        item.status = 'error';
-        statusText.textContent = 'Error';
-        item.element.querySelector('.loading')?.classList.add('hidden');
-      }
-
-      await yieldToUI();
+    const item = queue.find((i) => i.status === 'pending');
+    if (!item) {
+      updateUI();
+      return;
     }
 
-    isProcessing = false;
+    isProcessing = true;
+    item.status = 'processing';
+    const statusText = item.element.querySelector('.status-text')!;
+    statusText.textContent = 'Removing background...';
+
+    const w = initWorker();
+    w.postMessage({ id: item.id, file: item.file, config });
+
     updateUI();
   };
 
@@ -199,12 +220,10 @@ export default function init(payload?: SharedFilesPayload) {
 
     showProgress('Preparing ZIP...');
     try {
-      const zipFiles: DownloadBuffer[] = await Promise.all(
-        doneItems.map(async (item) => ({
-          data: await item.resultBlob!.arrayBuffer(),
-          name: `${item.file.name.replace(/\.[^/.]+$/, '')}-no-bg.png`,
-        }))
-      );
+      const zipFiles: DownloadBuffer[] = await Promise.all(doneItems.map(async (item) => ({
+        data: await item.resultBlob!.arrayBuffer(),
+        name: `${item.file.name.replace(/\.[^/.]+$/, '')}-no-bg.png`,
+      })));
 
       await downloadAsZip(zipFiles, 'background-removed-images.zip');
     } catch (e) {
@@ -221,6 +240,10 @@ export default function init(payload?: SharedFilesPayload) {
 
   return () => {
     // Cleanup
+    if (worker) {
+      worker.terminate();
+      worker = null;
+    }
     queue.forEach((item) => {
       if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
       URL.revokeObjectURL(item.originalUrl);

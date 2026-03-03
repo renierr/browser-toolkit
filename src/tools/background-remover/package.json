@@ -2,6 +2,7 @@
   "name": "background-remover",
   "version": "1.0.0",
   "dependencies": {
-    "@imgly/background-removal": "latest"
+    "@imgly/background-removal": "1.7.0",
+    "@imgly/background-removal-data": "1.4.5"
   }
 }
