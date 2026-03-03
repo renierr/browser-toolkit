@@ -265,8 +265,10 @@ export default function init(payload?: SharedFilesPayload) {
 
       showProgress('Writing file...', { visible: true });
       await yieldToUI(true);
-      const fileData = await fetchFile(selectedFile);
+      let fileData: Uint8Array | null = await fetchFile(selectedFile);
       await ffmpeg.writeFile(inputName, fileData);
+      // Release the JS-side copy immediately — the data is now in the WASM VFS
+      fileData = null;
 
       if (!currentMetadata && (enableCutting.checked || format === 'mp3')) {
         showProgress('Probing metadata...');
@@ -305,6 +307,12 @@ export default function init(payload?: SharedFilesPayload) {
 
       console.log('FFmpeg Args:', args.join(' '));
       const exitCode = await ffmpeg.exec(args);
+
+      // Free input file from VFS immediately — we no longer need it and this
+      // reclaims WASM memory before we allocate for reading the output.
+      await safeDeleteFile(inputName);
+      inputName = ''; // prevent double-delete in finally
+
       if (exitCode !== 0) throw new Error(`FFmpeg error (Exit ${exitCode})`);
 
       showProgress('Reading result...', { visible: true });
