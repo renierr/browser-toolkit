@@ -1,4 +1,4 @@
-import type { ShareTargetConfig, Tool, ToolScript } from './types';
+import type { ShareTargetConfig, Tool, ToolModule } from './types';
 
 export type ToolConfig = {
   name: string;
@@ -26,7 +26,7 @@ export type ToolConfig = {
 type BuildToolParams = {
   folder: string;
   html: string;
-  initScript?: ToolScript;
+  loadScript?: () => Promise<ToolModule>;
   config: ToolConfig;
 };
 
@@ -168,13 +168,13 @@ export function parseToolConfig(
   };
 }
 
-export function buildTool({ folder, html, initScript, config }: BuildToolParams): Tool {
+export function buildTool({ folder, html, loadScript, config }: BuildToolParams): Tool {
   return {
     name: config.name,
     description: config.description,
     path: folder,
     html,
-    script: initScript,
+    loadScript,
     draft: config.draft,
     example: config.example,
     icon: config.icon,

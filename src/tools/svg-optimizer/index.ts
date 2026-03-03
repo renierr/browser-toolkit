@@ -1,4 +1,4 @@
-import { optimize, type Config } from 'svgo';
+import { optimize, type Config } from 'svgo/browser';
 import { downloadAsZip, downloadFile, setupFileDropzone } from '../../js/file-utils';
 import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target.ts';

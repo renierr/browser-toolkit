@@ -52,6 +52,11 @@ export interface Tool {
    * If defined, this tool will receive shared files matching the specified MIME types.
    */
   shareTarget?: ShareTargetConfig;
+
+  /**
+   * Optional lazy loading function for the tool script.
+   */
+  loadScript?: () => Promise<ToolModule>;
 }
 
 export type CustomMainContext = {

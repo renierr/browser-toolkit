@@ -61,14 +61,12 @@ async function buildToolsList(): Promise<Tool[]> {
     }
 
     const scriptKey = Object.keys(scriptModules).find((k) => k === `${prefix}/${folder}/index.ts`);
-    let initScript: ToolModule['default'] | undefined;
+    let loadScript: (() => Promise<ToolModule>) | undefined;
     if (scriptKey) {
-      const importerOrValue = (scriptModules as any)[scriptKey];
-      const mod = typeof importerOrValue === 'function' ? await importerOrValue() : importerOrValue;
-      initScript = mod.default ?? mod.init;
+      loadScript = scriptModules[scriptKey] as () => Promise<ToolModule>;
     }
 
-    result.push(buildTool({ folder, html, initScript, config: toolConfig }));
+    result.push(buildTool({ folder, html, loadScript, config: toolConfig }));
   }
 
   return result;
@@ -164,8 +162,8 @@ function renderOverview() {
               <div class="mb-4">
                 <h3 class="text-2xl font-bold text-heading">${section.meta.title}</h3>
                 ${section.meta.description
-                  ? `<p class="text-sm text-muted mt-1">${section.meta.description}</p>`
-                  : ''}
+              ? `<p class="text-sm text-muted mt-1">${section.meta.description}</p>`
+              : ''}
               </div>
             </div>
           `;

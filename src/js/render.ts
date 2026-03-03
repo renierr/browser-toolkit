@@ -36,7 +36,7 @@ export function renderLayout(content: string, hideHeader?: boolean, hideFooter?:
   setupThemeToggle();
 }
 
-export function renderTool(tool: Tool | undefined, payload?: any) {
+export async function renderTool(tool: Tool | undefined, payload?: any) {
   renderLayout(toolPageHtml, tool?.hideHeader, tool?.hideFooter);
 
   const noToolHtml = `
@@ -52,6 +52,16 @@ export function renderTool(tool: Tool | undefined, payload?: any) {
       e.preventDefault();
       router.goOverview();
     });
+  }
+
+  // Lazy load script if needed
+  if (tool && !tool.script && tool.loadScript) {
+    try {
+      const mod = await tool.loadScript();
+      tool.script = mod.default ?? mod.init;
+    } catch (err) {
+      console.error(`[render] Failed to lazy load script for tool ${tool.path}:`, err);
+    }
   }
 
   // call Tool-specific script (if exist) with payload
@@ -100,8 +110,8 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false) {
       <button
         data-favorite="${tool.path}"
         class="absolute top-1 right-1 p-2 rounded-full bg-card/50 hover:bg-card text-heading transition-all z-2 focus:opacity-100 focus:ring-2 focus:ring-primary outline-none ${active
-          ? 'text-yellow-500 opacity-100'
-          : 'text-muted opacity-100'}"
+        ? 'text-yellow-500 opacity-100'
+        : 'text-muted opacity-100'}"
         aria-label="${active ? 'Remove from favorites' : 'Add to favorites'}"
         title="${active ? 'Remove from favorites' : 'Add to favorites'}"
       >
@@ -116,10 +126,10 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false) {
         href="#${tool.path}"
         aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
         class="card card-compact bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${tool.draft
-          ? 'border-l-yellow-400'
-          : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
-          ? 'focus:ring-yellow-300'
-          : 'focus:ring-secondary'} h-full"
+      ? 'border-l-yellow-400'
+      : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
+        ? 'focus:ring-yellow-300'
+        : 'focus:ring-secondary'} h-full"
       >
         <div class="card-body p-4">
           <div class="flex flex-col items-center sm:flex-row sm:items-start gap-4">
