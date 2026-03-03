@@ -48,6 +48,10 @@ export default defineConfig({
       },
     }),
   ],
+  worker: {
+    format: 'es',
+    plugins: () => [wasm(), topLevelAwait()],
+  },
   resolve: {
     alias: [
       {

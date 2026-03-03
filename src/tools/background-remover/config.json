@@ -3,7 +3,6 @@
   "description": "Remove backgrounds from images locally using AI",
   "icon": "eraser",
   "sectionId": "images",
-  "draft": true,
   "order": 10,
   "shareTarget": {
     "accept": [
