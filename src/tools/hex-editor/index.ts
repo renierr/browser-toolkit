@@ -185,12 +185,12 @@ export default function init(payload?: SharedFilesPayload) {
           }
 
           rowsHtml.push(`
-            <div class="flex items-center hover:bg-base-200/40 px-6 group" style="height: ${LINE_HEIGHT}px;">
-              <div class="px-2 shrink-0 text-primary opacity-50 text-[10px] font-bold select-none">${lineOffset.toString(16).padStart(8, '0').toUpperCase()}</div>
+            <div class="flex items-center hover:bg-base-200 px-2 group" style="height: ${LINE_HEIGHT}px;">
+              <div class="px-2 shrink-0 text-primary text-[10px] font-bold select-none">${lineOffset.toString(16).padStart(8, '0').toUpperCase()}</div>
               <div class="flex-1 flex justify-center gap-1 sm:gap-2">
                 ${hexCells}
               </div>
-              <div class="w-40 shrink-0 flex justify-center text-secondary opacity-70 tracking-[0.2em] select-none text-xs ${toggleAscii.checked ? '' : 'hidden'}">
+              <div class="ps-2 shrink-0 flex justify-center text-secondary tracking-[0.2em] select-none text-xs ${toggleAscii.checked ? '' : 'hidden'}">
                 ${asciiStr}
               </div>
             </div>
