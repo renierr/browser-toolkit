@@ -5,8 +5,14 @@ const MODEL_INPUT_SIZE = 320;
 const MODEL_INPUT_NAME = 'input.1';
 const MODEL_OUTPUT_NAME = '1959';
 
+interface ProcessingOptions {
+  threshold: number;
+  smoothing: number;
+}
+
 self.onmessage = async (event: MessageEvent) => {
-  const { id, file, modelUrl } = event.data;
+  const { id, file, modelUrl, options } = event.data;
+  const processingOptions: ProcessingOptions = options ?? { threshold: 128, smoothing: 4 };
 
   try {
     self.postMessage({ id, status: 'progress', progress: 5 });
@@ -25,9 +31,9 @@ self.onmessage = async (event: MessageEvent) => {
     self.postMessage({ id, status: 'progress', progress: 80 });
 
     const rawMask = results[MODEL_OUTPUT_NAME].data as Float32Array;
-    const mask = normalizeMask(rawMask);
+    const mask = normalizeMask(rawMask, processingOptions.threshold);
 
-    const canvas = applyMask(rgba, width, height, mask, MODEL_INPUT_SIZE);
+    const canvas = applyMask(rgba, width, height, mask, MODEL_INPUT_SIZE, processingOptions.smoothing);
     const blob = await canvas.convertToBlob({ type: 'image/png' });
     self.postMessage({ id, status: 'progress', progress: 95 });
 

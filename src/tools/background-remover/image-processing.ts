@@ -46,8 +46,9 @@ export function imageToTensor(
  * Normalizes the raw model output mask to [0..255] range.
  * u2net outputs sigmoid values already in ~[0,1], but we min-max normalize
  * to improve contrast on edge cases.
+ * When threshold > 0, applies a binary threshold to sharpen the mask.
  */
-export function normalizeMask(raw: Float32Array): Uint8Array {
+export function normalizeMask(raw: Float32Array, threshold: number = 128): Uint8Array {
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i < raw.length; i++) {
@@ -58,7 +59,14 @@ export function normalizeMask(raw: Float32Array): Uint8Array {
   const range = max - min || 1;
   const out = new Uint8Array(raw.length);
   for (let i = 0; i < raw.length; i++) {
-    out[i] = Math.round(((raw[i] - min) / range) * 255);
+    const normalized = Math.round(((raw[i] - min) / range) * 255);
+    // Apply threshold: values above threshold become 255, below become 0
+    // Threshold of 128 is the default (moderate), 0 means no thresholding (soft mask)
+    if (threshold > 0 && threshold < 255) {
+      out[i] = normalized >= threshold ? 255 : 0;
+    } else {
+      out[i] = normalized;
+    }
   }
   return out;
 }
@@ -66,6 +74,7 @@ export function normalizeMask(raw: Float32Array): Uint8Array {
 /**
  * Applies the alpha mask (model output resolution) to the original image,
  * producing a transparent-background PNG blob.
+ * When smoothing > 0, a box blur is applied to the mask to soften edges.
  */
 export function applyMask(
   rgba: Uint8ClampedArray,
@@ -73,8 +82,14 @@ export function applyMask(
   height: number,
   mask: Uint8Array,
   maskSize: number = MODEL_INPUT_SIZE,
+  smoothing: number = 0,
 ): OffscreenCanvas {
-  const upscaledMask = resizeGrayscale(mask, maskSize, maskSize, width, height);
+  let upscaledMask = resizeGrayscale(mask, maskSize, maskSize, width, height);
+
+  // Apply box blur for edge smoothing
+  if (smoothing > 0) {
+    upscaledMask = boxBlurGrayscale(upscaledMask, width, height, smoothing);
+  }
 
   const output = new Uint8ClampedArray(rgba.length);
   for (let i = 0; i < width * height; i++) {
@@ -89,6 +104,54 @@ export function applyMask(
   const ctx = canvas.getContext('2d')!;
   ctx.putImageData(new ImageData(output, width, height), 0, 0);
   return canvas;
+}
+
+/**
+ * Box blur for single-channel (grayscale) data.
+ * Applies a simple averaging filter with the given radius.
+ */
+function boxBlurGrayscale(
+  src: Uint8Array,
+  width: number,
+  height: number,
+  radius: number,
+): Uint8Array {
+  const dst = new Uint8Array(src.length);
+
+  // Horizontal pass
+  const temp = new Uint8Array(src.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0;
+      let count = 0;
+      for (let k = -radius; k <= radius; k++) {
+        const nx = x + k;
+        if (nx >= 0 && nx < width) {
+          sum += src[y * width + nx];
+          count++;
+        }
+      }
+      temp[y * width + x] = Math.round(sum / count);
+    }
+  }
+
+  // Vertical pass
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let sum = 0;
+      let count = 0;
+      for (let k = -radius; k <= radius; k++) {
+        const ny = y + k;
+        if (ny >= 0 && ny < height) {
+          sum += temp[ny * width + x];
+          count++;
+        }
+      }
+      dst[y * width + x] = Math.round(sum / count);
+    }
+  }
+
+  return dst;
 }
 
 /**

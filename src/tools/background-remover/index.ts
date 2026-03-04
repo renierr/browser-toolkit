@@ -5,6 +5,11 @@ import BackgroundRemovalWorker from './worker?worker';
 
 const MODEL_URL = new URL('./lib/models/u2netp-q.onnx', document.baseURI).href;
 
+interface ProcessingOptions {
+  threshold: number;
+  smoothing: number;
+}
+
 interface ImageQueueItem {
   id: string;
   file: File;
@@ -15,10 +20,62 @@ interface ImageQueueItem {
   originalUrl: string;
 }
 
+function getSelectedFormat(): 'png' | 'webp' {
+  const radio = document.querySelector<HTMLInputElement>('input[name="download-format"]:checked');
+  return (radio?.value as 'png' | 'webp') || 'png';
+}
+
+function getWebpQuality(): number {
+  const el = document.getElementById('opt-quality') as HTMLInputElement | null;
+  return el ? parseInt(el.value, 10) / 100 : 0.92;
+}
+
+function getProcessingOptions(): ProcessingOptions {
+  const threshold = parseInt((document.getElementById('opt-threshold') as HTMLInputElement)?.value ?? '128', 10);
+  const smoothing = parseInt((document.getElementById('opt-smooth') as HTMLInputElement)?.value ?? '4', 10);
+  return { threshold, smoothing };
+}
+
+async function convertBlobToFormat(blob: Blob, format: 'png' | 'webp', quality: number): Promise<Blob> {
+  if (format === 'png') return blob;
+  // Convert PNG blob to WebP using OffscreenCanvas
+  const bitmap = await createImageBitmap(blob);
+  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const ctx = canvas.getContext('2d')!;
+  ctx.drawImage(bitmap, 0, 0);
+  bitmap.close();
+  return canvas.convertToBlob({ type: 'image/webp', quality });
+}
+
+async function copyBlobToClipboard(blob: Blob): Promise<void> {
+  showProgress('Copying to clipboard...');
+  try {
+    // Clipboard API requires PNG
+    let pngBlob = blob;
+    if (blob.type !== 'image/png') {
+      const bitmap = await createImageBitmap(blob);
+      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const ctx = canvas.getContext('2d')!;
+      ctx.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      pngBlob = await canvas.convertToBlob({ type: 'image/png' });
+    }
+    await navigator.clipboard.write([new ClipboardItem({ [pngBlob.type]: pngBlob })]);
+    showMessage('Copied to clipboard!', { type: 'info', timeoutMs: 2000 });
+  } catch (err) {
+    console.error('Clipboard copy failed:', err);
+    showMessage('Failed to copy to clipboard.', { type: 'alert' });
+  } finally {
+    hideProgress();
+  }
+}
+
+// noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
   const gallery = document.getElementById('results-gallery')!;
   const bulkActions = document.getElementById('bulk-actions')!;
   const queueStatus = document.getElementById('queue-status')!;
+  const queueBadge = document.getElementById('queue-progress-badge')!;
   const btnClear = document.getElementById('btn-clear')!;
   const btnDownloadAll = document.getElementById('btn-download-all')!;
   const template = document.getElementById('result-item-template') as HTMLTemplateElement;
@@ -28,15 +85,61 @@ export default function init(payload?: SharedFilesPayload) {
   const modalImg = document.getElementById('modal-img') as HTMLImageElement;
   const modalFilename = document.getElementById('modal-filename')!;
   const modalDownload = document.getElementById('modal-download') as HTMLButtonElement;
+  const modalCopy = document.getElementById('modal-copy') as HTMLButtonElement;
+
+  // Options range labels
+  const optThreshold = document.getElementById('opt-threshold') as HTMLInputElement | null;
+  const optThresholdValue = document.getElementById('opt-threshold-value');
+  const optSmooth = document.getElementById('opt-smooth') as HTMLInputElement | null;
+  const optSmoothValue = document.getElementById('opt-smooth-value');
+  const optQuality = document.getElementById('opt-quality') as HTMLInputElement | null;
+  const optQualityValue = document.getElementById('opt-quality-value');
+
+  // Wire up option labels
+  optThreshold?.addEventListener('input', () => {
+    if (optThresholdValue) optThresholdValue.textContent = optThreshold.value;
+  });
+  optSmooth?.addEventListener('input', () => {
+    if (optSmoothValue) optSmoothValue.textContent = optSmooth.value;
+  });
+  optQuality?.addEventListener('input', () => {
+    if (optQualityValue) optQualityValue.textContent = `${optQuality.value}%`;
+  });
 
   let queue: ImageQueueItem[] = [];
   let isProcessing = false;
   let worker: Worker | null = null;
 
-
   const updateUI = () => {
-    queueStatus.textContent = `${queue.length} images in queue`;
-    bulkActions.classList.toggle('hidden', queue.length === 0);
+    const total = queue.length;
+    const done = queue.filter((i) => i.status === 'done').length;
+    const errors = queue.filter((i) => i.status === 'error').length;
+    const processing = queue.filter((i) => i.status === 'processing').length;
+
+    bulkActions.classList.toggle('hidden', total === 0);
+
+    if (total === 0) {
+      queueStatus.textContent = '0 images';
+      queueBadge.classList.add('hidden');
+      return;
+    }
+
+    queueStatus.textContent = `${total} image${total !== 1 ? 's' : ''}`;
+
+    if (done === total) {
+      queueBadge.textContent = '✓ All done';
+      queueBadge.className = 'badge badge-sm badge-success';
+    } else if (errors > 0 && done + errors === total) {
+      queueBadge.textContent = `${done} done, ${errors} failed`;
+      queueBadge.className = 'badge badge-sm badge-warning';
+    } else if (processing > 0) {
+      queueBadge.textContent = `${done}/${total} processed`;
+      queueBadge.className = 'badge badge-sm badge-info';
+    } else {
+      queueBadge.textContent = `${done}/${total} processed`;
+      queueBadge.className = 'badge badge-sm badge-ghost';
+    }
+    queueBadge.classList.remove('hidden');
   };
 
   const initWorker = () => {
@@ -49,7 +152,9 @@ export default function init(payload?: SharedFilesPayload) {
 
         if (status === 'progress') {
           const statusText = item.element.querySelector('.status-text')!;
+          const progressBar = item.element.querySelector('.item-progress') as HTMLProgressElement;
           statusText.textContent = `Processing... ${Math.round(progress)}%`;
+          if (progressBar) progressBar.value = Math.round(progress);
         } else if (status === 'success') {
           handleSuccess(item, result);
           isProcessing = false;
@@ -76,20 +181,28 @@ export default function init(payload?: SharedFilesPayload) {
     statusOverlay.classList.add('hidden');
 
     item.element.querySelector('.preview-toggle')?.classList.remove('hidden');
+    item.element.querySelector('.done-badge')?.classList.remove('hidden');
     item.element.querySelector('.btn-preview-full')?.classList.remove('hidden');
     item.element.querySelector('.btn-download-item')?.classList.remove('hidden');
+    item.element.querySelector('.btn-copy-item')?.classList.remove('hidden');
 
     // UI BUG FIX: Trigger the "Processed" button state automatically
     const btnProcessed = item.element.querySelector('.btn-compare-processed') as HTMLButtonElement;
     btnProcessed.click();
+
+    updateUI();
   };
 
   const handleError = (item: ImageQueueItem, error: string) => {
     console.error('Processing error:', error);
     item.status = 'error';
     const statusText = item.element.querySelector('.status-text')!;
+    const progressBar = item.element.querySelector('.item-progress') as HTMLProgressElement;
     statusText.textContent = 'Error';
+    if (progressBar) progressBar.classList.add('hidden');
     item.element.querySelector('.loading')?.classList.add('hidden');
+
+    updateUI();
   };
 
   const processQueue = async () => {
@@ -106,10 +219,15 @@ export default function init(payload?: SharedFilesPayload) {
     const statusText = item.element.querySelector('.status-text')!;
     statusText.textContent = 'Removing background...';
 
+    const options = getProcessingOptions();
     const w = initWorker();
-    w.postMessage({ id: item.id, file: item.file, modelUrl: MODEL_URL });
+    w.postMessage({ id: item.id, file: item.file, modelUrl: MODEL_URL, options });
 
     updateUI();
+  };
+
+  const getOutputFilename = (originalName: string, format: 'png' | 'webp') => {
+    return `${originalName.replace(/\.[^/.]+$/, '')}-no-bg.${format}`;
   };
 
   const addFilesToQueue = (files: FileList | File[]) => {
@@ -163,10 +281,22 @@ export default function init(payload?: SharedFilesPayload) {
 
       // Download logic
       const btnDownload = container.querySelector('.btn-download-item') as HTMLButtonElement;
-      btnDownload.onclick = () => {
+      btnDownload.onclick = async () => {
         const item = queue.find(it => it.id === id);
         if (item?.resultBlob) {
-          downloadFile(item.resultBlob, `${file.name.replace(/\.[^/.]+$/, '')}-no-bg.png`);
+          const format = getSelectedFormat();
+          const quality = getWebpQuality();
+          const outputBlob = await convertBlobToFormat(item.resultBlob, format, quality);
+          downloadFile(outputBlob, getOutputFilename(file.name, format));
+        }
+      };
+
+      // Copy to clipboard logic
+      const btnCopy = container.querySelector('.btn-copy-item') as HTMLButtonElement;
+      btnCopy.onclick = async () => {
+        const item = queue.find(it => it.id === id);
+        if (item?.resultBlob) {
+          await copyBlobToClipboard(item.resultBlob);
         }
       };
 
@@ -178,6 +308,9 @@ export default function init(payload?: SharedFilesPayload) {
           modalImg.src = item.resultUrl;
           modalFilename.textContent = file.name;
           modalDownload.onclick = () => btnDownload.click();
+          modalCopy.onclick = async () => {
+            if (item.resultBlob) await copyBlobToClipboard(item.resultBlob);
+          };
           previewModal.showModal();
         }
       };
@@ -217,14 +350,20 @@ export default function init(payload?: SharedFilesPayload) {
       return;
     }
 
+    const format = getSelectedFormat();
+    const quality = getWebpQuality();
+
     showProgress('Preparing ZIP...');
     try {
-      const zipFiles: DownloadBuffer[] = await Promise.all(doneItems.map(async (item) => ({
-        data: await item.resultBlob!.arrayBuffer(),
-        name: `${item.file.name.replace(/\.[^/.]+$/, '')}-no-bg.png`,
-      })));
+      const zipFiles: DownloadBuffer[] = await Promise.all(doneItems.map(async (item) => {
+        const outputBlob = await convertBlobToFormat(item.resultBlob!, format, quality);
+        return {
+          data: await outputBlob.arrayBuffer(),
+          name: getOutputFilename(item.file.name, format),
+        };
+      }));
 
-      await downloadAsZip(zipFiles, 'background-removed-images.zip');
+      await downloadAsZip(zipFiles, `background-removed-images.zip`);
     } catch (e) {
       showMessage('Failed to create ZIP file.', { type: 'alert' });
     } finally {
