@@ -1,6 +1,21 @@
 import * as ort from 'onnxruntime-web';
 
-ort.env.wasm.numThreads = Math.min(navigator.hardwareConcurrency ?? 1, 4);
+// Force single-threaded WASM execution.
+//
+// When serving with COOP/COEP headers the page becomes crossOriginIsolated,
+// SharedArrayBuffer becomes available, and onnxruntime-web auto-enables
+// multi-threading (up to 4 threads). The threaded path requires loading an
+// additional .mjs worker module (ort-wasm-simd-threaded.jsep.mjs) which
+// Vite does NOT include in the build output. This causes the session to
+// hang silently — especially on Android — because the worker fetch fails
+// without surfacing an error.
+//
+// Setting numThreads = 1 avoids the threaded code path entirely and lets
+// Vite's built-in WASM resolution (import.meta.url with hashed filenames)
+// work correctly. Do NOT set ort.env.wasm.wasmPaths — Vite already rewrites
+// the WASM URL to the hashed asset at build time.
+ort.env.wasm.numThreads = 1;
+
 
 const sessionCache = new Map<string, ort.InferenceSession>();
 
