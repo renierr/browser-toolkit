@@ -1,6 +1,7 @@
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import wasm from 'vite-plugin-wasm';
@@ -9,9 +10,71 @@ import topLevelAwait from 'vite-plugin-top-level-await';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// ---------------------------------------------------------------------------
+// Vite plugin: copy onnxruntime-web WASM + MJS files from node_modules
+// ---------------------------------------------------------------------------
+// onnxruntime-web loads its Emscripten glue (.mjs) and WASM binary at runtime
+// via dynamic import() with hardcoded filenames that Vite cannot statically
+// analyse or hash. This plugin copies them into dist/onnx/ at build time and
+// serves them from /onnx/ during dev so ort.env.wasm.wasmPaths can point at
+// a known, stable location.
+//
+// Which variant is needed? The default `import 'onnxruntime-web'` currently
+// resolves to the JSEP build and only references the .jsep files. We copy all
+// variants so that future ort entry-point changes (e.g. switching to the
+// webgpu or jspi export) work without touching this config again.
+//
+// Cache busting: the filenames are stable (no hash). Workbox precaches them
+// with a content-based revision so a dependency upgrade triggers a cache
+// refresh automatically.
+// ---------------------------------------------------------------------------
+const ONNX_DIST = path.resolve(__dirname, 'node_modules/onnxruntime-web/dist');
+const ONNX_FILES = fs.readdirSync(ONNX_DIST)
+  .filter(f => /^ort-wasm-simd-threaded\..+\.(mjs|wasm)$/.test(f));
+
+function onnxStaticPlugin(): Plugin {
+  return {
+    name: 'vite-plugin-onnx-static',
+
+    // Dev: serve files from node_modules under /onnx/*
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.startsWith('/onnx/')) {
+          const fileName = req.url.slice('/onnx/'.length).split('?')[0];
+          if (ONNX_FILES.includes(fileName)) {
+            const filePath = path.join(ONNX_DIST, fileName);
+            const contentType = fileName.endsWith('.wasm')
+              ? 'application/wasm'
+              : 'application/javascript';
+            res.setHeader('Content-Type', contentType);
+            res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
+            res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+            fs.createReadStream(filePath).pipe(res);
+            return;
+          }
+        }
+        next();
+      });
+    },
+
+    // Build: emit the files into dist/onnx/
+    generateBundle() {
+      for (const fileName of ONNX_FILES) {
+        const source = fs.readFileSync(path.join(ONNX_DIST, fileName));
+        this.emitFile({
+          type: 'asset',
+          fileName: `onnx/${fileName}`,
+          source,
+        });
+      }
+    },
+  };
+}
+
 export default defineConfig({
   base: './',
   plugins: [
+    onnxStaticPlugin(),
     wasm(),
     topLevelAwait(),
     tailwindcss(),
@@ -23,7 +86,7 @@ export default defineConfig({
         enabled: true,
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,wasm,onnx}'],
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx}'],
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
