@@ -47,6 +47,9 @@ const onnxWasmBase =
 // String prefix — the runtime appends e.g. "ort-wasm-simd-threaded.jsep.wasm".
 ort.env.wasm.wasmPaths = onnxWasmBase;
 
+// Suppress noisy C++ log about "Unknown CPU vendor" inside WASM — harmless.
+ort.env.logLevel = 'error';
+
 // Let ort's own init abort if the WASM fails to compile.
 ort.env.wasm.initTimeout = ONNX_SESSION_TIMEOUT_MS;
 
