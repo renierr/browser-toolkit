@@ -2,7 +2,6 @@ const MODEL_INPUT_SIZE = 320;
 
 /**
  * Decodes an image blob into raw RGBA pixel data using OffscreenCanvas.
- * On mobile/memory-constrained environments, resizing here saves significant memory.
  */
 export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
   data: Uint8ClampedArray;
@@ -18,7 +17,6 @@ export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
     const newWidth = Math.round(width * ratio);
     const newHeight = Math.round(height * ratio);
 
-    // Close old bitmap and create resized one
     const oldBitmap = bitmap;
     bitmap = await createImageBitmap(blob, {
       resizeWidth: newWidth,
@@ -40,8 +38,7 @@ export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
 }
 
 /**
- * Converts RGBA image data into a normalized CHW float32 tensor
- * resized to the model's expected input dimensions.
+ * Converts RGBA image data into a normalized CHW float32 tensor.
  */
 export function imageToTensor(
   rgba: Uint8ClampedArray,
@@ -55,9 +52,9 @@ export function imageToTensor(
 
   for (let i = 0; i < pixelCount; i++) {
     const base = i * 4;
-    chw[i] = resized[base] / 255;                     // R
-    chw[pixelCount + i] = resized[base + 1] / 255;    // G
-    chw[2 * pixelCount + i] = resized[base + 2] / 255; // B
+    chw[i] = resized[base] / 255;
+    chw[pixelCount + i] = resized[base + 1] / 255;
+    chw[2 * pixelCount + i] = resized[base + 2] / 255;
   }
 
   return chw;
@@ -65,11 +62,12 @@ export function imageToTensor(
 
 /**
  * Normalizes the raw model output mask to [0..255] range.
- * u2net outputs sigmoid values already in ~[0,1], but we min-max normalize
- * to improve contrast on edge cases.
- * When threshold > 0, applies a binary threshold to sharpen the mask.
  */
-export function normalizeMask(raw: Float32Array, threshold: number = 128): Uint8Array {
+export function normalizeMask(
+  raw: Float32Array,
+  threshold: number = 128,
+  contrast: number = 1.0,
+): Uint8Array {
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i < raw.length; i++) {
@@ -79,10 +77,16 @@ export function normalizeMask(raw: Float32Array, threshold: number = 128): Uint8
 
   const range = max - min || 1;
   const out = new Uint8Array(raw.length);
+
   for (let i = 0; i < raw.length; i++) {
-    const normalized = Math.round(((raw[i] - min) / range) * 255);
-    // Apply threshold: values above threshold become 255, below become 0
-    // Threshold of 128 is the default (moderate), 0 means no thresholding (soft mask)
+    let val = (raw[i] - min) / range;
+
+    if (contrast !== 1.0) {
+      val = 1 / (1 + Math.exp(-contrast * (val - 0.5) * 10));
+    }
+
+    const normalized = Math.round(val * 255);
+
     if (threshold > 0 && threshold < 255) {
       out[i] = normalized >= threshold ? 255 : 0;
     } else {
@@ -93,48 +97,169 @@ export function normalizeMask(raw: Float32Array, threshold: number = 128): Uint8
 }
 
 /**
- * Applies the alpha mask (model output resolution) to the original image,
- * producing a transparent-background PNG blob.
- * Uses native Canvas composite operations and filters for maximum performance.
+ * Simple box filter for Guided Filter.
+ */
+function boxFilter(data: Float32Array, width: number, height: number, radius: number): Float32Array {
+  const output = new Float32Array(data.length);
+  const winSize = 2 * radius + 1;
+
+  for (let y = 0; y < height; y++) {
+    let sum = 0;
+    for (let x = -radius; x <= radius; x++) {
+      sum += data[y * width + Math.max(0, Math.min(width - 1, x))];
+    }
+    for (let x = 0; x < width; x++) {
+      output[y * width + x] = sum;
+      const prev = data[y * width + Math.max(0, x - radius)];
+      const next = data[y * width + Math.min(width - 1, x + radius + 1)];
+      sum += next - prev;
+    }
+  }
+
+  const temp = new Float32Array(output);
+  for (let x = 0; x < width; x++) {
+    let sum = 0;
+    for (let y = -radius; y <= radius; y++) {
+      sum += temp[Math.max(0, Math.min(height - 1, y)) * width + x];
+    }
+    for (let y = 0; y < height; y++) {
+      output[y * width + x] = sum / (winSize * winSize);
+      const prev = temp[Math.max(0, y - radius) * width + x];
+      const next = temp[Math.min(height - 1, y + radius + 1) * width + x];
+      sum += next - prev;
+    }
+  }
+  return output;
+}
+
+/**
+ * Refines a low-resolution mask using the source image as a guide.
+ */
+export function guidedFilter(
+  sourceRgba: Uint8ClampedArray,
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  radius: number = 4,
+  eps: number = 0.01,
+): Uint8Array {
+  const size = width * height;
+
+  const I = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    I[i] = (sourceRgba[i * 4] * 0.299 + sourceRgba[i * 4 + 1] * 0.587 + sourceRgba[i * 4 + 2] * 0.114) / 255;
+  }
+
+  const p = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    p[i] = mask[i] / 255;
+  }
+
+  const mean_I = boxFilter(I, width, height, radius);
+  const mean_p = boxFilter(p, width, height, radius);
+
+  const Ip = new Float32Array(size);
+  const II = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    Ip[i] = I[i] * p[i];
+    II[i] = I[i] * I[i];
+  }
+
+  const mean_Ip = boxFilter(Ip, width, height, radius);
+  const corr_I = boxFilter(II, width, height, radius);
+
+  const var_I = new Float32Array(size);
+  const cov_Ip = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    var_I[i] = corr_I[i] - mean_I[i] * mean_I[i];
+    cov_Ip[i] = mean_Ip[i] - mean_I[i] * mean_p[i];
+  }
+
+  const a = new Float32Array(size);
+  const b = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    a[i] = cov_Ip[i] / (var_I[i] + eps);
+    b[i] = mean_p[i] - a[i] * mean_I[i];
+  }
+
+  const mean_a = boxFilter(a, width, height, radius);
+  const mean_b = boxFilter(b, width, height, radius);
+
+  const result = new Uint8Array(size);
+  for (let i = 0; i < size; i++) {
+    const q = mean_a[i] * I[i] + mean_b[i];
+    result[i] = Math.max(0, Math.min(255, Math.round(q * 255)));
+  }
+
+  return result;
+}
+
+/**
+ * Resizes a single-channel mask using OffscreenCanvas.
+ */
+export function resizeMask(
+  mask: Uint8Array,
+  srcW: number,
+  srcH: number,
+  dstW: number,
+  dstH: number,
+): Uint8Array {
+  if (srcW === dstW && srcH === dstH) return mask;
+
+  const canvas = new OffscreenCanvas(dstW, dstH);
+  const ctx = canvas.getContext('2d', { alpha: true })!;
+
+  const srcCanvas = new OffscreenCanvas(srcW, srcH);
+  const srcCtx = srcCanvas.getContext('2d')!;
+  const srcData = srcCtx.createImageData(srcW, srcH);
+  for (let i = 0; i < mask.length; i++) {
+    srcData.data[i * 4 + 3] = mask[i];
+  }
+  srcCtx.putImageData(srcData, 0, 0);
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(srcCanvas, 0, 0, dstW, dstH);
+
+  const dstData = ctx.getImageData(0, 0, dstW, dstH);
+  const result = new Uint8Array(dstW * dstH);
+  for (let i = 0; i < result.length; i++) {
+    result[i] = dstData.data[i * 4 + 3];
+  }
+  return result;
+}
+
+/**
+ * Applies the alpha mask to the original image.
  */
 export function applyMask(
   rgba: Uint8ClampedArray,
   width: number,
   height: number,
   mask: Uint8Array,
-  maskSize: number = MODEL_INPUT_SIZE,
+  maskWidth: number,
+  maskHeight: number,
   smoothing: number = 0,
 ): OffscreenCanvas {
-  // 1. Create a small mask canvas and put the mask pixels in it
-  // We use the alpha channel for the mask values
-  const smallMaskCanvas = new OffscreenCanvas(maskSize, maskSize);
-  const smallMaskCtx = smallMaskCanvas.getContext('2d')!;
-  const maskImageData = smallMaskCtx.createImageData(maskSize, maskSize);
-
-  // Fill alpha channel with mask values, RGB stays 0
-  for (let i = 0; i < mask.length; i++) {
-    maskImageData.data[i * 4 + 3] = mask[i];
-  }
-  smallMaskCtx.putImageData(maskImageData, 0, 0);
-
-  // 2. Create the final canvas and draw the original image
   const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d', { alpha: true })!;
 
-  // Use a temporary copy if rgba might be a SharedArrayBuffer to avoid ImageData errors
+  const maskCanvas = new OffscreenCanvas(maskWidth, maskHeight);
+  const maskCtx = maskCanvas.getContext('2d')!;
+  const maskData = maskCtx.createImageData(maskWidth, maskHeight);
+  for (let i = 0; i < mask.length; i++) {
+    maskData.data[i * 4 + 3] = mask[i];
+  }
+  maskCtx.putImageData(maskData, 0, 0);
+
+  ctx.clearRect(0, 0, width, height);
   ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
 
-  // 3. Clip the image using the mask
-  // 'destination-in' keeps existing pixels ONLY where the source is opaque
   ctx.globalCompositeOperation = 'destination-in';
-
-  // Apply native blur filter for smoothing if requested
   if (smoothing > 0) {
     ctx.filter = `blur(${smoothing}px)`;
   }
-
-  // Draw the mask canvas scaled up to the original size
-  ctx.drawImage(smallMaskCanvas, 0, 0, width, height);
+  ctx.drawImage(maskCanvas, 0, 0, width, height);
 
   return canvas;
 }
@@ -149,7 +274,6 @@ function resizeRGBA(
   dstW: number,
   dstH: number,
 ): Uint8ClampedArray {
-  // If already at target size, just return
   if (srcW === dstW && srcH === dstH) return src;
 
   const canvas = new OffscreenCanvas(dstW, dstH);
@@ -162,6 +286,3 @@ function resizeRGBA(
   ctx.drawImage(srcCanvas, 0, 0, dstW, dstH);
   return ctx.getImageData(0, 0, dstW, dstH).data;
 }
-
-// (resizeGrayscale was removed as it is no longer used)
-
