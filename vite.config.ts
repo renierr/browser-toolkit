@@ -30,7 +30,7 @@ const __dirname = path.dirname(__filename);
 // ---------------------------------------------------------------------------
 const ONNX_DIST = path.resolve(__dirname, 'node_modules/onnxruntime-web/dist');
 const ONNX_FILES = fs.readdirSync(ONNX_DIST)
-  .filter(f => /^ort-wasm-simd-threaded\..+\.(mjs|wasm)$/.test(f));
+  .filter(f => /^ort-wasm.*\.(mjs|wasm)$/.test(f));
 
 function onnxStaticPlugin(): Plugin {
   return {

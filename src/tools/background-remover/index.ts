@@ -153,10 +153,11 @@ export default function init(payload?: SharedFilesPayload) {
         if (status === 'progress') {
           const statusText = item.element.querySelector('.status-text')!;
           const progressBar = item.element.querySelector('.item-progress') as HTMLProgressElement;
-          statusText.textContent = `Processing... ${Math.round(progress)}%`;
+          const stepText = event.data.step ? ` (${event.data.step})` : '';
+          statusText.textContent = `Processing${stepText}... ${Math.round(progress)}%`;
           if (progressBar) progressBar.value = Math.round(progress);
         } else if (status === 'success') {
-          handleSuccess(item, result);
+          handleSuccess(item, result, event.data.width, event.data.height);
           isProcessing = false;
           processQueue();
         } else if (status === 'error') {
@@ -169,7 +170,7 @@ export default function init(payload?: SharedFilesPayload) {
     return worker;
   };
 
-  const handleSuccess = (item: ImageQueueItem, result: Blob) => {
+  const handleSuccess = (item: ImageQueueItem, result: Blob, width?: number, height?: number) => {
     item.resultBlob = result;
     item.resultUrl = URL.createObjectURL(result);
     item.status = 'done';
@@ -179,6 +180,11 @@ export default function init(payload?: SharedFilesPayload) {
 
     resultPreview.src = item.resultUrl;
     statusOverlay.classList.add('hidden');
+
+    if (width && height) {
+      const sizeInfo = item.element.querySelector('.filesize')!;
+      sizeInfo.textContent = `${sizeInfo.textContent} • ${width}x${height}`;
+    }
 
     item.element.querySelector('.preview-toggle')?.classList.remove('hidden');
     item.element.querySelector('.done-badge')?.classList.remove('hidden');

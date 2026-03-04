@@ -2,18 +2,39 @@ const MODEL_INPUT_SIZE = 320;
 
 /**
  * Decodes an image blob into raw RGBA pixel data using OffscreenCanvas.
+ * On mobile/memory-constrained environments, resizing here saves significant memory.
  */
-export async function decodeImage(blob: Blob): Promise<{
+export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
   data: Uint8ClampedArray;
   width: number;
   height: number;
 }> {
-  const bitmap = await createImageBitmap(blob);
-  const { width, height } = bitmap;
+  let bitmap = await createImageBitmap(blob);
+
+  let { width, height } = bitmap;
+
+  if (maxDimension && (width > maxDimension || height > maxDimension)) {
+    const ratio = Math.min(maxDimension / width, maxDimension / height);
+    const newWidth = Math.round(width * ratio);
+    const newHeight = Math.round(height * ratio);
+
+    // Close old bitmap and create resized one
+    const oldBitmap = bitmap;
+    bitmap = await createImageBitmap(blob, {
+      resizeWidth: newWidth,
+      resizeHeight: newHeight,
+      resizeQuality: 'high'
+    });
+    oldBitmap.close();
+    width = newWidth;
+    height = newHeight;
+  }
+
   const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d')!;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   ctx.drawImage(bitmap, 0, 0);
   bitmap.close();
+
   const imageData = ctx.getImageData(0, 0, width, height);
   return { data: imageData.data, width, height };
 }
@@ -164,12 +185,15 @@ function resizeRGBA(
   dstW: number,
   dstH: number,
 ): Uint8ClampedArray {
+  // If already at target size, just return
+  if (srcW === dstW && srcH === dstH) return src;
+
   const canvas = new OffscreenCanvas(dstW, dstH);
   const ctx = canvas.getContext('2d')!;
 
   const srcCanvas = new OffscreenCanvas(srcW, srcH);
   const srcCtx = srcCanvas.getContext('2d')!;
-  srcCtx.putImageData(new ImageData(Uint8ClampedArray.from(src), srcW, srcH), 0, 0);
+  srcCtx.putImageData(new ImageData(new Uint8ClampedArray(src), srcW, srcH), 0, 0);
 
   ctx.drawImage(srcCanvas, 0, 0, dstW, dstH);
   return ctx.getImageData(0, 0, dstW, dstH).data;
