@@ -95,7 +95,7 @@ export function normalizeMask(raw: Float32Array, threshold: number = 128): Uint8
 /**
  * Applies the alpha mask (model output resolution) to the original image,
  * producing a transparent-background PNG blob.
- * When smoothing > 0, a box blur is applied to the mask to soften edges.
+ * Uses native Canvas composite operations and filters for maximum performance.
  */
 export function applyMask(
   rgba: Uint8ClampedArray,
@@ -105,74 +105,38 @@ export function applyMask(
   maskSize: number = MODEL_INPUT_SIZE,
   smoothing: number = 0,
 ): OffscreenCanvas {
-  let upscaledMask = resizeGrayscale(mask, maskSize, maskSize, width, height);
+  // 1. Create a small mask canvas and put the mask pixels in it
+  // We use the alpha channel for the mask values
+  const smallMaskCanvas = new OffscreenCanvas(maskSize, maskSize);
+  const smallMaskCtx = smallMaskCanvas.getContext('2d')!;
+  const maskImageData = smallMaskCtx.createImageData(maskSize, maskSize);
 
-  // Apply box blur for edge smoothing
-  if (smoothing > 0) {
-    upscaledMask = boxBlurGrayscale(upscaledMask, width, height, smoothing);
+  // Fill alpha channel with mask values, RGB stays 0
+  for (let i = 0; i < mask.length; i++) {
+    maskImageData.data[i * 4 + 3] = mask[i];
   }
+  smallMaskCtx.putImageData(maskImageData, 0, 0);
 
-  const output = new Uint8ClampedArray(rgba.length);
-  for (let i = 0; i < width * height; i++) {
-    const base = i * 4;
-    output[base] = rgba[base];
-    output[base + 1] = rgba[base + 1];
-    output[base + 2] = rgba[base + 2];
-    output[base + 3] = upscaledMask[i];
-  }
-
+  // 2. Create the final canvas and draw the original image
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d')!;
-  ctx.putImageData(new ImageData(output, width, height), 0, 0);
+
+  // Use a temporary copy if rgba might be a SharedArrayBuffer to avoid ImageData errors
+  ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
+
+  // 3. Clip the image using the mask
+  // 'destination-in' keeps existing pixels ONLY where the source is opaque
+  ctx.globalCompositeOperation = 'destination-in';
+
+  // Apply native blur filter for smoothing if requested
+  if (smoothing > 0) {
+    ctx.filter = `blur(${smoothing}px)`;
+  }
+
+  // Draw the mask canvas scaled up to the original size
+  ctx.drawImage(smallMaskCanvas, 0, 0, width, height);
+
   return canvas;
-}
-
-/**
- * Box blur for single-channel (grayscale) data.
- * Applies a simple averaging filter with the given radius.
- */
-function boxBlurGrayscale(
-  src: Uint8Array,
-  width: number,
-  height: number,
-  radius: number,
-): Uint8Array {
-  const dst = new Uint8Array(src.length);
-
-  // Horizontal pass
-  const temp = new Uint8Array(src.length);
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      let sum = 0;
-      let count = 0;
-      for (let k = -radius; k <= radius; k++) {
-        const nx = x + k;
-        if (nx >= 0 && nx < width) {
-          sum += src[y * width + nx];
-          count++;
-        }
-      }
-      temp[y * width + x] = Math.round(sum / count);
-    }
-  }
-
-  // Vertical pass
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      let sum = 0;
-      let count = 0;
-      for (let k = -radius; k <= radius; k++) {
-        const ny = y + k;
-        if (ny >= 0 && ny < height) {
-          sum += temp[ny * width + x];
-          count++;
-        }
-      }
-      dst[y * width + x] = Math.round(sum / count);
-    }
-  }
-
-  return dst;
 }
 
 /**
@@ -199,42 +163,5 @@ function resizeRGBA(
   return ctx.getImageData(0, 0, dstW, dstH).data;
 }
 
-/**
- * Bilinear resize for single-channel (grayscale) data.
- */
-function resizeGrayscale(
-  src: Uint8Array,
-  srcW: number,
-  srcH: number,
-  dstW: number,
-  dstH: number,
-): Uint8Array {
-  const dst = new Uint8Array(dstW * dstH);
-  const xRatio = srcW / dstW;
-  const yRatio = srcH / dstH;
-
-  for (let y = 0; y < dstH; y++) {
-    const srcY = y * yRatio;
-    const y0 = Math.floor(srcY);
-    const y1 = Math.min(y0 + 1, srcH - 1);
-    const fy = srcY - y0;
-
-    for (let x = 0; x < dstW; x++) {
-      const srcX = x * xRatio;
-      const x0 = Math.floor(srcX);
-      const x1 = Math.min(x0 + 1, srcW - 1);
-      const fx = srcX - x0;
-
-      const tl = src[y0 * srcW + x0];
-      const tr = src[y0 * srcW + x1];
-      const bl = src[y1 * srcW + x0];
-      const br = src[y1 * srcW + x1];
-
-      const top = tl + (tr - tl) * fx;
-      const bottom = bl + (br - bl) * fx;
-      dst[y * dstW + x] = Math.round(top + (bottom - top) * fy);
-    }
-  }
-  return dst;
-}
+// (resizeGrayscale was removed as it is no longer used)
 
