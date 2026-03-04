@@ -31,9 +31,6 @@ export default function init(payload?: SharedFilesPayload) {
   let isProcessing = false;
   let worker: Worker | null = null;
 
-  const config = {
-    // Config remains empty as defaults are handled in worker
-  };
 
   const updateUI = () => {
     queueStatus.textContent = `${queue.length} images in queue`;
@@ -108,7 +105,7 @@ export default function init(payload?: SharedFilesPayload) {
     statusText.textContent = 'Removing background...';
 
     const w = initWorker();
-    w.postMessage({ id: item.id, file: item.file, config });
+    w.postMessage({ id: item.id, file: item.file });
 
     updateUI();
   };

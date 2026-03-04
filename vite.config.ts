@@ -82,7 +82,7 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['lucide'],
-    exclude: ['mupdf', '@ffmpeg/core', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
+    exclude: ['mupdf', '@ffmpeg/core', '@ffmpeg/ffmpeg', '@ffmpeg/util', 'onnxruntime-web'],
   },
   assetsInclude: ['**/*.wasm'],
 });
