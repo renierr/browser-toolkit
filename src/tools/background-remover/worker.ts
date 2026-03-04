@@ -5,15 +5,13 @@ const MODEL_INPUT_SIZE = 320;
 const MODEL_INPUT_NAME = 'input.1';
 const MODEL_OUTPUT_NAME = '1959';
 
-const MODEL_URL = `${import.meta.env.BASE_URL ?? './'}lib/models/u2netp-q.onnx`;
-
 self.onmessage = async (event: MessageEvent) => {
-  const { id, file } = event.data;
+  const { id, file, modelUrl } = event.data;
 
   try {
     self.postMessage({ id, status: 'progress', progress: 5 });
 
-    const session = await loadSession({ modelPath: MODEL_URL });
+    const session = await loadSession({ modelPath: modelUrl });
     self.postMessage({ id, status: 'progress', progress: 30 });
 
     const { data: rgba, width, height } = await decodeImage(file);

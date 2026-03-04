@@ -40,15 +40,24 @@ U²-Net produces 7 side-output maps at different scales (d0–d6). Only the firs
 
 ---
 
-## Worker Constants
+## Constants
 
-The model-specific values are defined at the top of `worker.ts`:
+Model-specific values are split between `index.ts` (URL) and `worker.ts` (model shape/names):
+
+**`index.ts`** — resolves the model URL on the main thread and passes it to the worker via `postMessage`:
+
+```typescript
+const MODEL_URL = new URL('./lib/models/u2netp-q.onnx', document.baseURI).href;
+```
+
+Resolved on the main thread because relative paths inside web workers resolve against the worker script location, not the page.
+
+**`worker.ts`** — defines the ONNX graph constants:
 
 ```typescript
 const MODEL_INPUT_SIZE = 320;
 const MODEL_INPUT_NAME = 'input.1';
 const MODEL_OUTPUT_NAME = '1959';
-const MODEL_URL = `${import.meta.env.BASE_URL ?? './'}lib/models/u2netp-q.onnx`;
 ```
 
 ### What these mean
@@ -58,7 +67,6 @@ const MODEL_URL = `${import.meta.env.BASE_URL ?? './'}lib/models/u2netp-q.onnx`;
 | `MODEL_INPUT_SIZE` | Spatial dimension the model expects (both H and W). Derived from the input shape: `[1, 3, 320, 320]` → `320`. |
 | `MODEL_INPUT_NAME` | The ONNX graph's **input node name**. An arbitrary identifier assigned during PyTorch-to-ONNX export. |
 | `MODEL_OUTPUT_NAME` | The ONNX graph's **output node name** to read. Models with multiple outputs (like U²-Net) have several; pick the finest/fused head. |
-| `MODEL_URL` | Path to the `.onnx` file relative to the `public/` folder. |
 
 The names `input.1` and `1959` are **auto-generated tensor IDs** from `torch.onnx.export()`. They have no semantic meaning — they are just the internal node identifiers in the ONNX graph.
 
@@ -133,13 +141,20 @@ const ort = require('onnxruntime-node');
 })();
 ```
 
-### 3. Update `worker.ts`
+### 3. Update the constants
+
+**`index.ts`** — update the model path:
+
+```typescript
+const MODEL_URL = new URL('./lib/models/your-model.onnx', document.baseURI).href;
+```
+
+**`worker.ts`** — update the ONNX graph constants:
 
 ```typescript
 const MODEL_INPUT_SIZE = 1024;             // from input shape [1, 3, 1024, 1024]
 const MODEL_INPUT_NAME = 'input.1';        // from inspection
 const MODEL_OUTPUT_NAME = '1827';          // from inspection (pick first/finest)
-const MODEL_URL = `${import.meta.env.BASE_URL ?? './'}lib/models/your-model.onnx`;
 ```
 
 ### 4. Check if preprocessing needs changes

@@ -3,6 +3,8 @@ import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target';
 import BackgroundRemovalWorker from './worker?worker';
 
+const MODEL_URL = new URL('./lib/models/u2netp-q.onnx', document.baseURI).href;
+
 interface ImageQueueItem {
   id: string;
   file: File;
@@ -105,7 +107,7 @@ export default function init(payload?: SharedFilesPayload) {
     statusText.textContent = 'Removing background...';
 
     const w = initWorker();
-    w.postMessage({ id: item.id, file: item.file });
+    w.postMessage({ id: item.id, file: item.file, modelUrl: MODEL_URL });
 
     updateUI();
   };
