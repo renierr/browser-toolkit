@@ -4,7 +4,7 @@ import Tesseract from 'tesseract.js';
 import tesseractWorker from 'tesseract.js/dist/worker.min.js?url';
 import tesseractWasm from 'tesseract.js-core/tesseract-core-simd.wasm.js?url'
 
-const TESSERACT_LANGS = ['deu', 'eng'];
+const TESSERACT_LANGS = ['deu', 'eng', 'deu_frak'];
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
