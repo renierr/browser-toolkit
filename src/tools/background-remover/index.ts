@@ -1,5 +1,6 @@
 import { setupFileDropzone, downloadFile, downloadAsZip, type DownloadBuffer } from '../../js/file-utils';
 import { showMessage, showProgress, hideProgress } from '../../js/ui';
+import { debounce } from '../../js/utils';
 import type { SharedFilesPayload } from '../../js/share-target';
 import BackgroundRemovalWorker from './worker?worker';
 
@@ -122,6 +123,8 @@ export default function init(payload?: SharedFilesPayload) {
   let isProcessing = false;
   let worker: Worker | null = null;
   let currentModalItemId: string | null = null;
+  let pendingReprocess: Map<string, ProcessingOptions> = new Map();
+  let reprocessDebouncers: Map<string, ReturnType<typeof debounce<(options: ProcessingOptions) => void>>> = new Map();
 
   const updateUI = () => {
     const total = queue.length;
@@ -172,10 +175,12 @@ export default function init(payload?: SharedFilesPayload) {
         } else if (status === 'success') {
           handleSuccess(item, result, event.data.width, event.data.height, event.data.rawMask);
           isProcessing = false;
+          flushPendingReprocess();
           processQueue();
         } else if (status === 'error') {
           handleError(item, error);
           isProcessing = false;
+          flushPendingReprocess();
           processQueue();
         }
       };
@@ -226,11 +231,37 @@ export default function init(payload?: SharedFilesPayload) {
   const handleError = (item: ImageQueueItem, error: string) => {
     console.error('Processing error:', error);
     item.status = 'error';
+    const statusOverlay = item.element.querySelector('.status-overlay')!;
     const statusText = item.element.querySelector('.status-text')!;
     const progressBar = item.element.querySelector('.item-progress') as HTMLProgressElement;
-    statusText.textContent = 'Error';
+    const spinner = item.element.querySelector('.loading') as HTMLElement | null;
+
+    // Show a meaningful error message (truncated for UI)
+    const shortError = error && error.length > 80 ? error.substring(0, 80) + '…' : (error || 'Unknown error');
+    statusText.innerHTML = `<span class="text-error font-bold">Error</span><br/><span class="text-xs opacity-70 mt-1 block">${shortError}</span>`;
     if (progressBar) progressBar.classList.add('hidden');
-    item.element.querySelector('.loading')?.classList.add('hidden');
+    if (spinner) spinner.classList.add('hidden');
+    statusOverlay.classList.remove('hidden');
+
+    // Add a retry button if not already present
+    let retryBtn = statusOverlay.querySelector('.btn-retry') as HTMLButtonElement | null;
+    if (!retryBtn) {
+      retryBtn = document.createElement('button');
+      retryBtn.className = 'btn btn-xs btn-primary mt-2 btn-retry';
+      retryBtn.textContent = 'Retry';
+      statusOverlay.appendChild(retryBtn);
+    }
+    retryBtn.classList.remove('hidden');
+    retryBtn.onclick = () => {
+      retryBtn!.classList.add('hidden');
+      item.status = 'pending';
+      const resetSpinner = item.element.querySelector('.loading') as HTMLElement | null;
+      if (resetSpinner) resetSpinner.classList.remove('hidden');
+      if (progressBar) { progressBar.classList.remove('hidden'); progressBar.value = 0; }
+      statusText.textContent = 'Pending...';
+      processQueue();
+    };
+
     if (item.id === currentModalItemId) modalStatusOverlay.classList.add('hidden');
     updateUI();
   };
@@ -266,10 +297,20 @@ export default function init(payload?: SharedFilesPayload) {
     return `${originalName.replace(/\.[^/.]+$/, '')}-no-bg.${format}`;
   };
 
-  const reprocessItem = (id: string, options: ProcessingOptions) => {
+  /** Flush the next pending reprocess (called after worker finishes a task) */
+  const flushPendingReprocess = () => {
+    if (isProcessing || pendingReprocess.size === 0) return;
+    const [nextId, nextOpts] = pendingReprocess.entries().next().value!;
+    pendingReprocess.delete(nextId);
+    doReprocess(nextId, nextOpts);
+  };
+
+  /** Actually send the reprocess message to the worker */
+  const doReprocess = (id: string, options: ProcessingOptions) => {
     const item = queue.find(it => it.id === id);
     if (!item || !item.rawMask) return;
 
+    isProcessing = true;
     item.status = 'processing';
     item.options = { ...options };
 
@@ -277,6 +318,11 @@ export default function init(payload?: SharedFilesPayload) {
     statusOverlay.classList.remove('hidden');
     const statusText = item.element.querySelector('.status-text')!;
     statusText.textContent = 'Adjusting...';
+    // Hide retry button from any previous error
+    const retryBtn = statusOverlay.querySelector('.btn-retry') as HTMLElement | null;
+    if (retryBtn) retryBtn.classList.add('hidden');
+    const spinner = item.element.querySelector('.loading') as HTMLElement | null;
+    if (spinner) spinner.classList.remove('hidden');
 
     if (id === currentModalItemId) {
       modalStatusOverlay.classList.remove('hidden');
@@ -290,6 +336,43 @@ export default function init(payload?: SharedFilesPayload) {
       rawMask: item.rawMask,
       options
     });
+  };
+
+  /**
+   * Get or create a debounced reprocess function for a specific item.
+   * Each item gets its own debouncer so concurrent adjustments on different items don't interfere.
+   */
+  const getItemDebouncer = (id: string) => {
+    let fn = reprocessDebouncers.get(id);
+    if (!fn) {
+      fn = debounce((options: ProcessingOptions) => {
+        if (isProcessing) {
+          // Queue it — will be picked up after the current task finishes
+          pendingReprocess.set(id, options);
+          const item = queue.find(it => it.id === id);
+          if (item) {
+            const statusOverlay = item.element.querySelector('.status-overlay')!;
+            statusOverlay.classList.remove('hidden');
+            const statusText = item.element.querySelector('.status-text')!;
+            statusText.textContent = 'Waiting...';
+          }
+        } else {
+          doReprocess(id, options);
+        }
+      }, 150);
+      reprocessDebouncers.set(id, fn);
+    }
+    return fn;
+  };
+
+  /**
+   * Debounced reprocess: coalesces rapid slider changes (especially on mobile touch)
+   * and serializes through the isProcessing flag to avoid overwhelming the worker.
+   */
+  const reprocessItem = (id: string, options: ProcessingOptions) => {
+    const item = queue.find(it => it.id === id);
+    if (!item || !item.rawMask) return;
+    getItemDebouncer(id)(options);
   };
 
   const addFilesToQueue = (files: FileList | File[]) => {
@@ -342,6 +425,9 @@ export default function init(payload?: SharedFilesPayload) {
             URL.revokeObjectURL(item.originalUrl);
             queue.splice(index, 1);
           }
+          const debounceFn = reprocessDebouncers.get(id);
+          if (debounceFn) { debounceFn.cancel(); reprocessDebouncers.delete(id); }
+          pendingReprocess.delete(id);
           container.remove();
           updateUI();
         };
@@ -531,6 +617,9 @@ export default function init(payload?: SharedFilesPayload) {
   if (payload?.sharedFiles?.length) addFilesToQueue(payload.sharedFiles);
   return () => {
     if (worker) { worker.terminate(); worker = null; }
+    reprocessDebouncers.forEach(fn => fn.cancel());
+    reprocessDebouncers.clear();
+    pendingReprocess.clear();
     queue.forEach((item) => {
       if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
       URL.revokeObjectURL(item.originalUrl);
