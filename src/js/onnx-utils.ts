@@ -2,32 +2,18 @@ import * as ort from 'onnxruntime-web';
 import { withTimeout } from './utils';
 
 // ---------------------------------------------------------------------------
-// ONNX Runtime – WASM configuration
+// ONNX Runtime – configuration
 // ---------------------------------------------------------------------------
 // onnxruntime-web dynamically loads an Emscripten glue module (.mjs) and its
-// matching WASM binary at runtime. The filenames are hardcoded strings that
-// Vite cannot statically analyse, so Vite won't emit or hash them.
+// matching WASM binary at runtime.
 //
-// A custom Vite plugin (onnxStaticPlugin in vite.config.ts) copies the two
+// A custom Vite plugin (onnxStaticPlugin in vite.config.ts) copies the
 // required files from node_modules into dist/onnx/ at build time and serves
-// them at /onnx/ during dev. Nothing extra is committed to git — bump the
-// onnxruntime-web dependency version and rebuild; the plugin picks up the new
-// files automatically.
-//
-// Which variant is used?
-// The default `import 'onnxruntime-web'` resolves to the JSEP build
-// (WebGPU/WebGL execution-provider support). At build time the variant is
-// baked in as `ort-wasm-simd-threaded.jsep.{mjs,wasm}` — the other variants
-// (.jspi, .asyncify, plain .mjs) are dead code and never loaded.
+// them at /onnx/ during dev.
 //
 // Threading: when the page is crossOriginIsolated (COOP + COEP headers),
 // SharedArrayBuffer is available so we allow multi-threading. Otherwise we
-// force a single thread. Setting wasmPaths as a string prefix works for both
-// cases — the runtime appends the hardcoded filename to the prefix.
-//
-// Cache busting: the files in dist/onnx/ have stable names (no hash). PWA
-// workbox precaches them with a content-based revision hash, so an upgrade
-// of onnxruntime-web triggers a cache update automatically.
+// force a single thread.
 // ---------------------------------------------------------------------------
 
 const ONNX_SESSION_TIMEOUT_MS = 30_000;
@@ -65,6 +51,36 @@ if (typeof self !== 'undefined' && self.crossOriginIsolated) {
 
 const sessionCache = new Map<string, ort.InferenceSession>();
 
+/**
+ * Detect WebGPU support. In a Worker `navigator.gpu` is only available when
+ * the browser ships WebGPU *and* the page is served over a secure context.
+ * We also call `requestAdapter()` — if no adapter is returned the hardware
+ * doesn't actually expose a usable GPU.
+ */
+let webgpuSupported: boolean | undefined;
+async function isWebGpuAvailable(): Promise<boolean> {
+  if (webgpuSupported !== undefined) return webgpuSupported;
+  try {
+    if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
+      webgpuSupported = false;
+    } else {
+      const adapter = await (navigator as unknown as { gpu: { requestAdapter(): Promise<unknown | null> } }).gpu.requestAdapter();
+      webgpuSupported = adapter != null;
+    }
+  } catch {
+    webgpuSupported = false;
+  }
+  return webgpuSupported;
+}
+
+/**
+ * Return the default execution-provider list: prefer WebGPU when available,
+ * always include WASM as the final fallback so every model can run.
+ */
+async function defaultProviders(): Promise<ort.InferenceSession.ExecutionProviderConfig[]> {
+  return (await isWebGpuAvailable()) ? ['webgpu', 'wasm'] : ['wasm'];
+}
+
 export interface OnnxModelConfig {
   modelPath: string;
   executionProviders?: ort.InferenceSession.ExecutionProviderConfig[];
@@ -74,34 +90,112 @@ export interface OnnxModelConfig {
 
 /**
  * Load (or return a cached) ONNX inference session.
- * Wraps the call with a timeout so the worker never hangs indefinitely —
- * if something goes wrong (missing WASM, CORS issue, etc.) the caller gets
- * a clear error instead of an endless spinner.
+ *
+ * By default the session is created with WebGPU (when the browser/hardware
+ * supports it) and WASM as a fallback. If session creation with the
+ * preferred providers fails, it automatically retries with pure WASM.
+ *
+ * The same fallback happens at inference time: if `session.run()` throws
+ * (e.g. because the WebGPU kernel for a particular op like ceil-mode
+ * MaxPool is not yet implemented), the session is transparently recreated
+ * with WASM and the inference is retried.
  */
 export async function loadSession(config: OnnxModelConfig): Promise<ort.InferenceSession> {
   const cached = sessionCache.get(config.modelPath);
   if (cached) return cached;
 
   const timeout = config.timeoutMs ?? ONNX_SESSION_TIMEOUT_MS;
+  const providers = config.executionProviders ?? await defaultProviders();
 
-  const session = await withTimeout(
-    ort.InferenceSession.create(config.modelPath, {
-      executionProviders: config.executionProviders ?? ['wasm'],
-    }),
-    timeout,
-    `ONNX session creation timed out after ${timeout / 1000}s – the WASM runtime may have failed to load. ` +
-    `Check the browser console for CORS or network errors.`,
-  );
+  const session = await createSessionWithFallback(config.modelPath, providers, timeout);
 
   sessionCache.set(config.modelPath, session);
   return session;
 }
 
+/**
+ * Try to create an InferenceSession with the given providers. If creation
+ * fails *and* there is a non-WASM provider in the list, fall back to pure
+ * WASM so the model still works.
+ */
+async function createSessionWithFallback(
+  modelPath: string,
+  providers: ort.InferenceSession.ExecutionProviderConfig[],
+  timeout: number,
+): Promise<ort.InferenceSession> {
+  const canFallback = providers.some(
+    (p) => (typeof p === 'string' ? p : p.name) !== 'wasm',
+  );
+
+  try {
+    return await withTimeout(
+      ort.InferenceSession.create(modelPath, { executionProviders: providers }),
+      timeout,
+      `ONNX session creation timed out after ${timeout / 1000}s – the WASM runtime may have failed to load. ` +
+      `Check the browser console for CORS or network errors.`,
+    );
+  } catch (err) {
+    if (!canFallback) throw err;
+
+    const names = providers.map((p) => (typeof p === 'string' ? p : p.name)).join(', ');
+    console.warn(
+      `[onnx-utils] Session creation failed with providers [${names}]. Falling back to WASM. Original error:`,
+      err,
+    );
+
+    return withTimeout(
+      ort.InferenceSession.create(modelPath, { executionProviders: ['wasm'] }),
+      timeout,
+      `ONNX WASM-fallback session creation timed out after ${timeout / 1000}s.`,
+    );
+  }
+}
+
+/**
+ * Run inference on the given session.
+ *
+ * If the run fails (e.g. because a WebGPU kernel doesn't support an op like
+ * ceil-mode MaxPool), the session is automatically recreated with the WASM
+ * backend and the inference is retried so the caller always gets a result.
+ */
 export async function runInference(
   session: ort.InferenceSession,
   feeds: Record<string, ort.Tensor>,
 ): Promise<ort.InferenceSession.OnnxValueMapType> {
-  return session.run(feeds);
+  try {
+    return await session.run(feeds);
+  } catch (err) {
+    // Find the model path for this session so we can rebuild it.
+    const modelPath = findModelPathForSession(session);
+    if (!modelPath) throw err; // Can't recover without the model path.
+
+    console.warn(
+      '[onnx-utils] Inference failed. Recreating session with WASM fallback. Original error:',
+      err,
+    );
+
+    // Remove the broken session from the cache. We intentionally do NOT call
+    // session.release() here — the WebGPU backend may still have in-flight
+    // command buffers referencing GPU resources owned by the session.
+    sessionCache.delete(modelPath);
+
+    const fallbackSession = await withTimeout(
+      ort.InferenceSession.create(modelPath, { executionProviders: ['wasm'] }),
+      ONNX_SESSION_TIMEOUT_MS,
+      'ONNX WASM-fallback session creation timed out.',
+    );
+
+    sessionCache.set(modelPath, fallbackSession);
+    return fallbackSession.run(feeds);
+  }
+}
+
+/** Reverse-lookup the model path for a cached session. */
+function findModelPathForSession(session: ort.InferenceSession): string | undefined {
+  for (const [path, cached] of sessionCache.entries()) {
+    if (cached === session) return path;
+  }
+  return undefined;
 }
 
 export function releaseSession(modelPath: string): void {
