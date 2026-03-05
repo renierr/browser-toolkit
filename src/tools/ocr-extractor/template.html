@@ -10,7 +10,7 @@
     </p>
 
     <div id="dropzone"
-         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
       <div class="flex flex-col items-center gap-2">
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
@@ -25,13 +25,6 @@
       <input type="file" id="image-input" class="hidden" accept="image/*" />
     </div>
 
-    <div id="status-container" class="hidden mt-4">
-      <div class="flex items-center justify-between mb-2">
-        <span id="status-text" class="text-sm font-medium">Initializing...</span>
-        <span id="progress-percent" class="text-xs opacity-70">0%</span>
-      </div>
-      <progress id="ocr-progress" class="progress progress-primary w-full" value="0" max="100"></progress>
-    </div>
   </div>
 
   <div id="result-container" class="hidden grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -39,7 +32,7 @@
       <div class="card-body">
         <h3 class="card-title text-sm">Preview</h3>
         <div class="bg-base-200 rounded-lg overflow-hidden flex items-center justify-center min-h-50">
-          <img id="preview-img" class="max-w-full max-h-100 object-contain" alt="upload preview"/>
+          <img id="preview-img" class="max-w-full max-h-100 object-contain" alt="upload preview" />
         </div>
       </div>
     </div>
@@ -54,7 +47,7 @@
           </button>
         </div>
         <textarea id="output-text" class="textarea textarea-bordered h-87.5 w-full font-mono text-sm leading-relaxed"
-                                                   placeholder="Text will appear here..."></textarea>
+          placeholder="Text will appear here..."></textarea>
       </div>
     </div>
   </div>

@@ -9,8 +9,6 @@ const REC_MODEL_URL = new URL('./lib/models/ocr/rec.onnx', document.baseURI).hre
 export default function init() {
   const statusContainer = document.getElementById('status-container');
   const statusText = document.getElementById('status-text');
-  const progressPercent = document.getElementById('progress-percent');
-  const ocrProgress = document.getElementById('ocr-progress') as HTMLProgressElement;
   const resultContainer = document.getElementById('result-container');
   const previewImg = document.getElementById('preview-img') as HTMLImageElement;
   const outputText = document.getElementById('output-text') as HTMLTextAreaElement;
@@ -60,8 +58,8 @@ export default function init() {
     resultContainer?.classList.add('hidden');
     statusContainer?.classList.remove('hidden');
     outputText.value = '';
-    ocrProgress.value = 0;
-    if (progressPercent) progressPercent.textContent = '0%';
+    statusContainer?.classList.remove('hidden');
+    outputText.value = '';
     if (statusText) statusText.textContent = 'Initializing OCR models...';
 
     // Show preview
@@ -103,6 +101,9 @@ export default function init() {
           if (e.data.type === 'detect-done') {
             ocrWorker.removeEventListener('message', handler);
             resolve(e.data.boxes);
+          } else if (e.data.type === 'progress') {
+            const progress = Math.round(e.data.progress);
+            showProgress('Detecting text...', { progress });
           } else if (e.data.type === 'error') {
             ocrWorker.removeEventListener('message', handler);
             reject(new Error(e.data.error));
@@ -137,9 +138,7 @@ export default function init() {
             resolve(e.data.text);
           } else if (e.data.type === 'progress') {
             const progress = Math.round(e.data.progress);
-            ocrProgress.value = progress;
-            if (progressPercent) progressPercent.textContent = `${progress}%`;
-            showProgress(`Recognizing text... ${progress}%`);
+            showProgress('Recognizing text...', { progress });
           } else if (e.data.type === 'error') {
             ocrWorker.removeEventListener('message', handler);
             reject(new Error(e.data.error));

@@ -33,6 +33,10 @@ type ShowProgressOptions = {
    */
   visible?: boolean;
   /**
+   * Progress percentage (optional). 0-100
+   */
+  progress?: number;
+  /**
    * Auto-close after N ms (optional). Example: 5000
    */
   timeoutMs?: number;
@@ -77,7 +81,11 @@ export function showProgress(message: string, options: ShowProgressOptions = { v
   if (!el || !textEl) return;
 
   const visible = options?.visible ?? true;
-  textEl.textContent = (message ?? 'Working…').toString();
+  let text = (message ?? 'Working…').toString();
+  if (typeof options.progress === 'number') {
+    text += ` (${Math.round(options.progress)}%)`;
+  }
+  textEl.textContent = text;
 
   // Toggle visibility
   el.classList.toggle('invisible', !visible);

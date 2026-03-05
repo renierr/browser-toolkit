@@ -91,7 +91,7 @@ export default defineConfig({
         skipWaiting: true,
         clientsClaim: true,
         importScripts: ['./sw-share-target.js', './sw-timer.js'],
-        maximumFileSizeToCacheInBytes: 50 * 1024 * 1024,
+        maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: ({ url }) =>

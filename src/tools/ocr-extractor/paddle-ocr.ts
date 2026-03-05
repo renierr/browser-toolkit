@@ -20,18 +20,24 @@ export class PaddleOCR {
     });
   }
 
-  async detect(imageData: ImageData): Promise<number[][][]> {
+  async detect(imageData: ImageData, onProgress?: (p: number) => void): Promise<number[][][]> {
     if (!this.detSession) throw new Error('Detection session not initialized');
+
+    if (onProgress) onProgress(0);
 
     // Preprocess
     const { tensor, scaleH, scaleW } = await this.preprocessDet(imageData);
+    if (onProgress) onProgress(10);
 
     // Run inference
     const output = await runInference(this.detSession, { x: tensor });
     const probMap = output[Object.keys(output)[0]];
+    if (onProgress) onProgress(90);
 
     // Postprocess
     const boxes = this.postprocessDet(probMap as ort.Tensor, scaleH, scaleW);
+    if (onProgress) onProgress(100);
+
     return boxes;
   }
 

@@ -10,7 +10,9 @@ self.onmessage = async (e: MessageEvent) => {
       await ocr.init(e.data.detModelUrl, e.data.recModelUrl);
       self.postMessage({ type: 'init-done' });
     } else if (type === 'detect') {
-      const detectedBoxes = await ocr.detect(imageData);
+      const detectedBoxes = await ocr.detect(imageData, (progress) => {
+        self.postMessage({ type: 'progress', progress });
+      });
       self.postMessage({ type: 'detect-done', boxes: detectedBoxes });
     } else if (type === 'recognize') {
       const results = await ocr.recognize(imageData, boxes, (progress) => {
