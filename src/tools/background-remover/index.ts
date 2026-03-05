@@ -104,6 +104,13 @@ export default function init(payload?: SharedFilesPayload) {
   const modalContrastVal = previewModal.querySelector('.modal-contrast-val')!;
   const modalStatusOverlay = document.getElementById('modal-status-overlay')!;
 
+  // Modal view mode
+  const modalOutlineCanvas = document.getElementById('modal-outline-canvas') as HTMLCanvasElement;
+  const btnViewProcessed = previewModal.querySelector('.modal-view-processed') as HTMLButtonElement;
+  const btnViewOriginal = previewModal.querySelector('.modal-view-original') as HTMLButtonElement;
+  const btnViewOutline = previewModal.querySelector('.modal-view-outline') as HTMLButtonElement;
+  let modalViewMode: 'processed' | 'original' | 'outline' = 'processed';
+
   // Options range labels
   const optThreshold = document.getElementById('opt-threshold') as HTMLInputElement | null;
   const optThresholdValue = document.getElementById('opt-threshold-value');
@@ -125,6 +132,122 @@ export default function init(payload?: SharedFilesPayload) {
   let currentModalItemId: string | null = null;
   let pendingReprocess: Map<string, ProcessingOptions> = new Map();
   let reprocessDebouncers: Map<string, ReturnType<typeof debounce<(options: ProcessingOptions) => void>>> = new Map();
+
+  /**
+   * Render the raw mask as a coloured outline overlay onto the modal canvas.
+   * The mask is 320x320 Float32Array; we normalize, resize to image dimensions,
+   * then draw only edge pixels (via a simple Sobel-like gradient magnitude threshold).
+   */
+  const renderOutlineToCanvas = (item: ImageQueueItem) => {
+    if (!item.rawMask || !item.width || !item.height) {
+      modalOutlineCanvas.classList.add('hidden');
+      return;
+    }
+
+    const MODEL_SIZE = 320;
+    const raw = item.rawMask;
+    const w = item.width;
+    const h = item.height;
+
+    // Normalize raw mask to 0-255
+    let min = Infinity, max = -Infinity;
+    for (let i = 0; i < raw.length; i++) {
+      if (raw[i] < min) min = raw[i];
+      if (raw[i] > max) max = raw[i];
+    }
+    const range = max - min || 1;
+    const norm = new Float32Array(raw.length);
+    for (let i = 0; i < raw.length; i++) {
+      norm[i] = (raw[i] - min) / range;
+    }
+
+    // Resize mask from MODEL_SIZE x MODEL_SIZE to image dimensions using bilinear interpolation
+    const resized = new Float32Array(w * h);
+    const xRatio = MODEL_SIZE / w;
+    const yRatio = MODEL_SIZE / h;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        const srcX = x * xRatio;
+        const srcY = y * yRatio;
+        const x0 = Math.min(Math.floor(srcX), MODEL_SIZE - 1);
+        const y0 = Math.min(Math.floor(srcY), MODEL_SIZE - 1);
+        const x1 = Math.min(x0 + 1, MODEL_SIZE - 1);
+        const y1 = Math.min(y0 + 1, MODEL_SIZE - 1);
+        const fx = srcX - x0;
+        const fy = srcY - y0;
+        const v = norm[y0 * MODEL_SIZE + x0] * (1 - fx) * (1 - fy)
+                + norm[y0 * MODEL_SIZE + x1] * fx * (1 - fy)
+                + norm[y1 * MODEL_SIZE + x0] * (1 - fx) * fy
+                + norm[y1 * MODEL_SIZE + x1] * fx * fy;
+        resized[y * w + x] = v;
+      }
+    }
+
+    // Compute gradient magnitude (Sobel-like) and draw edges
+    modalOutlineCanvas.width = w;
+    modalOutlineCanvas.height = h;
+    const ctx = modalOutlineCanvas.getContext('2d')!;
+    ctx.clearRect(0, 0, w, h);
+    const imgData = ctx.createImageData(w, h);
+    const data = imgData.data;
+    const edgeThreshold = 0.08;
+
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const gx = resized[y * w + (x + 1)] - resized[y * w + (x - 1)];
+        const gy = resized[(y + 1) * w + x] - resized[(y - 1) * w + x];
+        const mag = Math.sqrt(gx * gx + gy * gy);
+        if (mag > edgeThreshold) {
+          const idx = (y * w + x) * 4;
+          // Bright cyan outline with intensity based on gradient
+          const a = Math.min(255, Math.round(mag * 4 * 255));
+          data[idx] = 0;       // R
+          data[idx + 1] = 220; // G
+          data[idx + 2] = 255; // B
+          data[idx + 3] = a;   // A
+        }
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Position the canvas to exactly overlay the rendered image
+    positionOutlineCanvas();
+    modalOutlineCanvas.classList.remove('hidden');
+  };
+
+  /** Position the outline canvas to match the modal image's rendered bounding box */
+  const positionOutlineCanvas = () => {
+    const imgRect = modalImg.getBoundingClientRect();
+    const parentRect = modalImg.parentElement!.getBoundingClientRect();
+    modalOutlineCanvas.style.left = `${imgRect.left - parentRect.left}px`;
+    modalOutlineCanvas.style.top = `${imgRect.top - parentRect.top}px`;
+    modalOutlineCanvas.style.width = `${imgRect.width}px`;
+    modalOutlineCanvas.style.height = `${imgRect.height}px`;
+  };
+
+  /** Switch the modal between processed, original, and outline views */
+  const setModalViewMode = (mode: 'processed' | 'original' | 'outline') => {
+    modalViewMode = mode;
+    const item = queue.find(it => it.id === currentModalItemId);
+
+    // Update toggle button styles
+    btnViewProcessed.classList.toggle('btn-primary', mode === 'processed');
+    btnViewOriginal.classList.toggle('btn-primary', mode === 'original');
+    btnViewOutline.classList.toggle('btn-primary', mode === 'outline');
+
+    if (!item) return;
+
+    if (mode === 'original') {
+      modalImg.src = item.originalUrl;
+      modalOutlineCanvas.classList.add('hidden');
+    } else if (mode === 'outline') {
+      modalImg.src = item.originalUrl;
+      renderOutlineToCanvas(item);
+    } else {
+      modalImg.src = item.resultUrl || item.originalUrl;
+      modalOutlineCanvas.classList.add('hidden');
+    }
+  };
 
   const updateUI = () => {
     const total = queue.length;
@@ -205,7 +328,12 @@ export default function init(payload?: SharedFilesPayload) {
     statusOverlay.classList.add('hidden');
 
     if (item.id === currentModalItemId) {
-      modalImg.src = item.resultUrl;
+      if (modalViewMode === 'processed') {
+        modalImg.src = item.resultUrl;
+      } else if (modalViewMode === 'outline') {
+        renderOutlineToCanvas(item);
+      }
+      // 'original' mode doesn't need updating
       modalStatusOverlay.classList.add('hidden');
     }
 
@@ -457,6 +585,9 @@ export default function init(payload?: SharedFilesPayload) {
             modalImg.src = item.resultUrl;
             modalFilename.textContent = file.name;
 
+            // Reset view mode to processed
+            setModalViewMode('processed');
+
             // Populate modal sliders
             modalThresholdSlider.value = item.options.threshold.toString();
             modalThresholdVal.textContent = item.options.threshold.toString();
@@ -560,12 +691,35 @@ export default function init(payload?: SharedFilesPayload) {
     }
 
     reprocessItem(currentModalItemId, options);
+
+    // Switch to processed view since we're reprocessing
+    if (modalViewMode !== 'processed') {
+      setModalViewMode('processed');
+    }
   };
 
   modalThresholdSlider.onchange = onModalAdjust;
   modalSmoothSlider.onchange = onModalAdjust;
   modalContrastSlider.onchange = onModalAdjust;
   modalRefineToggle.onchange = onModalAdjust;
+
+  // View mode toggle handlers
+  btnViewProcessed.onclick = () => setModalViewMode('processed');
+  btnViewOriginal.onclick = () => setModalViewMode('original');
+  btnViewOutline.onclick = () => setModalViewMode('outline');
+
+  // Reposition outline canvas when image dimensions change
+  modalImg.addEventListener('load', () => {
+    if (modalViewMode === 'outline' && !modalOutlineCanvas.classList.contains('hidden')) {
+      positionOutlineCanvas();
+    }
+  });
+  const onModalResize = debounce(() => {
+    if (modalViewMode === 'outline' && !modalOutlineCanvas.classList.contains('hidden')) {
+      positionOutlineCanvas();
+    }
+  }, 100);
+  window.addEventListener('resize', onModalResize);
 
   // Real-time label updates for modal
   [modalThresholdSlider, modalSmoothSlider, modalContrastSlider].forEach(el => {
@@ -620,6 +774,8 @@ export default function init(payload?: SharedFilesPayload) {
     reprocessDebouncers.forEach(fn => fn.cancel());
     reprocessDebouncers.clear();
     pendingReprocess.clear();
+    onModalResize.cancel();
+    window.removeEventListener('resize', onModalResize);
     queue.forEach((item) => {
       if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
       URL.revokeObjectURL(item.originalUrl);
