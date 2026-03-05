@@ -2,39 +2,62 @@ const MODEL_INPUT_SIZE = 320;
 
 /**
  * Decodes an image blob into raw RGBA pixel data using OffscreenCanvas.
+ * Includes retry at lower resolution for mobile memory-pressure situations.
  */
 export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
   data: Uint8ClampedArray;
   width: number;
   height: number;
 }> {
-  let bitmap = await createImageBitmap(blob);
-
-  let { width, height } = bitmap;
-
-  if (maxDimension && (width > maxDimension || height > maxDimension)) {
-    const ratio = Math.min(maxDimension / width, maxDimension / height);
-    const newWidth = Math.round(width * ratio);
-    const newHeight = Math.round(height * ratio);
-
-    const oldBitmap = bitmap;
-    bitmap = await createImageBitmap(blob, {
-      resizeWidth: newWidth,
-      resizeHeight: newHeight,
-      resizeQuality: 'high'
-    });
-    oldBitmap.close();
-    width = newWidth;
-    height = newHeight;
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createBitmapWithLimit(blob, maxDimension);
+  } catch (firstErr) {
+    // Retry at a smaller size — better a low-res result than a crash
+    console.warn('[decodeImage] Decode failed, retrying at 2048 px', firstErr);
+    try {
+      bitmap = await createBitmapWithLimit(blob, 2048);
+    } catch {
+      throw new Error(
+        `Image could not be decoded. Original: ${(firstErr as Error).message}`
+      );
+    }
   }
 
+  const { width, height } = bitmap;
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   ctx.drawImage(bitmap, 0, 0);
   bitmap.close();
 
   const imageData = ctx.getImageData(0, 0, width, height);
+  // Free backing store eagerly — critical on mobile
+  canvas.width = 0;
+  canvas.height = 0;
   return { data: imageData.data, width, height };
+}
+
+/**
+ * Create an ImageBitmap, optionally capped to `maxDim`.
+ * Closes the full-res probe before allocating the resized one.
+ */
+async function createBitmapWithLimit(blob: Blob, maxDim?: number): Promise<ImageBitmap> {
+  const probe = await createImageBitmap(blob);
+
+  if (!maxDim || (probe.width <= maxDim && probe.height <= maxDim)) {
+    return probe;
+  }
+
+  // Close full-res BEFORE allocating resized
+  const { width: origW, height: origH } = probe;
+  probe.close();
+
+  const ratio = Math.min(maxDim / origW, maxDim / origH);
+  return createImageBitmap(blob, {
+    resizeWidth: Math.max(1, Math.round(origW * ratio)),
+    resizeHeight: Math.max(1, Math.round(origH * ratio)),
+    resizeQuality: 'high',
+  });
 }
 
 /**
@@ -221,11 +244,20 @@ export function resizeMask(
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(srcCanvas, 0, 0, dstW, dstH);
 
+  // Eagerly free the source canvas backing store
+  srcCanvas.width = 0;
+  srcCanvas.height = 0;
+
   const dstData = ctx.getImageData(0, 0, dstW, dstH);
   const result = new Uint8Array(dstW * dstH);
   for (let i = 0; i < result.length; i++) {
     result[i] = dstData.data[i * 4 + 3];
   }
+
+  // Eagerly free the destination canvas backing store
+  canvas.width = 0;
+  canvas.height = 0;
+
   return result;
 }
 
@@ -261,6 +293,10 @@ export function applyMask(
   }
   ctx.drawImage(maskCanvas, 0, 0, width, height);
 
+  // Eagerly free the mask canvas backing store
+  maskCanvas.width = 0;
+  maskCanvas.height = 0;
+
   return canvas;
 }
 
@@ -284,5 +320,16 @@ function resizeRGBA(
   srcCtx.putImageData(new ImageData(new Uint8ClampedArray(src), srcW, srcH), 0, 0);
 
   ctx.drawImage(srcCanvas, 0, 0, dstW, dstH);
-  return ctx.getImageData(0, 0, dstW, dstH).data;
+
+  // Eagerly free the source canvas backing store
+  srcCanvas.width = 0;
+  srcCanvas.height = 0;
+
+  const result = ctx.getImageData(0, 0, dstW, dstH).data;
+
+  // Eagerly free the destination canvas backing store
+  canvas.width = 0;
+  canvas.height = 0;
+
+  return result;
 }

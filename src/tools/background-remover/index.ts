@@ -53,7 +53,10 @@ async function convertBlobToFormat(blob: Blob, format: 'png' | 'webp', quality: 
   const ctx = canvas.getContext('2d')!;
   ctx.drawImage(bitmap, 0, 0);
   bitmap.close();
-  return canvas.convertToBlob({ type: 'image/webp', quality });
+  const result = await canvas.convertToBlob({ type: 'image/webp', quality });
+  canvas.width = 0;
+  canvas.height = 0;
+  return result;
 }
 
 async function copyBlobToClipboard(blob: Blob): Promise<void> {
@@ -67,6 +70,8 @@ async function copyBlobToClipboard(blob: Blob): Promise<void> {
       ctx.drawImage(bitmap, 0, 0);
       bitmap.close();
       pngBlob = await canvas.convertToBlob({ type: 'image/png' });
+      canvas.width = 0;
+      canvas.height = 0;
     }
     await navigator.clipboard.write([new ClipboardItem({ [pngBlob.type]: pngBlob })]);
     showMessage('Copied to clipboard!', { type: 'info', timeoutMs: 2000 });
@@ -582,6 +587,8 @@ export default function init(payload?: SharedFilesPayload) {
             URL.revokeObjectURL(item.originalUrl);
             queue.splice(index, 1);
           }
+          // Free worker-side RGBA cache for this image
+          worker?.postMessage({ id, action: 'evict' });
           const debounceFn = reprocessDebouncers.get(id);
           if (debounceFn) {
             debounceFn.cancel();
@@ -784,6 +791,7 @@ export default function init(payload?: SharedFilesPayload) {
     queue.forEach((item) => {
       if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
       URL.revokeObjectURL(item.originalUrl);
+      worker?.postMessage({ id: item.id, action: 'evict' });
       item.element.remove();
     });
     queue = [];
