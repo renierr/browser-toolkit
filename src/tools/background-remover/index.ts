@@ -193,6 +193,9 @@ export default function init(payload?: SharedFilesPayload) {
     const resultPreview = item.element.querySelector('.result-preview') as HTMLImageElement;
     const statusOverlay = item.element.querySelector('.status-overlay')!;
 
+    const originalPreview = item.element.querySelector('.original-preview') as HTMLImageElement;
+    originalPreview.classList.add('opacity-0');
+    resultPreview.classList.remove('opacity-0');
     resultPreview.src = item.resultUrl;
     statusOverlay.classList.add('hidden');
 
