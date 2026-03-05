@@ -1,5 +1,3 @@
-import { showMessage } from './ui';
-
 // Sets up drag-and-drop and click-to-select for a file input and dropzone
 export function setupFileDropzone(
   dropzoneId: string,
@@ -42,21 +40,6 @@ export function setupFileDropzone(
     }
     if (accepted.length === 0) return;
 
-    await Promise.all(
-      accepted.map(async (f) => {
-        try {
-          // Read boundaries to prompt OS download and wait briefly.
-          await Promise.all([
-            f.slice(0, 1).arrayBuffer(),
-            f.slice(-1).arrayBuffer()
-          ]);
-          //await new Promise((resolve) => setTimeout(resolve, 500));
-        } catch (e) {
-          console.warn('Failed to pre-warm file: ', f.name, e);
-          showMessage(`Failed to load ${f.name}. Please try selecting it again.`, { type: 'alert', timeoutMs: 5000 });
-        }
-      })
-    );
 
     const dt = new DataTransfer();
     for (const f of accepted) dt.items.add(f);
