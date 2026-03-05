@@ -32,18 +32,20 @@ export function setupFileDropzone(
     return false;
   };
 
-  const deliverAccepted = (files: FileList) => {
+  const deliverAccepted = async (files: FileList) => {
     const accepted: File[] = [];
     for (let i = 0; i < files.length; i++) {
       const f = files.item(i)!;
       if (matchesAccept(f, accept)) accepted.push(f);
     }
     if (accepted.length === 0) return;
+
+    await Promise.all(accepted.map((f) => f.slice(0, 1).arrayBuffer()));
+
     const dt = new DataTransfer();
     for (const f of accepted) dt.items.add(f);
     onFile(dt.files);
 
-    // Clear the file input so the same files can be selected/dropped again
     try {
       fileInput.value = '';
     } catch {
