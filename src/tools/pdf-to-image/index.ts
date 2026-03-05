@@ -81,7 +81,7 @@ export async function flattenAsImage(
     try {
       for (let i = 0; i < total; i++) {
         const progress = Math.round(((i + 1) / total) * 100);
-        showProgress(`Flattening… ${progress}% (${i + 1}/${total})`);
+        showProgress(`Flattening page ${i + 1} of ${total}…`, { progress });
         await yieldToUI();
 
         const page = srcDoc.loadPage(i);

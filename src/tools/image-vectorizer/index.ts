@@ -64,7 +64,7 @@ export default function init() {
 
     try {
       btnVectorize.disabled = true;
-      showProgress('Vectorizing image...');
+      showProgress('Vectorizing image...', { progress: 10 });
       await yieldToUI(true);
 
       const options: any = {
@@ -110,7 +110,7 @@ export default function init() {
             ctx.drawImage(img, 0, 0);
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-            showProgress('Generating SVG...');
+            showProgress('Generating SVG...', { progress: 80 });
             await yieldToUI(true);
             currentSvgString = ImageTracer.imagedataToSVG(imageData, options);
             svgContainer.innerHTML = currentSvgString || '';

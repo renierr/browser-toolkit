@@ -160,10 +160,14 @@ async function createSessionWithFallback(
  */
 export async function runInference(
   session: ort.InferenceSession,
-  feeds: Record<string, ort.Tensor>,
+  inputs: Record<string, ort.Tensor>,
+  onProgress?: (p: number) => void
 ): Promise<ort.InferenceSession.OnnxValueMapType> {
+  if (onProgress) onProgress(10);
   try {
-    return await session.run(feeds);
+    const result = await session.run(inputs);
+    if (onProgress) onProgress(90);
+    return result;
   } catch (err) {
     // Find the model path for this session so we can rebuild it.
     const modelPath = findModelPathForSession(session);
@@ -186,7 +190,7 @@ export async function runInference(
     );
 
     sessionCache.set(modelPath, fallbackSession);
-    return fallbackSession.run(feeds);
+    return fallbackSession.run(inputs);
   }
 }
 

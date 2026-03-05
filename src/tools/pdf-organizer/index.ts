@@ -47,7 +47,7 @@ export default function init(payload?: SharedFilesPayload) {
       try {
         if (p.thumbnailUrl && p.thumbnailUrl.startsWith('blob:'))
           URL.revokeObjectURL(p.thumbnailUrl);
-      } catch {}
+      } catch { }
     }
   };
 
@@ -66,11 +66,10 @@ export default function init(payload?: SharedFilesPayload) {
     pageList.innerHTML = '';
     pages.forEach((page, index) => {
       const card = document.createElement('div');
-      card.className = `relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-move touch-none ${
-        page.selected
+      card.className = `relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-move touch-none ${page.selected
           ? 'border-primary ring-2 ring-primary/20'
           : 'border-base-300 hover:border-base-content/30'
-      }`;
+        }`;
       card.dataset.id = page.id;
 
       card.innerHTML = `
@@ -145,7 +144,8 @@ export default function init(payload?: SharedFilesPayload) {
         const pageCount = srcDoc.countPages();
 
         for (let i = 0; i < pageCount; i++) {
-          showProgress(`Loading page ${i + 1} of ${pageCount}...`);
+          const pageProgress = Math.round(((i + 1) / pageCount) * 100);
+          showProgress(`Loading page ${i + 1} of ${pageCount}...`, { progress: pageProgress });
           await yieldToUI();
 
           const page = srcDoc.loadPage(i);
@@ -256,7 +256,8 @@ export default function init(payload?: SharedFilesPayload) {
 
       for (let i = 0; i < pagesToDownload.length; i++) {
         const pageItem = pagesToDownload[i];
-        showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`);
+        const assemblyProgress = Math.round(((i + 1) / pagesToDownload.length) * 100);
+        showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`, { progress: assemblyProgress });
 
         let srcDoc;
         if (loadedDocs[i] === undefined) {

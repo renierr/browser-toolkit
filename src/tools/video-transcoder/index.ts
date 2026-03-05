@@ -23,7 +23,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   const onProgress = ({ progress }: { progress: number }) => {
     if (!isTranscodingPhase) return;
-    showProgress(`Converting... ${Math.round(progress * 100)}%`);
+    showProgress(`Converting...`, { progress: Math.round(progress * 100) });
     yieldToUI(true);
   };
 

@@ -16,7 +16,8 @@ export async function generateAndDownloadPDF(
   try {
     for (let i = 0; i < pages.length; i++) {
       const page = pages[i];
-      showProgress(`Processing page ${i + 1} of ${pages.length}...`);
+      const progress = Math.round(((i + 1) / pages.length) * 100);
+      showProgress(`Processing page ${i + 1} of ${pages.length}...`, { progress });
       await yieldToUI();
 
       const renderCanvas = await getRenderedCanvas(page);

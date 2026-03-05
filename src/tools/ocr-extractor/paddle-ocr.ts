@@ -30,7 +30,9 @@ export class PaddleOCR {
     if (onProgress) onProgress(10);
 
     // Run inference
-    const output = await runInference(this.detSession, { x: tensor });
+    const output = await runInference(this.detSession, { x: tensor }, (p) => {
+      if (onProgress) onProgress(10 + p * 0.8);
+    });
     const probMap = output[Object.keys(output)[0]];
     if (onProgress) onProgress(90);
 
@@ -58,10 +60,15 @@ export class PaddleOCR {
         const crop = await this.getRotateCropImage(imageData, box);
         const recTensor = await this.preprocessRec(crop);
 
-        const recOutput = await runInference(this.recSession, { x: recTensor });
-        const logits = recOutput[Object.keys(recOutput)[0]];
+        const recOutput = await runInference(this.recSession, { x: recTensor }, (p) => {
+          // Inner progress for this box
+          const baseProgress = (processedBoxes / totalBoxes) * 100;
+          const stepSize = (1 / totalBoxes) * 100;
+          if (onProgress) onProgress(baseProgress + (p / 100) * stepSize);
+        });
+        const recOutputData = recOutput[Object.keys(recOutput)[0]];
 
-        const text = this.decode(logits as ort.Tensor);
+        const text = this.decode(recOutputData as ort.Tensor);
 
         // Add space between words found in the same line box group
         if (lineText.length > 0 && text.length > 0) {
@@ -214,6 +221,8 @@ export class PaddleOCR {
     let text = '';
     let lastCharIdx = -1;
 
+    const blankIdx = numClasses > LATIN_DICT.length ? 0 : -1;
+
     for (let t = 0; t < timesteps; t++) {
       let maxIdx = 0;
       let maxProb = -Infinity;
@@ -224,7 +233,8 @@ export class PaddleOCR {
           maxIdx = c;
         }
       }
-      if (maxIdx > 0 && maxIdx !== lastCharIdx) {
+
+      if (maxIdx !== blankIdx && maxIdx !== lastCharIdx) {
         const char = LATIN_DICT[maxIdx];
         if (char) text += char;
       }

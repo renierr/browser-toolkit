@@ -114,6 +114,8 @@ export default function init(payload?: SharedFilesPayload) {
       const graftMap = outDoc.newGraftMap();
       const pageCount = doc.countPages();
       for (let i = 0; i < pageCount; i++) {
+        const progress = Math.round(((i + 1) / pageCount) * 100);
+        showProgress(`Grafting page ${i + 1} of ${pageCount}...`, { progress });
         graftMap.graftPage(i, pdf, i);
       }
       graftMap.destroy();

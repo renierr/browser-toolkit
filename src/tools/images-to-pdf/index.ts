@@ -120,7 +120,9 @@ export default function init(payload?: SharedFilesPayload) {
     try {
       let imgCount = 0;
       for (const item of images) {
-        showProgress('Processing image ' + item.file.name + '...');
+        imgCount++;
+        const p = Math.round((imgCount / images.length) * 100);
+        showProgress(`Processing image ${imgCount} of ${images.length}: ${item.file.name}...`, { progress: p });
         await yieldToUI();
 
         const imageBytes = await item.file.arrayBuffer();
