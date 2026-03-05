@@ -1,7 +1,6 @@
 const MODEL_INPUT_SIZE = 320;
 const GUIDED_FILTER_MAX_DIM = 1024;
 
-
 export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
   data: Uint8ClampedArray;
   width: number;
@@ -9,16 +8,12 @@ export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
 }> {
   let bitmap: ImageBitmap;
   try {
-    bitmap = await createBitmapWithLimit(blob, maxDimension);
+    bitmap = maxDimension
+      ? await createBitmapWithLimit(blob, maxDimension)
+      : await createImageBitmap(blob);
   } catch (firstErr) {
     console.warn('[decodeImage] Decode failed, retrying at 2048 px', firstErr);
-    try {
-      bitmap = await createBitmapWithLimit(blob, 2048);
-    } catch {
-      throw new Error(
-        `Image could not be decoded. Original: ${(firstErr as Error).message}`
-      );
-    }
+    bitmap = await createBitmapDownscaled(blob, 2048);
   }
 
   const { width, height } = bitmap;
@@ -33,22 +28,31 @@ export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
   return { data: imageData.data, width, height };
 }
 
-async function createBitmapWithLimit(blob: Blob, maxDim?: number): Promise<ImageBitmap> {
+async function createBitmapWithLimit(blob: Blob, maxDim: number): Promise<ImageBitmap> {
   const probe = await createImageBitmap(blob);
+  if (probe.width <= maxDim && probe.height <= maxDim) return probe;
 
-  if (!maxDim || (probe.width <= maxDim && probe.height <= maxDim)) {
-    return probe;
-  }
-
-  const { width: origW, height: origH } = probe;
+  const { width, height } = probe;
   probe.close();
 
-  const ratio = Math.min(maxDim / origW, maxDim / origH);
+  const ratio = Math.min(maxDim / width, maxDim / height);
   return createImageBitmap(blob, {
-    resizeWidth: Math.max(1, Math.round(origW * ratio)),
-    resizeHeight: Math.max(1, Math.round(origH * ratio)),
+    resizeWidth: Math.max(1, Math.round(width * ratio)),
+    resizeHeight: Math.max(1, Math.round(height * ratio)),
     resizeQuality: 'high',
   });
+}
+
+async function createBitmapDownscaled(blob: Blob, maxDim: number): Promise<ImageBitmap> {
+  try {
+    return await createBitmapWithLimit(blob, maxDim);
+  } catch {
+    return createImageBitmap(blob, {
+      resizeWidth: maxDim,
+      resizeHeight: maxDim,
+      resizeQuality: 'medium',
+    });
+  }
 }
 
 export function imageToTensor(
@@ -104,8 +108,8 @@ export function normalizeMask(
   return out;
 }
 
-function boxFilter(data: Float32Array, width: number, height: number, radius: number): Float32Array {
-  const output = new Float32Array(data.length);
+function boxFilter(data: Float32Array, width: number, height: number, radius: number, out?: Float32Array, scratch?: Float32Array): Float32Array {
+  const output = out ?? new Float32Array(data.length);
   const winSize = 2 * radius + 1;
 
   for (let y = 0; y < height; y++) {
@@ -121,7 +125,9 @@ function boxFilter(data: Float32Array, width: number, height: number, radius: nu
     }
   }
 
-  const temp = new Float32Array(output);
+  // Vertical pass
+  const temp = scratch ?? new Float32Array(data.length);
+  temp.set(output);
   for (let x = 0; x < width; x++) {
     let sum = 0;
     for (let y = -radius; y <= radius; y++) {
@@ -139,14 +145,9 @@ function boxFilter(data: Float32Array, width: number, height: number, radius: nu
 
 export interface GuidedFilterResult {
   mask: Uint8Array;
-  /** Downscaled RGBA — pass back on next call to avoid recomputing. */
   downscaledRgba?: Uint8ClampedArray;
 }
 
-/**
- * Runs guided filter at reduced resolution internally, upscales result to original size.
- * Pass `cachedDownscaledRgba` from a previous call to skip the downscale step on reprocess.
- */
 export function guidedFilter(
   sourceRgba: Uint8ClampedArray,
   mask: Uint8Array,
@@ -199,36 +200,32 @@ function guidedFilterCore(
   const mean_I = boxFilter(I, width, height, radius);
   const mean_p = boxFilter(p, width, height, radius);
 
-  const Ip = new Float32Array(size);
-  const II = new Float32Array(size);
+  const buf1 = new Float32Array(size);
+  const buf2 = new Float32Array(size);
+  const buf3 = new Float32Array(size);
+  const buf4 = new Float32Array(size);
+  const bfScratch = new Float32Array(size);
+
   for (let i = 0; i < size; i++) {
-    Ip[i] = I[i] * p[i];
-    II[i] = I[i] * I[i];
+    buf1[i] = I[i] * p[i];
+    buf2[i] = I[i] * I[i];
+  }
+  boxFilter(buf1, width, height, radius, buf3, bfScratch);
+  boxFilter(buf2, width, height, radius, buf4, bfScratch);
+
+  for (let i = 0; i < size; i++) {
+    const var_I = buf4[i] - mean_I[i] * mean_I[i];
+    const cov_Ip = buf3[i] - mean_I[i] * mean_p[i];
+    buf1[i] = cov_Ip / (var_I + eps);
+    buf2[i] = mean_p[i] - buf1[i] * mean_I[i];
   }
 
-  const mean_Ip = boxFilter(Ip, width, height, radius);
-  const corr_I = boxFilter(II, width, height, radius);
-
-  const var_I = new Float32Array(size);
-  const cov_Ip = new Float32Array(size);
-  for (let i = 0; i < size; i++) {
-    var_I[i] = corr_I[i] - mean_I[i] * mean_I[i];
-    cov_Ip[i] = mean_Ip[i] - mean_I[i] * mean_p[i];
-  }
-
-  const a = new Float32Array(size);
-  const b = new Float32Array(size);
-  for (let i = 0; i < size; i++) {
-    a[i] = cov_Ip[i] / (var_I[i] + eps);
-    b[i] = mean_p[i] - a[i] * mean_I[i];
-  }
-
-  const mean_a = boxFilter(a, width, height, radius);
-  const mean_b = boxFilter(b, width, height, radius);
+  boxFilter(buf1, width, height, radius, buf3, bfScratch);
+  boxFilter(buf2, width, height, radius, buf4, bfScratch);
 
   const result = new Uint8Array(size);
   for (let i = 0; i < size; i++) {
-    const q = mean_a[i] * I[i] + mean_b[i];
+    const q = buf3[i] * I[i] + buf4[i];
     result[i] = Math.max(0, Math.min(255, Math.round(q * 255)));
   }
 
@@ -271,9 +268,6 @@ export function resizeMask(
   return result;
 }
 
-/**
- * Applies the alpha mask to the original image at full resolution.
- */
 export function applyMask(
   rgba: Uint8ClampedArray,
   width: number,
@@ -295,7 +289,6 @@ export function applyMask(
   maskCtx.putImageData(maskData, 0, 0);
 
   ctx.clearRect(0, 0, width, height);
-  // Cast avoids TS SharedArrayBuffer complaint without copying the buffer
   ctx.putImageData(new ImageData(rgba as unknown as Uint8ClampedArray<ArrayBuffer>, width, height), 0, 0);
 
   ctx.globalCompositeOperation = 'destination-in';
@@ -320,7 +313,6 @@ function resizeRGBA(
 
   const srcCanvas = new OffscreenCanvas(srcW, srcH);
   const srcCtx = srcCanvas.getContext('2d')!;
-  // Cast avoids TS SharedArrayBuffer complaint without copying the buffer
   srcCtx.putImageData(new ImageData(src as unknown as Uint8ClampedArray<ArrayBuffer>, srcW, srcH), 0, 0);
 
   const canvas = new OffscreenCanvas(dstW, dstH);

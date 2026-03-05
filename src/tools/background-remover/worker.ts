@@ -108,7 +108,10 @@ self.onmessage = async (event: MessageEvent) => {
     canvas.height = 0;
 
     self.postMessage({ id, status: 'progress', progress: 95, step: 'Encoding PNG' });
-    self.postMessage({ id, status: 'success', result: blob, width, height, rawMask });
+    self.postMessage({
+      id, status: 'success', result: blob, width, height,
+      rawMask: action === 'reprocess' ? undefined : rawMask,
+    });
   } catch (error) {
     const msg = (error as Error).message;
     console.error(`Worker error during ${step}:`, error);
