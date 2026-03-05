@@ -87,7 +87,7 @@ export class PaddleOCR {
 
   private async preprocessDet(imageData: ImageData) {
     const { width, height } = imageData;
-    const targetSize = 960;
+    const targetSize = 480;
     let newW = targetSize;
     let newH = targetSize;
 
