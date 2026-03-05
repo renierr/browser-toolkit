@@ -1,10 +1,9 @@
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
-import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui';
-import Tesseract from 'tesseract.js';
-import tesseractWorker from 'tesseract.js/dist/worker.min.js?url';
-import tesseractWasm from 'tesseract.js-core/tesseract-core-simd.wasm.js?url'
+import { showMessage, showProgress, hideProgress } from '../../js/ui';
+import OcrWorker from './worker?worker';
 
-const TESSERACT_LANGS = ['deu_latf', 'deu', 'eng'];
+const DET_MODEL_URL = new URL('./lib/models/ocr/det.onnx', document.baseURI).href;
+const REC_MODEL_URL = new URL('./lib/models/ocr/rec.onnx', document.baseURI).href;
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -18,7 +17,31 @@ export default function init() {
   const copyBtn = document.getElementById('copy-btn');
   const pasteBtn = document.getElementById('paste-btn');
 
-  let worker: Tesseract.Worker | null = null;
+  let worker: Worker | null = null;
+  let initPromise: Promise<void> | null = null;
+
+  const getWorker = (): Promise<Worker> => {
+    if (worker) return Promise.resolve(worker);
+    if (initPromise) return initPromise.then(() => worker!);
+
+    initPromise = new Promise((resolve, reject) => {
+      worker = new OcrWorker();
+      worker.onmessage = (e) => {
+        const { type, error } = e.data;
+        if (type === 'init-done') {
+          resolve();
+        } else if (type === 'error') {
+          reject(new Error(error));
+        }
+      };
+      worker.postMessage({
+        type: 'init',
+        detModelUrl: DET_MODEL_URL,
+        recModelUrl: REC_MODEL_URL
+      });
+    });
+    return initPromise.then(() => worker!);
+  };
 
   const cleanup = () => {
     if (worker) {
@@ -39,7 +62,7 @@ export default function init() {
     outputText.value = '';
     ocrProgress.value = 0;
     if (progressPercent) progressPercent.textContent = '0%';
-    if (statusText) statusText.textContent = 'Initializing Tesseract...';
+    if (statusText) statusText.textContent = 'Initializing OCR models...';
 
     // Show preview
     const reader = new FileReader();
@@ -51,32 +74,79 @@ export default function init() {
     reader.readAsDataURL(file);
 
     try {
-      showProgress('Recognizing text...');
-      await yieldToUI(true);
+      showProgress('Loading models...');
+      const ocrWorker = await getWorker();
 
-      if (!worker) {
-        worker = await Tesseract.createWorker(TESSERACT_LANGS, 1, {
-          workerPath: tesseractWorker,
-          corePath: tesseractWasm,
-          langPath: './lib/tesseract/lang-data',
-          logger: async (m) => {
-            if (m.status === 'recognizing text') {
-              const progress = Math.round(m.progress * 100);
-              ocrProgress.value = progress;
-              if (progressPercent) progressPercent.textContent = `${progress}%`;
-              if (statusText) statusText.textContent = 'Recognizing text...';
-              showProgress(`Recognizing text... ${progress}%`);
-              await yieldToUI(true);
-            } else if (statusText) {
-              statusText.textContent = m.status;
-            }
-          },
-        });
+      // Convert Blob to ImageData
+      const img = new Image();
+      const imgLoadPromise = new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = () => reject(new Error('Failed to load image for OCR'));
+      });
+      img.src = URL.createObjectURL(file);
+      await imgLoadPromise;
+
+      const canvas = new OffscreenCanvas(img.width, img.height);
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      if (!ctx) throw new Error('Could not get canvas context');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, img.width, img.height);
+      URL.revokeObjectURL(img.src);
+
+      // 1. Detect
+      if (statusText) statusText.textContent = 'Detecting text...';
+      showProgress('Detecting text...');
+      ocrWorker.postMessage({ type: 'detect', imageData }, [imageData.data.buffer]);
+
+      const boxes: number[][][] = await new Promise((resolve, reject) => {
+        const handler = (e: MessageEvent) => {
+          if (e.data.type === 'detect-done') {
+            ocrWorker.removeEventListener('message', handler);
+            resolve(e.data.boxes);
+          } else if (e.data.type === 'error') {
+            ocrWorker.removeEventListener('message', handler);
+            reject(new Error(e.data.error));
+          }
+        };
+        ocrWorker.addEventListener('message', handler);
+      });
+
+      if (boxes.length === 0) {
+        showMessage('No text detected in the image.', { type: 'info' });
+        statusContainer?.classList.add('hidden');
+        return;
       }
 
-      const {
-        data: { text },
-      } = await worker.recognize(file);
+      // 2. Recognize
+      if (statusText) statusText.textContent = `Recognizing text (0/${boxes.length})...`;
+      showProgress(`Recognizing text...`);
+
+      // Need a fresh copy of ImageData buffer if we transferred it
+      // Actually, we need to pass a slice or just not transfer it if we need it again.
+      // But we can recreate it or just not transfer it for detection.
+      // Let's recreate it for now to be safe, or just avoid transfer for detection.
+      ctx.drawImage(img, 0, 0);
+      const imageDataForRec = ctx.getImageData(0, 0, img.width, img.height);
+
+      ocrWorker.postMessage({ type: 'recognize', imageData: imageDataForRec, boxes }, [imageDataForRec.data.buffer]);
+
+      const text: string = await new Promise((resolve, reject) => {
+        const handler = (e: MessageEvent) => {
+          if (e.data.type === 'recognize-done') {
+            ocrWorker.removeEventListener('message', handler);
+            resolve(e.data.text);
+          } else if (e.data.type === 'progress') {
+            const progress = Math.round(e.data.progress);
+            ocrProgress.value = progress;
+            if (progressPercent) progressPercent.textContent = `${progress}%`;
+            showProgress(`Recognizing text... ${progress}%`);
+          } else if (e.data.type === 'error') {
+            ocrWorker.removeEventListener('message', handler);
+            reject(new Error(e.data.error));
+          }
+        };
+        ocrWorker.addEventListener('message', handler);
+      });
 
       outputText.value = text;
       resultContainer?.classList.remove('hidden');
@@ -94,7 +164,7 @@ export default function init() {
     }
   };
 
-  setupFileDropzone('dropzone', 'image-input', (files) => {
+  setupFileDropzone('dropzone', 'image-input', (files: FileList | File[]) => {
     if (files.length > 0) {
       processImage(files[0]);
     }
