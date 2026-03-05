@@ -60,10 +60,6 @@ self.onmessage = async (event: MessageEvent) => {
 
       if (!modelUrl) throw new Error('Model URL is required for full processing');
 
-      step = 'loading model';
-      const session = await loadSession({ modelPath: modelUrl });
-      self.postMessage({ id, status: 'progress', progress: 20, step: 'Model ready' });
-
       step = 'decoding image';
       if (!rgba) {
         const decoded = await decodeImage(file);
@@ -73,6 +69,10 @@ self.onmessage = async (event: MessageEvent) => {
         rgbaCache.set(id, { rgba, width, height });
       }
       self.postMessage({ id, status: 'progress', progress: 40, step: `Decoded (${width}x${height})` });
+
+      step = 'loading model';
+      const session = await loadSession({ modelPath: modelUrl });
+      self.postMessage({ id, status: 'progress', progress: 40, step: 'Model ready' });
 
       step = 'preparing tensor';
       const tensorData = imageToTensor(rgba, width!, height!, MODEL_INPUT_SIZE);
