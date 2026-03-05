@@ -221,7 +221,8 @@ export class PaddleOCR {
     let text = '';
     let lastCharIdx = -1;
 
-    const blankIdx = numClasses > LATIN_DICT.length ? 0 : -1;
+    const blankIdx = 0; 
+    const spaceIdx = numClasses - 1;
 
     for (let t = 0; t < timesteps; t++) {
       let maxIdx = 0;
@@ -235,8 +236,12 @@ export class PaddleOCR {
       }
 
       if (maxIdx !== blankIdx && maxIdx !== lastCharIdx) {
-        const char = LATIN_DICT[maxIdx];
-        if (char) text += char;
+        if (maxIdx === spaceIdx) {
+          text += ' ';
+        } else {
+          const char = LATIN_DICT[maxIdx]; 
+          if (char) text += char;
+        }
       }
       lastCharIdx = maxIdx;
     }
