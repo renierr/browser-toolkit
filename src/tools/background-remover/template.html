@@ -8,7 +8,7 @@
 
     <!-- Options -->
     <div class="collapse collapse-arrow bg-base-200/50 rounded-xl mb-4">
-      <input type="checkbox" id="options-toggle" />
+      <input type="checkbox" id="options-toggle" aria-label="Option toggle" />
       <div class="collapse-title font-medium flex items-center gap-2">
         <i data-lucide="settings-2" class="w-4 h-4"></i>
         Processing Options
@@ -43,10 +43,10 @@
           </div>
           <div class="form-control">
             <label class="label cursor-pointer" for="opt-refine">
-              <div class="flex flex-col">
+              <span class="flex flex-col">
                 <span class="label-text font-medium">Edge Refinement</span>
                 <span class="text-xs text-base-content/50">Guided filter for hair/fine details</span>
-              </div>
+              </span>
               <input type="checkbox" id="opt-refine" class="toggle toggle-primary" />
             </label>
           </div>
@@ -85,6 +85,10 @@
         </div>
         <p class="text-lg font-medium">Click or drag images here</p>
         <p class="text-sm text-base-content/50">Supports JPG, PNG, WebP, etc.</p>
+        <button id="paste-btn" class="btn btn-outline flex-1 sm:flex-none">
+          <i data-lucide="clipboard" class="w-4 h-4 mr-2"></i>
+          or click here to Paste from clipboard
+        </button>
       </div>
       <input type="file" id="image-input" class="hidden" accept="image/*" multiple />
     </div>
@@ -138,7 +142,7 @@
       </div>
 
       <!-- Item Controls (top row) -->
-      <div class="absolute top-2 left-2 right-2 flex justify-between items-start z-[26]">
+      <div class="absolute top-2 left-2 right-2 flex justify-between items-start z-26">
         <!-- Done badge + Touch Toggle -->
         <div class="done-badge hidden flex items-center gap-1">
           <span class="badge badge-success badge-sm gap-1 shadow-lg">
@@ -162,7 +166,7 @@
 
       <!-- Quick Adjust Overlay (Direct on hover/toggle) -->
       <div
-        class="absolute inset-x-0 bottom-0 p-3 bg-base-100/90 backdrop-blur-md border-t border-base-200 translate-y-full transition-transform duration-300 group-hover:translate-y-0 [&.force-show]:translate-y-0 z-[25] hidden btn-settings-item">
+        class="absolute inset-x-0 bottom-0 p-3 bg-base-100/90 backdrop-blur-md border-t border-base-200 translate-y-full transition-transform duration-300 group-hover:translate-y-0 [&.force-show]:translate-y-0 z-25 hidden btn-settings-item">
         <h4 class="text-[10px] font-bold uppercase opacity-50 mb-2 tracking-wider">Quick Adjust</h4>
         <div class="grid grid-cols-2 gap-x-4 gap-y-2">
           <div class="form-control">
@@ -171,14 +175,14 @@
               <span class="label-text-alt item-threshold-val text-[10px]">128</span>
             </label>
             <input type="range" min="0" max="255" value="128"
-              class="range range-xs range-primary item-threshold-slider" />
+              class="range range-xs range-primary item-threshold-slider" aria-label="Threshold" />
           </div>
           <div class="form-control">
             <label class="label p-0">
               <span class="label-text-alt font-medium">Smoothing</span>
               <span class="label-text-alt item-smooth-val text-[10px]">4</span>
             </label>
-            <input type="range" min="0" max="10" value="4" class="range range-xs range-primary item-smooth-slider" />
+            <input type="range" min="0" max="10" value="4" class="range range-xs range-primary item-smooth-slider" aria-label="Smoothing" />
           </div>
           <div class="form-control">
             <label class="label p-0">
@@ -186,7 +190,7 @@
               <span class="label-text-alt item-contrast-val text-[10px]">1.0</span>
             </label>
             <input type="range" min="0.5" max="2.0" step="0.1" value="1.0"
-              class="range range-xs range-primary item-contrast-slider" />
+              class="range range-xs range-primary item-contrast-slider" aria-label="Contrast" />
           </div>
           <div class="form-control">
             <label class="label cursor-pointer p-0 h-full flex flex-col justify-end items-start mt-1">
@@ -252,7 +256,7 @@
         <img id="modal-img" class="max-w-full max-h-full object-contain relative z-10 drop-shadow-2xl"
           alt="Full-size preview" />
         <canvas id="modal-outline-canvas"
-          class="absolute z-[15] pointer-events-none hidden"
+          class="absolute z-15 pointer-events-none hidden"
           aria-hidden="true"></canvas>
         <!-- Modal Status Overlay -->
         <div id="modal-status-overlay"
@@ -288,7 +292,7 @@
             <span class="modal-threshold-val text-primary font-mono font-bold text-sm">128</span>
           </div>
           <input type="range" min="0" max="255" value="128"
-            class="range range-sm range-primary modal-threshold-slider" />
+            class="range range-sm range-primary modal-threshold-slider" aria-label="Threshold" />
           <p class="text-[10px] opacity-40 mt-1">Adjust subject sensitivity</p>
         </div>
 
@@ -297,7 +301,7 @@
             <span class="label-text font-bold text-xs uppercase opacity-70">Smoothing</span>
             <span class="modal-smooth-val text-primary font-mono font-bold text-sm">4</span>
           </div>
-          <input type="range" min="0" max="10" value="4" class="range range-sm range-primary modal-smooth-slider" />
+          <input type="range" min="0" max="10" value="4" class="range range-sm range-primary modal-smooth-slider" aria-label="Smoothing" />
           <p class="text-[10px] opacity-40 mt-1">Softness of the mask edges</p>
         </div>
 
@@ -307,17 +311,17 @@
             <span class="modal-contrast-val text-primary font-mono font-bold text-sm">1.0</span>
           </div>
           <input type="range" min="0.5" max="2.0" step="0.1" value="1.0"
-            class="range range-sm range-primary modal-contrast-slider" />
+            class="range range-sm range-primary modal-contrast-slider" aria-label="Contrast" />
           <p class="text-[10px] opacity-40 mt-1">Hardness of mask transitions</p>
         </div>
 
         <div class="form-control pt-2">
           <label
             class="label cursor-pointer bg-base-200/50 p-4 rounded-xl border border-base-300 transition-colors hover:bg-base-200">
-            <div class="flex flex-col">
+            <span class="flex flex-col">
               <span class="label-text font-bold text-xs uppercase">Edge Refinement</span>
               <span class="text-[10px] opacity-50">Best for hair and fur</span>
-            </div>
+            </span>
             <input type="checkbox" class="toggle toggle-primary modal-refine-toggle" />
           </label>
         </div>

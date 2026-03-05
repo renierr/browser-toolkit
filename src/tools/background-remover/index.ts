@@ -1,5 +1,5 @@
-import { setupFileDropzone, downloadFile, downloadAsZip, type DownloadBuffer } from '../../js/file-utils';
-import { showMessage, showProgress, hideProgress } from '../../js/ui';
+import { downloadAsZip, type DownloadBuffer, downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
+import { hideProgress, showMessage, showProgress } from '../../js/ui';
 import { debounce } from '../../js/utils';
 import type { SharedFilesPayload } from '../../js/share-target';
 import BackgroundRemovalWorker from './worker?worker';
@@ -78,6 +78,7 @@ async function copyBlobToClipboard(blob: Blob): Promise<void> {
   }
 }
 
+// noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
   const gallery = document.getElementById('results-gallery')!;
   const bulkActions = document.getElementById('bulk-actions')!;
@@ -86,6 +87,7 @@ export default function init(payload?: SharedFilesPayload) {
   const btnClear = document.getElementById('btn-clear')!;
   const btnDownloadAll = document.getElementById('btn-download-all')!;
   const template = document.getElementById('result-item-template') as HTMLTemplateElement;
+  const pasteBtn = document.getElementById('paste-btn')!;
 
   // Modal elements
   const previewModal = document.getElementById('preview-modal') as HTMLDialogElement;
@@ -94,9 +96,13 @@ export default function init(payload?: SharedFilesPayload) {
   const modalDownload = document.getElementById('modal-download') as HTMLButtonElement;
   const modalCopy = document.getElementById('modal-copy') as HTMLButtonElement;
 
-  const modalThresholdSlider = previewModal.querySelector('.modal-threshold-slider') as HTMLInputElement;
+  const modalThresholdSlider = previewModal.querySelector(
+    '.modal-threshold-slider'
+  ) as HTMLInputElement;
   const modalSmoothSlider = previewModal.querySelector('.modal-smooth-slider') as HTMLInputElement;
-  const modalContrastSlider = previewModal.querySelector('.modal-contrast-slider') as HTMLInputElement;
+  const modalContrastSlider = previewModal.querySelector(
+    '.modal-contrast-slider'
+  ) as HTMLInputElement;
   const modalRefineToggle = previewModal.querySelector('.modal-refine-toggle') as HTMLInputElement;
 
   const modalThresholdVal = previewModal.querySelector('.modal-threshold-val')!;
@@ -121,17 +127,28 @@ export default function init(payload?: SharedFilesPayload) {
   const optContrast = document.getElementById('opt-contrast') as HTMLInputElement | null;
   const optContrastValue = document.getElementById('opt-contrast-value');
 
-  optThreshold?.addEventListener('input', () => { if (optThresholdValue) optThresholdValue.textContent = optThreshold.value; });
-  optSmooth?.addEventListener('input', () => { if (optSmoothValue) optSmoothValue.textContent = optSmooth.value; });
-  optQuality?.addEventListener('input', () => { if (optQualityValue) optQualityValue.textContent = `${optQuality.value}%`; });
-  optContrast?.addEventListener('input', () => { if (optContrastValue) optContrastValue.textContent = optContrast.value; });
+  optThreshold?.addEventListener('input', () => {
+    if (optThresholdValue) optThresholdValue.textContent = optThreshold.value;
+  });
+  optSmooth?.addEventListener('input', () => {
+    if (optSmoothValue) optSmoothValue.textContent = optSmooth.value;
+  });
+  optQuality?.addEventListener('input', () => {
+    if (optQualityValue) optQualityValue.textContent = `${optQuality.value}%`;
+  });
+  optContrast?.addEventListener('input', () => {
+    if (optContrastValue) optContrastValue.textContent = optContrast.value;
+  });
 
   let queue: ImageQueueItem[] = [];
   let isProcessing = false;
   let worker: Worker | null = null;
   let currentModalItemId: string | null = null;
   let pendingReprocess: Map<string, ProcessingOptions> = new Map();
-  let reprocessDebouncers: Map<string, ReturnType<typeof debounce<(options: ProcessingOptions) => void>>> = new Map();
+  let reprocessDebouncers: Map<
+    string,
+    ReturnType<typeof debounce<(options: ProcessingOptions) => void>>
+  > = new Map();
 
   /**
    * Render the raw mask as a coloured outline overlay onto the modal canvas.
@@ -150,7 +167,8 @@ export default function init(payload?: SharedFilesPayload) {
     const h = item.height;
 
     // Normalize raw mask to 0-255
-    let min = Infinity, max = -Infinity;
+    let min = Infinity,
+      max = -Infinity;
     for (let i = 0; i < raw.length; i++) {
       if (raw[i] < min) min = raw[i];
       if (raw[i] > max) max = raw[i];
@@ -175,11 +193,12 @@ export default function init(payload?: SharedFilesPayload) {
         const y1 = Math.min(y0 + 1, MODEL_SIZE - 1);
         const fx = srcX - x0;
         const fy = srcY - y0;
-        const v = norm[y0 * MODEL_SIZE + x0] * (1 - fx) * (1 - fy)
-                + norm[y0 * MODEL_SIZE + x1] * fx * (1 - fy)
-                + norm[y1 * MODEL_SIZE + x0] * (1 - fx) * fy
-                + norm[y1 * MODEL_SIZE + x1] * fx * fy;
-        resized[y * w + x] = v;
+
+        resized[y * w + x] =
+          norm[y0 * MODEL_SIZE + x0] * (1 - fx) * (1 - fy) +
+          norm[y0 * MODEL_SIZE + x1] * fx * (1 - fy) +
+          norm[y1 * MODEL_SIZE + x0] * (1 - fx) * fy +
+          norm[y1 * MODEL_SIZE + x1] * fx * fy;
       }
     }
 
@@ -201,10 +220,10 @@ export default function init(payload?: SharedFilesPayload) {
           const idx = (y * w + x) * 4;
           // Bright cyan outline with intensity based on gradient
           const a = Math.min(255, Math.round(mag * 4 * 255));
-          data[idx] = 0;       // R
+          data[idx] = 0; // R
           data[idx + 1] = 220; // G
           data[idx + 2] = 255; // B
-          data[idx + 3] = a;   // A
+          data[idx + 3] = a; // A
         }
       }
     }
@@ -228,7 +247,7 @@ export default function init(payload?: SharedFilesPayload) {
   /** Switch the modal between processed, original, and outline views */
   const setModalViewMode = (mode: 'processed' | 'original' | 'outline') => {
     modalViewMode = mode;
-    const item = queue.find(it => it.id === currentModalItemId);
+    const item = queue.find((it) => it.id === currentModalItemId);
 
     // Update toggle button styles
     btnViewProcessed.classList.toggle('btn-primary', mode === 'processed');
@@ -311,7 +330,13 @@ export default function init(payload?: SharedFilesPayload) {
     return worker;
   };
 
-  const handleSuccess = (item: ImageQueueItem, result: Blob, width?: number, height?: number, rawMask?: Float32Array) => {
+  const handleSuccess = (
+    item: ImageQueueItem,
+    result: Blob,
+    width?: number,
+    height?: number,
+    rawMask?: Float32Array
+  ) => {
     item.resultBlob = result;
     if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
     item.resultUrl = URL.createObjectURL(result);
@@ -365,7 +390,8 @@ export default function init(payload?: SharedFilesPayload) {
     const spinner = item.element.querySelector('.loading') as HTMLElement | null;
 
     // Show a meaningful error message (truncated for UI)
-    const shortError = error && error.length > 80 ? error.substring(0, 80) + '…' : (error || 'Unknown error');
+    const shortError =
+      error && error.length > 80 ? error.substring(0, 80) + '…' : error || 'Unknown error';
     statusText.innerHTML = `<span class="text-error font-bold">Error</span><br/><span class="text-xs opacity-70 mt-1 block">${shortError}</span>`;
     if (progressBar) progressBar.classList.add('hidden');
     if (spinner) spinner.classList.add('hidden');
@@ -385,7 +411,10 @@ export default function init(payload?: SharedFilesPayload) {
       item.status = 'pending';
       const resetSpinner = item.element.querySelector('.loading') as HTMLElement | null;
       if (resetSpinner) resetSpinner.classList.remove('hidden');
-      if (progressBar) { progressBar.classList.remove('hidden'); progressBar.value = 0; }
+      if (progressBar) {
+        progressBar.classList.remove('hidden');
+        progressBar.value = 0;
+      }
       statusText.textContent = 'Pending...';
       processQueue();
     };
@@ -435,7 +464,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   /** Actually send the reprocess message to the worker */
   const doReprocess = (id: string, options: ProcessingOptions) => {
-    const item = queue.find(it => it.id === id);
+    const item = queue.find((it) => it.id === id);
     if (!item || !item.rawMask) return;
 
     isProcessing = true;
@@ -462,7 +491,7 @@ export default function init(payload?: SharedFilesPayload) {
       action: 'reprocess',
       file: item.file,
       rawMask: item.rawMask,
-      options
+      options,
     });
   };
 
@@ -477,7 +506,7 @@ export default function init(payload?: SharedFilesPayload) {
         if (isProcessing) {
           // Queue it — will be picked up after the current task finishes
           pendingReprocess.set(id, options);
-          const item = queue.find(it => it.id === id);
+          const item = queue.find((it) => it.id === id);
           if (item) {
             const statusOverlay = item.element.querySelector('.status-overlay')!;
             statusOverlay.classList.remove('hidden');
@@ -498,7 +527,7 @@ export default function init(payload?: SharedFilesPayload) {
    * and serializes through the isProcessing flag to avoid overwhelming the worker.
    */
   const reprocessItem = (id: string, options: ProcessingOptions) => {
-    const item = queue.find(it => it.id === id);
+    const item = queue.find((it) => it.id === id);
     if (!item || !item.rawMask) return;
     getItemDebouncer(id)(options);
   };
@@ -546,7 +575,7 @@ export default function init(payload?: SharedFilesPayload) {
 
         const btnRemove = container.querySelector('.btn-remove-item') as HTMLElement;
         btnRemove.onclick = () => {
-          const index = queue.findIndex(item => item.id === id);
+          const index = queue.findIndex((item) => item.id === id);
           if (index !== -1) {
             const item = queue[index];
             if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
@@ -554,7 +583,10 @@ export default function init(payload?: SharedFilesPayload) {
             queue.splice(index, 1);
           }
           const debounceFn = reprocessDebouncers.get(id);
-          if (debounceFn) { debounceFn.cancel(); reprocessDebouncers.delete(id); }
+          if (debounceFn) {
+            debounceFn.cancel();
+            reprocessDebouncers.delete(id);
+          }
           pendingReprocess.delete(id);
           container.remove();
           updateUI();
@@ -562,7 +594,7 @@ export default function init(payload?: SharedFilesPayload) {
 
         const btnDownload = container.querySelector('.btn-download-item') as HTMLButtonElement;
         btnDownload.onclick = async () => {
-          const item = queue.find(it => it.id === id);
+          const item = queue.find((it) => it.id === id);
           if (item?.resultBlob) {
             const format = getSelectedFormat();
             const quality = getWebpQuality();
@@ -573,13 +605,13 @@ export default function init(payload?: SharedFilesPayload) {
 
         const btnCopy = container.querySelector('.btn-copy-item') as HTMLButtonElement;
         btnCopy.onclick = async () => {
-          const item = queue.find(it => it.id === id);
+          const item = queue.find((it) => it.id === id);
           if (item?.resultBlob) await copyBlobToClipboard(item.resultBlob);
         };
 
         const btnPreviewFull = container.querySelector('.btn-preview-full') as HTMLButtonElement;
         btnPreviewFull.onclick = () => {
-          const item = queue.find(it => it.id === id);
+          const item = queue.find((it) => it.id === id);
           if (item?.resultUrl) {
             currentModalItemId = item.id;
             modalImg.src = item.resultUrl;
@@ -620,7 +652,7 @@ export default function init(payload?: SharedFilesPayload) {
             threshold: parseInt(itemThreshold.value, 10),
             smoothing: parseInt(itemSmooth.value, 10),
             contrast: parseFloat(itemContrast.value),
-            useGuidedFilter: itemRefine.checked
+            useGuidedFilter: itemRefine.checked,
           };
           reprocessItem(id, options);
         };
@@ -630,7 +662,7 @@ export default function init(payload?: SharedFilesPayload) {
         itemContrast.onchange = onCardAdjust;
         itemRefine.onchange = onCardAdjust;
 
-        [itemThreshold, itemSmooth, itemContrast].forEach(el => {
+        [itemThreshold, itemSmooth, itemContrast].forEach((el) => {
           el.oninput = () => {
             const valLabel = el.parentElement?.querySelector('span[class*="-val"]');
             if (valLabel) valLabel.textContent = el.value;
@@ -645,7 +677,7 @@ export default function init(payload?: SharedFilesPayload) {
           status: 'pending',
           originalUrl,
           formattedSize,
-          options: { threshold: 128, smoothing: 4, contrast: 1.0, useGuidedFilter: false }
+          options: { threshold: 128, smoothing: 4, contrast: 1.0, useGuidedFilter: false },
         });
       }
       updateUI();
@@ -663,7 +695,7 @@ export default function init(payload?: SharedFilesPayload) {
       threshold: parseInt(modalThresholdSlider.value, 10),
       smoothing: parseInt(modalSmoothSlider.value, 10),
       contrast: parseFloat(modalContrastSlider.value),
-      useGuidedFilter: modalRefineToggle.checked
+      useGuidedFilter: modalRefineToggle.checked,
     };
 
     // Update labels
@@ -672,9 +704,11 @@ export default function init(payload?: SharedFilesPayload) {
     modalContrastVal.textContent = parseFloat(modalContrastSlider.value).toFixed(1);
 
     // Sync back to card UI if visible
-    const item = queue.find(it => it.id === currentModalItemId);
+    const item = queue.find((it) => it.id === currentModalItemId);
     if (item) {
-      const cardThreshold = item.element.querySelector('.item-threshold-slider') as HTMLInputElement;
+      const cardThreshold = item.element.querySelector(
+        '.item-threshold-slider'
+      ) as HTMLInputElement;
       const cardSmooth = item.element.querySelector('.item-smooth-slider') as HTMLInputElement;
       const cardContrast = item.element.querySelector('.item-contrast-slider') as HTMLInputElement;
       const cardRefine = item.element.querySelector('.item-refine-toggle') as HTMLInputElement;
@@ -687,7 +721,9 @@ export default function init(payload?: SharedFilesPayload) {
       // Update card labels
       item.element.querySelector('.item-threshold-val')!.textContent = modalThresholdSlider.value;
       item.element.querySelector('.item-smooth-val')!.textContent = modalSmoothSlider.value;
-      item.element.querySelector('.item-contrast-val')!.textContent = parseFloat(modalContrastSlider.value).toFixed(1);
+      item.element.querySelector('.item-contrast-val')!.textContent = parseFloat(
+        modalContrastSlider.value
+      ).toFixed(1);
     }
 
     reprocessItem(currentModalItemId, options);
@@ -722,14 +758,27 @@ export default function init(payload?: SharedFilesPayload) {
   window.addEventListener('resize', onModalResize);
 
   // Real-time label updates for modal
-  [modalThresholdSlider, modalSmoothSlider, modalContrastSlider].forEach(el => {
+  [modalThresholdSlider, modalSmoothSlider, modalContrastSlider].forEach((el) => {
     el.oninput = () => {
       const valLabel = el.parentElement?.querySelector('span[class*="-val"]');
-      if (valLabel) valLabel.textContent = el.value === modalContrastSlider.value ? parseFloat(el.value).toFixed(1) : el.value;
+      if (valLabel)
+        valLabel.textContent =
+          el.value === modalContrastSlider.value ? parseFloat(el.value).toFixed(1) : el.value;
     };
   });
 
   setupFileDropzone('dropzone', 'image-input', addFilesToQueue);
+
+  pasteBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const imageBlob = await retrieveImageBlobFromClipboard();
+    if (imageBlob) {
+      addFilesToQueue([new File([imageBlob], `pasted-image-${Date.now()}.png`, { type: imageBlob.type })]);
+    } else {
+      showMessage('No image found in clipboard.', { type: 'info', timeoutMs: 5000 });
+    }
+  });
 
   btnClear.addEventListener('click', () => {
     queue.forEach((item) => {
@@ -753,13 +802,15 @@ export default function init(payload?: SharedFilesPayload) {
 
     showProgress('Preparing ZIP...');
     try {
-      const zipFiles: DownloadBuffer[] = await Promise.all(doneItems.map(async (item) => {
-        const outputBlob = await convertBlobToFormat(item.resultBlob!, format, quality);
-        return {
-          data: await outputBlob.arrayBuffer(),
-          name: getOutputFilename(item.file.name, format),
-        };
-      }));
+      const zipFiles: DownloadBuffer[] = await Promise.all(
+        doneItems.map(async (item) => {
+          const outputBlob = await convertBlobToFormat(item.resultBlob!, format, quality);
+          return {
+            data: await outputBlob.arrayBuffer(),
+            name: getOutputFilename(item.file.name, format),
+          };
+        })
+      );
       await downloadAsZip(zipFiles, `background-removed-images.zip`);
     } catch (e) {
       showMessage('Failed to create ZIP file.', { type: 'alert' });
@@ -770,8 +821,11 @@ export default function init(payload?: SharedFilesPayload) {
 
   if (payload?.sharedFiles?.length) addFilesToQueue(payload.sharedFiles);
   return () => {
-    if (worker) { worker.terminate(); worker = null; }
-    reprocessDebouncers.forEach(fn => fn.cancel());
+    if (worker) {
+      worker.terminate();
+      worker = null;
+    }
+    reprocessDebouncers.forEach((fn) => fn.cancel());
     reprocessDebouncers.clear();
     pendingReprocess.clear();
     onModalResize.cancel();
