@@ -80,10 +80,8 @@ export default function init() {
     reader.readAsDataURL(file);
 
     try {
-      showProgress('Loading models...');
-      const ocrWorker = await getWorker();
-
       // Convert Blob to ImageData
+      showProgress('Decoding image...');
       const img = new Image();
       const imgLoadPromise = new Promise((resolve, reject) => {
         img.onload = resolve;
@@ -98,6 +96,9 @@ export default function init() {
       ctx.drawImage(img, 0, 0);
       const imageData = ctx.getImageData(0, 0, img.width, img.height);
       URL.revokeObjectURL(img.src);
+
+      showProgress('Loading models...');
+      const ocrWorker = await getWorker();
 
       // 1. Detect
       if (statusText) statusText.textContent = 'Detecting text...';

@@ -1,3 +1,5 @@
+import { showMessage } from './ui';
+
 // Sets up drag-and-drop and click-to-select for a file input and dropzone
 export function setupFileDropzone(
   dropzoneId: string,
@@ -43,16 +45,15 @@ export function setupFileDropzone(
     await Promise.all(
       accepted.map(async (f) => {
         try {
-          // Read first and last byte to force the OS (e.g. iOS iCloud / Android) 
-          // to eagerly download the full file locally, without loading the whole buffer into memory.
+          // Read boundaries to prompt OS download and wait briefly.
           await Promise.all([
             f.slice(0, 1).arrayBuffer(),
             f.slice(-1).arrayBuffer()
           ]);
-          // Give the OS a small delay to finish downloading the file in the background
-          await new Promise((resolve) => setTimeout(resolve, 500));
+          //await new Promise((resolve) => setTimeout(resolve, 500));
         } catch (e) {
           console.warn('Failed to pre-warm file: ', f.name, e);
+          showMessage(`Failed to load ${f.name}. Please try selecting it again.`, { type: 'alert', timeoutMs: 5000 });
         }
       })
     );
