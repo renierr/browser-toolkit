@@ -1,13 +1,15 @@
+
 import { PaddleOCR } from './paddle-ocr';
 
 const ocr = new PaddleOCR();
 
 self.onmessage = async (e: MessageEvent) => {
-  const { type, imageData, boxes } = e.data;
+  const { type, imageData, boxes, config } = e.data;
 
   try {
     if (type === 'init') {
-      await ocr.init(e.data.detModelUrl, e.data.recModelUrl);
+      const { detModelUrl, recModelUrl } = e.data; // config is already destructured above
+      await ocr.init(detModelUrl, recModelUrl, config);
       self.postMessage({ type: 'init-done' });
     } else if (type === 'detect') {
       const detectedBoxes = await ocr.detect(imageData, (progress) => {

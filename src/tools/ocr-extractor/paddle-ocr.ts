@@ -11,6 +11,8 @@ export interface OcrConfig {
   boxScoreThreshold?: number;
   /** Optional maximum number of boxes to process */
   maxBoxes?: number;
+  /** Force WASM backend, disabling WebGPU */
+  forceWasm?: boolean;
 }
 
 
@@ -28,12 +30,14 @@ export class PaddleOCR {
 
   async init(detModelPath: string, recModelPath: string, config?: OcrConfig) {
     this.config = config ?? {};
-
+    const execProviders = this.config.forceWasm ? ['wasm'] : undefined;
     this.detSession = await loadSession({
       modelPath: detModelPath,
+      executionProviders: execProviders,
     });
     this.recSession = await loadSession({
       modelPath: recModelPath,
+      executionProviders: execProviders,
     });
   }
 

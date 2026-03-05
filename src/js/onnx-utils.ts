@@ -108,7 +108,7 @@ export async function loadSession(config: OnnxModelConfig): Promise<ort.Inferenc
   const providers = config.executionProviders ?? await defaultProviders();
 
   const session = await createSessionWithFallback(config.modelPath, providers, timeout);
-
+  console.info('[onnx-utils] Session created with providers:', providers.join(', '));
   sessionCache.set(config.modelPath, session);
   return session;
 }

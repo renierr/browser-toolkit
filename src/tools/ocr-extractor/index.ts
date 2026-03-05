@@ -32,10 +32,18 @@ export default function init() {
           reject(new Error(error));
         }
       };
+      const config = {
+        targetSize: Number((document.getElementById('targetSize') as HTMLInputElement).value) || undefined,
+        detThreshold: Number((document.getElementById('detThreshold') as HTMLInputElement).value) || undefined,
+        boxScoreThreshold: Number((document.getElementById('boxScoreThreshold') as HTMLInputElement).value) || undefined,
+        maxBoxes: Number((document.getElementById('maxBoxes') as HTMLInputElement).value) || undefined,
+        forceWasm: (document.getElementById('forceWasm') as HTMLInputElement).checked,
+      };
       worker.postMessage({
         type: 'init',
         detModelUrl: DET_MODEL_URL,
-        recModelUrl: REC_MODEL_URL
+        recModelUrl: REC_MODEL_URL,
+        config,
       });
     });
     return initPromise.then(() => worker!);
@@ -94,7 +102,7 @@ export default function init() {
       // 1. Detect
       if (statusText) statusText.textContent = 'Detecting text...';
       showProgress('Detecting text...');
-      ocrWorker.postMessage({ type: 'detect', imageData }, [imageData.data.buffer]);
+      ocrWorker.postMessage({ type: 'detect', imageData });
 
       const boxes: number[][][] = await new Promise((resolve, reject) => {
         const handler = (e: MessageEvent) => {
@@ -129,7 +137,7 @@ export default function init() {
       ctx.drawImage(img, 0, 0);
       const imageDataForRec = ctx.getImageData(0, 0, img.width, img.height);
 
-      ocrWorker.postMessage({ type: 'recognize', imageData: imageDataForRec, boxes }, [imageDataForRec.data.buffer]);
+      ocrWorker.postMessage({ type: 'recognize', imageData: imageDataForRec, boxes });
 
       const text: string = await new Promise((resolve, reject) => {
         const handler = (e: MessageEvent) => {
