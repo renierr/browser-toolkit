@@ -1,6 +1,19 @@
 import { ort, loadSession, runInference } from '../../js/onnx-utils';
 import { LATIN_DICT } from './dict';
 
+/** Configuration options for the OCR pipeline */
+export interface OcrConfig {
+  /** Target size for detection preprocessing (default 480) */
+  targetSize?: number;
+  /** Binary map threshold for detection (default 0.3) */
+  detThreshold?: number;
+  /** Minimum box score to keep a detection (default 0.5) */
+  boxScoreThreshold?: number;
+  /** Optional maximum number of boxes to process */
+  maxBoxes?: number;
+}
+
+
 export interface OcrResult {
   text: string;
   confidence: number;
@@ -10,8 +23,12 @@ export interface OcrResult {
 export class PaddleOCR {
   private detSession: ort.InferenceSession | null = null;
   private recSession: ort.InferenceSession | null = null;
+  private config: OcrConfig = {};
 
-  async init(detModelPath: string, recModelPath: string) {
+
+  async init(detModelPath: string, recModelPath: string, config?: OcrConfig) {
+    this.config = config ?? {};
+
     this.detSession = await loadSession({
       modelPath: detModelPath,
     });
@@ -87,7 +104,7 @@ export class PaddleOCR {
 
   private async preprocessDet(imageData: ImageData) {
     const { width, height } = imageData;
-    const targetSize = 480;
+    const targetSize = this.config.targetSize ?? 480;
     let newW = targetSize;
     let newH = targetSize;
 
@@ -130,7 +147,7 @@ export class PaddleOCR {
   private postprocessDet(probMap: ort.Tensor, scaleH: number, scaleW: number): number[][][] {
     const [, , h, w] = probMap.dims;
     const data = probMap.data as Float32Array;
-    const threshold = 0.3;
+    const threshold = this.config.detThreshold ?? 0.3;
     const binaryMap = new Uint8Array(h * w);
     for (let i = 0; i < h * w; i++) {
       binaryMap[i] = data[i] > threshold ? 255 : 0;
@@ -156,7 +173,8 @@ export class PaddleOCR {
       if (contour.length < 4) continue;
       let box = this.getMinAreaRect(contour);
       const score = this.boxScore(data, box, h, w);
-      if (score < 0.5) continue;
+      const minScore = this.config.boxScoreThreshold ?? 0.5;
+      if (score < minScore) continue;
 
       const unclippedBox = this.unclipBox(box, 1.5);
       const rescaledBox = unclippedBox.map((p: number[]) => [
@@ -164,6 +182,10 @@ export class PaddleOCR {
         Math.max(0, p[1] / scaleH)
       ]);
       boxes.push(rescaledBox);
+      // Enforce optional maxBoxes limit
+      if (this.config.maxBoxes && boxes.length >= this.config.maxBoxes) {
+        break;
+      }
     }
 
     return this.mergeOverlappingBoxes(boxes);
@@ -221,7 +243,7 @@ export class PaddleOCR {
     let text = '';
     let lastCharIdx = -1;
 
-    const blankIdx = 0; 
+    const blankIdx = 0;
     const spaceIdx = numClasses - 1;
 
     for (let t = 0; t < timesteps; t++) {
@@ -239,7 +261,7 @@ export class PaddleOCR {
         if (maxIdx === spaceIdx) {
           text += ' ';
         } else {
-          const char = LATIN_DICT[maxIdx]; 
+          const char = LATIN_DICT[maxIdx];
           if (char) text += char;
         }
       }
