@@ -428,17 +428,16 @@ export default function init() {
     toggleFlashBtn.classList.toggle('text-accent', isFlashOn);
   });
 
-  fileInput?.addEventListener('change', (e) => {
+  fileInput?.addEventListener('change', async (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      scanImage(img);
-      img.src = event.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+    await file.slice(0, 1).arrayBuffer();
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => URL.revokeObjectURL(url);
+    scanImage(img);
+    img.src = url;
   });
 
   pasteBtn?.addEventListener('click', async () => {
