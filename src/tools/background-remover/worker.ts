@@ -12,13 +12,16 @@ interface ProcessingOptions {
   useGuidedFilter: boolean;
 }
 
-// Cache decoded RGBA per image so reprocessing never re-decodes the source file
-const rgbaCache = new Map<string, { rgba: Uint8ClampedArray; width: number; height: number }>();
+const rgbaCache = new Map<string, {
+  rgba: Uint8ClampedArray;
+  width: number;
+  height: number;
+  downscaledRgba?: Uint8ClampedArray;
+}>();
 
 self.onmessage = async (event: MessageEvent) => {
   const { id, action, file, modelUrl, options, rawMask: cachedRawMask } = event.data;
 
-  // Evict cache entry when image is removed from queue
   if (action === 'evict') {
     rgbaCache.delete(id);
     return;
@@ -88,7 +91,12 @@ self.onmessage = async (event: MessageEvent) => {
 
     if (processingOptions.useGuidedFilter && rgba) {
       step = 'refining edges';
-      mask = guidedFilter(rgba, mask, width!, height!, 4, 0.01);
+      const cached = rgbaCache.get(id);
+      const gf = guidedFilter(rgba, mask, width!, height!, 4, 0.01, cached?.downscaledRgba);
+      mask = gf.mask;
+      if (cached && gf.downscaledRgba) {
+        cached.downscaledRgba = gf.downscaledRgba;
+      }
     }
 
     step = 'applying mask';

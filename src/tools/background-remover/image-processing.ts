@@ -1,9 +1,7 @@
 const MODEL_INPUT_SIZE = 320;
+const GUIDED_FILTER_MAX_DIM = 1024;
 
-/**
- * Decodes an image blob into raw RGBA pixel data using OffscreenCanvas.
- * Includes retry at lower resolution for mobile memory-pressure situations.
- */
+
 export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
   data: Uint8ClampedArray;
   width: number;
@@ -13,7 +11,6 @@ export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
   try {
     bitmap = await createBitmapWithLimit(blob, maxDimension);
   } catch (firstErr) {
-    // Retry at a smaller size — better a low-res result than a crash
     console.warn('[decodeImage] Decode failed, retrying at 2048 px', firstErr);
     try {
       bitmap = await createBitmapWithLimit(blob, 2048);
@@ -31,16 +28,11 @@ export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
   bitmap.close();
 
   const imageData = ctx.getImageData(0, 0, width, height);
-  // Free backing store eagerly — critical on mobile
   canvas.width = 0;
   canvas.height = 0;
   return { data: imageData.data, width, height };
 }
 
-/**
- * Create an ImageBitmap, optionally capped to `maxDim`.
- * Closes the full-res probe before allocating the resized one.
- */
 async function createBitmapWithLimit(blob: Blob, maxDim?: number): Promise<ImageBitmap> {
   const probe = await createImageBitmap(blob);
 
@@ -48,7 +40,6 @@ async function createBitmapWithLimit(blob: Blob, maxDim?: number): Promise<Image
     return probe;
   }
 
-  // Close full-res BEFORE allocating resized
   const { width: origW, height: origH } = probe;
   probe.close();
 
@@ -60,9 +51,6 @@ async function createBitmapWithLimit(blob: Blob, maxDim?: number): Promise<Image
   });
 }
 
-/**
- * Converts RGBA image data into a normalized CHW float32 tensor.
- */
 export function imageToTensor(
   rgba: Uint8ClampedArray,
   srcWidth: number,
@@ -83,9 +71,6 @@ export function imageToTensor(
   return chw;
 }
 
-/**
- * Normalizes the raw model output mask to [0..255] range.
- */
 export function normalizeMask(
   raw: Float32Array,
   threshold: number = 128,
@@ -119,9 +104,6 @@ export function normalizeMask(
   return out;
 }
 
-/**
- * Simple box filter for Guided Filter.
- */
 function boxFilter(data: Float32Array, width: number, height: number, radius: number): Float32Array {
   const output = new Float32Array(data.length);
   const winSize = 2 * radius + 1;
@@ -155,8 +137,15 @@ function boxFilter(data: Float32Array, width: number, height: number, radius: nu
   return output;
 }
 
+export interface GuidedFilterResult {
+  mask: Uint8Array;
+  /** Downscaled RGBA — pass back on next call to avoid recomputing. */
+  downscaledRgba?: Uint8ClampedArray;
+}
+
 /**
- * Refines a low-resolution mask using the source image as a guide.
+ * Runs guided filter at reduced resolution internally, upscales result to original size.
+ * Pass `cachedDownscaledRgba` from a previous call to skip the downscale step on reprocess.
  */
 export function guidedFilter(
   sourceRgba: Uint8ClampedArray,
@@ -165,6 +154,35 @@ export function guidedFilter(
   height: number,
   radius: number = 4,
   eps: number = 0.01,
+  cachedDownscaledRgba?: Uint8ClampedArray,
+): GuidedFilterResult {
+  if (width <= GUIDED_FILTER_MAX_DIM && height <= GUIDED_FILTER_MAX_DIM) {
+    return { mask: guidedFilterCore(sourceRgba, mask, width, height, radius, eps) };
+  }
+
+  const ratio = Math.min(GUIDED_FILTER_MAX_DIM / width, GUIDED_FILTER_MAX_DIM / height);
+  const workW = Math.max(1, Math.round(width * ratio));
+  const workH = Math.max(1, Math.round(height * ratio));
+
+  const workRgba = cachedDownscaledRgba ?? resizeRGBA(sourceRgba, width, height, workW, workH);
+  const workMask = resizeMask(mask, width, height, workW, workH);
+  const scaledRadius = Math.max(1, Math.round(radius * ratio));
+
+  const result = guidedFilterCore(workRgba, workMask, workW, workH, scaledRadius, eps);
+  return {
+    mask: resizeMask(result, workW, workH, width, height),
+    downscaledRgba: workRgba,
+  };
+}
+
+
+function guidedFilterCore(
+  sourceRgba: Uint8ClampedArray,
+  mask: Uint8Array,
+  width: number,
+  height: number,
+  radius: number,
+  eps: number,
 ): Uint8Array {
   const size = width * height;
 
@@ -217,9 +235,6 @@ export function guidedFilter(
   return result;
 }
 
-/**
- * Resizes a single-channel mask using OffscreenCanvas.
- */
 export function resizeMask(
   mask: Uint8Array,
   srcW: number,
@@ -229,9 +244,6 @@ export function resizeMask(
 ): Uint8Array {
   if (srcW === dstW && srcH === dstH) return mask;
 
-  const canvas = new OffscreenCanvas(dstW, dstH);
-  const ctx = canvas.getContext('2d', { alpha: true })!;
-
   const srcCanvas = new OffscreenCanvas(srcW, srcH);
   const srcCtx = srcCanvas.getContext('2d')!;
   const srcData = srcCtx.createImageData(srcW, srcH);
@@ -240,11 +252,11 @@ export function resizeMask(
   }
   srcCtx.putImageData(srcData, 0, 0);
 
+  const canvas = new OffscreenCanvas(dstW, dstH);
+  const ctx = canvas.getContext('2d', { alpha: true })!;
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(srcCanvas, 0, 0, dstW, dstH);
-
-  // Eagerly free the source canvas backing store
   srcCanvas.width = 0;
   srcCanvas.height = 0;
 
@@ -253,8 +265,6 @@ export function resizeMask(
   for (let i = 0; i < result.length; i++) {
     result[i] = dstData.data[i * 4 + 3];
   }
-
-  // Eagerly free the destination canvas backing store
   canvas.width = 0;
   canvas.height = 0;
 
@@ -262,7 +272,7 @@ export function resizeMask(
 }
 
 /**
- * Applies the alpha mask to the original image.
+ * Applies the alpha mask to the original image at full resolution.
  */
 export function applyMask(
   rgba: Uint8ClampedArray,
@@ -285,24 +295,20 @@ export function applyMask(
   maskCtx.putImageData(maskData, 0, 0);
 
   ctx.clearRect(0, 0, width, height);
-  ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
+  // Cast avoids TS SharedArrayBuffer complaint without copying the buffer
+  ctx.putImageData(new ImageData(rgba as unknown as Uint8ClampedArray<ArrayBuffer>, width, height), 0, 0);
 
   ctx.globalCompositeOperation = 'destination-in';
   if (smoothing > 0) {
     ctx.filter = `blur(${smoothing}px)`;
   }
   ctx.drawImage(maskCanvas, 0, 0, width, height);
-
-  // Eagerly free the mask canvas backing store
   maskCanvas.width = 0;
   maskCanvas.height = 0;
 
   return canvas;
 }
 
-/**
- * Bilinear resize for RGBA pixel data.
- */
 function resizeRGBA(
   src: Uint8ClampedArray,
   srcW: number,
@@ -312,22 +318,18 @@ function resizeRGBA(
 ): Uint8ClampedArray {
   if (srcW === dstW && srcH === dstH) return src;
 
-  const canvas = new OffscreenCanvas(dstW, dstH);
-  const ctx = canvas.getContext('2d')!;
-
   const srcCanvas = new OffscreenCanvas(srcW, srcH);
   const srcCtx = srcCanvas.getContext('2d')!;
-  srcCtx.putImageData(new ImageData(new Uint8ClampedArray(src), srcW, srcH), 0, 0);
+  // Cast avoids TS SharedArrayBuffer complaint without copying the buffer
+  srcCtx.putImageData(new ImageData(src as unknown as Uint8ClampedArray<ArrayBuffer>, srcW, srcH), 0, 0);
 
+  const canvas = new OffscreenCanvas(dstW, dstH);
+  const ctx = canvas.getContext('2d')!;
   ctx.drawImage(srcCanvas, 0, 0, dstW, dstH);
-
-  // Eagerly free the source canvas backing store
   srcCanvas.width = 0;
   srcCanvas.height = 0;
 
   const result = ctx.getImageData(0, 0, dstW, dstH).data;
-
-  // Eagerly free the destination canvas backing store
   canvas.width = 0;
   canvas.height = 0;
 
