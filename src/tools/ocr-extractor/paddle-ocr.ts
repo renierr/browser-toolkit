@@ -80,25 +80,28 @@ export class PaddleOCR {
       for (const box of line) {
         const crop = await this.getRotateCropImage(imageData, box);
         const recTensor = await this.preprocessRec(crop);
+        try {
+          const recOutput = await runInference(this.recSession, { x: recTensor }, (p) => {
+            // Inner progress for this box
+            const baseProgress = (processedBoxes / totalBoxes) * 100;
+            const stepSize = (1 / totalBoxes) * 100;
+            if (onProgress) onProgress(baseProgress + (p / 100) * stepSize);
+          });
+          const recOutputData = recOutput[Object.keys(recOutput)[0]];
 
-        const recOutput = await runInference(this.recSession, { x: recTensor }, (p) => {
-          // Inner progress for this box
-          const baseProgress = (processedBoxes / totalBoxes) * 100;
-          const stepSize = (1 / totalBoxes) * 100;
-          if (onProgress) onProgress(baseProgress + (p / 100) * stepSize);
-        });
-        const recOutputData = recOutput[Object.keys(recOutput)[0]];
+          const text = this.decode(recOutputData as ort.Tensor);
 
-        const text = this.decode(recOutputData as ort.Tensor);
+          // Add space between words found in the same line box group
+          if (lineText.length > 0 && text.length > 0) {
+            lineText += ' ';
+          }
+          lineText += text;
 
-        // Add space between words found in the same line box group
-        if (lineText.length > 0 && text.length > 0) {
-          lineText += ' ';
+          processedBoxes++;
+          if (onProgress) onProgress((processedBoxes / totalBoxes) * 100);
+        } finally {
+          recTensor.dispose();
         }
-        lineText += text;
-
-        processedBoxes++;
-        if (onProgress) onProgress((processedBoxes / totalBoxes) * 100);
       }
       lineTexts.push(lineText);
     }

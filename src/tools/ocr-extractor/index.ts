@@ -130,14 +130,7 @@ export default function init() {
       if (statusText) statusText.textContent = `Recognizing text (0/${boxes.length})...`;
       showProgress(`Recognizing text...`);
 
-      // Need a fresh copy of ImageData buffer if we transferred it
-      // Actually, we need to pass a slice or just not transfer it if we need it again.
-      // But we can recreate it or just not transfer it for detection.
-      // Let's recreate it for now to be safe, or just avoid transfer for detection.
-      ctx.drawImage(img, 0, 0);
-      const imageDataForRec = ctx.getImageData(0, 0, img.width, img.height);
-
-      ocrWorker.postMessage({ type: 'recognize', imageData: imageDataForRec, boxes });
+      ocrWorker.postMessage({ type: 'recognize', imageData, boxes });
 
       const text: string = await new Promise((resolve, reject) => {
         const handler = (e: MessageEvent) => {
