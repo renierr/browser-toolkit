@@ -40,7 +40,23 @@ export function setupFileDropzone(
     }
     if (accepted.length === 0) return;
 
-    await Promise.all(accepted.map((f) => f.slice(0, 1).arrayBuffer()));
+    await Promise.all(
+      accepted.map(async (f) => {
+        try {
+          // Read first and last byte to force the OS (e.g. iOS iCloud / Android) 
+          // to eagerly download the full file locally, without loading the whole buffer into memory.
+          const size = f.size;
+          if (size > 0) {
+            await Promise.all([
+              f.slice(0, 1).arrayBuffer(),
+              f.slice(size - 1, size).arrayBuffer()
+            ]);
+          }
+        } catch (e) {
+          console.warn('Failed to pre-warm file: ', f.name, e);
+        }
+      })
+    );
 
     const dt = new DataTransfer();
     for (const f of accepted) dt.items.add(f);
