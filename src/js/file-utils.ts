@@ -45,15 +45,12 @@ export function setupFileDropzone(
         try {
           // Read first and last byte to force the OS (e.g. iOS iCloud / Android) 
           // to eagerly download the full file locally, without loading the whole buffer into memory.
-          const size = f.size;
-          if (size > 0) {
-            await Promise.all([
-              f.slice(0, 1).arrayBuffer(),
-              f.slice(size - 1, size).arrayBuffer()
-            ]);
-            // Give the OS a small delay to finish downloading the file in the background
-            await new Promise((resolve) => setTimeout(resolve, 500));
-          }
+          await Promise.all([
+            f.slice(0, 1).arrayBuffer(),
+            f.slice(-1).arrayBuffer()
+          ]);
+          // Give the OS a small delay to finish downloading the file in the background
+          await new Promise((resolve) => setTimeout(resolve, 500));
         } catch (e) {
           console.warn('Failed to pre-warm file: ', f.name, e);
         }
