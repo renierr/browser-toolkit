@@ -109,6 +109,7 @@ async function processImage(id: string, blob: Blob, modelName: string) {
       // but we interpolate 40 to 90
       reportProgress(id, 'Running Neural Network...', 40 + (p * 0.5));
     });
+    inputTensor.dispose();
 
     reportProgress(id, 'Post-processing Output...', 95);
 
@@ -118,6 +119,7 @@ async function processImage(id: string, blob: Blob, modelName: string) {
 
     const outFloatData = outputTensor.data as Float32Array;
     const outImgData = tensorToImageData(outFloatData, outW as number, outH as number);
+    outputTensor.dispose();
 
     // 6. Convert final ImageData to Blob
     const offscreen = new OffscreenCanvas(outW as number, outH as number);
