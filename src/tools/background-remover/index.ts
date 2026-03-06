@@ -325,6 +325,7 @@ export default function init(payload?: SharedFilesPayload) {
     item.element.querySelector('.btn-preview-full')?.classList.remove('hidden');
     item.element.querySelector('.btn-download-item')?.classList.remove('hidden');
     item.element.querySelector('.btn-copy-item')?.classList.remove('hidden');
+    item.element.querySelector('.btn-toggle-adjust')?.classList.remove('hidden');
     item.element.querySelector('.btn-settings-item')?.classList.remove('hidden');
     item.element.querySelector('.btn-compare-processed')?.classList.add('btn-primary');
     item.element.querySelector('.btn-compare-original')?.classList.remove('btn-primary');
