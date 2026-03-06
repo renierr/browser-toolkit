@@ -80,10 +80,22 @@ export default function init() {
       progressPreviewImg.src = previewUrl;
       progressPreviewImg.alt = 'Uploaded image preview';
 
+      // Wrap in a container with a scan-line animation
+      const previewWrapper = document.createElement('div');
+      previewWrapper.style.position = 'relative';
+      previewWrapper.style.display = 'inline-block';
+      previewWrapper.style.overflow = 'hidden';
+      previewWrapper.style.borderRadius = '0.5rem';
+
+      const scanLine = document.createElement('div');
+      scanLine.className = 'scan-line';
+      previewWrapper.appendChild(scanLine);
+      previewWrapper.appendChild(progressPreviewImg);
+
       // Convert Blob to ImageData (worker-safe path via OffscreenCanvas)
       const imageData = await blobToImageData(file);
 
-      showProgress('Loading models...', { contentElement: progressPreviewImg });
+      showProgress('Loading models...', { contentElement: previewWrapper });
       const ocrWorker = await getWorker();
 
       // 1. Detect
