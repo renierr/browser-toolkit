@@ -78,7 +78,7 @@ body.no-scroll {
             linear-gradient(-45deg, transparent 75%, rgba(0,0,0,0.06) 75%);
     background-size: 16px 16px;
     background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
-    background-color: transparent;
+    background-color: #fbf5ec;
 }
 
 /* Scan-line animation (reusable across tools: OCR, QR scanner, etc.) */
