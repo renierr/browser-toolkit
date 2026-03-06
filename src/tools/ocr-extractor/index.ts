@@ -72,12 +72,18 @@ export default function init() {
     try {
       // Show preview
       showProgress('Decoding image...');
-      if (previewImg) previewImg.src = URL.createObjectURL(file);
+      const previewUrl = URL.createObjectURL(file);
+      if (previewImg) previewImg.src = previewUrl;
+
+      // Build a preview element for the progress overlay
+      const progressPreviewImg = document.createElement('img');
+      progressPreviewImg.src = previewUrl;
+      progressPreviewImg.alt = 'Uploaded image preview';
 
       // Convert Blob to ImageData (worker-safe path via OffscreenCanvas)
       const imageData = await blobToImageData(file);
 
-      showProgress('Loading models...');
+      showProgress('Loading models...', { contentElement: progressPreviewImg });
       const ocrWorker = await getWorker();
 
       // 1. Detect

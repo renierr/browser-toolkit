@@ -45,6 +45,17 @@ type ShowProgressOptions = {
    * Example: 3000
    */
   tooLongMs?: number;
+  /**
+   * Optional HTMLElement to display alongside the progress text (e.g. an image preview).
+   * - `undefined` (omitted): keep whatever is already shown
+   * - `null`: explicitly clear the content area
+   * - `HTMLElement`: replace content area with this element
+   *
+   * The content area is constrained to max-w-[40vw] max-h-[50vh] with object-contain
+   * applied automatically to any <img> children.
+   * Cleared automatically when hideProgress() is called.
+   */
+  contentElement?: HTMLElement | null;
 };
 
 let progressAutoCloseTimer: number | null = null;
@@ -78,6 +89,7 @@ export function showProgress(message: string, options: ShowProgressOptions = { v
   const el = document.getElementById('ui-progress');
   const textEl = document.getElementById('ui-progress-text');
   const closeEl = document.getElementById('ui-progress-close') as HTMLButtonElement | null;
+  const contentEl = document.getElementById('ui-progress-content');
   if (!el || !textEl) return;
 
   const visible = options?.visible ?? true;
@@ -86,6 +98,25 @@ export function showProgress(message: string, options: ShowProgressOptions = { v
     text += ` (${Math.round(options.progress)}%)`;
   }
   textEl.textContent = text;
+
+  // Manage optional content area (e.g. image preview)
+  if (contentEl) {
+    if (options.contentElement === null) {
+      // Explicitly clear
+      contentEl.replaceChildren();
+      contentEl.style.display = 'none';
+    } else if (options.contentElement instanceof HTMLElement) {
+      // Set new content – auto-apply object-contain to <img> children
+      contentEl.replaceChildren(options.contentElement);
+      contentEl.querySelectorAll('img').forEach((img) => {
+        img.style.objectFit = 'contain';
+        img.style.maxWidth = '100%';
+        img.style.maxHeight = '50dvh';
+      });
+      contentEl.style.display = 'flex';
+    }
+    // undefined → keep existing content as-is
+  }
 
   // Toggle visibility
   el.classList.toggle('invisible', !visible);
@@ -97,10 +128,14 @@ export function showProgress(message: string, options: ShowProgressOptions = { v
     closeEl.addEventListener('click', () => hideProgress());
   }
 
-  // When hiding: clear timers + hide close icon
+  // When hiding: clear timers + hide close icon + clear content
   if (!visible) {
     clearProgressTimers();
     hideProgressCloseButton(closeEl);
+    if (contentEl) {
+      contentEl.replaceChildren();
+      contentEl.style.display = 'none';
+    }
     return;
   }
 
