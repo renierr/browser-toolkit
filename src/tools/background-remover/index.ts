@@ -1,69 +1,20 @@
 import { downloadAsZip, type DownloadBuffer, downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
 import { hideProgress, showMessage, showProgress } from '../../js/ui';
 import { debounce } from '../../js/utils';
-import { convertBlobFormat, copyImageBlobToClipboard } from '../../js/image-utils';
 import type { SharedFilesPayload } from '../../js/share-target';
 import BackgroundRemovalWorker from './worker?worker';
+import {
+  type ProcessingOptions,
+  type ImageQueueItem,
+  getSelectedFormat,
+  getWebpQuality,
+  getProcessingOptions,
+  convertBlobToFormat,
+  copyBlobToClipboard,
+  getOutputFilename
+} from './utils';
 
 const MODEL_URL = new URL('./lib/models/u2netp-q.onnx', document.baseURI).href;
-
-interface ProcessingOptions {
-  threshold: number;
-  smoothing: number;
-  contrast: number;
-  useGuidedFilter: boolean;
-}
-
-interface ImageQueueItem {
-  id: string;
-  file: File;
-  element: HTMLElement;
-  status: 'pending' | 'processing' | 'done' | 'error';
-  resultBlob?: Blob;
-  resultUrl?: string;
-  originalUrl: string;
-  rawMask?: Float32Array;
-  formattedSize: string;
-  width?: number;
-  height?: number;
-  options: ProcessingOptions;
-}
-
-function getSelectedFormat(): 'png' | 'webp' {
-  const radio = document.querySelector<HTMLInputElement>('input[name="download-format"]:checked');
-  return (radio?.value as 'png' | 'webp') || 'png';
-}
-
-function getWebpQuality(): number {
-  const el = document.getElementById('opt-quality') as HTMLInputElement | null;
-  return el ? parseInt(el.value, 10) / 100 : 0.92;
-}
-
-function getProcessingOptions(): ProcessingOptions {
-  const threshold = parseInt((document.getElementById('opt-threshold') as HTMLInputElement)?.value ?? '128', 10);
-  const smoothing = parseInt((document.getElementById('opt-smooth') as HTMLInputElement)?.value ?? '4', 10);
-  const contrast = parseFloat((document.getElementById('opt-contrast') as HTMLInputElement)?.value ?? '1.0');
-  const useGuidedFilter = (document.getElementById('opt-refine') as HTMLInputElement)?.checked ?? false;
-  return { threshold, smoothing, contrast, useGuidedFilter };
-}
-
-async function convertBlobToFormat(blob: Blob, format: 'png' | 'webp', quality: number): Promise<Blob> {
-  if (format === 'png') return blob;
-  return convertBlobFormat(blob, 'image/webp', quality);
-}
-
-async function copyBlobToClipboard(blob: Blob): Promise<void> {
-  showProgress('Copying to clipboard...');
-  try {
-    await copyImageBlobToClipboard(blob);
-    showMessage('Copied to clipboard!', { type: 'info', timeoutMs: 2000 });
-  } catch (err) {
-    console.error('Clipboard copy failed:', err);
-    showMessage('Failed to copy to clipboard.', { type: 'alert' });
-  } finally {
-    hideProgress();
-  }
-}
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -138,32 +89,29 @@ export default function init(payload?: SharedFilesPayload) {
   > = new Map();
 
   /**
-   * Render the raw mask as a coloured outline overlay onto the modal canvas.
+   * Render the raw mask as a coloured outline overlay onto a given canvas.
    * The mask is 320x320 Float32Array; we normalize, resize to image dimensions,
    * then draw only edge pixels (via a simple Sobel-like gradient magnitude threshold).
    */
-  const renderOutlineToCanvas = (item: ImageQueueItem) => {
-    if (!item.rawMask || !item.width || !item.height) {
-      modalOutlineCanvas.classList.add('hidden');
-      return;
-    }
-
+  const renderOutlineToCanvas = (
+    mask: Float32Array,
+    w: number,
+    h: number,
+    canvas: HTMLCanvasElement
+  ) => {
     const MODEL_SIZE = 320;
-    const raw = item.rawMask;
-    const w = item.width;
-    const h = item.height;
 
     // Normalize raw mask to 0-255
     let min = Infinity,
       max = -Infinity;
-    for (let i = 0; i < raw.length; i++) {
-      if (raw[i] < min) min = raw[i];
-      if (raw[i] > max) max = raw[i];
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] < min) min = mask[i];
+      if (mask[i] > max) max = mask[i];
     }
     const range = max - min || 1;
-    const norm = new Float32Array(raw.length);
-    for (let i = 0; i < raw.length; i++) {
-      norm[i] = (raw[i] - min) / range;
+    const norm = new Float32Array(mask.length);
+    for (let i = 0; i < mask.length; i++) {
+      norm[i] = (mask[i] - min) / range;
     }
 
     // Resize mask from MODEL_SIZE x MODEL_SIZE to image dimensions using bilinear interpolation
@@ -190,13 +138,14 @@ export default function init(payload?: SharedFilesPayload) {
     }
 
     // Compute gradient magnitude (Sobel-like) and draw edges
-    modalOutlineCanvas.width = w;
-    modalOutlineCanvas.height = h;
-    const ctx = modalOutlineCanvas.getContext('2d')!;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d')!;
     ctx.clearRect(0, 0, w, h);
     const imgData = ctx.createImageData(w, h);
     const data = imgData.data;
     const edgeThreshold = 0.08;
+    const thickness = Math.max(1, Math.round(Math.max(w, h) / 500));
 
     for (let y = 1; y < h - 1; y++) {
       for (let x = 1; x < w - 1; x++) {
@@ -204,21 +153,24 @@ export default function init(payload?: SharedFilesPayload) {
         const gy = resized[(y + 1) * w + x] - resized[(y - 1) * w + x];
         const mag = Math.sqrt(gx * gx + gy * gy);
         if (mag > edgeThreshold) {
-          const idx = (y * w + x) * 4;
-          // Bright cyan outline with intensity based on gradient
           const a = Math.min(255, Math.round(mag * 4 * 255));
-          data[idx] = 0; // R
-          data[idx + 1] = 220; // G
-          data[idx + 2] = 255; // B
-          data[idx + 3] = a; // A
+          for (let dy = -thickness + 1; dy <= thickness - 1; dy++) {
+            for (let dx = -thickness + 1; dx <= thickness - 1; dx++) {
+              const ny = y + dy;
+              const nx = x + dx;
+              if (ny >= 0 && ny < h && nx >= 0 && nx < w) {
+                const idx = (ny * w + nx) * 4;
+                data[idx] = 255; // R
+                data[idx + 1] = 0; // G
+                data[idx + 2] = 0; // B
+                data[idx + 3] = Math.max(data[idx + 3] || 0, a); // A
+              }
+            }
+          }
         }
       }
     }
     ctx.putImageData(imgData, 0, 0);
-
-    // Position the canvas to exactly overlay the rendered image
-    positionOutlineCanvas();
-    modalOutlineCanvas.classList.remove('hidden');
   };
 
   /** Position the outline canvas to match the modal image's rendered bounding box */
@@ -248,7 +200,13 @@ export default function init(payload?: SharedFilesPayload) {
       modalOutlineCanvas.classList.add('hidden');
     } else if (mode === 'outline') {
       modalImg.src = item.originalUrl;
-      renderOutlineToCanvas(item);
+      if (item.rawMask && item.width && item.height) {
+        renderOutlineToCanvas(item.rawMask, item.width, item.height, modalOutlineCanvas);
+        positionOutlineCanvas();
+        modalOutlineCanvas.classList.remove('hidden');
+      } else {
+        modalOutlineCanvas.classList.add('hidden');
+      }
     } else {
       modalImg.src = item.resultUrl || item.originalUrl;
       modalOutlineCanvas.classList.add('hidden');
@@ -343,7 +301,13 @@ export default function init(payload?: SharedFilesPayload) {
       if (modalViewMode === 'processed') {
         modalImg.src = item.resultUrl;
       } else if (modalViewMode === 'outline') {
-        renderOutlineToCanvas(item);
+        if (item.rawMask && item.width && item.height) {
+          renderOutlineToCanvas(item.rawMask, item.width, item.height, modalOutlineCanvas);
+          positionOutlineCanvas();
+          modalOutlineCanvas.classList.remove('hidden');
+        } else {
+          modalOutlineCanvas.classList.add('hidden');
+        }
       }
       // 'original' mode doesn't need updating
       modalStatusOverlay.classList.add('hidden');
@@ -364,6 +328,7 @@ export default function init(payload?: SharedFilesPayload) {
     item.element.querySelector('.btn-settings-item')?.classList.remove('hidden');
     item.element.querySelector('.btn-compare-processed')?.classList.add('btn-primary');
     item.element.querySelector('.btn-compare-original')?.classList.remove('btn-primary');
+    item.element.querySelector('.btn-compare-outline')?.classList.remove('btn-primary');
 
     updateUI();
   };
@@ -437,9 +402,7 @@ export default function init(payload?: SharedFilesPayload) {
     }
   };
 
-  const getOutputFilename = (originalName: string, format: 'png' | 'webp') => {
-    return `${originalName.replace(/\.[^/.]+$/, '')}-no-bg.${format}`;
-  };
+
 
   /** Flush the next pending reprocess (called after worker finishes a task) */
   const flushPendingReprocess = () => {
@@ -541,23 +504,41 @@ export default function init(payload?: SharedFilesPayload) {
 
         const originalPreview = container.querySelector('.original-preview') as HTMLImageElement;
         const resultPreview = container.querySelector('.result-preview') as HTMLImageElement;
+        const outlineCanvas = container.querySelector('.outline-canvas') as HTMLCanvasElement;
         if (originalPreview) originalPreview.src = originalUrl;
 
         const btnOriginal = container.querySelector('.btn-compare-original') as HTMLButtonElement;
         const btnProcessed = container.querySelector('.btn-compare-processed') as HTMLButtonElement;
+        const btnOutline = container.querySelector('.btn-compare-outline') as HTMLButtonElement;
 
         btnOriginal.onclick = () => {
           originalPreview.classList.remove('opacity-0');
           resultPreview.classList.add('opacity-0');
+          outlineCanvas.classList.add('opacity-0');
           btnOriginal.classList.add('btn-primary');
           btnProcessed.classList.remove('btn-primary');
+          btnOutline.classList.remove('btn-primary');
         };
 
         btnProcessed.onclick = () => {
           originalPreview.classList.add('opacity-0');
           resultPreview.classList.remove('opacity-0');
+          outlineCanvas.classList.add('opacity-0');
           btnProcessed.classList.add('btn-primary');
           btnOriginal.classList.remove('btn-primary');
+          btnOutline.classList.remove('btn-primary');
+        };
+
+        btnOutline.onclick = () => {
+          const item = queue.find((it) => it.id === id);
+          if (!item || !item.rawMask || !item.width || !item.height) return;
+          renderOutlineToCanvas(item.rawMask, item.width, item.height, outlineCanvas);
+          originalPreview.classList.remove('opacity-0');
+          resultPreview.classList.add('opacity-0');
+          outlineCanvas.classList.remove('opacity-0');
+          btnOutline.classList.add('btn-primary');
+          btnOriginal.classList.remove('btn-primary');
+          btnProcessed.classList.remove('btn-primary');
         };
 
         const btnRemove = container.querySelector('.btn-remove-item') as HTMLElement;
@@ -668,6 +649,11 @@ export default function init(payload?: SharedFilesPayload) {
           formattedSize,
           options: { threshold: 128, smoothing: 4, contrast: 1.0, useGuidedFilter: false },
         });
+      }
+      if (files.length > 0) {
+        setTimeout(({ gallery }) => {
+          gallery?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 50, { gallery });
       }
       updateUI();
       processQueue();
