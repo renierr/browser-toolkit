@@ -1,5 +1,6 @@
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
 import { showMessage, showProgress, hideProgress } from '../../js/ui';
+import { blobToImageData } from '../../js/image-utils';
 import OcrWorker from './worker?worker';
 
 const DET_MODEL_URL = new URL('./lib/models/ocr/det.onnx', document.baseURI).href;
@@ -66,36 +67,15 @@ export default function init() {
     resultContainer?.classList.add('hidden');
     statusContainer?.classList.remove('hidden');
     outputText.value = '';
-    statusContainer?.classList.remove('hidden');
-    outputText.value = '';
     if (statusText) statusText.textContent = 'Initializing OCR models...';
 
-    // Show preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (previewImg && e.target?.result) {
-        previewImg.src = e.target.result as string;
-      }
-    };
-    reader.readAsDataURL(file);
-
     try {
-      // Convert Blob to ImageData
+      // Show preview
       showProgress('Decoding image...');
-      const img = new Image();
-      const imgLoadPromise = new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = () => reject(new Error('Failed to load image for OCR'));
-      });
-      img.src = URL.createObjectURL(file);
-      await imgLoadPromise;
+      if (previewImg) previewImg.src = URL.createObjectURL(file);
 
-      const canvas = new OffscreenCanvas(img.width, img.height);
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      if (!ctx) throw new Error('Could not get canvas context');
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, img.width, img.height);
-      URL.revokeObjectURL(img.src);
+      // Convert Blob to ImageData (worker-safe path via OffscreenCanvas)
+      const imageData = await blobToImageData(file);
 
       showProgress('Loading models...');
       const ocrWorker = await getWorker();

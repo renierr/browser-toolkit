@@ -1,6 +1,7 @@
 import { downloadAsZip, type DownloadBuffer, downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
 import { hideProgress, showMessage, showProgress } from '../../js/ui';
 import { debounce } from '../../js/utils';
+import { convertBlobFormat, copyImageBlobToClipboard } from '../../js/image-utils';
 import type { SharedFilesPayload } from '../../js/share-target';
 import BackgroundRemovalWorker from './worker?worker';
 
@@ -48,32 +49,13 @@ function getProcessingOptions(): ProcessingOptions {
 
 async function convertBlobToFormat(blob: Blob, format: 'png' | 'webp', quality: number): Promise<Blob> {
   if (format === 'png') return blob;
-  const bitmap = await createImageBitmap(blob);
-  const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-  const ctx = canvas.getContext('2d')!;
-  ctx.drawImage(bitmap, 0, 0);
-  bitmap.close();
-  const result = await canvas.convertToBlob({ type: 'image/webp', quality });
-  canvas.width = 0;
-  canvas.height = 0;
-  return result;
+  return convertBlobFormat(blob, 'image/webp', quality);
 }
 
 async function copyBlobToClipboard(blob: Blob): Promise<void> {
   showProgress('Copying to clipboard...');
   try {
-    let pngBlob = blob;
-    if (blob.type !== 'image/png') {
-      const bitmap = await createImageBitmap(blob);
-      const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(bitmap, 0, 0);
-      bitmap.close();
-      pngBlob = await canvas.convertToBlob({ type: 'image/png' });
-      canvas.width = 0;
-      canvas.height = 0;
-    }
-    await navigator.clipboard.write([new ClipboardItem({ [pngBlob.type]: pngBlob })]);
+    await copyImageBlobToClipboard(blob);
     showMessage('Copied to clipboard!', { type: 'info', timeoutMs: 2000 });
   } catch (err) {
     console.error('Clipboard copy failed:', err);

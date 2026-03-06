@@ -1,57 +1,21 @@
+import {
+  decodeImageToRgba as decodeImageShared,
+  type DecodeImageResult,
+} from '../../js/image-utils';
+
 const MODEL_INPUT_SIZE = 320;
 const GUIDED_FILTER_MAX_DIM = 1024;
 
-export async function decodeImage(blob: Blob, maxDimension?: number): Promise<{
-  data: Uint8ClampedArray;
-  width: number;
-  height: number;
-}> {
-  let bitmap: ImageBitmap;
+/**
+ * Decode an image blob into raw RGBA pixel data.
+ * Re-exports the shared worker-safe helper with a fallback retry.
+ */
+export async function decodeImage(blob: Blob, maxDimension?: number): Promise<DecodeImageResult> {
   try {
-    bitmap = maxDimension
-      ? await createBitmapWithLimit(blob, maxDimension)
-      : await createImageBitmap(blob);
+    return await decodeImageShared(blob, maxDimension);
   } catch (firstErr) {
     console.warn('[decodeImage] Decode failed, retrying at 2048 px', firstErr);
-    bitmap = await createBitmapDownscaled(blob, 2048);
-  }
-
-  const { width, height } = bitmap;
-  const canvas = new OffscreenCanvas(width, height);
-  const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
-  ctx.drawImage(bitmap, 0, 0);
-  bitmap.close();
-
-  const imageData = ctx.getImageData(0, 0, width, height);
-  canvas.width = 0;
-  canvas.height = 0;
-  return { data: imageData.data, width, height };
-}
-
-async function createBitmapWithLimit(blob: Blob, maxDim: number): Promise<ImageBitmap> {
-  const probe = await createImageBitmap(blob);
-  if (probe.width <= maxDim && probe.height <= maxDim) return probe;
-
-  const { width, height } = probe;
-  probe.close();
-
-  const ratio = Math.min(maxDim / width, maxDim / height);
-  return createImageBitmap(blob, {
-    resizeWidth: Math.max(1, Math.round(width * ratio)),
-    resizeHeight: Math.max(1, Math.round(height * ratio)),
-    resizeQuality: 'high',
-  });
-}
-
-async function createBitmapDownscaled(blob: Blob, maxDim: number): Promise<ImageBitmap> {
-  try {
-    return await createBitmapWithLimit(blob, maxDim);
-  } catch {
-    return createImageBitmap(blob, {
-      resizeWidth: maxDim,
-      resizeHeight: maxDim,
-      resizeQuality: 'medium',
-    });
+    return decodeImageShared(blob, 2048);
   }
 }
 

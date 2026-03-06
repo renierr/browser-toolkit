@@ -1,5 +1,6 @@
 import { hideProgress, showProgress } from './ui.ts';
 import { downloadFile } from './file-utils.ts';
+import { copyImageBlobToClipboard, offscreenCanvasToBlob } from './image-utils.ts';
 
 type ImageFormat = 'jpg' | 'webp' | 'png';
 
@@ -45,28 +46,14 @@ export class CanvasExporter {
     showProgress('Copying to clipboard...');
 
     try {
-      let blob: Blob | null;
+      const bitmap = await createImageBitmap(canvas);
+      const offscreen = new OffscreenCanvas(bitmap.width, bitmap.height);
+      const ctx = offscreen.getContext('2d');
+      ctx?.drawImage(bitmap, 0, 0);
+      bitmap.close();
 
-      // Feature detection for the fast path
-      if ('OffscreenCanvas' in window && 'createImageBitmap' in window) {
-        const bitmap = await createImageBitmap(canvas);
-        const offscreen = new OffscreenCanvas(bitmap.width, bitmap.height);
-        const ctx = offscreen.getContext('2d');
-        ctx?.drawImage(bitmap, 0, 0);
-        blob = await offscreen.convertToBlob({ type: 'image/png' });
-        bitmap.close();
-      } else {
-        // Standard Fallback
-        blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
-      }
-
-      if (!blob) {
-        // noinspection ExceptionCaughtLocallyJS
-        throw new Error('Blob generation failed');
-      }
-
-      const data = [new ClipboardItem({ [blob.type]: blob })];
-      await navigator.clipboard.write(data);
+      const blob = await offscreenCanvasToBlob(offscreen, 'image/png');
+      await copyImageBlobToClipboard(blob);
     } catch (err) {
       console.error('Clipboard copy failed:', err);
       throw err;

@@ -1,5 +1,6 @@
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui';
 import { downloadFile, setupFileDropzone } from '../../js/file-utils.ts';
+import { blobToImage, imageElToBlob } from '../../js/image-utils.ts';
 import Sortable from 'sortablejs';
 import { addImageToPDFDocument } from '../../js/mupdf-utils.ts';
 import mupdf from 'mupdf';
@@ -175,20 +176,7 @@ export default function init(payload?: SharedFilesPayload) {
 
 const fallbackImageHandling = async (item: ImageItem) => {
   // Fallback for WebP or other formats: use Canvas to convert to JPEG
-  const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-    const i = new Image();
-    i.onload = () => resolve(i);
-    i.onerror = reject;
-    i.src = item.previewUrl;
-  });
-
-  const canvas = document.createElement('canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d');
-  if (!ctx) throw new Error('Could not get canvas context');
-  ctx.drawImage(img, 0, 0);
-  const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
-  const response = await fetch(dataUrl);
-  return await response.arrayBuffer();
+  const img = await blobToImage(item.file);
+  const blob = await imageElToBlob(img, 'image/jpeg', 0.9);
+  return await blob.arrayBuffer();
 };

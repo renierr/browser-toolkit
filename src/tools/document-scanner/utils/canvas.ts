@@ -1,3 +1,8 @@
+import {
+  blobToImage,
+  imageElToBlob,
+} from '../../../js/image-utils';
+
 export function sourceToCanvas(
   source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement
 ): HTMLCanvasElement {
@@ -17,38 +22,14 @@ export function sourceToCanvas(
 
 /**
  * Convert an HTMLImageElement to a PNG Blob for lossless storage.
- * This is only used as a fallback when no original Blob is available
- * (both file upload and camera capture pass their original blobs directly).
+ * Delegates to the shared imageElToBlob helper.
  */
 export function imageToBlob(img: HTMLImageElement): Promise<Blob> {
-  const width = img.naturalWidth || img.width;
-  const height = img.naturalHeight || img.height;
-
-  const oc = new OffscreenCanvas(width, height);
-  const ctx = oc.getContext('2d');
-  if (ctx) {
-    ctx.drawImage(img, 0, 0, width, height);
-    return oc.convertToBlob({ type: 'image/png' });
-  }
-  return Promise.reject(new Error('imageToBlob: OffscreenCanvas not supported'));
+  return imageElToBlob(img, 'image/png');
 }
 
 /** Decode a Blob back into an HTMLImageElement. */
-export function imageFromBlob(blob: Blob): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(blob);
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(img);
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error('imageFromBlob: failed to decode'));
-    };
-    img.src = url;
-  });
-}
+export const imageFromBlob = blobToImage;
 
 /**
  * Rotates a canvas by 90, 180, or 270 degrees and returns a new canvas.

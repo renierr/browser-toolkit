@@ -1,6 +1,7 @@
 import ImageTracer from 'imagetracerjs';
 import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui.ts';
 import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
+import { blobToImageData } from '../../js/image-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -97,43 +98,23 @@ export default function init() {
           break;
       }
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = async () => {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            ctx.drawImage(img, 0, 0);
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const imageData = await blobToImageData(selectedFile);
 
-            showProgress('Generating SVG...', { progress: 80 });
-            await yieldToUI(true);
-            currentSvgString = ImageTracer.imagedataToSVG(imageData, options);
-            svgContainer.innerHTML = currentSvgString || '';
+      showProgress('Generating SVG...', { progress: 80 });
+      await yieldToUI(true);
+      currentSvgString = ImageTracer.imagedataToSVG(imageData, options);
+      svgContainer.innerHTML = currentSvgString || '';
 
-            const svg = svgContainer.querySelector('svg');
-            if (svg) {
-              svg.setAttribute('width', '100%');
-              svg.setAttribute('height', '100%');
-              svg.classList.add('max-h-[400px]', 'object-contain');
-            }
+      const svg = svgContainer.querySelector('svg');
+      if (svg) {
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.classList.add('max-h-[400px]', 'object-contain');
+      }
 
-            resultSection.classList.remove('hidden');
-          } catch (err) {
-            console.error('Vectorization inner failed:', err);
-            showMessage('Vectorization failed during processing.', { type: 'alert' });
-          } finally {
-            btnVectorize.disabled = false;
-            hideProgress();
-          }
-        };
-        img.src = e.target?.result as string;
-      };
-      reader.readAsDataURL(selectedFile);
+      resultSection.classList.remove('hidden');
+      btnVectorize.disabled = false;
+      hideProgress();
     } catch (error) {
       console.error('Vectorization failed:', error);
       showMessage('Vectorization failed. See console for details.', { type: 'alert' });
