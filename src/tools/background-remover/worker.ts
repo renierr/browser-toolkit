@@ -71,7 +71,7 @@ self.onmessage = async (event: MessageEvent) => {
       self.postMessage({ id, status: 'progress', progress: 40, step: `Decoded (${width}x${height})` });
 
       step = 'loading model';
-      const session = await loadSession({ modelPath: modelUrl });
+      const session = await loadSession({ modelPath: modelUrl, executionProviders: ['wasm'] });
       self.postMessage({ id, status: 'progress', progress: 40, step: 'Model ready' });
 
       step = 'preparing tensor';
