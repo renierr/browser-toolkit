@@ -161,6 +161,28 @@ def print_node_summary(m, max_nodes=10, full=False, no_nodes=False):
         print(f"  ... ({len(nodes)-max_nodes} more nodes suppressed, use --full to show all)\n")
 
 
+def check_maxpool_ceil(m):
+    """Return (count, examples) of MaxPool nodes with ceil_mode == 1."""
+    nodes = list(m.graph.node)
+    count = 0
+    examples = []
+    for n in nodes:
+        if n.op_type != 'MaxPool':
+            continue
+        for attr in n.attribute:
+            if attr.name == 'ceil_mode':
+                try:
+                    val = helper.get_attribute_value(attr)
+                except Exception:
+                    val = None
+                if val == 1:
+                    count += 1
+                    if len(examples) < 10:
+                        examples.append(n.name or '<unnamed>')
+                break
+    return count, examples
+
+
 def main():
     p = argparse.ArgumentParser(description='Inspect ONNX model and print detailed info')
     p.add_argument('model', help='path to model.onnx')
@@ -187,6 +209,16 @@ def main():
         print_initializers(m)
     print_value_info(m)
     print_node_summary(m, max_nodes=args.max_nodes, full=args.full, no_nodes=args.no_nodes)
+
+    # check for MaxPool ceil_mode usage and warn
+    ceil_count, examples = check_maxpool_ceil(m)
+    if ceil_count:
+        print('\nWARNING: Model contains MaxPool nodes with ceil_mode=1')
+        print(f"  Occurrences: {ceil_count}")
+        if examples:
+            print(f"  Examples (up to 10): {examples}")
+        print("  These can cause shape/compatibility issues in some runtimes. See python/fix_onnx_maxpool_ceil.py to automatically set ceil_mode=0 and save a fixed model.")
+
 
 if __name__ == '__main__':
     main()
