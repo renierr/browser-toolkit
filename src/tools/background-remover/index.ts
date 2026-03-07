@@ -1,4 +1,10 @@
-import { downloadAsZip, type DownloadBuffer, downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
+import {
+  downloadAsZip,
+  type DownloadBuffer,
+  downloadFile,
+  retrieveImageBlobFromClipboard,
+  setupFileDropzone,
+} from '../../js/file-utils';
 import { hideProgress, showMessage, showProgress } from '../../js/ui';
 import { debounce } from '../../js/utils';
 import type { SharedFilesPayload } from '../../js/share-target';
@@ -12,7 +18,7 @@ import {
   convertBlobToFormat,
   copyBlobToClipboard,
   getOutputFilename,
-  MODELS
+  MODELS,
 } from './utils';
 
 // noinspection JSUnusedGlobalSymbols
@@ -320,7 +326,13 @@ export default function init(payload?: SharedFilesPayload) {
       } else if (modalViewMode === 'outline') {
         if (item.rawMask && item.width && item.height) {
           const modelSize = MODELS[item.options.modelId]?.inputSize || 320;
-          renderOutlineToCanvas(item.rawMask, item.width, item.height, modalOutlineCanvas, modelSize);
+          renderOutlineToCanvas(
+            item.rawMask,
+            item.width,
+            item.height,
+            modalOutlineCanvas,
+            modelSize
+          );
           positionOutlineCanvas();
           modalOutlineCanvas.classList.remove('hidden');
         } else {
@@ -411,8 +423,7 @@ export default function init(payload?: SharedFilesPayload) {
       const options = getProcessingOptions();
       const w = initWorker();
       const modelConfig = MODELS[options.modelId] || MODELS['silueta'];
-      const modelUrl = modelConfig.url;
-      w.postMessage({ id: item.id, file: item.file, modelUrl, options, modelConfig });
+      w.postMessage({ id: item.id, file: item.file, options, modelConfig });
       updateUI();
     } catch (err) {
       console.error('Failed to start processing:', err);
@@ -421,8 +432,6 @@ export default function init(payload?: SharedFilesPayload) {
       processQueue();
     }
   };
-
-
 
   /** Flush the next pending reprocess (called after worker finishes a task) */
   const flushPendingReprocess = () => {
@@ -695,9 +704,13 @@ export default function init(payload?: SharedFilesPayload) {
         });
       }
       if (files.length > 0) {
-        setTimeout(({ gallery }) => {
-          gallery?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }, 50, { gallery });
+        setTimeout(
+          ({ gallery }) => {
+            gallery?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          },
+          50,
+          { gallery }
+        );
       }
       updateUI();
       processQueue();
@@ -795,7 +808,9 @@ export default function init(payload?: SharedFilesPayload) {
     e.stopPropagation();
     const imageBlob = await retrieveImageBlobFromClipboard();
     if (imageBlob) {
-      addFilesToQueue([new File([imageBlob], `pasted-image-${Date.now()}.png`, { type: imageBlob.type })]);
+      addFilesToQueue([
+        new File([imageBlob], `pasted-image-${Date.now()}.png`, { type: imageBlob.type }),
+      ]);
     } else {
       showMessage('No image found in clipboard.', { type: 'info', timeoutMs: 5000 });
     }

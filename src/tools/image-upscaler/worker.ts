@@ -1,10 +1,6 @@
-import {
-  type OnnxModelConfig,
-  loadSession,
-  runInference,
-  createTensor,
-} from '../../js/onnx-utils';
+import { type OnnxModelConfig, loadSession, runInference, createTensor } from '../../js/onnx-utils';
 import { blobToImageData } from '../../js/image-utils';
+import type { ProcessingOptions } from './utils.ts';
 
 // Send updates to the main thread
 function reportProgress(id: string, status: string, progress: number) {
@@ -45,11 +41,7 @@ function imageDataToTensor(imgData: ImageData): Float32Array {
 /**
  * Denormalizes tensor data (RGB, 0-1 in NCHW) back into an ImageData object (RGBA, 0-255 in HWC).
  */
-function tensorToImageData(
-  tensorData: Float32Array,
-  width: number,
-  height: number
-): ImageData {
+function tensorToImageData(tensorData: Float32Array, width: number, height: number): ImageData {
   const numPixels = width * height;
   const rgbaData = new Uint8ClampedArray(numPixels * 4);
 
@@ -73,7 +65,7 @@ function tensorToImageData(
   return new ImageData(rgbaData, width, height);
 }
 
-async function processImage(id: string, blob: Blob, modelName: string) {
+async function processImage(id: string, blob: Blob, options: ProcessingOptions) {
   try {
     reportProgress(id, 'Decoding Image...', 5);
 
@@ -86,9 +78,9 @@ async function processImage(id: string, blob: Blob, modelName: string) {
     reportProgress(id, 'Loading AI Model...', 15);
 
     // 2. Load the Session
-    const modelUrl = `/lib/models/${modelName}.onnx`;
     const config: OnnxModelConfig = {
-      modelPath: modelUrl,
+      modelPath: options.modelUrl,
+      executionProviders: options.forceWasm ? ['wasm'] : undefined,
     };
     const session = await loadSession(config);
 
@@ -107,7 +99,7 @@ async function processImage(id: string, blob: Blob, modelName: string) {
     const results = await runInference(session, feeds, (p) => {
       // Inference itself might not provide granular progress via onnxruntime-web natively,
       // but we interpolate 40 to 90
-      reportProgress(id, 'Running Neural Network...', 40 + (p * 0.5));
+      reportProgress(id, 'Running Neural Network...', 40 + p * 0.5);
     });
     inputTensor.dispose();
 
@@ -136,7 +128,9 @@ async function processImage(id: string, blob: Blob, modelName: string) {
 // ── Event Listener ────────────────────────────────────────────────────────
 self.onmessage = (e: MessageEvent) => {
   const { type, payload } = e.data;
-  if (type === 'PROCESS' && payload.blob && payload.id && payload.model) {
-    processImage(payload.id, payload.blob, payload.model).catch((err) => reportError(payload.id, err));
+  if (type === 'PROCESS' && payload.blob && payload.id && payload.options) {
+    processImage(payload.id, payload.blob, payload.options).catch((err) =>
+      reportError(payload.id, err)
+    );
   }
 };

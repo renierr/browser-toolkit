@@ -8,23 +8,11 @@ import {
 import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target';
 import UpscalerWorker from './worker?worker';
+import { getProcessingOptions, type ImageQueueItem } from './utils.ts';
 
-interface ImageQueueItem {
-  id: string;
-  file: File;
-  element: HTMLElement;
-  status: 'pending' | 'processing' | 'done' | 'error';
-  originalUrl: string;
-  resultUrl?: string;
-  resultBlob?: Blob;
-  formattedSize: string;
-  options: { model: string };
-}
-
+// noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
   const pasteBtn = document.getElementById('paste-btn') as HTMLButtonElement;
-  const configModel = document.getElementById('config-model') as HTMLSelectElement;
-
   const gallery = document.getElementById('results-gallery')!;
   const bulkActions = document.getElementById('bulk-actions')!;
   const queueStatus = document.getElementById('queue-status')!;
@@ -136,7 +124,8 @@ export default function init(payload?: SharedFilesPayload) {
     const progressBar = item.element.querySelector('.item-progress') as HTMLProgressElement;
     const spinner = item.element.querySelector('.loading') as HTMLElement | null;
 
-    const shortError = error && error.length > 80 ? error.substring(0, 80) + '…' : error || 'Unknown error';
+    const shortError =
+      error && error.length > 80 ? error.substring(0, 80) + '…' : error || 'Unknown error';
     statusText.innerHTML = `<span class="text-error font-bold">Error</span><br/><span class="text-xs opacity-70 mt-1 block">${shortError}</span>`;
 
     if (progressBar) progressBar.classList.add('hidden');
@@ -181,7 +170,10 @@ export default function init(payload?: SharedFilesPayload) {
       statusText.textContent = 'Starting AI model...';
 
       const w = initWorker();
-      w.postMessage({ type: 'PROCESS', payload: { id: item.id, blob: item.file, model: item.options.model } });
+      w.postMessage({
+        type: 'PROCESS',
+        payload: { id: item.id, blob: item.file, options: item.options },
+      });
       updateUI();
     } catch (err) {
       console.error('Failed to start processing:', err);
@@ -258,9 +250,7 @@ export default function init(payload?: SharedFilesPayload) {
           const item = queue.find((it) => it.id === id);
           if (item?.resultBlob) {
             const pngBlob = new Blob([item.resultBlob], { type: 'image/png' });
-            await navigator.clipboard.write([
-              new ClipboardItem({ 'image/png': pngBlob }),
-            ]);
+            await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
           }
         };
 
@@ -272,7 +262,7 @@ export default function init(payload?: SharedFilesPayload) {
           status: 'pending',
           originalUrl,
           formattedSize,
-          options: { model: configModel.value }
+          options: getProcessingOptions(),
         });
       }
 
@@ -298,7 +288,9 @@ export default function init(payload?: SharedFilesPayload) {
     e.stopPropagation();
     const imageBlob = await retrieveImageBlobFromClipboard();
     if (imageBlob) {
-      addFilesToQueue([new File([imageBlob], `pasted-image-${Date.now()}.png`, { type: imageBlob.type })]);
+      addFilesToQueue([
+        new File([imageBlob], `pasted-image-${Date.now()}.png`, { type: imageBlob.type }),
+      ]);
     } else {
       showMessage('No image found in clipboard.', { type: 'info', timeoutMs: 3000 });
     }

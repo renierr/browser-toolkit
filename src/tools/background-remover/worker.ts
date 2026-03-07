@@ -1,5 +1,12 @@
 import { loadSession, runInference, createTensor } from '../../js/onnx-utils.ts';
-import { decodeImage, imageToTensor, normalizeMask, applyMask, guidedFilter, resizeMask } from './image-processing.ts';
+import {
+  decodeImage,
+  imageToTensor,
+  normalizeMask,
+  applyMask,
+  guidedFilter,
+  resizeMask,
+} from './image-processing.ts';
 
 interface ProcessingOptions {
   threshold: number;
@@ -19,22 +26,32 @@ interface ModelConfig {
   std: [number, number, number];
 }
 
-const rgbaCache = new Map<string, {
-  rgba: Uint8ClampedArray;
-  width: number;
-  height: number;
-  downscaledRgba?: Uint8ClampedArray;
-}>();
+const rgbaCache = new Map<
+  string,
+  {
+    rgba: Uint8ClampedArray;
+    width: number;
+    height: number;
+    downscaledRgba?: Uint8ClampedArray;
+  }
+>();
 
 self.onmessage = async (event: MessageEvent) => {
-  const { id, action, file, modelUrl, options, rawMask: cachedRawMask, modelConfig } = event.data;
+  const { id, action, file, options, rawMask: cachedRawMask, modelConfig } = event.data;
 
   if (action === 'evict') {
     rgbaCache.delete(id);
     return;
   }
 
-  const processingOptions: ProcessingOptions = options ?? { threshold: 128, smoothing: 4, contrast: 1.0, useGuidedFilter: false, modelId: 'silueta', forceWasm: false };
+  const processingOptions: ProcessingOptions = options ?? {
+    threshold: 128,
+    smoothing: 4,
+    contrast: 1.0,
+    useGuidedFilter: false,
+    modelId: 'silueta',
+    forceWasm: false,
+  };
   const config: ModelConfig = modelConfig;
   const modelInputSize = config.inputSize;
 
@@ -67,8 +84,6 @@ self.onmessage = async (event: MessageEvent) => {
     } else {
       self.postMessage({ id, status: 'progress', progress: 5, step: 'Initializing...' });
 
-      if (!modelUrl) throw new Error('Model URL is required for full processing');
-
       step = 'decoding image';
       if (!rgba) {
         const decoded = await decodeImage(file);
@@ -77,15 +92,30 @@ self.onmessage = async (event: MessageEvent) => {
         height = decoded.height;
         rgbaCache.set(id, { rgba, width, height });
       }
-      self.postMessage({ id, status: 'progress', progress: 40, step: `Decoded (${width}x${height})` });
+      self.postMessage({
+        id,
+        status: 'progress',
+        progress: 40,
+        step: `Decoded (${width}x${height})`,
+      });
 
       step = 'loading model';
       const execProviders = processingOptions.forceWasm ? ['wasm'] : ['webgpu', 'wasm'];
-      const session = await loadSession({ modelPath: modelUrl, executionProviders: execProviders });
+      const session = await loadSession({
+        modelPath: config.url,
+        executionProviders: execProviders,
+      });
       self.postMessage({ id, status: 'progress', progress: 40, step: 'Model ready' });
 
       step = 'preparing tensor';
-      const tensorData = imageToTensor(rgba, width!, height!, modelInputSize, config.mean, config.std);
+      const tensorData = imageToTensor(
+        rgba,
+        width!,
+        height!,
+        modelInputSize,
+        config.mean,
+        config.std
+      );
       const inputTensor = createTensor(tensorData, [1, 3, modelInputSize, modelInputSize]);
       self.postMessage({ id, status: 'progress', progress: 50, step: 'Preparing model input' });
 
@@ -112,7 +142,15 @@ self.onmessage = async (event: MessageEvent) => {
     }
 
     step = 'applying mask';
-    const canvas = applyMask(rgba!, width!, height!, mask, width!, height!, processingOptions.smoothing);
+    const canvas = applyMask(
+      rgba!,
+      width!,
+      height!,
+      mask,
+      width!,
+      height!,
+      processingOptions.smoothing
+    );
 
     step = 'encoding result';
     const blob = await canvas.convertToBlob({ type: 'image/png' });
@@ -121,7 +159,11 @@ self.onmessage = async (event: MessageEvent) => {
 
     self.postMessage({ id, status: 'progress', progress: 95, step: 'Encoding PNG' });
     self.postMessage({
-      id, status: 'success', result: blob, width, height,
+      id,
+      status: 'success',
+      result: blob,
+      width,
+      height,
       rawMask: action === 'reprocess' ? undefined : rawMask,
     });
   } catch (error) {
