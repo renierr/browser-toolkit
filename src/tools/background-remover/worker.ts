@@ -1,15 +1,22 @@
 import { loadSession, runInference, createTensor } from '../../js/onnx-utils.ts';
 import { decodeImage, imageToTensor, normalizeMask, applyMask, guidedFilter, resizeMask } from './image-processing.ts';
 
-const MODEL_INPUT_SIZE = 320;
-const MODEL_INPUT_NAME = 'input.1';
-const MODEL_OUTPUT_NAME = '1959';
-
 interface ProcessingOptions {
   threshold: number;
   smoothing: number;
   contrast: number;
   useGuidedFilter: boolean;
+  modelId: string;
+  forceWasm: boolean;
+}
+
+interface ModelConfig {
+  id: string;
+  name: string;
+  url: string;
+  inputSize: number;
+  mean: [number, number, number];
+  std: [number, number, number];
 }
 
 const rgbaCache = new Map<string, {
@@ -20,14 +27,16 @@ const rgbaCache = new Map<string, {
 }>();
 
 self.onmessage = async (event: MessageEvent) => {
-  const { id, action, file, modelUrl, options, rawMask: cachedRawMask } = event.data;
+  const { id, action, file, modelUrl, options, rawMask: cachedRawMask, modelConfig } = event.data;
 
   if (action === 'evict') {
     rgbaCache.delete(id);
     return;
   }
 
-  const processingOptions: ProcessingOptions = options ?? { threshold: 128, smoothing: 4, contrast: 1.0, useGuidedFilter: false };
+  const processingOptions: ProcessingOptions = options ?? { threshold: 128, smoothing: 4, contrast: 1.0, useGuidedFilter: false, modelId: 'silueta', forceWasm: false };
+  const config: ModelConfig = modelConfig;
+  const modelInputSize = config.inputSize;
 
   let step = 'initialization';
   try {
@@ -71,23 +80,26 @@ self.onmessage = async (event: MessageEvent) => {
       self.postMessage({ id, status: 'progress', progress: 40, step: `Decoded (${width}x${height})` });
 
       step = 'loading model';
-      const session = await loadSession({ modelPath: modelUrl, executionProviders: ['wasm'] });
+      const execProviders = processingOptions.forceWasm ? ['wasm'] : ['webgpu', 'wasm'];
+      const session = await loadSession({ modelPath: modelUrl, executionProviders: execProviders });
       self.postMessage({ id, status: 'progress', progress: 40, step: 'Model ready' });
 
       step = 'preparing tensor';
-      const tensorData = imageToTensor(rgba, width!, height!, MODEL_INPUT_SIZE);
-      const inputTensor = createTensor(tensorData, [1, 3, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE]);
+      const tensorData = imageToTensor(rgba, width!, height!, modelInputSize, config.mean, config.std);
+      const inputTensor = createTensor(tensorData, [1, 3, modelInputSize, modelInputSize]);
       self.postMessage({ id, status: 'progress', progress: 50, step: 'Preparing model input' });
 
       step = 'inference';
-      const results = await runInference(session, { [MODEL_INPUT_NAME]: inputTensor });
-      rawMask = results[MODEL_OUTPUT_NAME].data as Float32Array;
+      const inputName = session.inputNames[0];
+      const outputName = session.outputNames[0];
+      const results = await runInference(session, { [inputName]: inputTensor });
+      rawMask = results[outputName].data as Float32Array;
       self.postMessage({ id, status: 'progress', progress: 80, step: 'AI processing complete' });
     }
 
     step = 'post-processing';
     let mask = normalizeMask(rawMask!, processingOptions.threshold, processingOptions.contrast);
-    mask = resizeMask(mask, MODEL_INPUT_SIZE, MODEL_INPUT_SIZE, width!, height!);
+    mask = resizeMask(mask, modelInputSize, modelInputSize, width!, height!);
 
     if (processingOptions.useGuidedFilter && rgba) {
       step = 'refining edges';

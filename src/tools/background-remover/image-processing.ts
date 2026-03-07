@@ -24,16 +24,21 @@ export function imageToTensor(
   srcWidth: number,
   srcHeight: number,
   size: number = MODEL_INPUT_SIZE,
+  mean?: [number, number, number],
+  std?: [number, number, number]
 ): Float32Array {
   const resized = resizeRGBA(rgba, srcWidth, srcHeight, size, size);
   const pixelCount = size * size;
   const chw = new Float32Array(3 * pixelCount);
 
+  const m = mean || [0, 0, 0];
+  const s = std || [1, 1, 1];
+
   for (let i = 0; i < pixelCount; i++) {
     const base = i * 4;
-    chw[i] = resized[base] / 255;
-    chw[pixelCount + i] = resized[base + 1] / 255;
-    chw[2 * pixelCount + i] = resized[base + 2] / 255;
+    chw[i] = (resized[base] / 255 - m[0]) / s[0];
+    chw[pixelCount + i] = (resized[base + 1] / 255 - m[1]) / s[1];
+    chw[2 * pixelCount + i] = (resized[base + 2] / 255 - m[2]) / s[2];
   }
 
   return chw;

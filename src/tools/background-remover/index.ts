@@ -11,10 +11,9 @@ import {
   getProcessingOptions,
   convertBlobToFormat,
   copyBlobToClipboard,
-  getOutputFilename
+  getOutputFilename,
+  MODELS
 } from './utils';
-
-const MODEL_URL = new URL('./lib/models/u2netp-q.onnx', document.baseURI).href;
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -77,6 +76,22 @@ export default function init(payload?: SharedFilesPayload) {
   optContrast?.addEventListener('input', () => {
     if (optContrastValue) optContrastValue.textContent = optContrast.value;
   });
+
+  const optModel = document.getElementById('opt-model') as HTMLSelectElement | null;
+  const optThresholdContainer = optThreshold?.closest('.form-control');
+
+  const updateGlobalThresholdUI = () => {
+    if (optModel?.value === 'silueta') {
+      optThresholdContainer?.classList.add('opacity-50', 'pointer-events-none');
+      optThresholdContainer?.setAttribute('title', 'Not applicable for Silueta');
+    } else {
+      optThresholdContainer?.classList.remove('opacity-50', 'pointer-events-none');
+      optThresholdContainer?.removeAttribute('title');
+    }
+  };
+
+  optModel?.addEventListener('change', updateGlobalThresholdUI);
+  updateGlobalThresholdUI();
 
   let queue: ImageQueueItem[] = [];
   let isProcessing = false;
@@ -391,9 +406,10 @@ export default function init(payload?: SharedFilesPayload) {
       statusText.textContent = 'Removing background...';
 
       const options = getProcessingOptions();
-      item.options = { ...options };
       const w = initWorker();
-      w.postMessage({ id: item.id, file: item.file, modelUrl: MODEL_URL, options });
+      const modelConfig = MODELS[options.modelId] || MODELS['silueta'];
+      const modelUrl = modelConfig.url;
+      w.postMessage({ id: item.id, file: item.file, modelUrl, options, modelConfig });
       updateUI();
     } catch (err) {
       console.error('Failed to start processing:', err);
@@ -437,12 +453,14 @@ export default function init(payload?: SharedFilesPayload) {
     }
 
     const w = initWorker();
+    const modelConfig = MODELS[options.modelId] || MODELS['silueta'];
     w.postMessage({
       id: item.id,
       action: 'reprocess',
       file: item.file,
       rawMask: item.rawMask,
       options,
+      modelConfig,
     });
   };
 
@@ -600,6 +618,15 @@ export default function init(payload?: SharedFilesPayload) {
             modalContrastVal.textContent = item.options.contrast.toFixed(1);
             modalRefineToggle.checked = item.options.useGuidedFilter;
 
+            const modalThresholdContainer = modalThresholdSlider.closest('.form-control');
+            if (item.options.modelId === 'silueta') {
+              modalThresholdContainer?.classList.add('opacity-50', 'pointer-events-none');
+              modalThresholdContainer?.setAttribute('title', 'Not applicable for Silueta');
+            } else {
+              modalThresholdContainer?.classList.remove('opacity-50', 'pointer-events-none');
+              modalThresholdContainer?.removeAttribute('title');
+            }
+
             modalDownload.onclick = () => btnDownload.click();
             modalCopy.onclick = () => btnCopy.click();
             previewModal.showModal();
@@ -619,7 +646,10 @@ export default function init(payload?: SharedFilesPayload) {
         };
 
         const onCardAdjust = () => {
+          const item = queue.find((it) => it.id === id);
+          if (!item) return;
           const options: ProcessingOptions = {
+            ...item.options,
             threshold: parseInt(itemThreshold.value, 10),
             smoothing: parseInt(itemSmooth.value, 10),
             contrast: parseFloat(itemContrast.value),
@@ -627,6 +657,15 @@ export default function init(payload?: SharedFilesPayload) {
           };
           reprocessItem(id, options);
         };
+
+        const itemThresholdContainer = itemThreshold.closest('.form-control');
+        const setupItemUI = () => {
+          const itemOptions = getProcessingOptions();
+          if (itemOptions.modelId === 'silueta') {
+            itemThresholdContainer?.classList.add('opacity-50', 'pointer-events-none');
+          }
+        };
+        setupItemUI();
 
         itemThreshold.onchange = onCardAdjust;
         itemSmooth.onchange = onCardAdjust;
@@ -648,7 +687,7 @@ export default function init(payload?: SharedFilesPayload) {
           status: 'pending',
           originalUrl,
           formattedSize,
-          options: { threshold: 128, smoothing: 4, contrast: 1.0, useGuidedFilter: false },
+          options: getProcessingOptions(),
         });
       }
       if (files.length > 0) {
@@ -667,7 +706,10 @@ export default function init(payload?: SharedFilesPayload) {
   // Modal Adjust Logic
   const onModalAdjust = () => {
     if (!currentModalItemId) return;
+    const item = queue.find((it) => it.id === currentModalItemId);
+    if (!item) return;
     const options: ProcessingOptions = {
+      ...item.options,
       threshold: parseInt(modalThresholdSlider.value, 10),
       smoothing: parseInt(modalSmoothSlider.value, 10),
       contrast: parseFloat(modalContrastSlider.value),
@@ -680,7 +722,6 @@ export default function init(payload?: SharedFilesPayload) {
     modalContrastVal.textContent = parseFloat(modalContrastSlider.value).toFixed(1);
 
     // Sync back to card UI if visible
-    const item = queue.find((it) => it.id === currentModalItemId);
     if (item) {
       const cardThreshold = item.element.querySelector(
         '.item-threshold-slider'

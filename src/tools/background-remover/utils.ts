@@ -1,11 +1,41 @@
 import { convertBlobFormat, copyImageBlobToClipboard } from '../../js/image-utils';
 import { hideProgress, showMessage, showProgress } from '../../js/ui';
 
+export interface ModelConfig {
+  id: string;
+  name: string;
+  url: string;
+  inputSize: number;
+  mean: [number, number, number];
+  std: [number, number, number];
+}
+
+export const MODELS: Record<string, ModelConfig> = {
+  silueta: {
+    id: 'silueta',
+    name: 'Silueta',
+    url: new URL('./lib/models/silueta.onnx', document.baseURI).href,
+    inputSize: 320,
+    mean: [0.485, 0.456, 0.406],
+    std: [0.229, 0.224, 0.225],
+  },
+  u2netp: {
+    id: 'u2netp',
+    name: 'U2NetP',
+    url: new URL('./lib/models/u2netp-q.onnx', document.baseURI).href,
+    inputSize: 320,
+    mean: [0.485, 0.456, 0.406],
+    std: [0.229, 0.224, 0.225],
+  }
+};
+
 export interface ProcessingOptions {
   threshold: number;
   smoothing: number;
   contrast: number;
   useGuidedFilter: boolean;
+  modelId: string;
+  forceWasm: boolean;
 }
 
 export interface ImageQueueItem {
@@ -38,7 +68,10 @@ export function getProcessingOptions(): ProcessingOptions {
   const smoothing = parseInt((document.getElementById('opt-smooth') as HTMLInputElement)?.value ?? '4', 10);
   const contrast = parseFloat((document.getElementById('opt-contrast') as HTMLInputElement)?.value ?? '1.0');
   const useGuidedFilter = (document.getElementById('opt-refine') as HTMLInputElement)?.checked ?? false;
-  return { threshold, smoothing, contrast, useGuidedFilter };
+  const modelId = (document.getElementById('opt-model') as HTMLSelectElement)?.value ?? 'silueta';
+  const forceWasm = (document.getElementById('opt-force-wasm') as HTMLInputElement)?.checked ?? false;
+
+  return { threshold, smoothing, contrast, useGuidedFilter, modelId, forceWasm };
 }
 
 export async function convertBlobToFormat(blob: Blob, format: 'png' | 'webp', quality: number): Promise<Blob> {
