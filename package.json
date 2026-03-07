@@ -39,7 +39,7 @@
     "jszip": "^3.10.1",
     "lucide": "^0.575.0",
     "mupdf": "^1.27.0",
-    "onnxruntime-web": "^1.24.2",
+    "onnxruntime-web": "^1.24.3",
     "sortablejs": "^1.15.7"
   }
 }
