@@ -112,9 +112,10 @@ export default function init(payload?: SharedFilesPayload) {
     mask: Float32Array,
     w: number,
     h: number,
-    canvas: HTMLCanvasElement
+    canvas: HTMLCanvasElement,
+    modelSize: number
   ) => {
-    const MODEL_SIZE = 320;
+    const MODEL_SIZE = modelSize;
 
     // Normalize raw mask to 0-255
     let min = Infinity,
@@ -216,7 +217,8 @@ export default function init(payload?: SharedFilesPayload) {
     } else if (mode === 'outline') {
       modalImg.src = item.originalUrl;
       if (item.rawMask && item.width && item.height) {
-        renderOutlineToCanvas(item.rawMask, item.width, item.height, modalOutlineCanvas);
+        const modelSize = MODELS[item.options.modelId]?.inputSize || 320;
+        renderOutlineToCanvas(item.rawMask, item.width, item.height, modalOutlineCanvas, modelSize);
         positionOutlineCanvas();
         modalOutlineCanvas.classList.remove('hidden');
       } else {
@@ -317,7 +319,8 @@ export default function init(payload?: SharedFilesPayload) {
         modalImg.src = item.resultUrl;
       } else if (modalViewMode === 'outline') {
         if (item.rawMask && item.width && item.height) {
-          renderOutlineToCanvas(item.rawMask, item.width, item.height, modalOutlineCanvas);
+          const modelSize = MODELS[item.options.modelId]?.inputSize || 320;
+          renderOutlineToCanvas(item.rawMask, item.width, item.height, modalOutlineCanvas, modelSize);
           positionOutlineCanvas();
           modalOutlineCanvas.classList.remove('hidden');
         } else {
@@ -551,7 +554,8 @@ export default function init(payload?: SharedFilesPayload) {
         btnOutline.onclick = () => {
           const item = queue.find((it) => it.id === id);
           if (!item || !item.rawMask || !item.width || !item.height) return;
-          renderOutlineToCanvas(item.rawMask, item.width, item.height, outlineCanvas);
+          const modelSize = MODELS[item.options.modelId]?.inputSize || 320;
+          renderOutlineToCanvas(item.rawMask, item.width, item.height, outlineCanvas, modelSize);
           originalPreview.classList.remove('opacity-0');
           resultPreview.classList.add('opacity-0');
           outlineCanvas.classList.remove('opacity-0');
