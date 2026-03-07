@@ -106,7 +106,7 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
     reportProgress(id, 'Post-processing Output...', 95);
 
     // 5. Postprocess Output
-    const outputTensor = results.output; // name 'output' per netron dump
+    const outputTensor = results[options.modelConfig.output];
     const [_, __, outH, outW] = outputTensor.dims;
 
     const outFloatData = outputTensor.data as Float32Array;

@@ -15,8 +15,8 @@ export const MODELS: Record<string, ModelConfig> = {
     output: 'output',
   },
   RealESRGAN_x4plus: {
-    id: 'RealESRGAN_x2plus',
-    name: 'RealESRGAN_x2plus',
+    id: 'RealESRGAN_x4plus',
+    name: 'RealESRGAN_x4plus',
     url: new URL('./lib/models/RealESRGAN_x4plus.onnx', document.baseURI).href,
     input: 'input',
     output: 'output',
@@ -26,14 +26,14 @@ export const MODELS: Record<string, ModelConfig> = {
     name: 'rrdbx2',
     url: new URL('./lib/models/rrdbx2.onnx', document.baseURI).href,
     input: 'pixel_values',
-    output: 'recontrustion',
+    output: 'reconstruction',
   },
   rrdbx4: {
     id: 'rrdbx4',
     name: 'rrdbx4',
     url: new URL('./lib/models/rrdbx4.onnx', document.baseURI).href,
     input: 'pixel_values',
-    output: 'recontrustion',
+    output: 'reconstruction',
   },
 };
 
