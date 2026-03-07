@@ -71,7 +71,7 @@ self.onmessage = async (event: MessageEvent) => {
 
     if (action === 'reprocess' && rawMask) {
       step = 're-processing';
-      self.postMessage({ id, status: 'progress', progress: 10, step: 'Adjusting...' });
+      self.postMessage({ id, status: 'progress', progress: 10, step: 'Adjusting' });
 
       if (!rgba && file) {
         step = 'decoding image';
@@ -82,7 +82,7 @@ self.onmessage = async (event: MessageEvent) => {
         rgbaCache.set(id, { rgba, width, height });
       }
     } else {
-      self.postMessage({ id, status: 'progress', progress: 5, step: 'Initializing...' });
+      self.postMessage({ id, status: 'progress', progress: 5, step: 'Decoding Image' });
 
       step = 'decoding image';
       if (!rgba) {
@@ -96,7 +96,7 @@ self.onmessage = async (event: MessageEvent) => {
         id,
         status: 'progress',
         progress: 40,
-        step: `Decoded (${width}x${height})`,
+        step: `Decoded [${width}x${height}] - loading model`,
       });
 
       step = 'loading model';
@@ -105,7 +105,12 @@ self.onmessage = async (event: MessageEvent) => {
         modelPath: config.url,
         executionProviders: execProviders,
       });
-      self.postMessage({ id, status: 'progress', progress: 40, step: 'Model ready' });
+      self.postMessage({
+        id,
+        status: 'progress',
+        progress: 40,
+        step: 'Model ready - preparing tensors',
+      });
 
       step = 'preparing tensor';
       const tensorData = imageToTensor(
@@ -117,14 +122,19 @@ self.onmessage = async (event: MessageEvent) => {
         config.std
       );
       const inputTensor = createTensor(tensorData, [1, 3, modelInputSize, modelInputSize]);
-      self.postMessage({ id, status: 'progress', progress: 50, step: 'Preparing model input' });
+      self.postMessage({ id, status: 'progress', progress: 50, step: 'running inference' });
 
       step = 'inference';
       const inputName = session.inputNames[0];
       const outputName = session.outputNames[0];
       const results = await runInference(session, { [inputName]: inputTensor });
       rawMask = results[outputName].data as Float32Array;
-      self.postMessage({ id, status: 'progress', progress: 80, step: 'AI processing complete' });
+      self.postMessage({
+        id,
+        status: 'progress',
+        progress: 80,
+        step: 'AI complete - post-processing',
+      });
     }
 
     step = 'post-processing';
