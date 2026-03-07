@@ -2,12 +2,13 @@ import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file
 import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import { blobToImageData } from '../../js/image-utils';
 import OcrWorker from './worker?worker';
+import type { SharedFilesPayload } from '../../js/share-target.ts';
 
 const DET_MODEL_URL = new URL('./lib/models/ocr/det.onnx', document.baseURI).href;
 const REC_MODEL_URL = new URL('./lib/models/ocr/rec.onnx', document.baseURI).href;
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const statusContainer = document.getElementById('status-container');
   const statusText = document.getElementById('status-text');
   const resultContainer = document.getElementById('result-container');
@@ -34,10 +35,15 @@ export default function init() {
         }
       };
       const config = {
-        targetSize: Number((document.getElementById('targetSize') as HTMLInputElement).value) || undefined,
-        detThreshold: Number((document.getElementById('detThreshold') as HTMLInputElement).value) || undefined,
-        boxScoreThreshold: Number((document.getElementById('boxScoreThreshold') as HTMLInputElement).value) || undefined,
-        maxBoxes: Number((document.getElementById('maxBoxes') as HTMLInputElement).value) || undefined,
+        targetSize:
+          Number((document.getElementById('targetSize') as HTMLInputElement).value) || undefined,
+        detThreshold:
+          Number((document.getElementById('detThreshold') as HTMLInputElement).value) || undefined,
+        boxScoreThreshold:
+          Number((document.getElementById('boxScoreThreshold') as HTMLInputElement).value) ||
+          undefined,
+        maxBoxes:
+          Number((document.getElementById('maxBoxes') as HTMLInputElement).value) || undefined,
         forceWasm: (document.getElementById('forceWasm') as HTMLInputElement).checked,
       };
       worker.postMessage({
@@ -168,6 +174,11 @@ export default function init() {
       processImage(files[0]);
     }
   });
+
+  if (payload?.sharedFiles?.length) {
+    const file = payload.sharedFiles[0];
+    processImage(file);
+  }
 
   pasteBtn?.addEventListener('click', async (e) => {
     e.preventDefault();

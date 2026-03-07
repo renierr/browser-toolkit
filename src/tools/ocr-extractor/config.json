@@ -3,5 +3,8 @@
   "description": "Extract text from images using Tesseract",
   "icon": "scan-text",
   "sectionId": "images",
-  "order": 10
+  "order": 10,
+  "shareTarget": {
+    "accept": ["image/*"]
+  }
 }
