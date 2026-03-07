@@ -79,7 +79,7 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
 
     // 2. Load the Session
     const config: OnnxModelConfig = {
-      modelPath: options.modelUrl,
+      modelPath: options.modelConfig.url,
       executionProviders: options.forceWasm ? ['wasm'] : undefined,
     };
     const session = await loadSession(config);
@@ -91,7 +91,7 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
 
     // float32[batch_size, 3, height, width] per netron dump
     const inputTensor = createTensor(rgbData, [1, 3, height, width]);
-    const feeds = { input: inputTensor };
+    const feeds = { [options.modelConfig.input]: inputTensor };
 
     reportProgress(id, 'Upscaling Image (this may take a while)...', 40);
 
