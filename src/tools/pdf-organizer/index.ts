@@ -19,6 +19,7 @@ export default function init(payload?: SharedFilesPayload) {
   const actions = document.getElementById('organizer-actions') as HTMLDivElement;
   const dropzone = document.getElementById('pdf-dropzone') as HTMLDivElement;
   const selectionCount = document.getElementById('selection-count') as HTMLSpanElement;
+  const loadedFilename = document.getElementById('loaded-filename') as HTMLHeadingElement;
 
   const removeBtn = document.getElementById('remove-selected-btn') as HTMLButtonElement;
   const duplicateBtn = document.getElementById('duplicate-selected-btn') as HTMLButtonElement;
@@ -29,6 +30,8 @@ export default function init(payload?: SharedFilesPayload) {
   const deselectAllBtn = document.getElementById('deselect-all-btn') as HTMLButtonElement;
   const undoBtn = document.getElementById('undo-btn') as HTMLButtonElement;
   const startOverBtn = document.getElementById('start-over-btn') as HTMLButtonElement;
+  const addFileBtn = document.getElementById('add-file-btn') as HTMLButtonElement;
+  const addPdfFileInput = document.getElementById('add-pdf-file') as HTMLInputElement;
 
   let pages: PageItem[] = [];
   let history: PageItem[][] = [];
@@ -58,6 +61,16 @@ export default function init(payload?: SharedFilesPayload) {
     duplicateBtn.disabled = selectedCount === 0;
     downloadSelectedBtn.disabled = selectedCount === 0;
     undoBtn.disabled = history.length === 0;
+
+    if (originalFileName.length > 0) {
+      if (originalFileName.length === 1) {
+        loadedFilename.textContent = originalFileName[0];
+      } else {
+        loadedFilename.textContent = `${originalFileName.length} files loaded`;
+      }
+    } else {
+      loadedFilename.textContent = '';
+    }
 
     renderPages();
   };
@@ -120,28 +133,35 @@ export default function init(payload?: SharedFilesPayload) {
     }
   });
 
-  const loadFiles = async (files: FileList | File[]) => {
+  const loadFiles = async (files: FileList | File[], append = false) => {
     if (files.length === 0) {
       return;
     }
     showProgress('Loading PDF...');
 
     try {
-      revokeThumbnails(pages);
-      pages = [];
-      history = [];
-      originalPdfBytes = [];
-      originalFileName = [];
+      let startIndex = 0;
+      if (!append) {
+        revokeThumbnails(pages);
+        pages = [];
+        history = [];
+        originalPdfBytes = [];
+        originalFileName = [];
+      } else {
+        pushHistory();
+        startIndex = originalPdfBytes.length;
+      }
 
       for (let k = 0; k < files.length; k++) {
         const file = files[k];
         showProgress(`Loading file ${k + 1} of ${files.length}: ${file.name}`);
         await yieldToUI();
 
-        originalPdfBytes[k] = new Uint8Array<ArrayBuffer>(await file.arrayBuffer());
-        originalFileName[k] = file.name;
+        const pdfIndex = startIndex + k;
+        originalPdfBytes[pdfIndex] = new Uint8Array<ArrayBuffer>(await file.arrayBuffer());
+        originalFileName[pdfIndex] = file.name;
 
-        const srcDoc = mupdf.Document.openDocument(originalPdfBytes[k]);
+        const srcDoc = mupdf.Document.openDocument(originalPdfBytes[pdfIndex]);
         const pageCount = srcDoc.countPages();
 
         for (let i = 0; i < pageCount; i++) {
@@ -162,7 +182,7 @@ export default function init(payload?: SharedFilesPayload) {
 
           pages.push({
             id: generateId(),
-            pdf: k,
+            pdf: pdfIndex,
             originalIndex: i,
             thumbnailUrl: url,
             selected: false,
@@ -193,6 +213,18 @@ export default function init(payload?: SharedFilesPayload) {
       loadFiles(pdfFiles as unknown as FileList);
     }
   }
+
+  addFileBtn.addEventListener('click', () => {
+    addPdfFileInput.click();
+  });
+
+  addPdfFileInput.addEventListener('change', (e) => {
+    const files = (e.target as HTMLInputElement).files;
+    if (files && files.length > 0) {
+      loadFiles(files, true);
+      addPdfFileInput.value = '';
+    }
+  });
 
   removeBtn.addEventListener('click', () => {
     pushHistory();
@@ -231,6 +263,7 @@ export default function init(payload?: SharedFilesPayload) {
       dropzone.classList.remove('hidden');
       actions.classList.add('hidden');
       pageList.innerHTML = '';
+      loadedFilename.textContent = '';
       const fileInput = document.getElementById('pdf-file') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     }
@@ -263,11 +296,11 @@ export default function init(payload?: SharedFilesPayload) {
         });
 
         let srcDoc;
-        if (loadedDocs[i] === undefined) {
+        if (loadedDocs[pageItem.pdf] === undefined) {
           srcDoc = mupdf.Document.openDocument(originalPdfBytes[pageItem.pdf]);
-          loadedDocs[i] = srcDoc;
+          loadedDocs[pageItem.pdf] = srcDoc;
         } else {
-          srcDoc = loadedDocs[i];
+          srcDoc = loadedDocs[pageItem.pdf];
         }
         const graftMap = outDoc.newGraftMap();
         let insertAt: number = outDoc.countPages();
@@ -286,7 +319,7 @@ export default function init(payload?: SharedFilesPayload) {
       return null;
     } finally {
       outDoc?.destroy();
-      loadedDocs.forEach((doc) => doc.destroy());
+      loadedDocs.forEach((doc) => doc?.destroy());
       hideProgress();
     }
   };

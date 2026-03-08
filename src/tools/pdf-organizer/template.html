@@ -16,8 +16,14 @@
 
     <div id="organizer-actions"
          class="hidden flex flex-col gap-4 mt-8">
+      <h3 id="loaded-filename" class="text-lg font-semibold text-center"></h3>
       <div class="flex flex-wrap items-center justify-between gap-2 bg-base-200 p-3 rounded-lg sticky top-0 z-20 shadow-sm">
         <div class="flex items-center gap-1 flex-wrap">
+          <button id="add-file-btn" class="btn btn-xs sm:btn-sm btn-ghost">
+            <i data-lucide="plus" class="w-4 h-4"></i> Add
+          </button>
+          <input type="file" id="add-pdf-file" class="hidden" accept="application/pdf" multiple />
+          <div class="divider divider-horizontal mx-0"></div>
           <button id="select-all-btn" class="btn btn-xs sm:btn-sm btn-ghost">All</button>
           <button id="deselect-all-btn" class="btn btn-xs sm:btn-sm btn-ghost">None</button>
           <div class="divider divider-horizontal mx-0"></div>
