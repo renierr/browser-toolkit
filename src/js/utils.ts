@@ -1,23 +1,5 @@
 export const isDev = Boolean(import.meta.env.DEV);
 
-export const _fuzzyScore = (text: string, term: string): number => {
-  if (term === '') return 0;
-  text = text.toLowerCase();
-  term = term.toLowerCase();
-
-  let score = 0;
-  let termIndex = 0;
-
-  for (const char of text) {
-    if (char === term[termIndex]) {
-      score += 1 - termIndex * 0.1;
-      termIndex++;
-      if (termIndex === term.length) return score;
-    }
-  }
-  return termIndex === term.length ? score : -Infinity;
-};
-
 export const fuzzyScore = (text: string, term: string): number => {
   if (!term) return 0;
   const target = text.toLowerCase();
@@ -25,34 +7,38 @@ export const fuzzyScore = (text: string, term: string): number => {
 
   let score = 0;
   let lastIndex = -1;
-  let matchCount = 0;
+  let totalGap = 0;
 
   for (let i = 0; i < search.length; i++) {
     const char = search[i];
     const index = target.indexOf(char, lastIndex + 1);
 
-    if (index === -1) return -Infinity; // Character not found in order
+    if (index === -1) return -Infinity;
 
-    // 1. Base points for a match
-    score += 10;
+    // Bonus: Character is at the start of the string
+    if (index === 0) score += 100;
 
-    // 2. Bonus for consecutive characters (no gaps)
-    if (lastIndex !== -1 && index === lastIndex + 1) {
-      score += 20; 
+    // Bonus: Character is at the start of a word (after space, dash, or underscore)
+    if (index > 0 && /[\s\-_]/.test(target[index - 1])) {
+      score += 80;
     }
 
-    // 3. Bonus for matching the start of the string
-    if (index === 0) {
-      score += 30;
+    // Bonus: Consecutive match (no gap from previous character)
+    if (lastIndex !== -1 && index === lastIndex + 1) {
+      score += 40;
+    }
+
+    // Penalty: Increase gap penalty based on how many characters were skipped
+    if (lastIndex !== -1) {
+      totalGap += (index - lastIndex - 1);
     }
 
     lastIndex = index;
-    matchCount++;
   }
 
-  return score;
+  // Final Score: Subtract the total gap to demote "scattered" matches
+  return score - (totalGap * 10);
 };
-
 
 function getValueByDotNotation(obj: any, path: string): string | undefined {
   const keys = path.split('.');
