@@ -1,13 +1,33 @@
 <main class="container mx-auto px-4 py-8">
   <p id="header-description" class="mb-2">{{ config.description }}</p>
 
-  <input
-    type="text"
-    id="search"
-    placeholder="Search tools..."
-    class="input input-bordered w-full mb-8"
-    aria-label="Tool search"
-  />
+  <div class="flex gap-2 mb-8">
+    <input
+      type="text"
+      id="search"
+      placeholder="Search tools..."
+      class="input input-bordered flex-1 min-w-0"
+      aria-label="Tool search"
+    />
+    <div class="dropdown dropdown-end">
+      <label tabindex="0" class="btn btn-square btn-ghost" aria-label="Settings">
+        <i data-lucide="settings" class="w-6 h-6"></i>
+      </label>
+      <div
+        tabindex="0"
+        class="dropdown-content z-[1] menu p-4 shadow bg-base-100 rounded-box w-64 border"
+        id="overview-settings"
+      >
+        <h3 class="font-bold text-lg mb-2">View Settings</h3>
+        <div class="form-control">
+          <label class="label cursor-pointer justify-start gap-3">
+            <input type="checkbox" class="toggle toggle-sm toggle-primary" data-setting="compactMode" />
+            <span class="label-text">Compact Mode</span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <div id="tools-grid" class="flex flex-col gap-6">
     <!-- Tools will be placed here via JS -->

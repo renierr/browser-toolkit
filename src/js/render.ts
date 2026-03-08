@@ -105,7 +105,7 @@ export async function renderTool(tool: Tool | undefined, payload?: any) {
   }
 }
 
-export function renderToolCard(tool: Tool, insideFav: boolean = false) {
+export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: boolean = false) {
   const active = isFavorite(tool.path);
 
   let badge = '';
@@ -129,17 +129,19 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false) {
     `;
   }
 
-  return html`
-    <div class="relative group" id="${insideFav ? 'fav_' + tool.path : tool.path}">
-      <a
-        href="#${tool.path}"
-        aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
-        class="card card-compact bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${tool.draft
-      ? 'border-l-yellow-400'
-      : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
-        ? 'focus:ring-yellow-300'
-        : 'focus:ring-secondary'} h-full"
-      >
+  const cardContent = compact
+    ? html`
+        <div class="card-body p-3">
+          <div class="flex items-center gap-3">
+            <div class="shrink-0">${renderToolIconSvg(tool.icon, 'w-5 h-5')}</div>
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base font-bold text-heading truncate">${tool.name}</h3>
+            </div>
+            ${badge}
+          </div>
+        </div>
+      `
+    : html`
         <div class="card-body p-4">
           <div class="flex flex-col items-center sm:flex-row sm:items-start gap-4">
             <div class="shrink-0">${renderToolIconSvg(tool.icon, 'w-6 h-6')}</div>
@@ -151,6 +153,20 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false) {
             ${badge}
           </div>
         </div>
+      `;
+
+  return html`
+    <div class="relative group" id="${insideFav ? 'fav_' + tool.path : tool.path}">
+      <a
+        href="#${tool.path}"
+        aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
+        class="card card-compact bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${tool.draft
+      ? 'border-l-yellow-400'
+      : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
+        ? 'focus:ring-yellow-300'
+        : 'focus:ring-secondary'} h-full"
+      >
+        ${cardContent}
       </a>
       ${favoriteBtn}
     </div>

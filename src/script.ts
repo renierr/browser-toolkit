@@ -93,8 +93,19 @@ function renderOverview() {
   const searchInput = document.getElementById('search') as HTMLInputElement;
   const settings = getSettings('overview');
 
+  // Bind settings (compact mode toggle)
+  const settingsContainer = document.getElementById('overview-settings');
+  if (settingsContainer) {
+    settings.bind(settingsContainer);
+    // Re-render when settings change
+    settingsContainer.addEventListener('change', () => {
+      filterAndRender();
+    });
+  }
+
   function filterAndRender() {
     const term = searchInput.value.trim();
+    const compactMode = settings.get('compactMode', false);
     let filtered = tools;
 
     if (term) {
@@ -157,7 +168,7 @@ function renderOverview() {
             </div>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            ${favoriteTools.map((tool) => renderToolCard(tool, true)).join('')}
+            ${favoriteTools.map((tool) => renderToolCard(tool, true, compactMode)).join('')}
           </div>
         </section>
         <div class="border-b border-card my-4"></div>
@@ -168,7 +179,9 @@ function renderOverview() {
     outHtml += keysInOrder
       .map((key) => {
         const section = sectionMap.get(key)!;
-        const cardsHtml = section.items.map((tool) => renderToolCard(tool, false)).join('');
+        const cardsHtml = section.items
+          .map((tool) => renderToolCard(tool, false, compactMode))
+          .join('');
 
         // Determine collapsed state: respect stored value unless we're searching -> auto-expand
         let collapsed = isCollapsedStored(section.meta.id);
