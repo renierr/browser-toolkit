@@ -1,6 +1,6 @@
 export const isDev = Boolean(import.meta.env.DEV);
 
-export const fuzzyScore = (text: string, term: string): number => {
+export const _fuzzyScore = (text: string, term: string): number => {
   if (term === '') return 0;
   text = text.toLowerCase();
   term = term.toLowerCase();
@@ -17,6 +17,42 @@ export const fuzzyScore = (text: string, term: string): number => {
   }
   return termIndex === term.length ? score : -Infinity;
 };
+
+export const fuzzyScore = (text: string, term: string): number => {
+  if (!term) return 0;
+  const target = text.toLowerCase();
+  const search = term.toLowerCase();
+
+  let score = 0;
+  let lastIndex = -1;
+  let matchCount = 0;
+
+  for (let i = 0; i < search.length; i++) {
+    const char = search[i];
+    const index = target.indexOf(char, lastIndex + 1);
+
+    if (index === -1) return -Infinity; // Character not found in order
+
+    // 1. Base points for a match
+    score += 10;
+
+    // 2. Bonus for consecutive characters (no gaps)
+    if (lastIndex !== -1 && index === lastIndex + 1) {
+      score += 20; 
+    }
+
+    // 3. Bonus for matching the start of the string
+    if (index === 0) {
+      score += 30;
+    }
+
+    lastIndex = index;
+    matchCount++;
+  }
+
+  return score;
+};
+
 
 function getValueByDotNotation(obj: any, path: string): string | undefined {
   const keys = path.split('.');
