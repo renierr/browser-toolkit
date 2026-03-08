@@ -1,5 +1,55 @@
 import type { Tool } from './types';
 import { renderToolIconSvg } from './tool-icons';
+import { tools } from './tools';
+import router from './router';
+import { findAllToolsForMimeTypes, type SharedFilesPayload } from './share-target.ts';
+import { showMessage } from './ui.ts';
+
+/**
+ * Opens the provided content in a tool selected by the user.
+ * Automatically converts buffers/blobs to File objects and filters available tools.
+ */
+export async function openInTool(
+  input: File | Blob | ArrayBuffer | ArrayBufferView | File[],
+  options: { filename?: string; mimeType?: string } = {}
+) {
+  let files: File[] = [];
+
+  if (Array.isArray(input)) {
+    files = input;
+  } else if (input instanceof File) {
+    files = [input];
+  } else if (input instanceof Blob) {
+    const name = options.filename || 'file';
+    const mime = options.mimeType || input.type || 'application/octet-stream';
+    files = [new File([input], name, { type: mime })];
+  } else {
+    // ArrayBuffer or ArrayBufferView
+    const name = options.filename || 'file';
+    const mime = options.mimeType || 'application/octet-stream';
+    files = [new File([input as any], name, { type: mime })];
+  }
+
+  if (files.length === 0) return;
+
+  const mimeTypes = files.map((f) => f.type);
+  const matchingTools = findAllToolsForMimeTypes(tools, mimeTypes);
+
+  if (matchingTools.length === 0) {
+    showMessage('No tools found that can handle these files', { type: 'warning' });
+    return;
+  }
+
+  const selectedTool = await showToolChooser(matchingTools, files);
+
+  if (selectedTool) {
+    const payload: SharedFilesPayload = {
+      sharedFiles: files,
+      mimeTypes: mimeTypes,
+    };
+    router.goTo(selectedTool.path, payload);
+  }
+}
 
 /**
  * Shows a modal dialog for the user to choose which tool to open a shared file with.
@@ -13,20 +63,23 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
     // Build file description
     const fileCount = files.length;
     const firstName = files[0]?.name || 'Shared file';
-    const fileDescription = fileCount === 1
-      ? firstName
-      : `${firstName} and ${fileCount - 1} more file${fileCount > 2 ? 's' : ''}`;
+    const fileDescription =
+      fileCount === 1
+        ? firstName
+        : `${firstName} and ${fileCount - 1} more file${fileCount > 2 ? 's' : ''}`;
 
     // Create modal backdrop
     const backdrop = document.createElement('div');
-    backdrop.className = 'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4';
+    backdrop.className =
+      'fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4';
     backdrop.setAttribute('role', 'dialog');
     backdrop.setAttribute('aria-modal', 'true');
     backdrop.setAttribute('aria-labelledby', 'tool-chooser-title');
 
     // Create modal content
     const modal = document.createElement('div');
-    modal.className = 'bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-full max-w-md overflow-hidden';
+    modal.className =
+      'bg-base-100 rounded-2xl shadow-2xl border border-base-300 w-full max-w-md overflow-hidden';
 
     // Header
     const header = document.createElement('div');
@@ -129,4 +182,3 @@ function escapeHtml(str: string): string {
   div.textContent = str;
   return div.innerHTML;
 }
-

@@ -2,8 +2,8 @@ import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
 import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
 import mupdf, { type PDFDocument, type Document } from 'mupdf';
 import Sortable from 'sortablejs';
-import router from '../../js/router.ts';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { openInTool } from '../../js/tool-chooser.ts';
 
 interface PageItem {
   id: string;
@@ -47,7 +47,7 @@ export default function init(payload?: SharedFilesPayload) {
       try {
         if (p.thumbnailUrl && p.thumbnailUrl.startsWith('blob:'))
           URL.revokeObjectURL(p.thumbnailUrl);
-      } catch { }
+      } catch {}
     }
   };
 
@@ -66,10 +66,11 @@ export default function init(payload?: SharedFilesPayload) {
     pageList.innerHTML = '';
     pages.forEach((page, index) => {
       const card = document.createElement('div');
-      card.className = `relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-move touch-none ${page.selected
+      card.className = `relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-move touch-none ${
+        page.selected
           ? 'border-primary ring-2 ring-primary/20'
           : 'border-base-300 hover:border-base-content/30'
-        }`;
+      }`;
       card.dataset.id = page.id;
 
       card.innerHTML = `
@@ -257,7 +258,9 @@ export default function init(payload?: SharedFilesPayload) {
       for (let i = 0; i < pagesToDownload.length; i++) {
         const pageItem = pagesToDownload[i];
         const assemblyProgress = Math.round(((i + 1) / pagesToDownload.length) * 100);
-        showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`, { progress: assemblyProgress });
+        showProgress(`Assembling page ${i + 1} of ${pagesToDownload.length}...`, {
+          progress: assemblyProgress,
+        });
 
         let srcDoc;
         if (loadedDocs[i] === undefined) {
@@ -309,10 +312,8 @@ export default function init(payload?: SharedFilesPayload) {
   openViewerBtn.addEventListener('click', async () => {
     const pdfBytes = await generatePdfBytes(pages);
     if (pdfBytes) {
-      router.goTo('pdf-viewer', {
-        pdfBytes,
-        fileName: originalFileName[0].replace(/\.pdf$/i, '') + '_organized.pdf',
-      });
+      const name = originalFileName[0].replace(/\.pdf$/i, '') + '_organized.pdf';
+      await openInTool(pdfBytes, { filename: name, mimeType: 'application/pdf' });
     }
   });
 
