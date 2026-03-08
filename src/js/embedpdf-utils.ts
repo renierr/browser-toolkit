@@ -12,11 +12,12 @@ import {
 } from '@embedpdf/snippet';
 import { type AnnotationTool } from '@embedpdf/plugin-annotation';
 import { PdfAnnotationSubtype, type PdfStampAnnoObject } from '@embedpdf/models';
-import { FileImage, House, PenLine, type IconNode } from 'lucide';
+import { FileImage, House, PenLine, ScreenShare, type IconNode } from 'lucide';
 import { flattenAsImage } from '../tools/pdf-to-image';
 import { showMessage } from './ui.ts';
 import { getAllSignatures as getStoredSignatures } from '../tools/signature-creator/signature-store.ts';
 import type { SignatureData } from '../tools/signature-creator/signature-types.ts';
+import { openInTool } from './tool-chooser.ts';
 
 export const getDocManager = async (registry: PluginRegistry) => {
   return registry.getPlugin<DocumentManagerPlugin>(DocumentManagerPlugin.id)?.provides();
@@ -135,6 +136,79 @@ export function injectStyles(viewer: EmbedPdfContainer) {
             }
           `;
     shadowRoot.appendChild(style);
+  }
+}
+
+export async function addShareCommand(viewer: EmbedPdfContainer) {
+  const registry = await viewer.registry;
+  if (registry) {
+    const ui = await getViewerUi(registry);
+    const commands = await getViewerCommands(registry);
+    const docManager = await getDocManager(registry);
+    const exportPlugin = await getExportPlugin(registry);
+
+    if (commands && ui && docManager && exportPlugin) {
+      const SHARE_COMMAND_ID = 'app.share-pdf';
+      registerLucideIcon(viewer, 'icon-share', ScreenShare);
+
+      commands.registerCommand({
+        id: SHARE_COMMAND_ID,
+        label: 'Share / Open in Tool',
+        icon: 'icon-share',
+        action: async () => {
+          const activeDocId = docManager.getActiveDocumentId();
+          if (!activeDocId) {
+            showMessage('No active document to share.', { type: 'alert' });
+            return;
+          }
+          const docState = docManager.getDocumentState(activeDocId);
+
+          try {
+            const buffer = await exportPlugin.saveAsCopy().toPromise();
+            if (buffer) {
+              const name = docState?.name || 'document.pdf';
+              await openInTool(buffer, { filename: name, mimeType: 'application/pdf' });
+            } else {
+              showMessage('Could not retrieve PDF data from the export plugin.', { type: 'alert' });
+            }
+          } catch (error) {
+            console.error('Sharing failed', error);
+            showMessage('Failed to share PDF: ' + (error as any).message, { type: 'alert' });
+          }
+        },
+      });
+
+      // Add to document-menu below export
+      const schema = ui.getSchema();
+      const menu = schema.menus['document-menu'];
+      if (menu) {
+        const originalItems = menu.items;
+        const exportIndex = originalItems.findIndex(
+          (item: MenuItem) => item.id === 'document:export'
+        );
+
+        const shareMenuItem = {
+          type: 'command',
+          id: 'app.share-pdf-menu-item',
+          commandId: 'app.share-pdf',
+        } as MenuItem;
+
+        let newItems;
+        if (exportIndex !== -1) {
+          newItems = [
+            ...originalItems.slice(0, exportIndex + 1),
+            shareMenuItem,
+            ...originalItems.slice(exportIndex + 1),
+          ];
+        } else {
+          newItems = [...originalItems, shareMenuItem];
+        }
+
+        ui.mergeSchema({
+          menus: { 'document-menu': { ...menu, items: newItems } },
+        });
+      }
+    }
   }
 }
 

@@ -5,6 +5,7 @@ import { isDarkMode } from '../../js/theme.ts';
 import { default as EmbedPDF, ZoomMode, EmbedPdfContainer } from '@embedpdf/snippet';
 import {
   addFlattenAsImageCommand,
+  addShareCommand,
   addSignatureCommand,
   getDocManager,
   injectStyles,
@@ -41,6 +42,7 @@ const getViewer = async (container: HTMLElement) => {
       throw new Error('Failed to initialize PDF viewer.');
     }
     injectStyles(viewer);
+    await addShareCommand(viewer);
     await addFlattenAsImageCommand(viewer);
     await addSignatureCommand(viewer);
   }
