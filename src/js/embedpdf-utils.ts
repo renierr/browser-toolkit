@@ -12,7 +12,7 @@ import {
 } from '@embedpdf/snippet';
 import { type AnnotationTool } from '@embedpdf/plugin-annotation';
 import { PdfAnnotationSubtype, type PdfStampAnnoObject } from '@embedpdf/models';
-import { FileImage, House, PenLine, ScreenShare, type IconNode } from 'lucide';
+import { FileImage, House, PenLine, Share2, type IconNode } from 'lucide';
 import { flattenAsImage } from '../tools/pdf-to-image';
 import { showMessage } from './ui.ts';
 import { getAllSignatures as getStoredSignatures } from '../tools/signature-creator/signature-store.ts';
@@ -108,6 +108,71 @@ export function registerLucideIcon(
             strokeLinecap: 'round',
             strokeLinejoin: 'round',
           };
+        } else if (tag === 'circle') {
+          const cx = parseFloat(attrs.cx || '0');
+          const cy = parseFloat(attrs.cy || '0');
+          const r = parseFloat(attrs.r || '0');
+          return {
+            d: `M ${cx - r} ${cy} A ${r} ${r} 0 1 0 ${cx + r} ${cy} A ${r} ${r} 0 1 0 ${cx - r} ${cy}`,
+            stroke: 'currentColor',
+            fill: 'none',
+            strokeWidth: '2',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+          };
+        } else if (tag === 'line') {
+          return {
+            d: `M ${attrs.x1 || '0'} ${attrs.y1 || '0'} L ${attrs.x2 || '0'} ${attrs.y2 || '0'}`,
+            stroke: 'currentColor',
+            fill: 'none',
+            strokeWidth: '2',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+          };
+        } else if (tag === 'rect') {
+          const x = parseFloat(attrs.x || '0');
+          const y = parseFloat(attrs.y || '0');
+          const w = parseFloat(attrs.width || '0');
+          const h = parseFloat(attrs.height || '0');
+          const rx = parseFloat(attrs.rx || '0');
+          const ry = parseFloat(attrs.ry || '0');
+          let d = '';
+          if (rx === 0 && ry === 0) {
+            d = `M ${x} ${y} L ${x + w} ${y} L ${x + w} ${y + h} L ${x} ${y + h} Z`;
+          } else {
+            d = `M ${x + rx} ${y} L ${x + w - rx} ${y} A ${rx} ${ry} 0 0 1 ${x + w} ${y + ry} L ${x + w} ${y + h - ry} A ${rx} ${ry} 0 0 1 ${x + w - rx} ${y + h} L ${x + rx} ${y + h} A ${rx} ${ry} 0 0 1 ${x} ${y + h - ry} L ${x} ${y + ry} A ${rx} ${ry} 0 0 1 ${x + rx} ${y} Z`;
+          }
+          return {
+            d: d,
+            stroke: 'currentColor',
+            fill: 'none',
+            strokeWidth: '2',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+          };
+        } else if (tag === 'polygon') {
+          const rawPoints = String(attrs.points || '');
+          const coords = rawPoints
+            .trim()
+            .split(/[\s,]+/)
+            .filter((s: string) => s.length > 0);
+          let d = '';
+          for (let i = 0; i < coords.length; i += 2) {
+            const x = coords[i];
+            const y = coords[i + 1];
+            if (x && y) {
+              d += (d === '' ? 'M' : 'L') + x + ' ' + y;
+            }
+          }
+          if (d) d += ' Z';
+          return {
+            d: d,
+            stroke: 'currentColor',
+            fill: 'none',
+            strokeWidth: '2',
+            strokeLinecap: 'round',
+            strokeLinejoin: 'round',
+          };
         }
         return null;
       })
@@ -149,7 +214,7 @@ export async function addShareCommand(viewer: EmbedPdfContainer) {
 
     if (commands && ui && docManager && exportPlugin) {
       const SHARE_COMMAND_ID = 'app.share-pdf';
-      registerLucideIcon(viewer, 'icon-share', ScreenShare);
+      registerLucideIcon(viewer, 'icon-share', Share2);
 
       commands.registerCommand({
         id: SHARE_COMMAND_ID,
