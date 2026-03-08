@@ -13,7 +13,7 @@ export async function openInTool(
   input: File | Blob | ArrayBuffer | ArrayBufferView | File[],
   options: { filename?: string; mimeType?: string } = {}
 ) {
-  let files: File[] = [];
+  let files: File[];
 
   if (Array.isArray(input)) {
     files = input;
@@ -53,7 +53,7 @@ export async function openInTool(
 
 /**
  * Shows a modal dialog for the user to choose which tool to open a shared file with.
- * Returns the selected tool or null if cancelled.
+ * Returns the selected tool or null if canceled.
  *
  * @param tools - Array of tools that can handle the files (should be pre-sorted by order)
  * @param files - Array of files being shared
@@ -126,9 +126,36 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
       list.appendChild(button);
     });
 
-    // Footer with cancel button
     const footer = document.createElement('div');
-    footer.className = 'p-3 border-t border-base-300 flex justify-end';
+    footer.className = 'p-3 border-t border-base-300 flex justify-between items-center';
+
+    // Share button (if supported)
+    const shareBtnContainer = document.createElement('div');
+    if (navigator.share && navigator.canShare && navigator.canShare({ files })) {
+      const shareBtn = document.createElement('button');
+      shareBtn.className = 'btn btn-ghost btn-sm flex items-center gap-2';
+      shareBtn.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+        </svg>
+        <span>Share</span>
+      `;
+      shareBtn.addEventListener('click', async () => {
+        try {
+          const title = files.length === 1 ? files[0].name : `${files.length} files`;
+          await navigator.share({ files, title });
+          cleanup();
+          resolve(null);
+        } catch (err) {
+          if ((err as Error).name !== 'AbortError') {
+            console.error('Error sharing files:', err);
+            showMessage('Could not share files.', { type: 'warning' });
+          }
+        }
+      });
+      shareBtnContainer.appendChild(shareBtn);
+    }
+    footer.appendChild(shareBtnContainer);
 
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-ghost btn-sm';
