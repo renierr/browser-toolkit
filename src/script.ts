@@ -112,9 +112,9 @@ function renderOverview() {
       filtered = tools
         .map((tool) => ({
           tool,
-          score: Math.max(fuzzyScore(tool.name, term), fuzzyScore(tool.description, term)),
+          score: Math.max(fuzzyScore(tool.name, term) * 2, fuzzyScore(tool.description, term)),
         }))
-        .filter((item) => item.score > -Infinity)
+        .filter((item) => item.score > 0)
         .sort((a, b) => b.score - a.score)
         .map((item) => item.tool);
     }
