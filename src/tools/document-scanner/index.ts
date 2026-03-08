@@ -31,6 +31,7 @@ import { createLiveDetectionLoop } from './utils/live-detection-loop';
 import { createHandleDrag } from './utils/handle-drag';
 import { createCameraGestures } from './utils/camera-gestures';
 import { CanvasExporter } from '../../js/canvas-utils.ts';
+import { getSettings } from '../../js/settings.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -91,6 +92,7 @@ export default function init(payload?: SharedFilesPayload) {
   const state = createScannerState({
     onHistoryChange: () => updateUndoButton(),
   });
+  const settings = getSettings('document-scanner');
   let stream: MediaStream | null = null;
   let isFilterMode = false;
   let stopLevelSensor: (() => void) | null = null;
@@ -207,11 +209,11 @@ export default function init(payload?: SharedFilesPayload) {
     cameraView.classList.remove('hidden');
     cameraControls.classList.remove('hidden');
 
-    const savedDeviceId = localStorage.getItem('document-scanner-device-id') || undefined;
+    const savedDeviceId = settings.get<string | undefined>('device-id');
     stream = await startCameraUtil({ videoEl: video, prevStream: stream, deviceId: savedDeviceId });
 
     if (!stream && savedDeviceId) {
-      localStorage.removeItem('document-scanner-device-id');
+      settings.set('device-id', null);
       stream = await startCameraUtil({ videoEl: video, prevStream: stream });
     }
 
@@ -525,7 +527,7 @@ export default function init(payload?: SharedFilesPayload) {
       const deviceId = track.getSettings().deviceId;
       const label = track.label;
       if (deviceId) {
-        localStorage.setItem('document-scanner-device-id', deviceId);
+        settings.set('device-id', deviceId);
       }
 
       const displayId = label

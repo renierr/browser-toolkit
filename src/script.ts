@@ -18,6 +18,7 @@ import {
 } from './js/share-target.ts';
 import { showToolChooser } from './js/tool-chooser.ts';
 import { setTools, tools } from './js/tools.ts';
+import { getSettings } from './js/settings.ts';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -90,6 +91,7 @@ function renderOverview() {
 
   const grid = document.getElementById('tools-grid')!;
   const searchInput = document.getElementById('search') as HTMLInputElement;
+  const settings = getSettings('overview');
 
   function filterAndRender() {
     const term = searchInput.value.trim();
@@ -137,11 +139,8 @@ function renderOverview() {
     ];
 
     // Collapsible sections: persist state in localStorage per section
-    const COLLAPSE_KEY_PREFIX = 'bk:sectionCollapsed:';
-    const isCollapsedStored = (id: string) =>
-      localStorage.getItem(COLLAPSE_KEY_PREFIX + id) === '1';
-    const setCollapsedStored = (id: string, v: boolean) =>
-      localStorage.setItem(COLLAPSE_KEY_PREFIX + id, v ? '1' : '0');
+    const isCollapsedStored = (id: string) => settings.get(`collapsed:${id}`, false);
+    const setCollapsedStored = (id: string, v: boolean) => settings.set(`collapsed:${id}`, v);
 
     // Favorites section (top)
     const favorites = getFavorites();

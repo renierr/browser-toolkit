@@ -8,12 +8,14 @@ import { html, replacePlaceholders } from './utils.ts';
 import { renderToolIconSvg } from './tool-icons.ts';
 import { isFavorite } from './favorites.ts';
 import router from './router.ts';
+import { getSettings } from './settings.ts';
 
 const headerFinal = replacePlaceholders(headerHtml, siteContext);
 const footerFinal = replacePlaceholders(footerHtml, siteContext);
 
 let currentToolCleanup: (() => void) | undefined;
 let cancelPendingInit: (() => void) | undefined;
+let settingsCleanup: (() => void) | undefined;
 
 export function renderLayout(content: string, hideHeader?: boolean, hideFooter?: boolean) {
   // Cancel any pending script initialization from previous navigation
@@ -25,8 +27,10 @@ export function renderLayout(content: string, hideHeader?: boolean, hideFooter?:
   // Cleanup previous tool listeners/effects before replacing DOM
   try {
     currentToolCleanup?.();
+    settingsCleanup?.();
   } finally {
     currentToolCleanup = undefined;
+    settingsCleanup = undefined;
   }
 
   const app = document.getElementById('app')!;
@@ -44,6 +48,11 @@ export async function renderTool(tool: Tool | undefined, payload?: any) {
     `;
   const contentDiv = document.getElementById('tool-content')!;
   contentDiv.innerHTML = tool ? replacePlaceholders(tool.html, siteContext) : noToolHtml;
+
+  if (tool) {
+    // Automatically bind settings for this tool
+    settingsCleanup = getSettings(tool.path).bind(contentDiv);
+  }
 
   // Back button
   const backBtn = document.getElementById('back-btn');

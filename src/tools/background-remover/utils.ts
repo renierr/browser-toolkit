@@ -1,5 +1,6 @@
 import { convertBlobFormat, copyImageBlobToClipboard } from '../../js/image-utils';
 import { hideProgress, showMessage, showProgress } from '../../js/ui';
+import { getSettings } from '../../js/settings.ts';
 
 export interface ModelConfig {
   id: string;
@@ -64,12 +65,14 @@ export function getWebpQuality(): number {
 }
 
 export function getProcessingOptions(): ProcessingOptions {
-  const threshold = parseInt((document.getElementById('opt-threshold') as HTMLInputElement)?.value ?? '128', 10);
-  const smoothing = parseInt((document.getElementById('opt-smooth') as HTMLInputElement)?.value ?? '4', 10);
-  const contrast = parseFloat((document.getElementById('opt-contrast') as HTMLInputElement)?.value ?? '1.0');
-  const useGuidedFilter = (document.getElementById('opt-refine') as HTMLInputElement)?.checked ?? false;
-  const modelId = (document.getElementById('opt-model') as HTMLSelectElement)?.value ?? 'silueta';
-  const forceWasm = (document.getElementById('opt-force-wasm') as HTMLInputElement)?.checked ?? false;
+  const settings = getSettings('background-remover');
+
+  const threshold = settings.get('threshold', 128);
+  const smoothing = settings.get('smoothing', 4);
+  const contrast = settings.get('contrast', 1.0);
+  const useGuidedFilter = settings.get('refine', false);
+  const modelId = settings.get('model', 'silueta');
+  const forceWasm = settings.get('forceWasm', false);
 
   return { threshold, smoothing, contrast, useGuidedFilter, modelId, forceWasm };
 }

@@ -1,7 +1,8 @@
 import { getDomElements } from './dom.ts';
 import type { SignatureSettings } from './signature-types.ts';
+import { getSettings } from '../../js/settings.ts';
 
-const SETTINGS_KEY = 'bt-signature-settings';
+const settings = getSettings('signature-creator');
 
 export const DEFAULT_SIGNATURE_SETTINGS: SignatureSettings = {
   penColor: '#0B3D91',
@@ -21,10 +22,9 @@ Object.freeze(DEFAULT_SIGNATURE_SETTINGS);
 
 export function loadSettings(): SignatureSettings {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS);
-    const parsed = JSON.parse(raw) as Partial<SignatureSettings> | null;
-    return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, parsed || {});
+    const stored = settings.get<Partial<SignatureSettings>>('config');
+    if (!stored) return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS);
+    return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS, stored);
   } catch (e) {
     console.warn('Failed to load signature settings', e);
     return Object.assign({}, DEFAULT_SIGNATURE_SETTINGS);
@@ -33,10 +33,9 @@ export function loadSettings(): SignatureSettings {
 
 export function saveSettings(partial: Partial<SignatureSettings>) {
   try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    const stored = raw ? (JSON.parse(raw) as Partial<SignatureSettings>) : {};
+    const stored = settings.get<Partial<SignatureSettings>>('config') || {};
     const next = Object.assign({}, stored, partial);
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    settings.set('config', next);
   } catch (e) {
     console.warn('Failed to save signature settings', e);
   }
@@ -44,7 +43,7 @@ export function saveSettings(partial: Partial<SignatureSettings>) {
 
 export function resetSettings() {
   try {
-    localStorage.removeItem(SETTINGS_KEY);
+    settings.set('config', null);
   } catch (e) {
     console.warn('Failed to reset signature settings', e);
   }
