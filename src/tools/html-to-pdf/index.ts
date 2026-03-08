@@ -2,6 +2,7 @@ import { downloadFile } from '../../js/file-utils.ts';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
+import { getSettings } from '../../js/settings.ts';
 
 const PageSizes: { [key: string]: [number, number] } = {
   A0: [2383.94, 3370.39],
@@ -509,21 +510,15 @@ const processInlineImages = async (
 };
 
 const initTextPageDefaults = (): void => {
-  const fontFamilyKey = (
-    document.getElementById('font-family') as HTMLSelectElement
-  )?.value?.toLowerCase();
-  const fontSize = parseInt((document.getElementById('font-size') as HTMLInputElement)?.value);
-  const pageSizeKey = (document.getElementById('page-size') as HTMLSelectElement)?.value || 'A4';
-  const pageOrientationKey = (
-    document.getElementById('page-orientation') as HTMLSelectElement
-  )?.value?.toLowerCase();
+  const settings = getSettings('html-to-pdf');
+  const fontFamilyKey = settings.get('fontFamily', 'helvetica').toLowerCase();
+  const fontSize = settings.get('fontSize', 12);
+  const pageSizeKey = settings.get('pageSize', 'A4') as any;
+  const pageOrientationKey = settings.get('orientation', 'portrait').toLowerCase();
 
-  const customWidth = parseInt(
-    (document.getElementById('custom-width') as HTMLInputElement)?.value
-  );
-  const customHeight = parseInt(
-    (document.getElementById('custom-height') as HTMLInputElement)?.value
-  );
+  const customWidth = settings.get('customWidth', 595);
+  const customHeight = settings.get('customHeight', 842);
+
   let pageSize =
     pageSizeKey === 'Custom'
       ? ([customWidth || 595, customHeight || 842] as [number, number])
@@ -567,7 +562,7 @@ const generateAdvancedTextPdf = async (): Promise<void> => {
       orientation,
       unit: 'mm',
       format: pageSizeMm,
-      putOnlyUsedFonts: true
+      putOnlyUsedFonts: true,
     });
 
     // Load and register fonts for Unicode support
@@ -705,12 +700,7 @@ const generateAdvancedTextPdf = async (): Promise<void> => {
           break;
 
         case 'code':
-          currentY = await renderCodeBlock(
-            pdf,
-            lineText,
-            currentY,
-            maxWidth
-          );
+          currentY = await renderCodeBlock(pdf, lineText, currentY, maxWidth);
           break;
 
         case 'paragraph':
@@ -1000,7 +990,7 @@ const usePrintToPdf = (): void => {
   initTextPageDefaults();
   const printWin = window.open('', '_blank');
   if (!printWin) {
-    showMessage('Could not open print window. Please check your popup blocker.', { type: 'alert'});
+    showMessage('Could not open print window. Please check your popup blocker.', { type: 'alert' });
     return;
   }
 
@@ -1057,7 +1047,7 @@ const saveContent = () => {
     downloadFile(blob, generateFilename(true));
   } catch (error) {
     console.error('Failed to save content:', error);
-    showMessage('Could not save the editor content.', { type: 'alert'});
+    showMessage('Could not save the editor content.', { type: 'alert' });
   }
 };
 
@@ -1076,11 +1066,11 @@ const loadContent = () => {
       if (typeof fileContent === 'string') {
         quill.root.innerHTML = fileContent;
       } else {
-        showMessage('Failed to read file content.', { type: 'alert'});
+        showMessage('Failed to read file content.', { type: 'alert' });
       }
     };
     reader.onerror = () => {
-      showMessage('Error reading the selected file.', { type: 'alert'});
+      showMessage('Error reading the selected file.', { type: 'alert' });
     };
     reader.readAsText(file);
   };
@@ -1099,7 +1089,6 @@ const generateAdvancedPdf = async (): Promise<void> => {
     hideProgress();
   }
 };
-
 
 function mountHtmlToPdfTool() {
   const pageSizeSelect = document.getElementById('page-size') as HTMLSelectElement;

@@ -18,7 +18,7 @@
             <label class="label">
               <span class="label-text font-medium">AI Model</span>
             </label>
-            <select id="opt-model" class="select select-sm select-bordered w-full">
+            <select id="opt-model" class="select select-sm select-bordered w-full" data-setting="model">
               <option value="rrdbx2" selected>rrdb (2x)</option>
               <option value="rrdbx4">rrdb (4x)</option>
               <option value="RealESRGAN_x2plus">RealESRGAN_x2plus (2x)</option>
@@ -32,7 +32,7 @@
                 <span class="label-text font-medium">Force WASM</span>
                 <span class="text-xs text-base-content/50">Bypass WebGPU execution</span>
               </span>
-              <input type="checkbox" id="opt-force-wasm" class="toggle toggle-primary" />
+              <input type="checkbox" id="opt-force-wasm" class="toggle toggle-primary" data-setting="forceWasm" />
             </label>
           </div>
         </div>

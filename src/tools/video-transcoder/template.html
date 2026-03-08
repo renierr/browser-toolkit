@@ -41,7 +41,7 @@
           <label class="label">
             <span class="label-text font-semibold">Output Format</span>
           </label>
-          <select id="output-format" class="select select-bordered w-full">
+          <select id="output-format" class="select select-bordered w-full" data-setting="format">
             <option value="mp4">MP4 (H.264)</option>
             <option value="webm">WebM (VP8)</option>
             <option value="gif">GIF</option>
@@ -54,7 +54,7 @@
           <label class="label">
             <span class="label-text font-semibold">Quality / Preset</span>
           </label>
-          <select id="quality-preset" class="select select-bordered w-full">
+          <select id="quality-preset" class="select select-bordered w-full" data-setting="quality">
             <option value="ultrafast">Ultrafast (Lower quality, faster)</option>
             <option value="medium" selected>Medium (Balanced)</option>
             <option value="veryslow">Very Slow (Better quality, slower)</option>
@@ -65,7 +65,7 @@
           <label class="label" for="max-resolution">
             <span class="label-text font-semibold">Max Resolution</span>
           </label>
-          <select id="max-resolution" class="select select-bordered w-full">
+          <select id="max-resolution" class="select select-bordered w-full" data-setting="resolution">
             <option value="640">640p (Fastest, smallest)</option>
             <option value="720">720p</option>
             <option value="1280" selected>1280p (Recommended)</option>
@@ -245,7 +245,7 @@
               <span class="label-text text-xs whitespace-pre-line">Append Custom FFmpeg Arguments (e.g. <code>-r 30 -crf 18</code>)</span>
             </label>
             <input type="text" id="advanced-args" class="input input-bordered input-sm w-full font-mono"
-              placeholder="-threads 2" />
+              placeholder="-threads 2" data-setting="advancedArgs" />
           </div>
         </div>
 

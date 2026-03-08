@@ -20,7 +20,6 @@ import {
   getOutputFilename,
   MODELS,
 } from './utils';
-import { getSettings } from '../../js/settings.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

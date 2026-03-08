@@ -2,6 +2,7 @@ import { optimize, type Config } from 'svgo/browser';
 import { downloadAsZip, downloadFile, setupFileDropzone } from '../../js/file-utils';
 import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { getSettings } from '../../js/settings.ts';
 
 interface OptimizedFile {
   name: string;
@@ -31,66 +32,6 @@ export default function init(payload?: SharedFilesPayload) {
   const batchSection = document.getElementById('batch-section') as HTMLDivElement;
   const batchList = document.getElementById('batch-list') as HTMLTableSectionElement;
   const btnDownloadAll = document.getElementById('btn-download-all') as HTMLButtonElement;
-
-  // Option checkboxes
-  const keepXmlnsCheckbox = document.getElementById('keep-xmlns') as HTMLInputElement;
-  const multipassCheckbox = document.getElementById('opt-multipass') as HTMLInputElement;
-  const prettyCheckbox = document.getElementById('opt-pretty') as HTMLInputElement;
-  const removeCommentsCheckbox = document.getElementById('opt-removeComments') as HTMLInputElement;
-  const removeMetadataCheckbox = document.getElementById('opt-removeMetadata') as HTMLInputElement;
-  const removeTitleCheckbox = document.getElementById('opt-removeTitle') as HTMLInputElement;
-  const removeDescCheckbox = document.getElementById('opt-removeDesc') as HTMLInputElement;
-  const removeEditorsNSDataCheckbox = document.getElementById(
-    'opt-removeEditorsNSData'
-  ) as HTMLInputElement;
-  const removeEmptyAttrsCheckbox = document.getElementById(
-    'opt-removeEmptyAttrs'
-  ) as HTMLInputElement;
-  const removeEmptyContainersCheckbox = document.getElementById(
-    'opt-removeEmptyContainers'
-  ) as HTMLInputElement;
-  const removeEmptyTextCheckbox = document.getElementById(
-    'opt-removeEmptyText'
-  ) as HTMLInputElement;
-  const removeHiddenElemsCheckbox = document.getElementById(
-    'opt-removeHiddenElems'
-  ) as HTMLInputElement;
-  const removeUselessDefsCheckbox = document.getElementById(
-    'opt-removeUselessDefs'
-  ) as HTMLInputElement;
-  const removeUselessStrokeAndFillCheckbox = document.getElementById(
-    'opt-removeUselessStrokeAndFill'
-  ) as HTMLInputElement;
-  const removeDoctypeCheckbox = document.getElementById('opt-removeDoctype') as HTMLInputElement;
-  const removeXMLProcInstCheckbox = document.getElementById(
-    'opt-removeXMLProcInst'
-  ) as HTMLInputElement;
-  const cleanupIdsCheckbox = document.getElementById('opt-cleanupIds') as HTMLInputElement;
-  const cleanupNumericValuesCheckbox = document.getElementById(
-    'opt-cleanupNumericValues'
-  ) as HTMLInputElement;
-  const convertColorsCheckbox = document.getElementById('opt-convertColors') as HTMLInputElement;
-  const convertPathDataCheckbox = document.getElementById(
-    'opt-convertPathData'
-  ) as HTMLInputElement;
-  const convertShapeToPathCheckbox = document.getElementById(
-    'opt-convertShapeToPath'
-  ) as HTMLInputElement;
-  const convertTransformCheckbox = document.getElementById(
-    'opt-convertTransform'
-  ) as HTMLInputElement;
-  const mergePathsCheckbox = document.getElementById('opt-mergePaths') as HTMLInputElement;
-  const minifyStylesCheckbox = document.getElementById('opt-minifyStyles') as HTMLInputElement;
-  const inlineStylesCheckbox = document.getElementById('opt-inlineStyles') as HTMLInputElement;
-  const collapseGroupsCheckbox = document.getElementById('opt-collapseGroups') as HTMLInputElement;
-  const sortAttrsCheckbox = document.getElementById('opt-sortAttrs') as HTMLInputElement;
-  const sortDefsChildrenCheckbox = document.getElementById(
-    'opt-sortDefsChildren'
-  ) as HTMLInputElement;
-  const removeDimensionsCheckbox = document.getElementById(
-    'opt-removeDimensions'
-  ) as HTMLInputElement;
-  const removeViewBoxCheckbox = document.getElementById('opt-removeViewBox') as HTMLInputElement;
 
   let currentFileName = 'optimized.svg';
   let batchFiles: OptimizedFile[] = [];
@@ -168,38 +109,39 @@ export default function init(payload?: SharedFilesPayload) {
   };
 
   const buildSvgoConfig = (): Config => {
-    const keepXmlns = keepXmlnsCheckbox?.checked ?? true;
-    const multipass = multipassCheckbox?.checked ?? true;
-    const pretty = prettyCheckbox?.checked ?? false;
+    const settings = getSettings('svg-optimizer');
+    const keepXmlns = settings.get('keepXmlns', true);
+    const multipass = settings.get('multipass', true);
+    const pretty = settings.get('pretty', false);
 
     // Build overrides for preset-default plugins
     const overrides: Record<string, boolean> = {
-      removeViewBox: removeViewBoxCheckbox?.checked ?? false,
-      removeComments: removeCommentsCheckbox?.checked ?? true,
-      removeMetadata: removeMetadataCheckbox?.checked ?? true,
-      removeTitle: removeTitleCheckbox?.checked ?? true,
-      removeDesc: removeDescCheckbox?.checked ?? true,
-      removeEditorsNSData: removeEditorsNSDataCheckbox?.checked ?? true,
-      removeEmptyAttrs: removeEmptyAttrsCheckbox?.checked ?? true,
-      removeEmptyContainers: removeEmptyContainersCheckbox?.checked ?? true,
-      removeEmptyText: removeEmptyTextCheckbox?.checked ?? true,
-      removeHiddenElems: removeHiddenElemsCheckbox?.checked ?? true,
-      removeUselessDefs: removeUselessDefsCheckbox?.checked ?? true,
-      removeUselessStrokeAndFill: removeUselessStrokeAndFillCheckbox?.checked ?? true,
-      removeDoctype: removeDoctypeCheckbox?.checked ?? true,
-      removeXMLProcInst: removeXMLProcInstCheckbox?.checked ?? true,
-      cleanupIds: cleanupIdsCheckbox?.checked ?? true,
-      cleanupNumericValues: cleanupNumericValuesCheckbox?.checked ?? true,
-      convertColors: convertColorsCheckbox?.checked ?? true,
-      convertPathData: convertPathDataCheckbox?.checked ?? true,
-      convertShapeToPath: convertShapeToPathCheckbox?.checked ?? true,
-      convertTransform: convertTransformCheckbox?.checked ?? true,
-      mergePaths: mergePathsCheckbox?.checked ?? true,
-      minifyStyles: minifyStylesCheckbox?.checked ?? true,
-      inlineStyles: inlineStylesCheckbox?.checked ?? true,
-      collapseGroups: collapseGroupsCheckbox?.checked ?? true,
-      sortAttrs: sortAttrsCheckbox?.checked ?? true,
-      sortDefsChildren: sortDefsChildrenCheckbox?.checked ?? true,
+      removeViewBox: settings.get('removeViewBox', false),
+      removeComments: settings.get('removeComments', true),
+      removeMetadata: settings.get('removeMetadata', true),
+      removeTitle: settings.get('removeTitle', true),
+      removeDesc: settings.get('removeDesc', true),
+      removeEditorsNSData: settings.get('removeEditorsNSData', true),
+      removeEmptyAttrs: settings.get('removeEmptyAttrs', true),
+      removeEmptyContainers: settings.get('removeEmptyContainers', true),
+      removeEmptyText: settings.get('removeEmptyText', true),
+      removeHiddenElems: settings.get('removeHiddenElems', true),
+      removeUselessDefs: settings.get('removeUselessDefs', true),
+      removeUselessStrokeAndFill: settings.get('removeUselessStrokeAndFill', true),
+      removeDoctype: settings.get('removeDoctype', true),
+      removeXMLProcInst: settings.get('removeXMLProcInst', true),
+      cleanupIds: settings.get('cleanupIds', true),
+      cleanupNumericValues: settings.get('cleanupNumericValues', true),
+      convertColors: settings.get('convertColors', true),
+      convertPathData: settings.get('convertPathData', true),
+      convertShapeToPath: settings.get('convertShapeToPath', true),
+      convertTransform: settings.get('convertTransform', true),
+      mergePaths: settings.get('mergePaths', true),
+      minifyStyles: settings.get('minifyStyles', true),
+      inlineStyles: settings.get('inlineStyles', true),
+      collapseGroups: settings.get('collapseGroups', true),
+      sortAttrs: settings.get('sortAttrs', true),
+      sortDefsChildren: settings.get('sortDefsChildren', true),
     };
 
     const plugins: Config['plugins'] = [
@@ -212,7 +154,7 @@ export default function init(payload?: SharedFilesPayload) {
     ];
 
     // Add removeDimensions if checked
-    if (removeDimensionsCheckbox?.checked) {
+    if (settings.get('removeDimensions', false)) {
       plugins.push('removeDimensions');
     }
 

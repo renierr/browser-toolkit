@@ -1,3 +1,5 @@
+import { getSettings } from '../../js/settings.ts';
+
 export interface ModelConfig {
   id: string;
   name: string;
@@ -55,10 +57,9 @@ export interface ImageQueueItem {
   options: ProcessingOptions;
 }
 export function getProcessingOptions(): ProcessingOptions {
-  const modelId =
-    (document.getElementById('opt-model') as HTMLSelectElement)?.value ?? 'RealESRGAN_x2plus';
-  const forceWasm =
-    (document.getElementById('opt-force-wasm') as HTMLInputElement)?.checked ?? false;
+  const settings = getSettings('image-upscaler');
+  const modelId = settings.get('model', 'rrdbx2');
+  const forceWasm = settings.get('forceWasm', false);
 
   return { modelId, forceWasm, modelConfig: MODELS[modelId] };
 }
