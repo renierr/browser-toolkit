@@ -1,0 +1,11 @@
+{
+  "name": "sqlite-explorer",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "sql.js": "^1.12.0"
+  },
+  "devDependencies": {
+    "@types/sql.js": "^1.4.9"
+  }
+}
