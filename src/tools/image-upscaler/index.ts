@@ -305,6 +305,7 @@ export default function init(payload?: SharedFilesPayload) {
 
         gallery.appendChild(card);
 
+        const processingOptions = getProcessingOptions();
         // Create the queue item but do not decide final status until we know dimensions.
         const item: ImageQueueItem = {
           id,
@@ -313,7 +314,7 @@ export default function init(payload?: SharedFilesPayload) {
           status: 'pending', // temporary, will be updated after dimension check
           originalUrl,
           formattedSize,
-          options: getProcessingOptions(),
+          options: processingOptions,
         };
         queue.push(item);
 
@@ -324,7 +325,8 @@ export default function init(payload?: SharedFilesPayload) {
             try {
               const w = img.width;
               const h = img.height;
-              if (w > 512 || h > 512) {
+              const threshold = processingOptions.largeThreshold ?? 512;
+              if (w > threshold || h > threshold) {
                 // Set to 'hold' state with meta so helper can show dims
                 setItemStatus(item, 'hold', { width: w, height: h });
               } else {

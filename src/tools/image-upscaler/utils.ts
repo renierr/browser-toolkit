@@ -42,6 +42,7 @@ export const MODELS: Record<string, ModelConfig> = {
 export interface ProcessingOptions {
   modelId: string;
   forceWasm: boolean;
+  largeThreshold: number;
   modelConfig: ModelConfig;
 }
 
@@ -60,6 +61,7 @@ export function getProcessingOptions(): ProcessingOptions {
   const settings = getSettings('image-upscaler');
   const modelId = settings.get('model', 'rrdbx2');
   const forceWasm = settings.get('forceWasm', false);
+  const largeThreshold = settings.get('largeThreshold', 512);
 
-  return { modelId, forceWasm, modelConfig: MODELS[modelId] };
+  return { modelId, forceWasm, largeThreshold, modelConfig: MODELS[modelId] };
 }
