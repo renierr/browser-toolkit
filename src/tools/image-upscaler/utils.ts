@@ -49,7 +49,7 @@ export interface ImageQueueItem {
   id: string;
   file: File;
   element: HTMLElement;
-  status: 'pending' | 'processing' | 'done' | 'error';
+  status: 'pending' | 'processing' | 'done' | 'error' | 'hold';
   originalUrl: string;
   resultUrl?: string;
   resultBlob?: Blob;

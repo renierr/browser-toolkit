@@ -25,6 +25,90 @@ export default function init(payload?: SharedFilesPayload) {
   let isProcessing = false;
   let worker: Worker | null = null;
 
+  // Helper to update an item's status and its UI.
+  const setItemStatus = (
+    item: ImageQueueItem,
+    newStatus: ImageQueueItem['status'],
+    meta?: { width?: number; height?: number; errorMsg?: string }
+  ) => {
+    item.status = newStatus;
+    const statusOverlay = item.element.querySelector('.status-overlay')!;
+    const statusText = statusOverlay.querySelector('.status-text')! as HTMLElement;
+    const progressBar = statusOverlay.querySelector('.item-progress') as HTMLProgressElement | null;
+    const spinner = statusOverlay.querySelector('.loading') as HTMLElement | null;
+
+    // Reset common UI: hide retry / start buttons by default
+    const retryBtn = statusOverlay.querySelector('.btn-retry') as HTMLElement | null;
+    const startBtn = statusOverlay.querySelector('.btn-start-large') as HTMLElement | null;
+    if (retryBtn) retryBtn.classList.add('hidden');
+    if (startBtn) startBtn.classList.add('hidden');
+
+    if (newStatus === 'pending') {
+      statusText.textContent = 'Pending...';
+      if (spinner) spinner.classList.remove('hidden');
+      if (progressBar) {
+        progressBar.classList.remove('hidden');
+        progressBar.value = 0;
+      }
+      statusOverlay.classList.remove('hidden');
+    } else if (newStatus === 'processing') {
+      statusText.textContent = 'Starting AI model...';
+      if (spinner) spinner.classList.remove('hidden');
+      if (progressBar) progressBar.classList.remove('hidden');
+      statusOverlay.classList.remove('hidden');
+    } else if (newStatus === 'hold') {
+      // Show a warning and Start button; hide spinner/progress
+      if (spinner) spinner.classList.add('hidden');
+      if (progressBar) progressBar.classList.add('hidden');
+
+      const dims = meta?.width && meta?.height ? `(${meta.width}×${meta.height}) ` : '';
+      statusText.innerHTML =
+        `Large image ${dims}Processing at full resolution may fail or be very slow.` +
+        `<span class="text-xs opacity-70 block mt-1">Click Start to proceed.</span>`;
+
+      let btn = statusOverlay.querySelector('.btn-start-large') as HTMLButtonElement | null;
+      if (!btn) {
+        btn = document.createElement('button');
+        btn.className = 'btn btn-sm btn-warning mt-2 btn-start-large';
+        btn.textContent = 'Start anyway';
+        statusOverlay.appendChild(btn);
+      }
+      btn.classList.remove('hidden');
+      btn.onclick = () => {
+        btn!.classList.add('hidden');
+        setItemStatus(item, 'pending');
+        processQueue();
+      };
+      statusOverlay.classList.remove('hidden');
+    } else if (newStatus === 'done') {
+      statusOverlay.classList.add('hidden');
+    } else if (newStatus === 'error') {
+      // Show error message and provide retry action
+      if (spinner) spinner.classList.add('hidden');
+      if (progressBar) progressBar.classList.add('hidden');
+
+      const short = meta?.errorMsg || 'Unknown error';
+      statusText.innerHTML = `<span class="text-error font-bold">Error</span><br/><span class=\"text-xs opacity-70 mt-1 block\">${short}</span>`;
+
+      let retry = statusOverlay.querySelector('.btn-retry') as HTMLButtonElement | null;
+      if (!retry) {
+        retry = document.createElement('button');
+        retry.className = 'btn btn-xs btn-primary mt-2 btn-retry';
+        retry.textContent = 'Retry';
+        statusOverlay.appendChild(retry);
+      }
+      retry.classList.remove('hidden');
+      retry.onclick = () => {
+        retry!.classList.add('hidden');
+        setItemStatus(item, 'pending');
+        processQueue();
+      };
+      statusOverlay.classList.remove('hidden');
+    }
+
+    updateUI();
+  };
+
   const updateUI = () => {
     const total = queue.length;
     const done = queue.filter((i) => i.status === 'done').length;
@@ -95,16 +179,14 @@ export default function init(payload?: SharedFilesPayload) {
     item.resultBlob = result;
     if (item.resultUrl) URL.revokeObjectURL(item.resultUrl);
     item.resultUrl = URL.createObjectURL(result);
-    item.status = 'done';
+    setItemStatus(item, 'done');
 
     const resultPreview = item.element.querySelector('.result-preview') as HTMLImageElement;
-    const statusOverlay = item.element.querySelector('.status-overlay')!;
     const originalPreview = item.element.querySelector('.original-preview') as HTMLImageElement;
 
     originalPreview.classList.add('opacity-0');
     resultPreview.classList.remove('opacity-0');
     resultPreview.src = item.resultUrl;
-    statusOverlay.classList.add('hidden');
 
     item.element.querySelector('.preview-toggle')?.classList.remove('hidden');
     item.element.querySelector('.done-badge')?.classList.remove('hidden');
@@ -118,41 +200,8 @@ export default function init(payload?: SharedFilesPayload) {
 
   const handleError = (item: ImageQueueItem, error: string) => {
     console.error('Processing error:', error);
-    item.status = 'error';
-    const statusOverlay = item.element.querySelector('.status-overlay')!;
-    const statusText = item.element.querySelector('.status-text')!;
-    const progressBar = item.element.querySelector('.item-progress') as HTMLProgressElement;
-    const spinner = item.element.querySelector('.loading') as HTMLElement | null;
-
-    const shortError =
-      error && error.length > 80 ? error.substring(0, 80) + '…' : error || 'Unknown error';
-    statusText.innerHTML = `<span class="text-error font-bold">Error</span><br/><span class="text-xs opacity-70 mt-1 block">${shortError}</span>`;
-
-    if (progressBar) progressBar.classList.add('hidden');
-    if (spinner) spinner.classList.add('hidden');
-    statusOverlay.classList.remove('hidden');
-
-    let retryBtn = statusOverlay.querySelector('.btn-retry') as HTMLButtonElement | null;
-    if (!retryBtn) {
-      retryBtn = document.createElement('button');
-      retryBtn.className = 'btn btn-xs btn-primary mt-2 btn-retry';
-      retryBtn.textContent = 'Retry';
-      statusOverlay.appendChild(retryBtn);
-    }
-    retryBtn.classList.remove('hidden');
-    retryBtn.onclick = () => {
-      retryBtn!.classList.add('hidden');
-      item.status = 'pending';
-      if (spinner) spinner.classList.remove('hidden');
-      if (progressBar) {
-        progressBar.classList.remove('hidden');
-        progressBar.value = 0;
-      }
-      statusText.textContent = 'Pending...';
-      processQueue();
-    };
-
-    updateUI();
+    const shortError = error && error.length > 80 ? error.substring(0, 80) + '…' : error || 'Unknown error';
+    setItemStatus(item, 'error', { errorMsg: shortError });
   };
 
   const processQueue = async () => {
@@ -165,9 +214,7 @@ export default function init(payload?: SharedFilesPayload) {
 
     try {
       isProcessing = true;
-      item.status = 'processing';
-      const statusText = item.element.querySelector('.status-text')!;
-      statusText.textContent = 'Starting AI model...';
+      setItemStatus(item, 'processing');
 
       const w = initWorker();
       w.postMessage({
@@ -183,8 +230,10 @@ export default function init(payload?: SharedFilesPayload) {
     }
   };
 
-  const addFilesToQueue = (files: FileList | File[]) => {
+  const addFilesToQueue = async (files: FileList | File[]) => {
     try {
+      const checks: Promise<void>[] = [];
+
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         if (!file.type.startsWith('image/')) continue;
@@ -255,19 +304,52 @@ export default function init(payload?: SharedFilesPayload) {
         };
 
         gallery.appendChild(card);
-        queue.push({
+
+        // Create the queue item but do not decide final status until we know dimensions.
+        const item: ImageQueueItem = {
           id,
           file,
           element: card,
-          status: 'pending',
+          status: 'pending', // temporary, will be updated after dimension check
           originalUrl,
           formattedSize,
           options: getProcessingOptions(),
+        };
+        queue.push(item);
+
+        // Asynchronously check image dimensions and set proper status using helper.
+        const p = new Promise<void>((resolve) => {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const w = img.width;
+              const h = img.height;
+              if (w > 512 || h > 512) {
+                // Set to 'hold' state with meta so helper can show dims
+                setItemStatus(item, 'hold', { width: w, height: h });
+              } else {
+                setItemStatus(item, 'pending');
+              }
+            } catch (e) {
+              // fallback to pending on error
+              setItemStatus(item, 'pending');
+            } finally {
+              resolve();
+            }
+          };
+          img.onerror = () => {
+            // If we can't read dimensions, proceed as pending
+            setItemStatus(item, 'pending');
+            resolve();
+          };
+          img.src = originalUrl;
         });
+        checks.push(p);
       }
 
       if (files.length > 0) {
-        // Yield to allow rendering
+        // Yield to allow rendering while we wait for dimension checks
+        await Promise.all(checks);
         setTimeout(() => {
           gallery?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 50);
