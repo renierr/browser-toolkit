@@ -3,10 +3,12 @@ import { addImageToPDFDocument } from '../../../js/mupdf-utils.ts';
 import { downloadFile } from '../../../js/file-utils.ts';
 import { showProgress, showMessage, hideProgress, yieldToUI } from '../../../js/ui.ts';
 import type { ScannedPage } from '../types';
+import { openInTool } from '../../../js/tool-chooser.ts';
 
-export async function generateAndDownloadPDF(
+export async function generateAndDownloadOrSharePDF(
   pages: ScannedPage[],
-  getRenderedCanvas: (page: ScannedPage) => Promise<HTMLCanvasElement>
+  getRenderedCanvas: (page: ScannedPage) => Promise<HTMLCanvasElement>,
+  share: boolean = false
 ) {
   if (pages.length === 0) return;
 
@@ -34,9 +36,13 @@ export async function generateAndDownloadPDF(
     }
 
     const pdfBytes = pdfDoc.saveToBuffer('compress,compress-images,garbage');
-    await downloadFile(pdfBytes.asUint8Array(), `scanned-doc-${Date.now()}.pdf`, 'application/pdf');
+    if (share) {
+      await openInTool(pdfBytes.asUint8Array(), { filename: `scanned-doc-${Date.now()}.pdf`, mimeType: 'application/pdf'});
+    } else {
+      await downloadFile(pdfBytes.asUint8Array(), `scanned-doc-${Date.now()}.pdf`, 'application/pdf');
+      showMessage('PDF created successfully!', { type: 'info', timeoutMs: 5000 });
+    }
 
-    showMessage('PDF created successfully!', { type: 'info', timeoutMs: 5000 });
   } catch (error) {
     console.error('Failed to generate PDF', error);
     showMessage('Failed to generate PDF.', { type: 'alert' });

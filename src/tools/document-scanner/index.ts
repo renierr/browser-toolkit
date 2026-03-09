@@ -20,7 +20,7 @@ import {
   resetUiState,
 } from './utils/ui';
 import { startLevelSensor } from './utils/sensors';
-import { generateAndDownloadPDF } from './utils/pdf';
+import { generateAndDownloadOrSharePDF } from './utils/pdf';
 import { sourceToCanvas, imageToBlob, imageFromBlob, rotateCanvas } from './utils/canvas';
 import type { FilterType, ScannedPage } from './types';
 import { createScannerState } from './utils/state';
@@ -40,6 +40,7 @@ export default function init(payload?: SharedFilesPayload) {
   const video = document.getElementById('video') as HTMLVideoElement;
   const btnStartScan = document.getElementById('btn-start-scan')!;
   const btnStopScan = document.getElementById('btn-stop-scan')!;
+  const btnSharePdf = document.getElementById('btn-share-pdf')!;
   const cameraView = document.getElementById('camera-view')!;
   const captureContainer = document.getElementById('capture-container')!;
   const cameraControls = document.getElementById('camera-controls-sticky')!;
@@ -672,7 +673,11 @@ export default function init(payload?: SharedFilesPayload) {
   }
 
   btnDownloadPdf.addEventListener('click', () =>
-    generateAndDownloadPDF(state.getPages(), getRenderedCanvas)
+    generateAndDownloadOrSharePDF(state.getPages(), getRenderedCanvas)
+  );
+
+  btnSharePdf.addEventListener('click', () =>
+    generateAndDownloadOrSharePDF(state.getPages(), getRenderedCanvas, true)
   );
 
   btnDownload.addEventListener('click', async () => {
