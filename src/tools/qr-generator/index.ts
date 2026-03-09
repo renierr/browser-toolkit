@@ -13,6 +13,7 @@ export default function init() {
   const outputContainer = document.getElementById('qr-output-container');
   const downloadBtn = document.getElementById('download-qr') as HTMLButtonElement;
   const copyBtn = document.getElementById('copy-qr') as HTMLButtonElement;
+  const shareBtn = document.getElementById('share-qr') as HTMLButtonElement;
 
   const generateQR = async () => {
     const text = contentInput.value.trim();
@@ -20,6 +21,7 @@ export default function init() {
       outputContainer?.classList.add('hidden');
       downloadBtn?.classList.add('hidden');
       copyBtn?.classList.add('hidden');
+      shareBtn?.classList.add('hidden');
       return;
     }
 
@@ -35,6 +37,7 @@ export default function init() {
       outputContainer?.classList.remove('hidden');
       downloadBtn?.classList.remove('hidden');
       copyBtn?.classList.remove('hidden');
+      shareBtn?.classList.remove('hidden');
     } catch (err) {
       console.error('QR Generation failed', err);
     }
@@ -62,6 +65,15 @@ export default function init() {
       }, 2000);
     } catch (err) {
       showMessage('Failed to copy image', { type: 'alert' });
+    }
+  });
+
+  shareBtn.addEventListener('click', async () => {
+    try {
+      await CanvasExporter.share(canvas, 'qrcode', 'png');
+    } catch (err) {
+      console.error('Share failed', err);
+      showMessage('Failed to share image', { type: 'alert' });
     }
   });
 

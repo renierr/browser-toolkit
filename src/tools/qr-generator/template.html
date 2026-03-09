@@ -12,28 +12,28 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="form-control w-full">
-        <label class="label">
+        <label class="label" for="qr-size">
           <span class="label-text font-semibold">Size (px)</span>
         </label>
-        <input id="qr-size" type="number" value="300" min="100" max="1000" step="10" class="input input-bordered w-full" />
+        <input id="qr-size" data-setting="qr-size" type="number" value="300" min="100" max="1000" step="10" class="input input-bordered w-full" />
       </div>
       <div class="form-control w-full">
-        <label class="label">
+        <label class="label" for="qr-margin">
           <span class="label-text font-semibold">Margin</span>
         </label>
-        <input id="qr-margin" type="number" value="4" min="0" max="10" class="input input-bordered w-full" />
+        <input id="qr-margin" data-setting="qr-margin" type="number" value="4" min="0" max="10" class="input input-bordered w-full" />
       </div>
       <div class="form-control w-full">
-        <label class="label">
+        <label class="label" for="qr-color-dark">
           <span class="label-text font-semibold">Dark Color</span>
         </label>
-        <input id="qr-color-dark" type="color" value="#000000" class="input input-bordered w-full h-12 p-1" />
+        <input id="qr-color-dark" data-setting="qr-color-dark" type="color" value="#000000" class="input input-bordered w-full h-12 p-1" />
       </div>
       <div class="form-control w-full">
-        <label class="label">
+        <label class="label" for="qr-color-light">
           <span class="label-text font-semibold">Light Color</span>
         </label>
-        <input id="qr-color-light" type="color" value="#ffffff" class="input input-bordered w-full h-12 p-1" />
+        <input id="qr-color-light" data-setting="qr-color-light" type="color" value="#ffffff" class="input input-bordered w-full h-12 p-1" />
       </div>
     </div>
 
@@ -41,6 +41,10 @@
       <button id="copy-qr" class="btn btn-outline hidden">
         <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
         Copy to Clipboard
+      </button>
+      <button id="share-qr" class="btn btn-outline hidden">
+        <i data-lucide="share2" class="w-4 h-4 mr-2"></i>
+        Share
       </button>
       <button id="download-qr" class="btn btn-primary hidden">
         <i data-lucide="download" class="w-4 h-4 mr-2"></i>
