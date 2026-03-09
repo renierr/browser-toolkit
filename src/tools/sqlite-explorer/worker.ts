@@ -3,6 +3,7 @@ import type { Database, SqlJsStatic } from 'sql.js';
 
 export type WorkerRequest =
   | { type: 'LOAD_DB'; payload: { buffer: Uint8Array } }
+  | { type: 'CLOSE_DB' }
   | { type: 'GET_TABLES' }
   | { type: 'GET_SCHEMA'; payload: { table: string } }
   | { type: 'GET_DATA'; payload: { table: string; limit: number; offset: number } }
@@ -10,6 +11,7 @@ export type WorkerRequest =
 
 export type WorkerResponse =
   | { type: 'LOAD_DB_SUCCESS' }
+  | { type: 'CLOSE_DB_SUCCESS' }
   | { type: 'GET_TABLES_SUCCESS'; payload: { tables: string[] } }
   | { type: 'GET_SCHEMA_SUCCESS'; payload: { table: string; schema: any[] } }
   | {
@@ -50,6 +52,15 @@ self.onmessage = async (e: MessageEvent<{ wasmUrl?: string; req?: WorkerRequest 
         }
         db = new SQL.Database(req.payload.buffer);
         self.postMessage({ type: 'LOAD_DB_SUCCESS' });
+        break;
+      }
+
+      case 'CLOSE_DB': {
+        if (db) {
+          db.close();
+          db = null;
+        }
+        self.postMessage({ type: 'CLOSE_DB_SUCCESS' });
         break;
       }
 
