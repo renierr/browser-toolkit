@@ -131,7 +131,7 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
 
   const cardContent = compact
     ? html`
-        <div class="card-body p-1">
+        <div class="card-body p-1 ps-2">
           <div class="flex items-center gap-3">
             <div class="shrink-0">${renderToolIconSvg(tool.icon, 'w-5 h-5')}</div>
             <div class="flex-1 min-w-0">
@@ -164,7 +164,7 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
       <a
         href="#${tool.path}"
         aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
-        class="card card-compact bg-base-100 rounded-xl shadow hover:shadow-xl transition-all border-l-4 ${tool.draft
+        class="card card-compact bg-base-100 rounded-xl shadow shadow-black/50 dark:shadow-white/50 hover:shadow-md transition-all border-l-2 ${tool.draft
       ? 'border-l-yellow-400'
       : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
         ? 'focus:ring-yellow-300'
