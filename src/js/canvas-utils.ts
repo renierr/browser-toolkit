@@ -1,6 +1,7 @@
 import { hideProgress, showProgress } from './ui.ts';
 import { downloadFile } from './file-utils.ts';
 import { copyImageBlobToClipboard, offscreenCanvasToBlob } from './image-utils.ts';
+import { openInTool } from './tool-chooser.ts';
 
 type ImageFormat = 'jpg' | 'webp' | 'png';
 
@@ -61,4 +62,36 @@ export class CanvasExporter {
       hideProgress();
     }
   }
+
+  static async share(
+    canvas: HTMLCanvasElement,
+    filename: string = 'canvas_image',
+    format: ImageFormat = 'png',
+    quality: number = 0.92
+  ): Promise<void> {
+    showProgress(`Preparing ${format.toUpperCase()} sharing...`);
+
+    try {
+      const mimeType = this.MIME_MAP[format];
+
+      return await new Promise((resolve, reject) => {
+        canvas.toBlob(
+          async (blob) => {
+            if (!blob) return reject(new Error('Failed to create blob'));
+            try {
+              await openInTool(blob, { filename: `${filename}.${format}`, mimeType: mimeType });
+              resolve();
+            } catch (err) {
+              reject(err);
+            }
+          },
+          mimeType,
+          quality
+        );
+      });
+    } finally {
+      hideProgress();
+    }
+  }
+
 }

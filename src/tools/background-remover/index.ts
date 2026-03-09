@@ -20,6 +20,7 @@ import {
   getOutputFilename,
   MODELS,
 } from './utils';
+import { openInTool } from '../../js/tool-chooser';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -38,6 +39,7 @@ export default function init(payload?: SharedFilesPayload) {
   const modalFilename = document.getElementById('modal-filename')!;
   const modalDownload = document.getElementById('modal-download') as HTMLButtonElement;
   const modalCopy = document.getElementById('modal-copy') as HTMLButtonElement;
+  const modalShare = document.getElementById('modal-share') as HTMLButtonElement;
 
   const modalThresholdSlider = previewModal.querySelector(
     '.modal-threshold-slider'
@@ -355,6 +357,7 @@ export default function init(payload?: SharedFilesPayload) {
     item.element.querySelector('.btn-preview-full')?.classList.remove('hidden');
     item.element.querySelector('.btn-download-item')?.classList.remove('hidden');
     item.element.querySelector('.btn-copy-item')?.classList.remove('hidden');
+    item.element.querySelector('.btn-share-item')?.classList.remove('hidden');
     item.element.querySelector('.btn-toggle-adjust')?.classList.remove('hidden');
     item.element.querySelector('.btn-settings-item')?.classList.remove('hidden');
     item.element.querySelector('.btn-compare-processed')?.classList.add('btn-primary');
@@ -611,6 +614,24 @@ export default function init(payload?: SharedFilesPayload) {
           if (item?.resultBlob) await copyBlobToClipboard(item.resultBlob);
         };
 
+        const btnShare = container.querySelector('.btn-share-item') as HTMLButtonElement;
+        btnShare.onclick = async () => {
+          const item = queue.find((it) => it.id === id);
+          if (!item?.resultBlob) return;
+          try {
+            // Convert to currently selected format to match downloads/settings
+            const format = getSelectedFormat();
+            const quality = getWebpQuality();
+            const outputBlob = await convertBlobToFormat(item.resultBlob, format, quality);
+            const mime = format === 'webp' ? 'image/webp' : format === 'png' ? 'image/png' : 'image/jpeg';
+            const filename = getOutputFilename(file.name, format);
+            await openInTool(outputBlob, { filename, mimeType: mime });
+          } catch (err) {
+            console.error('Share failed:', err);
+            showMessage('Failed to share image.', { type: 'alert' });
+          }
+        };
+
         const btnPreviewFull = container.querySelector('.btn-preview-full') as HTMLButtonElement;
         btnPreviewFull.onclick = () => {
           const item = queue.find((it) => it.id === id);
@@ -642,6 +663,10 @@ export default function init(payload?: SharedFilesPayload) {
 
             modalDownload.onclick = () => btnDownload.click();
             modalCopy.onclick = () => btnCopy.click();
+            modalShare.onclick = () => {
+              previewModal.close();
+              btnShare.click();
+            }
             previewModal.showModal();
           }
         };

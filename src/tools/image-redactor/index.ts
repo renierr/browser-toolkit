@@ -27,6 +27,7 @@ export default function init(payload?: SharedFilesPayload) {
     btnCancelCrop: document.getElementById('btn-cancel-crop')!,
     btnReset: document.getElementById('btn-reset')!,
     btnDownload: document.getElementById('btn-download')!,
+    btnShare: document.getElementById('btn-share') as HTMLButtonElement,
     cropToolBtn: document.getElementById('btn-tool-crop')!,
     pasteBtn: document.getElementById('paste-btn')!,
     btnCopyClipboard: document.getElementById('btn-copy-clipboard')!,
@@ -506,6 +507,18 @@ export default function init(payload?: SharedFilesPayload) {
       console.log('Copied to clipboard');
     } catch (err) {
       showMessage('Failed to copy image to clipboard', { type: 'alert' });
+    }
+  });
+
+  elements.btnShare.addEventListener('click', async () => {
+    try {
+      const format = elements.exportFormat.value;
+      const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png';
+      const quality = format === 'image/png' ? undefined : EXPORT_QUALITY;
+      await CanvasExporter.share(elements.canvas, downloadFilename, ext, quality);
+    } catch (err) {
+      console.error('Share failed:', err);
+      showMessage('Failed to share image.', { type: 'alert' });
     }
   });
 

@@ -9,6 +9,7 @@ import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target';
 import UpscalerWorker from './worker?worker';
 import { getProcessingOptions, type ImageQueueItem } from './utils.ts';
+import { openInTool } from '../../js/tool-chooser';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {
@@ -302,6 +303,18 @@ export default function init(payload?: SharedFilesPayload) {
             await navigator.clipboard.write([new ClipboardItem({ 'image/png': pngBlob })]);
           }
         };
+
+        const btnShare = card.querySelector('.btn-share-item') as HTMLButtonElement | null;
+        if (btnShare) {
+          btnShare.onclick = async () => {
+            const item = queue.find((it) => it.id === id);
+            if (item?.resultBlob) {
+              // Use openInTool to share as an image
+              const filename = getOutputFilename(file.name);
+              await openInTool(item.resultBlob, { filename, mimeType: 'image/png' });
+            }
+          };
+        }
 
         gallery.appendChild(card);
 
