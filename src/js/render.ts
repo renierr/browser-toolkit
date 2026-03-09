@@ -118,13 +118,13 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
     favoriteBtn = html`
       <button
         data-favorite="${tool.path}"
-        class="absolute top-2 right-1 leading-0 rounded-full bg-card/50 hover:bg-card text-heading transition-all z-2 focus:opacity-100 focus:ring-2 focus:ring-primary outline-none ${active
+        class="absolute cursor-pointer top-2 right-1 leading-0 rounded-full bg-card/50 hover:bg-card text-heading transition-all z-2 focus:opacity-100 focus:ring-2 focus:ring-primary outline-none ${active
         ? 'text-yellow-500 opacity-100'
         : 'text-muted opacity-100'}"
         aria-label="${active ? 'Remove from favorites' : 'Add to favorites'}"
         title="${active ? 'Remove from favorites' : 'Add to favorites'}"
       >
-        <i data-lucide="star" class="w-4 h-4 drop-shadow-blue-400 dark:drop-shadow-blue-100 drop-shadow-xs ${active ? 'fill-current' : ''}"></i>
+        <i data-lucide="star" class="w-4 h-4 ${active ? 'fill-current' : ''}"></i>
       </button>
     `;
   }
