@@ -43,7 +43,7 @@ export function renderDataTable(columns: string[], rows: any[][], totalCount: nu
   } else {
     UI.dataTableHead.innerHTML = html`<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
     UI.dataTableBody.innerHTML = rows.map(row => 
-      html`<tr>${row.map(cell => `<td class="max-w-[200px] md:max-w-xs break-all whitespace-normal" title="${cell ?? ''}">${cell ?? '<em class="text-base-content/30">NULL</em>'}</td>`).join('')}</tr>`
+      html`<tr>${row.map(cell => `<td class="max-w-[200px] md:max-w-xs truncate" title="${cell ?? ''}">${cell ?? '<em class="text-base-content/30">NULL</em>'}</td>`).join('')}</tr>`
     ).join('');
   }
 
@@ -72,7 +72,7 @@ export function renderCustomQueryResult(columns: string[], rows: any[][]) {
   } else {
     UI.queryResultsHead.innerHTML = html`<tr>${columns.map(c => `<th>${c}</th>`).join('')}</tr>`;
     UI.queryResultsBody.innerHTML = rows.map(row => 
-      html`<tr>${row.map(cell => `<td class="max-w-[200px] md:max-w-sm break-all whitespace-normal" title="${cell ?? ''}">${cell ?? '<em class="text-base-content/30">NULL</em>'}</td>`).join('')}</tr>`
+      html`<tr>${row.map(cell => `<td class="max-w-[200px] md:max-w-sm truncate" title="${cell ?? ''}">${cell ?? '<em class="text-base-content/30">NULL</em>'}</td>`).join('')}</tr>`
     ).join('');
   }
 }

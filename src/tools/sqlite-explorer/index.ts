@@ -208,8 +208,14 @@ function handleWorkerMessage(data: any) {
 function setupUIEventListeners() {
   UI.closeDbBtn.addEventListener('click', closeDatabase);
 
-  UI.toggleSidebarBtn.addEventListener('click', () => {
-    UI.sidebar.classList.toggle('hidden');
+  UI.toggleSidebarBtnHide.addEventListener('click', () => {
+    UI.sidebar.classList.add('hidden');
+    UI.toggleSidebarBtnShow.classList.remove('hidden');
+  });
+
+  UI.toggleSidebarBtnShow.addEventListener('click', () => {
+    UI.sidebar.classList.remove('hidden');
+    UI.toggleSidebarBtnShow.classList.add('hidden');
   });
 
   UI.mainTabs.querySelectorAll('.tab').forEach(btn => {

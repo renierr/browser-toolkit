@@ -6,7 +6,8 @@ export interface DOMEls {
   dbFilename: HTMLElement;
   dbFilesize: HTMLElement;
   closeDbBtn: HTMLButtonElement;
-  toggleSidebarBtn: HTMLButtonElement;
+  toggleSidebarBtnShow: HTMLButtonElement;
+  toggleSidebarBtnHide: HTMLButtonElement;
   sidebar: HTMLElement;
   
   tableCount: HTMLElement;
@@ -57,7 +58,8 @@ export function initDOM(containerId: string): boolean {
     dbFilename: document.getElementById('db-filename')!,
     dbFilesize: document.getElementById('db-filesize')!,
     closeDbBtn: document.getElementById('close-db-btn') as HTMLButtonElement,
-    toggleSidebarBtn: document.getElementById('toggle-sidebar-btn') as HTMLButtonElement,
+    toggleSidebarBtnShow: document.getElementById('toggle-sidebar-btn-show') as HTMLButtonElement,
+    toggleSidebarBtnHide: document.getElementById('toggle-sidebar-btn-hide') as HTMLButtonElement,
     sidebar: document.getElementById('sidebar')!,
     
     tableCount: document.getElementById('table-count')!,
