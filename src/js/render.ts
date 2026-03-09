@@ -118,7 +118,7 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
     favoriteBtn = html`
       <button
         data-favorite="${tool.path}"
-        class="absolute top-1 right-1 p-2 rounded-full bg-card/50 hover:bg-card text-heading transition-all z-2 focus:opacity-100 focus:ring-2 focus:ring-primary outline-none ${active
+        class="absolute top-2 right-1 leading-0 rounded-full bg-card/50 hover:bg-card text-heading transition-all z-2 focus:opacity-100 focus:ring-2 focus:ring-primary outline-none ${active
         ? 'text-yellow-500 opacity-100'
         : 'text-muted opacity-100'}"
         aria-label="${active ? 'Remove from favorites' : 'Add to favorites'}"
@@ -131,11 +131,13 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
 
   const cardContent = compact
     ? html`
-        <div class="card-body p-3">
+        <div class="card-body p-1">
           <div class="flex items-center gap-3">
             <div class="shrink-0">${renderToolIconSvg(tool.icon, 'w-5 h-5')}</div>
             <div class="flex-1 min-w-0">
-              <h3 class="text-base font-bold text-heading truncate">${tool.name}</h3>
+              <h3 class="whitespace-normal text-base font-bold text-heading truncate">
+                ${tool.name}
+              </h3>
             </div>
             ${badge}
           </div>
@@ -147,8 +149,10 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
             <div class="shrink-0">${renderToolIconSvg(tool.icon, 'w-6 h-6')}</div>
 
             <div class="flex-1 min-w-0 text-center sm:text-left">
-              <h3 class="text-xl font-bold text-heading truncate">${tool.name}</h3>
-              <p class="text-muted mt-2 text-sm">${tool.description}</p>
+              <h3 class="text-xl whitespace-normal font-bold text-heading truncate">
+                ${tool.name}
+              </h3>
+              <p class="whitespace-normal text-muted mt-2 text-sm">${tool.description}</p>
             </div>
             ${badge}
           </div>
