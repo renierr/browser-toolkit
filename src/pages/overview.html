@@ -2,13 +2,23 @@
   <p id="header-description" class="mb-2">{{ config.description }}</p>
 
   <div class="flex gap-2 mb-8">
-    <input
-      type="text"
-      id="search"
-      placeholder="Search tools..."
-      class="input input-bordered flex-1 min-w-0"
-      aria-label="Tool search"
-    />
+    <div class="relative flex-1 min-w-0">
+      <input
+        type="text"
+        id="search"
+        placeholder="Search tools..."
+        class="input input-bordered w-full pr-10"
+        aria-label="Tool search"
+      />
+      <button
+        id="clear-search"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content hidden"
+        aria-label="Clear search"
+        title="Clear search"
+      >
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
     <div class="dropdown dropdown-end">
       <label tabindex="0" class="btn btn-square btn-ghost" aria-label="Settings">
         <i data-lucide="settings" class="w-6 h-6"></i>

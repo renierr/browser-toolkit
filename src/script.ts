@@ -91,6 +91,7 @@ function renderOverview() {
 
   const grid = document.getElementById('tools-grid')!;
   const searchInput = document.getElementById('search') as HTMLInputElement;
+  const clearBtn = document.getElementById('clear-search') as HTMLButtonElement | null;
   const settings = getSettings('overview');
 
   // Bind settings (compact mode toggle)
@@ -105,6 +106,7 @@ function renderOverview() {
 
   function filterAndRender() {
     const term = searchInput.value.trim();
+    if (clearBtn) clearBtn.classList.toggle('hidden', term.length === 0);
     const compactMode = settings.get('compactMode', false);
     let filtered = tools;
 
@@ -271,6 +273,13 @@ function renderOverview() {
   }
 
   searchInput?.addEventListener('input', filterAndRender);
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      filterAndRender();
+      searchInput.focus();
+    });
+  }
   filterAndRender();
 }
 
