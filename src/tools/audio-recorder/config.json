@@ -3,8 +3,5 @@
   "description": "Record audio, visualize waveforms, and save as WebM.",
   "icon": "mic",
   "sectionId": "media",
-  "order": 6,
-  "shareTarget": {
-    "accept": ["audio/*"]
-  }
+  "order": 6
 }

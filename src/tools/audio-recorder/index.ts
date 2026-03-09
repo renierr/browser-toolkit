@@ -1,4 +1,6 @@
 import { AudioRecorder } from './audio-utils';
+import { openInTool } from '../../js/tool-chooser.ts';
+import { showMessage } from '../../js/ui.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -77,7 +79,7 @@ export default function init() {
       ctx.strokeStyle = '#ef4444'; // Red color (Tailwind red-500)
       ctx.beginPath();
 
-      const sliceWidth = (canvas.width * 1.0) / bufferLength;
+      const sliceWidth = (canvas.width) / bufferLength;
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {
@@ -144,6 +146,32 @@ export default function init() {
         noRecordingsMsg.classList.remove('hidden');
       }
     });
+
+    // Share / Open in tool handler
+    const shareBtn = document.createElement('button');
+    shareBtn.className = 'btn btn-ghost btn-xs btn-square';
+    shareBtn.title = 'Open in tool';
+    shareBtn.innerHTML = `<i data-lucide="share-2" class="w-4 h-4"></i>`;
+
+    shareBtn.addEventListener('click', async () => {
+      try {
+        // Fetch the blob from the object URL and open in tool
+        const resp = await fetch(url);
+        const blob = await resp.blob();
+        const filename = `recording-${date.getTime()}.webm`;
+        const file = new File([blob], filename, { type: blob.type || 'audio/webm' });
+        await openInTool(file, { filename, mimeType: file.type });
+      } catch (err) {
+        console.error('Failed to open recording in tool:', err);
+        showMessage('Could not open recording in another tool.', { type: 'warning' });
+      }
+    });
+
+    // Insert share button into the controls area (after download, before delete)
+    const controls = item.querySelector('.flex.items-center.gap-1.shrink-0');
+    if (controls) {
+      controls.insertBefore(shareBtn, controls.querySelector('.btn-delete') || null);
+    }
 
     recordingsList.insertBefore(item, recordingsList.firstElementChild?.nextElementSibling || null);
   };
