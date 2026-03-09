@@ -164,7 +164,7 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
       <a
         href="#${tool.path}"
         aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
-        class="card card-compact bg-base-100 rounded-xl shadow shadow-black/50 dark:shadow-white/50 hover:shadow-md transition-all border-l-2 ${tool.draft
+        class="card card-compact hover:bg-base-200 bg-base-100 rounded-xl shadow shadow-black/50 dark:shadow-white/50 hover:shadow-md transition-all border-l-2 ${tool.draft
       ? 'border-l-yellow-400'
       : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
         ? 'focus:ring-yellow-300'
