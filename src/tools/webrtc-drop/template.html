@@ -58,17 +58,30 @@
             </div>
             <div class="p-6 flex flex-col items-center gap-6">
                 <!-- QR Output -->
-                <div id="qr-output-container" class="hidden flex flex-col items-center gap-3">
-                    <canvas id="qr-canvas-output" class="bg-white p-2 rounded-lg shadow-inner"></canvas>
-                    <p class="text-xs opacity-60 text-center">Ask the other peer to scan this QR code</p>
+                <div id="qr-output-container" class="hidden flex flex-col items-center gap-1 w-full max-w-[min(90vw,35vh,260px)] mx-auto overflow-hidden">
+                    <div class="bg-white p-1 rounded-lg shadow-inner w-full aspect-square flex items-center justify-center overflow-hidden">
+                        <canvas id="qr-canvas-output" class="max-w-full max-h-full object-contain block"></canvas>
+                    </div>
+                    <p class="text-[10px] font-bold text-primary text-center leading-tight mb-1" id="qr-instruction">Follow the steps below</p>
+                    <button id="host-scan-answer-btn" class="btn btn-primary btn-xs btn-block hidden py-2 h-auto">
+                        <i data-lucide="camera" class="w-3 h-3 mr-1"></i> I've Shared! Now Scan their Answer
+                    </button>
                 </div>
 
                 <!-- Scanner -->
-                <div id="scanner-container" class="hidden w-full max-w-sm rounded-xl overflow-hidden relative bg-black shadow-lg">
+                <div id="scanner-container" class="hidden w-full max-w-sm rounded-xl overflow-hidden relative bg-black shadow-lg aspect-video">
                     <video id="qr-video" class="w-full h-full object-cover"></video>
                     <canvas id="qr-canvas" class="hidden"></canvas>
-                    <div class="absolute inset-0 border-2 border-primary/50 opacity-50 pointer-events-none m-8 rounded-lg"></div>
-                    <div class="absolute bottom-4 left-0 right-0 text-center text-white text-[10px] bg-black/40 py-1">Scanning for QR...</div>
+                    <div class="absolute inset-0 flex items-center justify-center bg-black/60 group" id="scan-overlay">
+                        <button id="start-scan-btn" class="btn btn-primary btn-sm">
+                            <i data-lucide="camera" class="w-4 h-4 mr-2"></i> Start Camera Scan
+                        </button>
+                    </div>
+                    <div class="absolute inset-x-0 top-0 p-4 flex justify-center hidden" id="quick-connect-overlay">
+                        <button id="quick-connect-btn" class="btn btn-accent btn-sm shadow-lg animate-bounce">
+                            <i data-lucide="zap" class="w-4 h-4 mr-2"></i> Quick Connect to <span id="discovered-peer-name">?</span>
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Manual Fallback -->
@@ -79,7 +92,7 @@
                         Manual Handshake (Base64)
                     </div>
                     <div class="collapse-content space-y-3">
-                        <p class="text-[10px] opacity-60">Use this if QR scanning fails. Share the code via any chat.</p>
+                        <p class="text-[10px] opacity-60">1. Host copies Offer. 2. Joiner pastes Offer. 3. Joiner copies Answer. 4. Host pastes Answer.</p>
                         <div class="flex gap-2">
                             <textarea id="sdp-text" class="textarea textarea-bordered flex-1 h-20 text-[10px] font-mono" placeholder="Paste handshake code here..."></textarea>
                             <div class="flex flex-col gap-2">
@@ -116,6 +129,17 @@
             <p class="font-medium text-lg">Send a file</p>
             <p class="text-xs opacity-50 mt-1">Files are transferred directly P2P offline</p>
             <input type="file" id="file-input" class="hidden" />
+        </div>
+
+        <!-- Transfer History -->
+        <div class="card bg-base-100 border border-base-300 shadow-sm mt-6">
+            <div class="card-body p-4">
+                <h3 class="card-title text-sm uppercase opacity-50 mb-4">Transfer History</h3>
+                <div id="transfer-history-list" class="space-y-2">
+                    <!-- History items will be injected here -->
+                    <div id="no-history-msg" class="text-xs opacity-40 italic py-4 text-center">No transfers yet.</div>
+                </div>
+            </div>
         </div>
     </div>
 
