@@ -19,6 +19,51 @@ function generateName() {
     return name;
 }
 
+// --- SDP Compression ---
+// We only need: ufrag, pwd, fingerprints, and candidates for DataChannel.
+function compressSDP(sdp: string): string {
+    const lines = sdp.split('\n');
+    const data: any = { c: [] };
+    lines.forEach(l => {
+        if (l.startsWith('a=ice-ufrag:')) data.u = l.split(':')[1].trim();
+        else if (l.startsWith('a=ice-pwd:')) data.p = l.split(':')[1].trim();
+        else if (l.startsWith('a=fingerprint:sha-256 ')) data.f = l.split('sha-256 ')[1].trim();
+        else if (l.startsWith('a=candidate:')) {
+            const parts = l.split(' ');
+            if (parts[7] === 'host') { // Only LAN candidates to keep it small
+                data.c.push(`${parts[4]}:${parts[5]}`);
+            }
+        }
+    });
+    return btoa(JSON.stringify(data));
+}
+
+function decompressSDP(compressed: string, isOffer: boolean): string {
+    const data = JSON.parse(atob(compressed));
+    const fingerprint = data.f;
+    const candidates = data.c.map((c: string) => {
+        const [ip, port] = c.split(':');
+        return `a=candidate:1 1 udp 1 ${ip} ${port} typ host`;
+    }).join('\n');
+
+    return [
+        'v=0',
+        'o=- 0 0 IN IP4 127.0.0.1',
+        's=-',
+        't=0 0',
+        'a=msid-semantic: WMS',
+        `m=application 9 UDP/DTLS/SCTP webrtc-datachannel`,
+        'c=IN IP4 0.0.0.0',
+        `a=ice-ufrag:${data.u}`,
+        `a=ice-pwd:${data.p}`,
+        `a=fingerprint:sha-256 ${fingerprint}`,
+        `a=setup:${isOffer ? 'actpass' : 'active'}`,
+        'a=mid:0',
+        'a=sctp-port:5000',
+        candidates
+    ].join('\n');
+}
+
 export default async function init() {
     const selfName = generateName();
     let pc: RTCPeerConnection | null = null;
@@ -43,6 +88,9 @@ export default async function init() {
     const qrVideo = document.getElementById('qr-video') as HTMLVideoElement;
     const sdpText = document.getElementById('sdp-text') as HTMLTextAreaElement;
     const sdpActionBtn = document.getElementById('sdp-action-btn')!;
+    const copySdpBtn = document.getElementById('copy-sdp-btn')!;
+    const pasteSdpBtn = document.getElementById('paste-sdp-btn')!;
+    const quickStatus = document.getElementById('quick-status')!;
     const remotePeerNameEl = document.getElementById('remote-peer-name')!;
     const disconnectBtn = document.getElementById('disconnect-btn')!;
 
@@ -56,6 +104,22 @@ export default async function init() {
 
     selfNameEl.textContent = selfName;
     selfInitialsEl.textContent = selfName.split(' ').map(n => n[0]).join('').substring(0, 2);
+
+    // --- BroadcastChannel for Quick Connect (Same Machine/Browser) ---
+    const bc = new BroadcastChannel('btk-webrtc-drop');
+    bc.onmessage = (ev) => {
+        if (pc?.iceConnectionState === 'connected') return;
+        const msg = ev.data;
+        if (msg.type === 'offer' && !pc) {
+            // We are potential joiners
+            quickStatus.classList.remove('hidden');
+            quickStatus.textContent = `Quick Connect found: ${msg.name}`;
+            // If user clicks Join, they can use this offer
+            localStorage.setItem('btk-last-offer', msg.sdp);
+        } else if (msg.type === 'answer' && pc?.signalingState === 'have-local-offer') {
+             processSDP(msg.sdp);
+        }
+    };
 
     // --- Handshake Logic ---
 
@@ -115,8 +179,17 @@ export default async function init() {
         }
 
         const sdp = pc.localDescription?.sdp || '';
-        showQR(sdp);
-        stepTitle.textContent = isHost ? "Step 1: Show this QR to Peer" : "Step 2: Show this Answer QR to Peer";
+        const compressed = compressSDP(sdp);
+        showQR(compressed);
+        
+        // Broadcast for quick connect
+        bc.postMessage({
+            type: isHost ? 'offer' : 'answer',
+            name: selfName,
+            sdp: compressed
+        });
+
+        stepTitle.textContent = isHost ? "Step 1: Show this QR or Copy Handshake" : "Step 2: Show Answer QR or Copy Handshake";
     }
 
     function showQR(text: string) {
@@ -137,6 +210,9 @@ export default async function init() {
             return;
         }
 
+        let lastScanTime = 0;
+        const SCAN_INTERVAL = 150;
+
         if (!worker) {
             worker = new ScanWorker();
             worker.onmessage = (e) => {
@@ -147,10 +223,17 @@ export default async function init() {
             };
         }
 
-        const scan = async () => {
+        const scan = async (time: number) => {
             if (!stream) return;
-            const bitmap = await createImageBitmap(qrVideo);
-            worker?.postMessage({ type: 'scan-image', id: Date.now(), bitmap }, [bitmap]);
+            if (time - lastScanTime >= SCAN_INTERVAL) {
+                lastScanTime = time;
+                try {
+                    const bitmap = await createImageBitmap(qrVideo);
+                    worker?.postMessage({ type: 'scan-image', id: Date.now(), bitmap }, [bitmap]);
+                } catch (e) {
+                    // Ignore transient errors
+                }
+            }
             requestAnimationFrame(scan);
         };
         requestAnimationFrame(scan);
@@ -164,13 +247,14 @@ export default async function init() {
     async function processSDP(data: string) {
         if (!pc) return;
         try {
-            if (pc.signalingState === 'stable') {
-                // We got an offer
-                await pc.setRemoteDescription({ type: 'offer', sdp: data });
+            const isOffer = pc.signalingState === 'stable';
+            const sdp = data.length > 500 ? data : decompressSDP(data, isOffer);
+            
+            if (isOffer) {
+                await pc.setRemoteDescription({ type: 'offer', sdp });
                 generateHandshake(false);
             } else {
-                // We got an answer
-                await pc.setRemoteDescription({ type: 'answer', sdp: data });
+                await pc.setRemoteDescription({ type: 'answer', sdp });
             }
         } catch (e) {
             console.error('SDP Error:', e);
@@ -191,11 +275,32 @@ export default async function init() {
         setupView.classList.add('hidden');
         handshakeView.classList.remove('hidden');
         await createPeer(false);
+
+        // Check for Quick Connect (Same Machine)
+        const lastOffer = localStorage.getItem('btk-last-offer');
+        if (lastOffer) {
+            localStorage.removeItem('btk-last-offer');
+            processSDP(lastOffer);
+            stepTitle.textContent = "Quick Connecting...";
+            return;
+        }
+
         startScanning("Step 1: Scan Host's Offer QR");
     };
 
     sdpActionBtn.onclick = () => {
-        processSDP(sdpText.value);
+        processSDP(sdpText.value.trim());
+    };
+
+    copySdpBtn.onclick = () => {
+        navigator.clipboard.writeText(sdpText.value);
+        showMessage('Handshake code copied!');
+    };
+
+    pasteSdpBtn.onclick = async () => {
+        const text = await navigator.clipboard.readText();
+        sdpText.value = text.trim();
+        processSDP(text.trim());
     };
 
     cancelHandshakeBtn.onclick = () => reset();
@@ -218,6 +323,8 @@ export default async function init() {
         setupView.classList.remove('hidden');
         handshakeView.classList.add('hidden');
         connectedView.classList.add('hidden');
+        quickStatus.classList.add('hidden');
+        localStorage.removeItem('btk-last-offer');
         statusBadge.textContent = 'Ready';
         statusBadge.className = 'badge badge-outline';
     }
@@ -328,5 +435,6 @@ export default async function init() {
     return () => {
         reset();
         worker?.terminate();
+        bc.close();
     };
 }
