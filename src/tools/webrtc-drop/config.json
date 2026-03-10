@@ -1,0 +1,7 @@
+{
+  "name": "WebRTC Drop (P2P)",
+  "description": "Send large files securely peer-to-peer using WebRTC. Finds peers on your local network automatically.",
+  "icon": "share-2",
+  "sectionId": "utilities",
+  "order": 100
+}

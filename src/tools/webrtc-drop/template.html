@@ -1,0 +1,121 @@
+<div class="tool-content p-4 space-y-6 max-w-4xl mx-auto">
+    <!-- Header/Self Info -->
+    <div class="card bg-base-200 shadow-sm border border-base-300">
+        <div class="card-body p-4 flex flex-row items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="avatar placeholder">
+                    <div class="bg-primary text-primary-content rounded-full w-12 flex items-center justify-center">
+                        <span id="self-initials" class="text-xl">?</span>
+                    </div>
+                </div>
+                <div>
+                    <h2 id="self-name" class="font-bold text-lg">Initializing...</h2>
+                    <p class="text-xs opacity-50">Local P2P File Transfer (Offline)</p>
+                </div>
+            </div>
+            <div id="status-badge" class="badge badge-outline">Ready</div>
+        </div>
+    </div>
+
+    <!-- Connection Orchestrator -->
+    <div id="setup-view" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Host Mode -->
+        <div class="card bg-base-100 border border-base-300 shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-sm uppercase opacity-50">Host Mode</h3>
+                <p class="text-xs">Create a connection to receive files or send to someone who scans you.</p>
+                <div class="card-actions mt-4">
+                    <button id="host-btn" class="btn btn-primary btn-block">
+                        <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Create Offer QR
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Join Mode -->
+        <div class="card bg-base-100 border border-base-300 shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title text-sm uppercase opacity-50">Join Mode</h3>
+                <p class="text-xs">Scan someone's Offer QR to establish a connection.</p>
+                <div class="card-actions mt-4">
+                    <button id="join-btn" class="btn btn-secondary btn-block">
+                        <i data-lucide="camera" class="w-4 h-4 mr-2"></i> Scan Offer QR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Handshake Real-time View (Shown during handshake) -->
+    <div id="handshake-view" class="hidden space-y-4">
+        <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+            <div class="bg-base-200 p-3 flex items-center justify-between">
+                <span id="handshake-step-title" class="font-bold">Step: Exchange Handshake</span>
+                <button id="cancel-handshake" class="btn btn-ghost btn-xs">Cancel</button>
+            </div>
+            <div class="p-6 flex flex-col items-center gap-6">
+                <!-- QR Output -->
+                <div id="qr-output-container" class="hidden flex flex-col items-center gap-3">
+                    <canvas id="qr-canvas-output" class="bg-white p-2 rounded-lg shadow-inner"></canvas>
+                    <p class="text-xs opacity-60 text-center">Ask the other peer to scan this QR code</p>
+                </div>
+
+                <!-- Scanner -->
+                <div id="scanner-container" class="hidden w-full max-w-sm rounded-xl overflow-hidden relative bg-black shadow-lg">
+                    <video id="qr-video" class="w-full h-full object-cover"></video>
+                    <canvas id="qr-canvas" class="hidden"></canvas>
+                    <div class="absolute inset-0 border-2 border-primary/50 opacity-50 pointer-events-none m-8 rounded-lg"></div>
+                    <div class="absolute bottom-4 left-0 right-0 text-center text-white text-[10px] bg-black/40 py-1">Scanning for QR...</div>
+                </div>
+
+                <!-- Manual Fallback -->
+                <div class="collapse collapse-arrow bg-base-200 w-full">
+                    <input type="checkbox" /> 
+                    <div class="collapse-title text-sm font-medium">Manual Copy/Paste Backup</div>
+                    <div class="collapse-content space-y-3">
+                        <textarea id="sdp-text" class="textarea textarea-bordered w-full h-24 text-[10px] font-mono" placeholder="Handshake data (SDP)"></textarea>
+                        <button id="sdp-action-btn" class="btn btn-sm btn-block">Process Data</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Connected View (Shown after handshake) -->
+    <div id="connected-view" class="hidden space-y-6">
+        <div class="alert alert-success">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+            <div>
+                <h3 class="font-bold">Connected!</h3>
+                <div class="text-xs">Peer: <span id="remote-peer-name" class="font-bold"></span></div>
+            </div>
+            <button id="disconnect-btn" class="btn btn-sm btn-ghost">Disconnect</button>
+        </div>
+
+        <div id="dropzone" class="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center cursor-pointer hover:bg-primary/5 transition-colors">
+            <div class="mb-4 text-primary opacity-70">
+                <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto"></i>
+            </div>
+            <p class="font-medium text-lg">Send a file</p>
+            <p class="text-xs opacity-50 mt-1">Files are transferred directly P2P offline</p>
+            <input type="file" id="file-input" class="hidden" />
+        </div>
+    </div>
+
+    <!-- Incoming File Modal (Same as before) -->
+    <dialog id="receive-modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg">Incoming File</h3>
+            <p class="py-4">
+                <span id="sender-name" class="font-bold"></span> wants to send you:
+                <br/>
+                <span id="incoming-filename" class="text-primary break-all"></span> 
+                (<span id="incoming-size"></span>)
+            </p>
+            <div class="modal-action">
+                <button id="reject-btn" class="btn btn-ghost">Decline</button>
+                <button id="accept-btn" class="btn btn-primary">Accept & Download</button>
+            </div>
+        </div>
+    </dialog>
+</div>

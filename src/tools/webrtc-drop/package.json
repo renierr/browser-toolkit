@@ -1,0 +1,10 @@
+{
+  "name": "webrtc-drop",
+  "version": "1.0.0",
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6"
+  }
+}

@@ -3,3 +3,9 @@ declare module '*.wasm?url' {
   const src: string;
   export default src;
 }
+declare module '*?worker' {
+  class WebWorker extends Worker {
+    constructor();
+  }
+  export default WebWorker;
+}
