@@ -23,19 +23,39 @@ function generateName() {
 // We only need: ufrag, pwd, fingerprints, and candidates for DataChannel.
 function compressSDP(sdp: string): string {
     const lines = sdp.split('\n');
-    const data: any = { c: [] };
+    const data: any = { u: '', p: '', f: '', c: [] };
+    const candidates: string[] = [];
+    
     lines.forEach(l => {
-        if (l.startsWith('a=ice-ufrag:')) data.u = l.split(':')[1].trim();
-        else if (l.startsWith('a=ice-pwd:')) data.p = l.split(':')[1].trim();
-        else if (l.startsWith('a=fingerprint:sha-256 ')) data.f = l.split('sha-256 ')[1].trim();
-        else if (l.startsWith('a=candidate:')) {
-            const parts = l.split(' ');
-            // Include both 'host' and 'srflx' (server reflexive/STUN) candidates if they exist,
-            // though we are mostly offline, some browsers might need them for LAN.
-            // But for true offline, 'host' is enough, we just need to ensure we don't filter it too aggressively.
-            data.c.push(`${parts[4]}:${parts[5]}`);
+        const line = l.trim();
+        if (line.startsWith('a=ice-ufrag:')) data.u = line.split(':')[1].trim();
+        else if (line.startsWith('a=ice-pwd:')) data.p = line.split(':')[1].trim();
+        else if (line.startsWith('a=fingerprint:sha-256 ')) data.f = line.split('sha-256 ')[1].trim();
+        else if (line.startsWith('a=candidate:')) {
+            const parts = line.split(' ');
+            // Include only 'host' candidates (LAN)
+            if (parts[7] === 'host') {
+                candidates.push(`${parts[4]}:${parts[5]}`);
+            }
         }
     });
+
+    // Deduplicate and prioritize IPv4 (shorter), then limit to 4 to keep QR code small
+    const uniqueCandidates = [...new Set(candidates)];
+    data.c = uniqueCandidates
+        .sort((a, b) => {
+            // More robust IPv4 check: IPv6 has many colons
+            const aColons = (a.match(/:/g) || []).length;
+            const bColons = (b.match(/:/g) || []).length;
+            const aIsReallyIPv4 = aColons === 1;
+            const bIsReallyIPv4 = bColons === 1;
+
+            if (aIsReallyIPv4 && !bIsReallyIPv4) return -1;
+            if (!aIsReallyIPv4 && bIsReallyIPv4) return 1;
+            return 0;
+        })
+        .slice(0, 4);
+
     return btoa(JSON.stringify(data));
 }
 
@@ -60,7 +80,10 @@ function decompressSDP(compressed: string, isOffer: boolean): string {
     ];
 
     data.c.forEach((c: string) => {
-        const [ip, port] = c.split(':');
+        const lastColon = c.lastIndexOf(':');
+        if (lastColon === -1) return;
+        const ip = c.substring(0, lastColon);
+        const port = c.substring(lastColon + 1);
         lines.push(`a=candidate:1 1 udp 2122260223 ${ip} ${port} typ host generation 0`);
     });
 
