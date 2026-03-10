@@ -28,3 +28,40 @@ export function addImageToPDFDocument(
   }
 
 }
+
+export interface HtmlToPdfOptions {
+  width?: number;
+  height?: number;
+  fontSize?: number;
+}
+
+export async function htmlToPdfBuffer(
+  html: string,
+  options: HtmlToPdfOptions = {}
+): Promise<Uint8Array> {
+  const { width = 595, height = 842, fontSize = 12 } = options;
+  const encoded = new TextEncoder().encode(html);
+  const doc = mupdf.Document.openDocument(encoded, 'application/xhtml+xml');
+  doc.layout(width, height, fontSize);
+
+  const buf = new mupdf.Buffer();
+  const writer = new mupdf.DocumentWriter(buf, 'pdf', 'compress');
+
+  try {
+    for (let i = 0; i < doc.countPages(); i++) {
+      const page = doc.loadPage(i);
+      const dev = writer.beginPage(page.getBounds());
+      page.run(dev, mupdf.Matrix.identity);
+      writer.endPage();
+      dev.destroy();
+      page.destroy();
+    }
+    writer.close();
+    return new Uint8Array(buf.asUint8Array());
+  } finally {
+    try { writer.destroy(); } catch (e) {}
+    try { buf.destroy(); } catch (e) {}
+    try { doc.destroy(); } catch (e) {}
+  }
+}
+

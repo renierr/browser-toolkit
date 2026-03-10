@@ -1,8 +1,9 @@
 import OverType from 'overtype';
 import { MarkdownParser } from 'overtype/parser';
-import * as mupdf from 'mupdf';
 import { isDarkMode } from '../../js/theme.ts';
 import { downloadFile } from '../../js/file-utils.ts';
+import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
+import { showMessage } from '../../js/ui.ts';
 
 interface Note {
   id?: number;
@@ -216,33 +217,12 @@ export default async function init() {
 </body>
 </html>`;
 
-        const encoded = new TextEncoder().encode(fullHtml);
         try {
-          const doc = mupdf.Document.openDocument(encoded, "application/xhtml+xml");
-          doc.layout(595, 842, 12); // A4 page size at 72 dpi (595x842) and font size 12
-          const buf = new mupdf.Buffer();
-          const writer = new mupdf.DocumentWriter(buf, "pdf", "compress");
-          
-          for (let i = 0; i < doc.countPages(); i++) {
-            const page = doc.loadPage(i);
-            const dev = writer.beginPage(page.getBounds());
-            page.run(dev, mupdf.Matrix.identity);
-            writer.endPage();
-            dev.destroy();
-            page.destroy();
-          }
-          writer.close();
-          
-          const bytes = buf.asUint8Array();
-          await downloadFile(bytes, `note-${id}.pdf`, "application/pdf");
-
-          // Clean up mupdf resources
-          writer.destroy();
-          buf.destroy();
-          doc.destroy();
+          const pdfBytes = await htmlToPdfBuffer(fullHtml);
+          await downloadFile(pdfBytes, `note-${id}.pdf`, "application/pdf");
         } catch (e) {
           console.error("Failed to export PDF:", e);
-          alert("Failed to export PDF. See console for details.");
+          showMessage('Failed to export PDF. See console for details.', { type: 'alert' });
         }
       }
     };
