@@ -1,6 +1,8 @@
 import OverType from 'overtype';
 import { MarkdownParser } from 'overtype/parser';
+import * as mupdf from 'mupdf';
 import { isDarkMode } from '../../js/theme.ts';
+import { downloadFile } from '../../js/file-utils.ts';
 
 interface Note {
   id?: number;
@@ -92,6 +94,9 @@ export default async function init() {
               }
             </div>
             <div class="flex gap-1">
+              <button class="btn btn-ghost btn-xs export-btn" data-id="${note.id}" title="Export to PDF">
+                <i data-lucide="file-down" class="w-4 h-4"></i>
+              </button>
               <button class="btn btn-ghost btn-xs edit-btn" data-id="${note.id}">
                 <i data-lucide="pencil" class="w-4 h-4"></i>
               </button>
@@ -176,6 +181,73 @@ export default async function init() {
     };
   }
 
+  async function exportToPdf(id: number) {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get(id);
+
+    request.onsuccess = async () => {
+      const note = request.result;
+      if (note) {
+        // Use preview mode to output clean HTML without markdown syntax markers
+        let htmlContent = MarkdownParser.parse(note.content);
+        htmlContent = htmlContent.replace(/<span class="syntax-marker[^"]*">.*?<\/span>/g, "");
+        htmlContent = htmlContent.replace(/\sclass="(bullet-list|ordered-list|code-fence|hr-marker|blockquote|url-part)"/g, "");
+        htmlContent = htmlContent.replace(/\sclass=""/g, "");
+        const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: sans-serif; padding: 20px; line-height: 1.5; color: #000; background: #fff; }
+    h1, h2, h3 { font-weight: bold; margin-top: 0.5em; margin-bottom: 0.2em; }
+    h1 { font-size: 1.5em; }
+    h2 { font-size: 1.25em; }
+    h3 { font-size: 1.1em; }
+    ul, ol { margin-left: 0; padding-left: 20px; }
+    .blockquote { display: block; border-left: 4px solid #ccc; padding-left: 1em; margin: 0.5em 0; opacity: 0.8; }
+    code { background-color: #f0f0f0; padding: 0.1em 0.2em; border-radius: 0.2em; font-size: 0.9em; }
+    .code-block { background-color: #f0f0f0; padding: 1em; border-radius: 0.5em; margin: 1em 0; overflow-x: auto; white-space: pre; }
+    .code-fence { opacity: 0.3; font-size: 0.8em; }
+    a { color: #0000ee; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  ${htmlContent}
+</body>
+</html>`;
+
+        const encoded = new TextEncoder().encode(fullHtml);
+        try {
+          const doc = mupdf.Document.openDocument(encoded, "application/xhtml+xml");
+          doc.layout(595, 842, 12); // A4 page size at 72 dpi (595x842) and font size 12
+          const buf = new mupdf.Buffer();
+          const writer = new mupdf.DocumentWriter(buf, "pdf", "compress");
+          
+          for (let i = 0; i < doc.countPages(); i++) {
+            const page = doc.loadPage(i);
+            const dev = writer.beginPage(page.getBounds());
+            page.run(dev, mupdf.Matrix.identity);
+            writer.endPage();
+            dev.destroy();
+            page.destroy();
+          }
+          writer.close();
+          
+          const bytes = buf.asUint8Array();
+          await downloadFile(bytes, `note-${id}.pdf`, "application/pdf");
+
+          // Clean up mupdf resources
+          writer.destroy();
+          buf.destroy();
+          doc.destroy();
+        } catch (e) {
+          console.error("Failed to export PDF:", e);
+          alert("Failed to export PDF. See console for details.");
+        }
+      }
+    };
+  }
+
   addBtn.addEventListener('click', saveNote);
   cancelBtn.addEventListener('click', resetForm);
   searchInput.addEventListener('input', () => loadNotes(searchInput.value));
@@ -209,6 +281,10 @@ export default async function init() {
       if (id && confirm('Delete this note?')) {
         deleteNote(id);
       }
+    } else if (target.closest('.export-btn')) {
+      const btn = target.closest('.export-btn') as HTMLButtonElement;
+      const id = parseInt(btn.getAttribute('data-id') || '0');
+      if (id) exportToPdf(id);
     }
   });
 
