@@ -7,7 +7,7 @@ import {
 } from '../../js/file-utils';
 import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target';
-import UpscalerWorker from './worker?worker';
+import ImageWorker from './worker?worker';
 import { getProcessingOptions, type ImageQueueItem } from './utils.ts';
 import { openInTool } from '../../js/tool-chooser';
 
@@ -20,6 +20,7 @@ export default function init(payload?: SharedFilesPayload) {
   const queueBadge = document.getElementById('queue-progress-badge')!;
   const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
   const btnDownloadAll = document.getElementById('btn-download-all') as HTMLButtonElement;
+  const btnProcessAll = document.getElementById('btn-process-all') as HTMLButtonElement;
   const template = document.getElementById('result-item-template') as HTMLTemplateElement;
 
   let queue: ImageQueueItem[] = [];
@@ -146,12 +147,12 @@ export default function init(payload?: SharedFilesPayload) {
     const parts = originalName.split('.');
     parts.pop();
     const base = parts.join('.') || 'image';
-    return `${base}-upscaled.png`;
+    return `${base}-processed.png`;
   };
 
   const initWorker = () => {
     if (!worker) {
-      worker = new UpscalerWorker();
+      worker = new ImageWorker();
       worker.onmessage = (event) => {
         const { type, payload } = event.data;
         const item = queue.find((i) => i.id === payload.id);
@@ -218,10 +219,12 @@ export default function init(payload?: SharedFilesPayload) {
       setItemStatus(item, 'processing');
 
       const w = initWorker();
-      w.postMessage({
-        type: 'PROCESS',
-        payload: { id: item.id, blob: item.file, options: item.options },
-      });
+      if (w) {
+        w.postMessage({
+          type: 'PROCESS',
+          payload: { id: item.id, blob: item.file, options: item.options },
+        });
+      }
       updateUI();
     } catch (err) {
       console.error('Failed to start processing:', err);
@@ -329,6 +332,10 @@ export default function init(payload?: SharedFilesPayload) {
           formattedSize,
           options: processingOptions,
         };
+
+        const modelBadge = card.querySelector('.model-badge') as HTMLElement;
+        if (modelBadge) modelBadge.textContent = processingOptions.modelConfig.name;
+
         queue.push(item);
 
         // Asynchronously check image dimensions and set proper status using helper.
@@ -371,7 +378,7 @@ export default function init(payload?: SharedFilesPayload) {
       }
 
       updateUI();
-      processQueue();
+      // Auto-start removed as per user request
     } catch (err) {
       console.error('Error adding files to queue:', err);
       showMessage('Failed to add some files.', { type: 'alert' });
@@ -418,12 +425,16 @@ export default function init(payload?: SharedFilesPayload) {
           name: getOutputFilename(item.file.name),
         }))
       );
-      await downloadAsZip(zipFiles, 'upscaled-images.zip');
+      await downloadAsZip(zipFiles, 'processed-images.zip');
     } catch (e) {
       showMessage('Failed to create ZIP.', { type: 'alert' });
     } finally {
       hideProgress();
     }
+  });
+
+  btnProcessAll.addEventListener('click', () => {
+    processQueue();
   });
 
   if (payload?.sharedFiles?.length) addFilesToQueue(payload.sharedFiles);

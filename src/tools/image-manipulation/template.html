@@ -1,8 +1,8 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">AI Image Upscaler</h2>
+    <h2 class="card-title text-2xl font-bold mb-4">AI Image Magic</h2>
     <p class="text-base-content/70 mb-6">
-      Upscale and enhance image resolution using AI locally. All processing happens in your browser for maximum privacy.
+      Apply AI magic to your images locally. All processing happens in your browser for maximum privacy.
     </p>
 
     <!-- Options -->
@@ -10,7 +10,7 @@
       <input type="checkbox" id="options-toggle" aria-label="Option toggle" />
       <div class="collapse-title font-medium flex items-center gap-2">
         <i data-lucide="settings-2" class="w-4 h-4"></i>
-        Processing Options
+        Model Configuration
       </div>
       <div class="collapse-content">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -19,19 +19,20 @@
               <span class="label-text font-medium">AI Model</span>
             </label>
             <select id="opt-model" class="select select-sm select-bordered w-full" data-setting="model">
-              <option value="rrdbx2" selected>rrdb (2x)</option>
-              <option value="rrdbx4">rrdb (4x)</option>
-              <option value="RealESRGAN_x2plus">RealESRGAN_x2plus (2x)</option>
-              <option value="RealESRGAN_x4plus">RealESRGAN_x4plus (4x)</option>
+              <option value="line_drawings" selected>Line Drawing</option>
+              <option value="rrdbx2">rrdb Upscale (2x)</option>
+              <option value="rrdbx4">rrdb Upscale (4x)</option>
+              <option value="RealESRGAN_x2plus">RealESRGAN Upscale (2x)</option>
+              <option value="RealESRGAN_x4plus">RealESRGAN Upscale (4x)</option>
             </select>
-            <p class="text-xs text-base-content/50 mt-1">Select the AI model and upscale factor.</p>
+            <p class="text-xs text-base-content/50 mt-1">Select the AI model for processing.</p>
           </div>
           <div class="form-control">
             <label class="label" for="opt-large-threshold">
-              <span class="label-text font-medium">Large image threshold (px)</span>
+              <span class="label-text font-medium">Auto-hold threshold (px)</span>
             </label>
             <input id="opt-large-threshold" class="input input-sm input-bordered w-full" type="number" min="1" value="512" data-setting="largeThreshold" />
-            <p class="text-xs text-base-content/50 mt-1">If an image dimension exceeds this value (width or height), it will be placed on hold and require manual start.</p>
+            <p class="text-xs text-base-content/50 mt-1">Images exceeding this size will always require a manual start to avoid browser lag.</p>
           </div>
           <div class="form-control">
             <label class="label cursor-pointer" for="opt-force-wasm">
@@ -76,7 +77,11 @@
             <i data-lucide="trash-2" class="w-4 h-4"></i>
             Clear All
           </button>
-          <button id="btn-download-all" class="btn btn-primary btn-xs sm:btn-sm gap-2">
+          <button id="btn-process-all" class="btn btn-primary btn-xs sm:btn-sm gap-2">
+            <i data-lucide="play" class="w-4 h-4"></i>
+            Process All
+          </button>
+          <button id="btn-download-all" class="btn btn-success btn-xs sm:btn-sm gap-2">
             <i data-lucide="download" class="w-4 h-4"></i>
             Download All (.zip)
           </button>
@@ -101,7 +106,7 @@
         alt="Original image" />
       <img
         class="checkerboard-bg result-preview absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300 pointer-events-none"
-        alt="Upscaled image" />
+        alt="Processed image" />
 
       <!-- Status / Progress Overlay -->
       <div
@@ -124,7 +129,7 @@
         <!-- Preview Toggle (Processed/Original) -->
         <div class="preview-toggle hidden">
           <div class="join shadow-lg bg-base-100/50">
-            <button class="btn btn-xs join-item btn-compare-processed btn-primary">Upscaled</button>
+            <button class="btn btn-xs join-item btn-compare-processed btn-primary">Processed</button>
             <button class="btn btn-xs join-item btn-compare-original">Original</button>
           </div>
         </div>
@@ -135,7 +140,10 @@
       <div class="flex justify-between items-start gap-2">
         <div class="min-w-0 flex-1">
           <p class="filename truncate text-sm font-bold"></p>
-          <p class="filesize text-xs opacity-60"></p>
+          <div class="flex items-center gap-2">
+            <p class="filesize text-xs opacity-60"></p>
+            <span class="model-badge badge badge-ghost badge-xs"></span>
+          </div>
         </div>
 
         <button class="btn btn-ghost btn-xs btn-circle btn-remove-item" title="Remove">

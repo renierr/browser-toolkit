@@ -1,0 +1,12 @@
+{
+  "name": "AI Image Magic",
+  "description": "Apply AI magic like upscaling or line drawing to your images",
+  "icon": "sparkles",
+  "sectionId": "images",
+  "order": 5,
+  "shareTarget": {
+    "accept": [
+      "image/*"
+    ]
+  }
+}

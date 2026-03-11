@@ -39,21 +39,26 @@ function imageDataToTensor(imgData: ImageData): Float32Array {
 }
 
 /**
- * Denormalizes tensor data (RGB, 0-1 in NCHW) back into an ImageData object (RGBA, 0-255 in HWC).
+ * Denormalizes tensor data (RGB or Grayscale, 0-1 in NCHW) back into an ImageData object (RGBA, 0-255 in HWC).
  */
 function tensorToImageData(tensorData: Float32Array, width: number, height: number): ImageData {
   const numPixels = width * height;
   const rgbaData = new Uint8ClampedArray(numPixels * 4);
+  const channels = Math.floor(tensorData.length / numPixels);
 
   for (let i = 0; i < numPixels; i++) {
     const rgbaIdx = i * 4;
 
-    // R
-    let r = tensorData[i] * 255;
-    // G
-    let g = tensorData[numPixels + i] * 255;
-    // B
-    let b = tensorData[numPixels * 2 + i] * 255;
+    let r, g, b;
+    if (channels === 1) {
+      // Grayscale
+      r = g = b = tensorData[i] * 255;
+    } else {
+      // RGB
+      r = tensorData[i] * 255;
+      g = tensorData[numPixels + i] * 255;
+      b = tensorData[numPixels * 2 + i] * 255;
+    }
 
     // Clamp values just in case
     rgbaData[rgbaIdx] = Math.max(0, Math.min(255, Math.round(r)));
@@ -70,8 +75,6 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
     reportProgress(id, 'Decoding Image...', 5);
 
     // 1. Decode Image to ImageData
-    // Real-ESRGAN can be memory hungry, but we will let the user attempt
-    // full resolution inference.
     const imgData = await blobToImageData(blob);
     const { width, height } = imgData;
 
@@ -89,16 +92,14 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
     // 3. Preprocess Input
     const rgbData = imageDataToTensor(imgData);
 
-    // float32[batch_size, 3, height, width] per netron dump
+    // float32[batch_size, 3, height, width]
     const inputTensor = createTensor(rgbData, [1, 3, height, width]);
     const feeds = { [options.modelConfig.input]: inputTensor };
 
-    reportProgress(id, 'Upscaling Image (this may take a while)...', 40);
+    reportProgress(id, 'Processing Image (this may take a while)...', 40);
 
     // 4. Run Inference
     const results = await runInference(session, feeds, (p) => {
-      // Inference itself might not provide granular progress via onnxruntime-web natively,
-      // but we interpolate 40 to 90
       reportProgress(id, 'Running Neural Network...', 40 + p * 0.5);
     });
     inputTensor.dispose();
@@ -107,10 +108,12 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
 
     // 5. Postprocess Output
     const outputTensor = results[options.modelConfig.output];
-    const [_, __, outH, outW] = outputTensor.dims;
+    const dims = outputTensor.dims;
+    const outH = dims[dims.length - 2] as number;
+    const outW = dims[dims.length - 1] as number;
 
     const outFloatData = outputTensor.data as Float32Array;
-    const outImgData = tensorToImageData(outFloatData, outW as number, outH as number);
+    const outImgData = tensorToImageData(outFloatData, outW, outH);
     outputTensor.dispose();
 
     // 6. Convert final ImageData to Blob
