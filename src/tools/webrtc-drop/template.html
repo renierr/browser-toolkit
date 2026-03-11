@@ -1,7 +1,7 @@
 <div class="tool-content p-4 space-y-6 max-w-4xl mx-auto">
     <!-- Header/Self Info -->
     <div class="card bg-base-200 shadow-sm border border-base-300">
-        <div class="card-body p-4 flex flex-row items-center justify-between">
+        <div class="card-body p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div class="flex items-center gap-3">
                 <div class="avatar placeholder">
                     <div class="bg-primary text-primary-content rounded-full w-12 flex items-center justify-center">
@@ -13,22 +13,26 @@
                     <p class="text-xs opacity-50">Local P2P File Transfer (Offline)</p>
                 </div>
             </div>
-            <div class="flex flex-col items-end gap-1 text-right">
-                <div id="status-badge" class="badge badge-outline">Ready</div>
-                <div id="quick-status" class="text-[10px] opacity-40 hidden">Quick Connect: Active</div>
+            <div class="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+                <div class="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-2">
+                    <div id="quick-status" class="text-[10px] opacity-40 hidden">Quick Connect: Active</div>
+                    <div id="status-badge" class="badge badge-outline">Ready</div>
+                </div>
 
-                <div class="mt-1 text-right">
-                    <label class="inline-flex items-center gap-2" for="discovery-toggle">
-                        <input id="discovery-toggle" type="checkbox" class="checkbox" aria-label="Enable online discovery" />
+                <div class="mt-1 w-full sm:text-right">
+                    <label class="inline-flex items-center gap-2 cursor-pointer" for="discovery-toggle">
+                        <input id="discovery-toggle" type="checkbox" class="checkbox checkbox-xs" aria-label="Enable online discovery" />
                         <span class="text-[11px] opacity-70">Enable online discovery</span>
                     </label>
-                    <div class="mt-1 flex items-center justify-end gap-2">
+                    <div class="mt-1 flex items-center justify-start sm:justify-end gap-2">
                         <span id="discovery-status" class="text-[10px] opacity-50">Discovery: Off</span>
                         <span id="discovery-dot" class="w-2 h-2 rounded-full bg-gray-300" title="Discovery status" aria-hidden="true"></span>
                     </div>
-                    <p class="text-[10px] opacity-50 max-w-xs mt-1">When enabled this advertises offers through an online service (ntfy.sh) so peers can discover you remotely; default is off. Discovery remains on until you disable it. QR/manual handshake and the local Quick Connect fallback remain available.</p>
                 </div>
             </div>
+        </div>
+        <div class="px-4 pb-4">
+            <p class="text-[10px] opacity-50">When enabled this advertises offers through an online service (ntfy.sh) so peers can discover you remotely. QR/manual handshake and the local Quick Connect fallback remain available.</p>
         </div>
     </div>
 

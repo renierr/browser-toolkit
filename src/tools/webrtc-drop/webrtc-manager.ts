@@ -11,6 +11,7 @@ export class WebRTCManager {
     private pc: RTCPeerConnection | null = null;
     private dataChannel: RTCDataChannel | null = null;
     private config: PeerConnectionConfig;
+    private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
     constructor(config: PeerConnectionConfig) {
         this.config = config;
@@ -50,15 +51,37 @@ export class WebRTCManager {
         channel.binaryType = 'arraybuffer';
         channel.onopen = () => {
             console.debug('[WebRTC] datachannel open');
+            this.startHeartbeat();
             this.config.onConnected();
         };
         channel.onclose = () => {
             console.debug('[WebRTC] datachannel close');
+            this.stopHeartbeat();
             this.config.onDisconnected();
         };
         channel.onmessage = (ev) => {
+            // Filter out heartbeat pings to avoid surface noise in index.ts
+            if (typeof ev.data === 'string' && ev.data === '{"type":"ping"}') {
+                return;
+            }
             this.config.onData(ev.data);
         };
+    }
+
+    private startHeartbeat() {
+        this.stopHeartbeat();
+        this.heartbeatInterval = setInterval(() => {
+            if (this.dataChannel?.readyState === 'open') {
+                this.dataChannel.send('{"type":"ping"}');
+            }
+        }, 20000); // 20 seconds
+    }
+
+    private stopHeartbeat() {
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+            this.heartbeatInterval = null;
+        }
     }
 
     async generateHandshake(isHost: boolean) {
@@ -140,6 +163,7 @@ export class WebRTCManager {
     }
 
     close() {
+        this.stopHeartbeat();
         this.pc?.close();
         this.pc = null;
         this.dataChannel = null;
