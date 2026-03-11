@@ -46,7 +46,7 @@ export default function init(payload?: SharedFilesPayload) {
     if (startBtn) startBtn.classList.add('hidden');
 
     if (newStatus === 'pending') {
-      statusText.textContent = 'Waiting...';
+      statusText.textContent = isProcessing ? 'Queued...' : 'Waiting...';
       if (spinner) spinner.classList.add('hidden');
       if (progressBar) {
         progressBar.classList.add('hidden');
@@ -55,11 +55,9 @@ export default function init(payload?: SharedFilesPayload) {
       if (startBtn) {
         startBtn.classList.remove('hidden');
         (startBtn as HTMLButtonElement).onclick = () => {
-          if (isProcessing) {
-            showMessage('Already processing another image. Please wait.', { type: 'info' });
-            return;
-          }
-          processItem(item);
+          startBtn.classList.add('hidden');
+          statusText.textContent = 'Queued...';
+          processQueue();
         };
       }
       statusOverlay.classList.remove('hidden');
@@ -69,7 +67,6 @@ export default function init(payload?: SharedFilesPayload) {
       if (progressBar) progressBar.classList.remove('hidden');
       statusOverlay.classList.remove('hidden');
     } else if (newStatus === 'hold') {
-      // Show a warning and Start button; hide spinner/progress
       if (spinner) spinner.classList.add('hidden');
       if (progressBar) progressBar.classList.add('hidden');
 
@@ -81,11 +78,8 @@ export default function init(payload?: SharedFilesPayload) {
       if (startBtn) {
         startBtn.classList.remove('hidden');
         (startBtn as HTMLButtonElement).onclick = () => {
-          if (isProcessing) {
-            showMessage('Already processing another image. Please wait.', { type: 'info' });
-            return;
-          }
-          processItem(item);
+          setItemStatus(item, 'pending');
+          processQueue();
         };
       }
       statusOverlay.classList.remove('hidden');
@@ -444,6 +438,12 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   btnProcessAll.addEventListener('click', () => {
+    // Process All should include items that are on 'hold'
+    queue.forEach((item) => {
+      if (item.status === 'hold') {
+        setItemStatus(item, 'pending');
+      }
+    });
     processQueue();
   });
 
