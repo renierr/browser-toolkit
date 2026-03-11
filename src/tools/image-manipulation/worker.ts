@@ -17,57 +17,90 @@ function reportError(id: string, error: unknown) {
 }
 
 /**
- * Normalizes ImageData (RGBA, 0-255) to a Float32Array (RGB, 0-1) in NCHW format
- * (Batch, Channels, Height, Width).
+ * Normalizes ImageData (RGBA, 0-255) to a Float32Array (RGB) in NCHW format.
+ * Applies range mapping and mean/std normalization.
  */
-function imageDataToTensor(imgData: ImageData): Float32Array {
+function imageDataToTensor(imgData: ImageData, config: any): Float32Array {
   const { width, height, data } = imgData;
   const numPixels = width * height;
-  const floatData = new Float32Array(numPixels * 3); // 3 channels (RGB)
+  const floatData = new Float32Array(numPixels * 3);
+
+  const mean = config.mean || [0, 0, 0];
+  const std = config.std || [1, 1, 1];
+  const [min, max] = config.normalizeRange || [0, 1];
+  const rangeWidth = max - min;
 
   for (let i = 0; i < numPixels; i++) {
     const rgbaIdx = i * 4;
-    // R
-    floatData[i] = data[rgbaIdx] / 255.0;
-    // G
-    floatData[numPixels + i] = data[rgbaIdx + 1] / 255.0;
-    // B
-    floatData[numPixels * 2 + i] = data[rgbaIdx + 2] / 255.0;
+    for (let c = 0; c < 3; c++) {
+      const pix = data[rgbaIdx + c] / 255.0;
+      const val = (pix * rangeWidth + min - mean[c]) / std[c];
+      floatData[c * numPixels + i] = val;
+    }
   }
 
   return floatData;
 }
 
 /**
- * Denormalizes tensor data (RGB or Grayscale, 0-1 in NCHW) back into an ImageData object (RGBA, 0-255 in HWC).
+ * Denormalizes tensor data back into an ImageData object.
+ * Reverses normalization and range mapping.
  */
-function tensorToImageData(tensorData: Float32Array, width: number, height: number): ImageData {
+function tensorToImageData(tensorData: Float32Array, width: number, height: number, config: any): ImageData {
   const numPixels = width * height;
   const rgbaData = new Uint8ClampedArray(numPixels * 4);
   const channels = Math.floor(tensorData.length / numPixels);
 
+  const mean = config.mean || [0, 0, 0];
+  const std = config.std || [1, 1, 1];
+  const [min, max] = config.normalizeRange || [0, 1];
+  const rangeWidth = max - min;
+
   for (let i = 0; i < numPixels; i++) {
     const rgbaIdx = i * 4;
 
-    let r, g, b;
-    if (channels === 1) {
-      // Grayscale
-      r = g = b = tensorData[i] * 255;
-    } else {
-      // RGB
-      r = tensorData[i] * 255;
-      g = tensorData[numPixels + i] * 255;
-      b = tensorData[numPixels * 2 + i] * 255;
-    }
+    for (let c = 0; c < 3; c++) {
+      let val;
+      if (channels === 1) {
+        val = tensorData[i];
+      } else {
+        val = tensorData[c * numPixels + i];
+      }
 
-    // Clamp values just in case
-    rgbaData[rgbaIdx] = Math.max(0, Math.min(255, Math.round(r)));
-    rgbaData[rgbaIdx + 1] = Math.max(0, Math.min(255, Math.round(g)));
-    rgbaData[rgbaIdx + 2] = Math.max(0, Math.min(255, Math.round(b)));
-    rgbaData[rgbaIdx + 3] = 255; // Alpha fully opaque
+      // Reverse: pix = (((val * std) + mean - min) / rangeWidth) * 255.0
+      // For grayscale, we use mean[0] and std[0] if provided, else defaults
+      const m = mean[c] !== undefined ? mean[c] : mean[0];
+      const s = std[c] !== undefined ? std[c] : std[0];
+      
+      const afterRange = (val * s) + m;
+      const normalized = (afterRange - min) / rangeWidth;
+      const pix = normalized * 255.0;
+      
+      rgbaData[rgbaIdx + c] = Math.max(0, Math.min(255, Math.round(pix)));
+    }
+    rgbaData[rgbaIdx + 3] = 255; // Alpha
   }
 
   return new ImageData(rgbaData, width, height);
+}
+
+/**
+ * Pads an ImageData to the next multiple of the given base.
+ */
+function padImageData(imgData: ImageData, multiple: number): ImageData {
+  if (multiple <= 1) return imgData;
+  const newWidth = Math.ceil(imgData.width / multiple) * multiple;
+  const newHeight = Math.ceil(imgData.height / multiple) * multiple;
+
+  if (newWidth === imgData.width && newHeight === imgData.height) return imgData;
+
+  const canvas = new OffscreenCanvas(newWidth, newHeight);
+  const ctx = canvas.getContext('2d')!;
+  ctx.putImageData(imgData, 0, 0);
+
+  // Extend edge pixels (simple padding) or keep as-is (transparent/black)
+  // Most models prefer mirrored or edge padding, but black/transparent often works.
+  return ctx.getImageData(0, 0, newWidth, newHeight);
 }
 
 async function processImage(id: string, blob: Blob, options: ProcessingOptions) {
@@ -76,7 +109,13 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
 
     // 1. Decode Image to ImageData
     const imgData = await blobToImageData(blob);
-    const { width, height } = imgData;
+    const originalWidth = imgData.width;
+    const originalHeight = imgData.height;
+
+    reportProgress(id, 'Preparing Model Input...', 10);
+    const padMultiple = options.modelConfig.padToMultipleOf || 1;
+    const paddedImgData = padImageData(imgData, padMultiple);
+    const { width, height } = paddedImgData;
 
     reportProgress(id, 'Loading AI Model...', 15);
 
@@ -90,7 +129,7 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
     reportProgress(id, 'Preparing Tensors...', 30);
 
     // 3. Preprocess Input
-    const rgbData = imageDataToTensor(imgData);
+    const rgbData = imageDataToTensor(paddedImgData, options.modelConfig);
 
     // float32[batch_size, 3, height, width]
     const inputTensor = createTensor(rgbData, [1, 3, height, width]);
@@ -113,15 +152,27 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
     const outW = dims[dims.length - 1] as number;
 
     const outFloatData = outputTensor.data as Float32Array;
-    const outImgData = tensorToImageData(outFloatData, outW, outH);
+    let outImgData = tensorToImageData(outFloatData, outW, outH, options.modelConfig);
     outputTensor.dispose();
 
-    // 6. Convert final ImageData to Blob
-    const offscreen = new OffscreenCanvas(outW as number, outH as number);
-    const ctx = offscreen.getContext('2d')!;
-    ctx.putImageData(outImgData, 0, 0);
-    const outBlob = await offscreen.convertToBlob({ type: 'image/png' });
+    // 6. Crop back to original scale (if padded)
+    const upscaleFactor = outW / width;
+    const targetW = originalWidth * upscaleFactor;
+    const targetH = originalHeight * upscaleFactor;
 
+    const offscreen = new OffscreenCanvas(targetW, targetH);
+    const ctx = offscreen.getContext('2d')!;
+
+    if (outW !== targetW || outH !== targetH) {
+      // Draw the output image data onto a temp canvas then crop
+      const tempCanvas = new OffscreenCanvas(outW, outH);
+      tempCanvas.getContext('2d')!.putImageData(outImgData, 0, 0);
+      ctx.drawImage(tempCanvas, 0, 0);
+    } else {
+      ctx.putImageData(outImgData, 0, 0);
+    }
+
+    const outBlob = await offscreen.convertToBlob({ type: 'image/png' });
     reportResult(id, outBlob);
   } catch (error) {
     reportError(id, error);

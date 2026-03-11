@@ -6,6 +6,10 @@ export interface ModelConfig {
   url: string;
   input: string;
   output: string;
+  padToMultipleOf?: number;
+  mean?: number[]; // [r, g, b] default [0, 0, 0]
+  std?: number[];  // [r, g, b] default [1, 1, 1]
+  normalizeRange?: [number, number]; // e.g. [0, 1] or [-1, 1], default [0, 1]
 }
 
 export const MODELS: Record<string, ModelConfig> = {
@@ -15,6 +19,7 @@ export const MODELS: Record<string, ModelConfig> = {
     url: new URL('/lib/models/line-drawings.onnx', document.baseURI).href,
     input: 'input',
     output: 'output',
+    padToMultipleOf: 2,
   },
   RealESRGAN_x2plus: {
     id: 'RealESRGAN_x2plus',
@@ -22,6 +27,7 @@ export const MODELS: Record<string, ModelConfig> = {
     url: new URL('/lib/models/RealESRGAN_x2plus.onnx', document.baseURI).href,
     input: 'input',
     output: 'output',
+    padToMultipleOf: 4,
   },
   RealESRGAN_x4plus: {
     id: 'RealESRGAN_x4plus',
@@ -29,6 +35,7 @@ export const MODELS: Record<string, ModelConfig> = {
     url: new URL('/lib/models/RealESRGAN_x4plus.onnx', document.baseURI).href,
     input: 'input',
     output: 'output',
+    padToMultipleOf: 4,
   },
   rrdbx2: {
     id: 'rrdbx2',
@@ -36,6 +43,7 @@ export const MODELS: Record<string, ModelConfig> = {
     url: new URL('/lib/models/rrdbx2.onnx', document.baseURI).href,
     input: 'pixel_values',
     output: 'reconstruction',
+    padToMultipleOf: 8,
   },
   rrdbx4: {
     id: 'rrdbx4',
@@ -43,6 +51,7 @@ export const MODELS: Record<string, ModelConfig> = {
     url: new URL('/lib/models/rrdbx4.onnx', document.baseURI).href,
     input: 'pixel_values',
     output: 'reconstruction',
+    padToMultipleOf: 8,
   },
 };
 

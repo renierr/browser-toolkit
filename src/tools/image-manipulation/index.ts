@@ -46,10 +46,10 @@ export default function init(payload?: SharedFilesPayload) {
     if (startBtn) startBtn.classList.add('hidden');
 
     if (newStatus === 'pending') {
-      statusText.textContent = 'Pending...';
-      if (spinner) spinner.classList.remove('hidden');
+      statusText.textContent = 'Waiting...';
+      if (spinner) spinner.classList.add('hidden');
       if (progressBar) {
-        progressBar.classList.remove('hidden');
+        progressBar.classList.add('hidden');
         progressBar.value = 0;
       }
       statusOverlay.classList.remove('hidden');
