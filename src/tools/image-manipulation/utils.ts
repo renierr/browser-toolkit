@@ -53,6 +53,14 @@ export const MODELS: Record<string, ModelConfig> = {
     output: 'reconstruction',
     padToMultipleOf: 8,
   },
+  swin2sr: {
+    id: 'swin2sr',
+    name: 'Swin2SR Upscale (x2)',
+    url: new URL('/lib/models/swin2sr.onnx', document.baseURI).href,
+    input: 'pixel_values',
+    output: 'reconstruction',
+    padToMultipleOf: 8,
+  },
 };
 
 export interface ProcessingOptions {
