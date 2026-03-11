@@ -393,10 +393,11 @@ export default async function init() {
   disconnectBtn.onclick = reset;
 
   // --- Transfer Logic ---
-  let incomingChunks: any[] = [];
+  let incomingChunks: (Uint8Array | ArrayBuffer)[] = [];
   let incomingMeta: any = null;
   let receivedSize = 0;
   let currentSendingFile: File | null = null;
+  let writableStream: any = null; // FileSystemWritableFileStream
 
   function handleData(data: any) {
     if (typeof data === 'string') {
@@ -423,35 +424,54 @@ export default async function init() {
         console.warn('Malformed string message', e);
       }
     } else {
-      const chunk = data instanceof Blob ? data : new Uint8Array(data);
+      const chunk = data instanceof Blob ? data : (data as Uint8Array | ArrayBuffer);
       if (incomingMeta) {
         if (chunk instanceof Blob) {
           chunk.arrayBuffer().then((buf) => {
-            incomingChunks.push(new Uint8Array(buf));
-            processChunk(buf.byteLength);
+            handleReceivedChunk(new Uint8Array(buf));
           });
         } else {
-          incomingChunks.push(chunk);
-          processChunk(chunk.byteLength);
+          handleReceivedChunk(chunk instanceof ArrayBuffer ? new Uint8Array(chunk) : chunk);
         }
       }
     }
   }
 
-  function processChunk(size: number) {
+  async function handleReceivedChunk(chunk: Uint8Array) {
+    if (writableStream) {
+      await writableStream.write(chunk);
+    } else {
+      incomingChunks.push(chunk);
+    }
+    processChunk(chunk.byteLength);
+  }
+
+  async function processChunk(size: number) {
     receivedSize += size;
     const percent = Math.round((receivedSize / incomingMeta.size) * 100);
-    showProgress(`Receiving ${incomingMeta.name}...`, { progress: percent });
+    const remaining = incomingMeta.size - receivedSize;
+    
+    showProgress(
+      `Receiving ${incomingMeta.name}... (${Utils.formatBytes(remaining)} remaining)`, 
+      { progress: percent }
+    );
 
     if (receivedSize >= incomingMeta.size) {
       hideProgress();
-      const blob = new Blob(incomingChunks, { type: incomingMeta.mime });
-      downloadFile(blob, incomingMeta.name);
+      
+      if (writableStream) {
+        await writableStream.close();
+        writableStream = null;
+      } else {
+        // Cast to any[] to avoid strict type issues with Uint8Array vs BlobPart in some TS versions
+        const blob = new Blob(incomingChunks as any[], { type: incomingMeta.mime });
+        downloadFile(blob, incomingMeta.name);
+      }
+
       addToHistory({
         name: incomingMeta.name,
         size: receivedSize,
         type: 'received',
-        blob: receivedSize < 50 * 1024 * 1024 ? blob : null,
       });
       incomingChunks = [];
       receivedSize = 0;
@@ -460,7 +480,28 @@ export default async function init() {
     }
   }
 
-  acceptBtn.onclick = () => {
+  acceptBtn.onclick = async () => {
+    // Check for File System Access API support
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: incomingMeta.name,
+        });
+        writableStream = await handle.createWritable();
+      } catch (e: any) {
+        if (e.name === 'AbortError') {
+          console.debug('[Streaming] user canceled save dialog; rejecting');
+          receiveModal.close();
+          manager?.send(JSON.stringify({ type: 'reject' }));
+          incomingChunks = [];
+          receivedSize = 0;
+          return;
+        }
+        console.warn('File streaming failed, falling back to memory', e);
+        writableStream = null;
+      }
+    }
+
     receiveModal.close();
     manager?.send(JSON.stringify({ type: 'accept' }));
     showProgress('Receiving...', { progress: 0 });
@@ -486,7 +527,6 @@ export default async function init() {
     if (!manager) return;
     showProgress(`Sending ${file.name}...`, { progress: 0 });
     const CHUNK_SIZE = 16 * 1024;
-    const buffer = await file.arrayBuffer();
     let offset = 0;
 
     while (offset < file.size) {
@@ -498,23 +538,30 @@ export default async function init() {
           };
         });
       }
-      const chunk = buffer.slice(offset, offset + CHUNK_SIZE);
-      manager.send(chunk);
-      offset += chunk.byteLength;
-      showProgress(`Sending ${file.name}...`, { progress: Math.round((offset / file.size) * 100) });
+      
+      const chunk = file.slice(offset, offset + CHUNK_SIZE);
+      const buffer = await chunk.arrayBuffer();
+      manager.send(buffer);
+      offset += buffer.byteLength;
+      
+      const remainingBytes = file.size - offset;
+      const progressPercent = Math.round((offset / file.size) * 100);
+      showProgress(
+        `Sending ${file.name}... (${Utils.formatBytes(remainingBytes)} remaining)`, 
+        { progress: progressPercent }
+      );
     }
 
     hideProgress();
     currentSendingFile = null;
     showMessage('File sent!');
-    addToHistory({ name: file.name, size: file.size, type: 'sent', blob: null });
+    addToHistory({ name: file.name, size: file.size, type: 'sent' });
   }
 
   function addToHistory(item: {
     name: string;
     size: number;
     type: 'sent' | 'received';
-    blob?: Blob | null;
   }) {
     noHistoryMsg.classList.add('hidden');
     const div = document.createElement('div');
@@ -542,14 +589,6 @@ export default async function init() {
 
     const actions = document.createElement('div');
     actions.className = 'flex gap-1';
-
-    if (item.blob) {
-      const viewBtn = document.createElement('button');
-      viewBtn.className = 'btn btn-ghost btn-xs text-primary';
-      viewBtn.textContent = 'View';
-      viewBtn.onclick = () => window.open(URL.createObjectURL(item.blob!), '_blank');
-      actions.appendChild(viewBtn);
-    }
 
     div.appendChild(info);
     div.appendChild(actions);
