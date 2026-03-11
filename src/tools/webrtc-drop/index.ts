@@ -4,15 +4,18 @@ import { startCamera, stopCamera } from '../../js/camera-utils.ts';
 import QRCode from 'qrcode';
 import { generateName, formatBytes } from './utils.ts';
 import { WebRTCManager } from './webrtc-manager.ts';
+import { DiscoveryManager } from './discovery-manager.ts';
 
 // @ts-ignore - Vite worker import
 import ScanWorker from '../qr-scanner/scan.worker?worker';
 
+// noinspection JSUnusedGlobalSymbols
 export default async function init() {
     const selfName = generateName();
     let manager: WebRTCManager | null = null;
     let worker: Worker | null = null;
     let stream: MediaStream | null = null;
+    let discovery: DiscoveryManager | null = null;
 
     // UI Elements
     const selfNameEl = document.getElementById('self-name')!;
@@ -45,6 +48,9 @@ export default async function init() {
     const disconnectBtn = document.getElementById('disconnect-btn')!;
     const historyList = document.getElementById('transfer-history-list')!;
     const noHistoryMsg = document.getElementById('no-history-msg')!;
+    const discoveryToggle = document.getElementById('discovery-toggle') as HTMLInputElement | null;
+    const discoveryStatusEl = document.getElementById('discovery-status')!;
+    const discoveryDotEl = document.getElementById('discovery-dot')!;
 
     const receiveModal = document.getElementById('receive-modal') as HTMLDialogElement;
     const senderNameEl = document.getElementById('sender-name')!;
@@ -76,6 +82,76 @@ export default async function init() {
     };
     bc.postMessage({ type: 'ping' });
 
+    // --- DiscoveryManager (optional online discovery via ntfy.sh) ---
+    function initDiscovery() {
+        if (!discoveryToggle || !discoveryToggle.checked) return;
+        if (!discovery) discovery = new DiscoveryManager('webrtc-drop');
+        discovery.start((data: any) => {
+            try {
+                // If someone is asking for offers, answer (hosts that have a stored offer should re-advertise)
+                if (data.type === 'ping') {
+                    const stored = localStorage.getItem('btk-host-offer');
+                    if (stored && discovery && discovery.isEnabled) {
+                        discovery.broadcast({ type: 'offer', name: selfName, sdp: stored }).catch(() => {});
+                    }
+                    return;
+                }
+
+                if (data.type === 'offer' && !manager) {
+                    quickStatus.classList.remove('hidden');
+                    quickStatus.textContent = `Quick Connect found: ${data.name}`;
+                    discoveredPeerNameEl.textContent = data.name;
+                    quickConnectOverlay.classList.remove('hidden');
+                    joinBtn.classList.add('btn-secondary', 'animate-pulse');
+                    localStorage.setItem('btk-last-offer', data.sdp);
+                } else if (data.type === 'answer' && manager && !manager.isStable) {
+                    manager.processSDP(data.sdp);
+                }
+            } catch (e) { console.warn('Discovery message error', e); }
+        }, (status) => {
+            if (status === 'listening') {
+                discoveryStatusEl.textContent = 'Discovery: Listening';
+                discoveryDotEl.className = 'w-2 h-2 rounded-full bg-green-400';
+                // Ask for offers when we start listening so hosts can re-advertise (ntfy doesn't buffer past events)
+                try {
+                    const stored = localStorage.getItem('btk-host-offer');
+                    // If we have a local offer and are hosting, re-advertise it so late listeners see it
+                    if (stored && discovery && discovery.isEnabled) {
+                        discovery.broadcast({ type: 'offer', name: selfName, sdp: stored }).catch(() => {});
+                    }
+                    // Also send a ping to ask other hosts to advertise their offers
+                    if (discovery && discovery.isEnabled) discovery.broadcast({ type: 'ping', name: selfName }).catch(() => {});
+                } catch (err) {}
+            } else if (status === 'error') {
+                discoveryStatusEl.textContent = 'Discovery: Error';
+                discoveryDotEl.className = 'w-2 h-2 rounded-full bg-red-400';
+            }
+        });
+     }
+
+    function stopDiscovery() {
+        discovery?.stop();
+        discovery = null;
+        discoveryStatusEl.textContent = 'Discovery: Off';
+        discoveryDotEl.className = 'w-2 h-2 rounded-full bg-gray-300';
+    }
+
+    // Wire the toggle to start/stop discovery
+    if (discoveryToggle) {
+        discoveryToggle.checked = false; // default OFF
+        discoveryToggle.onchange = () => {
+            if (discoveryToggle.checked) {
+                initDiscovery();
+                showMessage('Online discovery enabled (ntfy.sh). Offers will be advertised.');
+                discoveryStatusEl.textContent = 'Discovery: Starting...';
+                discoveryDotEl.className = 'w-2 h-2 rounded-full bg-yellow-400';
+            } else {
+                stopDiscovery();
+                showMessage('Online discovery disabled.');
+            }
+        };
+    }
+
     // --- WebRTC Setup ---
     function initManager() {
         manager = new WebRTCManager({
@@ -99,9 +175,23 @@ export default async function init() {
                     qrInstruction.classList.add('text-secondary');
                     stepTitle.textContent = "Step 2: Show Answer QR or Copy Handshake";
                 }
+                // Broadcast locally via BroadcastChannel (local quick connect)
                 bc.postMessage({ type: isHost ? 'offer' : 'answer', name: selfName, sdp: compressed });
-            }
-        });
+                // Optionally advertise via discovery service if enabled
+                if (discovery && discovery.isEnabled) {
+                    discovery.broadcast({ type: isHost ? 'offer' : 'answer', name: selfName, sdp: compressed })
+                      .then(() => {
+                        // pulse green briefly
+                        discoveryDotEl.classList.add('animate-pulse');
+                        setTimeout(() => discoveryDotEl.classList.remove('animate-pulse'), 800);
+                      })
+                      .catch(() => {
+                        discoveryStatusEl.textContent = 'Discovery: Error';
+                        discoveryDotEl.className = 'w-2 h-2 rounded-full bg-red-400';
+                      });
+                 }
+             }
+         });
     }
 
     function showConnected() {
@@ -130,7 +220,7 @@ export default async function init() {
         qrOutputContainer.classList.add('hidden');
         scannerContainer.classList.remove('hidden');
         scanOverlay.classList.remove('hidden');
-        
+
         startScanBtn.onclick = async () => {
             scanOverlay.classList.add('hidden');
             stream = await startCamera({ videoEl: qrVideo });
@@ -191,6 +281,8 @@ export default async function init() {
         localStorage.removeItem('btk-host-offer');
         statusBadge.textContent = 'Ready';
         statusBadge.className = 'badge badge-outline';
+        stopDiscovery();
+        if (discoveryToggle) discoveryToggle.checked = false;
     }
 
     // --- Actions ---
@@ -200,6 +292,8 @@ export default async function init() {
         initManager();
         await manager!.createPeer(true);
         manager!.generateHandshake(true);
+        // ensure discovery is running if user enabled it (advertise host offer)
+        initDiscovery();
     };
 
     hostScanAnswerBtn.onclick = () => startScanning("Step 2: Scan Joiner's Answer QR");
@@ -210,6 +304,14 @@ export default async function init() {
         initManager();
         await manager!.createPeer(false);
         startScanning("Step 1: Scan Host's Offer QR");
+        initDiscovery();
+        // Actively ask for offers: ping local BroadcastChannel and remote discovery
+        try {
+            bc.postMessage({ type: 'ping' });
+            if (discovery && discovery.isEnabled) {
+                discovery.broadcast({ type: 'ping', name: selfName }).catch(() => {});
+            }
+        } catch (e) {}
     };
 
     quickConnectBtn.onclick = () => {
@@ -282,7 +384,7 @@ export default async function init() {
         receivedSize += size;
         const percent = Math.round((receivedSize / incomingMeta.size) * 100);
         showProgress(`Receiving ${incomingMeta.name}...`, { progress: percent });
-        
+
         if (receivedSize >= incomingMeta.size) {
             hideProgress();
             const blob = new Blob(incomingChunks, { type: incomingMeta.mime });
@@ -336,7 +438,7 @@ export default async function init() {
             offset += chunk.byteLength;
             showProgress(`Sending ${file.name}...`, { progress: Math.round((offset / file.size) * 100) });
         }
-        
+
         hideProgress();
         currentSendingFile = null;
         showMessage('File sent!');
@@ -347,29 +449,29 @@ export default async function init() {
         noHistoryMsg.classList.add('hidden');
         const div = document.createElement('div');
         div.className = 'flex items-center justify-between p-2 rounded bg-base-200/50 text-xs border border-base-300';
-        
+
         const info = document.createElement('div');
         info.className = 'flex items-center gap-2 overflow-hidden mr-2';
-        
+
         const icon = document.createElement('i');
         icon.className = 'w-4 h-4 shrink-0 ' + (item.type === 'sent' ? 'text-primary' : 'text-success');
         icon.setAttribute('data-lucide', item.type === 'sent' ? 'arrow-up-right' : 'arrow-down-left');
-        
+
         const nameText = document.createElement('span');
         nameText.className = 'truncate font-medium';
         nameText.textContent = item.name;
-        
+
         const sizeText = document.createElement('span');
         sizeText.className = 'opacity-40 text-[10px] whitespace-nowrap';
         sizeText.textContent = formatBytes(item.size);
-        
+
         info.appendChild(icon);
         info.appendChild(nameText);
         info.appendChild(sizeText);
-        
+
         const actions = document.createElement('div');
         actions.className = 'flex gap-1';
-        
+
         if (item.blob) {
             const viewBtn = document.createElement('button');
             viewBtn.className = 'btn btn-ghost btn-xs text-primary';
@@ -381,7 +483,7 @@ export default async function init() {
         div.appendChild(info);
         div.appendChild(actions);
         historyList.prepend(div);
-        
+
         // @ts-ignore
         if (window.lucide) window.lucide.createIcons();
     }
@@ -394,5 +496,6 @@ export default async function init() {
         reset();
         worker?.terminate();
         bc.close();
+        stopDiscovery();
     };
 }

@@ -16,6 +16,18 @@
             <div class="flex flex-col items-end gap-1 text-right">
                 <div id="status-badge" class="badge badge-outline">Ready</div>
                 <div id="quick-status" class="text-[10px] opacity-40 hidden">Quick Connect: Active</div>
+
+                <div class="mt-1 text-right">
+                    <label class="inline-flex items-center gap-2" for="discovery-toggle">
+                        <input id="discovery-toggle" type="checkbox" class="checkbox" aria-label="Enable online discovery" />
+                        <span class="text-[11px] opacity-70">Enable online discovery</span>
+                    </label>
+                    <div class="mt-1 flex items-center justify-end gap-2">
+                        <span id="discovery-status" class="text-[10px] opacity-50">Discovery: Off</span>
+                        <span id="discovery-dot" class="w-2 h-2 rounded-full bg-gray-300" title="Discovery status" aria-hidden="true"></span>
+                    </div>
+                    <p class="text-[10px] opacity-50 max-w-xs mt-1">When enabled this advertises offers through an online service (ntfy.sh) so peers can discover you remotely; default is off. QR/manual handshake and the local Quick Connect fallback remain available.</p>
+                </div>
             </div>
         </div>
     </div>
@@ -86,7 +98,7 @@
 
                 <!-- Manual Fallback -->
                 <div class="collapse collapse-arrow bg-base-200 w-full">
-                    <input type="checkbox" /> 
+                    <input type="checkbox" />
                     <div class="collapse-title text-sm font-medium flex items-center gap-2">
                         <i data-lucide="keyboard" class="w-4 h-4"></i>
                         Manual Handshake (Base64)
@@ -94,7 +106,7 @@
                     <div class="collapse-content space-y-3">
                         <p class="text-[10px] opacity-60">1. Host copies Offer. 2. Joiner pastes Offer. 3. Joiner copies Answer. 4. Host pastes Answer.</p>
                         <div class="flex gap-2">
-                            <textarea id="sdp-text" class="textarea textarea-bordered flex-1 h-20 text-[10px] font-mono" placeholder="Paste handshake code here..."></textarea>
+                            <textarea id="sdp-text" aria-label="handshake code" class="textarea textarea-bordered flex-1 h-20 text-[10px] font-mono" placeholder="Paste handshake code here..."></textarea>
                             <div class="flex flex-col gap-2">
                                 <button id="copy-sdp-btn" class="btn btn-sm btn-square" title="Copy My Code">
                                     <i data-lucide="copy" class="w-4 h-4"></i>
@@ -150,7 +162,7 @@
             <p class="py-4">
                 <span id="sender-name" class="font-bold"></span> wants to send you:
                 <br/>
-                <span id="incoming-filename" class="text-primary break-all"></span> 
+                <span id="incoming-filename" class="text-primary break-all"></span>
                 (<span id="incoming-size"></span>)
             </p>
             <div class="modal-action">
