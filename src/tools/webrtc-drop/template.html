@@ -141,13 +141,15 @@
 
     <!-- Connected View (Shown after handshake) -->
     <div id="connected-view" class="hidden space-y-6">
-        <div class="alert alert-success">
-            <i data-lucide="check-circle" class="w-5 h-5"></i>
-            <div>
-                <h3 class="font-bold">Connected!</h3>
-                <div class="text-xs">Peer: <span id="remote-peer-name" class="font-bold"></span></div>
+        <div class="alert alert-success py-2 sm:py-4 flex flex-col sm:flex-row items-center sm:items-center justify-between gap-2 sm:gap-4">
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+                <i data-lucide="check-circle" class="w-5 h-5 shrink-0"></i>
+                <div class="flex-1">
+                    <h3 class="font-bold text-sm leading-tight">Connected!</h3>
+                    <div class="text-[10px] sm:text-xs opacity-70">Peer: <span id="remote-peer-name" class="font-bold"></span></div>
+                </div>
             </div>
-            <button id="disconnect-btn" class="btn btn-sm btn-ghost">Disconnect</button>
+            <button id="disconnect-btn" class="btn btn-xs sm:btn-sm btn-ghost w-full sm:w-auto mt-1 sm:mt-0">Disconnect</button>
         </div>
 
         <div id="dropzone" class="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center cursor-pointer hover:bg-primary/5 transition-colors">
