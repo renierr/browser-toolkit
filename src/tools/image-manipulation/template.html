@@ -7,7 +7,7 @@
 
     <!-- Options -->
     <div class="collapse collapse-arrow bg-base-200/50 rounded-xl mb-4">
-      <input type="checkbox" id="options-toggle" aria-label="Option toggle" />
+      <input type="checkbox" id="options-toggle" aria-label="Option toggle" checked />
       <div class="collapse-title font-medium flex items-center gap-2">
         <i data-lucide="settings-2" class="w-4 h-4"></i>
         Model Configuration
@@ -114,6 +114,7 @@
         <span class="loading loading-spinner loading-lg text-primary mb-2"></span>
         <span class="status-text font-medium text-sm">Pending...</span>
         <progress class="progress progress-primary w-48 mt-2 item-progress" value="0" max="100"></progress>
+        <button class="btn btn-sm btn-primary mt-2 btn-start-item hidden">Start</button>
       </div>
 
       <!-- Item Controls (top row) -->

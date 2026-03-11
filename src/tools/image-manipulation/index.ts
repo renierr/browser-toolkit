@@ -41,7 +41,7 @@ export default function init(payload?: SharedFilesPayload) {
 
     // Reset common UI: hide retry / start buttons by default
     const retryBtn = statusOverlay.querySelector('.btn-retry') as HTMLElement | null;
-    const startBtn = statusOverlay.querySelector('.btn-start-large') as HTMLElement | null;
+    const startBtn = statusOverlay.querySelector('.btn-start-item') as HTMLElement | null;
     if (retryBtn) retryBtn.classList.add('hidden');
     if (startBtn) startBtn.classList.add('hidden');
 
@@ -51,6 +51,16 @@ export default function init(payload?: SharedFilesPayload) {
       if (progressBar) {
         progressBar.classList.add('hidden');
         progressBar.value = 0;
+      }
+      if (startBtn) {
+        startBtn.classList.remove('hidden');
+        (startBtn as HTMLButtonElement).onclick = () => {
+          if (isProcessing) {
+            showMessage('Already processing another image. Please wait.', { type: 'info' });
+            return;
+          }
+          processItem(item);
+        };
       }
       statusOverlay.classList.remove('hidden');
     } else if (newStatus === 'processing') {
@@ -68,19 +78,16 @@ export default function init(payload?: SharedFilesPayload) {
         `Large image ${dims}Processing at full resolution may fail or be very slow.` +
         `<span class="text-xs opacity-70 block mt-1">Click Start to proceed.</span>`;
 
-      let btn = statusOverlay.querySelector('.btn-start-large') as HTMLButtonElement | null;
-      if (!btn) {
-        btn = document.createElement('button');
-        btn.className = 'btn btn-sm btn-warning mt-2 btn-start-large';
-        btn.textContent = 'Start anyway';
-        statusOverlay.appendChild(btn);
+      if (startBtn) {
+        startBtn.classList.remove('hidden');
+        (startBtn as HTMLButtonElement).onclick = () => {
+          if (isProcessing) {
+            showMessage('Already processing another image. Please wait.', { type: 'info' });
+            return;
+          }
+          processItem(item);
+        };
       }
-      btn.classList.remove('hidden');
-      btn.onclick = () => {
-        btn!.classList.add('hidden');
-        setItemStatus(item, 'pending');
-        processQueue();
-      };
       statusOverlay.classList.remove('hidden');
     } else if (newStatus === 'done') {
       statusOverlay.classList.add('hidden');
@@ -206,14 +213,7 @@ export default function init(payload?: SharedFilesPayload) {
     setItemStatus(item, 'error', { errorMsg: shortError });
   };
 
-  const processQueue = async () => {
-    if (isProcessing) return;
-    const item = queue.find((i) => i.status === 'pending');
-    if (!item) {
-      updateUI();
-      return;
-    }
-
+  async function processItem(item: ImageQueueItem) {
     try {
       isProcessing = true;
       setItemStatus(item, 'processing');
@@ -232,7 +232,17 @@ export default function init(payload?: SharedFilesPayload) {
       isProcessing = false;
       processQueue();
     }
-  };
+  }
+
+  async function processQueue() {
+    if (isProcessing) return;
+    const item = queue.find((i) => i.status === 'pending');
+    if (!item) {
+      updateUI();
+      return;
+    }
+    await processItem(item);
+  }
 
   const addFilesToQueue = async (files: FileList | File[]) => {
     try {
