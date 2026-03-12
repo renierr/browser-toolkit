@@ -61,6 +61,14 @@ export const MODELS: Record<string, ModelConfig> = {
     output: 'reconstruction',
     padToMultipleOf: 8,
   },
+  iat_lol_v2: {
+    id: 'iat_lol_v2',
+    name: 'Low-light Enhancement (IAT)',
+    url: new URL('/lib/models/iat_lol_v2.onnx', document.baseURI).href,
+    input: 'input',
+    output: 'enhanced',
+    padToMultipleOf: 8,
+  },
 };
 
 export interface ProcessingOptions {
