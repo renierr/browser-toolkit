@@ -77,6 +77,18 @@ export const MODELS: Record<string, ModelConfig> = {
     outputMean: [0, 0, 0],
     outputStd: [1, 1, 1],
   },
+  iat_exposure: {
+    id: 'iat_exposure',
+    name: 'Exposure Correction (IAT)',
+    url: new URL('/lib/models/iat_exposure.emb.onnx', document.baseURI).href,
+    input: 'input',
+    output: 'enhanced',
+    padToMultipleOf: 8,
+    mean: [0.5, 0.5, 0.5],
+    std: [0.5, 0.5, 0.5],
+    outputMean: [0, 0, 0],
+    outputStd: [1, 1, 1],
+  },
 };
 
 export interface ProcessingOptions {
