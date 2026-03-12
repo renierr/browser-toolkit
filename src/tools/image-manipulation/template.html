@@ -30,11 +30,16 @@
             <p class="text-xs text-base-content/50 mt-1">Select the AI model for processing.</p>
           </div>
           <div class="form-control">
-            <label class="label" for="opt-large-threshold">
-              <span class="label-text font-medium">Auto-hold threshold (px)</span>
+            <label class="label" for="opt-max-dimension">
+              <span class="label-text font-medium">Max processing resolution</span>
             </label>
-            <input id="opt-large-threshold" class="input input-sm input-bordered w-full" type="number" min="1" value="512" data-setting="largeThreshold" />
-            <p class="text-xs text-base-content/50 mt-1">Images exceeding this size will always require a manual start to avoid browser lag.</p>
+            <select id="opt-max-dimension" class="select select-sm select-bordered w-full" data-setting="maxDimension">
+              <option value="0" selected>Native (original size)</option>
+              <option value="1024">1024px</option>
+              <option value="2048">2048px</option>
+              <option value="4096">4096px</option>
+            </select>
+            <p class="text-xs text-base-content/50 mt-1">Downscale images during processing to save memory.</p>
           </div>
           <div class="form-control">
             <label class="label cursor-pointer" for="opt-force-wasm">
@@ -44,6 +49,13 @@
               </span>
               <input type="checkbox" id="opt-force-wasm" class="toggle toggle-primary" data-setting="forceWasm" />
             </label>
+          </div>
+          <div class="form-control sm:col-span-2">
+            <button id="btn-clear-cache" class="btn btn-outline btn-sm gap-2 w-fit">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              Clear Model Cache
+            </button>
+            <p class="text-xs text-base-content/50 mt-1">Free up WASM memory by releasing loaded AI models.</p>
           </div>
         </div>
       </div>

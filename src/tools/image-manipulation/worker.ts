@@ -1,4 +1,4 @@
-import { type OnnxModelConfig, loadSession, runInference, createTensor } from '../../js/onnx-utils';
+import { type OnnxModelConfig, loadSession, runInference, createTensor, releaseSession } from '../../js/onnx-utils';
 import { blobToImageData } from '../../js/image-utils';
 import type { ProcessingOptions } from './utils.ts';
 
@@ -29,13 +29,16 @@ function imageDataToTensor(imgData: ImageData, config: any): Float32Array {
   const std = config.std || [1, 1, 1];
   const [min, max] = config.normalizeRange || [0, 1];
   const rangeWidth = max - min;
+  const isBGR = !!config.bgr;
 
   for (let i = 0; i < numPixels; i++) {
     const rgbaIdx = i * 4;
     for (let c = 0; c < 3; c++) {
       const pix = data[rgbaIdx + c] / 255.0;
       const val = (pix * rangeWidth + min - mean[c]) / std[c];
-      floatData[c * numPixels + i] = val;
+      
+      const targetC = isBGR ? (2 - c) : c;
+      floatData[targetC * numPixels + i] = val;
     }
   }
 
@@ -51,20 +54,22 @@ function tensorToImageData(tensorData: Float32Array, width: number, height: numb
   const rgbaData = new Uint8ClampedArray(numPixels * 4);
   const channels = Math.floor(tensorData.length / numPixels);
 
-  const mean = config.mean || [0, 0, 0];
-  const std = config.std || [1, 1, 1];
-  const [min, max] = config.normalizeRange || [0, 1];
+  const mean = config.outputMean || config.mean || [0, 0, 0];
+  const std = config.outputStd || config.std || [1, 1, 1];
+  const [min, max] = config.outputRange || config.normalizeRange || [0, 1];
   const rangeWidth = max - min;
+  const isBGR = !!config.bgr;
 
   for (let i = 0; i < numPixels; i++) {
     const rgbaIdx = i * 4;
 
     for (let c = 0; c < 3; c++) {
       let val;
+      const sourceC = isBGR ? (2 - c) : c;
       if (channels === 1) {
         val = tensorData[i];
       } else {
-        val = tensorData[c * numPixels + i];
+        val = tensorData[sourceC * numPixels + i];
       }
 
       // Reverse: pix = (((val * std) + mean - min) / rangeWidth) * 255.0
@@ -98,19 +103,25 @@ function padImageData(imgData: ImageData, multiple: number): ImageData {
   const ctx = canvas.getContext('2d')!;
   ctx.putImageData(imgData, 0, 0);
 
-  // Extend edge pixels (simple padding) or keep as-is (transparent/black)
-  // Most models prefer mirrored or edge padding, but black/transparent often works.
   return ctx.getImageData(0, 0, newWidth, newHeight);
 }
 
 async function processImage(id: string, blob: Blob, options: ProcessingOptions) {
+  let session = null;
   try {
     reportProgress(id, 'Decoding Image...', 5);
 
-    // 1. Decode Image to ImageData
-    const imgData = await blobToImageData(blob);
+    // 1. Decode Image to ImageData (with resolution limit help)
+    const maxDim = options.maxDimension > 0 ? options.maxDimension : undefined;
+    const imgData = await blobToImageData(blob, maxDim);
     const originalWidth = imgData.width;
     const originalHeight = imgData.height;
+
+    // We also need the NATIVE original dimensions to scale back if we downscaled here
+    // But blobToImageData with maxDimension already handles downscaling.
+    // However, if we want to scale back to the *file's* original size, we'd need that too.
+    // The user said "Native default - no downscaling", so if maxDim is 0, we are at file size.
+    // If maxDim > 0, we might have downscaled.
 
     reportProgress(id, 'Preparing Model Input...', 10);
     const padMultiple = options.modelConfig.padToMultipleOf || 1;
@@ -124,7 +135,7 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
       modelPath: options.modelConfig.url,
       executionProviders: options.forceWasm ? ['wasm'] : undefined,
     };
-    const session = await loadSession(config);
+    session = await loadSession(config);
 
     reportProgress(id, 'Preparing Tensors...', 30);
 
@@ -164,16 +175,22 @@ async function processImage(id: string, blob: Blob, options: ProcessingOptions) 
     const ctx = offscreen.getContext('2d')!;
 
     if (outW !== targetW || outH !== targetH) {
-      // Draw the output image data onto a temp canvas then crop
       const tempCanvas = new OffscreenCanvas(outW, outH);
       tempCanvas.getContext('2d')!.putImageData(outImgData, 0, 0);
       ctx.drawImage(tempCanvas, 0, 0);
+      // cleanup temp
+      tempCanvas.width = 0;
+      tempCanvas.height = 0;
     } else {
       ctx.putImageData(outImgData, 0, 0);
     }
 
     const outBlob = await offscreen.convertToBlob({ type: 'image/png' });
     reportResult(id, outBlob);
+
+    // Final cleanup of large objects
+    offscreen.width = 0;
+    offscreen.height = 0;
   } catch (error) {
     reportError(id, error);
   }
@@ -186,5 +203,11 @@ self.onmessage = (e: MessageEvent) => {
     processImage(payload.id, payload.blob, payload.options).catch((err) =>
       reportError(payload.id, err)
     );
+  } else if (type === 'CLEAR_CACHE') {
+    // Release all sessions known to us
+    import('./utils.ts').then(({ MODELS }) => {
+      Object.values(MODELS).forEach(m => releaseSession(m.url));
+      console.log('[Worker] Model cache cleared.');
+    });
   }
 };

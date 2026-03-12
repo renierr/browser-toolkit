@@ -10,6 +10,10 @@ export interface ModelConfig {
   mean?: number[]; // [r, g, b] default [0, 0, 0]
   std?: number[];  // [r, g, b] default [1, 1, 1]
   normalizeRange?: [number, number]; // e.g. [0, 1] or [-1, 1], default [0, 1]
+  outputMean?: number[];
+  outputStd?: number[];
+  outputRange?: [number, number];
+  bgr?: boolean;
 }
 
 export const MODELS: Record<string, ModelConfig> = {
@@ -68,6 +72,10 @@ export const MODELS: Record<string, ModelConfig> = {
     input: 'input',
     output: 'enhanced',
     padToMultipleOf: 8,
+    mean: [0.5, 0.5, 0.5],
+    std: [0.5, 0.5, 0.5],
+    outputMean: [0, 0, 0],
+    outputStd: [1, 1, 1],
   },
 };
 
@@ -75,6 +83,7 @@ export interface ProcessingOptions {
   modelId: string;
   forceWasm: boolean;
   largeThreshold: number;
+  maxDimension: number; // 0 for native
   modelConfig: ModelConfig;
 }
 
@@ -94,6 +103,7 @@ export function getProcessingOptions(): ProcessingOptions {
   const modelId = settings.get('model', 'line_drawings');
   const forceWasm = settings.get('forceWasm', false);
   const largeThreshold = settings.get('largeThreshold', 512);
+  const maxDimension = Number(settings.get('maxDimension', 0));
 
-  return { modelId, forceWasm, largeThreshold, modelConfig: MODELS[modelId] };
+  return { modelId, forceWasm, largeThreshold, maxDimension, modelConfig: MODELS[modelId] };
 }

@@ -447,6 +447,13 @@ export default function init(payload?: SharedFilesPayload) {
     processQueue();
   });
 
+  const btnClearCache = document.getElementById('btn-clear-cache') as HTMLButtonElement;
+  btnClearCache.addEventListener('click', () => {
+    const w = initWorker();
+    w.postMessage({ type: 'CLEAR_CACHE' });
+    showMessage('Model cache cleared and memory released.', { type: 'info' });
+  });
+
   if (payload?.sharedFiles?.length) addFilesToQueue(payload.sharedFiles);
 
   return () => {
