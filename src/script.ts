@@ -87,7 +87,7 @@ function getSectionMeta(sectionId: string | undefined) {
 }
 
 function renderOverview() {
-  renderLayout(overviewHtml);
+  renderLayout(overviewHtml, false, false);
 
   const grid = document.getElementById('tools-grid')!;
   const searchInput = document.getElementById('search') as HTMLInputElement;
