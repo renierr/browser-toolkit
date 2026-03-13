@@ -17,7 +17,7 @@ let currentToolCleanup: (() => void) | undefined;
 let cancelPendingInit: (() => void) | undefined;
 let settingsCleanup: (() => void) | undefined;
 
-export function renderLayout(content: string, hideHeader?: boolean, hideFooter?: boolean) {
+export function renderLayout(content: string, hideHeader?: boolean, hideFooter: boolean = true) {
   // Cancel any pending script initialization from previous navigation
   if (cancelPendingInit) {
     cancelPendingInit();
