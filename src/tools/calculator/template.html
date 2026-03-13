@@ -1,0 +1,134 @@
+<div class="flex flex-col h-[calc(100vh-12rem)] max-w-md mx-auto bg-base-100 shadow-2xl rounded-3xl overflow-hidden border border-base-300">
+    <!-- Calculator Display Area -->
+    <div class="flex-none p-6 bg-base-200/50 flex flex-col justify-end items-end gap-1 min-h-[160px] select-all min-w-0 overflow-hidden">
+        <div id="calc-last-op" class="text-sm text-base-content/60 font-mono h-6 transition-all duration-200 truncate w-full text-right"></div>
+        <div id="calc-display" class="text-5xl font-semibold text-base-content font-mono overflow-x-auto whitespace-nowrap w-full text-right py-2 scrollbar-hide focus:outline-none max-w-full" contenteditable="true" inputmode="decimal">0</div>
+    </div>
+
+    <!-- Mode Toggle and Tools Bar -->
+    <div class="flex justify-between items-center px-6 py-2 bg-base-200/30 border-y border-base-300">
+        <div class="flex gap-2">
+            <button id="calc-toggle-sci" class="btn btn-ghost btn-sm gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flask-conical"><path d="M10 2v7.5"/><path d="M14 2v7.5"/><path d="M4.853 21h14.294a2 2 0 0 0 1.922-2.53l-3.32-11.41a2 2 0 0 0-1.922-1.44H8.172a2 2 0 0 0-1.922 1.44l-3.32 11.41A2 2 0 0 0 4.853 21Z"/><path d="M6 16h12"/><path d="M7 11.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5"/></svg>
+                <span class="hidden sm:inline">Scientific</span>
+            </button>
+            <button popovertarget="calc-history-panel" class="btn btn-ghost btn-sm gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-history"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>
+                <span class="hidden sm:inline">History</span>
+            </button>
+        </div>
+        <div class="flex gap-1">
+            <button id="calc-copy" class="btn btn-ghost btn-circle btn-xs" title="Copy result">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-copy"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            </button>
+        </div>
+        <div class="flex gap-1">
+            <button class="btn btn-ghost btn-sm" id="calc-backspace" title="Backspace">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-delete"><path d="M20 5H9l-7 7 7 7h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z"/><line x1="18" y1="9" x2="12" y2="15"/><line x1="12" y1="9" x2="18" y2="15"/></svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Buttons Grid -->
+    <div class="flex-grow p-4 grid grid-cols-4 gap-3 bg-base-100 overflow-y-auto">
+        <!-- Scientific Row (Hidden by default) -->
+        <div id="calc-scientific-buttons" class="hidden contents">
+            <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="sin(">sin</button>
+            <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="cos(">cos</button>
+            <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="tan(">tan</button>
+            <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="pow(">xⁿ</button>
+            <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="sqrt(">√</button>
+            <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="log(">log</button>
+            <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="ln(">ln</button>
+            <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="PI">π</button>
+        </div>
+
+        <!-- Main Buttons Row 1 -->
+        <button class="btn btn-error btn-outline btn-md rounded-2xl text-lg font-bold" id="calc-clear">AC</button>
+        <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key="(">(</button>
+        <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key=")">)</button>
+        <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="/">÷</button>
+
+        <!-- Main Buttons Row 2 -->
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="7">7</button>
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="8">8</button>
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="9">9</button>
+        <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="*">×</button>
+
+        <!-- Main Buttons Row 3 -->
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="4">4</button>
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="5">5</button>
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="6">6</button>
+        <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="-">-</button>
+
+        <!-- Main Buttons Row 4 -->
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="1">1</button>
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="2">2</button>
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="3">3</button>
+        <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="+">+</button>
+
+        <!-- Main Buttons Row 5 -->
+        <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key="%">%</button>
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="0">0</button>
+        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val=".">.</button>
+        <button class="btn btn-success btn-md rounded-2xl text-3xl font-bold text-success-content shadow-lg shadow-success/20" id="calc-equals">=</button>
+    </div>
+</div>
+
+<!-- History Popover (Outside main container, hidden by default) -->
+<div id="calc-history-panel" popover class="p-0 m-0 w-full sm:w-80 h-full sm:h-auto sm:max-h-[80vh] bg-base-100 shadow-2xl border border-base-300 sm:rounded-3xl sm:top-20 sm:right-4 left-auto overflow-hidden">
+    <div class="flex flex-col h-full max-h-[80vh]">
+        <div class="p-4 border-b border-base-300 flex justify-between items-center bg-base-200">
+            <h3 class="font-bold text-lg">History</h3>
+            <button popovertarget="calc-history-panel" popovertargetaction="hide" class="btn btn-ghost btn-sm btn-circle">✕</button>
+        </div>
+        <div id="calc-history-list" class="flex-grow overflow-y-auto p-4 flex flex-col gap-3 min-h-[200px]">
+            <div class="text-center text-base-content/40 mt-10">No calculations yet</div>
+        </div>
+        <div class="p-4 border-t border-base-300 flex gap-2 bg-base-200/50 mt-auto">
+            <button id="calc-clear-history" class="btn btn-outline btn-sm flex-grow">Clear</button>
+            <button popovertarget="calc-history-panel" popovertargetaction="hide" class="btn btn-neutral btn-sm">Close</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom styles for high usability and Android-like feel */
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+    /* Ensure display doesn't have weird outlines */
+    #calc-display:empty:before {
+        content: attr(data-placeholder);
+        color: #888;
+    }
+    #calc-display:focus {
+        outline: none;
+    }
+    /* Animation for results */
+    .calc-result-flash {
+        animation: flash 0.3s ease-out;
+    }
+    @keyframes flash {
+        0% { opacity: 0.5; transform: scale(0.98); }
+        100% { opacity: 1; transform: scale(1); }
+    }
+    /* Popover styles */
+    #calc-history-panel {
+        color: var(--fallback-bc,oklch(var(--bc)/1)); /* DaisyUI text color variable */
+    }
+    #calc-history-panel::backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(2px);
+    }
+    #calc-history-panel:not(:popover-open) {
+        display: none;
+    }
+    #calc-history-panel:popover-open {
+        display: block;
+    }
+</style>
