@@ -3,5 +3,7 @@
   "description": "Powerful scientific calculator with session history and mobile-first design.",
   "icon": "calculator",
   "sectionId": "utilities",
+  "hideFooter": true,
+  "hideHeader": true,
   "order": 5
 }
