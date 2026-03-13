@@ -8,6 +8,7 @@ export interface TransferConfig {
   onMessage: (msg: string, type?: 'info' | 'warning' | 'alert') => void;
   onIncomingFile: (sender: string, filename: string, size: number, type: string) => void;
   onHideProgress: () => void;
+  onPeerNameReceived?: (name: string) => void;
 }
 
 export class TransferManager {
@@ -47,6 +48,7 @@ export class TransferManager {
         const msg = JSON.parse(data);
         if (msg.type === 'name') {
           this.remotePeerName = msg.name;
+          this.config.onPeerNameReceived?.(msg.name);
         } else if (msg.type === 'metadata') {
           this.incomingMeta = msg;
           this.incomingChunks = [];

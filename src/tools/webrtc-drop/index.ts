@@ -25,6 +25,7 @@ export default async function init() {
     onMessage: (msg, type) => showMessage(msg, { type }),
     onIncomingFile: (sender, filename, size) => ui.showIncomingFile(sender, filename, size),
     onHideProgress: () => hideProgress(),
+    onPeerNameReceived: (name) => ui.showConnected(name),
   });
 
   ui.setSelfInfo(selfName);
@@ -45,6 +46,7 @@ export default async function init() {
   function handleDiscoveryMessage(data: any) {
     if (data.type === 'offer') {
       console.debug('[Discovery] offer received from', data.name);
+      transfer.setRemotePeerName(data.name || 'Peer');
       ui.addDiscoveryPeer(data.name, () => connectToDiscoveredPeer(data), Utils.simpleHash(data.sdp + (data.sender || '')));
       try { localStorage.setItem('btk-last-offer', data.sdp); } catch (e) {}
     } else if (data.type === 'answer' && manager && !manager.isStable) {
@@ -55,6 +57,7 @@ export default async function init() {
   }
 
   async function connectToDiscoveredPeer(peer: any) {
+    transfer.setRemotePeerName(peer.name || 'Peer');
     ui.showHandshake(`Connecting to ${peer.name || 'peer'}...`);
     if (ui.discoveryToggle?.checked) initDiscovery();
 
