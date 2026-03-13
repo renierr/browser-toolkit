@@ -2,8 +2,9 @@ import OverType from 'overtype';
 import { MarkdownParser } from 'overtype/parser';
 import { isDarkMode } from '../../js/theme.ts';
 import { showMessage } from '../../js/ui.ts';
-import { openDB, getAllNotes, saveNote, deleteNote, getNoteById } from './db.ts';
+import { openDB, getAllNotes, saveNote, deleteNote, getNoteById, importNotes } from './db.ts';
 import { removeMarkdownSyntax, exportNoteToPdf } from './pdf-utils.ts';
+import { downloadFile } from '../../js/file-utils.ts';
 import type { Note } from './types.ts';
 
 // noinspection JSUnusedGlobalSymbols
@@ -15,6 +16,9 @@ export default async function init() {
   const formTitle = document.getElementById('form-title') as HTMLSpanElement;
   const searchInput = document.getElementById('search-input') as HTMLInputElement;
   const container = document.getElementById('notes-container') as HTMLDivElement;
+  const exportAllBtn = document.getElementById('export-all-btn') as HTMLButtonElement;
+  const importBtn = document.getElementById('import-btn') as HTMLButtonElement;
+  const importInput = document.getElementById('import-input') as HTMLInputElement;
 
   const overType = new OverType(noteInput, {
     toolbar: true,
@@ -71,6 +75,9 @@ export default async function init() {
               }
             </div>
             <div class="flex gap-1">
+              <button class="btn btn-ghost btn-xs export-md-btn" data-id="${note.id}" title="Save as Markdown">
+                <i data-lucide="file-text" class="w-4 h-4"></i>
+              </button>
               <button class="btn btn-ghost btn-xs export-btn" data-id="${note.id}" title="Export to PDF">
                 <i data-lucide="file-down" class="w-4 h-4"></i>
               </button>
@@ -147,7 +154,7 @@ export default async function init() {
     try {
       const note = await getNoteById(db, id);
       if (note) {
-        await exportNoteToPdf(id, note.content);
+        await exportNoteToPdf(note);
       }
     } catch (e) {
       console.error('Failed to export note:', e);
@@ -155,9 +162,74 @@ export default async function init() {
     }
   }
 
+  async function handleExportMarkdown(id: number) {
+    try {
+      const note = await getNoteById(db, id);
+      if (note) {
+        const filename = `note-${note.shortId || note.id}.md`;
+        const blob = new Blob([note.content], { type: 'text/markdown' });
+        await downloadFile(blob, filename, 'text/markdown');
+      }
+    } catch (e) {
+      console.error('Failed to export markdown:', e);
+      showMessage('Failed to export markdown.', { type: 'alert' });
+    }
+  }
+
+  async function handleGlobalExport() {
+    try {
+      const notes = await getAllNotes(db);
+      const structuralData = {
+        generator: 'browser-toolkit-notes',
+        version: 1,
+        exportedAt: Date.now(),
+        notes,
+      };
+      const json = JSON.stringify(structuralData, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const date = new Date().toISOString().split('T')[0];
+      await downloadFile(blob, `notes-backup-${date}.json`, 'application/json');
+    } catch (e) {
+      console.error('Failed to export all notes:', e);
+      showMessage('Failed to export all notes.', { type: 'alert' });
+    }
+  }
+
+  async function handleGlobalImport(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+
+      // Validate structural JSON
+      if (data.generator !== 'browser-toolkit-notes') {
+        throw new Error('Invalid backup file: missing generator signature');
+      }
+
+      const notes = data.notes as Note[];
+      if (!Array.isArray(notes)) {
+        throw new Error('Invalid backup file: notes list is missing or invalid');
+      }
+
+      const result = await importNotes(db, notes);
+      showMessage(`Import complete! Imported: ${result.imported}, Skipped: ${result.skipped} (duplicates).`);
+      loadNotes(searchInput.value);
+    } catch (e) {
+      console.error('Failed to import notes:', e);
+      showMessage(`Failed to import: ${e instanceof Error ? e.message : 'Invalid JSON backup'}`, { type: 'alert' });
+    } finally {
+      importInput.value = '';
+    }
+  }
+
   addBtn.addEventListener('click', handleSave);
   cancelBtn.addEventListener('click', resetForm);
   searchInput.addEventListener('input', () => loadNotes(searchInput.value));
+  exportAllBtn.addEventListener('click', handleGlobalExport);
+  importBtn.addEventListener('click', () => importInput.click());
+  importInput.addEventListener('change', handleGlobalImport);
 
   container.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
@@ -192,6 +264,10 @@ export default async function init() {
       const btn = target.closest('.export-btn') as HTMLButtonElement;
       const id = parseInt(btn.getAttribute('data-id') || '0');
       if (id) handleExport(id);
+    } else if (target.closest('.export-md-btn')) {
+      const btn = target.closest('.export-md-btn') as HTMLButtonElement;
+      const id = parseInt(btn.getAttribute('data-id') || '0');
+      if (id) handleExportMarkdown(id);
     }
   });
 

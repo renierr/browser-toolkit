@@ -4,6 +4,10 @@ const DB_NAME = 'NotesDB';
 const STORE_NAME = 'notes';
 const DB_VERSION = 1;
 
+export function generateShortId(): string {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
+}
+
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -50,11 +54,15 @@ export async function saveNote(db: IDBDatabase, content: string, editingId: numb
         if (note) {
           note.content = content;
           note.updatedAt = Date.now();
+          if (!note.shortId) {
+            note.shortId = generateShortId();
+          }
           store.put(note);
         }
       };
     } else {
       const note: Note = {
+        shortId: generateShortId(),
         content,
         createdAt: Date.now(),
       };
@@ -72,6 +80,39 @@ export async function deleteNote(db: IDBDatabase, id: number): Promise<void> {
     const store = transaction.objectStore(STORE_NAME);
     store.delete(id);
     transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+  });
+}
+
+export async function importNotes(db: IDBDatabase, notes: Note[]): Promise<{ imported: number; skipped: number }> {
+  const existingNotes = await getAllNotes(db);
+  const existingShortIds = new Set(existingNotes.map((n) => n.shortId).filter(Boolean));
+
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+
+    let imported = 0;
+    let skipped = 0;
+
+    for (const note of notes) {
+      if (note.shortId && existingShortIds.has(note.shortId)) {
+        skipped++;
+        continue;
+      }
+
+      // Generate shortId if missing for some reason
+      if (!note.shortId) {
+        note.shortId = generateShortId();
+      }
+
+      // Remove id to let auto-increment handle it if it conflicts or is already present
+      const { id, ...noteToSave } = note;
+      store.add(noteToSave);
+      imported++;
+    }
+
+    transaction.oncomplete = () => resolve({ imported, skipped });
     transaction.onerror = () => reject(transaction.error);
   });
 }

@@ -2,6 +2,7 @@ import { downloadFile } from '../../js/file-utils.ts';
 import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import { MarkdownParser } from 'overtype/parser';
+import type { Note } from './types.ts';
 
 export const removeMarkdownSyntax = (html: string): string => {
   let htmlContent = html.replace(/<span class="syntax-marker[^"]*">.*?<\/span>/g, '');
@@ -10,8 +11,8 @@ export const removeMarkdownSyntax = (html: string): string => {
   return htmlContent;
 };
 
-export async function exportNoteToPdf(id: number, content: string): Promise<void> {
-  const htmlContent = removeMarkdownSyntax(MarkdownParser.parse(content));
+export async function exportNoteToPdf(note: Note): Promise<void> {
+  const htmlContent = removeMarkdownSyntax(MarkdownParser.parse(note.content));
   const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
@@ -36,7 +37,8 @@ export async function exportNoteToPdf(id: number, content: string): Promise<void
 
   try {
     const pdfBytes = await htmlToPdfBuffer(fullHtml);
-    await downloadFile(pdfBytes, `note-${id}.pdf`, 'application/pdf');
+    const filename = `note-${note.shortId || note.id}.pdf`;
+    await downloadFile(pdfBytes, filename, 'application/pdf');
   } catch (e) {
     console.error('Failed to export PDF:', e);
     showMessage('Failed to export PDF. See console for details.', { type: 'alert' });
