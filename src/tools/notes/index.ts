@@ -75,6 +75,7 @@ export default async function init() {
       .map((note) => {
         const lines = note.content.split('\n');
         const hasManyLines = lines.length > 3 || note.content.length > 200;
+        const previewHtml = removeMarkdownSyntax(MarkdownParser.parse(note.content));
 
         return `
       <div class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
@@ -82,7 +83,7 @@ export default async function init() {
           <div class="flex justify-between items-start gap-4 flex-wrap">
             <div class="note-content-wrapper flex-1">
               <div class="overtype-content prose prose-sm max-w-full min-w-32 break-all text-base-content ${hasManyLines ? 'note-content-collapsed' : ''}">
-                ${MarkdownParser.parse(note.content)}
+                ${previewHtml}
               </div>
               ${
                 hasManyLines
@@ -182,6 +183,13 @@ export default async function init() {
     };
   }
 
+  const removeMarkdownSyntax = (html: string) => {
+    let htmlContent = html.replace(/<span class="syntax-marker[^"]*">.*?<\/span>/g, "");
+    htmlContent = htmlContent.replace(/\sclass="(bullet-list|ordered-list|code-fence|hr-marker|blockquote|url-part)"/g, "");
+    htmlContent = htmlContent.replace(/\sclass=""/g, "");
+    return htmlContent;
+  }
+
   async function exportToPdf(id: number) {
     const transaction = db.transaction(STORE_NAME, 'readonly');
     const store = transaction.objectStore(STORE_NAME);
@@ -192,9 +200,7 @@ export default async function init() {
       if (note) {
         // Use preview mode to output clean HTML without markdown syntax markers
         let htmlContent = MarkdownParser.parse(note.content);
-        htmlContent = htmlContent.replace(/<span class="syntax-marker[^"]*">.*?<\/span>/g, "");
-        htmlContent = htmlContent.replace(/\sclass="(bullet-list|ordered-list|code-fence|hr-marker|blockquote|url-part)"/g, "");
-        htmlContent = htmlContent.replace(/\sclass=""/g, "");
+        htmlContent = removeMarkdownSyntax(htmlContent);
         const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
