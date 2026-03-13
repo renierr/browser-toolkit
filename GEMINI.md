@@ -60,6 +60,9 @@ It is a **TypeScript** project built with **Vite**.
 - `public/`: Static assets
 - `dist/`: Build output
 
+## Context info for tools
+see docs/index.md for more context about the tools.
+
 ## Coding Conventions
 
 ### TypeScript
@@ -78,11 +81,14 @@ It is a **TypeScript** project built with **Vite**.
 - Component files should be descriptive.
 
 ### Build & Scripts
+never use npm we use pnpm.
+use tsc for error checking no full build.
+
 - `pnpm dev`: Start development server.
 - `pnpm build`: Build for production.
 - `pnpm format`: Format code using Prettier.
 
 ## General Guidelines
-- Ensure all code is compatible with modern browsers (ES2022).
+- Ensure all code is compatible with modern browsers.
 - This is a browser-only toolkit; avoid Node.js specific APIs in client-side code.
 - When adding a new tool, ensure it has a corresponding entry in `src/tools` and `src/pages`.
