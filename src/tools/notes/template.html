@@ -1,4 +1,9 @@
 <style>
+
+    .overtype-toolbar {
+      position: sticky !important;
+      top: 0;
+    }
     .overtype-content .syntax-marker {
       opacity: 0.4;
       font-weight: normal;
@@ -67,15 +72,14 @@
     }
   </style>
 
-<div class="card bg-base-100 shadow-xl border">
-  <div class="card-body">
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body p-1 md:p-4">
     <h2 class="card-title text-2xl font-bold mb-4">Notes</h2>
     <p class="text-base-content/70 mb-6">Simple note taking - stored locally in your browser.</p>
 
-    <div class="flex flex-col gap-4 bg-base-200 p-4 rounded-xl shadow-sm border mb-8">
+    <div class="flex flex-col gap-4 pb-2 mb-4">
       <div class="form-control w-full">
-        <label class="label"><span class="label-text font-bold" id="form-title">New Note</span></label>
-        <div id="note-input" class="textarea textarea-bordered h-96 text-lg w-full"></div>
+        <div id="note-input" class="textarea textarea-bordered p-0 h-96 max-h-[50dvh] text-lg w-full"></div>
       </div>
       <div class="flex justify-end gap-2">
         <button id="cancel-edit-btn" class="btn btn-secondary hidden">Cancel</button>
@@ -84,7 +88,7 @@
     </div>
 
     <div class="flex flex-col md:flex-row gap-4 items-center justify-between mb-6">
-      <div class="flex flex-1 gap-4 items-center">
+      <div class="flex flex-wrap flex-1 gap-4 items-center">
         <div class="relative w-full md:w-72">
           <input id="search-input" type="text" placeholder="Search notes..." class="input input-bordered w-full pl-10" />
           <span class="absolute left-3 top-1/2 -translate-y-1/2 opacity-50">

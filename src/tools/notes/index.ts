@@ -13,7 +13,6 @@ export default async function init() {
   const noteInput = document.getElementById('note-input') as HTMLDivElement;
   const addBtn = document.getElementById('add-note-btn') as HTMLButtonElement;
   const cancelBtn = document.getElementById('cancel-edit-btn') as HTMLButtonElement;
-  const formTitle = document.getElementById('form-title') as HTMLSpanElement;
   const searchInput = document.getElementById('search-input') as HTMLInputElement;
   const container = document.getElementById('notes-container') as HTMLDivElement;
   const exportAllBtn = document.getElementById('export-all-btn') as HTMLButtonElement;
@@ -117,7 +116,6 @@ export default async function init() {
     editingId = null;
     overType.setValue('');
     addBtn.textContent = 'Add Note';
-    formTitle.textContent = 'New Note';
     cancelBtn.classList.add('hidden');
   }
 
@@ -128,10 +126,9 @@ export default async function init() {
         editingId = id;
         overType.setValue(note.content);
         addBtn.textContent = 'Update Note';
-        formTitle.textContent = 'Edit Note';
         cancelBtn.classList.remove('hidden');
         overType.focus();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        noteInput.scrollIntoView({ block: 'start', behavior: 'smooth' });
       }
     } catch (e) {
       console.error('Failed to load note for editing:', e);
