@@ -47,6 +47,8 @@ export class WebRTCManager {
         };
     }
 
+    private missedPongs = 0;
+
     private setupDataChannel(channel: RTCDataChannel) {
         channel.binaryType = 'arraybuffer';
         channel.onopen = () => {
@@ -60,9 +62,16 @@ export class WebRTCManager {
             this.config.onDisconnected();
         };
         channel.onmessage = (ev) => {
-            // Filter out heartbeat pings to avoid surface noise in index.ts
-            if (typeof ev.data === 'string' && ev.data === '{"type":"ping"}') {
-                return;
+            // Filter out heartbeat pings/pongs
+            if (typeof ev.data === 'string') {
+                if (ev.data === '{"type":"ping"}') {
+                    this.dataChannel?.send('{"type":"pong"}');
+                    return;
+                }
+                if (ev.data === '{"type":"pong"}') {
+                    this.missedPongs = 0;
+                    return;
+                }
             }
             this.config.onData(ev.data);
         };
@@ -70,11 +79,19 @@ export class WebRTCManager {
 
     private startHeartbeat() {
         this.stopHeartbeat();
+        this.missedPongs = 0;
         this.heartbeatInterval = setInterval(() => {
             if (this.dataChannel?.readyState === 'open') {
+                if (this.missedPongs >= 3) {
+                    console.warn('[WebRTC] heartbeat timeout, closing connection');
+                    this.close();
+                    this.config.onDisconnected();
+                    return;
+                }
                 this.dataChannel.send('{"type":"ping"}');
+                this.missedPongs++;
             }
-        }, 20000); // 20 seconds
+        }, 10000); // 10 seconds
     }
 
     private stopHeartbeat() {
