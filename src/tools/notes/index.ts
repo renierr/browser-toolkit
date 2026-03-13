@@ -1,34 +1,10 @@
 import OverType from 'overtype';
 import { MarkdownParser } from 'overtype/parser';
 import { isDarkMode } from '../../js/theme.ts';
-import { downloadFile } from '../../js/file-utils.ts';
-import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
 import { showMessage } from '../../js/ui.ts';
-
-interface Note {
-  id?: number;
-  content: string;
-  createdAt: number;
-  updatedAt?: number;
-}
-
-const DB_NAME = 'NotesDB';
-const STORE_NAME = 'notes';
-const DB_VERSION = 1;
-
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-    request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
-    request.onupgradeneeded = (event) => {
-      const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-      }
-    };
-  });
-}
+import { openDB, getAllNotes, saveNote, deleteNote, getNoteById } from './db.ts';
+import { removeMarkdownSyntax, exportNoteToPdf } from './pdf-utils.ts';
+import type { Note } from './types.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default async function init() {
@@ -48,12 +24,8 @@ export default async function init() {
   let editingId: number | null = null;
 
   async function loadNotes(query = '') {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.getAll();
-
-    request.onsuccess = () => {
-      let notes: Note[] = request.result;
+    try {
+      let notes = await getAllNotes(db);
 
       if (query) {
         const q = query.toLowerCase();
@@ -62,7 +34,10 @@ export default async function init() {
 
       notes.sort((a, b) => (b.updatedAt || b.createdAt) - (a.updatedAt || a.createdAt));
       renderNotes(notes);
-    };
+    } catch (e) {
+      console.error('Failed to load notes:', e);
+      showMessage('Failed to load notes.', { type: 'alert' });
+    }
   }
 
   function renderNotes(notes: Note[]) {
@@ -117,33 +92,18 @@ export default async function init() {
       .join('');
   }
 
-  async function saveNote() {
+  async function handleSave() {
     const content = overType.getValue().trim();
     if (!content) return;
 
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-
-    if (editingId !== null) {
-      const request = store.get(editingId);
-      request.onsuccess = () => {
-        const note = request.result;
-        note.content = content;
-        note.updatedAt = Date.now();
-        store.put(note);
-      };
-    } else {
-      const note: Note = {
-        content,
-        createdAt: Date.now(),
-      };
-      store.add(note);
-    }
-
-    transaction.oncomplete = () => {
+    try {
+      await saveNote(db, content, editingId);
       resetForm();
       loadNotes(searchInput.value);
-    };
+    } catch (e) {
+      console.error('Failed to save note:', e);
+      showMessage('Failed to save note.', { type: 'alert' });
+    }
   }
 
   function resetForm() {
@@ -155,12 +115,8 @@ export default async function init() {
   }
 
   async function startEdit(id: number) {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(id);
-
-    request.onsuccess = () => {
-      const note = request.result;
+    try {
+      const note = await getNoteById(db, id);
       if (note) {
         editingId = id;
         overType.setValue(note.content);
@@ -170,71 +126,36 @@ export default async function init() {
         overType.focus();
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
-    };
+    } catch (e) {
+      console.error('Failed to load note for editing:', e);
+      showMessage('Failed to load note for editing.', { type: 'alert' });
+    }
   }
 
-  async function deleteNote(id: number) {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    store.delete(id);
-    transaction.oncomplete = () => {
+  async function handleDelete(id: number) {
+    try {
+      await deleteNote(db, id);
       if (editingId === id) resetForm();
       loadNotes(searchInput.value);
-    };
+    } catch (e) {
+      console.error('Failed to delete note:', e);
+      showMessage('Failed to delete note.', { type: 'alert' });
+    }
   }
 
-  const removeMarkdownSyntax = (html: string) => {
-    let htmlContent = html.replace(/<span class="syntax-marker[^"]*">.*?<\/span>/g, "");
-    htmlContent = htmlContent.replace(/\sclass="(bullet-list|ordered-list|code-fence|hr-marker|blockquote|url-part)"/g, "");
-    htmlContent = htmlContent.replace(/\sclass=""/g, "");
-    return htmlContent;
-  }
-
-  async function exportToPdf(id: number) {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(id);
-
-    request.onsuccess = async () => {
-      const note = request.result;
+  async function handleExport(id: number) {
+    try {
+      const note = await getNoteById(db, id);
       if (note) {
-        // Use preview mode to output clean HTML without markdown syntax markers
-        let htmlContent = MarkdownParser.parse(note.content);
-        htmlContent = removeMarkdownSyntax(htmlContent);
-        const fullHtml = `<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    body { font-family: sans-serif; padding: 20px; line-height: 1.5; color: #000; background: #fff; }
-    h1, h2, h3 { font-weight: bold; margin-top: 0.5em; margin-bottom: 0.2em; }
-    h1 { font-size: 1.5em; }
-    h2 { font-size: 1.25em; }
-    h3 { font-size: 1.1em; }
-    ul, ol { margin-left: 0; padding-left: 20px; }
-    .blockquote { display: block; border-left: 4px solid #ccc; padding-left: 1em; margin: 0.5em 0; opacity: 0.8; }
-    code { background-color: #f0f0f0; padding: 0.1em 0.2em; border-radius: 0.2em; font-size: 0.9em; }
-    .code-block { background-color: #f0f0f0; padding: 1em; border-radius: 0.5em; margin: 1em 0; overflow-x: auto; white-space: pre; }
-    .code-fence { opacity: 0.3; font-size: 0.8em; }
-    a { color: #0000ee; text-decoration: underline; }
-  </style>
-</head>
-<body>
-  ${htmlContent}
-</body>
-</html>`;
-
-        try {
-          const pdfBytes = await htmlToPdfBuffer(fullHtml);
-          await downloadFile(pdfBytes, `note-${id}.pdf`, "application/pdf");
-        } catch (e) {
-          console.error("Failed to export PDF:", e);
-          showMessage('Failed to export PDF. See console for details.', { type: 'alert' });
-        }
+        await exportNoteToPdf(id, note.content);
       }
-    };
+    } catch (e) {
+      console.error('Failed to export note:', e);
+      showMessage('Failed to export note.', { type: 'alert' });
+    }
   }
 
-  addBtn.addEventListener('click', saveNote);
+  addBtn.addEventListener('click', handleSave);
   cancelBtn.addEventListener('click', resetForm);
   searchInput.addEventListener('input', () => loadNotes(searchInput.value));
 
@@ -265,12 +186,12 @@ export default async function init() {
     } else if (deleteBtn) {
       const id = parseInt(deleteBtn.getAttribute('data-id') || '0');
       if (id && confirm('Delete this note?')) {
-        deleteNote(id);
+        handleDelete(id);
       }
     } else if (target.closest('.export-btn')) {
       const btn = target.closest('.export-btn') as HTMLButtonElement;
       const id = parseInt(btn.getAttribute('data-id') || '0');
-      if (id) exportToPdf(id);
+      if (id) handleExport(id);
     }
   });
 
