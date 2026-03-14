@@ -1,6 +1,7 @@
 import { elements, categoryColors } from './elements';
 import type { Element } from './types';
 
+// noinspection JSUnusedGlobalSymbols
 export function init(): () => void {
   const grid = document.getElementById('periodic-table-grid');
   const searchInput = document.getElementById('element-search') as HTMLInputElement;
@@ -240,5 +241,3 @@ export function init(): () => void {
     clearBtn?.removeEventListener('click', onClearFilter);
   };
 }
-
-export default init;
