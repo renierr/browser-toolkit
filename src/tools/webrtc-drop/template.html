@@ -39,7 +39,7 @@
     <!-- Connection Orchestrator -->
     <div id="setup-view" class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <!-- Discovered Peers (Online) -->
-        <div class="card bg-base-100 border border-base-300 shadow-sm md:col-span-2">
+        <div class="card bg-base-100 border border-base-300 shadow-sm md:col-span-2 hidden">
             <div class="card-body p-4">
                 <h3 class="card-title text-sm uppercase opacity-50">Discovered Peers (Online)</h3>
                 <p class="text-xs opacity-60">Peers found via online discovery (opt-in). Select a peer below to join without scanning a QR. Discovery is off by default and remains enabled until you disable it.</p>
@@ -53,7 +53,7 @@
                 <h3 class="card-title text-sm uppercase opacity-50">Host Mode</h3>
                 <p class="text-xs">Create a connection to receive files or send to someone who scans you.</p>
                 <div class="card-actions mt-4">
-                    <button id="re-offer-btn" class="btn btn-ghost btn-block mt-2">
+                    <button id="re-offer-btn" class="btn btn-ghost btn-block mt-2 hidden">
                         <i data-lucide="refresh-ccw" class="w-4 h-4 mr-2"></i> Re-offer (re-advertise)
                     </button>
                     <button id="host-btn" class="btn btn-primary btn-block">

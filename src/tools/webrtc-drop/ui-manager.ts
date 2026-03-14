@@ -33,9 +33,9 @@ export class UIManager {
   public readonly historyList = document.getElementById('transfer-history-list')!;
   public readonly noHistoryMsg = document.getElementById('no-history-msg')!;
   public readonly discoveryList = document.getElementById('discovery-list')!;
-  public readonly discoveryCard = this.discoveryList.closest('.card') as HTMLElement | null;
-  public readonly reOfferBtn = document.getElementById('re-offer-btn') as HTMLButtonElement | null;
-  public readonly discoveryToggle = document.getElementById('discovery-toggle') as HTMLInputElement | null;
+  public readonly discoveryCard = this.discoveryList.closest('.card')!;
+  public readonly reOfferBtn = document.getElementById('re-offer-btn')!;
+  public readonly discoveryToggle = document.getElementById('discovery-toggle') as HTMLInputElement;
   public readonly discoveryStatusEl = document.getElementById('discovery-status')!;
   public readonly discoveryDotEl = document.getElementById('discovery-dot')!;
 
@@ -93,7 +93,8 @@ export class UIManager {
     this.remotePeerNameEl.textContent = '';
     this.sdpText.value = '';
     this.qrInstruction.textContent = 'Follow the steps below';
-    this.qrInstruction.className = 'text-[10px] font-bold text-primary text-center leading-tight mb-1';
+    this.qrInstruction.className =
+      'text-[10px] font-bold text-primary text-center leading-tight mb-1';
   }
 
   showQR(text: string, isHost: boolean) {
@@ -113,12 +114,14 @@ export class UIManager {
 
     if (isHost) {
       this.hostScanAnswerBtn.classList.remove('hidden');
-      this.qrInstruction.textContent = "STEP 1: Show this to the Joiner. THEN click 'Scan their Answer'.";
+      this.qrInstruction.textContent =
+        "STEP 1: Show this to the Joiner. THEN click 'Scan their Answer'.";
       this.qrInstruction.classList.add('text-primary');
       this.stepTitle.textContent = 'Step 1: Show this QR or Copy Handshake';
     } else {
       this.hostScanAnswerBtn.classList.add('hidden');
-      this.qrInstruction.textContent = 'STEP 2: Offer scanned! NOW show this Answer QR to the Host.';
+      this.qrInstruction.textContent =
+        'STEP 2: Offer scanned! NOW show this Answer QR to the Host.';
       this.qrInstruction.classList.add('text-secondary');
       this.stepTitle.textContent = 'Step 2: Show Answer QR or Copy Handshake';
     }
@@ -161,7 +164,8 @@ export class UIManager {
     if (!row) {
       row = document.createElement('div');
       row.id = `discovery-peer-${peerKey}`;
-      row.className = 'p-2 rounded border border-base-300 flex items-center justify-between bg-base-200/50';
+      row.className =
+        'p-2 rounded border border-base-300 flex items-center justify-between bg-base-200/50';
       const info = document.createElement('div');
       info.className = 'text-sm truncate';
       info.textContent = peerName || 'Peer';
@@ -191,7 +195,8 @@ export class UIManager {
   addToHistory(item: { name: string; size: number; type: 'sent' | 'received' }) {
     this.noHistoryMsg.classList.add('hidden');
     const div = document.createElement('div');
-    div.className = 'flex items-center justify-between p-2 rounded bg-base-200/50 text-xs border border-base-300';
+    div.className =
+      'flex items-center justify-between p-2 rounded bg-base-200/50 text-xs border border-base-300';
 
     const info = document.createElement('div');
     info.className = 'flex items-center gap-2 overflow-hidden mr-2';

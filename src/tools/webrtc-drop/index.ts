@@ -10,10 +10,11 @@ import { TransferManager } from './transfer-manager.ts';
 // @ts-ignore - Vite worker import
 import ScanWorker from '../qr-scanner/scan.worker?worker';
 
+// noinspection JSUnusedGlobalSymbols
 export default async function init() {
   const selfName = Utils.generateName();
   const ui = new UIManager();
-  
+
   let manager: WebRTCManager | null = null;
   let worker: Worker | null = null;
   let stream: MediaStream | null = null;
@@ -34,9 +35,9 @@ export default async function init() {
   function initDiscovery() {
     if (!ui.discoveryToggle || !ui.discoveryToggle.checked) return;
     if (discovery?.isEnabled) return;
-    
+
     if (!discovery) discovery = new DiscoveryManager('webrtc-drop');
-    
+
     discovery.start(
       (data: any) => handleDiscoveryMessage(data),
       (status) => ui.updateDiscoveryStatus(status === 'listening' ? 'listening' : 'error')
@@ -47,8 +48,14 @@ export default async function init() {
     if (data.type === 'offer') {
       console.debug('[Discovery] offer received from', data.name);
       transfer.setRemotePeerName(data.name || 'Peer');
-      ui.addDiscoveryPeer(data.name, () => connectToDiscoveredPeer(data), Utils.simpleHash(data.sdp + (data.sender || '')));
-      try { localStorage.setItem('btk-last-offer', data.sdp); } catch (e) {}
+      ui.addDiscoveryPeer(
+        data.name,
+        () => connectToDiscoveredPeer(data),
+        Utils.simpleHash(data.sdp + (data.sender || ''))
+      );
+      try {
+        localStorage.setItem('btk-last-offer', data.sdp);
+      } catch (e) {}
     } else if (data.type === 'answer' && manager && !manager.isStable) {
       console.debug('[Discovery] answer received; processing SDP');
       ui.stepTitle.textContent = `Processing remote answer from ${data.name || 'peer'}`;
@@ -59,7 +66,7 @@ export default async function init() {
   async function connectToDiscoveredPeer(peer: any) {
     transfer.setRemotePeerName(peer.name || 'Peer');
     ui.showHandshake(`Connecting to ${peer.name || 'peer'}...`);
-    if (ui.discoveryToggle?.checked) initDiscovery();
+    if (ui.discoveryToggle.checked) initDiscovery();
 
     setTimeout(async () => {
       initManager();
@@ -73,20 +80,18 @@ export default async function init() {
     ui.updateDiscoveryStatus('off');
   }
 
-  if (ui.discoveryToggle) {
-    ui.discoveryToggle.onchange = () => {
-      if (ui.discoveryToggle?.checked) {
-        initDiscovery();
-        ui.updateDiscoveryStatus('starting');
-        if (ui.discoveryCard) ui.discoveryCard.style.display = '';
-        if (ui.reOfferBtn) ui.reOfferBtn.style.display = '';
-      } else {
-        stopDiscovery();
-        if (ui.discoveryCard) ui.discoveryCard.style.display = 'none';
-        if (ui.reOfferBtn) ui.reOfferBtn.style.display = 'none';
-      }
-    };
-  }
+  ui.discoveryToggle.onchange = () => {
+    if (ui.discoveryToggle.checked) {
+      initDiscovery();
+      ui.updateDiscoveryStatus('starting');
+      ui.discoveryCard.classList.remove('hidden');
+      ui.reOfferBtn.classList.remove('hidden');
+    } else {
+      stopDiscovery();
+      ui.discoveryCard.classList.add('hidden');
+      ui.reOfferBtn.classList.add('hidden');
+    }
+  };
 
   // --- WebRTC Setup ---
   function initManager() {
@@ -102,10 +107,11 @@ export default async function init() {
       onSDPGenerated: (compressed, isHost) => {
         ui.showQR(compressed, isHost);
         if (isHost) localStorage.setItem('btk-host-offer', compressed);
-        
+
         if (discovery?.isEnabled) {
-          discovery.broadcast({ type: isHost ? 'offer' : 'answer', name: selfName, sdp: compressed })
-            .catch(err => console.warn('[Discovery] broadcast failed', err));
+          discovery
+            .broadcast({ type: isHost ? 'offer' : 'answer', name: selfName, sdp: compressed })
+            .catch((err) => console.warn('[Discovery] broadcast failed', err));
         }
       },
     };
@@ -171,33 +177,33 @@ export default async function init() {
     ui.showHandshake('Step 1: Show this QR or Copy Handshake');
     initManager();
     await manager!.createPeer(true);
-    if (ui.discoveryToggle?.checked) {
+    if (ui.discoveryToggle.checked) {
       initDiscovery();
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
     }
-    manager!.generateHandshake(true);
+    await manager!.generateHandshake(true);
   };
 
   ui.joinBtn.onclick = async () => {
     ui.showHandshake("Step 1: Scan Host's Offer QR");
     initManager();
     await manager!.createPeer(false);
-    startScanning("Step 1: Scan Host's Offer QR");
-    if (ui.discoveryToggle?.checked) initDiscovery();
+    await startScanning("Step 1: Scan Host's Offer QR");
+    if (ui.discoveryToggle.checked) initDiscovery();
   };
 
-  ui.reOfferBtn?.addEventListener('click', async () => {
+  ui.reOfferBtn.addEventListener('click', async () => {
     if (!manager) initManager();
     await manager!.createPeer(true);
-    if (ui.discoveryToggle?.checked) {
+    if (ui.discoveryToggle.checked) {
       initDiscovery();
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
     }
-    manager!.generateHandshake(true);
+    await manager!.generateHandshake(true);
   });
 
   ui.hostScanAnswerBtn.onclick = () => startScanning("Step 2: Scan Joiner's Answer QR");
-  
+
   ui.quickConnectBtn.onclick = () => {
     const lastOffer = localStorage.getItem('btk-last-offer');
     if (lastOffer) {
@@ -225,7 +231,9 @@ export default async function init() {
     let handle = null;
     if ('showSaveFilePicker' in window) {
       try {
-        handle = await (window as any).showSaveFilePicker({ suggestedName: transfer.incomingFileName });
+        handle = await (window as any).showSaveFilePicker({
+          suggestedName: transfer.incomingFileName,
+        });
       } catch (e: any) {
         if (e.name === 'AbortError') {
           ui.receiveModal.close();
