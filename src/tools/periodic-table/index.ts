@@ -53,7 +53,10 @@ export function init(): () => void {
   function showDetails(el: Element): void {
     if (!detailCard || !emptySelection) return;
     emptySelection.classList.add('hidden');
-    detailCard.classList.remove('hidden');
+    if (detailCard) {
+      detailCard.classList.remove('hidden');
+      detailCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 
     const nameEl = document.getElementById('detail-name');
     const categoryEl = document.getElementById('detail-category');
