@@ -7,18 +7,23 @@ export function init(): () => void {
   const detailCard = document.getElementById('selected-element-card');
   const emptySelection = document.getElementById('empty-selection');
   const canvas = document.getElementById('atomic-canvas') as HTMLCanvasElement;
+  const legendBtns = document.querySelectorAll('.legend-btn');
+  const clearBtn = document.getElementById('clear-filter');
   let animationId: number;
+  let activeCategory: string | null = null;
 
   function renderGrid(filter = ''): void {
     if (!grid) return;
     grid.innerHTML = '';
 
     elements.forEach((el) => {
-      if (
-        filter &&
-        !el.name.toLowerCase().includes(filter.toLowerCase()) &&
-        !el.symbol.toLowerCase().includes(filter.toLowerCase())
-      ) {
+      const matchesText =
+        !filter ||
+        el.name.toLowerCase().includes(filter.toLowerCase()) ||
+        el.symbol.toLowerCase().includes(filter.toLowerCase());
+      const matchesCategory = !activeCategory || el.category === activeCategory;
+
+      if (!matchesText || !matchesCategory) {
         return;
       }
 
@@ -171,11 +176,68 @@ export function init(): () => void {
     renderGrid(searchInput.value);
   };
 
+  const onLegendClick = (btn: HTMLButtonElement): void => {
+    const category = btn.dataset.category || null;
+    if (activeCategory === category) {
+      activeCategory = null;
+    } else {
+      activeCategory = category;
+    }
+
+    updateLegendStyles();
+
+    if (clearBtn) {
+      if (activeCategory) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+    }
+
+    renderGrid(searchInput.value);
+  };
+
+  const updateLegendStyles = (): void => {
+    legendBtns.forEach((b) => {
+      if (b instanceof HTMLElement) {
+        if (b.dataset.category === activeCategory) {
+          b.classList.add('ring-2', 'ring-offset-2', 'ring-primary');
+        } else {
+          b.classList.remove('ring-2', 'ring-offset-2', 'ring-primary');
+        }
+      }
+    });
+  };
+
+  const onClearFilter = (): void => {
+    activeCategory = null;
+    updateLegendStyles();
+    if (clearBtn) clearBtn.classList.add('hidden');
+    renderGrid(searchInput.value);
+  };
+
+  const onLegendClickWrapper = (e: Event): void => {
+    const btn = e.currentTarget as HTMLButtonElement;
+    onLegendClick(btn);
+  };
+
   searchInput?.addEventListener('input', onSearchInput);
+  legendBtns.forEach((btn) => {
+    if (btn instanceof HTMLButtonElement) {
+      btn.addEventListener('click', onLegendClickWrapper);
+    }
+  });
+  clearBtn?.addEventListener('click', onClearFilter);
 
   return () => {
     if (animationId) cancelAnimationFrame(animationId);
     searchInput?.removeEventListener('input', onSearchInput);
+    legendBtns.forEach((btn) => {
+      if (btn instanceof HTMLButtonElement) {
+        btn.removeEventListener('click', onLegendClickWrapper);
+      }
+    });
+    clearBtn?.removeEventListener('click', onClearFilter);
   };
 }
 
