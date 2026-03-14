@@ -1,4 +1,4 @@
-<div class="flex flex-col h-full w-80 mx-auto bg-base-100 shadow-2xl rounded-3xl overflow-hidden border border-base-300 min-h-0">
+<div class="flex flex-col h-full w-80 landscape:w-2xl mx-auto bg-base-100 shadow-2xl rounded-3xl overflow-hidden border border-base-300 min-h-0">
     <!-- Calculator Display Area -->
     <div class="flex-none p-6 bg-base-200/50 flex flex-col justify-end items-end gap-1 min-h-40 select-all min-w-0 overflow-hidden">
         <div id="calc-last-op" class="text-sm text-base-content/60 font-mono h-6 transition-all duration-200 truncate w-full text-right"></div>
@@ -8,7 +8,7 @@
     <!-- Mode Toggle and Tools Bar -->
     <div class="flex justify-between items-center px-6 py-2 bg-base-200/30 border-y border-base-300">
         <div class="flex gap-2">
-            <button id="calc-toggle-sci" class="btn btn-ghost btn-sm gap-2">
+            <button id="calc-toggle-sci" class="btn btn-ghost btn-sm gap-2 landscape:hidden">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-flask-conical"><path d="M10 2v7.5"/><path d="M14 2v7.5"/><path d="M4.853 21h14.294a2 2 0 0 0 1.922-2.53l-3.32-11.41a2 2 0 0 0-1.922-1.44H8.172a2 2 0 0 0-1.922 1.44l-3.32 11.41A2 2 0 0 0 4.853 21Z"/><path d="M6 16h12"/><path d="M7 11.5a1.5 1.5 0 0 0 1.5 1.5h7a1.5 1.5 0 0 0 1.5-1.5"/></svg>
                 <span class="hidden sm:inline">Scientific</span>
             </button>
@@ -29,10 +29,10 @@
         </div>
     </div>
 
-    <!-- Buttons Grid -->
-    <div class="grow p-4 grid grid-cols-4 gap-3 bg-base-100 overflow-y-auto">
-        <!-- Scientific Row (Hidden by default) -->
-        <div id="calc-scientific-buttons" class="hidden contents">
+    <!-- Buttons Area -->
+    <div class="flex flex-col landscape:flex-row grow overflow-hidden">
+        <!-- Scientific Grid (Side in landscape) -->
+        <div id="calc-scientific-buttons" class="hidden landscape:grid grid-cols-2 gap-3 p-4 bg-base-200/20 border-r border-base-300 overflow-y-auto">
             <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="sin(">sin</button>
             <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="cos(">cos</button>
             <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="tan(">tan</button>
@@ -43,35 +43,38 @@
             <button class="btn btn-neutral btn-sm rounded-xl text-xs font-bold" data-val="PI">π</button>
         </div>
 
-        <!-- Main Buttons Row 1 -->
-        <button class="btn btn-error btn-outline btn-md rounded-2xl text-lg font-bold" id="calc-clear">AC</button>
-        <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key="(">(</button>
-        <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key=")">)</button>
-        <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="/">÷</button>
+        <!-- Main Buttons Grid -->
+        <div class="grow p-4 grid grid-cols-4 gap-3 bg-base-100 overflow-y-auto">
+            <!-- Main Buttons Row 1 -->
+            <button class="btn btn-error btn-outline btn-md rounded-2xl text-lg font-bold" id="calc-clear">AC</button>
+            <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key="(">(</button>
+            <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key=")">)</button>
+            <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="/">÷</button>
 
-        <!-- Main Buttons Row 2 -->
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="7">7</button>
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="8">8</button>
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="9">9</button>
-        <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="*">×</button>
+            <!-- Main Buttons Row 2 -->
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="7">7</button>
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="8">8</button>
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="9">9</button>
+            <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="*">×</button>
 
-        <!-- Main Buttons Row 3 -->
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="4">4</button>
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="5">5</button>
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="6">6</button>
-        <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="-">-</button>
+            <!-- Main Buttons Row 3 -->
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="4">4</button>
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="5">5</button>
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="6">6</button>
+            <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="-">-</button>
 
-        <!-- Main Buttons Row 4 -->
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="1">1</button>
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="2">2</button>
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="3">3</button>
-        <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="+">+</button>
+            <!-- Main Buttons Row 4 -->
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="1">1</button>
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="2">2</button>
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="3">3</button>
+            <button class="btn btn-primary btn-md rounded-2xl text-2xl font-bold" data-op="+">+</button>
 
-        <!-- Main Buttons Row 5 -->
-        <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key="%">%</button>
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="0">0</button>
-        <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val=".">.</button>
-        <button class="btn btn-success btn-md rounded-2xl text-3xl font-bold text-success-content shadow-lg shadow-success/20" id="calc-equals">=</button>
+            <!-- Main Buttons Row 5 -->
+            <button class="btn btn-neutral btn-md rounded-2xl text-lg" data-key="%">%</button>
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val="0">0</button>
+            <button class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium" data-val=".">.</button>
+            <button class="btn btn-success btn-md rounded-2xl text-3xl font-bold text-success-content shadow-lg shadow-success/20" id="calc-equals">=</button>
+        </div>
     </div>
 </div>
 

@@ -1,6 +1,7 @@
 import { CalculatorLogic } from './logic';
 import { HistoryManager } from './history';
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const display = document.getElementById('calc-display') as HTMLDivElement;
   const lastOp = document.getElementById('calc-last-op') as HTMLDivElement;
@@ -25,22 +26,27 @@ export default function init() {
   const updateHistory = () => {
     const history = historyManager.getHistory();
     if (history.length === 0) {
-      historyList.innerHTML = '<div class="text-center text-base-content/40 mt-10">No calculations yet</div>';
+      historyList.innerHTML =
+        '<div class="text-center text-base-content/40 mt-10">No calculations yet</div>';
       return;
     }
 
-    historyList.innerHTML = history.map(item => `
+    historyList.innerHTML = history
+      .map(
+        (item) => `
       <div class="card bg-base-200 p-3 cursor-pointer hover:bg-base-300 transition-colors" data-id="${item.id}">
         <div class="text-xs text-base-content/60 truncate">${item.expression}</div>
         <div class="text-lg font-mono font-bold text-right text-base-content">${item.result}</div>
       </div>
-    `).join('');
+    `
+      )
+      .join('');
 
     // Add click listeners to history items
-    historyList.querySelectorAll('.card').forEach(card => {
+    historyList.querySelectorAll('.card').forEach((card) => {
       card.addEventListener('click', () => {
         const id = card.getAttribute('data-id');
-        const item = history.find(i => i.id === id);
+        const item = history.find((i) => i.id === id);
         if (item) {
           currentInput = item.result.toString();
           lastOp.innerText = item.expression;
@@ -54,10 +60,10 @@ export default function init() {
 
   const calculate = () => {
     if (currentInput === '0' && lastOp.innerText === '') return;
-    
+
     // Check for trailing operators
     const sanitizedInput = currentInput.replace(/[+\-*/]$/, '');
-    
+
     const calculation = CalculatorLogic.evaluate(sanitizedInput);
     if (calculation.error) {
       lastOp.innerText = 'Error';
@@ -91,9 +97,10 @@ export default function init() {
   };
 
   // Event Listeners
-  document.querySelectorAll('[data-val], [data-key], [data-op]').forEach(btn => {
+  document.querySelectorAll('[data-val], [data-key], [data-op]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const val = btn.getAttribute('data-val') || btn.getAttribute('data-key') || btn.getAttribute('data-op');
+      const val =
+        btn.getAttribute('data-val') || btn.getAttribute('data-key') || btn.getAttribute('data-op');
       if (val) handleInput(val);
     });
   });
@@ -119,9 +126,9 @@ export default function init() {
   document.getElementById('calc-toggle-sci')?.addEventListener('click', () => {
     isScientific = !isScientific;
     if (isScientific) {
-      sciButtons.classList.remove('hidden');
+      sciButtons.style.display = 'grid';
     } else {
-      sciButtons.classList.add('hidden');
+      sciButtons.style.display = '';
     }
   });
 
