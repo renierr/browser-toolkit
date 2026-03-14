@@ -1,8 +1,15 @@
 <div class="flex flex-col h-full w-80 landscape:w-2xl mx-auto bg-base-100 shadow-2xl rounded-3xl overflow-hidden border border-base-300 min-h-0">
     <!-- Calculator Display Area -->
-    <div class="flex-none p-6 bg-base-200/50 flex flex-col justify-end items-end gap-1 min-h-40 select-all min-w-0 overflow-hidden">
+    <div class="flex-none p-6 bg-base-200/50 flex flex-col justify-end items-end gap-1 min-h-40 select-all min-w-0 overflow-hidden relative group">
         <div id="calc-last-op" class="text-sm text-base-content/60 font-mono h-6 transition-all duration-200 truncate w-full text-right"></div>
         <div id="calc-display" class="text-5xl font-semibold text-base-content font-mono overflow-x-auto whitespace-nowrap w-full text-right py-2 scrollbar-hide focus:outline-none max-w-full" contenteditable="true" inputmode="decimal">0</div>
+        <!-- Scroll indicators -->
+        <div id="calc-scroll-left" class="absolute left-0 bottom-0 top-12 w-8 bg-linear-to-r from-base-200 to-transparent pointer-events-none opacity-0 transition-opacity duration-200 flex items-center justify-start pl-1 cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-base-content/50"><path d="m15 18-6-6 6-6"/></svg>
+        </div>
+        <div id="calc-scroll-right" class="absolute right-0 bottom-0 top-12 w-8 bg-linear-to-l from-base-200 to-transparent pointer-events-none opacity-0 transition-opacity duration-200 flex items-center justify-end pr-1 cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-base-content/50"><path d="m9 18 6-6-6-6"/></svg>
+        </div>
     </div>
 
     <!-- Mode Toggle and Tools Bar -->

@@ -8,10 +8,29 @@ export default function init() {
   const sciButtons = document.getElementById('calc-scientific-buttons') as HTMLDivElement;
   const historyPanel = document.getElementById('calc-history-panel') as HTMLDivElement;
   const historyList = document.getElementById('calc-history-list') as HTMLDivElement;
+  const scrollLeftIndicator = document.getElementById('calc-scroll-left') as HTMLDivElement;
+  const scrollRightIndicator = document.getElementById('calc-scroll-right') as HTMLDivElement;
 
   const historyManager = new HistoryManager();
   let currentInput = '0';
   let isScientific = false;
+
+  const checkScroll = () => {
+    const { scrollLeft, scrollWidth, clientWidth } = display;
+    // Use a small threshold to avoid flicker
+    const canScrollLeft = scrollLeft > 2;
+    const canScrollRight = scrollLeft < scrollWidth - clientWidth - 2;
+
+    scrollLeftIndicator.classList.toggle('opacity-100', canScrollLeft);
+    scrollLeftIndicator.classList.toggle('opacity-0', !canScrollLeft);
+    scrollLeftIndicator.classList.toggle('pointer-events-auto', canScrollLeft);
+    scrollLeftIndicator.classList.toggle('pointer-events-none', !canScrollLeft);
+
+    scrollRightIndicator.classList.toggle('opacity-100', canScrollRight);
+    scrollRightIndicator.classList.toggle('opacity-0', !canScrollRight);
+    scrollRightIndicator.classList.toggle('pointer-events-auto', canScrollRight);
+    scrollRightIndicator.classList.toggle('pointer-events-none', !canScrollRight);
+  };
 
   const updateDisplay = (animate = false) => {
     display.innerText = currentInput;
@@ -21,6 +40,8 @@ export default function init() {
     }
     // Scroll to end
     display.scrollLeft = display.scrollWidth;
+    // Check scroll after UI update
+    setTimeout(checkScroll, 0);
   };
 
   const updateHistory = () => {
@@ -123,6 +144,14 @@ export default function init() {
     }
   });
 
+  scrollLeftIndicator.addEventListener('click', () => {
+    display.scrollBy({ left: -100, behavior: 'smooth' });
+  });
+
+  scrollRightIndicator.addEventListener('click', () => {
+    display.scrollBy({ left: 100, behavior: 'smooth' });
+  });
+
   document.getElementById('calc-toggle-sci')?.addEventListener('click', () => {
     isScientific = !isScientific;
     if (isScientific) {
@@ -140,7 +169,11 @@ export default function init() {
   // Handle direct display editing
   display.addEventListener('input', (e) => {
     currentInput = (e.target as HTMLDivElement).innerText;
+    checkScroll();
   });
+
+  display.addEventListener('scroll', checkScroll);
+  window.addEventListener('resize', checkScroll);
 
   display.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
@@ -171,8 +204,12 @@ export default function init() {
 
   document.addEventListener('keydown', onKeyDown);
 
+  // Initial check
+  checkScroll();
+
   // Return cleanup function to remove global listener
   return () => {
     document.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('resize', checkScroll);
   };
 }
