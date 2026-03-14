@@ -1,6 +1,7 @@
 import isOdd from 'is-odd';
 import { showMessage } from '../../../js/ui.ts';
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const form = document.getElementById('even-odd-form') as HTMLFormElement | null;
   const input = document.getElementById('number-input') as HTMLInputElement | null;

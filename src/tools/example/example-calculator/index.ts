@@ -24,6 +24,7 @@ type HistoryEntry = {
   value: number;
 };
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const resultEl = document.getElementById('result') as HTMLElement | null;
   const historyEl = document.getElementById('history') as HTMLUListElement | null;

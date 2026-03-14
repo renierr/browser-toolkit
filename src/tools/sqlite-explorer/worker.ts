@@ -66,7 +66,9 @@ self.onmessage = async (e: MessageEvent<{ wasmUrl?: string; req?: WorkerRequest 
 
       case 'GET_TABLES': {
         if (!db) throw new Error('Database not loaded');
-        const res = db.exec("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;");
+        const res = db.exec(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;"
+        );
         const tables = res.length > 0 ? res[0].values.map((v: any) => v[0] as string) : [];
         self.postMessage({ type: 'GET_TABLES_SUCCESS', payload: { tables } });
         break;
@@ -76,20 +78,25 @@ self.onmessage = async (e: MessageEvent<{ wasmUrl?: string; req?: WorkerRequest 
         if (!db) throw new Error('Database not loaded');
         const res = db.exec(`PRAGMA table_info("${req.payload.table}");`);
         const schema = res.length > 0 ? res[0].values : [];
-        self.postMessage({ type: 'GET_SCHEMA_SUCCESS', payload: { table: req.payload.table, schema } });
+        self.postMessage({
+          type: 'GET_SCHEMA_SUCCESS',
+          payload: { table: req.payload.table, schema },
+        });
         break;
       }
 
       case 'GET_DATA': {
         if (!db) throw new Error('Database not loaded');
-        
+
         // Get total count
         const countRes = db.exec(`SELECT COUNT(*) FROM "${req.payload.table}";`);
         const totalCount = countRes.length > 0 ? (countRes[0].values[0][0] as number) : 0;
-        
+
         // Get paginated data
-        const res = db.exec(`SELECT * FROM "${req.payload.table}" LIMIT ${req.payload.limit} OFFSET ${req.payload.offset};`);
-        
+        const res = db.exec(
+          `SELECT * FROM "${req.payload.table}" LIMIT ${req.payload.limit} OFFSET ${req.payload.offset};`
+        );
+
         if (res.length > 0) {
           self.postMessage({
             type: 'GET_DATA_SUCCESS',
@@ -101,7 +108,7 @@ self.onmessage = async (e: MessageEvent<{ wasmUrl?: string; req?: WorkerRequest 
             },
           });
         } else {
-           self.postMessage({
+          self.postMessage({
             type: 'GET_DATA_SUCCESS',
             payload: {
               table: req.payload.table,
@@ -118,9 +125,12 @@ self.onmessage = async (e: MessageEvent<{ wasmUrl?: string; req?: WorkerRequest 
         if (!db) throw new Error('Database not loaded');
         const res = db.exec(req.payload.sql);
         if (res.length > 0) {
-           self.postMessage({ type: 'EXECUTE_QUERY_SUCCESS', payload: { columns: res[0].columns, rows: res[0].values } });
+          self.postMessage({
+            type: 'EXECUTE_QUERY_SUCCESS',
+            payload: { columns: res[0].columns, rows: res[0].values },
+          });
         } else {
-           self.postMessage({ type: 'EXECUTE_QUERY_SUCCESS', payload: { columns: [], rows: [] } });
+          self.postMessage({ type: 'EXECUTE_QUERY_SUCCESS', payload: { columns: [], rows: [] } });
         }
         break;
       }

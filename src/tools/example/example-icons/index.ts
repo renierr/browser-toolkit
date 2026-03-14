@@ -3,6 +3,7 @@
 import { getRegisteredToolIconIds, renderToolIconSvg } from '../../../js/tool-icons.ts';
 import { isDarkMode } from '../../../js/theme.ts';
 
+// noinspection JSUnusedGlobalSymbols
 export default function init() {
   const root = document.getElementById('icon-gallery');
   if (!root) return;

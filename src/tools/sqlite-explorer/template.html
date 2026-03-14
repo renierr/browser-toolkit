@@ -8,8 +8,8 @@
 
         <!-- Dropzone -->
         <div id="dropzone"
-          class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40 hover:bg-base-300 group">
-          <div class="flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105">
+          class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+          <div class="flex flex-col items-center gap-2">
             <div class="text-base-content/30 text-4xl">
               <i data-lucide="upload-cloud"></i>
             </div>
@@ -64,13 +64,13 @@
 
         <!-- Tab Contents -->
         <div class="flex-1 flex flex-col overflow-hidden">
-          
+
           <!-- Data Tab -->
           <div id="tab-content-data" class="flex-1 flex flex-col p-4 overflow-hidden">
             <div id="data-empty-state" class="flex-1 flex items-center justify-center text-base-content/50">
               Select a table from the sidebar
             </div>
-            
+
             <div id="data-active-state" class="hidden flex-1 flex flex-col h-full overflow-hidden">
               <div class="flex justify-between items-center mb-4 shrink-0">
                 <h3 class="font-bold text-lg" id="current-table-name-data">Table Data</h3>
@@ -84,7 +84,7 @@
                    </select>
                 </div>
               </div>
-              
+
               <!-- Data Table Container -->
               <div class="flex-1 overflow-auto rounded-box border border-base-300 bg-base-100 shadow-sm min-h-0 max-h-[50dvh]">
                 <table class="table table-sm table-pin-rows w-full">
@@ -92,7 +92,7 @@
                   <tbody id="data-table-body"></tbody>
                 </table>
               </div>
-              
+
               <!-- Pagination -->
               <div class="flex justify-between items-center mt-4 shrink-0">
                 <div class="text-sm font-medium" id="pagination-info">Showing 0 of 0</div>
@@ -133,10 +133,10 @@
           <div id="tab-content-query" class="hidden flex-1 flex flex-col p-4 overflow-hidden gap-4">
              <div class="flex flex-col gap-2 shrink-0">
                 <label class="font-bold">SQL Query</label>
-                <textarea 
-                  id="custom-query-input" 
+                <textarea
+                  id="custom-query-input"
                   data-setting="customQueryInput"
-                  class="textarea textarea-bordered font-mono w-full h-32 resize-y" 
+                  class="textarea textarea-bordered font-mono w-full h-32 resize-y"
                   placeholder="SELECT * FROM sqlite_master;"
                 ></textarea>
                 <div class="flex justify-end mt-2">
@@ -145,7 +145,7 @@
                    </button>
                 </div>
              </div>
-             
+
              <!-- Query Error -->
              <div id="query-error" class="hidden alert alert-error shadow-sm py-2 shrink-0">
                 <i data-lucide="alert-circle" class="w-5 h-5"></i>
