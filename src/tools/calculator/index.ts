@@ -206,6 +206,7 @@ export default function init() {
 
   // Initial check
   checkScroll();
+  display.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   // Return cleanup function to remove global listener
   return () => {
