@@ -534,7 +534,7 @@ export default function init(payload?: SharedFilesPayload) {
   };
 
   setupFileDropzone('hex-dropzone', 'hex-file-input', (files) => {
-    if (files.length > 0) updateFileInfo(files[0]);
+    updateFileInfo(files[0]);
   });
 
   if (payload?.sharedFiles?.length) {

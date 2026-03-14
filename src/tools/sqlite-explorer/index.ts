@@ -44,14 +44,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   // Handle Dropzone
   setupFileDropzone('dropzone', 'sql-input', async (files: FileList) => {
-    if (files.length > 0) {
-      await loadFile(files[0]);
-    } else {
-      showMessage('No valid files were uploaded. Please upload a valid SQLite database file.', {
-        type: 'warning',
-        timeoutMs: 5000,
-      });
-    }
+    await loadFile(files[0]);
   });
 
   // Handle Shared Files

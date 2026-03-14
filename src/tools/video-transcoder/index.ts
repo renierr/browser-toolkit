@@ -27,7 +27,6 @@ export default function init(payload?: SharedFilesPayload) {
     yieldToUI(true);
   };
 
-
   const dropZone = document.getElementById('drop-zone') as HTMLDivElement;
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
   const fileInfo = document.getElementById('file-info') as HTMLDivElement;
@@ -55,7 +54,9 @@ export default function init(payload?: SharedFilesPayload) {
   const cutStartInput = document.getElementById('cut-start') as HTMLInputElement;
   const cutEndInput = document.getElementById('cut-end') as HTMLInputElement;
   const cutPreview = document.getElementById('cut-preview') as HTMLVideoElement;
-  const toggleCuttingSettings = document.getElementById('toggle-cutting-settings') as HTMLInputElement;
+  const toggleCuttingSettings = document.getElementById(
+    'toggle-cutting-settings'
+  ) as HTMLInputElement;
   const previewContainer = document.getElementById('preview-container') as HTMLDivElement;
   const metaDuration = document.getElementById('meta-duration') as HTMLSpanElement;
   const metaResolution = document.getElementById('meta-resolution') as HTMLSpanElement;
@@ -160,7 +161,11 @@ export default function init(payload?: SharedFilesPayload) {
 
   /** Safely delete a file from FFmpeg's virtual filesystem, ignoring errors. */
   const safeDeleteFile = async (name: string) => {
-    try { await ffmpeg.deleteFile(name); } catch { /* file may not exist */ }
+    try {
+      await ffmpeg.deleteFile(name);
+    } catch {
+      /* file may not exist */
+    }
   };
 
   const updateFileInfo = async (file: File) => {
@@ -287,14 +292,17 @@ export default function init(payload?: SharedFilesPayload) {
         if (currentMetadata.acodec) metaACodec.innerText = `Audio: ${currentMetadata.acodec}`;
         if (currentMetadata.bitrate) metaBitrate.innerText = `Bitrate: ${currentMetadata.bitrate}`;
         if (currentMetadata.fps) metaFPS.innerText = `FPS: ${currentMetadata.fps}`;
-        if (currentMetadata.sampleRate) metaSampleRate.innerText = `Sample Rate: ${currentMetadata.sampleRate}`;
+        if (currentMetadata.sampleRate)
+          metaSampleRate.innerText = `Sample Rate: ${currentMetadata.sampleRate}`;
         videoMetadata.classList.remove('hidden');
       }
 
       if (format === 'mp3' && !hasAudio) {
         await safeDeleteFile(inputName);
         inputName = ''; // prevent double-delete in finally
-        showMessage('This file contains no audio streams — cannot convert to MP3.', { type: 'alert' });
+        showMessage('This file contains no audio streams — cannot convert to MP3.', {
+          type: 'alert',
+        });
         return;
       }
 
@@ -350,12 +358,18 @@ export default function init(payload?: SharedFilesPayload) {
       }
 
       if (currentMetadata) {
-        const resStr = (currentMetadata.width && currentMetadata.height) ? `${currentMetadata.width}x${currentMetadata.height}` : 'N/A';
+        const resStr =
+          currentMetadata.width && currentMetadata.height
+            ? `${currentMetadata.width}x${currentMetadata.height}`
+            : 'N/A';
         resultMetaSummary.innerText = `${currentMetadata.vcodec || 'Video'} | ${resStr} | ${currentMetadata.duration.toFixed(2)}s`;
         let detailsHtml = `<div><strong>Source:</strong> ${selectedFile.name}</div><div><strong>Format:</strong> ${resStr} (${currentMetadata.vcodec || 'N/A'}) @ ${currentMetadata.fps || 'N/A'} fps</div>`;
-        if (currentMetadata.acodec) detailsHtml += `<div><strong>Audio:</strong> ${currentMetadata.acodec} @ ${currentMetadata.sampleRate || 'N/A'}</div>`;
-        if (currentMetadata.bitrate) detailsHtml += `<div><strong>Bitrate:</strong> ${currentMetadata.bitrate}</div>`;
-        if (enableCutting.checked) detailsHtml += `<div class="text-primary font-bold"><strong>Cut:</strong> ${parseFloat(cutStartInput.value).toFixed(2)}s - ${parseFloat(cutEndInput.value).toFixed(2)}s</div>`;
+        if (currentMetadata.acodec)
+          detailsHtml += `<div><strong>Audio:</strong> ${currentMetadata.acodec} @ ${currentMetadata.sampleRate || 'N/A'}</div>`;
+        if (currentMetadata.bitrate)
+          detailsHtml += `<div><strong>Bitrate:</strong> ${currentMetadata.bitrate}</div>`;
+        if (enableCutting.checked)
+          detailsHtml += `<div class="text-primary font-bold"><strong>Cut:</strong> ${parseFloat(cutStartInput.value).toFixed(2)}s - ${parseFloat(cutEndInput.value).toFixed(2)}s</div>`;
         resultDetails.innerHTML = detailsHtml;
       }
       resultSection.classList.remove('hidden');
@@ -372,15 +386,21 @@ export default function init(payload?: SharedFilesPayload) {
 
       // If the WASM instance crashed (memory access out of bounds, etc.),
       // the FFmpeg instance is corrupted and must be re-created on next use.
-      const isCrash = errorMsg.includes('memory access out of bounds')
-        || errorMsg.includes('RuntimeError')
-        || errorMsg.includes('unreachable')
-        || errorMsg.includes('abort');
+      const isCrash =
+        errorMsg.includes('memory access out of bounds') ||
+        errorMsg.includes('RuntimeError') ||
+        errorMsg.includes('unreachable') ||
+        errorMsg.includes('abort');
       if (isCrash) {
         console.warn('WASM crash detected – FFmpeg instance will be re-created on next run.');
-        try { ffmpeg.terminate(); } catch { /* ignore */ }
+        try {
+          ffmpeg.terminate();
+        } catch {
+          /* ignore */
+        }
         ffmpegLoaded = false;
-        errorMsg += '\n\nThe FFmpeg instance has been reset. You can try again (consider using a lower max resolution).';
+        errorMsg +=
+          '\n\nThe FFmpeg instance has been reset. You can try again (consider using a lower max resolution).';
       }
 
       // Show version in the error section
@@ -391,7 +411,11 @@ export default function init(payload?: SharedFilesPayload) {
       resultSection.classList.add('hidden');
       const logToggle = errorSection.querySelector('input[type="checkbox"]') as HTMLInputElement;
       if (logToggle) logToggle.checked = true;
-      showMessage('Transcoding failed: ' + (errorMsg.length > 60 ? errorMsg.substring(0, 60) + '...' : errorMsg), { type: 'alert' });
+      showMessage(
+        'Transcoding failed: ' +
+          (errorMsg.length > 60 ? errorMsg.substring(0, 60) + '...' : errorMsg),
+        { type: 'alert' }
+      );
     } finally {
       // Only attempt VFS cleanup if FFmpeg is still alive (not crashed)
       if (ffmpegLoaded) {
@@ -408,9 +432,12 @@ export default function init(payload?: SharedFilesPayload) {
 
   const onDownloadClick = async () => {
     if (!resultBlob) return;
-    await downloadFile(resultBlob, `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`, resultBlob.type);
+    await downloadFile(
+      resultBlob,
+      `transcoded-${selectedFile?.name.split('.')[0]}.${outputFormat.value}`,
+      resultBlob.type
+    );
   };
-
 
   const onPointerDown = (e: PointerEvent, handle: 'start' | 'end') => {
     e.preventDefault();
@@ -433,13 +460,14 @@ export default function init(payload?: SharedFilesPayload) {
     syncCuttingUI('slider', e);
   };
 
-
   setupFileDropzone('drop-zone', 'file-input', (files) => {
-    if (files.length) updateFileInfo(files[0]);
+    updateFileInfo(files[0]);
   });
 
   if (payload?.sharedFiles?.length) {
-    const videoFiles = payload.sharedFiles.filter(f => f.type.startsWith('video/') || f.name?.toLowerCase().match(/\.(mp4|webm|mov|avi|mkv)$/));
+    const videoFiles = payload.sharedFiles.filter(
+      (f) => f.type.startsWith('video/') || f.name?.toLowerCase().match(/\.(mp4|webm|mov|avi|mkv)$/)
+    );
     if (videoFiles.length > 0) updateFileInfo(videoFiles[0]);
   }
 
@@ -485,6 +513,10 @@ export default function init(payload?: SharedFilesPayload) {
     btnClear.removeEventListener('click', resetUI);
     btnConvert.removeEventListener('click', onConvertClick);
     btnDownload.removeEventListener('click', onDownloadClick);
-    try { ffmpeg.terminate(); } catch { /* ignore if already terminated */ }
+    try {
+      ffmpeg.terminate();
+    } catch {
+      /* ignore if already terminated */
+    }
   };
 }

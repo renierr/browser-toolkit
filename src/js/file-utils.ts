@@ -1,8 +1,11 @@
 // Sets up drag-and-drop and click-to-select for a file input and dropzone
+import { showMessage } from './ui.ts';
+
 export function setupFileDropzone(
   dropzoneId: string,
   inputId: string,
-  onFile: (files: FileList) => void
+  onFile: (files: FileList) => void,
+  onError?: (err: Error) => void
 ) {
   const dropzone = document.getElementById(dropzoneId);
   const fileInput = document.getElementById(inputId) as HTMLInputElement | null;
@@ -38,8 +41,17 @@ export function setupFileDropzone(
       const f = files.item(i)!;
       if (matchesAccept(f, accept)) accepted.push(f);
     }
-    if (accepted.length === 0) return;
-
+    if (accepted.length === 0) {
+      if (onError) {
+        onError(new Error('No matching files found.'));
+      } else {
+        showMessage('No valid file were uploaded. Please upload the correct filetype.', {
+          type: 'warning',
+          timeoutMs: 5000,
+        });
+      }
+      return;
+    }
 
     const dt = new DataTransfer();
     for (const f of accepted) dt.items.add(f);
@@ -106,12 +118,9 @@ export async function downloadAsZip(files: DownloadBuffer[], zipFilename: string
     await downloadFile(blob, zipFilename, 'application/zip');
   } catch (e) {
     // If jszip isn't available, throw a clear error so callers know why ZIP failed.
-    throw new Error(
-      'downloadAsZip requires the "jszip" package to be installed.'
-    );
+    throw new Error('downloadAsZip requires the "jszip" package to be installed.');
   }
 }
-
 
 export async function downloadFile(
   source: string | Uint8Array | ArrayBuffer | Blob,

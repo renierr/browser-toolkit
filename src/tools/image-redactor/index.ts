@@ -523,17 +523,15 @@ export default function init(payload?: SharedFilesPayload) {
   });
 
   setupFileDropzone('dropzone', 'image-input', (files) => {
-    if (files.length > 0) {
-      const file = files[0];
-      downloadFilename = file.name.replace(/\.[^/.]+$/, '') + '-redacted';
-      elements.exportFormat.value =
-        file.type === 'image/jpeg'
-          ? 'image/jpeg'
-          : file.type === 'image/webp'
-            ? 'image/webp'
-            : 'image/png';
-      loadImage(file);
-    }
+    const file = files[0];
+    downloadFilename = file.name.replace(/\.[^/.]+$/, '') + '-redacted';
+    elements.exportFormat.value =
+      file.type === 'image/jpeg'
+        ? 'image/jpeg'
+        : file.type === 'image/webp'
+          ? 'image/webp'
+          : 'image/png';
+    loadImage(file);
   });
 
   if (payload?.sharedFiles?.length) {

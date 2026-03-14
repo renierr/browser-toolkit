@@ -152,7 +152,6 @@ export default function init(payload?: SharedFilesPayload) {
   };
 
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files: FileList) => {
-    if (files.length === 0) return;
     await processFile(files[0]);
   });
 

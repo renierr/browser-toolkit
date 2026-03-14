@@ -252,7 +252,7 @@ export default async function init() {
   };
 
   setupFileDropzone('dropzone', 'file-input', (files) => {
-    if (files.length > 0) transfer.sendFile(files[0]);
+    transfer.sendFile(files[0]);
   });
 
   return () => {

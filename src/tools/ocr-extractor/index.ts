@@ -170,9 +170,7 @@ export default function init(payload?: SharedFilesPayload) {
   };
 
   setupFileDropzone('dropzone', 'image-input', (files: FileList | File[]) => {
-    if (files.length > 0) {
-      processImage(files[0]);
-    }
+    processImage(files[0]);
   });
 
   if (payload?.sharedFiles?.length) {

@@ -53,7 +53,7 @@ export default function init() {
   };
 
   setupFileDropzone('drop-zone', 'file-input', (files) => {
-    if (files.length) updateFileInfo(files[0]);
+    updateFileInfo(files[0]);
   });
 
   const onColorCountInput = () => {
@@ -126,7 +126,11 @@ export default function init() {
   const onDownloadClick = async () => {
     if (!currentSvgString) return;
     const blob = new Blob([currentSvgString], { type: 'image/svg+xml' });
-    await downloadFile(blob, `vectorized-${selectedFile?.name?.split('.')[0] || 'image'}.svg`, 'image/svg+xml');
+    await downloadFile(
+      blob,
+      `vectorized-${selectedFile?.name?.split('.')[0] || 'image'}.svg`,
+      'image/svg+xml'
+    );
   };
 
   const onCopySvgClick = () => {

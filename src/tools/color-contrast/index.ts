@@ -1,8 +1,14 @@
 import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 import {
-  extractColorsFromImage, suggestBetterColors, checkWCAG, getContrastRatio, getLuminance, hexToRgb,
-  normalizeHex } from './color-utils.ts';
+  extractColorsFromImage,
+  suggestBetterColors,
+  checkWCAG,
+  getContrastRatio,
+  getLuminance,
+  hexToRgb,
+  normalizeHex,
+} from './color-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -267,9 +273,7 @@ export default function init() {
 
   // Setup file dropzone
   setupFileDropzone('dropzone', 'image-input', (files) => {
-    if (files.length > 0) {
-      analyzeImage(files[0]);
-    }
+    analyzeImage(files[0]);
   });
 
   // Initial update
