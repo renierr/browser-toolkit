@@ -1,0 +1,7 @@
+{
+  "name": "Periodic Table",
+  "description": "Interactive periodic table with electron shells, isotopes, and atomic structure visualization.",
+  "icon": "database",
+  "sectionId": "utilities",
+  "order": 10
+}
