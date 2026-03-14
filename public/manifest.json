@@ -1,7 +1,7 @@
 {
-  "name": "Browser Toolkit",
+  "name": "B-Toolkit",
   "short_name": "BrowserToolKit",
-  "description": "Collection of useful JavaScript tools – no framework, easily extendable",
+  "description": "Collection of useful Browser based Tools",
   "start_url": "./",
   "id": "/",
   "display": "standalone",
@@ -52,9 +52,7 @@
       "files": [
         {
           "name": "files",
-          "accept": [
-            "*/*"
-          ]
+          "accept": ["*/*"]
         }
       ]
     }
@@ -63,9 +61,7 @@
     {
       "action": "./index.html",
       "accept": {
-        "application/pdf": [
-          ".pdf"
-        ],
+        "application/pdf": [".pdf"],
         "text/*": [
           ".txt",
           ".json",
@@ -94,23 +90,8 @@
           ".heic",
           ".avif"
         ],
-        "audio/*": [
-          ".wav",
-          ".mp3",
-          ".ogg",
-          ".webm",
-          ".flac",
-          ".m4a",
-          ".aac"
-        ],
-        "video/*": [
-          ".mp4",
-          ".webm",
-          ".ogg",
-          ".mov",
-          ".avi",
-          ".mkv"
-        ],
+        "audio/*": [".wav", ".mp3", ".ogg", ".webm", ".flac", ".m4a", ".aac"],
+        "video/*": [".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"],
         "application/octet-stream": [
           ".bin",
           ".dat",
@@ -129,16 +110,8 @@
           ".tar",
           ".gz"
         ],
-        "application/vnd.sqlite3": [
-          ".sqlite",
-          ".sqlite3",
-          ".db"
-        ],
-        "application/x-sqlite3": [
-          ".sqlite",
-          ".sqlite3",
-          ".db"
-        ]
+        "application/vnd.sqlite3": [".sqlite", ".sqlite3", ".db"],
+        "application/x-sqlite3": [".sqlite", ".sqlite3", ".db"]
       }
     }
   ]

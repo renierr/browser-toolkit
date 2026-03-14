@@ -27,7 +27,7 @@ export const siteConfig = {
     },
     utilities: {
       title: 'Utilities',
-      description: 'useful tools for coding and development.',
+      description: 'useful tools in general or for coding and development.',
     },
   },
 } satisfies SiteConfig;
