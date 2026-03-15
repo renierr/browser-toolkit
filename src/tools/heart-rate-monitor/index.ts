@@ -19,6 +19,9 @@ export function init() {
   const noSessionsRow = document.getElementById('no-sessions')!;
   const ekgContainer = document.getElementById('ekg-container')!;
   const ekgCanvas = document.getElementById('ekg-canvas') as HTMLCanvasElement;
+  const batteryIndicator = document.getElementById('battery-indicator')!;
+  const batteryLevel = document.getElementById('battery-level')!;
+  const batteryIcon = document.getElementById('battery-icon')!;
   const exportAllBtn = document.getElementById('export-all-btn') as HTMLButtonElement;
   const viewJsonBtn = document.getElementById('view-json-btn') as HTMLButtonElement;
   const importInput = document.getElementById('import-input') as HTMLInputElement;
@@ -128,15 +131,39 @@ export function init() {
   };
 
   const onHeartRateUpdate = (data: HeartRateUpdate) => {
-    ekgGraph.setHeartRate(data.heartRate);
-    hrDisplay.textContent = data.heartRate.toString();
+    if (data.heartRate !== -1) {
+      ekgGraph.setHeartRate(data.heartRate);
+      hrDisplay.textContent = data.heartRate.toString();
 
-    if (isRecording && currentSession) {
-      currentSession.dataPoints.push({
-        timestamp: Date.now(),
-        heartRate: data.heartRate,
-      });
+      if (isRecording && currentSession) {
+        currentSession.dataPoints.push({
+          timestamp: Date.now(),
+          heartRate: data.heartRate,
+        });
+      }
     }
+
+    if (data.batteryLevel !== undefined) {
+      batteryIndicator.classList.remove('hidden');
+      batteryLevel.textContent = `${data.batteryLevel}%`;
+
+      // Update battery icon based on level
+      batteryIcon.setAttribute('data-lucide', getBatteryIcon(data.batteryLevel));
+      // @ts-ignore - Lucide is available globally
+      if ((window as any).lucide)
+        (window as any).lucide.createIcons({
+          attrs: { class: 'size-4' },
+          nameAttr: 'data-lucide',
+          icons: [batteryIcon],
+        });
+    }
+  };
+
+  const getBatteryIcon = (level: number): string => {
+    if (level > 90) return 'battery-full';
+    if (level > 60) return 'battery-medium';
+    if (level > 20) return 'battery-low';
+    return 'battery-warning';
   };
 
   const startRecording = () => {
@@ -191,6 +218,8 @@ export function init() {
     device = null;
     ekgGraph.setHeartRate(0);
     hrDisplay.textContent = '--';
+    batteryIndicator.classList.add('hidden');
+    batteryLevel.textContent = '--%';
     connectBtn.classList.remove('hidden');
     recordingControls.classList.add('hidden');
     disconnectBtn.classList.add('hidden');
