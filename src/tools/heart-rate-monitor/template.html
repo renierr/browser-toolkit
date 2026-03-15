@@ -92,7 +92,14 @@
       <form method="dialog">
         <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
       </form>
-      <div id="modal-title" class="font-bold text-lg mb-4 text-primary">Session Details</div>
+      <div class="flex items-center justify-between gap-4 mb-4">
+        <div id="modal-title" class="font-bold text-lg text-primary">Session Details</div>
+        <div id="session-select-container" class="hidden">
+           <select id="session-select" class="select select-sm select-bordered w-full max-w-xs">
+             <!-- Sessions will be added here -->
+           </select>
+        </div>
+      </div>
 
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-base-200 p-3 rounded-lg">

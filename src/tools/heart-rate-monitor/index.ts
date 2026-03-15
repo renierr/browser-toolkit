@@ -265,9 +265,10 @@ export function init() {
 
         // Check if it's a single session or an array of sessions
         const sessionToView = Array.isArray(data) ? data[0] : data;
+        const allSessions = Array.isArray(data) ? data : [data];
 
         if (sessionToView && sessionToView.startTime && sessionToView.dataPoints) {
-          showSessionDetails(sessionToView);
+          showSessionDetails(sessionToView, allSessions);
           updateStatus('JSON loaded successfully', 'success');
         } else {
           updateStatus('Invalid JSON format', 'error');
