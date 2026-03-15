@@ -1,0 +1,70 @@
+<div class="flex flex-col gap-6 max-w-4xl mx-auto p-4">
+  <div class="card bg-base-100 shadow-xl border border-base-300">
+    <div class="card-body">
+      <h2 class="card-title text-2xl flex items-center gap-2">
+        <i data-lucide="heart" class="text-error animate-pulse"></i>
+        Heart Rate Monitor
+      </h2>
+      <p class="text-base-content/70">Connect your Bluetooth heart rate strap to monitor and record your sessions.</p>
+
+      <div class="divider"></div>
+
+      <div class="flex flex-col md:flex-row items-center justify-between gap-8 py-4">
+        <div class="flex flex-col items-center gap-2">
+          <div id="hr-display" class="text-8xl font-black text-primary tabular-nums">--</div>
+          <div class="text-xl font-medium text-base-content/60 uppercase tracking-widest">BPM</div>
+        </div>
+
+        <div class="flex flex-col gap-4 w-full md:w-auto">
+          <button id="connect-btn" class="btn btn-primary btn-lg flex items-center gap-2">
+            <i data-lucide="bluetooth"></i>
+            Connect Device
+          </button>
+
+          <div id="recording-controls" class="hidden flex flex-col gap-2">
+             <button id="record-btn" class="btn btn-outline btn-error flex items-center gap-2">
+              <i data-lucide="circle" class="fill-current"></i>
+              Start Recording
+            </button>
+            <div id="recording-status" class="hidden badge badge-error badge-outline gap-1 p-3 animate-pulse">
+               <span class="w-2 h-2 rounded-full bg-error"></span>
+               Recording... <span id="record-timer" class="font-mono ml-1">00:00</span>
+            </div>
+          </div>
+
+          <button id="disconnect-btn" class="btn btn-ghost btn-sm hidden">Disconnect</button>
+        </div>
+      </div>
+
+      <div id="status-message" class="alert alert-info hidden">
+        <i data-lucide="info"></i>
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl border border-base-300">
+    <div class="card-body">
+      <h3 class="card-title text-xl mb-4">Recorded Sessions</h3>
+      <div class="overflow-x-auto">
+        <table class="table table-zebra w-full">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Duration</th>
+              <th>Avg HR</th>
+              <th>Max HR</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="sessions-list">
+            <!-- Sessions will be loaded here -->
+            <tr id="no-sessions">
+              <td colspan="5" class="text-center text-base-content/50 py-8">No sessions recorded yet.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
