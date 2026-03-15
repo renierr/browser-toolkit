@@ -29,5 +29,9 @@ export const siteConfig = {
       title: 'Utilities',
       description: 'useful tools in general or for coding and development.',
     },
+    devices: {
+      title: 'Devices',
+      description: 'Tools accessing or using devices.',
+    },
   },
 } satisfies SiteConfig;

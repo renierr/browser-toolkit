@@ -19,6 +19,7 @@
     "@tailwindcss/vite": "^4.2.1",
     "@types/node": "^25.3.2",
     "@types/sortablejs": "^1.15.9",
+    "@types/web-bluetooth": "0.0.20",
     "daisyui": "^5.5.19",
     "extract-zip": "^2.0.1",
     "prettier": "^3.8.1",
