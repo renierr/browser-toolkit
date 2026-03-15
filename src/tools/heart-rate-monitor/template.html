@@ -71,4 +71,52 @@
       </div>
     </div>
   </div>
+
+  <!-- Session Details Modal -->
+  <dialog id="session-modal" class="modal">
+    <div class="modal-box max-w-4xl">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+      </form>
+      <h3 id="modal-title" class="font-bold text-lg mb-4 text-primary">Session Details</h3>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-base-200 p-3 rounded-lg">
+          <div class="text-xs uppercase text-base-content/60">Duration</div>
+          <div id="modal-duration" class="font-bold font-mono">--:--</div>
+        </div>
+        <div class="bg-base-200 p-3 rounded-lg">
+          <div class="text-xs uppercase text-base-content/60">Avg HR</div>
+          <div id="modal-avg-hr" class="font-bold">-- BPM</div>
+        </div>
+        <div class="bg-base-200 p-3 rounded-lg">
+          <div class="text-xs uppercase text-base-content/60">Max HR</div>
+          <div id="modal-max-hr" class="font-bold">-- BPM</div>
+        </div>
+        <div class="bg-base-200 p-3 rounded-lg">
+          <div class="text-xs uppercase text-base-content/60">Data Points</div>
+          <div id="modal-datapoints" class="font-bold">--</div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <h4 class="font-semibold mb-2 flex items-center gap-2">
+          <i data-lucide="line-chart" class="w-4 h-4"></i>
+          Heart Rate Graph
+        </h4>
+        <div class="bg-base-200 rounded-lg p-2">
+          <canvas id="session-graph" class="w-full h-48 sm:h-64"></canvas>
+        </div>
+      </div>
+
+      <div class="modal-action">
+        <form method="dialog">
+          <button class="btn">Close</button>
+        </form>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
 </div>

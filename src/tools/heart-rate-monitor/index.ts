@@ -18,6 +18,16 @@ export function init() {
   const ekgCanvas = document.getElementById('ekg-canvas') as HTMLCanvasElement;
   const ctx = ekgCanvas.getContext('2d')!;
 
+  // Modal elements
+  const modal = document.getElementById('session-modal') as HTMLDialogElement;
+  const modalTitle = document.getElementById('modal-title')!;
+  const modalDuration = document.getElementById('modal-duration')!;
+  const modalAvgHr = document.getElementById('modal-avg-hr')!;
+  const modalMaxHr = document.getElementById('modal-max-hr')!;
+  const modalDatapoints = document.getElementById('modal-datapoints')!;
+  const graphCanvas = document.getElementById('session-graph') as HTMLCanvasElement;
+  const graphCtx = graphCanvas.getContext('2d')!;
+
   let device: BluetoothDevice | null = null;
   let isRecording = false;
   let currentSession: HeartRateSession | null = null;
@@ -142,6 +152,7 @@ export function init() {
 
     sessions.forEach((session) => {
       const row = document.createElement('tr');
+      row.className = 'hover:bg-base-200 cursor-pointer';
       const date = new Date(session.startTime).toLocaleString();
       const duration = session.endTime
         ? formatDuration(session.endTime - session.startTime)
@@ -157,11 +168,22 @@ export function init() {
         <td>${avgHr} <small class="text-base-content/50">BPM</small></td>
         <td>${maxHr} <small class="text-base-content/50">BPM</small></td>
         <td class="text-right">
+          <button class="btn btn-ghost btn-xs text-info view-session" data-id="${session.id}">View</button>
           <button class="btn btn-ghost btn-xs text-error delete-session" data-id="${session.id}">Delete</button>
         </td>
       `;
 
+      row.querySelector('.view-session')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showSessionDetails(session);
+      });
+
+      row.addEventListener('click', () => {
+        showSessionDetails(session);
+      });
+
       row.querySelector('.delete-session')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const id = Number((e.currentTarget as HTMLElement).dataset.id);
         if (confirm('Delete this session?')) {
           await deleteSession(id);
@@ -171,6 +193,101 @@ export function init() {
 
       sessionsList.appendChild(row);
     });
+  };
+
+  const showSessionDetails = (session: HeartRateSession) => {
+    const date = new Date(session.startTime).toLocaleString();
+    const duration = session.endTime ? formatDuration(session.endTime - session.startTime) : '---';
+
+    const hrs = session.dataPoints.map((p) => p.heartRate);
+    const avgHr = hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : 0;
+    const maxHr = hrs.length ? Math.max(...hrs) : 0;
+
+    modalTitle.textContent = `Session: ${date}`;
+    modalDuration.textContent = duration;
+    modalAvgHr.textContent = `${avgHr} BPM`;
+    modalMaxHr.textContent = `${maxHr} BPM`;
+    modalDatapoints.textContent = session.dataPoints.length.toString();
+
+    modal.showModal();
+
+    // Draw graph after a short delay to ensure canvas is sized
+    setTimeout(() => drawSessionGraph(session), 50);
+  };
+
+  const drawSessionGraph = (session: HeartRateSession) => {
+    const width = graphCanvas.clientWidth;
+    const height = graphCanvas.clientHeight;
+    graphCanvas.width = width;
+    graphCanvas.height = height;
+
+    const points = session.dataPoints;
+    if (points.length < 2) {
+      graphCtx.clearRect(0, 0, width, height);
+      graphCtx.fillStyle = '#666';
+      graphCtx.textAlign = 'center';
+      graphCtx.fillText('Not enough data points', width / 2, height / 2);
+      return;
+    }
+
+    graphCtx.clearRect(0, 0, width, height);
+
+    const hrs = points.map((p) => p.heartRate);
+    const minHr = Math.min(...hrs) - 5;
+    const maxHr = Math.max(...hrs) + 5;
+    const range = maxHr - minHr;
+
+    const startTime = session.startTime;
+    const endTime = session.endTime || points[points.length - 1].timestamp;
+    const duration = endTime - startTime;
+
+    // Drawing settings
+    graphCtx.strokeStyle = '#ff52d9'; // primary/accent color
+    graphCtx.lineWidth = 2;
+    graphCtx.lineJoin = 'round';
+    graphCtx.lineCap = 'round';
+
+    // Draw grid/background lines
+    graphCtx.strokeStyle = 'rgba(128, 128, 128, 0.1)';
+    graphCtx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++) {
+      const y = (height * i) / 4;
+      graphCtx.beginPath();
+      graphCtx.moveTo(0, y);
+      graphCtx.lineTo(width, y);
+      graphCtx.stroke();
+
+      // Label
+      graphCtx.fillStyle = 'rgba(128, 128, 128, 0.5)';
+      graphCtx.font = '10px sans-serif';
+      const labelValue = Math.round(maxHr - (range * i) / 4);
+      graphCtx.fillText(labelValue.toString(), 5, y - 2);
+    }
+
+    // Draw data line
+    graphCtx.strokeStyle = '#ff52d9';
+    graphCtx.lineWidth = 2;
+    graphCtx.beginPath();
+
+    points.forEach((p, i) => {
+      const x = ((p.timestamp - startTime) / duration) * width;
+      const y = height - ((p.heartRate - minHr) / range) * height;
+
+      if (i === 0) graphCtx.moveTo(x, y);
+      else graphCtx.lineTo(x, y);
+    });
+
+    graphCtx.stroke();
+
+    // Gradient fill under the line
+    const gradient = graphCtx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, 'rgba(255, 82, 217, 0.2)');
+    gradient.addColorStop(1, 'rgba(255, 82, 217, 0)');
+    graphCtx.fillStyle = gradient;
+    graphCtx.lineTo(width, height);
+    graphCtx.lineTo(0, height);
+    graphCtx.closePath();
+    graphCtx.fill();
   };
 
   const onHeartRateUpdate = (data: HeartRateUpdate) => {
