@@ -1,5 +1,6 @@
 export interface HeartRateSession {
   id?: number;
+  uid: string;
   startTime: number;
   endTime?: number;
   dataPoints: { timestamp: number; heartRate: number }[];
@@ -19,7 +20,8 @@ export function openDB(): Promise<IDBDatabase> {
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        store.createIndex('uid', 'uid', { unique: true });
       }
     };
   });

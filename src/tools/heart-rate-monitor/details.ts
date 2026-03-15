@@ -21,7 +21,7 @@ export function showSessionDetails(session: HeartRateSession) {
   const avgHr = hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : 0;
   const maxHr = hrs.length ? Math.max(...hrs) : 0;
 
-  modalTitle.textContent = `Session: ${date}`;
+  modalTitle.innerHTML = `Session Details <span class="badge badge-ghost font-mono ml-2">${session.uid || 'N/A'}</span> <div class="text-xs font-normal text-base-content/50 mt-1">${date}</div>`;
   modalDuration.textContent = duration;
   modalAvgHr.textContent = `${avgHr} BPM`;
   modalMaxHr.textContent = `${maxHr} BPM`;

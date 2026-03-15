@@ -1,7 +1,7 @@
 import { connectHeartRate, type HeartRateUpdate } from './bluetooth';
 import { deleteSession, getAllSessions, type HeartRateSession, saveSession } from './db';
 import { showMessage } from '../../js/ui';
-import { formatDuration } from './utils';
+import { formatDuration, generateShortId } from './utils';
 import { EKGGraph } from './graph';
 import { initDetails, showSessionDetails } from './details';
 
@@ -19,6 +19,9 @@ export function init() {
   const noSessionsRow = document.getElementById('no-sessions')!;
   const ekgContainer = document.getElementById('ekg-container')!;
   const ekgCanvas = document.getElementById('ekg-canvas') as HTMLCanvasElement;
+  const exportAllBtn = document.getElementById('export-all-btn') as HTMLButtonElement;
+  const viewJsonBtn = document.getElementById('view-json-btn') as HTMLButtonElement;
+  const importInput = document.getElementById('import-input') as HTMLInputElement;
 
   let device: BluetoothDevice | null = null;
   let isRecording = false;
@@ -91,6 +94,7 @@ export function init() {
       const maxHr = hrs.length ? Math.max(...hrs) : 0;
 
       row.innerHTML = `
+        <td class="font-mono text-xs opacity-70">${session.uid || '---'}</td>
         <td>${date}</td>
         <td class="font-mono">${duration}</td>
         <td>${avgHr} <small class="text-base-content/50">BPM</small></td>
@@ -139,6 +143,7 @@ export function init() {
     isRecording = true;
     recordingStartTime = Date.now();
     currentSession = {
+      uid: generateShortId(),
       startTime: recordingStartTime,
       dataPoints: [],
     };
@@ -224,6 +229,56 @@ export function init() {
     } else {
       startRecording();
     }
+  });
+
+  exportAllBtn.addEventListener('click', async () => {
+    const sessions = await getAllSessions();
+    if (sessions.length === 0) {
+      updateStatus('No sessions to export', 'warning');
+      return;
+    }
+
+    const data = JSON.stringify(sessions, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `heart-rate-sessions-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    updateStatus('Sessions exported', 'success');
+  });
+
+  viewJsonBtn.addEventListener('click', () => {
+    importInput.click();
+  });
+
+  importInput.addEventListener('change', (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        const data = JSON.parse(content);
+
+        // Check if it's a single session or an array of sessions
+        const sessionToView = Array.isArray(data) ? data[0] : data;
+
+        if (sessionToView && sessionToView.startTime && sessionToView.dataPoints) {
+          showSessionDetails(sessionToView);
+          updateStatus('JSON loaded successfully', 'success');
+        } else {
+          updateStatus('Invalid JSON format', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        updateStatus('Failed to parse JSON', 'error');
+      }
+      importInput.value = '';
+    };
+    reader.readAsText(file);
   });
 
   // Initial load

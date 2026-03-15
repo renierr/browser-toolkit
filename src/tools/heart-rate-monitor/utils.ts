@@ -4,3 +4,7 @@ export const formatDuration = (ms: number): string => {
   const secs = totalSeconds % 60;
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 };
+
+export const generateShortId = (): string => {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+};

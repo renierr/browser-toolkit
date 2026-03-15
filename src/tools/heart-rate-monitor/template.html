@@ -49,11 +49,25 @@
 
   <div class="card bg-base-100 shadow-xl border border-base-300 max-w-dvw">
     <div class="card-body p-4 sm:p-8">
-      <h3 class="card-title text-xl mb-4">Recorded Sessions</h3>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+        <h3 class="card-title text-xl">Recorded Sessions</h3>
+        <div class="flex items-center gap-2">
+          <input type="file" id="import-input" class="hidden" accept=".json" />
+          <button id="view-json-btn" class="btn btn-outline btn-sm gap-2">
+            <i data-lucide="upload"></i>
+            View JSON
+          </button>
+          <button id="export-all-btn" class="btn btn-primary btn-sm gap-2">
+            <i data-lucide="download"></i>
+            Export All
+          </button>
+        </div>
+      </div>
       <div class="overflow-x-auto">
         <table class="table table-zebra w-full">
           <thead>
             <tr>
+              <th>ID</th>
               <th>Date</th>
               <th>Duration</th>
               <th>Avg HR</th>
@@ -64,7 +78,7 @@
           <tbody id="sessions-list">
             <!-- Sessions will be loaded here -->
             <tr id="no-sessions">
-              <td colspan="5" class="text-center text-base-content/50 py-8">No sessions recorded yet.</td>
+              <td colspan="6" class="text-center text-base-content/50 py-8">No sessions recorded yet.</td>
             </tr>
           </tbody>
         </table>
@@ -78,7 +92,7 @@
       <form method="dialog">
         <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
       </form>
-      <h3 id="modal-title" class="font-bold text-lg mb-4 text-primary">Session Details</h3>
+      <div id="modal-title" class="font-bold text-lg mb-4 text-primary">Session Details</div>
 
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div class="bg-base-200 p-3 rounded-lg">
