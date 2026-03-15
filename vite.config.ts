@@ -29,8 +29,7 @@ const __dirname = path.dirname(__filename);
 // refresh automatically.
 // ---------------------------------------------------------------------------
 const ONNX_DIST = path.resolve(__dirname, 'node_modules/onnxruntime-web/dist');
-const ONNX_FILES = fs.readdirSync(ONNX_DIST)
-  .filter(f => /^ort-wasm.*\.(mjs|wasm)$/.test(f));
+const ONNX_FILES = fs.readdirSync(ONNX_DIST).filter((f) => /^ort-wasm.*\.(mjs|wasm)$/.test(f));
 
 function onnxStaticPlugin(): Plugin {
   return {
@@ -81,7 +80,124 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      manifest: false, // we provide our own manifest.json
+      manifest: {
+        name: 'Browser-Tools',
+        short_name: 'B-Tools',
+        description: 'Collection of useful Browser based Tools',
+        start_url: './',
+        id: '/',
+        display: 'standalone',
+        background_color: '#ffffff',
+        theme_color: '#3b82f6',
+        orientation: 'any',
+        icons: [
+          {
+            src: './favicon-192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: './favicon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: './favicon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+        screenshots: [
+          {
+            src: './screenshot.png',
+            sizes: '1280x720',
+            type: 'image/png',
+            form_factor: 'wide',
+          },
+          {
+            src: './screenshot.png',
+            sizes: '1280x720',
+            type: 'image/png',
+          },
+        ],
+        share_target: {
+          action: './index.html',
+          method: 'POST',
+          enctype: 'multipart/form-data',
+          params: {
+            title: 'title',
+            text: 'text',
+            url: 'url',
+            files: [
+              {
+                name: 'files',
+                accept: ['*/*'],
+              },
+            ],
+          },
+        },
+        file_handlers: [
+          {
+            action: './index.html',
+            accept: {
+              'application/pdf': ['.pdf'],
+              'text/*': [
+                '.txt',
+                '.json',
+                '.xml',
+                '.html',
+                '.css',
+                '.js',
+                '.ts',
+                '.md',
+                '.yaml',
+                '.yml',
+                '.py',
+                '.sh',
+                '.php',
+              ],
+              'image/*': [
+                '.png',
+                '.jpg',
+                '.jpeg',
+                '.gif',
+                '.webp',
+                '.svg',
+                '.bmp',
+                '.ico',
+                '.tiff',
+                '.heic',
+                '.avif',
+              ],
+              'audio/*': ['.wav', '.mp3', '.ogg', '.webm', '.flac', '.m4a', '.aac'],
+              'video/*': ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'],
+              'application/octet-stream': [
+                '.bin',
+                '.dat',
+                '.dmp',
+                '.exe',
+                '.dll',
+                '.sys',
+                '.iso',
+                '.img',
+                '.hex',
+                '.vmdk',
+                '.vhd',
+                '.7z',
+                '.zip',
+                '.rar',
+                '.tar',
+                '.gz',
+              ],
+              'application/vnd.sqlite3': ['.sqlite', '.sqlite3', '.db'],
+              'application/x-sqlite3': ['.sqlite', '.sqlite3', '.db'],
+            },
+          },
+        ],
+      },
       devOptions: {
         enabled: true,
       },
@@ -119,10 +235,7 @@ export default defineConfig({
     alias: [
       {
         find: /^@ffmpeg\/(.*)$/,
-        replacement: path.resolve(
-          __dirname,
-          'src/tools/video-transcoder/node_modules/@ffmpeg/$1'
-        ),
+        replacement: path.resolve(__dirname, 'src/tools/video-transcoder/node_modules/@ffmpeg/$1'),
       },
       {
         find: 'lucide',
