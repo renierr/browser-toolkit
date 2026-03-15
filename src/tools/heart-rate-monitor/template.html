@@ -40,11 +40,15 @@
         <i data-lucide="info"></i>
         <span></span>
       </div>
+
+      <div id="ekg-container" class="mt-4 hidden">
+        <canvas id="ekg-canvas" class="w-full h-32 bg-base-200 rounded-lg"></canvas>
+      </div>
     </div>
   </div>
 
-  <div class="card bg-base-100 shadow-xl border border-base-300">
-    <div class="card-body">
+  <div class="card bg-base-100 shadow-xl border border-base-300 max-w-dvw">
+    <div class="card-body p-4 sm:p-8">
       <h3 class="card-title text-xl mb-4">Recorded Sessions</h3>
       <div class="overflow-x-auto">
         <table class="table table-zebra w-full">
