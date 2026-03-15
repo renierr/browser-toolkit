@@ -100,12 +100,43 @@
       </div>
 
       <div class="mb-4">
-        <h4 class="font-semibold mb-2 flex items-center gap-2">
-          <i data-lucide="line-chart" class="w-4 h-4"></i>
-          Heart Rate Graph
-        </h4>
+        <div class="flex items-center justify-between mb-2">
+          <h4 class="font-semibold flex items-center gap-2">
+            <i data-lucide="line-chart" class="w-4 h-4"></i>
+            Heart Rate Graph
+          </h4>
+          <div class="form-control">
+            <label class="label cursor-pointer gap-2">
+              <span class="label-text text-xs uppercase font-semibold text-base-content/60">Show Data Table</span>
+              <input type="checkbox" id="toggle-data" class="toggle toggle-primary toggle-sm" />
+            </label>
+          </div>
+        </div>
         <div class="bg-base-200 rounded-lg p-2">
           <canvas id="session-graph" class="w-full h-48 sm:h-64"></canvas>
+        </div>
+      </div>
+
+      <div id="modal-data-container" class="hidden mb-4">
+        <h4 class="font-semibold mb-2 flex items-center gap-2">
+          <i data-lucide="table" class="w-4 h-4"></i>
+          Recorded Data Points
+        </h4>
+        <div class="bg-base-200 rounded-lg overflow-hidden border border-base-300">
+           <div class="max-h-64 overflow-y-auto">
+             <table class="table table-xs table-zebra w-full">
+               <thead>
+                 <tr class="sticky top-0 bg-base-300 z-10">
+                   <th>#</th>
+                   <th>Time</th>
+                   <th>Heart Rate</th>
+                 </tr>
+               </thead>
+               <tbody id="modal-data-body">
+                 <!-- Data points will be loaded here -->
+               </tbody>
+             </table>
+           </div>
         </div>
       </div>
 

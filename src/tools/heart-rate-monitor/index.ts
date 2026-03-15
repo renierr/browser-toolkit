@@ -1,6 +1,9 @@
 import { connectHeartRate, type HeartRateUpdate } from './bluetooth';
 import { deleteSession, getAllSessions, type HeartRateSession, saveSession } from './db';
 import { showMessage } from '../../js/ui';
+import { formatDuration } from './utils';
+import { EKGGraph } from './graph';
+import { initDetails, showSessionDetails } from './details';
 
 // noinspection JSUnusedGlobalSymbols
 export function init() {
@@ -16,17 +19,6 @@ export function init() {
   const noSessionsRow = document.getElementById('no-sessions')!;
   const ekgContainer = document.getElementById('ekg-container')!;
   const ekgCanvas = document.getElementById('ekg-canvas') as HTMLCanvasElement;
-  const ctx = ekgCanvas.getContext('2d')!;
-
-  // Modal elements
-  const modal = document.getElementById('session-modal') as HTMLDialogElement;
-  const modalTitle = document.getElementById('modal-title')!;
-  const modalDuration = document.getElementById('modal-duration')!;
-  const modalAvgHr = document.getElementById('modal-avg-hr')!;
-  const modalMaxHr = document.getElementById('modal-max-hr')!;
-  const modalDatapoints = document.getElementById('modal-datapoints')!;
-  const graphCanvas = document.getElementById('session-graph') as HTMLCanvasElement;
-  const graphCtx = graphCanvas.getContext('2d')!;
 
   let device: BluetoothDevice | null = null;
   let isRecording = false;
@@ -69,74 +61,10 @@ export function init() {
     }
   };
 
-  // EKG Graph Logic
-  let animationFrameId: number | null = null;
-  const ekgPoints: number[] = [];
-  const maxPoints = 200;
-  let lastHeartRate = 0;
-  let phase = 0;
+  const ekgGraph = new EKGGraph(ekgCanvas);
+  ekgGraph.start();
 
-  const drawEKG = () => {
-    const width = ekgCanvas.clientWidth;
-    const height = ekgCanvas.clientHeight;
-    if (ekgCanvas.width !== width || ekgCanvas.height !== height) {
-      ekgCanvas.width = width;
-      ekgCanvas.height = height;
-    }
-
-    ctx.clearRect(0, 0, width, height);
-    ctx.beginPath();
-    ctx.strokeStyle = '#ff52d9'; // primary color or error color
-    ctx.lineWidth = 2;
-    ctx.lineJoin = 'round';
-
-    const step = width / (maxPoints - 1);
-    for (let i = 0; i < ekgPoints.length; i++) {
-      const x = i * step;
-      const y = height / 2 - ekgPoints[i] * (height / 3);
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-
-    // Generate next point
-    if (lastHeartRate > 0) {
-      // Basic EKG spike logic based on BPM
-      const period = (60 / lastHeartRate) * 60; // frames at 60fps
-      phase++;
-      let spike = 0;
-      const p = phase % Math.floor(period);
-
-      // Typical EKG components: P, QRS, T
-      if (p < 5)
-        spike = 0.1; // P wave
-      else if (p >= 5 && p < 7)
-        spike = -0.1; // Q
-      else if (p >= 7 && p < 10)
-        spike = 1.0; // R (the big spike)
-      else if (p >= 10 && p < 12)
-        spike = -0.2; // S
-      else if (p >= 20 && p < 30)
-        spike = 0.2; // T wave
-      else spike = (Math.random() - 0.5) * 0.05; // Base noise
-
-      ekgPoints.push(spike);
-    } else {
-      ekgPoints.push((Math.random() - 0.5) * 0.05);
-    }
-
-    if (ekgPoints.length > maxPoints) ekgPoints.shift();
-    animationFrameId = requestAnimationFrame(drawEKG);
-  };
-
-  animationFrameId = requestAnimationFrame(drawEKG);
-
-  const formatDuration = (ms: number) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const mins = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+  initDetails();
 
   const loadSessions = async () => {
     const sessions = await getAllSessions();
@@ -195,103 +123,8 @@ export function init() {
     });
   };
 
-  const showSessionDetails = (session: HeartRateSession) => {
-    const date = new Date(session.startTime).toLocaleString();
-    const duration = session.endTime ? formatDuration(session.endTime - session.startTime) : '---';
-
-    const hrs = session.dataPoints.map((p) => p.heartRate);
-    const avgHr = hrs.length ? Math.round(hrs.reduce((a, b) => a + b, 0) / hrs.length) : 0;
-    const maxHr = hrs.length ? Math.max(...hrs) : 0;
-
-    modalTitle.textContent = `Session: ${date}`;
-    modalDuration.textContent = duration;
-    modalAvgHr.textContent = `${avgHr} BPM`;
-    modalMaxHr.textContent = `${maxHr} BPM`;
-    modalDatapoints.textContent = session.dataPoints.length.toString();
-
-    modal.showModal();
-
-    // Draw graph after a short delay to ensure canvas is sized
-    setTimeout(() => drawSessionGraph(session), 50);
-  };
-
-  const drawSessionGraph = (session: HeartRateSession) => {
-    const width = graphCanvas.clientWidth;
-    const height = graphCanvas.clientHeight;
-    graphCanvas.width = width;
-    graphCanvas.height = height;
-
-    const points = session.dataPoints;
-    if (points.length < 2) {
-      graphCtx.clearRect(0, 0, width, height);
-      graphCtx.fillStyle = '#666';
-      graphCtx.textAlign = 'center';
-      graphCtx.fillText('Not enough data points', width / 2, height / 2);
-      return;
-    }
-
-    graphCtx.clearRect(0, 0, width, height);
-
-    const hrs = points.map((p) => p.heartRate);
-    const minHr = Math.min(...hrs) - 5;
-    const maxHr = Math.max(...hrs) + 5;
-    const range = maxHr - minHr;
-
-    const startTime = session.startTime;
-    const endTime = session.endTime || points[points.length - 1].timestamp;
-    const duration = endTime - startTime;
-
-    // Drawing settings
-    graphCtx.strokeStyle = '#ff52d9'; // primary/accent color
-    graphCtx.lineWidth = 2;
-    graphCtx.lineJoin = 'round';
-    graphCtx.lineCap = 'round';
-
-    // Draw grid/background lines
-    graphCtx.strokeStyle = 'rgba(128, 128, 128, 0.1)';
-    graphCtx.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-      const y = (height * i) / 4;
-      graphCtx.beginPath();
-      graphCtx.moveTo(0, y);
-      graphCtx.lineTo(width, y);
-      graphCtx.stroke();
-
-      // Label
-      graphCtx.fillStyle = 'rgba(128, 128, 128, 0.5)';
-      graphCtx.font = '10px sans-serif';
-      const labelValue = Math.round(maxHr - (range * i) / 4);
-      graphCtx.fillText(labelValue.toString(), 5, y - 2);
-    }
-
-    // Draw data line
-    graphCtx.strokeStyle = '#ff52d9';
-    graphCtx.lineWidth = 2;
-    graphCtx.beginPath();
-
-    points.forEach((p, i) => {
-      const x = ((p.timestamp - startTime) / duration) * width;
-      const y = height - ((p.heartRate - minHr) / range) * height;
-
-      if (i === 0) graphCtx.moveTo(x, y);
-      else graphCtx.lineTo(x, y);
-    });
-
-    graphCtx.stroke();
-
-    // Gradient fill under the line
-    const gradient = graphCtx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, 'rgba(255, 82, 217, 0.2)');
-    gradient.addColorStop(1, 'rgba(255, 82, 217, 0)');
-    graphCtx.fillStyle = gradient;
-    graphCtx.lineTo(width, height);
-    graphCtx.lineTo(0, height);
-    graphCtx.closePath();
-    graphCtx.fill();
-  };
-
   const onHeartRateUpdate = (data: HeartRateUpdate) => {
-    lastHeartRate = data.heartRate;
+    ekgGraph.setHeartRate(data.heartRate);
     hrDisplay.textContent = data.heartRate.toString();
 
     if (isRecording && currentSession) {
@@ -351,7 +184,7 @@ export function init() {
     if (isRecording) stopRecording();
 
     device = null;
-    lastHeartRate = 0;
+    ekgGraph.setHeartRate(0);
     hrDisplay.textContent = '--';
     connectBtn.classList.remove('hidden');
     recordingControls.classList.add('hidden');
@@ -397,7 +230,7 @@ export function init() {
   loadSessions();
 
   return () => {
-    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+    ekgGraph.stop();
     if (timerInterval) clearInterval(timerInterval);
     if (device?.gatt?.connected) {
       device.gatt.disconnect();
