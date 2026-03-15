@@ -240,6 +240,9 @@ export function init() {
       disconnectBtn.classList.remove('hidden');
       ekgContainer.classList.remove('hidden');
       updateStatus('Connected to ' + (device.name || 'Device'), 'success', true);
+
+      // Scroll to display
+      hrDisplay.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (err: any) {
       console.error(err);
       updateStatus(err.message || 'Connection failed', 'error');
