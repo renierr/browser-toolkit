@@ -116,7 +116,13 @@ export default function init() {
         updateDisplay();
         return;
       }
-      // If starting from zero and user enters an operator, keep the 0 and append operator
+      // If the value looks like a function (ends with '(') or is a constant, replace the 0
+      if (/\w+\($/.test(val) || /^PI$/.test(val) || /^E$/.test(val) || val === '(') {
+        currentInput = val;
+        updateDisplay();
+        return;
+      }
+      // Otherwise, keep the 0 and append operator or other token
       currentInput = '0' + val;
       updateDisplay();
       return;

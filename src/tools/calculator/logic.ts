@@ -16,24 +16,44 @@ export class CalculatorLogic {
   static evaluate(expression: string): CalculationResult {
     try {
       // Basic sanitization
+      // Replace common symbols and map known functions to Math.* safely using word boundaries
       let sanitized = expression
         .replace(/×/g, '*')
         .replace(/÷/g, '/')
-        .replace(/(\d+)%/g, '($1/100)') // Convert 50% to (50/100)
-        .replace(/pow\(/g, 'Math.pow(')
+        // Convert percentage like 50%, 12.5% or (2+3)% to ((...)/100)
+        .replace(/(\d+(?:\.\d+)?|\([^)]*\))%/g, '($1/100)')
+        .replace(/\bpow\(/gi, 'Math.pow(')
         .replace(/\^/g, '**')
-        .replace(/sqrt\(/g, 'Math.sqrt(')
-        .replace(/sin\(/g, 'Math.sin(')
-        .replace(/cos\(/g, 'Math.cos(')
-        .replace(/tan\(/g, 'Math.tan(')
-        .replace(/log\(/g, 'Math.log10(')
-        .replace(/ln\(/g, 'Math.log(')
-        .replace(/PI/g, 'Math.PI')
-        .replace(/E/g, 'Math.E');
+        .replace(/\bsqrt\(/gi, 'Math.sqrt(')
+        .replace(/\bsin\(/gi, 'Math.sin(')
+        .replace(/\bcos\(/gi, 'Math.cos(')
+        .replace(/\btan\(/gi, 'Math.tan(')
+        .replace(/\basin\(/gi, 'Math.asin(')
+        .replace(/\bacos\(/gi, 'Math.acos(')
+        .replace(/\batan\(/gi, 'Math.atan(')
+        .replace(/\basinh\(/gi, 'Math.asinh(')
+        .replace(/\bacosh\(/gi, 'Math.acosh(')
+        .replace(/\batanh\(/gi, 'Math.atanh(')
+        .replace(/\bsinh\(/gi, 'Math.sinh(')
+        .replace(/\bcosh\(/gi, 'Math.cosh(')
+        .replace(/\btanh\(/gi, 'Math.tanh(')
+        .replace(/\bexp\(/gi, 'Math.exp(')
+        .replace(/\blog\(/gi, 'Math.log10(')
+        .replace(/\bln\(/gi, 'Math.log(')
+        .replace(/\babs\(/gi, 'Math.abs(')
+        .replace(/\bfloor\(/gi, 'Math.floor(')
+        .replace(/\bceil\(/gi, 'Math.ceil(')
+        .replace(/\bround\(/gi, 'Math.round(')
+        // Map constants using word boundaries. Use case-insensitive flag so `pi` and `e` also work
+        // Word boundaries prevent matching the 'e' in scientific notation (e.g. 1e10)
+        .replace(/\bPI\b/gi, 'Math.PI')
+        .replace(/\bE\b/gi, 'Math.E');
 
       // Check for illegal characters (only numbers, operators, dots, parens, comma, whitespace and letters allowed)
       // Note: this is a permissive check to avoid blocking valid function names like Math, sin, cos, etc.
-      if (/[^0-9+\-\*\/().,\sA-Za-z]/.test(sanitized)) {
+      // Use RegExp constructor to avoid needing to escape '/' in a literal and to keep the pattern readable.
+      const illegalRe = new RegExp('[^0-9+\\-*/().,\\sA-Za-z]');
+      if (illegalRe.test(sanitized)) {
         // More specific check to prevent arbitrary JS execution
         // This is a simplified check; for a production app, a proper parser would be better.
       }
