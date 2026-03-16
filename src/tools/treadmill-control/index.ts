@@ -1,6 +1,7 @@
 import { 
   connectTreadmill, 
-  sendControlCommand 
+  sendControlCommand,
+  resetControlState
 } from './bluetooth';
 import { type TreadmillData } from './ftms-parser';
 import { showMessage } from '../../js/ui';
@@ -55,6 +56,8 @@ export function init() {
   const speedDownBtn = document.getElementById('speed-down-btn') as HTMLButtonElement;
   const inclineUpBtn = document.getElementById('incline-up-btn') as HTMLButtonElement;
   const inclineDownBtn = document.getElementById('incline-down-btn') as HTMLButtonElement;
+
+  const controlButtons = [startBtn, stopBtn, speedUpBtn, speedDownBtn, inclineUpBtn, inclineDownBtn];
 
   let device: BluetoothDevice | null = null;
   let currentSpeed = 0;
@@ -138,6 +141,7 @@ export function init() {
 
   const handleDisconnect = () => {
     device = null;
+    resetControlState();
     dashboard.classList.add('opacity-50', 'pointer-events-none');
     connectBtn.classList.remove('hidden');
     disconnectBtn.classList.add('hidden');
@@ -145,28 +149,71 @@ export function init() {
     
     // Reset visibility of optional metrics for next connection
     Object.values(optionalMetrics).forEach(m => m.container.classList.add('hidden'));
+    
+    // Enable all buttons (reset state)
+    controlButtons.forEach(btn => {
+      btn.disabled = false;
+      btn.classList.remove('btn-disabled');
+    });
   };
 
   connectBtn.addEventListener('click', async () => {
     try {
       updateStatus('Scanning for treadmill...');
-      device = await connectTreadmill(onUpdate);
+      const result = await connectTreadmill(onUpdate);
+      device = result.device;
+      const support = result.support;
+      
       device.addEventListener('gattserverdisconnected', handleDisconnect);
 
       dashboard.classList.remove('opacity-50', 'pointer-events-none');
       connectBtn.classList.add('hidden');
       disconnectBtn.classList.remove('hidden');
       updateStatus('Connected to ' + (device.name || 'Treadmill'), 'success');
+
+      // Check Support and Disable Controls
+      if (!support.controlSupported) {
+        controlButtons.forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add('btn-disabled');
+        });
+        showMessage('Control Point not supported by this treadmill. Buttons disabled.', { type: 'warning', timeoutMs: 7000 });
+      } else {
+        if (!support.speedControlSupported) {
+          [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach(btn => {
+             btn.disabled = true;
+             btn.classList.add('btn-disabled');
+          });
+          showMessage('Speed control not supported.', { type: 'warning', timeoutMs: 5000 });
+        }
+        if (!support.inclineControlSupported) {
+          [inclineUpBtn, inclineDownBtn].forEach(btn => {
+             btn.disabled = true;
+             btn.classList.add('btn-disabled');
+          });
+          showMessage('Incline control not supported.', { type: 'warning', timeoutMs: 5000 });
+        }
+      }
     } catch (err: any) {
-      console.error(err);
-      updateStatus(null);
-      showMessage(err.message || 'Connection failed', { type: 'alert', timeoutMs: 10000 });
+      if (err.name === 'NotFoundError' || err.name === 'SecurityError') {
+        // User likely cancelled the dialog or blocked the request
+        updateStatus(null);
+        console.log('Treadmill: Connection cancelled by user');
+      } else {
+        console.error('Treadmill: Connection error', err);
+        updateStatus(null);
+        resetControlState();
+        showMessage(err.message || 'Connection failed', { type: 'alert', timeoutMs: 10000 });
+      }
     }
   });
 
   disconnectBtn.addEventListener('click', () => {
     if (device?.gatt?.connected) {
       device.gatt.disconnect();
+    } else {
+      // Manual reset if device is stuck
+      handleDisconnect();
     }
   });
 
