@@ -1,0 +1,9 @@
+{
+  "name": "Treadmill Control",
+  "description": "Connect to an FTMS-compatible treadmill to monitor your workout and control speed and incline.",
+  "icon": "activity",
+  "sectionId": "devices",
+  "order": 2,
+  "draft": false,
+  "example": false
+}
