@@ -46,33 +46,6 @@ export async function readChunk(file: File | Blob, offset: number, length: numbe
   return new Uint8Array(buffer);
 }
 
-/**
- * Generates a line of hex and ASCII representation.
- */
-export function generateLine(offset: number, bytes: Uint8Array): {
-  offset: string;
-  hex: string[];
-  ascii: string;
-} {
-  const hex: string[] = [];
-  let ascii = '';
-
-  for (let i = 0; i < BYTES_PER_LINE; i++) {
-    if (i < bytes.length) {
-      hex.push(formatHex(bytes[i]));
-      ascii += formatAscii(bytes[i]);
-    } else {
-      hex.push('');
-      ascii += ' ';
-    }
-  }
-
-  return {
-    offset: formatOffset(offset),
-    hex,
-    ascii
-  };
-}
 
 /**
  * Manages a mutable buffer for editing.
@@ -247,7 +220,7 @@ export async function scanForStrings(
   let carry: Uint8Array = new Uint8Array(0);
   const decoder = new TextDecoder('ascii');
 
-  const isPrintable = (b: number) => b >= 32 && b <= 126;
+  const isPrintable = (b: number) => (b >= 32 && b <= 126) || b === 9;
 
   while (offset < total) {
     if (signal?.aborted) break;
