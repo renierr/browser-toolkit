@@ -1,3 +1,4 @@
+<!--suppress CssUnusedSymbol -->
 <style>
   #hex-viewer {
     height: 60dvh;
@@ -53,8 +54,8 @@
 
   @keyframes search-flare {
     0% {
-      outline: 0px solid var(--color-accent);
-      outline-offset: 0px;
+      outline: 0 solid var(--color-accent);
+      outline-offset: 0;
       box-shadow: 0 0 0 0 var(--color-accent);
     }
 
@@ -65,7 +66,7 @@
     }
 
     100% {
-      outline: 0px solid transparent;
+      outline: 0 solid transparent;
       outline-offset: 20px;
       box-shadow: 0 0 0 0 transparent;
     }
@@ -137,11 +138,11 @@
         <!-- Search Bar -->
         <div class="flex items-center gap-2">
           <div class="join shadow-sm border border-base-300">
-            <select id="search-type" class="select select-bordered select-sm join-item bg-base-200">
+            <select id="search-type" aria-label="text/hex" class="select select-bordered select-sm join-item bg-base-200">
               <option value="text">Text</option>
               <option value="hex">Hex</option>
             </select>
-            <input type="text" id="search-input" placeholder="Search..."
+            <input type="text" id="search-input" aria-label="Search" placeholder="Search..."
               class="input input-bordered input-sm join-item w-32 sm:w-48 font-mono" />
             <button id="search-btn" class="btn btn-sm btn-primary join-item px-4">
               <i data-lucide="search" class="w-4 h-4"></i>
@@ -180,7 +181,7 @@
 
       <div id="hex-viewer" tabindex="0" class="select-none font-mono relative">
         <!-- Hidden input to trigger virtual keyboard on mobile and capture desktop keys -->
-        <input type="text" id="hex-keyboard-input"
+        <input type="text" id="hex-keyboard-input" aria-label="hidden input"
           class="absolute opacity-0 pointer-events-none w-0 h-0"
           inputmode="text" autocorrect="off" autocapitalize="none" spellcheck="false" autocomplete="off" />
 
@@ -218,14 +219,14 @@
         <span class="text-[10px] uppercase font-bold opacity-50 block mb-2">Hex</span>
         <input type="text" id="edit-hex-input"
           class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner focus:input-primary"
-          maxlength="2" />
+          maxlength="2" aria-label="Hex" />
       </div>
       <div class="divider divider-horizontal mx-0 h-10 self-end mb-4"></div>
       <div class="text-center">
         <span class="text-[10px] uppercase font-bold opacity-50 block mb-2">ASCII</span>
         <input type="text" id="edit-ascii-input"
           class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner focus:input-primary"
-          maxlength="1" />
+          maxlength="1" aria-label="ASCII" />
       </div>
     </div>
     <div class="modal-action">
@@ -245,7 +246,7 @@
       <label class="label p-0 m-0" for="strings-minlen">Min length</label>
       <input id="strings-minlen" type="number" value="4" min="1" class="input input-sm w-20" />
       <button id="strings-scan-btn" class="btn btn-sm btn-primary">Scan</button>
-      <button id="strings-cancel-btn" class="btn btn-sm btn-ghost">Close</button>
+      <button id="strings-cancel-btn" class="btn btn-sm btn-ghost">Cancel</button>
       <div id="strings-progress" class="text-sm opacity-60 ml-auto">Idle</div>
     </div>
 

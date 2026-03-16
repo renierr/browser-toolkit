@@ -213,3 +213,102 @@ export class HexBufferManager {
     return this.modifications.size > 0;
   }
 }
+
+export type StringResult = { offset: number; text: string };
+
+/**
+ * Scan a file (via HexBufferManager) for printable ASCII strings.
+ * Streams through the file in chunks to keep memory usage low.
+ *
+ * Options:
+ * - onProgress: called with scanned/total periodically
+ * - onResult: called each time a string meeting minLen is found (useful for incremental UI)
+ * - signal: optional AbortSignal to cancel the scan
+ */
+export async function scanForStrings(
+  bufferManager: HexBufferManager,
+  minLen: number,
+  options: {
+    onProgress?: (progress: { scanned: number; total: number }) => void;
+    onResult?: (res: StringResult) => void;
+    signal?: AbortSignal | null;
+  } = {}
+): Promise<StringResult[]> {
+  const { onProgress, onResult, signal } = options;
+  const results: StringResult[] = [];
+
+  if (!bufferManager || minLen <= 0) return results;
+
+  const total = bufferManager.totalSize;
+  const chunkSize = 256 * 1024; // 256KB
+  let offset = 0;
+
+  // carry holds bytes that may be part of a string that spans chunk boundary
+  let carry: number[] = [];
+  const decoder = new TextDecoder('ascii');
+
+  const isPrintable = (b: number) => b >= 32 && b <= 126;
+
+  while (offset < total) {
+    if (signal?.aborted) break;
+
+    const readSize = Math.min(chunkSize, total - offset);
+    const chunk = await bufferManager.getRange(offset, readSize);
+
+    // bytesBaseOffset is the file offset corresponding to bytes[0]
+    const bytesBaseOffset = offset - carry.length;
+
+    // combine carry + chunk
+    const bytes = new Uint8Array(carry.length + chunk.length);
+    for (let i = 0; i < carry.length; i++) bytes[i] = carry[i];
+    bytes.set(chunk, carry.length);
+
+    let seqStart = -1;
+    carry = [];
+
+    for (let i = 0; i < bytes.length; i++) {
+      const b = bytes[i];
+      if (isPrintable(b)) {
+        if (seqStart === -1) seqStart = i;
+      } else {
+        if (seqStart !== -1) {
+          const len = i - seqStart;
+          if (len >= minLen) {
+            const slice = bytes.subarray(seqStart, i);
+            const s = decoder.decode(slice);
+            const globalOffset = bytesBaseOffset + seqStart;
+            const r = { offset: globalOffset, text: s };
+            results.push(r);
+            if (onResult) onResult(r);
+          }
+        }
+        seqStart = -1;
+      }
+    }
+
+    // If a printable sequence continues till the end of bytes, keep it in carry
+    if (seqStart !== -1) {
+      for (let i = seqStart; i < bytes.length; i++) carry.push(bytes[i]);
+      // To avoid unbounded carry growth (malicious large printable file), cap carry length
+      if (carry.length > minLen * 4) carry = carry.slice(carry.length - minLen * 4);
+    }
+
+    offset += readSize;
+    if (onProgress) onProgress({ scanned: Math.min(offset, total), total });
+
+    // Yield occasionally to keep UI responsive
+    await yieldToUI(false);
+  }
+
+  // At end, flush any remaining carry
+  if (!signal?.aborted && carry.length >= minLen) {
+    const base = total - carry.length;
+    const s = decoder.decode(new Uint8Array(carry));
+    const r = { offset: base, text: s };
+    results.push(r);
+    if (onResult) onResult(r);
+  }
+
+  return results;
+}
+

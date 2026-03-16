@@ -1,7 +1,7 @@
 import { downloadFile, setupFileDropzone } from '../../js/file-utils';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui';
 import { identifyFileType } from './magic-bytes';
-import { BYTES_PER_LINE, formatAscii, formatHex, HexBufferManager } from './hex-utils';
+import { BYTES_PER_LINE, formatAscii, formatHex, HexBufferManager, scanForStrings } from './hex-utils';
 import type { SharedFilesPayload } from '../../js/share-target';
 
 // noinspection JSUnusedGlobalSymbols
@@ -58,6 +58,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   // Strings scan state
   let stringsAbort = false;
+  let stringsAbortController: AbortController | null = null;
   // Each entry contains the file offset and the discovered string
   let lastStringsResult: { offset: number; text: string }[] = [];
 
@@ -83,81 +84,7 @@ export default function init(payload?: SharedFilesPayload) {
     }
   };
 
-  const isPrintable = (b: number) => b >= 32 && b <= 126;
-
-  // Streamed strings scanner: scans file in chunks, emits found strings of at least `minLen`.
-  // Memory safe: reads chunks and only keeps found strings (as joined text) in array.
-  const scanForStrings = async (minLen: number, onProgress?: (progress: { scanned: number; total: number }) => void) => {
-    lastStringsResult = [];
-    stringsAbort = false;
-    if (!bufferManager) return lastStringsResult;
-
-    const total = bufferManager.totalSize;
-    const chunkSize = 256 * 1024; // 256KB chunks
-    let offset = 0;
-    // carry holds bytes that may be part of a string that spans chunk boundary
-    let carry: number[] = [];
-
-    while (offset < total) {
-      if (stringsAbort) break;
-
-      const readSize = Math.min(chunkSize, total - offset);
-      const chunk = await bufferManager.getRange(offset, readSize);
-
-      // bytesBaseOffset is the file offset corresponding to bytes[0]
-      const bytesBaseOffset = offset - carry.length;
-
-      // convert to bytes array for easy iteration
-      const bytes = new Uint8Array(carry.length + chunk.length);
-      for (let i = 0; i < carry.length; i++) bytes[i] = carry[i];
-      bytes.set(chunk, carry.length);
-
-      let seqStart = -1;
-      carry = [];
-
-      for (let i = 0; i < bytes.length; i++) {
-        const b = bytes[i];
-        if (isPrintable(b)) {
-          if (seqStart === -1) seqStart = i;
-        } else {
-          if (seqStart !== -1) {
-            const len = i - seqStart;
-            if (len >= minLen) {
-              const slice = bytes.subarray(seqStart, i);
-              // Decode as ASCII printable bytes
-              const s = String.fromCharCode(...slice);
-              const globalOffset = bytesBaseOffset + seqStart;
-              lastStringsResult.push({ offset: globalOffset, text: s });
-            }
-          }
-          seqStart = -1;
-        }
-      }
-
-      // If a printable sequence continues till the end of bytes, keep it in carry
-      if (seqStart !== -1) {
-        for (let i = seqStart; i < bytes.length; i++) carry.push(bytes[i]);
-        // To avoid unbounded carry growth (malicious large printable file), cap carry length to minLen * 4
-        if (carry.length > minLen * 4) carry = carry.slice(carry.length - minLen * 4);
-      }
-
-      offset += readSize;
-
-      if (onProgress) onProgress({ scanned: Math.min(offset, total), total });
-
-      // Yield occasionally to keep UI responsive
-      await yieldToUI(false);
-    }
-
-    // At end, flush any remaining carry
-    if (!stringsAbort && carry.length >= minLen) {
-      const base = total - carry.length;
-      const s = String.fromCharCode(...new Uint8Array(carry));
-      lastStringsResult.push({ offset: base, text: s });
-    }
-
-    return lastStringsResult;
-  };
+  // scanForStrings moved to hex-utils.ts and imported above. We use an AbortController to cancel.
 
   const updateFileInfo = async (file: File) => {
     showProgress('Analyzing file...');
@@ -639,12 +566,15 @@ export default function init(payload?: SharedFilesPayload) {
 
     const stopScan = () => {
       stringsAbort = true;
+      if (stringsAbortController) {
+        stringsAbortController.abort();
+        stringsAbortController = null;
+      }
       if (stringsProgress) stringsProgress.textContent = 'Cancelled';
     };
 
     stringsCancelBtn!.onclick = () => {
       stopScan();
-      if (stringsModal && stringsModal.open) stringsModal.close();
     };
 
     stringsClose!.onclick = () => {
@@ -659,21 +589,28 @@ export default function init(payload?: SharedFilesPayload) {
       stringsProgress.textContent = 'Scanning...';
       lastStringsResult = [];
       stringsAbort = false;
+      stringsAbortController = new AbortController();
 
       try {
-        const results = await scanForStrings(minLen, (p) => {
-          stringsProgress.textContent = `Scanned ${p.scanned.toLocaleString()} / ${p.total.toLocaleString()} bytes`;
-          // update partial results in the UI occasionally
-          if (lastStringsResult.length) {
-            // show up to latest 200 results to avoid DOM bloat
-            const recent = lastStringsResult.slice(-200);
-            const lines = recent.map((r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`);
-            stringsResults.textContent = lines.join('\n');
-            stringsResults.scrollTop = stringsResults.scrollHeight;
+        const results = await scanForStrings(bufferManager, minLen, {
+          signal: stringsAbortController.signal,
+          onProgress: (p) => {
+            stringsProgress.textContent = `Scanned ${p.scanned.toLocaleString()} / ${p.total.toLocaleString()} bytes`;
+          },
+          onResult: (r) => {
+            lastStringsResult.push(r);
+            // update partial results in the UI occasionally
+            if (lastStringsResult.length) {
+              // show up to latest 200 results to avoid DOM bloat
+              const recent = lastStringsResult.slice(-200);
+              const lines = recent.map((r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`);
+              stringsResults.textContent = lines.join('\n');
+              stringsResults.scrollTop = stringsResults.scrollHeight;
+            }
           }
         });
 
-        if (stringsAbort) {
+        if (stringsAbort || stringsAbortController?.signal.aborted) {
           stringsProgress.textContent = 'Cancelled';
         } else {
           stringsProgress.textContent = `Found ${results.length.toLocaleString()} strings`;
@@ -681,9 +618,15 @@ export default function init(payload?: SharedFilesPayload) {
           stringsResults.textContent = lines.join('\n');
         }
       } catch (err) {
-        console.error('Strings scan failed', err);
-        stringsProgress.textContent = 'Error';
-        showMessage('Strings scan failed', { type: 'alert' });
+        if ((err as any)?.name === 'AbortError') {
+          stringsProgress.textContent = 'Cancelled';
+        } else {
+          console.error('Strings scan failed', err);
+          stringsProgress.textContent = 'Error';
+          showMessage('Strings scan failed', { type: 'alert' });
+        }
+      } finally {
+        stringsAbortController = null;
       }
     };
 
