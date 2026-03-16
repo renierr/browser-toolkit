@@ -90,7 +90,7 @@ export default function init() {
     }
 
     // Check for trailing operators
-    const sanitizedInput = balancedInput.replace(/[+\-*/]$/, '');
+    const sanitizedInput = balancedInput.replace(/[+\-*/^]$/, '');
 
     const calculation = CalculatorLogic.evaluate(sanitizedInput);
     if (calculation.error) {
@@ -107,11 +107,31 @@ export default function init() {
   };
 
   const handleInput = (val: string) => {
-    if (currentInput === '0' && val !== '.') {
-      currentInput = val;
-    } else {
-      currentInput += val;
+    const isOperator = (s: string) => /[+\-*/^]/.test(s);
+
+    if (currentInput === '0') {
+      // If starting from zero and input is a digit or '.', replace the 0
+      if (/[0-9.]/.test(val)) {
+        currentInput = val;
+        updateDisplay();
+        return;
+      }
+      // If starting from zero and user enters an operator, keep the 0 and append operator
+      currentInput = '0' + val;
+      updateDisplay();
+      return;
     }
+
+    // If both last char and new val are operators, replace the last operator
+    const lastChar = currentInput[currentInput.length - 1];
+    if (isOperator(lastChar) && isOperator(val)) {
+      currentInput = currentInput.slice(0, -1) + val;
+      updateDisplay();
+      return;
+    }
+
+    // Default: append the value
+    currentInput += val;
     updateDisplay();
   };
 
@@ -194,7 +214,7 @@ export default function init() {
     if (document.activeElement === display) return; // Don't duplicate if display focused
 
     if (/[0-9]/.test(e.key)) handleInput(e.key);
-    if (['+', '-', '*', '/'].includes(e.key)) handleInput(e.key);
+    if (['+', '-', '*', '/', '^'].includes(e.key)) handleInput(e.key);
     if (e.key === '.') handleInput('.');
     if (e.key === '(' || e.key === ')') handleInput(e.key);
     if (e.key === 'Backspace') handleBackspace();

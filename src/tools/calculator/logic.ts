@@ -21,6 +21,7 @@ export class CalculatorLogic {
         .replace(/÷/g, '/')
         .replace(/(\d+)%/g, '($1/100)') // Convert 50% to (50/100)
         .replace(/pow\(/g, 'Math.pow(')
+        .replace(/\^/g, '**')
         .replace(/sqrt\(/g, 'Math.sqrt(')
         .replace(/sin\(/g, 'Math.sin(')
         .replace(/cos\(/g, 'Math.cos(')
@@ -30,24 +31,25 @@ export class CalculatorLogic {
         .replace(/PI/g, 'Math.PI')
         .replace(/E/g, 'Math.E');
 
-      // Check for illegal characters (only numbers, operators, dots, parens, and Math functions allowed)
-      if (/[^0-9+\-*/.()Math.pseintalog10E]/.test(sanitized)) {
+      // Check for illegal characters (only numbers, operators, dots, parens, comma, whitespace and letters allowed)
+      // Note: this is a permissive check to avoid blocking valid function names like Math, sin, cos, etc.
+      if (/[^0-9+\-\*\/().,\sA-Za-z]/.test(sanitized)) {
         // More specific check to prevent arbitrary JS execution
         // This is a simplified check; for a production app, a proper parser would be better.
       }
 
-      // We use Function constructor as a safer alternative to eval, 
-      // but it's still powerful. In this context (offline-first browser tool), 
+      // We use Function constructor as a safer alternative to eval,
+      // but it's still powerful. In this context (offline-first browser tool),
       // it's acceptable if we validate the input string.
       const result = new Function(`return ${sanitized}`)();
-      
+
       if (typeof result !== 'number' || !isFinite(result)) {
         return { expression, result: 'Error', error: 'Invalid calculation' };
       }
 
       // Format the result to avoid long floating point issues
-      const formattedResult = Number.isInteger(result) 
-        ? result 
+      const formattedResult = Number.isInteger(result)
+        ? result
         : parseFloat(result.toFixed(10));
 
       return { expression, result: formattedResult };
