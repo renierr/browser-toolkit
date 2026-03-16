@@ -21,7 +21,7 @@ export function formatOffset(offset: number): string {
 }
 
 /**
- * Formats a byte as an ASCII character, or a dot if non-printable.
+ * Formats a byte as an ASCII character or a dot if non-printable.
  * Escapes HTML entities to prevent breaking the viewer.
  */
 export function formatAscii(byte: number): string {
@@ -244,7 +244,7 @@ export async function scanForStrings(
   let offset = 0;
 
   // carry holds bytes that may be part of a string that spans chunk boundary
-  let carry: number[] = [];
+  let carry: Uint8Array = new Uint8Array(0);
   const decoder = new TextDecoder('ascii');
 
   const isPrintable = (b: number) => b >= 32 && b <= 126;
@@ -255,18 +255,14 @@ export async function scanForStrings(
     const readSize = Math.min(chunkSize, total - offset);
     const chunk = await bufferManager.getRange(offset, readSize);
 
-    // bytesBaseOffset is the file offset corresponding to bytes[0]
-    const bytesBaseOffset = offset - carry.length;
-
     // combine carry + chunk
     const bytes = new Uint8Array(carry.length + chunk.length);
-    for (let i = 0; i < carry.length; i++) bytes[i] = carry[i];
+    bytes.set(carry);
     bytes.set(chunk, carry.length);
 
     let seqStart = -1;
-    carry = [];
-
-    for (let i = 0; i < bytes.length; i++) {
+    let i = 0;
+    for (; i < bytes.length; i++) {
       const b = bytes[i];
       if (isPrintable(b)) {
         if (seqStart === -1) seqStart = i;
@@ -276,7 +272,7 @@ export async function scanForStrings(
           if (len >= minLen) {
             const slice = bytes.subarray(seqStart, i);
             const s = decoder.decode(slice);
-            const globalOffset = bytesBaseOffset + seqStart;
+            const globalOffset = (offset - carry.length) + seqStart;
             const r = { offset: globalOffset, text: s };
             results.push(r);
             if (onResult) onResult(r);
@@ -286,11 +282,27 @@ export async function scanForStrings(
       }
     }
 
-    // If a printable sequence continues till the end of bytes, keep it in carry
+    // After the loop, if seqStart is NOT -1, it means we are in the middle of a printable sequence
+    // that reached the end of the chunk. We carry it over to the next chunk.
     if (seqStart !== -1) {
-      for (let i = seqStart; i < bytes.length; i++) carry.push(bytes[i]);
-      // To avoid unbounded carry growth (malicious large printable file), cap carry length
-      if (carry.length > minLen * 4) carry = carry.slice(carry.length - minLen * 4);
+      // If carry is getting too large, we must flush some of it to avoid OOM
+      // while ensuring we don't break a potential string.
+      // But for a string search, we really want the whole string.
+      // Most files won't have 100MB+ of continuous printable ASCII.
+      // We'll limit carry to 1MB. If it exceeds that, we flush the first part.
+      const MAX_CARRY = 1024 * 1024;
+      if (bytes.length - seqStart > MAX_CARRY) {
+        const flushEnd = bytes.length - MAX_CARRY;
+        const slice = bytes.subarray(seqStart, flushEnd);
+        const s = decoder.decode(slice);
+        const r = { offset: (offset - carry.length) + seqStart, text: s };
+        results.push(r);
+        if (onResult) onResult(r);
+        seqStart = flushEnd;
+      }
+      carry = bytes.slice(seqStart);
+    } else {
+      carry = new Uint8Array(0);
     }
 
     offset += readSize;
@@ -302,9 +314,8 @@ export async function scanForStrings(
 
   // At end, flush any remaining carry
   if (!signal?.aborted && carry.length >= minLen) {
-    const base = total - carry.length;
-    const s = decoder.decode(new Uint8Array(carry));
-    const r = { offset: base, text: s };
+    const s = decoder.decode(carry);
+    const r = { offset: total - carry.length, text: s };
     results.push(r);
     if (onResult) onResult(r);
   }

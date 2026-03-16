@@ -250,7 +250,19 @@
       <div id="strings-progress" class="text-sm opacity-60 ml-auto">Idle</div>
     </div>
 
-    <div id="strings-results" class="h-64 overflow-auto bg-base-200 p-3 rounded-md font-mono text-sm text-[13px]"></div>
+    <div id="strings-results" class="h-64 overflow-auto bg-base-200 rounded-md font-mono text-sm text-[13px]">
+      <table class="table table-xs table-pin-rows">
+        <thead>
+          <tr>
+            <th class="w-24">Offset</th>
+            <th>String</th>
+          </tr>
+        </thead>
+        <tbody id="strings-results-body">
+          <!-- Results will be injected here -->
+        </tbody>
+      </table>
+    </div>
 
     <div class="modal-action mt-4">
       <button id="strings-download" class="btn btn-ghost">Download as .txt</button>

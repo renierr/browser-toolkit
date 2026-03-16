@@ -35,6 +35,7 @@ export default function init(payload?: SharedFilesPayload) {
   const stringsClose = document.getElementById('strings-close') as HTMLButtonElement | null;
   const stringsDownload = document.getElementById('strings-download') as HTMLButtonElement | null;
   const stringsResults = document.getElementById('strings-results') as HTMLElement | null;
+  const stringsResultsBody = document.getElementById('strings-results-body') as HTMLElement | null;
   const stringsProgress = document.getElementById('strings-progress') as HTMLElement | null;
 
   const statusSelection = document.getElementById('status-selection')!;
@@ -560,7 +561,7 @@ export default function init(payload?: SharedFilesPayload) {
         return;
       }
       // reset UI
-      stringsResults.innerHTML = '';
+      if (stringsResultsBody) stringsResultsBody.innerHTML = '';
       if (!stringsModal.open) stringsModal.showModal();
     };
 
@@ -583,13 +584,30 @@ export default function init(payload?: SharedFilesPayload) {
     };
 
     stringsScanBtn.onclick = async () => {
-      if (!bufferManager) return;
+      if (!bufferManager || !stringsResultsBody) return;
       const minLen = Math.max(1, parseInt(stringsMinLenInput?.value || '4', 10));
-      stringsResults.innerHTML = '';
+      stringsResultsBody.innerHTML = '';
       stringsProgress.textContent = 'Scanning...';
       lastStringsResult = [];
       stringsAbort = false;
       stringsAbortController = new AbortController();
+
+      const addResultToUI = (r: { offset: number; text: string }) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover cursor-pointer';
+        tr.innerHTML = `
+          <td class="font-bold text-primary">0x${r.offset.toString(16).toUpperCase().padStart(8, '0')}</td>
+          <td class="break-all whitespace-pre-wrap">${r.text}</td>
+        `;
+        tr.onclick = () => {
+          scrollToOffset(r.offset);
+          selectedOffset = r.offset;
+          updateStatus();
+          renderVisibleLines(true);
+          if (stringsModal && stringsModal.open) stringsModal.close();
+        };
+        stringsResultsBody.appendChild(tr);
+      };
 
       try {
         const results = await scanForStrings(bufferManager, minLen, {
@@ -599,13 +617,10 @@ export default function init(payload?: SharedFilesPayload) {
           },
           onResult: (r) => {
             lastStringsResult.push(r);
-            // update partial results in the UI occasionally
-            if (lastStringsResult.length) {
-              // show up to latest 200 results to avoid DOM bloat
-              const recent = lastStringsResult.slice(-200);
-              const lines = recent.map((r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`);
-              stringsResults.textContent = lines.join('\n');
-              stringsResults.scrollTop = stringsResults.scrollHeight;
+            // update partial results in the UI
+            if (lastStringsResult.length <= 1000) {
+              addResultToUI(r);
+              if (stringsResults) stringsResults.scrollTop = stringsResults.scrollHeight;
             }
           }
         });
@@ -614,8 +629,11 @@ export default function init(payload?: SharedFilesPayload) {
           stringsProgress.textContent = 'Cancelled';
         } else {
           stringsProgress.textContent = `Found ${results.length.toLocaleString()} strings`;
-          const lines = results.map((r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`);
-          stringsResults.textContent = lines.join('\n');
+          if (results.length > 1000) {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td colspan="2" class="text-center opacity-50 italic">... and ${(results.length - 1000).toLocaleString()} more results (download to see all)</td>`;
+            stringsResultsBody.appendChild(tr);
+          }
         }
       } catch (err) {
         if ((err as any)?.name === 'AbortError') {
