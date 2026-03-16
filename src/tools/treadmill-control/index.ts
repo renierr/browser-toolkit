@@ -159,7 +159,8 @@ export function init() {
       updateStatus('Connected to ' + (device.name || 'Treadmill'), 'success');
     } catch (err: any) {
       console.error(err);
-      updateStatus(err.message || 'Connection failed', 'error');
+      updateStatus(null);
+      showMessage(err.message || 'Connection failed', { type: 'alert', timeoutMs: 10000 });
     }
   });
 
