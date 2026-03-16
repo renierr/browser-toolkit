@@ -78,6 +78,72 @@
         </div>
       </div>
 
+      <!-- Remaining Time (Optional) -->
+      <div id="remaining-time-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+        <div class="card-body p-4 items-center gap-1">
+          <span class="text-xs font-bold opacity-50 uppercase">Remaining</span>
+          <span id="remaining-time-display" class="text-3xl font-bold tabular-nums">--:--</span>
+          <span class="text-xs font-semibold opacity-40">time</span>
+        </div>
+      </div>
+
+      <!-- Average Speed (Optional) -->
+      <div id="avg-speed-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+        <div class="card-body p-4 items-center gap-1">
+          <span class="text-xs font-bold opacity-50 uppercase">Avg Speed</span>
+          <span id="avg-speed-display" class="text-3xl font-bold tabular-nums">0.0</span>
+          <span class="text-xs font-semibold opacity-40">km/h</span>
+        </div>
+      </div>
+
+      <!-- Heart Rate (Optional) -->
+      <div id="hr-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+        <div class="card-body p-4 items-center gap-1">
+          <span class="text-xs font-bold opacity-50 uppercase">Heart Rate</span>
+          <div class="flex items-center gap-2">
+            <i data-lucide="heart" class="text-error size-4 animate-pulse"></i>
+            <span id="hr-display" class="text-3xl font-bold tabular-nums">--</span>
+          </div>
+          <span class="text-xs font-semibold opacity-40">bpm</span>
+        </div>
+      </div>
+
+      <!-- Pace (Optional) -->
+      <div id="pace-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+        <div class="card-body p-4 items-center gap-1">
+          <span class="text-xs font-bold opacity-50 uppercase">Pace</span>
+          <span id="pace-display" class="text-3xl font-bold tabular-nums">--:--</span>
+          <span class="text-xs font-semibold opacity-40">min/km</span>
+        </div>
+      </div>
+
+      <!-- Avg Pace (Optional) -->
+      <div id="avg-pace-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+        <div class="card-body p-4 items-center gap-1">
+          <span class="text-xs font-bold opacity-50 uppercase">Avg Pace</span>
+          <span id="avg-pace-display" class="text-3xl font-bold tabular-nums">--:--</span>
+          <span class="text-xs font-semibold opacity-40">min/km</span>
+        </div>
+      </div>
+
+      <!-- Elevation Gain (Optional) -->
+      <div id="elevation-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+        <div class="card-body p-4 items-center gap-1">
+          <span class="text-xs font-bold opacity-50 uppercase">Elevation</span>
+          <span id="elevation-display" class="text-3xl font-bold tabular-nums">0.0</span>
+          <span class="text-xs font-semibold opacity-40">m</span>
+        </div>
+      </div>
+
+      <!-- METs (Optional) -->
+      <div id="mets-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+        <div class="card-body p-4 items-center gap-1">
+          <span class="text-xs font-bold opacity-50 uppercase">METs</span>
+          <span id="mets-display" class="text-3xl font-bold tabular-nums">0.0</span>
+          <span class="text-xs font-semibold opacity-40">index</span>
+        </div>
+      </div>
+
       <!-- Calories -->
       <div class="card bg-base-100 shadow-xl border border-base-300">
         <div class="card-body p-4 items-center gap-1">
@@ -87,7 +153,7 @@
         </div>
       </div>
 
-            <!-- Incline -->
+      <!-- Incline -->
       <div class="card bg-base-100 shadow-xl border border-base-300">
         <div class="card-body p-4 items-center gap-1">
           <span class="text-xs font-bold opacity-50 uppercase">Incline</span>

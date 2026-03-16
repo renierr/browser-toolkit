@@ -17,6 +17,38 @@ export function init() {
   const timeDisplay = document.getElementById('time-display')!;
   const caloriesDisplay = document.getElementById('calories-display')!;
 
+  // Optional Metrics
+  const optionalMetrics = {
+    remainingTime: {
+      display: document.getElementById('remaining-time-display')!,
+      container: document.getElementById('remaining-time-container')!
+    },
+    averageSpeed: {
+      display: document.getElementById('avg-speed-display')!,
+      container: document.getElementById('avg-speed-container')!
+    },
+    heartRate: {
+      display: document.getElementById('hr-display')!,
+      container: document.getElementById('hr-container')!
+    },
+    instantaneousPace: {
+      display: document.getElementById('pace-display')!,
+      container: document.getElementById('pace-container')!
+    },
+    averagePace: {
+      display: document.getElementById('avg-pace-display')!,
+      container: document.getElementById('avg-pace-container')!
+    },
+    elevationGainPositive: {
+      display: document.getElementById('elevation-display')!,
+      container: document.getElementById('elevation-container')!
+    },
+    metabolicEquivalent: {
+      display: document.getElementById('mets-display')!,
+      container: document.getElementById('mets-container')!
+    }
+  };
+
   const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
   const stopBtn = document.getElementById('stop-btn') as HTMLButtonElement;
   const speedUpBtn = document.getElementById('speed-up-btn') as HTMLButtonElement;
@@ -48,6 +80,12 @@ export function init() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatPace = (minPerKm: number): string => {
+    const mins = Math.floor(minPerKm);
+    const secs = Math.round((minPerKm - mins) * 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const onUpdate = (data: TreadmillData) => {
     if (data.speed !== undefined) {
       speedDisplay.textContent = data.speed.toFixed(1);
@@ -66,6 +104,36 @@ export function init() {
     if (data.calories !== undefined) {
       caloriesDisplay.textContent = data.calories.toString();
     }
+
+    // Handle Optional Metrics
+    if (data.remainingTime !== undefined) {
+      optionalMetrics.remainingTime.container.classList.remove('hidden');
+      optionalMetrics.remainingTime.display.textContent = formatTime(data.remainingTime);
+    }
+    if (data.averageSpeed !== undefined) {
+      optionalMetrics.averageSpeed.container.classList.remove('hidden');
+      optionalMetrics.averageSpeed.display.textContent = data.averageSpeed.toFixed(1);
+    }
+    if (data.heartRate !== undefined) {
+      optionalMetrics.heartRate.container.classList.remove('hidden');
+      optionalMetrics.heartRate.display.textContent = data.heartRate.toString();
+    }
+    if (data.instantaneousPace !== undefined) {
+      optionalMetrics.instantaneousPace.container.classList.remove('hidden');
+      optionalMetrics.instantaneousPace.display.textContent = formatPace(data.instantaneousPace);
+    }
+    if (data.averagePace !== undefined) {
+      optionalMetrics.averagePace.container.classList.remove('hidden');
+      optionalMetrics.averagePace.display.textContent = formatPace(data.averagePace);
+    }
+    if (data.elevationGainPositive !== undefined) {
+      optionalMetrics.elevationGainPositive.container.classList.remove('hidden');
+      optionalMetrics.elevationGainPositive.display.textContent = data.elevationGainPositive.toFixed(1);
+    }
+    if (data.metabolicEquivalent !== undefined) {
+      optionalMetrics.metabolicEquivalent.container.classList.remove('hidden');
+      optionalMetrics.metabolicEquivalent.display.textContent = data.metabolicEquivalent.toFixed(1);
+    }
   };
 
   const handleDisconnect = () => {
@@ -74,6 +142,9 @@ export function init() {
     connectBtn.classList.remove('hidden');
     disconnectBtn.classList.add('hidden');
     updateStatus('Treadmill disconnected');
+    
+    // Reset visibility of optional metrics for next connection
+    Object.values(optionalMetrics).forEach(m => m.container.classList.add('hidden'));
   };
 
   connectBtn.addEventListener('click', async () => {
