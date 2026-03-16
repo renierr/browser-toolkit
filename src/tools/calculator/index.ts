@@ -237,7 +237,8 @@ export default function init() {
 
   document.addEventListener('keydown', onKeyDown);
 
-  // Initial check
+  // Initialize stuff
+  updateHistory();
   checkScroll();
   display.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
