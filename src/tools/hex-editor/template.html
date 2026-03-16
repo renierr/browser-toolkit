@@ -158,6 +158,10 @@
           <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i>
           Reset
         </button>
+        <button id="show-strings-btn" class="btn btn-sm btn-ghost gap-2" title="Find printable strings in the file">
+          <i data-lucide="type" class="w-4 h-4"></i>
+          Strings
+        </button>
         <button id="download-btn" class="btn btn-primary btn-sm gap-2 shadow-md">
           <i data-lucide="download" class="w-4 h-4"></i>
           Export
@@ -176,8 +180,8 @@
 
       <div id="hex-viewer" tabindex="0" class="select-none font-mono relative">
         <!-- Hidden input to trigger virtual keyboard on mobile and capture desktop keys -->
-        <input type="text" id="hex-keyboard-input" 
-          class="absolute opacity-0 pointer-events-none w-0 h-0" 
+        <input type="text" id="hex-keyboard-input"
+          class="absolute opacity-0 pointer-events-none w-0 h-0"
           inputmode="text" autocorrect="off" autocapitalize="none" spellcheck="false" autocomplete="off" />
 
         <div id="hex-content" class="relative">
@@ -227,6 +231,29 @@
     <div class="modal-action">
       <button id="cancel-edit" class="btn btn-ghost">Discard</button>
       <button id="save-edit" class="btn btn-primary px-8">Save Change</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Strings Modal: shows printable strings discovered in the file -->
+<dialog id="strings-modal" class="modal">
+  <div class="modal-box max-w-4xl w-full">
+    <h3 class="font-bold text-lg mb-2">Printable Strings</h3>
+    <p class="text-sm opacity-60 mb-4">Scans the loaded file for sequences of printable ASCII characters (like the Unix `strings` tool). This scan is performed in chunks to avoid loading the entire file into memory.</p>
+
+    <div class="flex items-center gap-3 mb-4">
+      <label class="label p-0 m-0" for="strings-minlen">Min length</label>
+      <input id="strings-minlen" type="number" value="4" min="1" class="input input-sm w-20" />
+      <button id="strings-scan-btn" class="btn btn-sm btn-primary">Scan</button>
+      <button id="strings-cancel-btn" class="btn btn-sm btn-ghost">Close</button>
+      <div id="strings-progress" class="text-sm opacity-60 ml-auto">Idle</div>
+    </div>
+
+    <div id="strings-results" class="h-64 overflow-auto bg-base-200 p-3 rounded-md font-mono text-sm text-[13px]"></div>
+
+    <div class="modal-action mt-4">
+      <button id="strings-download" class="btn btn-ghost">Download as .txt</button>
+      <button id="strings-close" class="btn btn-primary">Done</button>
     </div>
   </div>
 </dialog>

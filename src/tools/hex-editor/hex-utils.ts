@@ -133,7 +133,7 @@ export class HexBufferManager {
 
   /**
    * Generates the final full buffer for download.
-   * WARNING: This loads the entire file into memory. 
+   * WARNING: This loads the entire file into memory.
    * Only use for download or if file is small.
    */
   async getFullBuffer(): Promise<Uint8Array> {

@@ -26,6 +26,17 @@ export default function init(payload?: SharedFilesPayload) {
 
   const toggleAscii = document.getElementById('toggle-ascii') as HTMLInputElement;
 
+  // Strings modal elements
+  const showStringsBtn = document.getElementById('show-strings-btn') as HTMLButtonElement | null;
+  const stringsModal = document.getElementById('strings-modal') as HTMLDialogElement | null;
+  const stringsMinLenInput = document.getElementById('strings-minlen') as HTMLInputElement | null;
+  const stringsScanBtn = document.getElementById('strings-scan-btn') as HTMLButtonElement | null;
+  const stringsCancelBtn = document.getElementById('strings-cancel-btn') as HTMLButtonElement | null;
+  const stringsClose = document.getElementById('strings-close') as HTMLButtonElement | null;
+  const stringsDownload = document.getElementById('strings-download') as HTMLButtonElement | null;
+  const stringsResults = document.getElementById('strings-results') as HTMLElement | null;
+  const stringsProgress = document.getElementById('strings-progress') as HTMLElement | null;
+
   const statusSelection = document.getElementById('status-selection')!;
   const statusStats = document.getElementById('status-stats')!;
 
@@ -44,6 +55,11 @@ export default function init(payload?: SharedFilesPayload) {
   let currentFile: File | null = null;
   let selectedOffset: number | null = null;
   let searchMatch: { offset: number; length: number } | null = null;
+
+  // Strings scan state
+  let stringsAbort = false;
+  // Each entry contains the file offset and the discovered string
+  let lastStringsResult: { offset: number; text: string }[] = [];
 
   // Editing State
   let editingNybble: 'high' | 'low' | null = null;
@@ -65,6 +81,82 @@ export default function init(payload?: SharedFilesPayload) {
       // fallback
       el.focus();
     }
+  };
+
+  const isPrintable = (b: number) => b >= 32 && b <= 126;
+
+  // Streamed strings scanner: scans file in chunks, emits found strings of at least `minLen`.
+  // Memory safe: reads chunks and only keeps found strings (as joined text) in array.
+  const scanForStrings = async (minLen: number, onProgress?: (progress: { scanned: number; total: number }) => void) => {
+    lastStringsResult = [];
+    stringsAbort = false;
+    if (!bufferManager) return lastStringsResult;
+
+    const total = bufferManager.totalSize;
+    const chunkSize = 256 * 1024; // 256KB chunks
+    let offset = 0;
+    // carry holds bytes that may be part of a string that spans chunk boundary
+    let carry: number[] = [];
+
+    while (offset < total) {
+      if (stringsAbort) break;
+
+      const readSize = Math.min(chunkSize, total - offset);
+      const chunk = await bufferManager.getRange(offset, readSize);
+
+      // bytesBaseOffset is the file offset corresponding to bytes[0]
+      const bytesBaseOffset = offset - carry.length;
+
+      // convert to bytes array for easy iteration
+      const bytes = new Uint8Array(carry.length + chunk.length);
+      for (let i = 0; i < carry.length; i++) bytes[i] = carry[i];
+      bytes.set(chunk, carry.length);
+
+      let seqStart = -1;
+      carry = [];
+
+      for (let i = 0; i < bytes.length; i++) {
+        const b = bytes[i];
+        if (isPrintable(b)) {
+          if (seqStart === -1) seqStart = i;
+        } else {
+          if (seqStart !== -1) {
+            const len = i - seqStart;
+            if (len >= minLen) {
+              const slice = bytes.subarray(seqStart, i);
+              // Decode as ASCII printable bytes
+              const s = String.fromCharCode(...slice);
+              const globalOffset = bytesBaseOffset + seqStart;
+              lastStringsResult.push({ offset: globalOffset, text: s });
+            }
+          }
+          seqStart = -1;
+        }
+      }
+
+      // If a printable sequence continues till the end of bytes, keep it in carry
+      if (seqStart !== -1) {
+        for (let i = seqStart; i < bytes.length; i++) carry.push(bytes[i]);
+        // To avoid unbounded carry growth (malicious large printable file), cap carry length to minLen * 4
+        if (carry.length > minLen * 4) carry = carry.slice(carry.length - minLen * 4);
+      }
+
+      offset += readSize;
+
+      if (onProgress) onProgress({ scanned: Math.min(offset, total), total });
+
+      // Yield occasionally to keep UI responsive
+      await yieldToUI(false);
+    }
+
+    // At end, flush any remaining carry
+    if (!stringsAbort && carry.length >= minLen) {
+      const base = total - carry.length;
+      const s = String.fromCharCode(...new Uint8Array(carry));
+      lastStringsResult.push({ offset: base, text: s });
+    }
+
+    return lastStringsResult;
   };
 
   const updateFileInfo = async (file: File) => {
@@ -532,6 +624,79 @@ export default function init(payload?: SharedFilesPayload) {
     hexVisibleRows.innerHTML = '';
     hexStretcher.style.height = '0';
   };
+
+  // Strings modal handlers
+  if (showStringsBtn && stringsModal && stringsScanBtn && stringsResults && stringsProgress) {
+    showStringsBtn.onclick = () => {
+      if (!currentFile) {
+        showMessage('No file loaded', { type: 'warning' });
+        return;
+      }
+      // reset UI
+      stringsResults.innerHTML = '';
+      if (!stringsModal.open) stringsModal.showModal();
+    };
+
+    const stopScan = () => {
+      stringsAbort = true;
+      if (stringsProgress) stringsProgress.textContent = 'Cancelled';
+    };
+
+    stringsCancelBtn!.onclick = () => {
+      stopScan();
+      if (stringsModal && stringsModal.open) stringsModal.close();
+    };
+
+    stringsClose!.onclick = () => {
+      stopScan();
+      if (stringsModal && stringsModal.open) stringsModal.close();
+    };
+
+    stringsScanBtn.onclick = async () => {
+      if (!bufferManager) return;
+      const minLen = Math.max(1, parseInt(stringsMinLenInput?.value || '4', 10));
+      stringsResults.innerHTML = '';
+      stringsProgress.textContent = 'Scanning...';
+      lastStringsResult = [];
+      stringsAbort = false;
+
+      try {
+        const results = await scanForStrings(minLen, (p) => {
+          stringsProgress.textContent = `Scanned ${p.scanned.toLocaleString()} / ${p.total.toLocaleString()} bytes`;
+          // update partial results in the UI occasionally
+          if (lastStringsResult.length) {
+            // show up to latest 200 results to avoid DOM bloat
+            const recent = lastStringsResult.slice(-200);
+            const lines = recent.map((r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`);
+            stringsResults.textContent = lines.join('\n');
+            stringsResults.scrollTop = stringsResults.scrollHeight;
+          }
+        });
+
+        if (stringsAbort) {
+          stringsProgress.textContent = 'Cancelled';
+        } else {
+          stringsProgress.textContent = `Found ${results.length.toLocaleString()} strings`;
+          const lines = results.map((r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`);
+          stringsResults.textContent = lines.join('\n');
+        }
+      } catch (err) {
+        console.error('Strings scan failed', err);
+        stringsProgress.textContent = 'Error';
+        showMessage('Strings scan failed', { type: 'alert' });
+      }
+    };
+
+    stringsDownload!.onclick = () => {
+      if (!lastStringsResult || lastStringsResult.length === 0) {
+        showMessage('No strings to download', { type: 'warning' });
+        return;
+      }
+      const lines = lastStringsResult.map((r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`);
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      downloadFile(blob, `${currentFile?.name || 'strings'}.strings.txt`);
+    };
+  }
 
   setupFileDropzone('hex-dropzone', 'hex-file-input', (files) => {
     updateFileInfo(files[0]);
