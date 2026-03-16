@@ -82,8 +82,15 @@ export default function init() {
   const calculate = () => {
     if (currentInput === '0' && lastOp.innerText === '') return;
 
+    let balancedInput = currentInput;
+    const opens = (balancedInput.match(/\(/g) || []).length;
+    const closes = (balancedInput.match(/\)/g) || []).length;
+    if (opens > closes) {
+      balancedInput = balancedInput + ')'.repeat(opens - closes);
+    }
+
     // Check for trailing operators
-    const sanitizedInput = currentInput.replace(/[+\-*/]$/, '');
+    const sanitizedInput = balancedInput.replace(/[+\-*/]$/, '');
 
     const calculation = CalculatorLogic.evaluate(sanitizedInput);
     if (calculation.error) {
