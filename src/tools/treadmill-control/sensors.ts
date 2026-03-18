@@ -80,6 +80,72 @@ export async function startSensors(
     let incline = 0.0;
     let calories = 0;
     let hr = 80;
+    // Additional optional metrics
+    let averageSpeed = speed; // km/h
+    let elevationGainPositive = 0; // m
+    let elevationGainNegative = 0; // m
+    let instantaneousPace = speed > 0 ? 60 / speed : 0; // min/km
+    let averagePace = instantaneousPace; // min/km
+    let metabolicEquivalent = Math.max(1, Math.round((1 + speed * 0.6) * 10) / 10); // METs (approx)
+    let remainingTime: number | null = 30 * 60; // seconds, optional session target (default 30min)
+    let cadence = Math.round(80 + speed * 10); // steps per minute
+    let cumulativeStrideCount = 0; // total strides
+    let proprietarySteps = 0; // steps/proprietary counter
+    let status = speed > 0 ? 'Running' : 'Stopped';
+    const isMetric = true;
+
+    // Helper to compute derived metrics and emit a full update
+    const emitCurrent = () => {
+      // averageSpeed derived from distance and elapsed (avoid division by zero)
+      if (elapsed > 0) {
+        averageSpeed = distance / (elapsed / 3600.0);
+      } else {
+        averageSpeed = speed;
+      }
+
+      instantaneousPace = speed > 0 ? 60 / speed : 0; // min/km
+      averagePace = averageSpeed > 0 ? 60 / averageSpeed : 0; // min/km
+      metabolicEquivalent = Math.max(1, Math.round((1 + speed * 0.6) * 10) / 10);
+      cadence = speed > 0 ? Math.round(80 + speed * 10) : 0;
+      // increment stride counters based on cadence (steps per minute -> per second)
+      const strideIncrement = cadence / 60.0;
+      cumulativeStrideCount += strideIncrement;
+      proprietarySteps += strideIncrement;
+      // Round counters to integers when emitting
+      status = speed > 0 ? 'Running' : 'Stopped';
+      if (remainingTime !== null) {
+        remainingTime = Math.max(0, Math.round(remainingTime - 1));
+      }
+
+      // Small elevation gain simulation: increase positive gain when incline increases
+      if (incline > 0 && speed > 0) {
+        elevationGainPositive += Math.max(0, incline / 10.0 * (speed / 6.0));
+      } else if (incline < 0 && speed > 0) {
+        elevationGainNegative += Math.abs(incline) / 10.0 * (speed / 6.0);
+      }
+
+      // Build partial payload with all optional fields
+      mergeAndEmit({
+        speed: Number(speed.toFixed(2)),
+        averageSpeed: Number(averageSpeed.toFixed(2)),
+        distance: Number(distance.toFixed(3)),
+        inclination: Number(incline.toFixed(1)),
+        elevationGainPositive: Number(elevationGainPositive.toFixed(1)),
+        elevationGainNegative: Number(elevationGainNegative.toFixed(1)),
+        instantaneousPace: Number(instantaneousPace.toFixed(2)),
+        averagePace: Number(averagePace.toFixed(2)),
+        calories,
+        heartRate: hr,
+        metabolicEquivalent,
+        elapsedTime: elapsed,
+        remainingTime: remainingTime === null ? undefined : remainingTime,
+        cadence,
+        cumulativeStrideCount: Math.floor(cumulativeStrideCount),
+        steps: Math.floor(proprietarySteps),
+        status,
+        isMetric,
+      });
+    };
 
     const fakeDevice: any = {
       name: 'Simulated Treadmill',
@@ -104,8 +170,8 @@ export async function startSensors(
       }
     };
 
-    // Emit initial state
-    mergeAndEmit({ speed, distance, inclination: incline, elapsedTime: elapsed, calories, heartRate: hr });
+    // Emit initial state (with extended optional fields)
+    emitCurrent();
 
     const simulateData = () => {
       if (elapsed < 20) {
@@ -116,18 +182,13 @@ export async function startSensors(
       // distance in km: speed (km/h) * (1/3600) per second
       distance += speed / 3600.0;
       elapsed += 1;
-      incline = Math.max(0, Math.min(5, incline + (Math.random() - 0.5) * 0.1));
-      calories += Math.round((speed / 6.0) * 0.1);
-      hr = Math.round(70 + speed * 6 + Math.random() * 5);
+      // small incline wander
+      incline = Math.max(-3, Math.min(15, incline + (Math.random() - 0.5) * 0.2));
+      // calories roughly proportional to speed and incline
+      calories += Math.round((speed / 6.0) * (1 + Math.abs(incline) / 10.0));
+      hr = Math.round(70 + speed * 6 + Math.random() * 6);
 
-      mergeAndEmit({
-        speed: Number(speed.toFixed(2)),
-        distance: Number(distance.toFixed(3)),
-        inclination: Number(incline.toFixed(1)),
-        elapsedTime: elapsed,
-        calories,
-        heartRate: hr,
-      });
+      emitCurrent();
     };
 
     return {
@@ -149,23 +210,24 @@ export async function startSensors(
             intervalId = null;
           }
           speed = 0;
-          mergeAndEmit({ speed, distance, inclination: incline, elapsedTime: elapsed, calories, heartRate: hr });
+          // emit a final stopped state
+          emitCurrent();
         },
         changeSpeed: (delta: number) => {
           speed = Math.max(0, Math.min(12, speed + delta));
-          mergeAndEmit({ speed: Number(speed.toFixed(2)), distance: Number(distance.toFixed(3)), inclination: Number(incline.toFixed(1)), elapsedTime: elapsed, calories, heartRate: hr });
+          emitCurrent();
         },
         setSpeed: (s: number) => {
           speed = Math.max(0, Math.min(12, s));
-          mergeAndEmit({ speed: Number(speed.toFixed(2)), distance: Number(distance.toFixed(3)), inclination: Number(incline.toFixed(1)), elapsedTime: elapsed, calories, heartRate: hr });
+          emitCurrent();
         },
         changeIncline: (delta: number) => {
-          incline = Math.max(0, Math.min(15, incline + delta));
-          mergeAndEmit({ speed: Number(speed.toFixed(2)), distance: Number(distance.toFixed(3)), inclination: Number(incline.toFixed(1)), elapsedTime: elapsed, calories, heartRate: hr });
+          incline = Math.max(-3, Math.min(15, incline + delta));
+          emitCurrent();
         },
         setIncline: (n: number) => {
-          incline = Math.max(0, Math.min(15, n));
-          mergeAndEmit({ speed: Number(speed.toFixed(2)), distance: Number(distance.toFixed(3)), inclination: Number(incline.toFixed(1)), elapsedTime: elapsed, calories, heartRate: hr });
+          incline = Math.max(-3, Math.min(15, n));
+          emitCurrent();
         }
       },
       cleanup: async () => {
