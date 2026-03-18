@@ -24,6 +24,10 @@ export function init() {
 
   // Optional Metrics
   const optionalMetrics = {
+    steps: {
+      display: document.getElementById('steps-display')!,
+      container: document.getElementById('steps-container')!
+    },
     remainingTime: {
       display: document.getElementById('remaining-time-display')!,
       container: document.getElementById('remaining-time-container')!
@@ -142,6 +146,11 @@ export function init() {
     if (data.metabolicEquivalent !== undefined) {
       optionalMetrics.metabolicEquivalent.container.classList.remove('hidden');
       optionalMetrics.metabolicEquivalent.display.textContent = data.metabolicEquivalent.toFixed(1);
+    }
+    // Steps (PitPat proprietary)
+    if ((data as any).steps !== undefined) {
+      optionalMetrics.steps.container.classList.remove('hidden');
+      optionalMetrics.steps.display.textContent = ((data as any).steps).toString();
     }
   };
 
