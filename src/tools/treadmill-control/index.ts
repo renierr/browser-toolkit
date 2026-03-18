@@ -1,5 +1,4 @@
 import {
-  connectTreadmill,
   sendControlCommand,
   resetControlState,
   startPitPatHeartbeat,
@@ -7,7 +6,7 @@ import {
 } from './bluetooth';
 import type { TreadmillDeviceType } from './bluetooth';
 import { type TreadmillData } from './ftms-parser';
-import { subscribeToRSC } from './rsc';
+import { startSensors, type SensorsResult } from './sensors';
 import { showMessage } from '../../js/ui';
 
 // noinspection JSUnusedGlobalSymbols
@@ -75,7 +74,7 @@ export function init() {
   let device: BluetoothDevice | null = null;
   let deviceType: TreadmillDeviceType | null = null;
   let pitpatWriteChar: BluetoothRemoteGATTCharacteristic | null = null;
-  let rscCleanup: (() => Promise<void>) | null = null;
+  let sensorsHandle: SensorsResult | null = null;
   let currentSpeed = 0;
   let currentIncline = 0;
 
@@ -182,14 +181,14 @@ export function init() {
     // Reset visibility of optional metrics for next connection
     Object.values(optionalMetrics).forEach(m => m.container.classList.add('hidden'));
 
-    // Stop RSC notifications if we subscribed
-    if (rscCleanup) {
+    // Cleanup sensor subscriptions if we started them
+    if (sensorsHandle) {
       try {
-        await rscCleanup();
+        await sensorsHandle.cleanup();
       } catch (_) {
         // ignore
       }
-      rscCleanup = null;
+      sensorsHandle = null;
     }
 
     // Enable all buttons (reset state)
@@ -204,21 +203,16 @@ export function init() {
   connectBtn.addEventListener('click', async () => {
     try {
       updateStatus('Scanning for treadmill...');
-      const result = await connectTreadmill(onUpdate);
-      device = result.device;
-      deviceType = result.type;
-      const support = result.support ?? { controlSupported: false, speedControlSupported: false, inclineControlSupported: false };
-      if (result.writeChar && deviceType === 'PITPAT') {
-        pitpatWriteChar = result.writeChar;
+      // Use Sensor Aggregator which handles FTMS/PitPat and RSC merging
+      sensorsHandle = await startSensors(onUpdate, { stepsMode: 'session' });
+      device = sensorsHandle.device;
+      deviceType = sensorsHandle.type;
+      const support = sensorsHandle.support ?? { controlSupported: false, speedControlSupported: false, inclineControlSupported: false };
+      if (sensorsHandle.writeChar && deviceType === 'PITPAT') {
+        pitpatWriteChar = sensorsHandle.writeChar;
         startPitPatHeartbeat(device, pitpatWriteChar);
       }
 
-      // Subscribe to Running Speed & Cadence if available and store cleanup
-      try {
-        rscCleanup = await subscribeToRSC(device, (d) => onUpdate(d as TreadmillData));
-      } catch (_) {
-        rscCleanup = null;
-      }
 
       device.addEventListener('gattserverdisconnected', () => {
         handleDisconnect();
