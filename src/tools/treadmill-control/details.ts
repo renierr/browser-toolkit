@@ -8,6 +8,8 @@ export function showSessionDetails(session: TreadmillSession, sessions?: Treadmi
   const sessionSelect = document.getElementById('session-select') as HTMLSelectElement;
   const modalDuration = document.getElementById('modal-duration')!;
   const modalDatapoints = document.getElementById('modal-datapoints')!;
+  const modalAvgSpeed = document.getElementById('modal-avg-speed')!;
+  const modalMaxSpeed = document.getElementById('modal-max-speed')!;
   const graphCanvas = document.getElementById('session-graph') as HTMLCanvasElement;
   const dataToggle = document.getElementById('toggle-data') as HTMLInputElement;
   const dataContainer = document.getElementById('modal-data-container')!;
@@ -23,13 +25,16 @@ export function showSessionDetails(session: TreadmillSession, sessions?: Treadmi
 	if (!s.dataPoints.length) return;
 
 	// normalize start time and point times to numbers (ms)
-	const startMs = typeof s.startTime === 'string' ? Date.parse(s.startTime) : (s.startTime as number);
+	const startVal: any = (s.startTime as unknown);
+	const startMs = typeof startVal === 'string' ? Date.parse(startVal) : Number(startVal);
 	const times = s.dataPoints.map(p => {
-		const t = typeof p.timestamp === 'string' ? Date.parse(p.timestamp) : (p.timestamp as number);
-		return (isNaN(t) ? 0 : t) - (isNaN(startMs as number) ? 0 : startMs);
+		const tVal: any = (p.timestamp as unknown);
+		const t = typeof tVal === 'string' ? Date.parse(tVal) : Number(tVal);
+		return (isNaN(t) ? 0 : t) - (isNaN(startMs) ? 0 : startMs);
 	});
 	const speeds = s.dataPoints.map(p => {
-		const v = (p.data && (p.data as any).speed) ?? 0;
+		let v: any = (p.data && (p.data as any).speed) ?? 0;
+		if (typeof v === 'string') v = v.replace(',', '.');
 		const n = Number(v);
 		return isNaN(n) ? 0 : n;
 	});
@@ -51,12 +56,31 @@ export function showSessionDetails(session: TreadmillSession, sessions?: Treadmi
   };
 
   const updateView = (current: TreadmillSession) => {
-	const startMs = typeof current.startTime === 'string' ? Date.parse(current.startTime) : (current.startTime as number);
+	const startMs = (current.startTime as number);
 	const date = new Date(isNaN(startMs as number) ? String(current.startTime) : startMs).toLocaleString();
-	const duration = current.endTime ? formatDuration((typeof current.endTime === 'string' ? Date.parse(current.endTime) : (current.endTime as number)) - (isNaN(startMs as number) ? 0 : startMs)) : '---';
+	const duration = current.endTime ? formatDuration(((current.endTime as number)) - (isNaN(startMs as number) ? 0 : startMs)) : '---';
 	modalTitle.innerHTML = `Session Details <span class="badge badge-ghost font-mono ml-2">${current.uid || 'N/A'}</span> <div class="text-xs font-normal text-base-content/50 mt-1">${date}</div>`;
 	modalDuration.textContent = duration;
 	modalDatapoints.textContent = current.dataPoints.length.toString();
+
+	// compute avg and max speed (coerce strings to numbers safely)
+	const speedVals = current.dataPoints.map(p => {
+	  let v: any = (p.data && (p.data as any).speed);
+	  if (v === undefined || v === null) return null;
+	  if (typeof v === 'string') v = v.replace(',', '.');
+	  const n = Number(v);
+	  return isNaN(n) ? null : n;
+	}).filter((s): s is number => s !== null);
+
+	if (speedVals.length === 0) {
+	  modalAvgSpeed.textContent = '---';
+	  modalMaxSpeed.textContent = '---';
+	} else {
+	  const avgSpeed = speedVals.reduce((a, b) => a + b, 0) / speedVals.length;
+	  const maxSpeed = Math.max(...speedVals);
+	  modalAvgSpeed.textContent = `${avgSpeed.toFixed(1)} km/h`;
+	  modalMaxSpeed.textContent = `${maxSpeed.toFixed(1)} km/h`;
+	}
 
 	dataToggle.checked = false;
 	dataContainer.classList.add('hidden');
@@ -89,11 +113,13 @@ export function showSessionDetails(session: TreadmillSession, sessions?: Treadmi
 
 function renderDataTable(session: TreadmillSession, container: HTMLElement) {
   container.innerHTML = '';
-  const startMs = typeof session.startTime === 'string' ? Date.parse(session.startTime) : (session.startTime as number);
+  const startVal: any = (session.startTime as unknown);
+  const startMs = typeof startVal === 'string' ? Date.parse(startVal) : Number(startVal);
   session.dataPoints.forEach((p, index) => {
 	const row = document.createElement('tr');
-	const ts = typeof p.timestamp === 'string' ? Date.parse(p.timestamp) : (p.timestamp as number);
-	const relativeTime = formatDuration((isNaN(ts) ? 0 : ts) - (isNaN(startMs as number) ? 0 : startMs));
+	const tVal: any = (p.timestamp as unknown);
+	const ts = typeof tVal === 'string' ? Date.parse(tVal) : Number(tVal);
+	const relativeTime = formatDuration((isNaN(ts) ? 0 : ts) - (isNaN(startMs) ? 0 : startMs));
 	const speedVal = (p.data && (p.data as any).speed) ?? undefined;
 	const speed = speedVal !== undefined ? `${Number(speedVal).toFixed(1)} km/h` : '--';
 	const inclineVal = (p.data && (p.data as any).inclination) ?? undefined;
