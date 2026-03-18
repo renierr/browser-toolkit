@@ -551,7 +551,7 @@ export function init() {
       connectBtn.classList.add('hidden');
       disconnectBtn.classList.remove('hidden');
       updateStatus('Connected to ' + (device.name || 'Treadmill'), 'success');
-      speedDisplay.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      dashboard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
       // Check Support and Disable Controls
       if (!support.controlSupported) {
