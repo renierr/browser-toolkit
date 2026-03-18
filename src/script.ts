@@ -104,6 +104,9 @@ function renderOverview() {
     });
   }
 
+  // Track attached global key handler so we can remove it when toggling flatList
+  let lastKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+
   function filterAndRender() {
     const term = searchInput.value.trim();
     if (clearBtn) clearBtn.classList.toggle('hidden', term.length === 0);
@@ -151,6 +154,12 @@ function renderOverview() {
       ...encountered.filter((k) => !configuredOrder.includes(k)),
     ];
 
+    // Pagination / flat-list settings
+    const flatList = settings.get('flatList', false);
+    const pageSize = Number(settings.get('pageSize', 24)) || 24;
+    let currentPage = Number(settings.get('page', 1)) || 1;
+    const setPageStored = (p: number) => settings.set('page', p);
+
     // Collapsible sections: persist state in localStorage per section
     const isCollapsedStored = (id: string) => settings.get(`collapsed:${id}`, false);
     const setCollapsedStored = (id: string, v: boolean) => settings.set(`collapsed:${id}`, v);
@@ -177,8 +186,37 @@ function renderOverview() {
       `;
     }
 
-    // Render each section as a collapsible block containing its own grid
-    outHtml += keysInOrder
+    // If flatList is enabled, render a simple paginated list of all tools
+    if (flatList) {
+      const allTools = sorted; // already filtered/sorted
+      const total = allTools.length;
+      const totalPages = Math.max(1, Math.ceil(total / pageSize));
+      if (currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      setPageStored(currentPage);
+
+      const startIdx = (currentPage - 1) * pageSize;
+      const pageItems = allTools.slice(startIdx, startIdx + pageSize);
+
+      outHtml += html`
+        <div class="mb-4 flex items-center justify-between">
+          <h3 class="text-2xl font-bold text-heading">All Tools</h3>
+          <div class="text-sm text-muted">${total} tools — Page ${currentPage} / ${totalPages}</div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="flat-list-grid">
+          ${pageItems.map((tool) => renderToolCard(tool, false, compactMode)).join('')}
+        </div>
+
+        <div class="mt-4 flex items-center justify-center gap-2" aria-label="Pagination">
+          <button class="btn btn-sm" id="page-prev" ${currentPage <= 1 ? 'disabled' : ''}>Prev</button>
+          <div class="text-sm text-muted px-2">Page ${currentPage} of ${totalPages}</div>
+          <button class="btn btn-sm" id="page-next" ${currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+        </div>
+      `;
+    } else {
+      // Render each section as a collapsible block containing its own grid
+      outHtml += keysInOrder
       .map((key) => {
         const section = sectionMap.get(key)!;
         const cardsHtml = section.items
@@ -233,8 +271,56 @@ function renderOverview() {
         `;
       })
       .join('');
+    }
 
     grid.innerHTML = outHtml;
+
+    // If flat list, wire up pagination buttons
+    if (flatList) {
+      const prev = grid.querySelector('#page-prev') as HTMLButtonElement | null;
+      const next = grid.querySelector('#page-next') as HTMLButtonElement | null;
+      prev?.addEventListener('click', () => {
+        if (currentPage <= 1) return;
+        currentPage -= 1;
+        setPageStored(currentPage);
+        filterAndRender();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      next?.addEventListener('click', () => {
+        const total = sorted.length;
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        if (currentPage >= totalPages) return;
+        currentPage += 1;
+        setPageStored(currentPage);
+        filterAndRender();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      // Keyboard navigation: left/right to change pages, / to focus search
+      const keyHandler = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') {
+          prev?.click();
+        } else if (e.key === 'ArrowRight') {
+          next?.click();
+        } else if (e.key === '/') {
+          e.preventDefault();
+          searchInput.focus();
+        }
+      };
+
+      // Remove previous handler if present
+      if (lastKeyHandler) window.removeEventListener('keydown', lastKeyHandler);
+      window.addEventListener('keydown', keyHandler);
+      lastKeyHandler = keyHandler;
+
+      // Ensure when flatList is disabled in a later render we remove the handler.
+    }
+
+    // If flatList is not active, remove any lingering key handler
+    if (!settings.get('flatList', false) && lastKeyHandler) {
+      window.removeEventListener('keydown', lastKeyHandler);
+      lastKeyHandler = null;
+    }
 
     // Attach collapse toggle listeners (listen to the toggle buttons)
     grid.querySelectorAll('[data-section-toggle]').forEach((btnEl) => {
