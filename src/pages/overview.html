@@ -36,10 +36,11 @@
           </label>
         </div>
         <div class="form-control mt-2">
-          <label class="label cursor-pointer justify-start gap-3">
+          <label class="label cursor-pointer justify-start gap-3 mb-2">
             <input type="checkbox" class="toggle toggle-sm toggle-primary" data-setting="flatList" />
             <span class="label-text">Flat list (paginate)</span>
           </label>
+
           <label class="label mt-2">
             <span class="label-text">Page size</span>
           </label>
@@ -48,6 +49,16 @@
             <option value="24">24</option>
             <option value="48">48</option>
           </select>
+
+          <label class="label mt-3">
+            <span class="label-text">Sort by</span>
+          </label>
+          <select class="select select-sm w-full mb-2" data-setting="sortBy" aria-label="Sort tools">
+            <option value="order">Order (default)</option>
+            <option value="name">Name</option>
+            <option value="recent">Recently used</option>
+          </select>
+
         </div>
       </div>
     </div>

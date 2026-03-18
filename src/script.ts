@@ -124,11 +124,29 @@ function renderOverview() {
         .map((item) => item.tool);
     }
 
-    // Sort tools (globally) by order then name
-    const sorted = [...filtered].sort((a, b) => {
-      if (a.order !== b.order) return a.order - b.order;
-      return a.name.localeCompare(b.name);
-    });
+    // Sort tools according to user preference
+    // Force to plain string to avoid TypeScript literal narrowing issues
+    const sortBy = (settings.get('sortBy', 'order') as unknown) as string;
+    let sorted = [...filtered];
+    if (sortBy === 'name') {
+      sorted.sort((a, b) => a.name.localeCompare(b.name));
+    } else if (sortBy === 'recent') {
+      // Use persisted last-used timestamps in localStorage
+      const KEY = 'bk:lastUsed';
+      const raw = localStorage.getItem(KEY);
+      const map = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+      sorted.sort((a, b) => {
+        const ta = map[a.path] ?? 0;
+        const tb = map[b.path] ?? 0;
+        return tb - ta || a.name.localeCompare(b.name);
+      });
+    } else {
+      // default: order then name
+      sorted.sort((a, b) => {
+        if (a.order !== b.order) return a.order - b.order;
+        return a.name.localeCompare(b.name);
+      });
+    }
 
     // Group by sectionId
     const sectionMap = new Map<
@@ -409,6 +427,16 @@ function handleRoute(path: string | null, payload?: any) {
   const doRender = () => {
     if (path) {
       const tool = tools.find((t) => t.path === path);
+      // Persist last-used timestamp for recent sorting
+      try {
+        const KEY = 'bk:lastUsed';
+        const raw = localStorage.getItem(KEY);
+        const map = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+        map[path] = Date.now();
+        localStorage.setItem(KEY, JSON.stringify(map));
+      } catch (e) {
+        // ignore storage errors
+      }
       renderTool(tool, payload);
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     } else {
