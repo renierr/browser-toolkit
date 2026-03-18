@@ -24,7 +24,7 @@
 
     <!-- Troubleshooting Hint -->
     <div class="collapse collapse-plus bg-base-200/50 max-w-md">
-      <input type="checkbox" /> 
+      <input type="checkbox" />
       <div class="collapse-title text-sm font-medium opacity-70">
         Connection problems?
       </div>
@@ -37,7 +37,7 @@
         </ul>
       </div>
     </div>
-    
+
     <div id="status-message" class="alert shadow-lg hidden">
       <i data-lucide="info" class="size-4"></i>
       <span></span>
@@ -47,7 +47,7 @@
   </div>
 
   <!-- Dashboard Card -->
-  <div id="dashboard" class="grid grid-cols-1 md:grid-cols-3 gap-6 opacity-50 pointer-events-none">
+  <div id="dashboard" class="grid grid-cols-1 gap-6 opacity-50 pointer-events-none">
     <!-- Main Metric: Speed -->
     <div class="card bg-base-100 shadow-xl border border-base-300 md:col-span-2">
       <div class="card-body items-center text-center">
@@ -56,13 +56,10 @@
           <span id="speed-display" class="text-8xl font-black text-primary tabular-nums">0.0</span>
           <span class="text-2xl font-bold opacity-50">km/h</span>
         </div>
-        
+
         <div class="divider">Controls</div>
-        
+
         <div class="flex flex-wrap justify-center gap-4">
-          <button id="speed-down-btn" class="btn btn-circle btn-outline btn-lg" aria-label="Decrease Speed">
-             <i data-lucide="minus"></i>
-          </button>
           <div class="flex flex-col gap-2">
             <button id="start-btn" class="btn btn-success btn-wide gap-2">
               <i data-lucide="play" class="fill-current"></i> Start
@@ -71,15 +68,20 @@
               <i data-lucide="square" class="fill-current"></i> Stop
             </button>
           </div>
-          <button id="speed-up-btn" class="btn btn-circle btn-outline btn-lg" aria-label="Increase Speed">
-            <i data-lucide="plus"></i>
-          </button>
+          <div class="flex flex-wrap gap-2">
+            <button id="speed-down-btn" class="btn btn-circle btn-outline btn-lg" aria-label="Decrease Speed">
+              <i data-lucide="minus"></i>
+            </button>
+            <button id="speed-up-btn" class="btn btn-circle btn-outline btn-lg" aria-label="Increase Speed">
+              <i data-lucide="plus"></i>
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Secondary Metrics -->
-    <div class="grid grid-cols-2 md:grid-cols-1 gap-4">
+    <div class="grid grid-cols-2 gap-4">
       <!-- Distance -->
       <div class="card bg-base-100 shadow-xl border border-base-300">
         <div class="card-body p-4 items-center gap-1">
