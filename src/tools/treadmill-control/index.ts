@@ -7,6 +7,9 @@ import {
 import type { TreadmillDeviceType } from './bluetooth';
 import { type TreadmillData } from './ftms-parser';
 import { startSensors, type SensorsResult } from './sensors';
+import { saveSession, getAllSessions, deleteSession, type TreadmillSession } from './db';
+import * as details from './details';
+import { generateShortId } from '../heart-rate-monitor/utils';
 import { showMessage } from '../../js/ui';
 
 // noinspection JSUnusedGlobalSymbols
@@ -77,6 +80,17 @@ export function init() {
   let sensorsHandle: SensorsResult | null = null;
   let currentSpeed = 0;
   let currentIncline = 0;
+  // Session recording
+  const sessionsList = document.getElementById('sessions-list')!;
+  const noSessionsRow = document.getElementById('no-sessions')!;
+  const exportAllBtn = document.getElementById('export-all-btn') as HTMLButtonElement | null;
+  const viewJsonBtn = document.getElementById('view-json-btn') as HTMLButtonElement | null;
+  const importInput = document.getElementById('import-input') as HTMLInputElement | null;
+
+  let isRecording = false;
+  let currentSession: TreadmillSession | null = null;
+
+  details.initDetails();
 
   const updateStatus = (msg: string | null, type: 'info' | 'error' | 'success' = 'info') => {
     if (!msg) {
@@ -170,6 +184,76 @@ export function init() {
     }
   };
 
+  // Collector wrapper that records data when a session is active
+  const collectorOnUpdate = (data: TreadmillData) => {
+    onUpdate(data);
+    if (isRecording && currentSession) {
+      currentSession.dataPoints.push({ timestamp: Date.now(), data });
+    }
+  };
+
+  const formatDuration = (ms: number): string => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const loadSessions = async () => {
+    const sessions = await getAllSessions();
+    sessionsList.innerHTML = '';
+
+    if (sessions.length === 0) {
+      sessionsList.appendChild(noSessionsRow);
+      return;
+    }
+
+    sessions.sort((a, b) => b.startTime - a.startTime);
+
+    sessions.forEach((session) => {
+      const row = document.createElement('tr');
+      row.className = 'hover:bg-base-200 cursor-pointer';
+      const date = new Date(session.startTime).toLocaleString();
+      const duration = session.endTime ? formatDuration(session.endTime - session.startTime) : '---';
+
+      const speeds = session.dataPoints.map(p => p.data.speed ?? 0);
+      const avgSpeed = speeds.length ? (speeds.reduce((a, b) => a + b, 0) / speeds.length) : 0;
+      const maxSpeed = speeds.length ? Math.max(...speeds) : 0;
+
+      row.innerHTML = `
+        <td class="font-mono text-xs opacity-70">${session.uid || '---'}</td>
+        <td>${date}</td>
+        <td class="font-mono">${duration}</td>
+        <td>${avgSpeed.toFixed(1)} <small class="text-base-content/50">km/h</small></td>
+        <td>${maxSpeed.toFixed(1)} <small class="text-base-content/50">km/h</small></td>
+        <td class="text-right">
+          <button class="btn btn-ghost btn-xs text-info view-session" data-id="${session.id}">View</button>
+          <button class="btn btn-ghost btn-xs text-error delete-session" data-id="${session.id}">Delete</button>
+        </td>
+      `;
+
+      row.querySelector('.view-session')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        details.showSessionDetails(session);
+      });
+
+      row.addEventListener('click', () => {
+        details.showSessionDetails(session);
+      });
+
+      row.querySelector('.delete-session')?.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const id = Number((e.currentTarget as HTMLElement).dataset.id);
+        if (confirm('Delete this session?')) {
+          await deleteSession(id);
+          loadSessions();
+        }
+      });
+
+      sessionsList.appendChild(row);
+    });
+  };
+
   const handleDisconnect = async () => {
     device = null;
     resetControlState();
@@ -204,7 +288,8 @@ export function init() {
     try {
       updateStatus('Scanning for treadmill...');
       // Use Sensor Aggregator which handles FTMS/PitPat and RSC merging
-      sensorsHandle = await startSensors(onUpdate, { stepsMode: 'session' });
+      // use collectorOnUpdate so recorded sessions receive the same updates
+      sensorsHandle = await startSensors(collectorOnUpdate, { stepsMode: 'session' });
       device = sensorsHandle.device;
       deviceType = sensorsHandle.type;
       const support = sensorsHandle.support ?? { controlSupported: false, speedControlSupported: false, inclineControlSupported: false };
@@ -275,6 +360,8 @@ export function init() {
         showMessage(err.message || 'Connection failed', { type: 'alert', timeoutMs: 10000 });
       }
     }
+    // refresh session list when connecting
+    loadSessions();
   });
 
   disconnectBtn.addEventListener('click', () => {
@@ -303,6 +390,16 @@ export function init() {
         await sendControlCommand(device, 0x07);
       }
       showMessage('Start command sent');
+      // Start session recording
+      if (!isRecording) {
+        isRecording = true;
+        currentSession = {
+          uid: generateShortId(),
+          startTime: Date.now(),
+          dataPoints: [],
+        };
+        updateStatus('Recording session...', 'success');
+      }
     } catch (err: any) {
       showMessage(err.message || 'Failed to start', { type: 'alert' });
     }
@@ -320,6 +417,19 @@ export function init() {
         await sendControlCommand(device, 0x08);
       }
       showMessage('Stop command sent');
+      // Stop session recording and save
+      if (isRecording && currentSession) {
+        isRecording = false;
+        currentSession.endTime = Date.now();
+        if (currentSession.dataPoints.length > 0) {
+          await saveSession(currentSession);
+          updateStatus('Session saved', 'success');
+          loadSessions();
+        } else {
+          updateStatus('Session discarded (no data)', 'info');
+        }
+        currentSession = null;
+      }
     } catch (err: any) {
       showMessage(err.message || 'Failed to stop', { type: 'alert' });
     }
@@ -388,6 +498,59 @@ export function init() {
       showMessage('Incline change failed', { type: 'alert' });
     }
   });
+
+
+  // Export / Import / View JSON handlers
+  if (exportAllBtn) {
+    exportAllBtn.addEventListener('click', async () => {
+      const sessions = await getAllSessions();
+      if (sessions.length === 0) {
+        updateStatus('No sessions to export', 'info');
+        return;
+      }
+      const data = JSON.stringify(sessions, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `treadmill-sessions-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      updateStatus('Sessions exported', 'success');
+    });
+  }
+
+  if (viewJsonBtn && importInput) {
+    viewJsonBtn.addEventListener('click', () => importInput.click());
+
+    importInput.addEventListener('change', (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const content = event.target?.result as string;
+          const data = JSON.parse(content);
+          const sessionToView = Array.isArray(data) ? data[0] : data;
+          const allSessions = Array.isArray(data) ? data : [data];
+          if (sessionToView && sessionToView.startTime && sessionToView.dataPoints) {
+            details.showSessionDetails(sessionToView, allSessions);
+            updateStatus('JSON loaded successfully', 'success');
+          } else {
+            updateStatus('Invalid JSON format', 'error');
+          }
+        } catch (err) {
+          console.error(err);
+          updateStatus('Failed to parse JSON', 'error');
+        }
+        importInput.value = '';
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  // Initial load
+  loadSessions();
 
   return () => {
     if (device?.gatt?.connected) {
