@@ -160,6 +160,8 @@ export function init() {
     controlButtons.forEach(btn => {
       btn.disabled = false;
       btn.classList.remove('btn-disabled');
+      // Ensure any buttons hidden due to lack of support are shown again
+      btn.classList.remove('hidden');
     });
   };
 
@@ -188,25 +190,40 @@ export function init() {
       // Check Support and Disable Controls
       if (!support.controlSupported) {
         controlButtons.forEach(btn => {
+          // hide unsupported controls to avoid confusion
           btn.disabled = true;
           btn.classList.add('btn-disabled');
+          btn.classList.add('hidden');
         });
-        showMessage('Control Point not supported by this treadmill. Buttons disabled.', { type: 'warning', timeoutMs: 7000 });
+        showMessage('Control Point not supported by this treadmill. Controls hidden.', { type: 'warning', timeoutMs: 7000 });
       } else {
         if (!support.speedControlSupported) {
           [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach(btn => {
+             // hide speed related controls if treadmill doesn't support them
              btn.disabled = true;
              btn.classList.add('btn-disabled');
+             btn.classList.add('hidden');
           });
-          showMessage('Speed control not supported.', { type: 'warning', timeoutMs: 5000 });
+          showMessage('Speed control not supported. Speed controls hidden.', { type: 'warning', timeoutMs: 5000 });
         }
         if (!support.inclineControlSupported) {
           [inclineUpBtn, inclineDownBtn].forEach(btn => {
+             // hide incline controls if not supported
              btn.disabled = true;
              btn.classList.add('btn-disabled');
+             btn.classList.add('hidden');
           });
-          showMessage('Incline control not supported.', { type: 'warning', timeoutMs: 5000 });
+          showMessage('Incline control not supported. Incline controls hidden.', { type: 'warning', timeoutMs: 5000 });
         }
+      }
+
+      // Some proprietary devices (PitPat) don't support incline control — hide those too
+      if (deviceType === 'PITPAT') {
+        [inclineUpBtn, inclineDownBtn].forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add('btn-disabled');
+          btn.classList.add('hidden');
+        });
       }
     } catch (err: any) {
       if (err.name === 'NotFoundError' || err.name === 'SecurityError') {
