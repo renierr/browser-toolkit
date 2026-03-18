@@ -1,17 +1,21 @@
-import { 
-  connectTreadmill, 
+import {
+  connectTreadmill,
   sendControlCommand,
-  resetControlState
+  resetControlState,
+  startPitPatHeartbeat,
+  stopPitPatHeartbeat,
 } from './bluetooth';
+import type { TreadmillDeviceType } from './bluetooth';
 import { type TreadmillData } from './ftms-parser';
 import { showMessage } from '../../js/ui';
 
+// noinspection JSUnusedGlobalSymbols
 export function init() {
   const dashboard = document.getElementById('dashboard')!;
   const connectBtn = document.getElementById('connect-btn') as HTMLButtonElement;
   const disconnectBtn = document.getElementById('disconnect-btn') as HTMLButtonElement;
   const statusMessage = document.getElementById('status-message')!;
-  
+
   const speedDisplay = document.getElementById('speed-display')!;
   const inclineDisplay = document.getElementById('incline-display')!;
   const distanceDisplay = document.getElementById('distance-display')!;
@@ -60,6 +64,8 @@ export function init() {
   const controlButtons = [startBtn, stopBtn, speedUpBtn, speedDownBtn, inclineUpBtn, inclineDownBtn];
 
   let device: BluetoothDevice | null = null;
+  let deviceType: TreadmillDeviceType | null = null;
+  let pitpatWriteChar: BluetoothRemoteGATTCharacteristic | null = null;
   let currentSpeed = 0;
   let currentIncline = 0;
 
@@ -146,10 +152,10 @@ export function init() {
     connectBtn.classList.remove('hidden');
     disconnectBtn.classList.add('hidden');
     updateStatus('Treadmill disconnected');
-    
+
     // Reset visibility of optional metrics for next connection
     Object.values(optionalMetrics).forEach(m => m.container.classList.add('hidden'));
-    
+
     // Enable all buttons (reset state)
     controlButtons.forEach(btn => {
       btn.disabled = false;
@@ -162,9 +168,17 @@ export function init() {
       updateStatus('Scanning for treadmill...');
       const result = await connectTreadmill(onUpdate);
       device = result.device;
-      const support = result.support;
-      
-      device.addEventListener('gattserverdisconnected', handleDisconnect);
+      deviceType = result.type;
+      const support = result.support ?? { controlSupported: false, speedControlSupported: false, inclineControlSupported: false };
+      if (result.writeChar && deviceType === 'PITPAT') {
+        pitpatWriteChar = result.writeChar;
+        startPitPatHeartbeat(device, pitpatWriteChar);
+      }
+
+      device.addEventListener('gattserverdisconnected', () => {
+        handleDisconnect();
+        stopPitPatHeartbeat();
+      });
 
       dashboard.classList.remove('opacity-50', 'pointer-events-none');
       connectBtn.classList.add('hidden');
@@ -196,7 +210,7 @@ export function init() {
       }
     } catch (err: any) {
       if (err.name === 'NotFoundError' || err.name === 'SecurityError') {
-        // User likely cancelled the dialog or blocked the request
+        // User likely canceled the dialog or blocked the request
         updateStatus(null);
         console.log('Treadmill: Connection cancelled by user');
       } else {
@@ -212,7 +226,7 @@ export function init() {
     if (device?.gatt?.connected) {
       device.gatt.disconnect();
     } else {
-      // Manual reset if device is stuck
+      // Manual reset if a device is stuck
       handleDisconnect();
     }
   });
@@ -223,8 +237,16 @@ export function init() {
   startBtn.addEventListener('click', async () => {
     if (!device) return;
     try {
-      // 0x07: Start or Resume
-      await sendControlCommand(device, 0x07);
+      if (deviceType === 'PITPAT') {
+        // build PitPat packet for START
+        const { makePitPatPacket } = await import('./pitpat-packets');
+        const pkt = makePitPatPacket('START', currentSpeed || 1.0);
+        // send via bluetooth module helper
+        await sendControlCommand(device, pkt[0], Array.from(pkt.slice(1)));
+      } else {
+        // FTMS: 0x07 Start or Resume
+        await sendControlCommand(device, 0x07);
+      }
       showMessage('Start command sent');
     } catch (err: any) {
       showMessage(err.message || 'Failed to start', { type: 'alert' });
@@ -234,9 +256,14 @@ export function init() {
   stopBtn.addEventListener('click', async () => {
     if (!device) return;
     try {
-      // 0x08: Stop or Pause (Stop/Reset is often 0x01 according to some docs, 0x08 is Pause)
-      // FTMS OpCodes: 0x07 Start, 0x08 Stop
-      await sendControlCommand(device, 0x08);
+      if (deviceType === 'PITPAT') {
+        const { makePitPatPacket } = await import('./pitpat-packets');
+        const pkt = makePitPatPacket('STOP', currentSpeed || 1.0);
+        await sendControlCommand(device, pkt[0], Array.from(pkt.slice(1)));
+      } else {
+        // FTMS OpCodes: 0x07 Start, 0x08 Stop
+        await sendControlCommand(device, 0x08);
+      }
       showMessage('Stop command sent');
     } catch (err: any) {
       showMessage(err.message || 'Failed to stop', { type: 'alert' });
@@ -248,8 +275,15 @@ export function init() {
     try {
       const nextSpeed = currentSpeed + 0.5;
       // 0x02: Set Target Speed (Speed in units of 0.01 km/h)
-      const speedUint16 = Math.round(nextSpeed * 100);
-      await sendControlCommand(device, 0x02, [speedUint16 & 0xFF, (speedUint16 >> 8) & 0xFF]);
+      currentSpeed = nextSpeed;
+      if (deviceType === 'PITPAT') {
+        const { makePitPatPacket } = await import('./pitpat-packets');
+        const pkt = makePitPatPacket('SPEED', currentSpeed || 1.0);
+        await sendControlCommand(device, pkt[0], Array.from(pkt.slice(1)));
+      } else {
+        const speedUint16 = Math.round(nextSpeed * 100);
+        await sendControlCommand(device, 0x02, [speedUint16 & 0xFF, (speedUint16 >> 8) & 0xFF]);
+      }
     } catch (err: any) {
       showMessage('Speed change failed', { type: 'alert' });
     }
@@ -271,8 +305,14 @@ export function init() {
     try {
       const nextIncline = currentIncline + 0.5;
       // 0x03: Set Target Inclination (Units of 0.1%)
-      const inclineInt16 = Math.round(nextIncline * 10);
-      await sendControlCommand(device, 0x03, [inclineInt16 & 0xFF, (inclineInt16 >> 8) & 0xFF]);
+      currentIncline = nextIncline;
+      if (deviceType === 'PITPAT') {
+        // PitPat does not support incline in this implementation; inform user
+        showMessage('Incline control not supported for PitPat devices', { type: 'warning', timeoutMs: 3000 });
+      } else {
+        const inclineInt16 = Math.round(nextIncline * 10);
+        await sendControlCommand(device, 0x03, [inclineInt16 & 0xFF, (inclineInt16 >> 8) & 0xFF]);
+      }
     } catch (err: any) {
       showMessage('Incline change failed', { type: 'alert' });
     }
@@ -282,8 +322,13 @@ export function init() {
     if (!device) return;
     try {
       const nextIncline = currentIncline - 0.5;
-      const inclineInt16 = Math.round(nextIncline * 10);
-      await sendControlCommand(device, 0x03, [inclineInt16 & 0xFF, (inclineInt16 >> 8) & 0xFF]);
+      currentIncline = nextIncline;
+      if (deviceType === 'PITPAT') {
+        showMessage('Incline control not supported for PitPat devices', { type: 'warning', timeoutMs: 3000 });
+      } else {
+        const inclineInt16 = Math.round(nextIncline * 10);
+        await sendControlCommand(device, 0x03, [inclineInt16 & 0xFF, (inclineInt16 >> 8) & 0xFF]);
+      }
     } catch (err: any) {
       showMessage('Incline change failed', { type: 'alert' });
     }
