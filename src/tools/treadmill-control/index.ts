@@ -398,7 +398,7 @@ export function init() {
           startTime: Date.now(),
           dataPoints: [],
         };
-        updateStatus('Recording session...', 'success');
+        showMessage('Recording session...', { type: 'info', timeoutMs: 3000 });
       }
     } catch (err: any) {
       showMessage(err.message || 'Failed to start', { type: 'alert' });
@@ -423,10 +423,10 @@ export function init() {
         currentSession.endTime = Date.now();
         if (currentSession.dataPoints.length > 0) {
           await saveSession(currentSession);
-          updateStatus('Session saved', 'success');
+          showMessage('Session saved', { type: 'info', timeoutMs: 3000 });
           loadSessions();
         } else {
-          updateStatus('Session discarded (no data)', 'info');
+          showMessage('Session discarded (no data)', { type: 'info', timeoutMs: 3000 });
         }
         currentSession = null;
       }
@@ -505,7 +505,7 @@ export function init() {
     exportAllBtn.addEventListener('click', async () => {
       const sessions = await getAllSessions();
       if (sessions.length === 0) {
-        updateStatus('No sessions to export', 'info');
+        showMessage('No sessions to export', { type: 'info', timeoutMs: 3000 });
         return;
       }
       const data = JSON.stringify(sessions, null, 2);
@@ -516,7 +516,7 @@ export function init() {
       a.download = `treadmill-sessions-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      updateStatus('Sessions exported', 'success');
+      showMessage('Sessions exported', { type: 'info', timeoutMs: 3000 });
     });
   }
 
@@ -535,13 +535,13 @@ export function init() {
           const allSessions = Array.isArray(data) ? data : [data];
           if (sessionToView && sessionToView.startTime && sessionToView.dataPoints) {
             details.showSessionDetails(sessionToView, allSessions);
-            updateStatus('JSON loaded successfully', 'success');
+            showMessage('JSON loaded. Viewing first session in file.', { type: 'info', timeoutMs: 5000 });
           } else {
-            updateStatus('Invalid JSON format', 'error');
+            showMessage('JSON does not appear to be a valid session or array of sessions', { type: 'warning', timeoutMs: 7000 });
           }
         } catch (err) {
           console.error(err);
-          updateStatus('Failed to parse JSON', 'error');
+          showMessage('Failed to parse JSON file', { type: 'alert', timeoutMs: 7000 });
         }
         importInput.value = '';
       };
