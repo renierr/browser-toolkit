@@ -440,39 +440,41 @@ export function init() {
       if (simulatorRef) {
         simulatorRef.stop();
         showMessage('Simulated stop command sent');
+        // Stop session recording and save
         if (isRecording && currentSession) {
           isRecording = false;
           currentSession.endTime = Date.now();
           if (currentSession.dataPoints.length > 0) {
             await saveSession(currentSession);
-            showMessage('Session saved', { type: 'info', timeoutMs: 3000 });
+            updateStatus('Session saved', 'success');
             loadSessions();
           } else {
-            showMessage('Session discarded (no data)', { type: 'info', timeoutMs: 3000 });
+            updateStatus('Session discarded (no data)', 'info');
           }
           currentSession = null;
         }
         return;
       }
+
       if (deviceType === 'PITPAT') {
         const { makePitPatPacket } = await import('./pitpat-packets');
         const pkt = makePitPatPacket('STOP', currentSpeed || 1.0);
         await sendControlCommand(device, pkt[0], Array.from(pkt.slice(1)));
       } else {
-        // FTMS OpCodes: 0x07 Start, 0x08 Stop
         await sendControlCommand(device, 0x08);
       }
       showMessage('Stop command sent');
+
       // Stop session recording and save
       if (isRecording && currentSession) {
         isRecording = false;
         currentSession.endTime = Date.now();
         if (currentSession.dataPoints.length > 0) {
           await saveSession(currentSession);
-          showMessage('Session saved', { type: 'info', timeoutMs: 3000 });
+          updateStatus('Session saved', 'success');
           loadSessions();
         } else {
-          showMessage('Session discarded (no data)', { type: 'info', timeoutMs: 3000 });
+          updateStatus('Session discarded (no data)', 'info');
         }
         currentSession = null;
       }
@@ -481,11 +483,11 @@ export function init() {
     }
   });
 
+  // Speed controls
   speedUpBtn.addEventListener('click', async () => {
     if (!device) return;
     try {
       const nextSpeed = currentSpeed + 0.5;
-      // 0x02: Set Target Speed (Speed in units of 0.01 km/h)
       currentSpeed = nextSpeed;
       if (simulatorRef) {
         simulatorRef.changeSpeed(0.5);
@@ -519,6 +521,91 @@ export function init() {
       showMessage('Speed change failed', { type: 'alert' });
     }
   });
+
+  const simulateConnectBtn = document.getElementById('simulate-connect-btn') as HTMLButtonElement | null;
+  if (simulateConnectBtn) {
+    simulateConnectBtn.addEventListener('click', async () => {
+      await connectSensors(true);
+    });
+  }
+
+  async function connectSensors(simulate: boolean) {
+    try {
+      updateStatus('Scanning for treadmill...');
+      sensorsHandle = await startSensors(collectorOnUpdate, { stepsMode: 'session', simulate });
+      device = sensorsHandle.device;
+      deviceType = sensorsHandle.type;
+      simulatorRef = (sensorsHandle as any).simulator ?? null;
+      const support = sensorsHandle.support ?? { controlSupported: false, speedControlSupported: false, inclineControlSupported: false };
+      if (sensorsHandle.writeChar && deviceType === 'PITPAT') {
+        pitpatWriteChar = sensorsHandle.writeChar;
+        startPitPatHeartbeat(device, pitpatWriteChar);
+      }
+
+      device.addEventListener('gattserverdisconnected', () => {
+        handleDisconnect();
+        stopPitPatHeartbeat();
+      });
+
+      dashboard.classList.remove('opacity-50', 'pointer-events-none');
+      connectBtn.classList.add('hidden');
+      disconnectBtn.classList.remove('hidden');
+      updateStatus('Connected to ' + (device.name || 'Treadmill'), 'success');
+      speedDisplay.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+      // Check Support and Disable Controls
+      if (!support.controlSupported) {
+        controlButtons.forEach(btn => {
+          // hide unsupported controls to avoid confusion
+          btn.disabled = true;
+          btn.classList.add('btn-disabled');
+          btn.classList.add('hidden');
+        });
+        showMessage('Control Point not supported by this treadmill. Controls hidden.', { type: 'warning', timeoutMs: 7000 });
+      } else {
+        if (!support.speedControlSupported) {
+          [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach(btn => {
+             // hide speed related controls if treadmill doesn't support them
+             btn.disabled = true;
+             btn.classList.add('btn-disabled');
+             btn.classList.add('hidden');
+          });
+          showMessage('Speed control not supported. Speed controls hidden.', { type: 'warning', timeoutMs: 5000 });
+        }
+        if (!support.inclineControlSupported) {
+          [inclineUpBtn, inclineDownBtn].forEach(btn => {
+             // hide incline controls if not supported
+             btn.disabled = true;
+             btn.classList.add('btn-disabled');
+             btn.classList.add('hidden');
+          });
+          showMessage('Incline control not supported. Incline controls hidden.', { type: 'warning', timeoutMs: 5000 });
+        }
+      }
+
+      // Some proprietary devices (PitPat) don't support incline control — hide those too
+      if (deviceType === 'PITPAT') {
+        [inclineUpBtn, inclineDownBtn].forEach(btn => {
+          btn.disabled = true;
+          btn.classList.add('btn-disabled');
+          btn.classList.add('hidden');
+        });
+      }
+    } catch (err: any) {
+      if (err.name === 'NotFoundError' || err.name === 'SecurityError') {
+        // User likely canceled the dialog or blocked the request
+        updateStatus(null);
+        console.log('Treadmill: Connection cancelled by user');
+      } else {
+        console.error('Treadmill: Connection error', err);
+        updateStatus(null);
+        resetControlState();
+        showMessage(err.message || 'Connection failed', { type: 'alert', timeoutMs: 10000 });
+      }
+    }
+    // refresh session list when connecting
+    loadSessions();
+  }
 
   inclineUpBtn.addEventListener('click', async () => {
     if (!device) return;

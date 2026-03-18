@@ -31,8 +31,7 @@ export async function startSensors(
   opts?: { stepsMode?: StepsMode; simulate?: boolean }
 ): Promise<SensorsResult> {
   const stepsMode = opts?.stepsMode ?? 'session';
-  const simulateParam = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('simulate_treadmill') === '1';
-  const simulate = Boolean(opts?.simulate) || simulateParam;
+  const simulate = Boolean(opts?.simulate) || false;
 
   // current merged state
   const current: TreadmillData = {};
