@@ -25,14 +25,17 @@ export function showSessionDetails(session: TreadmillSession, sessions?: Treadmi
 	const speeds = s.dataPoints.map(p => p.data.speed ?? 0);
 	const times = s.dataPoints.map(p => p.timestamp - s.startTime);
 	const minV = Math.min(...speeds);
-	const maxV = Math.max(...speeds) || 1;
+	const maxV = Math.max(...speeds);
+
+	const lastTime = times[times.length - 1] || 1;
+	const range = (maxV - minV) || 1;
 
 	ctx.strokeStyle = '#0ea5e9';
 	ctx.lineWidth = 2 * devicePixelRatio;
 	ctx.beginPath();
-	s.dataPoints.forEach((_p, i) => {
-	  const x = (times[i] / times[times.length - 1]) * w;
-	  const y = h - ((speeds[i] - minV) / (maxV - minV || 1)) * h;
+	s.dataPoints.forEach((_, i) => {
+	  const x = (times[i] / lastTime) * w;
+	  const y = h - ((speeds[i] - minV) / range) * h;
 	  if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
 	});
 	ctx.stroke();
