@@ -10,39 +10,40 @@
           </h2>
           <p class="text-base-content/70">Monitor and control your treadmill via Bluetooth FTMS.</p>
         </div>
+
         <div class="flex flex-col items-center gap-4">
-    <div class="flex flex-wrap justify-center gap-2">
-      <button id="connect-btn" class="btn btn-primary">
-        <i data-lucide="bluetooth" class="size-4"></i>
-        Connect Treadmill
-      </button>
-      <button id="disconnect-btn" class="btn btn-outline btn-error hidden">
-        <i data-lucide="bluetooth-off" class="size-4"></i>
-        Disconnect
-      </button>
-    </div>
+          <div class="flex flex-wrap justify-center gap-2">
+            <button id="connect-btn" class="btn btn-primary">
+              <i data-lucide="bluetooth" class="size-4"></i>
+              Connect Treadmill
+            </button>
+            <button id="disconnect-btn" class="btn btn-outline btn-error hidden">
+              <i data-lucide="bluetooth-off" class="size-4"></i>
+              Disconnect
+            </button>
+          </div>
 
-    <!-- Troubleshooting Hint -->
-    <div class="collapse collapse-plus bg-base-200/50 max-w-md">
-      <input type="checkbox" />
-      <div class="collapse-title text-sm font-medium opacity-70">
-        Connection problems?
-      </div>
-      <div class="collapse-content text-xs opacity-60">
-        <ul class="list-disc list-inside space-y-1">
-          <li>Ensure the treadmill is NOT connected to another app/phone.</li>
-          <li>Turn Bluetooth off and on in your system settings.</li>
-          <li>Restart the treadmill (power cycle).</li>
-          <li>If it says "NetworkError", try unpairing/forgetting the device from your system's Bluetooth settings first.</li>
-        </ul>
-      </div>
-    </div>
+          <!-- Troubleshooting Hint -->
+          <div class="collapse collapse-plus bg-base-200/50 max-w-md">
+            <input id="collapse-troubleshoot" type="checkbox" />
+            <label for="collapse-troubleshoot" class="sr-only">Toggle troubleshooting hint</label>
+            <div class="collapse-title text-sm font-medium opacity-70">Connection problems?</div>
+            <div class="collapse-content text-xs opacity-60">
+              <ul class="list-disc list-inside space-y-1">
+                <li>Ensure the treadmill is NOT connected to another app/phone.</li>
+                <li>Turn Bluetooth off and on in your system settings.</li>
+                <li>Restart the treadmill (power cycle).</li>
+                <li>If it says "NetworkError", try unpairing/forgetting the device from your system's Bluetooth settings first.</li>
+              </ul>
+            </div>
+          </div>
 
-    <div id="status-message" class="alert shadow-lg hidden">
-      <i data-lucide="info" class="size-4"></i>
-      <span></span>
-    </div>
-  </div>
+          <div id="status-message" class="alert shadow-lg hidden">
+            <i data-lucide="info" class="size-4"></i>
+            <span></span>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -106,6 +107,15 @@
           <span class="text-xs font-bold opacity-50 uppercase">Steps</span>
           <span id="steps-display" class="text-3xl font-bold tabular-nums">0</span>
           <span class="text-xs font-semibold opacity-40">steps</span>
+        </div>
+      </div>
+
+      <!-- Cadence (Optional, from RSC) -->
+      <div id="cadence-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+        <div class="card-body p-4 items-center gap-1">
+          <span class="text-xs font-bold opacity-50 uppercase">Cadence</span>
+          <span id="cadence-display" class="text-3xl font-bold tabular-nums">--</span>
+          <span class="text-xs font-semibold opacity-40">spm</span>
         </div>
       </div>
 

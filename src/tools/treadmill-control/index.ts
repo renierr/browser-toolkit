@@ -7,6 +7,7 @@ import {
 } from './bluetooth';
 import type { TreadmillDeviceType } from './bluetooth';
 import { type TreadmillData } from './ftms-parser';
+import { subscribeToRSC } from './rsc';
 import { showMessage } from '../../js/ui';
 
 // noinspection JSUnusedGlobalSymbols
@@ -27,6 +28,10 @@ export function init() {
     steps: {
       display: document.getElementById('steps-display')!,
       container: document.getElementById('steps-container')!
+    },
+    cadence: {
+      display: document.getElementById('cadence-display')!,
+      container: document.getElementById('cadence-container')!
     },
     remainingTime: {
       display: document.getElementById('remaining-time-display')!,
@@ -70,6 +75,7 @@ export function init() {
   let device: BluetoothDevice | null = null;
   let deviceType: TreadmillDeviceType | null = null;
   let pitpatWriteChar: BluetoothRemoteGATTCharacteristic | null = null;
+  let rscCleanup: (() => Promise<void>) | null = null;
   let currentSpeed = 0;
   let currentIncline = 0;
 
@@ -118,6 +124,14 @@ export function init() {
       caloriesDisplay.textContent = data.calories.toString();
     }
 
+    // Cadence (from RSC)
+    if (data.cadence !== undefined) {
+      optionalMetrics.cadence.container.classList.remove('hidden');
+      optionalMetrics.cadence.display.textContent = Math.round(data.cadence).toString();
+    } else {
+      optionalMetrics.cadence.container.classList.add('hidden');
+    }
+
     // Handle Optional Metrics
     if (data.remainingTime !== undefined) {
       optionalMetrics.remainingTime.container.classList.remove('hidden');
@@ -147,14 +161,17 @@ export function init() {
       optionalMetrics.metabolicEquivalent.container.classList.remove('hidden');
       optionalMetrics.metabolicEquivalent.display.textContent = data.metabolicEquivalent.toFixed(1);
     }
-    // Steps (PitPat proprietary)
-    if ((data as any).steps !== undefined) {
+    // Steps: prefer cumulativeStrideCount (from RSC or proprietary), fall back to PitPat steps
+    const cumulative = (data.cumulativeStrideCount !== undefined) ? data.cumulativeStrideCount : (data as any).steps;
+    if (cumulative !== undefined) {
       optionalMetrics.steps.container.classList.remove('hidden');
-      optionalMetrics.steps.display.textContent = ((data as any).steps).toString();
+      optionalMetrics.steps.display.textContent = String(cumulative);
+    } else {
+      optionalMetrics.steps.container.classList.add('hidden');
     }
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
     device = null;
     resetControlState();
     dashboard.classList.add('opacity-50', 'pointer-events-none');
@@ -164,6 +181,16 @@ export function init() {
 
     // Reset visibility of optional metrics for next connection
     Object.values(optionalMetrics).forEach(m => m.container.classList.add('hidden'));
+
+    // Stop RSC notifications if we subscribed
+    if (rscCleanup) {
+      try {
+        await rscCleanup();
+      } catch (_) {
+        // ignore
+      }
+      rscCleanup = null;
+    }
 
     // Enable all buttons (reset state)
     controlButtons.forEach(btn => {
@@ -184,6 +211,13 @@ export function init() {
       if (result.writeChar && deviceType === 'PITPAT') {
         pitpatWriteChar = result.writeChar;
         startPitPatHeartbeat(device, pitpatWriteChar);
+      }
+
+      // Subscribe to Running Speed & Cadence if available and store cleanup
+      try {
+        rscCleanup = await subscribeToRSC(device, (d) => onUpdate(d as TreadmillData));
+      } catch (_) {
+        rscCleanup = null;
       }
 
       device.addEventListener('gattserverdisconnected', () => {

@@ -12,6 +12,9 @@ export interface TreadmillData {
   metabolicEquivalent?: number; // METs
   elapsedTime?: number; // seconds
   remainingTime?: number; // seconds
+  cadence?: number; // steps per minute (from RSC)
+  cumulativeStrideCount?: number; // cumulative stride/step counter from RSC or proprietary characteristic
+  // Some devices expose a cumulative stride/step counter (proprietary); if available populate steps
   // PitPat / proprietary fields
   steps?: number;
   status?: string; // e.g. 'Running' | 'Stopped'
@@ -105,7 +108,6 @@ export function parseTreadmillData(value: DataView): TreadmillData {
   // Remaining Time (bit 11)
   if (flags & (1 << 11)) {
     data.remainingTime = value.getUint16(offset, true);
-    offset += 2;
   }
 
   return data;
