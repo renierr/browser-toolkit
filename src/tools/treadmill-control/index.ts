@@ -80,6 +80,7 @@ export function init() {
   let sensorsHandle: SensorsResult | null = null;
   let currentSpeed = 0;
   let currentIncline = 0;
+  let simulatorRef: any = null;
   // Session recording
   const sessionsList = document.getElementById('sessions-list')!;
   const noSessionsRow = document.getElementById('no-sessions')!;
@@ -175,7 +176,7 @@ export function init() {
       optionalMetrics.metabolicEquivalent.display.textContent = data.metabolicEquivalent.toFixed(1);
     }
     // Steps: prefer cumulativeStrideCount (from RSC or proprietary), fall back to PitPat steps
-    const cumulative = (data.cumulativeStrideCount !== undefined) ? data.cumulativeStrideCount : (data as any).steps;
+    const cumulative = (data.cumulativeStrideCount !== undefined) ? data.cumulativeStrideCount : data.steps;
     if (cumulative !== undefined) {
       optionalMetrics.steps.container.classList.remove('hidden');
       optionalMetrics.steps.display.textContent = String(cumulative);
@@ -292,6 +293,7 @@ export function init() {
       sensorsHandle = await startSensors(collectorOnUpdate, { stepsMode: 'session' });
       device = sensorsHandle.device;
       deviceType = sensorsHandle.type;
+      simulatorRef = sensorsHandle.simulator ?? null;
       const support = sensorsHandle.support ?? { controlSupported: false, speedControlSupported: false, inclineControlSupported: false };
       if (sensorsHandle.writeChar && deviceType === 'PITPAT') {
         pitpatWriteChar = sensorsHandle.writeChar;
@@ -364,11 +366,24 @@ export function init() {
     loadSessions();
   });
 
-  disconnectBtn.addEventListener('click', () => {
-    if (device?.gatt?.connected) {
-      device.gatt.disconnect();
-    } else {
-      // Manual reset if a device is stuck
+  disconnectBtn.addEventListener('click', async () => {
+    try {
+      // If using simulator, call cleanup on sensorsHandle which stops the sim and emits disconnect
+      if (sensorsHandle && sensorsHandle.simulator) {
+        await sensorsHandle.cleanup();
+        return;
+      }
+
+      // For real devices, attempt to disconnect the GATT server if present
+      if (device?.gatt?.connected && typeof device.gatt.disconnect === 'function') {
+        device.gatt.disconnect();
+        return;
+      }
+
+      // Manual reset if a device is stuck or no gatt disconnect available
+      handleDisconnect();
+    } catch (err) {
+      console.warn('Disconnect failed, performing manual cleanup', err);
       handleDisconnect();
     }
   });
@@ -379,6 +394,20 @@ export function init() {
   startBtn.addEventListener('click', async () => {
     if (!device) return;
     try {
+      if (simulatorRef) {
+        simulatorRef.start();
+        showMessage('Simulated start command sent');
+        // also start recording
+        if (!isRecording) {
+          isRecording = true;
+          currentSession = {
+            uid: generateShortId(),
+            startTime: Date.now(),
+            dataPoints: [],
+          };
+        }
+        return;
+      }
       if (deviceType === 'PITPAT') {
         // build PitPat packet for START
         const { makePitPatPacket } = await import('./pitpat-packets');
@@ -408,6 +437,23 @@ export function init() {
   stopBtn.addEventListener('click', async () => {
     if (!device) return;
     try {
+      if (simulatorRef) {
+        simulatorRef.stop();
+        showMessage('Simulated stop command sent');
+        if (isRecording && currentSession) {
+          isRecording = false;
+          currentSession.endTime = Date.now();
+          if (currentSession.dataPoints.length > 0) {
+            await saveSession(currentSession);
+            showMessage('Session saved', { type: 'info', timeoutMs: 3000 });
+            loadSessions();
+          } else {
+            showMessage('Session discarded (no data)', { type: 'info', timeoutMs: 3000 });
+          }
+          currentSession = null;
+        }
+        return;
+      }
       if (deviceType === 'PITPAT') {
         const { makePitPatPacket } = await import('./pitpat-packets');
         const pkt = makePitPatPacket('STOP', currentSpeed || 1.0);
@@ -441,6 +487,10 @@ export function init() {
       const nextSpeed = currentSpeed + 0.5;
       // 0x02: Set Target Speed (Speed in units of 0.01 km/h)
       currentSpeed = nextSpeed;
+      if (simulatorRef) {
+        simulatorRef.changeSpeed(0.5);
+        return;
+      }
       if (deviceType === 'PITPAT') {
         const { makePitPatPacket } = await import('./pitpat-packets');
         const pkt = makePitPatPacket('SPEED', currentSpeed || 1.0);
@@ -458,6 +508,11 @@ export function init() {
     if (!device) return;
     try {
       const nextSpeed = Math.max(0, currentSpeed - 0.5);
+      currentSpeed = nextSpeed;
+      if (simulatorRef) {
+        simulatorRef.changeSpeed(-0.5);
+        return;
+      }
       const speedUint16 = Math.round(nextSpeed * 100);
       await sendControlCommand(device, 0x02, [speedUint16 & 0xFF, (speedUint16 >> 8) & 0xFF]);
     } catch (err: any) {
@@ -471,6 +526,10 @@ export function init() {
       const nextIncline = currentIncline + 0.5;
       // 0x03: Set Target Inclination (Units of 0.1%)
       currentIncline = nextIncline;
+      if (simulatorRef) {
+        simulatorRef.changeIncline(0.5);
+        return;
+      }
       if (deviceType === 'PITPAT') {
         // PitPat does not support incline in this implementation; inform user
         showMessage('Incline control not supported for PitPat devices', { type: 'warning', timeoutMs: 3000 });
@@ -488,6 +547,10 @@ export function init() {
     try {
       const nextIncline = currentIncline - 0.5;
       currentIncline = nextIncline;
+      if (simulatorRef) {
+        simulatorRef.changeIncline(-0.5);
+        return;
+      }
       if (deviceType === 'PITPAT') {
         showMessage('Incline control not supported for PitPat devices', { type: 'warning', timeoutMs: 3000 });
       } else {

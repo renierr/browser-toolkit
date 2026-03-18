@@ -144,11 +144,11 @@ export function parsePitPatData(value: DataView): TreadmillData {
   data.speed = rawSpeed / 1000.0; // PitPat uses 1000 == 1.00 kph
   data.distance = rawDist / 1000.0; // raw in meters -> km
   data.calories = calories;
-  (data as any).steps = steps;
+  data.steps = steps;
   data.elapsedTime = Math.round(durationMs / 1000);
-  (data as any).status = status;
+  data.status = status;
   // Provide unit hint
-  (data as any).isMetric = unitMode === 0;
+  data.isMetric = unitMode === 0;
 
   return data;
 }

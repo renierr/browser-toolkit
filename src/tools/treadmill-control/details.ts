@@ -33,7 +33,7 @@ export function showSessionDetails(session: TreadmillSession, sessions?: Treadmi
 		return (isNaN(t) ? 0 : t) - (isNaN(startMs) ? 0 : startMs);
 	});
 	const speeds = s.dataPoints.map(p => {
-		let v: any = (p.data && (p.data as any).speed) ?? 0;
+		let v: any = (p.data && p.data.speed) ?? 0;
 		if (typeof v === 'string') v = v.replace(',', '.');
 		const n = Number(v);
 		return isNaN(n) ? 0 : n;
@@ -65,7 +65,7 @@ export function showSessionDetails(session: TreadmillSession, sessions?: Treadmi
 
 	// compute avg and max speed (coerce strings to numbers safely)
 	const speedVals = current.dataPoints.map(p => {
-	  let v: any = (p.data && (p.data as any).speed);
+	  let v: any = (p.data && p.data.speed);
 	  if (v === undefined || v === null) return null;
 	  if (typeof v === 'string') v = v.replace(',', '.');
 	  const n = Number(v);
@@ -120,9 +120,9 @@ function renderDataTable(session: TreadmillSession, container: HTMLElement) {
 	const tVal: any = (p.timestamp as unknown);
 	const ts = typeof tVal === 'string' ? Date.parse(tVal) : Number(tVal);
 	const relativeTime = formatDuration((isNaN(ts) ? 0 : ts) - (isNaN(startMs) ? 0 : startMs));
-	const speedVal = (p.data && (p.data as any).speed) ?? undefined;
+	const speedVal = (p.data && p.data.speed) ?? undefined;
 	const speed = speedVal !== undefined ? `${Number(speedVal).toFixed(1)} km/h` : '--';
-	const inclineVal = (p.data && (p.data as any).inclination) ?? undefined;
+	const inclineVal = (p.data && p.data.inclination) ?? undefined;
 	const incline = inclineVal !== undefined ? `${Number(inclineVal).toFixed(1)}%` : '--';
 	row.innerHTML = `
 	  <td>${index + 1}</td>
