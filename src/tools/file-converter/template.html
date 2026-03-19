@@ -17,9 +17,7 @@
       <input type="file" id="fc-file-input" class="hidden" multiple />
     </div>
 
-    <div id="fc-file-info" class="mt-4 text-sm text-base-content/70 hidden">
-      <!-- File info will be inserted here -->
-    </div>
+    <div id="fc-file-info" class="mt-4 text-sm text-base-content/70 hidden"></div>
 
     <div id="result-container" class="hidden mt-6">
       <div class="divider">Conversion</div>
@@ -37,15 +35,19 @@
       </div>
 
       <div id="fc-preview" class="hidden mb-4">
-        <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2">
           <span class="text-sm font-medium" id="fc-convert-from"></span>
-          <i data-lucide="arrow-right" class="w-4 h-4 mx-2"></i>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
           <span class="text-sm font-medium" id="fc-convert-to"></span>
         </div>
       </div>
 
       <div class="card-actions justify-end">
-        <button id="fc-download-btn" class="btn btn-primary" disabled>
+        <button id="fc-convert-btn" class="btn btn-primary">
+          <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+          Convert
+        </button>
+        <button id="fc-download-btn" class="btn" disabled>
           <i data-lucide="download" class="w-4 h-4 mr-2"></i>
           Download
         </button>

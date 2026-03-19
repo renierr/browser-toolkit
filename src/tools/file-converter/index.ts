@@ -1,22 +1,23 @@
 import { downloadAsZip, downloadFile, setupFileDropzone } from '../../js/file-utils';
 import { hideProgress, showMessage, showProgress } from '../../js/ui';
-import type { SharedFilesPayload } from '../../js/share-target';
 import { loadSharedFiles } from '../../js/share-target';
+import type { SharedFilesPayload } from '../../js/share-target';
 
 import { convertBuffer } from './lib/converter';
 
-let currentFiles: File[] = [];
-let currentOutputs: { data: Uint8Array; name: string; mime?: string }[] = [];
-let currentTarget = 'markdown';
+type FileEntry = { data: Uint8Array; name: string; mime?: string };
 
-const formatLabels: Record<string, string> = {
+const FORMAT_LABELS: Record<string, string> = {
   markdown: 'Markdown (.md)',
   html: 'HTML (.html)',
   docx: 'DOCX (.docx)',
   epub: 'EPUB (.epub)',
 };
 
-function getFileExtension(name: string): string {
+let files: File[] = [];
+let outputs: FileEntry[] = [];
+
+function getExt(name: string): string {
   const lower = name.toLowerCase();
   if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'HTML';
   if (lower.endsWith('.md') || lower.endsWith('.markdown')) return 'Markdown';
@@ -25,164 +26,117 @@ function getFileExtension(name: string): string {
   return name.split('.').pop()?.toUpperCase() || 'Unknown';
 }
 
-function updateUI() {
-  const resultContainer = document.getElementById('result-container');
-  const fileInfo = document.getElementById('fc-file-info');
-  const preview = document.getElementById('fc-preview');
-  const convertFrom = document.getElementById('fc-convert-from');
-  const convertTo = document.getElementById('fc-convert-to');
-  const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement | null;
-  const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement | null;
+function formatSize(bytes: number): string {
+  return `${Math.round(bytes / 1024)} KB`;
+}
 
-  if (
-    !resultContainer ||
-    !fileInfo ||
-    !preview ||
-    !convertFrom ||
-    !convertTo ||
-    !downloadBtn ||
-    !formatSel
-  )
-    return;
+function renderFileInfo() {
+  const container = document.getElementById('fc-file-info')!;
+  const resultContainer = document.getElementById('result-container')!;
+  const preview = document.getElementById('fc-preview')!;
+  const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
+  const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement;
 
-  if (currentFiles.length === 0) {
+  if (files.length === 0) {
+    container.classList.add('hidden');
     resultContainer.classList.add('hidden');
-    fileInfo.classList.add('hidden');
-    downloadBtn.disabled = true;
     return;
   }
 
+  container.classList.remove('hidden');
   resultContainer.classList.remove('hidden');
-  fileInfo.classList.remove('hidden');
+  downloadBtn.disabled = outputs.length === 0;
 
-  if (currentFiles.length === 1) {
-    const file = currentFiles[0];
-    fileInfo.innerHTML = `
+  if (files.length === 1) {
+    const f = files[0];
+    container.innerHTML = `
       <div class="flex items-center gap-2">
         <i data-lucide="file-text" class="w-4 h-4"></i>
-        <span class="font-medium">${file.name}</span>
-        <span class="opacity-60">— ${Math.round(file.size / 1024)} KB</span>
+        <span class="font-medium">${f.name}</span>
+        <span class="opacity-60">— ${formatSize(f.size)}</span>
       </div>
     `;
   } else {
-    const fileList = currentFiles
+    const fileList = files
       .map(
         (f, i) => `
       <div class="flex items-center gap-2 py-1">
-        <button class="btn btn-ghost btn-xs" data-remove="${i}">×</button>
+        <button class="btn btn-ghost btn-xs fc-remove" data-index="${i}">×</button>
         <span class="truncate flex-1">${f.name}</span>
-        <span class="opacity-60 text-sm">${Math.round(f.size / 1024)} KB</span>
+        <span class="opacity-60 text-sm">${formatSize(f.size)}</span>
       </div>
     `
       )
       .join('');
-    fileInfo.innerHTML = `
+    container.innerHTML = `
       <div class="flex items-center justify-between mb-2">
         <div class="flex items-center gap-2">
           <i data-lucide="files" class="w-4 h-4"></i>
-          <span class="font-medium">${currentFiles.length} files selected</span>
+          <span class="font-medium">${files.length} files selected</span>
         </div>
         <button class="btn btn-ghost btn-xs" id="fc-clear-all">Clear all</button>
       </div>
       <div class="text-sm">${fileList}</div>
     `;
-    fileInfo.querySelector('#fc-clear-all')?.addEventListener('click', () => {
-      currentFiles = [];
-      currentOutputs = [];
-      updateUI();
+    container.querySelector('#fc-clear-all')?.addEventListener('click', () => {
+      files = [];
+      outputs = [];
+      renderFileInfo();
     });
-    fileInfo.querySelectorAll('[data-remove]').forEach((btn) => {
+    container.querySelectorAll('.fc-remove').forEach((btn) => {
       btn.addEventListener('click', (e) => {
-        const idx = parseInt((e.target as HTMLElement).getAttribute('data-remove') || '0');
-        currentFiles.splice(idx, 1);
-        currentOutputs = [];
-        updateUI();
+        const idx = parseInt((e.target as HTMLElement).getAttribute('data-index') || '0');
+        files.splice(idx, 1);
+        outputs = [];
+        renderFileInfo();
       });
     });
   }
 
-  currentTarget = formatSel.value;
-
-  convertFrom.textContent = getFileExtension(currentFiles[0].name);
-  convertTo.textContent = formatLabels[currentTarget] || currentTarget;
+  const target = formatSel.value;
   preview.classList.remove('hidden');
-
-  downloadBtn.disabled = currentOutputs.length === 0;
+  document.getElementById('fc-convert-from')!.textContent = getExt(files[0].name);
+  document.getElementById('fc-convert-to')!.textContent = FORMAT_LABELS[target] || target;
 }
 
 // noinspection JSUnusedGlobalSymbols
 export default async function init(payload?: SharedFilesPayload) {
-  const dropzone = document.getElementById('dropzone');
-  const input = document.getElementById('fc-file-input') as HTMLInputElement | null;
-  const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement | null;
-  const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement | null;
+  const convertBtn = document.getElementById('fc-convert-btn') as HTMLButtonElement;
+  const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement;
+  const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
 
-  if (!dropzone || !input || !formatSel || !downloadBtn) return;
+  if (!convertBtn || !downloadBtn || !formatSel) return;
 
-  setupFileDropzone('dropzone', 'fc-file-input', (files) => {
-    const newFiles = Array.from(files);
+  setupFileDropzone('dropzone', 'fc-file-input', (newFiles) => {
     for (const file of newFiles) {
-      if (!currentFiles.some((f) => f.name === file.name && f.size === file.size)) {
-        currentFiles.push(file);
+      if (!files.some((f) => f.name === file.name && f.size === file.size)) {
+        files.push(file);
       }
     }
-    currentOutputs = [];
-    updateUI();
+    outputs = [];
+    renderFileInfo();
   });
 
   formatSel.addEventListener('change', () => {
-    currentTarget = formatSel.value;
-    const convertTo = document.getElementById('fc-convert-to');
-    if (convertTo) convertTo.textContent = formatLabels[currentTarget] || currentTarget;
+    const target = formatSel.value;
+    document.getElementById('fc-convert-to')!.textContent = FORMAT_LABELS[target] || target;
   });
 
   if (payload?.sharedFiles?.length) {
-    currentFiles = payload.sharedFiles.slice();
-    updateUI();
+    files = payload.sharedFiles.slice();
+    renderFileInfo();
   }
 
   try {
-    const shared = await loadSharedFiles([] as any).catch(() => []);
-    if (shared?.length && currentFiles.length === 0) {
-      currentFiles = shared.slice();
-      updateUI();
+    const shared = await loadSharedFiles([] as unknown as string[]).catch(() => []);
+    if (shared?.length && files.length === 0) {
+      files = shared.slice();
+      renderFileInfo();
     }
   } catch {}
 
-  downloadBtn.addEventListener('click', async () => {
-    if (!currentOutputs.length) return;
-    downloadBtn.disabled = true;
-
-    try {
-      if (currentOutputs.length === 1) {
-        const o = currentOutputs[0];
-        await downloadFile(o.data, o.name, o.mime || 'application/octet-stream');
-        showMessage('File downloaded.', { type: 'info', timeoutMs: 3000 });
-      } else {
-        const files = currentOutputs.map((o) => ({ data: o.data.buffer, name: o.name }));
-        await downloadAsZip(files, 'converted-files.zip');
-        showMessage(`${currentOutputs.length} files downloaded.`, {
-          type: 'info',
-          timeoutMs: 3000,
-        });
-      }
-    } finally {
-      downloadBtn.disabled = false;
-    }
-  });
-
-  const convertBtn = document.createElement('button');
-  convertBtn.id = 'fc-convert-btn';
-  convertBtn.className = 'btn btn-primary';
-  convertBtn.innerHTML = '<i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i> Convert';
-
-  const actionsDiv = downloadBtn.parentElement;
-  if (actionsDiv) {
-    actionsDiv.insertBefore(convertBtn, downloadBtn);
-  }
-
   convertBtn.addEventListener('click', async () => {
-    if (!currentFiles.length) {
+    if (!files.length) {
       showMessage('Please upload a file first', { type: 'warning' });
       return;
     }
@@ -191,45 +145,57 @@ export default async function init(payload?: SharedFilesPayload) {
     convertBtn.disabled = true;
 
     try {
+      outputs = [];
       showProgress('Loading Pandoc…', { visible: true, progress: 0, tooLongMs: 5000 });
-      currentOutputs = [];
 
-      for (let i = 0; i < currentFiles.length; i++) {
-        const f = currentFiles[i];
-        showProgress(`Converting ${i + 1}/${currentFiles.length}…`, {
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        showProgress(`Converting ${i + 1}/${files.length}…`, {
           visible: true,
           progress: 0,
           tooLongMs: 10000,
         });
-
-        const arrayBuffer = await f.arrayBuffer();
-        const result = await convertBuffer(
-          new Uint8Array(arrayBuffer),
-          f.name,
-          target,
-          (progress) => {
-            showProgress(`Converting ${i + 1}/${currentFiles.length}…`, {
-              visible: true,
-              progress,
-              tooLongMs: 10000,
-            });
-          }
-        );
-        currentOutputs.push(result);
+        const buffer = await f.arrayBuffer();
+        const result = await convertBuffer(new Uint8Array(buffer), f.name, target);
+        outputs.push(result);
       }
 
-      updateUI();
+      renderFileInfo();
       showMessage('Conversion complete!', { type: 'info', timeoutMs: 3000 });
-    } catch (e: any) {
-      console.error('Conversion error:', e);
-      showMessage('Conversion failed: ' + (e?.message || String(e)), { type: 'alert' });
+    } catch (e: unknown) {
+      showMessage('Conversion failed: ' + (e instanceof Error ? e.message : String(e)), {
+        type: 'alert',
+      });
     } finally {
       convertBtn.disabled = false;
       hideProgress();
     }
   });
 
-  if ((window as any).lucide) updateUI();
+  downloadBtn.addEventListener('click', async () => {
+    if (!outputs.length) return;
+    downloadBtn.disabled = true;
 
-  return () => {};
+    try {
+      if (outputs.length === 1) {
+        const o = outputs[0];
+        await downloadFile(o.data, o.name, o.mime || 'application/octet-stream');
+      } else {
+        await downloadAsZip(
+          outputs.map((o) => ({ data: o.data.buffer, name: o.name })),
+          'converted-files.zip'
+        );
+      }
+      showMessage('Download started.', { type: 'info', timeoutMs: 3000 });
+    } finally {
+      downloadBtn.disabled = false;
+    }
+  });
+
+  renderFileInfo();
+
+  return () => {
+    files = [];
+    outputs = [];
+  };
 }
