@@ -1,0 +1,20 @@
+{
+  "name": "File Converter",
+  "description": "Convert documents between common formats.",
+  "draft": false,
+  "example": false,
+  "icon": "file-text",
+  "sectionId": "utilities",
+  "shareTarget": {
+    "accept": [
+      "text/*",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/xhtml+xml",
+      "text/markdown",
+      "text/html",
+      "application/epub+zip"
+    ]
+  }
+}
+

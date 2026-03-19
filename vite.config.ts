@@ -238,6 +238,13 @@ export default defineConfig({
         replacement: path.resolve(__dirname, 'src/tools/video-transcoder/node_modules/@ffmpeg/$1'),
       },
       {
+        find: /^pandoc-wasm\/src\/(.*)$/,
+        replacement: path.resolve(
+          __dirname,
+          'src/tools/file-converter/node_modules/pandoc-wasm/src/$1'
+        ),
+      },
+      {
         find: 'lucide',
         replacement: path.resolve(__dirname, 'node_modules/lucide/dist/esm/lucide.js'),
       },
@@ -254,11 +261,18 @@ export default defineConfig({
         pdf: path.resolve(__dirname, 'pdf.html'),
       },
     },
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
   },
   optimizeDeps: {
     include: ['lucide'],
-    exclude: ['mupdf', '@ffmpeg/core', '@ffmpeg/ffmpeg', '@ffmpeg/util', 'onnxruntime-web'],
+    exclude: [
+      'mupdf',
+      'pandoc-wasm',
+      '@ffmpeg/core',
+      '@ffmpeg/ffmpeg',
+      '@ffmpeg/util',
+      'onnxruntime-web',
+    ],
   },
   assetsInclude: ['**/*.wasm'],
 });

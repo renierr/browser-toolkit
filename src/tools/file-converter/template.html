@@ -1,0 +1,55 @@
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-2">File Converter</h2>
+    <p class="text-base-content/70 mb-6">Convert documents between common formats using Pandoc.</p>
+
+    <div
+      id="dropzone"
+      class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3"
+    >
+      <div class="flex flex-col items-center gap-2">
+        <div class="text-base-content/30 text-4xl">
+          <i data-lucide="upload-cloud"></i>
+        </div>
+        <p class="text-lg font-medium">Click or drag files here</p>
+        <p class="text-sm text-base-content/50">Supports HTML, Markdown, DOCX, EPUB</p>
+      </div>
+      <input type="file" id="fc-file-input" class="hidden" multiple />
+    </div>
+
+    <div id="fc-file-info" class="mt-4 text-sm text-base-content/70 hidden">
+      <!-- File info will be inserted here -->
+    </div>
+
+    <div id="result-container" class="hidden mt-6">
+      <div class="divider">Conversion</div>
+
+      <div class="form-control w-full max-w-xs mb-4">
+        <label class="label">
+          <span class="label-text font-medium">Target format</span>
+        </label>
+        <select id="fc-target-format" class="select select-bordered">
+          <option value="markdown">Markdown (.md)</option>
+          <option value="html">HTML (.html)</option>
+          <option value="docx">DOCX (.docx)</option>
+          <option value="epub">EPUB (.epub)</option>
+        </select>
+      </div>
+
+      <div id="fc-preview" class="hidden mb-4">
+        <div class="flex justify-between items-center">
+          <span class="text-sm font-medium" id="fc-convert-from"></span>
+          <i data-lucide="arrow-right" class="w-4 h-4 mx-2"></i>
+          <span class="text-sm font-medium" id="fc-convert-to"></span>
+        </div>
+      </div>
+
+      <div class="card-actions justify-end">
+        <button id="fc-download-btn" class="btn btn-primary" disabled>
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+          Download
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
