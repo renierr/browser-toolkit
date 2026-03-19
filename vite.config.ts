@@ -144,6 +144,8 @@ export default defineConfig({
             action: './index.html',
             accept: {
               'application/pdf': ['.pdf'],
+              'text/markdown': ['.md', '.markdown'],
+              'text/x-markdown': ['.md', '.markdown'],
               'text/*': [
                 '.txt',
                 '.json',
@@ -152,7 +154,6 @@ export default defineConfig({
                 '.css',
                 '.js',
                 '.ts',
-                '.md',
                 '.yaml',
                 '.yml',
                 '.py',

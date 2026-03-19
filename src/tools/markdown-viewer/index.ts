@@ -2,6 +2,7 @@ import { setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target';
 import { createMarkdownRenderer } from './markdown-renderer';
+import { MarkdownParser } from 'overtype/parser';
 
 interface State {
   isSourceView: boolean;
@@ -29,6 +30,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
   const iconEye = document.getElementById('icon-eye') as HTMLElement;
   const renderedContent = document.getElementById('rendered-content') as HTMLElement;
   const sourceView = document.getElementById('source-view') as HTMLElement;
+  const newFileBtn = document.getElementById('new-file-btn') as HTMLButtonElement;
 
   setupFileDropzone('dropzone', 'file-input', (files) => {
     loadFile(files[0]);
@@ -37,6 +39,10 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
   toggleBtn.addEventListener('click', () => {
     state.isSourceView = !state.isSourceView;
     updateView();
+  });
+
+  newFileBtn.addEventListener('click', () => {
+    resetViewer();
   });
 
   const handleSharedFiles = (files: File[]) => {
@@ -74,9 +80,10 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
       viewer.classList.add('flex');
 
       renderedContent.innerHTML = state.renderedHtml;
-      sourceView.textContent = state.currentContent;
+      sourceView.innerHTML = MarkdownParser.parse(state.currentContent);
 
       updateView();
+      renderedContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
     };
 
     reader.onerror = () => {
@@ -112,7 +119,22 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
     );
   }
 
+  function resetViewer() {
+    state.isSourceView = false;
+    state.currentFile = null;
+    state.currentContent = '';
+    state.renderedHtml = '';
+    fileName.textContent = '';
+    renderedContent.innerHTML = '';
+    sourceView.innerHTML = '';
+    viewer.classList.remove('flex');
+    viewer.classList.add('hidden');
+    dropzone.classList.remove('hidden');
+    updateView();
+  }
+
   return () => {
     toggleBtn.removeEventListener('click', () => {});
+    newFileBtn.removeEventListener('click', () => {});
   };
 }

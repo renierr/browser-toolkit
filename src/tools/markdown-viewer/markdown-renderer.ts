@@ -1,5 +1,4 @@
 import MarkdownIt from 'markdown-it';
-import anchorPlugin from 'markdown-it-anchor';
 import { bare as emoji } from 'markdown-it-emoji';
 import footnote from 'markdown-it-footnote';
 import taskLists from 'markdown-it-task-lists';
@@ -22,10 +21,6 @@ export function createMarkdownRenderer(): MarkdownRenderer {
     breaks: true,
   });
 
-  md.use(anchorPlugin, {
-    permalink: anchorPlugin.permalink.headerLink(),
-    slugify: slugify,
-  });
   md.use(emoji);
   md.use(footnote);
   md.use(taskLists, { enabled: true, label: true, labelAfter: true });
@@ -76,15 +71,6 @@ function renderContainer(tokens: Token[], idx: number, alertClass: string): stri
     return `<div class="alert ${alertClass} shadow-lg my-3">${title ? `<span class="font-semibold uppercase text-xs">${escapeHtml(title)}</span>` : ''}`;
   }
   return '</div>\n';
-}
-
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/[\s_-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
 
 function escapeHtml(str: string): string {
