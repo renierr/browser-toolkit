@@ -364,6 +364,30 @@ export function throttleTrailing<T extends (...args: any[]) => any>(fn: T, wait 
 let wakeLockSentinel: WakeLockSentinel | null = null;
 let wakeLockCount = 0;
 
+function showWakeLockIndicator() {
+  try {
+    const el = document.getElementById('wake-lock-indicator');
+    if (el) {
+      el.classList.remove('hidden');
+      el.setAttribute('aria-hidden', 'false');
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
+function hideWakeLockIndicator() {
+  try {
+    const el = document.getElementById('wake-lock-indicator');
+    if (el) {
+      el.classList.add('hidden');
+      el.setAttribute('aria-hidden', 'true');
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
 async function requestWakeLockInternal() {
   if (!('wakeLock' in navigator) || wakeLockCount === 0 || wakeLockSentinel) return;
   try {
@@ -400,6 +424,7 @@ export function acquireWakeLock(): () => void {
   if (wakeLockCount === 1) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     requestWakeLockInternal();
+    showWakeLockIndicator();
   }
 
   let released = false;
@@ -415,6 +440,7 @@ export function acquireWakeLock(): () => void {
         wakeLockSentinel = null;
       }
       console.log('Wake Lock fully released');
+      hideWakeLockIndicator();
     }
   };
 }
