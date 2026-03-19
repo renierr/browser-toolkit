@@ -1,0 +1,9 @@
+{
+  "name": "Markdown Viewer",
+  "description": "Render and view Markdown files with GFM support, task lists, footnotes, and more",
+  "icon": "file-text",
+  "sectionId": "general",
+  "shareTarget": {
+    "accept": ["text/markdown", "text/x-markdown"]
+  }
+}
