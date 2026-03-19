@@ -11,6 +11,7 @@ import { saveSession, getAllSessions, deleteSession, type TreadmillSession } fro
 import * as details from './details';
 import { generateShortId } from '../heart-rate-monitor/utils';
 import { showMessage } from '../../js/ui';
+import { acquireWakeLock } from '../../js/utils';
 
 // noinspection JSUnusedGlobalSymbols
 export function init() {
@@ -90,6 +91,7 @@ export function init() {
 
   let isRecording = false;
   let currentSession: TreadmillSession | null = null;
+  let releaseWakeLock: (() => void) | null = null;
 
   details.initDetails();
 
@@ -386,6 +388,10 @@ export function init() {
       console.warn('Disconnect failed, performing manual cleanup', err);
       handleDisconnect();
     }
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+    }
   });
 
   // Control Point Commands
@@ -405,6 +411,7 @@ export function init() {
             startTime: Date.now(),
             dataPoints: [],
           };
+          releaseWakeLock = acquireWakeLock();
         }
         return;
       }
@@ -427,6 +434,7 @@ export function init() {
           startTime: Date.now(),
           dataPoints: [],
         };
+        releaseWakeLock = acquireWakeLock();
         showMessage('Recording session...', { type: 'info', timeoutMs: 3000 });
       }
     } catch (err: any) {
@@ -451,6 +459,10 @@ export function init() {
           } else {
             updateStatus('Session discarded (no data)', 'info');
           }
+          if (releaseWakeLock) {
+            releaseWakeLock();
+            releaseWakeLock = null;
+          }
           currentSession = null;
         }
         return;
@@ -466,18 +478,22 @@ export function init() {
       showMessage('Stop command sent');
 
       // Stop session recording and save
-      if (isRecording && currentSession) {
-        isRecording = false;
-        currentSession.endTime = Date.now();
-        if (currentSession.dataPoints.length > 0) {
-          await saveSession(currentSession);
-          updateStatus('Session saved', 'success');
-          loadSessions();
-        } else {
-          updateStatus('Session discarded (no data)', 'info');
+        if (isRecording && currentSession) {
+          isRecording = false;
+          currentSession.endTime = Date.now();
+          if (currentSession.dataPoints.length > 0) {
+            await saveSession(currentSession);
+            updateStatus('Session saved', 'success');
+            loadSessions();
+          } else {
+            updateStatus('Session discarded (no data)', 'info');
+          }
+          if (releaseWakeLock) {
+            releaseWakeLock();
+            releaseWakeLock = null;
+          }
+          currentSession = null;
         }
-        currentSession = null;
-      }
     } catch (err: any) {
       showMessage(err.message || 'Failed to stop', { type: 'alert' });
     }
@@ -705,6 +721,10 @@ export function init() {
   return () => {
     if (device?.gatt?.connected) {
       device.gatt.disconnect();
+    }
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
     }
   };
 }

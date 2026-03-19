@@ -1,6 +1,7 @@
 import { connectHeartRate, type HeartRateUpdate } from './bluetooth';
 import { deleteSession, getAllSessions, type HeartRateSession, saveSession } from './db';
 import { showMessage } from '../../js/ui';
+import { acquireWakeLock } from '../../js/utils';
 import { formatDuration, generateShortId } from './utils';
 import { EKGGraph } from './graph';
 import { initDetails, showSessionDetails } from './details';
@@ -29,6 +30,7 @@ export function init() {
   let device: BluetoothDevice | null = null;
   let isRecording = false;
   let currentSession: HeartRateSession | null = null;
+  let releaseWakeLock: (() => void) | null = null;
   let recordingStartTime: number | null = null;
   let timerInterval: number | null = null;
 
@@ -175,6 +177,7 @@ export function init() {
       dataPoints: [],
     };
 
+    releaseWakeLock = acquireWakeLock();
     recordBtn.innerHTML = '<i data-lucide="square" class="fill-current"></i> Stop Recording';
     recordingStatus.classList.remove('hidden');
     updateStatus('Recording started', 'success');
@@ -205,6 +208,11 @@ export function init() {
       updateStatus('Session discarded (no data)', 'info');
     }
 
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+    }
+
     currentSession = null;
     recordingStartTime = null;
     recordBtn.innerHTML = '<i data-lucide="circle" class="fill-current"></i> Start Recording';
@@ -226,6 +234,10 @@ export function init() {
     ekgContainer.classList.add('hidden');
     updateStatus(null, 'info', true);
     updateStatus('Device disconnected');
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+    }
   };
 
   connectBtn.addEventListener('click', async () => {
@@ -322,6 +334,10 @@ export function init() {
     if (timerInterval) clearInterval(timerInterval);
     if (device?.gatt?.connected) {
       device.gatt.disconnect();
+    }
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
     }
   };
 }
