@@ -2,6 +2,7 @@ import { downloadAsZip, downloadFile, setupFileDropzone } from '../../js/file-ut
 import { hideProgress, showMessage, showProgress } from '../../js/ui';
 import { loadSharedFiles } from '../../js/share-target';
 import type { SharedFilesPayload } from '../../js/share-target';
+import { identifyFileType, isPandocSupportedInput, getFileTypeLabel } from '../../js/magic-bytes';
 
 import { convertBuffer } from './lib/converter';
 
@@ -53,6 +54,7 @@ export default async function init(payload?: SharedFilesPayload) {
       const f = files[0];
       container.innerHTML = `
         <div class="flex items-center gap-2">
+          <button class="btn btn-ghost btn-xs fc-remove" data-index="0">×</button>
           <i data-lucide="file-text" class="w-4 h-4"></i>
           <span class="font-medium">${f.name}</span>
           <span class="opacity-60">— ${formatSize(f.size)}</span>
@@ -80,20 +82,21 @@ export default async function init(payload?: SharedFilesPayload) {
         </div>
         <div class="text-sm">${fileList}</div>
       `;
-      container.querySelector('#fc-clear-all')?.addEventListener('click', () => {
-        files.length = 0;
+    }
+
+    container.querySelector('#fc-clear-all')?.addEventListener('click', () => {
+      files.length = 0;
+      outputs.length = 0;
+      renderFileInfo();
+    });
+    container.querySelectorAll('.fc-remove').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt((e.target as HTMLElement).getAttribute('data-index') || '0');
+        files.splice(idx, 1);
         outputs.length = 0;
         renderFileInfo();
       });
-      container.querySelectorAll('.fc-remove').forEach((btn) => {
-        btn.addEventListener('click', (e) => {
-          const idx = parseInt((e.target as HTMLElement).getAttribute('data-index') || '0');
-          files.splice(idx, 1);
-          outputs.length = 0;
-          renderFileInfo();
-        });
-      });
-    }
+    });
 
     const target = formatSel.value;
     preview.classList.remove('hidden');
@@ -135,6 +138,76 @@ export default async function init(payload?: SharedFilesPayload) {
     }
   } catch {}
 
+  const SUPPORTED_EXTENSIONS = new Set([
+    'html',
+    'htm',
+    'xhtml',
+    'md',
+    'markdown',
+    'mdown',
+    'mkd',
+    'mkdn',
+    'docx',
+    'doc',
+    'epub',
+    'xml',
+    'txt',
+    'rtf',
+    'odt',
+    'latex',
+    'tex',
+    'rst',
+    'org',
+    'textile',
+    'jira',
+    'twiki',
+    'creole',
+    'docbook',
+    'fb2',
+    'opml',
+    'bib',
+    'csljson',
+  ]);
+
+  function getExtension(name: string): string {
+    return name.split('.').pop()?.toLowerCase() || '';
+  }
+
+  const validateFiles = async (): Promise<{
+    valid: File[];
+    skipped: { file: File; reason: string }[];
+  }> => {
+    const valid: File[] = [];
+    const skipped: { file: File; reason: string }[] = [];
+
+    for (const f of files) {
+      const ext = getExtension(f.name);
+
+      if (SUPPORTED_EXTENSIONS.has(ext)) {
+        valid.push(f);
+        continue;
+      }
+
+      const sample = await f.slice(0, 8192).arrayBuffer();
+      const detected = identifyFileType(new Uint8Array(sample));
+
+      if (detected) {
+        if (isPandocSupportedInput(detected.type)) {
+          valid.push(f);
+        } else {
+          skipped.push({
+            file: f,
+            reason: getFileTypeLabel(detected.type),
+          });
+        }
+      } else {
+        skipped.push({ file: f, reason: 'Unknown file type' });
+      }
+    }
+
+    return { valid, skipped };
+  };
+
   convertBtn.addEventListener('click', async () => {
     if (!files.length) {
       showMessage('Please upload a file first', { type: 'warning' });
@@ -145,12 +218,25 @@ export default async function init(payload?: SharedFilesPayload) {
     convertBtn.disabled = true;
 
     try {
+      showProgress('Validating files…', { visible: true, progress: 0 });
+      const { valid, skipped } = await validateFiles();
+
+      if (skipped.length > 0) {
+        const skippedList = skipped.map((s) => `${s.file.name} (${s.reason})`).join(', ');
+        showMessage(`Skipped: ${skippedList}`, { type: 'warning', timeoutMs: 8000 });
+      }
+
+      if (valid.length === 0) {
+        showMessage('No supported files to convert', { type: 'alert' });
+        return;
+      }
+
       outputs.length = 0;
       showProgress('Loading Pandoc…', { visible: true, progress: 0, tooLongMs: 5000 });
 
-      for (let i = 0; i < files.length; i++) {
-        const f = files[i];
-        showProgress(`Converting ${i + 1}/${files.length}…`, {
+      for (let i = 0; i < valid.length; i++) {
+        const f = valid[i];
+        showProgress(`Converting ${i + 1}/${valid.length}…`, {
           visible: true,
           progress: 0,
           tooLongMs: 10000,

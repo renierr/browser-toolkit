@@ -1,7 +1,13 @@
 import { downloadFile, setupFileDropzone } from '../../js/file-utils';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui';
-import { identifyFileType } from './magic-bytes';
-import { BYTES_PER_LINE, formatAscii, formatHex, HexBufferManager, scanForStrings } from './hex-utils';
+import { identifyFileType } from '../../js/magic-bytes';
+import {
+  BYTES_PER_LINE,
+  formatAscii,
+  formatHex,
+  HexBufferManager,
+  scanForStrings,
+} from './hex-utils';
 import type { SharedFilesPayload } from '../../js/share-target';
 
 // noinspection JSUnusedGlobalSymbols
@@ -31,7 +37,9 @@ export default function init(payload?: SharedFilesPayload) {
   const stringsModal = document.getElementById('strings-modal') as HTMLDialogElement | null;
   const stringsMinLenInput = document.getElementById('strings-minlen') as HTMLInputElement | null;
   const stringsScanBtn = document.getElementById('strings-scan-btn') as HTMLButtonElement | null;
-  const stringsCancelBtn = document.getElementById('strings-cancel-btn') as HTMLButtonElement | null;
+  const stringsCancelBtn = document.getElementById(
+    'strings-cancel-btn'
+  ) as HTMLButtonElement | null;
   const stringsClose = document.getElementById('strings-close') as HTMLButtonElement | null;
   const stringsDownload = document.getElementById('strings-download') as HTMLButtonElement | null;
   const stringsResults = document.getElementById('strings-results') as HTMLElement | null;
@@ -622,7 +630,7 @@ export default function init(payload?: SharedFilesPayload) {
               addResultToUI(r);
               if (stringsResults) stringsResults.scrollTop = stringsResults.scrollHeight;
             }
-          }
+          },
         });
 
         if (stringsAbort || stringsAbortController?.signal.aborted) {
@@ -653,7 +661,9 @@ export default function init(payload?: SharedFilesPayload) {
         showMessage('No strings to download', { type: 'warning' });
         return;
       }
-      const lines = lastStringsResult.map((r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`);
+      const lines = lastStringsResult.map(
+        (r) => `${r.offset.toString(16).padStart(8, '0').toUpperCase()}: ${r.text}`
+      );
       const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
       downloadFile(blob, `${currentFile?.name || 'strings'}.strings.txt`);
     };

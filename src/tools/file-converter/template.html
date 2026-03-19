@@ -12,9 +12,17 @@
           <i data-lucide="upload-cloud"></i>
         </div>
         <p class="text-lg font-medium">Click or drag files here</p>
-        <p class="text-sm text-base-content/50">Supports HTML, Markdown, DOCX, EPUB</p>
+        <p class="text-sm text-base-content/50">
+          Supports HTML, Markdown, DOCX, EPUB. Unsupported files will be skipped.
+        </p>
       </div>
-      <input type="file" id="fc-file-input" class="hidden" multiple />
+      <input
+        type="file"
+        id="fc-file-input"
+        class="hidden"
+        multiple
+        accept=".html,.htm,.xhtml,.md,.markdown,.docx,.epub,.xml,.txt"
+      />
     </div>
 
     <div id="fc-file-info" class="mt-4 text-sm text-base-content/70 hidden"></div>
