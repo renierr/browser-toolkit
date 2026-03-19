@@ -65,12 +65,40 @@ function updateUI() {
       </div>
     `;
   } else {
-    fileInfo.innerHTML = `
-      <div class="flex items-center gap-2">
-        <i data-lucide="files" class="w-4 h-4"></i>
-        <span class="font-medium">${currentFiles.length} files selected</span>
+    const fileList = currentFiles
+      .map(
+        (f, i) => `
+      <div class="flex items-center gap-2 py-1">
+        <button class="btn btn-ghost btn-xs" data-remove="${i}">×</button>
+        <span class="truncate flex-1">${f.name}</span>
+        <span class="opacity-60 text-sm">${Math.round(f.size / 1024)} KB</span>
       </div>
+    `
+      )
+      .join('');
+    fileInfo.innerHTML = `
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <i data-lucide="files" class="w-4 h-4"></i>
+          <span class="font-medium">${currentFiles.length} files selected</span>
+        </div>
+        <button class="btn btn-ghost btn-xs" id="fc-clear-all">Clear all</button>
+      </div>
+      <div class="text-sm">${fileList}</div>
     `;
+    fileInfo.querySelector('#fc-clear-all')?.addEventListener('click', () => {
+      currentFiles = [];
+      currentOutputs = [];
+      updateUI();
+    });
+    fileInfo.querySelectorAll('[data-remove]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const idx = parseInt((e.target as HTMLElement).getAttribute('data-remove') || '0');
+        currentFiles.splice(idx, 1);
+        currentOutputs = [];
+        updateUI();
+      });
+    });
   }
 
   currentTarget = formatSel.value;
@@ -92,7 +120,12 @@ export default async function init(payload?: SharedFilesPayload) {
   if (!dropzone || !input || !formatSel || !downloadBtn) return;
 
   setupFileDropzone('dropzone', 'fc-file-input', (files) => {
-    currentFiles = Array.from(files);
+    const newFiles = Array.from(files);
+    for (const file of newFiles) {
+      if (!currentFiles.some((f) => f.name === file.name && f.size === file.size)) {
+        currentFiles.push(file);
+      }
+    }
     currentOutputs = [];
     updateUI();
   });
