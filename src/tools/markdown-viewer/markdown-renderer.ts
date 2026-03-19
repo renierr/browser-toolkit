@@ -1,5 +1,5 @@
 import MarkdownIt from 'markdown-it';
-import { bare as emoji } from 'markdown-it-emoji';
+import { full as emoji } from 'markdown-it-emoji';
 import footnote from 'markdown-it-footnote';
 import taskLists from 'markdown-it-task-lists';
 import container from 'markdown-it-container';
