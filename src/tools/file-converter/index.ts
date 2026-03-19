@@ -14,9 +14,6 @@ const FORMAT_LABELS: Record<string, string> = {
   epub: 'EPUB (.epub)',
 };
 
-let files: File[] = [];
-let outputs: FileEntry[] = [];
-
 function getExt(name: string): string {
   const lower = name.toLowerCase();
   if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'HTML';
@@ -30,77 +27,80 @@ function formatSize(bytes: number): string {
   return `${Math.round(bytes / 1024)} KB`;
 }
 
-function renderFileInfo() {
-  const container = document.getElementById('fc-file-info')!;
-  const resultContainer = document.getElementById('result-container')!;
-  const preview = document.getElementById('fc-preview')!;
-  const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
-  const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement;
-
-  if (files.length === 0) {
-    container.classList.add('hidden');
-    resultContainer.classList.add('hidden');
-    return;
-  }
-
-  container.classList.remove('hidden');
-  resultContainer.classList.remove('hidden');
-  downloadBtn.disabled = outputs.length === 0;
-
-  if (files.length === 1) {
-    const f = files[0];
-    container.innerHTML = `
-      <div class="flex items-center gap-2">
-        <i data-lucide="file-text" class="w-4 h-4"></i>
-        <span class="font-medium">${f.name}</span>
-        <span class="opacity-60">— ${formatSize(f.size)}</span>
-      </div>
-    `;
-  } else {
-    const fileList = files
-      .map(
-        (f, i) => `
-      <div class="flex items-center gap-2 py-1">
-        <button class="btn btn-ghost btn-xs fc-remove" data-index="${i}">×</button>
-        <span class="truncate flex-1">${f.name}</span>
-        <span class="opacity-60 text-sm">${formatSize(f.size)}</span>
-      </div>
-    `
-      )
-      .join('');
-    container.innerHTML = `
-      <div class="flex items-center justify-between mb-2">
-        <div class="flex items-center gap-2">
-          <i data-lucide="files" class="w-4 h-4"></i>
-          <span class="font-medium">${files.length} files selected</span>
-        </div>
-        <button class="btn btn-ghost btn-xs" id="fc-clear-all">Clear all</button>
-      </div>
-      <div class="text-sm">${fileList}</div>
-    `;
-    container.querySelector('#fc-clear-all')?.addEventListener('click', () => {
-      files = [];
-      outputs = [];
-      renderFileInfo();
-    });
-    container.querySelectorAll('.fc-remove').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        const idx = parseInt((e.target as HTMLElement).getAttribute('data-index') || '0');
-        files.splice(idx, 1);
-        outputs = [];
-        renderFileInfo();
-      });
-    });
-  }
-
-  const target = formatSel.value;
-  preview.classList.remove('hidden');
-  document.getElementById('fc-convert-from')!.textContent = getExt(files[0].name);
-  document.getElementById('fc-convert-to')!.textContent = FORMAT_LABELS[target] || target;
-}
-
 // noinspection JSUnusedGlobalSymbols
 export default async function init(payload?: SharedFilesPayload) {
+  const files: File[] = [];
+  const outputs: FileEntry[] = [];
+
+  function renderFileInfo() {
+    const container = document.getElementById('fc-file-info')!;
+    const resultContainer = document.getElementById('result-container')!;
+    const preview = document.getElementById('fc-preview')!;
+    const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
+    const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement;
+
+    if (files.length === 0) {
+      container.classList.add('hidden');
+      resultContainer.classList.add('hidden');
+      return;
+    }
+
+    container.classList.remove('hidden');
+    resultContainer.classList.remove('hidden');
+    downloadBtn.disabled = outputs.length === 0;
+
+    if (files.length === 1) {
+      const f = files[0];
+      container.innerHTML = `
+        <div class="flex items-center gap-2">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span class="font-medium">${f.name}</span>
+          <span class="opacity-60">— ${formatSize(f.size)}</span>
+        </div>
+      `;
+    } else {
+      const fileList = files
+        .map(
+          (f, i) => `
+        <div class="flex items-center gap-2 py-1">
+          <button class="btn btn-ghost btn-xs fc-remove" data-index="${i}">×</button>
+          <span class="truncate flex-1">${f.name}</span>
+          <span class="opacity-60 text-sm">${formatSize(f.size)}</span>
+        </div>
+      `
+        )
+        .join('');
+      container.innerHTML = `
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <i data-lucide="files" class="w-4 h-4"></i>
+            <span class="font-medium">${files.length} files selected</span>
+          </div>
+          <button class="btn btn-ghost btn-xs" id="fc-clear-all">Clear all</button>
+        </div>
+        <div class="text-sm">${fileList}</div>
+      `;
+      container.querySelector('#fc-clear-all')?.addEventListener('click', () => {
+        files.length = 0;
+        outputs.length = 0;
+        renderFileInfo();
+      });
+      container.querySelectorAll('.fc-remove').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          const idx = parseInt((e.target as HTMLElement).getAttribute('data-index') || '0');
+          files.splice(idx, 1);
+          outputs.length = 0;
+          renderFileInfo();
+        });
+      });
+    }
+
+    const target = formatSel.value;
+    preview.classList.remove('hidden');
+    document.getElementById('fc-convert-from')!.textContent = getExt(files[0].name);
+    document.getElementById('fc-convert-to')!.textContent = FORMAT_LABELS[target] || target;
+  }
+
   const convertBtn = document.getElementById('fc-convert-btn') as HTMLButtonElement;
   const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement;
   const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
@@ -113,24 +113,24 @@ export default async function init(payload?: SharedFilesPayload) {
         files.push(file);
       }
     }
-    outputs = [];
+    outputs.length = 0;
     renderFileInfo();
   });
 
   formatSel.addEventListener('change', () => {
-    const target = formatSel.value;
-    document.getElementById('fc-convert-to')!.textContent = FORMAT_LABELS[target] || target;
+    document.getElementById('fc-convert-to')!.textContent =
+      FORMAT_LABELS[formatSel.value] || formatSel.value;
   });
 
   if (payload?.sharedFiles?.length) {
-    files = payload.sharedFiles.slice();
+    files.push(...payload.sharedFiles);
     renderFileInfo();
   }
 
   try {
     const shared = await loadSharedFiles([] as unknown as string[]).catch(() => []);
     if (shared?.length && files.length === 0) {
-      files = shared.slice();
+      files.push(...shared);
       renderFileInfo();
     }
   } catch {}
@@ -145,7 +145,7 @@ export default async function init(payload?: SharedFilesPayload) {
     convertBtn.disabled = true;
 
     try {
-      outputs = [];
+      outputs.length = 0;
       showProgress('Loading Pandoc…', { visible: true, progress: 0, tooLongMs: 5000 });
 
       for (let i = 0; i < files.length; i++) {
@@ -193,9 +193,4 @@ export default async function init(payload?: SharedFilesPayload) {
   });
 
   renderFileInfo();
-
-  return () => {
-    files = [];
-    outputs = [];
-  };
 }
