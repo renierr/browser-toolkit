@@ -382,6 +382,15 @@ function renderOverview() {
   }
 
   searchInput?.addEventListener('input', filterAndRender);
+  searchInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      const grid = document.getElementById('tools-grid');
+      const cards = grid?.querySelectorAll('.card[href^="#"]');
+      if (cards?.length === 1) {
+        (cards[0] as HTMLAnchorElement).click();
+      }
+    }
+  });
   if (clearBtn) {
     clearBtn.addEventListener('click', () => {
       searchInput.value = '';
