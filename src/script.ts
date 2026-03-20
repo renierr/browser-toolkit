@@ -16,7 +16,7 @@ import {
   setupLaunchHandler,
   type SharedFilesPayload,
 } from './js/share-target.ts';
-import { showToolChooser } from './js/tool-chooser.ts';
+import { showToolChooser, getLastUsedMap, setLastUsed } from './js/tool-chooser.ts';
 import { setTools, tools } from './js/tools.ts';
 import { getSettings } from './js/settings.ts';
 import { getMimeTypeFromFileName } from './js/mime-types';
@@ -127,15 +127,12 @@ function renderOverview() {
 
     // Sort tools according to user preference
     // Force to plain string to avoid TypeScript literal narrowing issues
-    const sortBy = (settings.get('sortBy', 'order') as unknown) as string;
+    const sortBy = settings.get('sortBy', 'order') as unknown as string;
     let sorted = [...filtered];
     if (sortBy === 'name') {
       sorted.sort((a, b) => a.name.localeCompare(b.name));
     } else if (sortBy === 'recent') {
-      // Use persisted last-used timestamps in localStorage
-      const KEY = 'bk:lastUsed';
-      const raw = localStorage.getItem(KEY);
-      const map = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+      const map = getLastUsedMap();
       sorted.sort((a, b) => {
         const ta = map[a.path] ?? 0;
         const tb = map[b.path] ?? 0;
@@ -223,73 +220,80 @@ function renderOverview() {
           <div class="text-sm text-muted">${total} tools — Page ${currentPage} / ${totalPages}</div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="flat-list-grid">
+        <div
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+          id="flat-list-grid"
+        >
           ${pageItems.map((tool) => renderToolCard(tool, false, compactMode)).join('')}
         </div>
 
         <div class="mt-4 flex items-center justify-center gap-2" aria-label="Pagination">
-          <button class="btn btn-sm" id="page-prev" ${currentPage <= 1 ? 'disabled' : ''}>Prev</button>
+          <button class="btn btn-sm" id="page-prev" ${currentPage <= 1 ? 'disabled' : ''}>
+            Prev
+          </button>
           <div class="text-sm text-muted px-2">Page ${currentPage} of ${totalPages}</div>
-          <button class="btn btn-sm" id="page-next" ${currentPage >= totalPages ? 'disabled' : ''}>Next</button>
+          <button class="btn btn-sm" id="page-next" ${currentPage >= totalPages ? 'disabled' : ''}>
+            Next
+          </button>
         </div>
       `;
     } else {
       // Render each section as a collapsible block containing its own grid
       outHtml += keysInOrder
-      .map((key) => {
-        const section = sectionMap.get(key)!;
-        const cardsHtml = section.items
-          .map((tool) => renderToolCard(tool, false, compactMode))
-          .join('');
+        .map((key) => {
+          const section = sectionMap.get(key)!;
+          const cardsHtml = section.items
+            .map((tool) => renderToolCard(tool, false, compactMode))
+            .join('');
 
-        // Determine collapsed state: respect stored value unless we're searching -> auto-expand
-        let collapsed = isCollapsedStored(section.meta.id);
-        if (term) collapsed = false; // expand during search to show matches
+          // Determine collapsed state: respect stored value unless we're searching -> auto-expand
+          let collapsed = isCollapsedStored(section.meta.id);
+          if (term) collapsed = false; // expand during search to show matches
 
-        return html`
-          <section class="p-0" id="section-${encodeURIComponent(section.meta.id)}">
-            <div class="">
-              <div class="flex items-start justify-between mb-4">
-                <div class="min-w-0">
-                  <h3 class="text-2xl font-bold text-heading">${section.meta.title}</h3>
-                  ${section.meta.description
-                    ? `<p class="text-sm text-muted mt-1">${section.meta.description}</p>`
-                    : ''}
+          return html`
+            <section class="p-0" id="section-${encodeURIComponent(section.meta.id)}">
+              <div class="">
+                <div class="flex items-start justify-between mb-4">
+                  <div class="min-w-0">
+                    <h3 class="text-2xl font-bold text-heading">${section.meta.title}</h3>
+                    ${section.meta.description
+                      ? `<p class="text-sm text-muted mt-1">${section.meta.description}</p>`
+                      : ''}
+                  </div>
+
+                  <div class="flex items-center ml-4">
+                    <span class="text-sm text-muted mr-3">${section.items.length}</span>
+                    <button
+                      type="button"
+                      class="btn btn-ghost btn-sm p-2"
+                      data-section-toggle="${section.meta.id}"
+                      aria-expanded="${!collapsed}"
+                      aria-controls="section-content-${encodeURIComponent(section.meta.id)}"
+                      title="Toggle section"
+                    >
+                      <i
+                        data-lucide="chevron-down"
+                        class="w-4 h-4 transform ${collapsed
+                          ? ''
+                          : 'rotate-180'} transition-transform"
+                      ></i>
+                    </button>
+                  </div>
                 </div>
 
-                <div class="flex items-center ml-4">
-                  <span class="text-sm text-muted mr-3">${section.items.length}</span>
-                  <button
-                    type="button"
-                    class="btn btn-ghost btn-sm p-2"
-                    data-section-toggle="${section.meta.id}"
-                    aria-expanded="${!collapsed}"
-                    aria-controls="section-content-${encodeURIComponent(section.meta.id)}"
-                    title="Toggle section"
-                  >
-                    <i
-                      data-lucide="chevron-down"
-                      class="w-4 h-4 transform ${collapsed
-                        ? ''
-                        : 'rotate-180'} transition-transform"
-                    ></i>
-                  </button>
+                <div
+                  id="section-content-${encodeURIComponent(section.meta.id)}"
+                  class="${collapsed ? 'hidden' : ''}"
+                >
+                  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    ${cardsHtml}
+                  </div>
                 </div>
               </div>
-
-              <div
-                id="section-content-${encodeURIComponent(section.meta.id)}"
-                class="${collapsed ? 'hidden' : ''}"
-              >
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  ${cardsHtml}
-                </div>
-              </div>
-            </div>
-          </section>
-        `;
-      })
-      .join('');
+            </section>
+          `;
+        })
+        .join('');
     }
 
     grid.innerHTML = outHtml;
@@ -428,16 +432,7 @@ function handleRoute(path: string | null, payload?: any) {
   const doRender = () => {
     if (path) {
       const tool = tools.find((t) => t.path === path);
-      // Persist last-used timestamp for recent sorting
-      try {
-        const KEY = 'bk:lastUsed';
-        const raw = localStorage.getItem(KEY);
-        const map = raw ? (JSON.parse(raw) as Record<string, number>) : {};
-        map[path] = Date.now();
-        localStorage.setItem(KEY, JSON.stringify(map));
-      } catch (e) {
-        // ignore storage errors
-      }
+      setLastUsed(path);
       renderTool(tool, payload);
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     } else {

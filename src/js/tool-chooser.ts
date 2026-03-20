@@ -6,15 +6,23 @@ import { findAllToolsForMimeTypes, type SharedFilesPayload } from './share-targe
 import { showMessage } from './ui.ts';
 import { getSettings } from './settings.ts';
 
-const LAST_USED_KEY = 'bk:lastUsed';
+export function getLastUsedMap(): Record<string, number> {
+  return getSettings('global').get<Record<string, number>>('lastUsed', {});
+}
+
+export function setLastUsed(path: string): void {
+  const settings = getSettings('global');
+  const map = getLastUsedMap();
+  map[path] = Date.now();
+  settings.set('lastUsed', map);
+}
 
 function sortTools(toolsToSort: Tool[], sortBy: string): Tool[] {
   if (sortBy === 'name') {
     return [...toolsToSort].sort((a, b) => a.name.localeCompare(b.name));
   }
   if (sortBy === 'recent') {
-    const raw = localStorage.getItem(LAST_USED_KEY);
-    const map = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    const map = getLastUsedMap();
     return [...toolsToSort].sort((a, b) => {
       const ta = map[a.path] ?? 0;
       const tb = map[b.path] ?? 0;
