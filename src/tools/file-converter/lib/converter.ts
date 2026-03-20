@@ -52,8 +52,14 @@ export async function convertBuffer(
   const to =
     targetInfo.ext === 'md' ? 'markdown' : targetInfo.ext === 'txt' ? 'plaintext' : targetInfo.ext;
 
+  const convertOptions: Record<string, unknown> = { from, to };
+
+  if (targetInfo.ext === 'html') {
+    convertOptions['embed-resources'] = true;
+  }
+
   onProgress?.(5);
-  const result = await convertInput({ from, to }, input, originalName);
+  const result = await convertInput(convertOptions, input, originalName);
   onProgress?.(90);
 
   const output =
