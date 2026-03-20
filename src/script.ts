@@ -19,6 +19,7 @@ import {
 import { showToolChooser } from './js/tool-chooser.ts';
 import { setTools, tools } from './js/tools.ts';
 import { getSettings } from './js/settings.ts';
+import { getMimeTypeFromFileName } from './js/mime-types';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -558,7 +559,7 @@ async function boot() {
   try {
     setupLaunchHandler(async (launchFiles) => {
       if (launchFiles.length > 0) {
-        const mimeTypes = launchFiles.map((f) => f.type || 'application/octet-stream');
+        const mimeTypes = launchFiles.map((f) => getMimeTypeFromFileName(f.type || '', f.name));
         await routeFilesToTool(launchFiles, mimeTypes);
       }
     });

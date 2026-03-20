@@ -16,11 +16,30 @@ export function swShareTargetPlugin(): Plugin {
     if (!existsSync(mimeTypesPath)) return '';
     const source = readFileSync(mimeTypesPath, 'utf-8');
     
-    // Extract MIME_TYPE_FALLBACKS object
-    const mimeTypeMapMatch = source.match(/export const MIME_TYPE_FALLBACKS[^=]*=\s*\{([^}]*)\}/s);
-    const fallbackObj = mimeTypeMapMatch ? mimeTypeMapMatch[1] : '';
+    // Find the MIME_TYPE_FALLBACKS object by counting braces
+    const startIdx = source.indexOf('export const MIME_TYPE_FALLBACKS');
+    let braceCount = 0;
+    let inObject = false;
+    let endIdx = startIdx;
     
-    // Build the inlined utilities
+    for (let i = startIdx; i < source.length; i++) {
+      const char = source[i];
+      if (char === '{') {
+        braceCount++;
+        inObject = true;
+      } else if (char === '}') {
+        braceCount--;
+        if (inObject && braceCount === 0) {
+          endIdx = i + 1;
+          break;
+        }
+      }
+    }
+    
+    const fullObject = source.substring(startIdx, endIdx);
+    const match = fullObject.match(/export const MIME_TYPE_FALLBACKS[^=]*=\s*\{([\s\S]*)\}/);
+    const fallbackObj = match ? match[1] : '';
+    
     return `
 const MIME_TYPE_FALLBACKS = {${fallbackObj}};
 
@@ -38,7 +57,6 @@ function getMimeTypeFromFileName(mime, fileName) {
   }
 
   function transformSwCode(code: string): string {
-    // Remove TypeScript references and imports
     let result = code
       .replace(/\/\/\/ <reference[^>]*>/g, '')
       .replace(/import\s*\{[^}]*\}\s*from\s*'[^']*';/g, '')
