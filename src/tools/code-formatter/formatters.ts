@@ -61,38 +61,95 @@ export function detectFormatFromExtension(filename: string): SupportedFormat | n
   if (!ext) return null;
 
   switch (ext) {
-    case 'json': return 'json';
-    case 'json5': return 'json5';
-    case 'xml': case 'svg': return 'xml';
-    case 'html': case 'htm': return 'html';
-    case 'vue': return 'vue';
-    case 'ts': case 'tsx': case 'mts': case 'cts': return 'typescript';
-    case 'js': case 'jsx': case 'mjs': case 'cjs': return 'javascript';
-    case 'css': return 'css';
-    case 'scss': case 'sass': return 'scss';
-    case 'less': return 'less';
-    case 'sql': return 'sql';
-    case 'java': return 'java';
-    case 'yaml': case 'yml': return 'yaml';
-    case 'md': case 'markdown': return 'markdown';
-    case 'mdx': return 'mdx';
-    case 'graphql': case 'gql': return 'graphql';
-    case 'c': case 'h': return 'c';
-    case 'cpp': case 'hpp': case 'cc': case 'cxx': return 'cpp';
-    case 'cs': return 'csharp';
-    case 'go': return 'go';
-    case 'rs': return 'rust';
-    case 'py': case 'pyw': return 'python';
-    case 'rb': return 'ruby';
-    case 'php': return 'php';
-    case 'swift': return 'swift';
-    case 'kt': case 'kts': return 'kotlin';
-    case 'sh': case 'bash': case 'zsh': return 'bash';
-    case 'ps1': case 'psm1': case 'psd1': return 'powershell';
-    case 'toml': return 'toml';
-    case 'ini': case 'cfg': case 'conf': case 'properties': return 'ini';
-    case 'txt': return 'text';
-    default: return null;
+    case 'json':
+      return 'json';
+    case 'json5':
+      return 'json5';
+    case 'xml':
+    case 'svg':
+      return 'xml';
+    case 'html':
+    case 'htm':
+      return 'html';
+    case 'vue':
+      return 'vue';
+    case 'ts':
+    case 'tsx':
+    case 'mts':
+    case 'cts':
+      return 'typescript';
+    case 'js':
+    case 'jsx':
+    case 'mjs':
+    case 'cjs':
+      return 'javascript';
+    case 'css':
+      return 'css';
+    case 'scss':
+    case 'sass':
+      return 'scss';
+    case 'less':
+      return 'less';
+    case 'sql':
+      return 'sql';
+    case 'java':
+      return 'java';
+    case 'yaml':
+    case 'yml':
+      return 'yaml';
+    case 'md':
+    case 'markdown':
+      return 'markdown';
+    case 'mdx':
+      return 'mdx';
+    case 'graphql':
+    case 'gql':
+      return 'graphql';
+    case 'c':
+    case 'h':
+      return 'c';
+    case 'cpp':
+    case 'hpp':
+    case 'cc':
+    case 'cxx':
+      return 'cpp';
+    case 'cs':
+      return 'csharp';
+    case 'go':
+      return 'go';
+    case 'rs':
+      return 'rust';
+    case 'py':
+    case 'pyw':
+      return 'python';
+    case 'rb':
+      return 'ruby';
+    case 'php':
+      return 'php';
+    case 'swift':
+      return 'swift';
+    case 'kt':
+    case 'kts':
+      return 'kotlin';
+    case 'sh':
+    case 'bash':
+    case 'zsh':
+      return 'bash';
+    case 'ps1':
+    case 'psm1':
+    case 'psd1':
+      return 'powershell';
+    case 'toml':
+      return 'toml';
+    case 'ini':
+    case 'cfg':
+    case 'conf':
+    case 'properties':
+      return 'ini';
+    case 'txt':
+      return 'text';
+    default:
+      return null;
   }
 }
 
@@ -124,14 +181,20 @@ export function detectFormat(input: string): SupportedFormat {
   if (/^<\?(php)?(\s|$)/i.test(trimmed)) return 'php';
 
   // Dockerfile - must have FROM and at least one instruction
-  if (/^FROM\s+\S+/im.test(trimmed) &&
-      /^(RUN|COPY|ADD|CMD|ENTRYPOINT|WORKDIR|ENV|EXPOSE|ARG|LABEL|VOLUME|USER|HEALTHCHECK|ONBUILD|STOPSIGNAL|SHELL)\s/im.test(trimmed)) {
+  if (
+    /^FROM\s+\S+/im.test(trimmed) &&
+    /^(RUN|COPY|ADD|CMD|ENTRYPOINT|WORKDIR|ENV|EXPOSE|ARG|LABEL|VOLUME|USER|HEALTHCHECK|ONBUILD|STOPSIGNAL|SHELL)\s/im.test(
+      trimmed
+    )
+  ) {
     return 'dockerfile';
   }
 
   // JSON - strict structure check
-  if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
-      (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+  if (
+    (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+    (trimmed.startsWith('[') && trimmed.endsWith(']'))
+  ) {
     try {
       JSON.parse(trimmed);
       return 'json';
@@ -150,8 +213,10 @@ export function detectFormat(input: string): SupportedFormat {
   if (trimmed.startsWith('<?xml')) return 'xml';
 
   // Vue SFC - needs template/script/style combination
-  if (/<template[\s>]/i.test(trimmed) &&
-      (/<script[\s>]/i.test(trimmed) || /<style[\s>]/i.test(trimmed))) {
+  if (
+    /<template[\s>]/i.test(trimmed) &&
+    (/<script[\s>]/i.test(trimmed) || /<style[\s>]/i.test(trimmed))
+  ) {
     return 'vue';
   }
 
@@ -159,15 +224,21 @@ export function detectFormat(input: string): SupportedFormat {
   if (/^<!doctype\s+html/i.test(trimmed)) return 'html';
 
   // Angular directives
-  if (/\*ng(If|For|ForOf|Switch|Class|Style|TemplateOutlet)\b/i.test(trimmed) ||
-      /\[(ng(Class|Style|Model)|formControl|formGroup)\]/i.test(trimmed) ||
-      /\(click\)|\(ngSubmit\)|\(change\)/i.test(trimmed)) {
+  if (
+    /\*ng(If|For|ForOf|Switch|Class|Style|TemplateOutlet)\b/i.test(trimmed) ||
+    /\[(ng(Class|Style|Model)|formControl|formGroup)\]/i.test(trimmed) ||
+    /\(click\)|\(ngSubmit\)|\(change\)/i.test(trimmed)
+  ) {
     return 'angular';
   }
 
   // HTML detection
   if (trimmed.startsWith('<') && /<\/\w+>\s*$/.test(trimmed)) {
-    if (/<(html|head|body|div|span|p|a|img|script|link|style|meta|nav|section|article|header|footer|main|aside|form|input|button|table|ul|ol|li|h[1-6]|canvas|svg)[\s>\/]/i.test(trimmed)) {
+    if (
+      /<(html|head|body|div|span|p|a|img|script|link|style|meta|nav|section|article|header|footer|main|aside|form|input|button|table|ul|ol|li|h[1-6]|canvas|svg)[\s>\/]/i.test(
+        trimmed
+      )
+    ) {
       return 'html';
     }
     // XML fallback for other tag-based content
@@ -177,14 +248,20 @@ export function detectFormat(input: string): SupportedFormat {
   }
 
   // SQL - strong keywords at line start
-  if (/^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+(TABLE|DATABASE|INDEX|VIEW|PROCEDURE|FUNCTION)|ALTER\s+TABLE|DROP\s+(TABLE|DATABASE)|WITH\s+\w+\s+AS|TRUNCATE|GRANT|REVOKE|BEGIN|COMMIT|ROLLBACK)\b/im.test(trimmed)) {
+  if (
+    /^\s*(SELECT|INSERT\s+INTO|UPDATE|DELETE\s+FROM|CREATE\s+(TABLE|DATABASE|INDEX|VIEW|PROCEDURE|FUNCTION)|ALTER\s+TABLE|DROP\s+(TABLE|DATABASE)|WITH\s+\w+\s+AS|TRUNCATE|GRANT|REVOKE|BEGIN|COMMIT|ROLLBACK)\b/im.test(
+      trimmed
+    )
+  ) {
     return 'sql';
   }
 
   // GraphQL
-  if (/^\s*(query|mutation|subscription|fragment)\s+\w+/im.test(trimmed) ||
-      /^\s*type\s+\w+\s*(\{|implements)/im.test(trimmed) ||
-      /^\s*(schema|interface|enum|input|scalar|union|directive)\s+/im.test(trimmed)) {
+  if (
+    /^\s*(query|mutation|subscription|fragment)\s+\w+/im.test(trimmed) ||
+    /^\s*type\s+\w+\s*(\{|implements)/im.test(trimmed) ||
+    /^\s*(schema|interface|enum|input|scalar|union|directive)\s+/im.test(trimmed)
+  ) {
     return 'graphql';
   }
 
@@ -198,8 +275,10 @@ export function detectFormat(input: string): SupportedFormat {
   }
 
   // TOML - sections with dots or double brackets
-  if (/^\s*\[[\w.-]+\]\s*$/m.test(trimmed) &&
-      /^\s*\w+\s*=\s*(["']|true|false|\d+|\[)/m.test(trimmed)) {
+  if (
+    /^\s*\[[\w.-]+\]\s*$/m.test(trimmed) &&
+    /^\s*\w+\s*=\s*(["']|true|false|\d+|\[)/m.test(trimmed)
+  ) {
     if (/^\s*\[\[[\w.-]+\]\]/m.test(trimmed)) return 'toml';
     // Check for TOML-style values
     if (/^\s*\w+\s*=\s*\[/m.test(trimmed) || /"""|'''/.test(trimmed)) return 'toml';
@@ -215,22 +294,23 @@ export function detectFormat(input: string): SupportedFormat {
     /__\w+__/.test(trimmed), // Dunder
     /\bself\.\w+/.test(trimmed),
     /^\s*@\w+(\.\w+)*(\([^)]*\))?\s*$/m.test(trimmed), // Decorators
-    /\b(print|len|range|str|int|float|list|dict|set|tuple|True|False|None)\b/.test(trimmed) && !/[;{}]/.test(trimmed),
+    /\b(print|len|range|str|int|float|list|dict|set|tuple|True|False|None)\b/.test(trimmed) &&
+      !/[;{}]/.test(trimmed),
     /\bdef\s+__init__/.test(trimmed),
     /:\s*$/.test(firstLine) && /^\s{4}\S/m.test(trimmed), // Indentation-based
   ].filter(Boolean).length;
 
   // Markdown - multiple indicators
   const mdScore = [
-    /^#{1,6}\s+\S/m.test(trimmed),           // Headers
-    /^\s*[-*+]\s+\S/m.test(trimmed),          // Lists
-    /\[.+?\]\([^)]+\)/.test(trimmed),         // Links
-    /^```(\w+)?$/m.test(trimmed),             // Code blocks
-    /^\s*>\s+\S/m.test(trimmed),              // Blockquotes
-    /\*\*[^*]+\*\*|__[^_]+__/.test(trimmed),  // Bold
-    /\*[^*]+\*|_[^_]+_/.test(trimmed),        // Italic
-    /^\|.+\|$/m.test(trimmed),                // Tables
-    /^[-*_]{3,}\s*$/m.test(trimmed),          // Horizontal rules
+    /^#{1,6}\s+\S/m.test(trimmed), // Headers
+    /^\s*[-*+]\s+\S/m.test(trimmed), // Lists
+    /\[.+?\]\([^)]+\)/.test(trimmed), // Links
+    /^```(\w+)?$/m.test(trimmed), // Code blocks
+    /^\s*>\s+\S/m.test(trimmed), // Blockquotes
+    /\*\*[^*]+\*\*|__[^_]+__/.test(trimmed), // Bold
+    /\*[^*]+\*|_[^_]+_/.test(trimmed), // Italic
+    /^\|.+\|$/m.test(trimmed), // Tables
+    /^[-*_]{3,}\s*$/m.test(trimmed), // Horizontal rules
   ].filter(Boolean).length;
 
   if (mdScore >= 2) {
@@ -254,7 +334,9 @@ export function detectFormat(input: string): SupportedFormat {
 
   // PowerShell - cmdlets and PS-specific syntax
   const psScore = [
-    /\b(Get|Set|New|Remove|Add|Clear|Copy|Move|Rename|Start|Stop|Restart|Test|Update|Write|Read|Out|Invoke|Enable|Disable|Register|Unregister|Import|Export|Convert|Format|Select|Where|Sort|Group|Measure)-\w+\b/.test(trimmed),
+    /\b(Get|Set|New|Remove|Add|Clear|Copy|Move|Rename|Start|Stop|Restart|Test|Update|Write|Read|Out|Invoke|Enable|Disable|Register|Unregister|Import|Export|Convert|Format|Select|Where|Sort|Group|Measure)-\w+\b/.test(
+      trimmed
+    ),
     /\$\w+\s*=/.test(trimmed) && !/\$\{/.test(trimmed), // PS vars but not bash
     /\bparam\s*\(/i.test(trimmed),
     /\[CmdletBinding\(\)\]|\[Parameter\(/i.test(trimmed),
@@ -324,7 +406,9 @@ export function detectFormat(input: string): SupportedFormat {
   const rustScore = [
     /^\s*(pub\s+)?fn\s+\w+/m.test(trimmed),
     /^\s*(pub\s+)?(struct|enum|impl|trait|mod|type)\s+\w+/m.test(trimmed),
-    /\b(let\s+mut|&mut|&str|Vec<|Option<|Result<|Box<|Rc<|Arc<|Some\(|None|Ok\(|Err\()\b/.test(trimmed),
+    /\b(let\s+mut|&mut|&str|Vec<|Option<|Result<|Box<|Rc<|Arc<|Some\(|None|Ok\(|Err\()\b/.test(
+      trimmed
+    ),
     /#\[(derive|allow|cfg|test|inline|must_use)\b/.test(trimmed),
     /\bmatch\s+\w+\s*\{/.test(trimmed),
     /\.unwrap\(\)|\.expect\(|\.iter\(\)|\.collect\(\)/.test(trimmed),
@@ -342,14 +426,16 @@ export function detectFormat(input: string): SupportedFormat {
     /^\s*import\s+(Foundation|UIKit|SwiftUI|Combine|AppKit|CoreData)\b/m.test(trimmed),
     /@(IBOutlet|IBAction|Published|State|Binding|ObservedObject|Environment)\b/.test(trimmed),
     /\b(override|mutating|throws|async|await)\b/.test(trimmed) && /\bfunc\b/.test(trimmed),
-    /\?\.|!\./. test(trimmed), // Optional chaining
+    /\?\.|!\./.test(trimmed), // Optional chaining
   ].filter(Boolean).length;
 
   if (swiftScore >= 2) return 'swift';
 
   // Kotlin
   const kotlinScore = [
-    /^\s*(fun|class|object|interface|sealed\s+class|data\s+class|enum\s+class)\s+\w+/m.test(trimmed),
+    /^\s*(fun|class|object|interface|sealed\s+class|data\s+class|enum\s+class)\s+\w+/m.test(
+      trimmed
+    ),
     /\b(val|var)\s+\w+\s*:\s*\w+/.test(trimmed),
     /^\s*package\s+[\w.]+\s*$/m.test(trimmed) && /\bfun\b/.test(trimmed),
     /\b(suspend|override|lateinit|companion\s+object)\b/.test(trimmed),
@@ -364,7 +450,9 @@ export function detectFormat(input: string): SupportedFormat {
   const csharpScore = [
     /^\s*using\s+[\w.]+;\s*$/m.test(trimmed),
     /^\s*namespace\s+[\w.]+\s*[{;]/m.test(trimmed),
-    /\b(public|private|protected|internal)\s+(static\s+)?(partial\s+)?(class|struct|interface|enum|record)\s+\w+/.test(trimmed),
+    /\b(public|private|protected|internal)\s+(static\s+)?(partial\s+)?(class|struct|interface|enum|record)\s+\w+/.test(
+      trimmed
+    ),
     /\b(get|set)\s*[{;=>]/.test(trimmed),
     /\basync\s+Task\b|\bawait\s+\w+/.test(trimmed),
     /\bvar\s+\w+\s*=\s*new\s+\w+/.test(trimmed),
@@ -377,7 +465,9 @@ export function detectFormat(input: string): SupportedFormat {
   // C++ (check before C)
   const cppScore = [
     /^\s*#include\s*<[\w./]+>/m.test(trimmed),
-    /\b(std::|cout|cin|endl|cerr|vector<|string::|map<|set<|unique_ptr<|shared_ptr<)\b/.test(trimmed),
+    /\b(std::|cout|cin|endl|cerr|vector<|string::|map<|set<|unique_ptr<|shared_ptr<)\b/.test(
+      trimmed
+    ),
     /^\s*using\s+namespace\s+\w+;/m.test(trimmed),
     /\b(template\s*<|nullptr|constexpr|noexcept|override|virtual|explicit|mutable)\b/.test(trimmed),
     /^\s*class\s+\w+\s*(:\s*(public|private|protected)\s+\w+)?\s*\{/m.test(trimmed),
@@ -389,9 +479,12 @@ export function detectFormat(input: string): SupportedFormat {
 
   // C
   const cScore = [
-    /^\s*#include\s*<[\w./]+>/m.test(trimmed) && !/\b(std::|class|template|cout|cin)\b/.test(trimmed),
+    /^\s*#include\s*<[\w./]+>/m.test(trimmed) &&
+      !/\b(std::|class|template|cout|cin)\b/.test(trimmed),
     /^\s*(int|void|char|float|double|long|short|unsigned)\s+\w+\s*\([^)]*\)\s*\{/m.test(trimmed),
-    /\b(printf|scanf|fprintf|fscanf|sprintf|sscanf|malloc|calloc|realloc|free|sizeof|NULL)\b/.test(trimmed),
+    /\b(printf|scanf|fprintf|fscanf|sprintf|sscanf|malloc|calloc|realloc|free|sizeof|NULL)\b/.test(
+      trimmed
+    ),
     /^\s*(typedef|struct|union|enum)\s+\w*\s*\{/m.test(trimmed),
     /\bFILE\s*\*|\bvoid\s*\*/.test(trimmed),
     /^\s*#define\s+\w+/m.test(trimmed),
@@ -403,9 +496,13 @@ export function detectFormat(input: string): SupportedFormat {
   const javaScore = [
     /^\s*package\s+[\w.]+;\s*$/m.test(trimmed),
     /^\s*import\s+[\w.*]+;\s*$/m.test(trimmed),
-    /\b(public|private|protected)\s+(static\s+)?(final\s+)?(class|interface|enum|abstract\s+class)\s+\w+/.test(trimmed),
+    /\b(public|private|protected)\s+(static\s+)?(final\s+)?(class|interface|enum|abstract\s+class)\s+\w+/.test(
+      trimmed
+    ),
     /\bSystem\.(out|err|in)\.\w+/.test(trimmed),
-    /@(Override|Deprecated|SuppressWarnings|FunctionalInterface|Autowired|Component|Service|Repository)\b/.test(trimmed),
+    /@(Override|Deprecated|SuppressWarnings|FunctionalInterface|Autowired|Component|Service|Repository)\b/.test(
+      trimmed
+    ),
     /\b(extends|implements)\s+\w+/.test(trimmed),
     /\bpublic\s+static\s+void\s+main\s*\(/.test(trimmed),
   ].filter(Boolean).length;
@@ -415,7 +512,9 @@ export function detectFormat(input: string): SupportedFormat {
   // TypeScript
   const tsScore = [
     /\b(interface|type)\s+\w+\s*[{=<]/.test(trimmed),
-    /:\s*(string|number|boolean|void|any|never|unknown|null|undefined|object)(\[\])?\b/.test(trimmed),
+    /:\s*(string|number|boolean|void|any|never|unknown|null|undefined|object)(\[\])?\b/.test(
+      trimmed
+    ),
     /\bas\s+(const|string|number|boolean|any|\w+)/.test(trimmed),
     /\b(readonly|keyof|typeof|infer)\b/.test(trimmed),
     /<\w+(\s*,\s*\w+)*>/.test(trimmed) && /:\s*\w+/.test(trimmed),
@@ -426,27 +525,32 @@ export function detectFormat(input: string): SupportedFormat {
   if (tsScore >= 2) return 'typescript';
 
   // SCSS
-  if (/\$[\w-]+\s*:/.test(trimmed) ||
-      /@(mixin|include|extend|use|forward)\b/.test(trimmed) ||
-      /@(if|else\s+if|else|for|each|while)\b/.test(trimmed)) {
+  if (
+    /\$[\w-]+\s*:/.test(trimmed) ||
+    /@(mixin|include|extend|use|forward)\b/.test(trimmed) ||
+    /@(if|else\s+if|else|for|each|while)\b/.test(trimmed)
+  ) {
     return 'scss';
   }
 
   // LESS
-  if (/@[\w-]+\s*:/.test(trimmed) && !/^@(media|import|keyframes|font-face|supports|charset|namespace)\b/m.test(trimmed)) {
+  if (
+    /@[\w-]+\s*:/.test(trimmed) &&
+    !/^@(media|import|keyframes|font-face|supports|charset|namespace)\b/m.test(trimmed)
+  ) {
     return 'less';
   }
 
   // CSS
-  if (/^\s*[\w.#\[\]:*,>\+~-]+\s*\{[^}]*\}/m.test(trimmed) ||
-      /@(media|keyframes|font-face|import|supports|layer)\b/.test(trimmed)) {
+  if (
+    /^\s*[\w.#\[\]:*,>\+~-]+\s*\{[^}]*\}/m.test(trimmed) ||
+    /@(media|keyframes|font-face|import|supports|layer)\b/.test(trimmed)
+  ) {
     return 'css';
   }
 
   // YAML (basic)
-  if (/^\s*[\w-]+:\s*(\S|$)/m.test(trimmed) &&
-      !/[{};]/.test(trimmed) &&
-      lineCount > 1) {
+  if (/^\s*[\w-]+:\s*(\S|$)/m.test(trimmed) && !/[{};]/.test(trimmed) && lineCount > 1) {
     return 'yaml';
   }
 
@@ -1130,7 +1234,11 @@ function formatCStyleGeneric(input: string, indent = 2): string {
     }
 
     // Track multi-line comments (simplified - just skip comment-only lines)
-    if (trimmedLine.startsWith('/*') || trimmedLine.startsWith('*') || trimmedLine.startsWith('//')) {
+    if (
+      trimmedLine.startsWith('/*') ||
+      trimmedLine.startsWith('*') ||
+      trimmedLine.startsWith('//')
+    ) {
       result.push(PADDING.repeat(depth) + trimmedLine);
       continue;
     }
@@ -1246,8 +1354,8 @@ function formatPython(input: string, indent = 4): string {
 
     // Check if this line decreases indentation
     const decreaseKeywords = ['elif', 'else', 'except', 'finally', 'case'];
-    const startsWithDecrease = decreaseKeywords.some(kw =>
-      trimmedLine.startsWith(kw + ':') || trimmedLine.startsWith(kw + ' ')
+    const startsWithDecrease = decreaseKeywords.some(
+      (kw) => trimmedLine.startsWith(kw + ':') || trimmedLine.startsWith(kw + ' ')
     );
 
     if (startsWithDecrease && depth > 0) {
@@ -1264,11 +1372,26 @@ function formatPython(input: string, indent = 4): string {
 
     // Check if this line increases indentation for next line
     const endsWithColon = /:\s*(#.*)?$/.test(trimmedLine);
-    const opensBlock = ['def ', 'class ', 'if ', 'elif ', 'else:', 'for ', 'while ', 'try:',
-                        'except', 'finally:', 'with ', 'async def ', 'async for ', 'async with ',
-                        'match ', 'case '];
+    const opensBlock = [
+      'def ',
+      'class ',
+      'if ',
+      'elif ',
+      'else:',
+      'for ',
+      'while ',
+      'try:',
+      'except',
+      'finally:',
+      'with ',
+      'async def ',
+      'async for ',
+      'async with ',
+      'match ',
+      'case ',
+    ];
 
-    if (endsWithColon || opensBlock.some(kw => trimmedLine.startsWith(kw))) {
+    if (endsWithColon || opensBlock.some((kw) => trimmedLine.startsWith(kw))) {
       if (endsWithColon) {
         depth++;
       }
@@ -1278,8 +1401,12 @@ function formatPython(input: string, indent = 4): string {
     const openBrackets = (trimmedLine.match(/[\(\[\{]/g) || []).length;
     const closeBrackets = (trimmedLine.match(/[\)\]\}]/g) || []).length;
     if (openBrackets > closeBrackets) {
-      depth += (openBrackets - closeBrackets);
-    } else if (closeBrackets > openBrackets && !trimmedLine.startsWith(')') && !trimmedLine.startsWith(']')) {
+      depth += openBrackets - closeBrackets;
+    } else if (
+      closeBrackets > openBrackets &&
+      !trimmedLine.startsWith(')') &&
+      !trimmedLine.startsWith(']')
+    ) {
       depth = Math.max(0, depth - (closeBrackets - openBrackets));
     }
   }
@@ -1371,7 +1498,8 @@ function formatBash(input: string, indent = 2): string {
     // Keywords that decrease indentation
     const decreasePatterns = /^(fi|done|esac|elif|else|\}|\]\]|then)\b/;
     // Keywords that increase indentation for next line
-    const increasePatterns = /\b(then|do|else|in|\{)\s*$|^(if|while|until|for|case|select)\b.*\bthen\s*$|\bdo\s*$/;
+    const increasePatterns =
+      /\b(then|do|else|in|\{)\s*$|^(if|while|until|for|case|select)\b.*\bthen\s*$|\bdo\s*$/;
     // Keywords that are neutral (decrease then increase)
     const neutralPatterns = /^(elif|else)\b/;
 
@@ -1386,7 +1514,11 @@ function formatBash(input: string, indent = 2): string {
     }
 
     // Handle case patterns (word) which increase depth
-    if (/^\w+\)/.test(trimmedLine) || /^["'].*["']\)/.test(trimmedLine) || /^\*\)/.test(trimmedLine)) {
+    if (
+      /^\w+\)/.test(trimmedLine) ||
+      /^["'].*["']\)/.test(trimmedLine) ||
+      /^\*\)/.test(trimmedLine)
+    ) {
       depth++;
     }
 
@@ -1558,19 +1690,43 @@ function formatDockerfile(input: string, indent = 4): string {
     }
 
     // Dockerfile instructions
-    const instructions = ['FROM', 'RUN', 'CMD', 'LABEL', 'MAINTAINER', 'EXPOSE', 'ENV',
-                          'ADD', 'COPY', 'ENTRYPOINT', 'VOLUME', 'USER', 'WORKDIR',
-                          'ARG', 'ONBUILD', 'STOPSIGNAL', 'HEALTHCHECK', 'SHELL'];
+    const instructions = [
+      'FROM',
+      'RUN',
+      'CMD',
+      'LABEL',
+      'MAINTAINER',
+      'EXPOSE',
+      'ENV',
+      'ADD',
+      'COPY',
+      'ENTRYPOINT',
+      'VOLUME',
+      'USER',
+      'WORKDIR',
+      'ARG',
+      'ONBUILD',
+      'STOPSIGNAL',
+      'HEALTHCHECK',
+      'SHELL',
+    ];
 
-    const startsWithInstruction = instructions.some(inst =>
-      trimmedLine.toUpperCase().startsWith(inst + ' ') || trimmedLine.toUpperCase() === inst
+    const startsWithInstruction = instructions.some(
+      (inst) =>
+        trimmedLine.toUpperCase().startsWith(inst + ' ') || trimmedLine.toUpperCase() === inst
     );
 
     if (startsWithInstruction && !inContinuation) {
       // Add blank line before certain instructions for readability
       const needsSpaceBefore = ['FROM', 'RUN', 'COPY', 'ADD', 'CMD', 'ENTRYPOINT'];
-      if (result.length > 0 && needsSpaceBefore.some(inst => trimmedLine.toUpperCase().startsWith(inst))) {
-        if (result[result.length - 1] !== '' && !result[result.length - 1].toUpperCase().startsWith('FROM')) {
+      if (
+        result.length > 0 &&
+        needsSpaceBefore.some((inst) => trimmedLine.toUpperCase().startsWith(inst))
+      ) {
+        if (
+          result[result.length - 1] !== '' &&
+          !result[result.length - 1].toUpperCase().startsWith('FROM')
+        ) {
           // result.push(''); // Optional: add blank lines between major sections
         }
       }

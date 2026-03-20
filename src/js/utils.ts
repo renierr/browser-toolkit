@@ -30,14 +30,14 @@ export const fuzzyScore = (text: string, term: string): number => {
 
     // Penalty: Increase gap penalty based on how many characters were skipped
     if (lastIndex !== -1) {
-      totalGap += (index - lastIndex - 1);
+      totalGap += index - lastIndex - 1;
     }
 
     lastIndex = index;
   }
 
   // Final Score: Subtract the total gap to demote "scattered" matches
-  return score - (totalGap * 10);
+  return score - totalGap * 10;
 };
 
 function getValueByDotNotation(obj: any, path: string): string | undefined {
@@ -453,8 +453,14 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, message: string)
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(message)), ms);
     promise.then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      (err)   => { clearTimeout(timer); reject(err); },
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
     );
   });
 }

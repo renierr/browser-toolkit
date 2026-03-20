@@ -2,15 +2,26 @@
   <div class="card-body p-6">
     <h2 class="text-2xl font-bold mb-4 text-heading">Share Target Test</h2>
     <p class="text-card-desc mb-6">
-      This tool helps verify the Share Target API functionality. You can upload files here to simulate
-      receiving shared files, or use the system share sheet to share files to this PWA.
+      This tool helps verify the Share Target API functionality. You can upload files here to
+      simulate receiving shared files, or use the system share sheet to share files to this PWA.
     </p>
 
     <div class="grid grid-cols-1 gap-6">
       <!-- Manual Upload Section -->
       <div class="border-2 border-dashed border-base-300 rounded-lg p-8 text-center" id="drop-zone">
         <div class="flex flex-col items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-base-content/50">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="48"
+            height="48"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="text-base-content/50"
+          >
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
             <polyline points="17 8 12 3 7 8"></polyline>
             <line x1="12" y1="3" x2="12" y2="15"></line>
@@ -50,15 +61,16 @@
       <!-- Shared Text Section -->
       <div id="shared-text-container" class="hidden">
         <h3 class="text-lg font-bold mb-2">Shared Text</h3>
-        <div class="bg-base-200 p-4 rounded-lg font-mono text-sm break-all" id="shared-text-content"></div>
+        <div
+          class="bg-base-200 p-4 rounded-lg font-mono text-sm break-all"
+          id="shared-text-content"
+        ></div>
       </div>
 
       <!-- Debug Info -->
       <div class="collapse collapse-arrow bg-base-200">
         <input type="checkbox" />
-        <div class="collapse-title text-sm font-medium">
-          Debug Information
-        </div>
+        <div class="collapse-title text-sm font-medium">Debug Information</div>
         <div class="collapse-content">
           <pre id="debug-info" class="text-xs overflow-auto max-h-40"></pre>
         </div>

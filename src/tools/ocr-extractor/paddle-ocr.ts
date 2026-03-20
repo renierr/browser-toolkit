@@ -15,7 +15,6 @@ export interface OcrConfig {
   forceWasm?: boolean;
 }
 
-
 export interface OcrResult {
   text: string;
   confidence: number;
@@ -26,7 +25,6 @@ export class PaddleOCR {
   private detSession: ort.InferenceSession | null = null;
   private recSession: ort.InferenceSession | null = null;
   private config: OcrConfig = {};
-
 
   async init(detModelPath: string, recModelPath: string, config?: OcrConfig) {
     this.config = config ?? {};
@@ -64,7 +62,11 @@ export class PaddleOCR {
     return boxes;
   }
 
-  async recognize(imageData: ImageData, boxes: number[][][], onProgress?: (p: number) => void): Promise<string[]> {
+  async recognize(
+    imageData: ImageData,
+    boxes: number[][][],
+    onProgress?: (p: number) => void
+  ): Promise<string[]> {
     if (!this.recSession) throw new Error('Recognition session not initialized');
 
     // Group boxes into lines (Reading Order)
@@ -116,9 +118,9 @@ export class PaddleOCR {
     let newH = targetSize;
 
     if (width > height) {
-      newH = Math.round(height * (targetSize / width) / 32) * 32;
+      newH = Math.round((height * (targetSize / width)) / 32) * 32;
     } else {
-      newW = Math.round(width * (targetSize / height) / 32) * 32;
+      newW = Math.round((width * (targetSize / height)) / 32) * 32;
     }
 
     const canvas = new OffscreenCanvas(newW, newH);
@@ -128,7 +130,7 @@ export class PaddleOCR {
     const imgBitmap = await createImageBitmap(imageData, {
       resizeWidth: newW,
       resizeHeight: newH,
-      resizeQuality: 'high'
+      resizeQuality: 'high',
     });
     ctx.drawImage(imgBitmap, 0, 0);
     const resizedData = ctx.getImageData(0, 0, newW, newH).data;
@@ -186,7 +188,7 @@ export class PaddleOCR {
       const unclippedBox = this.unclipBox(box, 1.5);
       const rescaledBox = unclippedBox.map((p: number[]) => [
         Math.max(0, p[0] / scaleW),
-        Math.max(0, p[1] / scaleH)
+        Math.max(0, p[1] / scaleH),
       ]);
       boxes.push(rescaledBox);
       // Enforce optional maxBoxes limit
@@ -200,13 +202,15 @@ export class PaddleOCR {
 
   private mergeOverlappingBoxes(boxes: number[][][]): number[][][] {
     if (boxes.length === 0) return [];
-    const sorted = boxes.map(box => {
-      const minX = Math.min(...box.map(p => p[0]));
-      const maxX = Math.max(...box.map(p => p[0]));
-      const minY = Math.min(...box.map(p => p[1]));
-      const maxY = Math.max(...box.map(p => p[1]));
-      return { box, area: (maxX - minX) * (maxY - minY) };
-    }).sort((a, b) => b.area - a.area);
+    const sorted = boxes
+      .map((box) => {
+        const minX = Math.min(...box.map((p) => p[0]));
+        const maxX = Math.max(...box.map((p) => p[0]));
+        const minY = Math.min(...box.map((p) => p[1]));
+        const maxY = Math.max(...box.map((p) => p[1]));
+        return { box, area: (maxX - minX) * (maxY - minY) };
+      })
+      .sort((a, b) => b.area - a.area);
 
     const result: number[][][] = [];
     for (const item of sorted) {
@@ -224,10 +228,10 @@ export class PaddleOCR {
 
   private calculateIoU(box1: number[][], box2: number[][]): number {
     const getBounds = (box: number[][]) => ({
-      minX: Math.min(...box.map(p => p[0])),
-      maxX: Math.max(...box.map(p => p[0])),
-      minY: Math.min(...box.map(p => p[1])),
-      maxY: Math.max(...box.map(p => p[1]))
+      minX: Math.min(...box.map((p) => p[0])),
+      maxX: Math.max(...box.map((p) => p[0])),
+      minY: Math.min(...box.map((p) => p[1])),
+      maxY: Math.max(...box.map((p) => p[1])),
     });
     const b1 = getBounds(box1);
     const b2 = getBounds(box2);
@@ -281,7 +285,10 @@ export class PaddleOCR {
     const sorted = [...box].sort((a, b) => a[1] - b[1]);
     const top = sorted.slice(0, 2).sort((a, b) => a[0] - b[0]);
     const bottom = sorted.slice(2, 4).sort((a, b) => a[0] - b[0]);
-    const tl = top[0], tr = top[1], br = bottom[1], bl = bottom[0];
+    const tl = top[0],
+      tr = top[1],
+      br = bottom[1],
+      bl = bottom[0];
 
     const width = Math.max(
       Math.sqrt(Math.pow(tr[0] - tl[0], 2) + Math.pow(tr[1] - tl[1], 2)),
@@ -323,7 +330,7 @@ export class PaddleOCR {
     const bitmap = await createImageBitmap(imageData, {
       resizeWidth: targetW,
       resizeHeight: targetH,
-      resizeQuality: 'high'
+      resizeQuality: 'high',
     });
     ctx.drawImage(bitmap, 0, 0);
     const resizedData = ctx.getImageData(0, 0, targetW, targetH).data;
@@ -352,10 +359,19 @@ export class PaddleOCR {
     return contours;
   }
 
-  private traceContour(binaryMap: Uint8Array, visited: Uint8Array, startX: number, startY: number, h: number, w: number): number[][] {
+  private traceContour(
+    binaryMap: Uint8Array,
+    visited: Uint8Array,
+    startX: number,
+    startY: number,
+    h: number,
+    w: number
+  ): number[][] {
     const contour: number[][] = [];
-    let currX = startX, currY = startY;
-    const dx = [1, 1, 0, -1, -1, -1, 0, 1], dy = [0, 1, 1, 1, 0, -1, -1, -1];
+    let currX = startX,
+      currY = startY;
+    const dx = [1, 1, 0, -1, -1, -1, 0, 1],
+      dy = [0, 1, 1, 1, 0, -1, -1, -1];
     let dir = 7;
     do {
       visited[currY * w + currX] = 1;
@@ -363,9 +379,11 @@ export class PaddleOCR {
       let found = false;
       for (let i = 0; i < 8; i++) {
         const checkDir = (dir + i) % 8;
-        const nx = currX + dx[checkDir], ny = currY + dy[checkDir];
+        const nx = currX + dx[checkDir],
+          ny = currY + dy[checkDir];
         if (nx >= 0 && nx < w && ny >= 0 && ny < h && binaryMap[ny * w + nx] === 255) {
-          currX = nx; currY = ny;
+          currX = nx;
+          currY = ny;
           dir = (checkDir + 5) % 8;
           found = true;
           break;
@@ -377,20 +395,31 @@ export class PaddleOCR {
   }
 
   private getMinAreaRect(contour: number[][]): number[][] {
-    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    let minX = Infinity,
+      maxX = -Infinity,
+      minY = Infinity,
+      maxY = -Infinity;
     for (const [x, y] of contour) {
-      if (x < minX) minX = x; if (x > maxX) maxX = x;
-      if (y < minY) minY = y; if (y > maxY) maxY = y;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
     }
-    return [[minX, minY], [maxX, minY], [maxX, maxY], [minX, maxY]];
+    return [
+      [minX, minY],
+      [maxX, minY],
+      [maxX, maxY],
+      [minX, maxY],
+    ];
   }
 
   private boxScore(data: Float32Array, box: number[][], h: number, w: number): number {
-    let sum = 0, count = 0;
-    const minX = Math.floor(Math.min(...box.map(p => p[0])));
-    const maxX = Math.ceil(Math.max(...box.map(p => p[0])));
-    const minY = Math.floor(Math.min(...box.map(p => p[1])));
-    const maxY = Math.ceil(Math.max(...box.map(p => p[1])));
+    let sum = 0,
+      count = 0;
+    const minX = Math.floor(Math.min(...box.map((p) => p[0])));
+    const maxX = Math.ceil(Math.max(...box.map((p) => p[0])));
+    const minY = Math.floor(Math.min(...box.map((p) => p[1])));
+    const maxY = Math.ceil(Math.max(...box.map((p) => p[1])));
     for (let y = minY; y <= maxY; y++) {
       for (let x = minX; x <= maxX; x++) {
         if (x >= 0 && x < w && y >= 0 && y < h) {
@@ -405,17 +434,16 @@ export class PaddleOCR {
   private unclipBox(box: number[][], ratio: number): number[][] {
     const centerX = box.reduce((s, p) => s + p[0], 0) / 4;
     const centerY = box.reduce((s, p) => s + p[1], 0) / 4;
-    return box.map(p => [
-      centerX + (p[0] - centerX) * ratio,
-      centerY + (p[1] - centerY) * ratio
-    ]);
+    return box.map((p) => [centerX + (p[0] - centerX) * ratio, centerY + (p[1] - centerY) * ratio]);
   }
 
   private groupBoxesIntoLines(boxes: number[][][]): number[][][][] {
     if (boxes.length === 0) return [];
-    const boxInfo = boxes.map(box => {
-      const minX = Math.min(...box.map(p => p[0])), maxX = Math.max(...box.map(p => p[0])),
-        minY = Math.min(...box.map(p => p[1])), maxY = Math.max(...box.map(p => p[1]));
+    const boxInfo = boxes.map((box) => {
+      const minX = Math.min(...box.map((p) => p[0])),
+        maxX = Math.max(...box.map((p) => p[0])),
+        minY = Math.min(...box.map((p) => p[1])),
+        maxY = Math.max(...box.map((p) => p[1]));
       return { box, minX, maxX, minY, maxY, centerY: (minY + maxY) / 2, height: maxY - minY };
     });
     boxInfo.sort((a, b) => a.centerY - b.centerY);
@@ -426,10 +454,14 @@ export class PaddleOCR {
       for (let i = 1; i < boxInfo.length; i++) {
         const lineY = currentLine.reduce((acc, b) => acc + b.centerY, 0) / currentLine.length;
         const currentBox = boxInfo[i];
-        if (Math.abs(currentBox.centerY - lineY) < currentBox.height * 0.7) currentLine.push(currentBox);
-        else { currentLine = [currentBox]; lines.push(currentLine); }
+        if (Math.abs(currentBox.centerY - lineY) < currentBox.height * 0.7)
+          currentLine.push(currentBox);
+        else {
+          currentLine = [currentBox];
+          lines.push(currentLine);
+        }
       }
     }
-    return lines.map(line => line.sort((a, b) => a.minX - b.minX).map(b => b.box));
+    return lines.map((line) => line.sort((a, b) => a.minX - b.minX).map((b) => b.box));
   }
 }

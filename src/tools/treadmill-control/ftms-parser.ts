@@ -123,13 +123,25 @@ export function parsePitPatData(value: DataView): TreadmillData {
   // Read current speed (2 bytes) at offset 3 (big-endian)
   const rawSpeed = (value.getUint8(3) << 8) | value.getUint8(4);
   // Distance (4 bytes) at offset 7 (big-endian)
-  const rawDist = (value.getUint8(7) << 24) | (value.getUint8(8) << 16) | (value.getUint8(9) << 8) | value.getUint8(10);
+  const rawDist =
+    (value.getUint8(7) << 24) |
+    (value.getUint8(8) << 16) |
+    (value.getUint8(9) << 8) |
+    value.getUint8(10);
   // Steps (4 bytes) at offset 14
-  const steps = (value.getUint8(14) << 24) | (value.getUint8(15) << 16) | (value.getUint8(16) << 8) | value.getUint8(17);
+  const steps =
+    (value.getUint8(14) << 24) |
+    (value.getUint8(15) << 16) |
+    (value.getUint8(16) << 8) |
+    value.getUint8(17);
   // Calories (2 bytes) at offset 18 (big-endian)
   const calories = (value.getUint8(18) << 8) | value.getUint8(19);
   // Duration (4 bytes) at offset 20 (milliseconds)
-  const durationMs = (value.getUint8(20) << 24) | (value.getUint8(21) << 16) | (value.getUint8(22) << 8) | value.getUint8(23);
+  const durationMs =
+    (value.getUint8(20) << 24) |
+    (value.getUint8(21) << 16) |
+    (value.getUint8(22) << 8) |
+    value.getUint8(23);
 
   const flags = value.getUint8(26);
   const unitMode = (flags & 128) === 128 ? 1 : 0; // 1 = imperial (mph/mi), 0 = metric
@@ -160,4 +172,3 @@ export function parsePitPatData(value: DataView): TreadmillData {
 export function parseTreadmillPayload(value: DataView, isPitPat: boolean = false): TreadmillData {
   return isPitPat ? parsePitPatData(value) : parseTreadmillData(value);
 }
-

@@ -13,7 +13,7 @@ export const ensureAudioContextReady = async (): Promise<void> => {
   if (ctx.state === 'suspended') {
     await ctx.resume();
   }
-}
+};
 
 export function playTone(durationMs: number, volume: number): Promise<void> {
   return new Promise((resolve) => {

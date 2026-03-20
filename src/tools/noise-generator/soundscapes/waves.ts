@@ -9,7 +9,7 @@ export const playWaves = (engine: NoiseEngine) => {
       filter: { type: 'lowpass', freq: 400 },
       pan: pan,
       gain: 0.2,
-      offset: Math.random() * 10
+      offset: Math.random() * 10,
     });
 
     if (layer) {
@@ -24,7 +24,7 @@ export const playWaves = (engine: NoiseEngine) => {
   const foam = engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 1200, Q: 0.5 },
-    gain: 0.03
+    gain: 0.03,
   });
 
   if (foam) {

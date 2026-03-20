@@ -81,7 +81,7 @@ export function createScannerState(opts: StateOptions = {}) {
   }
 
   function cleanup() {
-    pages.forEach(p => p.thumbnailUrl && URL.revokeObjectURL(p.thumbnailUrl));
+    pages.forEach((p) => p.thumbnailUrl && URL.revokeObjectURL(p.thumbnailUrl));
     pages = [];
     currentPageIndex = -1;
     cornerHistory.clear();

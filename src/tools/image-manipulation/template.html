@@ -2,7 +2,8 @@
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">AI Image Magic</h2>
     <p class="text-base-content/70 mb-6">
-      Apply AI magic to your images locally. All processing happens in your browser for maximum privacy.
+      Apply AI magic to your images locally. All processing happens in your browser for maximum
+      privacy.
     </p>
 
     <!-- Options -->
@@ -18,7 +19,11 @@
             <label class="label" for="opt-model">
               <span class="label-text font-medium">AI Model</span>
             </label>
-            <select id="opt-model" class="select select-sm select-bordered w-full" data-setting="model">
+            <select
+              id="opt-model"
+              class="select select-sm select-bordered w-full"
+              data-setting="model"
+            >
               <option value="line_drawings" selected>Line Drawing</option>
               <option value="rrdbx2">rrdb Upscale (2x)</option>
               <option value="rrdbx4">rrdb Upscale (4x)</option>
@@ -34,13 +39,19 @@
             <label class="label" for="opt-max-dimension">
               <span class="label-text font-medium">Max processing resolution</span>
             </label>
-            <select id="opt-max-dimension" class="select select-sm select-bordered w-full" data-setting="maxDimension">
+            <select
+              id="opt-max-dimension"
+              class="select select-sm select-bordered w-full"
+              data-setting="maxDimension"
+            >
               <option value="0" selected>Native (original size)</option>
               <option value="1024">1024px</option>
               <option value="2048">2048px</option>
               <option value="4096">4096px</option>
             </select>
-            <p class="text-xs text-base-content/50 mt-1">Downscale images during processing to save memory.</p>
+            <p class="text-xs text-base-content/50 mt-1">
+              Downscale images during processing to save memory.
+            </p>
           </div>
           <div class="form-control">
             <label class="label cursor-pointer" for="opt-force-wasm">
@@ -48,7 +59,12 @@
                 <span class="label-text font-medium">Force WASM</span>
                 <span class="text-xs text-base-content/50">Bypass WebGPU execution</span>
               </span>
-              <input type="checkbox" id="opt-force-wasm" class="toggle toggle-primary" data-setting="forceWasm" />
+              <input
+                type="checkbox"
+                id="opt-force-wasm"
+                class="toggle toggle-primary"
+                data-setting="forceWasm"
+              />
             </label>
           </div>
           <div class="form-control sm:col-span-2">
@@ -56,15 +72,19 @@
               <i data-lucide="refresh-cw" class="w-4 h-4"></i>
               Clear Model Cache
             </button>
-            <p class="text-xs text-base-content/50 mt-1">Free up WASM memory by releasing loaded AI models.</p>
+            <p class="text-xs text-base-content/50 mt-1">
+              Free up WASM memory by releasing loaded AI models.
+            </p>
           </div>
         </div>
       </div>
     </div>
 
     <!-- Dropzone -->
-    <div id="dropzone"
-      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40">
+    <div
+      id="dropzone"
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40"
+    >
       <div class="flex flex-col items-center gap-2 text-center">
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
@@ -82,7 +102,9 @@
     <!-- Bulk Actions -->
     <div id="bulk-actions" class="hidden mt-8">
       <div class="divider">Selected Images & Processing</div>
-      <div class="flex flex-wrap justify-between items-center bg-base-200/50 p-4 rounded-xl mb-6 gap-3">
+      <div
+        class="flex flex-wrap justify-between items-center bg-base-200/50 p-4 rounded-xl mb-6 gap-3"
+      >
         <div class="flex items-center gap-3 text-sm font-medium">
           <span id="queue-status">0 images</span>
           <span id="queue-progress-badge" class="badge badge-sm badge-ghost hidden"></span>
@@ -114,21 +136,30 @@
 <!-- Item Template (hidden) -->
 <template id="result-item-template">
   <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden group">
-    <div class="relative aspect-square bg-base-200 overflow-hidden flex items-center justify-center">
+    <div
+      class="relative aspect-square bg-base-200 overflow-hidden flex items-center justify-center"
+    >
       <!-- Previews -->
       <img
         class="checkerboard-bg original-preview absolute inset-0 w-full h-full object-contain transition-opacity duration-300 pointer-events-none"
-        alt="Original image" />
+        alt="Original image"
+      />
       <img
         class="checkerboard-bg result-preview absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300 pointer-events-none"
-        alt="Processed image" />
+        alt="Processed image"
+      />
 
       <!-- Status / Progress Overlay -->
       <div
-        class="status-overlay absolute inset-0 bg-base-300/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+        class="status-overlay absolute inset-0 bg-base-300/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center"
+      >
         <span class="loading loading-spinner loading-lg text-primary mb-2"></span>
         <span class="status-text font-medium text-sm">Pending...</span>
-        <progress class="progress progress-primary w-48 mt-2 item-progress" value="0" max="100"></progress>
+        <progress
+          class="progress progress-primary w-48 mt-2 item-progress"
+          value="0"
+          max="100"
+        ></progress>
         <button class="btn btn-sm btn-primary mt-2 btn-start-item hidden">Start</button>
       </div>
 
@@ -145,7 +176,9 @@
         <!-- Preview Toggle (Processed/Original) -->
         <div class="preview-toggle hidden">
           <div class="join shadow-lg bg-base-100/50">
-            <button class="btn btn-xs join-item btn-compare-processed btn-primary">Processed</button>
+            <button class="btn btn-xs join-item btn-compare-processed btn-primary">
+              Processed
+            </button>
             <button class="btn btn-xs join-item btn-compare-original">Original</button>
           </div>
         </div>

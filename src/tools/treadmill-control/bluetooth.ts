@@ -1,9 +1,9 @@
 import { parseTreadmillData, parseTreadmillPayload, type TreadmillData } from './ftms-parser';
 
 export const FTMS_SERVICE_UUID = 0x1826;
-export const TREADMILL_DATA_CHAR_UUID = 0x2ACD;
-export const FITNESS_MACHINE_FEATURE_CHAR_UUID = 0x2ACC;
-export const FITNESS_MACHINE_CONTROL_POINT_CHAR_UUID = 0x2AD9;
+export const TREADMILL_DATA_CHAR_UUID = 0x2acd;
+export const FITNESS_MACHINE_FEATURE_CHAR_UUID = 0x2acc;
+export const FITNESS_MACHINE_CONTROL_POINT_CHAR_UUID = 0x2ad9;
 
 // PitPat (proprietary) UUIDs (string form)
 export const PITPAT_SERVICE_UUID = '0000fba0-0000-1000-8000-00805f9b34fb';
@@ -24,9 +24,7 @@ export type TreadmillDeviceType = 'FTMS' | 'PITPAT';
  *
  * onUpdate receives parsed TreadmillData (using the unified parser).
  */
-export async function connectTreadmill(
-  onUpdate: (data: TreadmillData) => void
-): Promise<{
+export async function connectTreadmill(onUpdate: (data: TreadmillData) => void): Promise<{
   device: BluetoothDevice;
   support?: MachineSupport;
   type: TreadmillDeviceType;
@@ -40,7 +38,11 @@ export async function connectTreadmill(
       { services: [FTMS_SERVICE_UUID as unknown as BluetoothServiceUUID] },
       { services: [PITPAT_SERVICE_UUID] },
     ],
-    optionalServices: ['battery_service', PITPAT_SERVICE_UUID, FTMS_SERVICE_UUID as unknown as BluetoothServiceUUID],
+    optionalServices: [
+      'battery_service',
+      PITPAT_SERVICE_UUID,
+      FTMS_SERVICE_UUID as unknown as BluetoothServiceUUID,
+    ],
   });
 
   console.log('Treadmill: Connecting to GATT server...');
@@ -49,8 +51,12 @@ export async function connectTreadmill(
 
   // Discover services and decide type
   const services = await server.getPrimaryServices();
-  const hasPitPat = services.some(s => s.uuid.toLowerCase() === PITPAT_SERVICE_UUID.toLowerCase());
-  const hasFTMS = services.some(s => Number(s.uuid) === FTMS_SERVICE_UUID || s.uuid.toLowerCase().includes('1826'));
+  const hasPitPat = services.some(
+    (s) => s.uuid.toLowerCase() === PITPAT_SERVICE_UUID.toLowerCase()
+  );
+  const hasFTMS = services.some(
+    (s) => Number(s.uuid) === FTMS_SERVICE_UUID || s.uuid.toLowerCase().includes('1826')
+  );
   const isPitPat = hasPitPat && !hasFTMS;
   const type: TreadmillDeviceType = isPitPat ? 'PITPAT' : 'FTMS';
 
@@ -76,11 +82,15 @@ export async function connectTreadmill(
 
   // FTMS path
   console.log('Treadmill: Getting Fitness Machine Service...');
-  const service = await server.getPrimaryService(FTMS_SERVICE_UUID as unknown as BluetoothServiceUUID);
+  const service = await server.getPrimaryService(
+    FTMS_SERVICE_UUID as unknown as BluetoothServiceUUID
+  );
 
   // Set up Treadmill Data characteristic (Mandatory - Priority 1)
   console.log('Treadmill: Getting Data Characteristic...');
-  const dataChar = await service.getCharacteristic(TREADMILL_DATA_CHAR_UUID as unknown as BluetoothCharacteristicUUID);
+  const dataChar = await service.getCharacteristic(
+    TREADMILL_DATA_CHAR_UUID as unknown as BluetoothCharacteristicUUID
+  );
 
   console.log('Treadmill: Starting notifications...');
   await dataChar.startNotifications();
@@ -102,9 +112,11 @@ export async function connectTreadmill(
   try {
     console.log('Treadmill: Attempting to read machine features...');
     // Small delay before next GATT operation
-    await new Promise(r => setTimeout(r, 200));
+    await new Promise((r) => setTimeout(r, 200));
 
-    const featureChar = await service.getCharacteristic(FITNESS_MACHINE_FEATURE_CHAR_UUID as unknown as BluetoothCharacteristicUUID);
+    const featureChar = await service.getCharacteristic(
+      FITNESS_MACHINE_FEATURE_CHAR_UUID as unknown as BluetoothCharacteristicUUID
+    );
     const featureValue = await featureChar.readValue();
     console.log('Treadmill: Feature value read successfully');
 
@@ -142,7 +154,9 @@ export async function sendControlCommand(
 
   // Try to detect if device exposes PitPat service
   const services = await server.getPrimaryServices();
-  const hasPitPat = services.some(s => s.uuid.toLowerCase() === PITPAT_SERVICE_UUID.toLowerCase());
+  const hasPitPat = services.some(
+    (s) => s.uuid.toLowerCase() === PITPAT_SERVICE_UUID.toLowerCase()
+  );
 
   if (hasPitPat) {
     // PitPat expects proprietary 23-byte packets via its writing characteristic
@@ -155,8 +169,12 @@ export async function sendControlCommand(
   }
 
   // Default FTMS path
-  const service = await server.getPrimaryService(FTMS_SERVICE_UUID as unknown as BluetoothServiceUUID);
-  const cpChar = await service.getCharacteristic(FITNESS_MACHINE_CONTROL_POINT_CHAR_UUID as unknown as BluetoothCharacteristicUUID);
+  const service = await server.getPrimaryService(
+    FTMS_SERVICE_UUID as unknown as BluetoothServiceUUID
+  );
+  const cpChar = await service.getCharacteristic(
+    FITNESS_MACHINE_CONTROL_POINT_CHAR_UUID as unknown as BluetoothCharacteristicUUID
+  );
 
   // 1. Request Control if not already done
   if (!isControlRequested) {
@@ -185,7 +203,10 @@ let heartbeatTimer: number | null = null;
 /**
  * Start PitPat heartbeat. Caller must provide a valid writing characteristic for PitPat.
  */
-export function startPitPatHeartbeat(device: BluetoothDevice, writeChar: BluetoothRemoteGATTCharacteristic) {
+export function startPitPatHeartbeat(
+  device: BluetoothDevice,
+  writeChar: BluetoothRemoteGATTCharacteristic
+) {
   if (heartbeatTimer) stopPitPatHeartbeat();
   const heartbeatPacket = new Uint8Array([0x6a, 0x05, 0xfd, 0xf8, 0x43]);
   heartbeatTimer = window.setInterval(async () => {
@@ -207,4 +228,3 @@ export function stopPitPatHeartbeat() {
     heartbeatTimer = null;
   }
 }
-

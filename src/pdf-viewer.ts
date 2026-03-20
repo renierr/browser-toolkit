@@ -1,7 +1,8 @@
 import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
-import { default as EmbedPDF, type EmbedPdfContainer, ZoomMode, } from '@embedpdf/snippet';
+import { default as EmbedPDF, type EmbedPdfContainer, ZoomMode } from '@embedpdf/snippet';
 import {
-  addFlattenAsImageCommand, addNavigateHomeCommand,
+  addFlattenAsImageCommand,
+  addNavigateHomeCommand,
   getDocManager,
   injectStyles,
 } from './js/embedpdf-utils.ts';
@@ -45,7 +46,7 @@ async function cleanupOldFiles(): Promise<void> {
           const parts = key.split('-');
           const timestamp = parseInt(parts[0], 10);
 
-          if (!isNaN(timestamp) && (now - timestamp > MAX_AGE)) {
+          if (!isNaN(timestamp) && now - timestamp > MAX_AGE) {
             store.delete(key);
           }
         }
@@ -78,7 +79,6 @@ async function initViewer() {
       await addFlattenAsImageCommand(viewerInstance);
       await addNavigateHomeCommand(viewerInstance);
     }
-
   }
 }
 
@@ -134,10 +134,10 @@ async function handleSharedContent() {
   const sharedUrl = getSharedUrl();
   if (sharedUrl) {
     try {
-        new URL(sharedUrl);
-        console.log('Loading shared URL:', sharedUrl);
+      new URL(sharedUrl);
+      console.log('Loading shared URL:', sharedUrl);
     } catch (e) {
-        // Not a URL
+      // Not a URL
     }
   }
 }

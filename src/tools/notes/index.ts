@@ -211,11 +211,15 @@ export default async function init() {
       }
 
       const result = await importNotes(db, notes);
-      showMessage(`Import complete! Imported: ${result.imported}, Skipped: ${result.skipped} (duplicates).`);
+      showMessage(
+        `Import complete! Imported: ${result.imported}, Skipped: ${result.skipped} (duplicates).`
+      );
       loadNotes(searchInput.value);
     } catch (e) {
       console.error('Failed to import notes:', e);
-      showMessage(`Failed to import: ${e instanceof Error ? e.message : 'Invalid JSON backup'}`, { type: 'alert' });
+      showMessage(`Failed to import: ${e instanceof Error ? e.message : 'Invalid JSON backup'}`, {
+        type: 'alert',
+      });
     } finally {
       importInput.value = '';
     }

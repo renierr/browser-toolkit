@@ -203,7 +203,8 @@ export default function init(payload?: SharedFilesPayload) {
 
   const handleError = (item: ImageQueueItem, error: string) => {
     console.error('Processing error:', error);
-    const shortError = error && error.length > 80 ? error.substring(0, 80) + '…' : error || 'Unknown error';
+    const shortError =
+      error && error.length > 80 ? error.substring(0, 80) + '…' : error || 'Unknown error';
     setItemStatus(item, 'error', { errorMsg: shortError });
   };
 

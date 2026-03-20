@@ -61,7 +61,10 @@ class Router {
         const navEntries = nav.entries();
         if (Array.isArray(navEntries) && navEntries.length > 1) {
           // Determine the current entry index. If navigation provides it, use that, otherwise assume the last entry is current.
-          const currentIndex = typeof nav.currentEntryIndex === 'number' ? nav.currentEntryIndex : navEntries.length - 1;
+          const currentIndex =
+            typeof nav.currentEntryIndex === 'number'
+              ? nav.currentEntryIndex
+              : navEntries.length - 1;
 
           // Find the earliest entry (lowest index) before the current index whose URL has no hash or only a single '#'.
           let foundIndex = -1;

@@ -10,7 +10,12 @@ self.addEventListener('message', async (ev: MessageEvent<WorkerInMessage>) => {
     const out: WorkerOutMessage = { type: 'decode-result', id: msg.id, text };
     postMessage(out);
   } catch (e: any) {
-    const out: WorkerOutMessage = { type: 'decode-result', id: msg.id, text: null, reason: String(e) };
+    const out: WorkerOutMessage = {
+      type: 'decode-result',
+      id: msg.id,
+      text: null,
+      reason: String(e),
+    };
     postMessage(out);
   }
 });

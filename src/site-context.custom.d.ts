@@ -2,7 +2,7 @@ declare global {
   interface SiteContextCustom {
     custom?: {
       foo: string;
-      bar?: number
+      bar?: number;
     };
   }
 }

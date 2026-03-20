@@ -6,7 +6,7 @@ export const playFire = (engine: NoiseEngine, checkActive: () => boolean) => {
   const layer = engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 400 },
-    gain: 0.5
+    gain: 0.5,
   });
 
   if (layer) {
@@ -56,7 +56,7 @@ export const playFire = (engine: NoiseEngine, checkActive: () => boolean) => {
   engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 1500, Q: 0.5 },
-    gain: 0.05
+    gain: 0.05,
   });
 
   const scheduleCrackle = () => {

@@ -1,18 +1,21 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">Video Transcoder</h2>
-    <p class="text-base-content/70 mb-6">Convert video files to different formats or compress them. All processing
-      happens locally in your browser.<br>
-      Since this is local in your Browser keep in mind that this transcoder is not meant for very large files. It is
-      best suited for small or medium sized files.<br>
-      The transcoder uses <a href="https://ffmpeg.org/" target="_blank">FFmpeg</a> to transcode the video. with the WASM
-      version of FFmpeg. So no GPU acceleration is used, all runs in CPU.
+    <p class="text-base-content/70 mb-6">
+      Convert video files to different formats or compress them. All processing happens locally in
+      your browser.<br />
+      Since this is local in your Browser keep in mind that this transcoder is not meant for very
+      large files. It is best suited for small or medium sized files.<br />
+      The transcoder uses <a href="https://ffmpeg.org/" target="_blank">FFmpeg</a> to transcode the
+      video. with the WASM version of FFmpeg. So no GPU acceleration is used, all runs in CPU.
     </p>
 
     <div class="grid grid-cols-1 gap-6">
       <div class="flex flex-col gap-4">
-        <div id="drop-zone"
-          class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-64">
+        <div
+          id="drop-zone"
+          class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-64"
+        >
           <div class="flex flex-col items-center gap-2">
             <div class="text-base-content/30 text-4xl">
               <i data-lucide="upload-cloud"></i>
@@ -20,7 +23,7 @@
             <p class="text-lg font-medium">Click or drag video here</p>
             <p class="text-sm text-base-content/50 mt-1">Supports MP4, WebM, MOV, AVI, etc.</p>
           </div>
-          <input type="file" id="file-input" class="hidden" accept="video/*">
+          <input type="file" id="file-input" class="hidden" accept="video/*" />
         </div>
 
         <div id="file-info" class="hidden p-4 bg-base-200 rounded-lg flex items-center gap-3">
@@ -65,7 +68,11 @@
           <label class="label" for="max-resolution">
             <span class="label-text font-semibold">Max Resolution</span>
           </label>
-          <select id="max-resolution" class="select select-bordered w-full" data-setting="resolution">
+          <select
+            id="max-resolution"
+            class="select select-bordered w-full"
+            data-setting="resolution"
+          >
             <option value="640">640p (Fastest, smallest)</option>
             <option value="720">720p</option>
             <option value="1280" selected>1280p (Recommended)</option>
@@ -76,9 +83,7 @@
 
         <div class="collapse collapse-arrow bg-base-200 mt-2">
           <input type="checkbox" id="toggle-cutting-settings" />
-          <div class="collapse-title font-semibold text-sm">
-            Cutting & Truncating
-          </div>
+          <div class="collapse-title font-semibold text-sm">Cutting & Truncating</div>
           <div class="collapse-content flex flex-col gap-4">
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3">
@@ -87,15 +92,20 @@
               </label>
             </div>
 
-            <div id="cutting-controls" class="hidden flex flex-col gap-4 p-4 bg-base-300 rounded-lg">
+            <div
+              id="cutting-controls"
+              class="hidden flex flex-col gap-4 p-4 bg-base-300 rounded-lg"
+            >
               <div class="form-control">
                 <label class="label cursor-pointer justify-start gap-3">
                   <input type="checkbox" id="copy-codec" class="checkbox checkbox-secondary" />
                   <span class="label-text whitespace-pre-line">No Transcoding (Lossless Cut)</span>
                 </label>
                 <label class="block label pb-0">
-                  <span class="label-text-alt whitespace-pre-line text-base-content/60">Keep original video/audio quality. Much faster, but
-                    may not work with all formats.</span>
+                  <span class="label-text-alt whitespace-pre-line text-base-content/60"
+                    >Keep original video/audio quality. Much faster, but may not work with all
+                    formats.</span
+                  >
                 </label>
               </div>
 
@@ -104,20 +114,38 @@
                   <label class="label">
                     <span class="label-text font-semibold text-xs">Start Time (s)</span>
                   </label>
-                  <input type="number" id="cut-start" class="input input-bordered input-sm w-full" value="0" step="0.1"
-                    min="0" />
+                  <input
+                    type="number"
+                    id="cut-start"
+                    class="input input-bordered input-sm w-full"
+                    value="0"
+                    step="0.1"
+                    min="0"
+                  />
                 </div>
                 <div class="form-control w-full">
                   <label class="label">
                     <span class="label-text font-semibold text-xs">End Time (s)</span>
                   </label>
-                  <input type="number" id="cut-end" class="input input-bordered input-sm w-full" value="0" step="0.1"
-                    min="0" />
+                  <input
+                    type="number"
+                    id="cut-end"
+                    class="input input-bordered input-sm w-full"
+                    value="0"
+                    step="0.1"
+                    min="0"
+                  />
                 </div>
               </div>
 
-              <div id="video-metadata" class="hidden p-3 bg-base-100/50 rounded-lg border border-base-content/5">
-                <h4 class="text-[10px] font-bold uppercase tracking-widest text-base-content/40 mb-2">Source Metadata
+              <div
+                id="video-metadata"
+                class="hidden p-3 bg-base-100/50 rounded-lg border border-base-content/5"
+              >
+                <h4
+                  class="text-[10px] font-bold uppercase tracking-widest text-base-content/40 mb-2"
+                >
+                  Source Metadata
                 </h4>
                 <div class="grid grid-cols-2 gap-y-1 gap-x-4 text-[11px] font-medium">
                   <span id="meta-duration"></span>
@@ -189,7 +217,9 @@
                   cursor: grab;
                   z-index: 10;
                   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-                  transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275), border-color 0.2s;
+                  transition:
+                    transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+                    border-color 0.2s;
                 }
 
                 .slider-handle:hover {
@@ -216,11 +246,16 @@
               </style>
 
               <div class="flex flex-col gap-2 mt-2">
-                <div class="w-full aspect-video bg-black rounded-lg overflow-hidden mb-2 hidden" id="preview-container">
+                <div
+                  class="w-full aspect-video bg-black rounded-lg overflow-hidden mb-2 hidden"
+                  id="preview-container"
+                >
                   <video id="cut-preview" class="w-full h-full" muted></video>
                 </div>
-                <div id="slider-container"
-                  class="custom-range-slider bg-base-300 rounded-lg p-1 border border-base-content/5">
+                <div
+                  id="slider-container"
+                  class="custom-range-slider bg-base-300 rounded-lg p-1 border border-base-content/5"
+                >
                   <div class="slider-track"></div>
                   <div id="slider-before" class="slider-dimmed"></div>
                   <div id="slider-after" class="slider-dimmed"></div>
@@ -228,8 +263,11 @@
                   <div id="handle-start" class="slider-handle handle-start"></div>
                   <div id="handle-end" class="slider-handle handle-end"></div>
                 </div>
-                <p class="text-[10px] text-center text-base-content/60 font-semibold pt-1 uppercase tracking-wider">
-                  Highlighted area is kept • Dimmed area is cut</p>
+                <p
+                  class="text-[10px] text-center text-base-content/60 font-semibold pt-1 uppercase tracking-wider"
+                >
+                  Highlighted area is kept • Dimmed area is cut
+                </p>
               </div>
             </div>
           </div>
@@ -237,15 +275,20 @@
 
         <div id="advanced-card" class="collapse collapse-arrow bg-base-200 mt-2">
           <input type="checkbox" />
-          <div class="collapse-title font-semibold text-sm">
-            Advanced Options
-          </div>
+          <div class="collapse-title font-semibold text-sm">Advanced Options</div>
           <div class="collapse-content">
             <label class="label">
-              <span class="label-text text-xs whitespace-pre-line">Append Custom FFmpeg Arguments (e.g. <code>-r 30 -crf 18</code>)</span>
+              <span class="label-text text-xs whitespace-pre-line"
+                >Append Custom FFmpeg Arguments (e.g. <code>-r 30 -crf 18</code>)</span
+              >
             </label>
-            <input type="text" id="advanced-args" class="input input-bordered input-sm w-full font-mono"
-              placeholder="-threads 2" data-setting="advancedArgs" />
+            <input
+              type="text"
+              id="advanced-args"
+              class="input input-bordered input-sm w-full font-mono"
+              placeholder="-threads 2"
+              data-setting="advancedArgs"
+            />
           </div>
         </div>
 
@@ -267,13 +310,20 @@
       </div>
       <div class="flex flex-col sm:flex-row items-stretch gap-6">
         <div
-          class="w-full sm:w-1/2 aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center shadow-inner">
+          class="w-full sm:w-1/2 aspect-video bg-black rounded-lg overflow-hidden flex items-center justify-center shadow-inner"
+        >
           <video id="result-video" controls class="max-h-full hidden"></video>
-          <img id="result-image" class="max-h-full object-contain hidden" alt="Transcoding Result" />
+          <img
+            id="result-image"
+            class="max-h-full object-contain hidden"
+            alt="Transcoding Result"
+          />
           <audio id="result-audio" controls class="w-full mx-4 hidden"></audio>
         </div>
         <div class="flex-1 flex flex-col gap-4">
-          <div class="p-4 bg-success/10 text-success rounded-lg flex items-center gap-3 border border-success/20">
+          <div
+            class="p-4 bg-success/10 text-success rounded-lg flex items-center gap-3 border border-success/20"
+          >
             <i data-lucide="check-circle" class="w-6 h-6"></i>
             <div>
               <p class="font-bold">Conversion Complete!</p>
@@ -303,12 +353,12 @@
 
     <div class="collapse collapse-arrow bg-base-200 border border-base-300">
       <input type="checkbox" />
-      <div class="collapse-title font-semibold text-sm">
-        Execution Logs
-      </div>
+      <div class="collapse-title font-semibold text-sm">Execution Logs</div>
       <div class="collapse-content">
-        <pre id="error-logs"
-          class="text-[10px] leading-tight font-mono p-4 bg-neutral text-neutral-content rounded-lg overflow-auto max-h-64 whitespace-pre-wrap"></pre>
+        <pre
+          id="error-logs"
+          class="text-[10px] leading-tight font-mono p-4 bg-neutral text-neutral-content rounded-lg overflow-auto max-h-64 whitespace-pre-wrap"
+        ></pre>
       </div>
     </div>
   </div>

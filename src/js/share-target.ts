@@ -1,8 +1,6 @@
 import type { Tool } from './types';
 import { getMimeTypeFromFileName } from './mime-types';
 
-
-
 function openDbClient(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('shared-db', 1);
@@ -124,7 +122,7 @@ export async function loadSharedFiles(keys: string[]): Promise<File[]> {
           const file = new File([fileOrBlob], 'shared-file', { type: fileOrBlob.type });
           files.push(file);
         }
-        await idbDelete(key).catch(() => { });
+        await idbDelete(key).catch(() => {});
       }
     } catch (e) {
       console.error(`Failed to load shared file with key ${key}`, e);

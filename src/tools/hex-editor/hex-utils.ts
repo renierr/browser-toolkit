@@ -30,22 +30,29 @@ export function formatAscii(byte: number): string {
 
   const char = String.fromCharCode(byte);
   switch (char) {
-    case '<': return '&lt;';
-    case '>': return '&gt;';
-    case '&': return '&amp;';
-    default: return char;
+    case '<':
+      return '&lt;';
+    case '>':
+      return '&gt;';
+    case '&':
+      return '&amp;';
+    default:
+      return char;
   }
 }
 
 /**
  * Reads a chunk from a File or Blob.
  */
-export async function readChunk(file: File | Blob, offset: number, length: number): Promise<Uint8Array> {
+export async function readChunk(
+  file: File | Blob,
+  offset: number,
+  length: number
+): Promise<Uint8Array> {
   const blob = file.slice(offset, offset + length);
   const buffer = await blob.arrayBuffer();
   return new Uint8Array(buffer);
 }
-
 
 /**
  * Manages a mutable buffer for editing.
@@ -245,7 +252,7 @@ export async function scanForStrings(
           if (len >= minLen) {
             const slice = bytes.subarray(seqStart, i);
             const s = decoder.decode(slice);
-            const globalOffset = (offset - carry.length) + seqStart;
+            const globalOffset = offset - carry.length + seqStart;
             const r = { offset: globalOffset, text: s };
             results.push(r);
             if (onResult) onResult(r);
@@ -268,7 +275,7 @@ export async function scanForStrings(
         const flushEnd = bytes.length - MAX_CARRY;
         const slice = bytes.subarray(seqStart, flushEnd);
         const s = decoder.decode(slice);
-        const r = { offset: (offset - carry.length) + seqStart, text: s };
+        const r = { offset: offset - carry.length + seqStart, text: s };
         results.push(r);
         if (onResult) onResult(r);
         seqStart = flushEnd;
@@ -295,4 +302,3 @@ export async function scanForStrings(
 
   return results;
 }
-

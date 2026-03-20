@@ -1,210 +1,339 @@
 <div class="flex flex-col gap-6 max-w-4xl mx-auto">
-    <div class="card bg-base-100 shadow-md p-6 border">
-        <h2 class="text-xl font-bold mb-4">Signature Creator</h2>
-        <p class="text-base-content/70 mb-6">
-            Draw your signature in the canvas below.<br>
-            Curve mode and DPI settings will also apply to saved signatures when downloading.
+  <div class="card bg-base-100 shadow-md p-6 border">
+    <h2 class="text-xl font-bold mb-4">Signature Creator</h2>
+    <p class="text-base-content/70 mb-6">
+      Draw your signature in the canvas below.<br />
+      Curve mode and DPI settings will also apply to saved signatures when downloading.
+    </p>
+    <div class="flex flex-wrap gap-4 mb-4 items-start">
+      <div class="form-control">
+        <label class="label py-0" for="stroke-width">
+          <span class="label-text text-xs"
+            >Width: <span id="width-value" class="inline-block w-3">2</span></span
+          >
+        </label>
+        <input
+          type="range"
+          id="stroke-width"
+          min="1"
+          max="12"
+          value="4"
+          class="range range-xs range-primary"
+        />
+      </div>
+      <div class="form-control">
+        <label class="label py-0 block" for="stroke-color">
+          <span class="label-text text-xs">Color</span>
+        </label>
+        <input
+          type="color"
+          id="stroke-color"
+          class="input input-bordered p-1 w-12 h-10"
+          value="#0B3D91"
+        />
+      </div>
+      <div class="form-control">
+        <label class="label py-0" for="export-dpi">
+          <span class="label-text text-xs">PNG Export DPI</span>
+        </label>
+        <input type="number" id="export-dpi" value="72" class="input" />
+      </div>
+    </div>
+
+    <!-- Advanced stroke settings (collapsible, initially closed) -->
+    <details class="mt-4 border rounded-lg bg-base-100 p-3 mb-2">
+      <summary class="cursor-pointer font-medium text-sm">Advanced stroke settings</summary>
+
+      <!-- Short overall description -->
+      <div class="flex items-start justify-between gap-3">
+        <p class="text-xs opacity-70 mt-2 mb-3">
+          Fine-tune how strokes respond to speed and pressure. Tweak these only if you want more
+          control over thin/thick transitions and responsiveness.
         </p>
-        <div class="flex flex-wrap gap-4 mb-4 items-start">
-            <div class="form-control">
-                <label class="label py-0" for="stroke-width">
-                    <span class="label-text text-xs">Width: <span id="width-value" class="inline-block w-3">2</span></span>
-                </label>
-                <input type="range" id="stroke-width" min="1" max="12" value="4" class="range range-xs range-primary">
-            </div>
-            <div class="form-control">
-                <label class="label py-0 block" for="stroke-color">
-                    <span class="label-text text-xs">Color</span>
-                </label>
-                <input type="color" id="stroke-color" class="input input-bordered p-1 w-12 h-10" value="#0B3D91">
-            </div>
-            <div class="form-control">
-                <label class="label py-0" for="export-dpi">
-                    <span class="label-text text-xs">PNG Export DPI</span>
-                </label>
-                <input type="number" id="export-dpi" value="72" class="input" />
-            </div>
+        <div class="mt-2">
+          <button id="reset-btn" class="btn btn-sm btn-outline">Reset to defaults</button>
         </div>
+      </div>
 
-        <!-- Advanced stroke settings (collapsible, initially closed) -->
-        <details class="mt-4 border rounded-lg bg-base-100 p-3 mb-2">
-          <summary class="cursor-pointer font-medium text-sm">Advanced stroke settings</summary>
-
-          <!-- Short overall description -->
-          <div class="flex items-start justify-between gap-3">
-            <p class="text-xs opacity-70 mt-2 mb-3">Fine-tune how strokes respond to speed and pressure. Tweak these only if you want more control over thin/thick transitions and responsiveness.</p>
-            <div class="mt-2">
-              <button id="reset-btn" class="btn btn-sm btn-outline">Reset to defaults</button>
-            </div>
+      <div class="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="form-control">
+          <label class="label py-0" for="curve-mode">
+            <span class="label-text text-xs">Curve mode</span>
+          </label>
+          <div class="relative">
+            <select id="curve-mode" class="select select-bordered w-full">
+              <option value="natural" selected>Natural</option>
+              <option value="fast">Fast</option>
+              <option value="fast">Draft</option>
+              <option value="none">None (raw strokes)</option>
+            </select>
           </div>
-
-            <div class="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div class="form-control">
-                <label class="label py-0" for="curve-mode">
-                  <span class="label-text text-xs">Curve mode</span>
-                </label>
-                <div class="relative">
-                  <select id="curve-mode" class="select select-bordered w-full">
-                    <option value="natural" selected>Natural</option>
-                    <option value="fast">Fast</option>
-                    <option value="fast">Draft</option>
-                    <option value="none">None (raw strokes)</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-control">
-                <label class="label py-0" for="rdp-epsilon">
-                  <span class="label-text text-xs">Reduce lines</span>
-                </label>
-                <div class="relative">
-                  <select id="rdp-epsilon" class="select select-bordered w-full">
-                    <option value="none" selected>Keep all</option>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-control">
-                <label class="label py-0" for="move-tolerance">
-                  <span class="label-text text-xs">Move tolerance: <span id="move-tolerance-value">2</span>px</span>
-                </label>
-                <input type="range" id="move-tolerance" min="0" max="20" step="1" value="2" class="range range-xs range-primary">
-                <p class="text-xs opacity-60 mt-1">Minimum pointer movement (px) required to register a new point. Increase to smooth jitter.</p>
-              </div>
-
-              <div class="form-control">
-                <label class="label py-0" for="min-width-factor">
-                  <span class="label-text text-xs">Min width factor: <span id="min-width-factor-value">0.15</span></span>
-                </label>
-                <input type="range" id="min-width-factor" min="0.05" max="1.0" step="0.01" value="0.15" class="range range-xs range-primary">
-                <p class="text-xs opacity-60 mt-1">Lowest allowed stroke width as a fraction of base width.</p>
-              </div>
-
-              <div class="form-control">
-                <label class="label py-0" for="max-width-factor">
-                  <span class="label-text text-xs">Max width factor: <span id="max-width-factor-value">2.0</span></span>
-                </label>
-                <input type="range" id="max-width-factor" min="1.0" max="4.0" step="0.01" value="2.0" class="range range-xs range-primary">
-                <p class="text-xs opacity-60 mt-1">Maximum stroke width multiplier relative to base width.</p>
-              </div>
-
-              <div class="form-control">
-                <label class="label py-0" for="velocity-sensitivity">
-                  <span class="label-text text-xs">Velocity sensitivity: <span id="velocity-sensitivity-value">0.85</span></span>
-                </label>
-                <input type="range" id="velocity-sensitivity" min="0" max="2.0" step="0.01" value="0.85" class="range range-xs range-primary">
-                <p class="text-xs opacity-60 mt-1">Higher values make speed affect width more strongly (faster → thinner).</p>
-              </div>
-
-              <div class="form-control">
-                <label class="label py-0" for="pressure-influence">
-                  <span class="label-text text-xs">Pressure influence: <span id="pressure-influence-value">0.90</span></span>
-                </label>
-                <input type="range" id="pressure-influence" min="0" max="1.0" step="0.01" value="0.90" class="range range-xs range-primary">
-                <p class="text-xs opacity-60 mt-1">How much pen pressure scales stroke width (0 = ignore pressure).</p>
-              </div>
-
-              <div class="form-control">
-                <label class="label py-0" for="velocity-influence">
-                  <span class="label-text text-xs">Velocity influence: <span id="velocity-influence-value">0.80</span></span>
-                </label>
-                <input type="range" id="velocity-influence" min="0" max="1.0" step="0.01" value="0.80" class="range range-xs range-primary">
-                <p class="text-xs opacity-60 mt-1">Blend amount of velocity-based scaling into computed width (0..1).</p>
-              </div>
-
-              <div class="form-control sm:col-span-2">
-                <label class="label py-0" for="width-smoothing">
-                  <span class="label-text text-xs">Width smoothing: <span id="width-smoothing-value">0.65</span></span>
-                </label>
-                <input type="range" id="width-smoothing" min="0" max="1.0" step="0.01" value="0.65" class="range range-xs range-primary">
-                <p class="text-xs opacity-60 mt-1">How much previous width is preserved when computing the next segment (higher = smoother).</p>
-              </div>
-            </div>
-        </details>
-
-        <div id="canvas-container" class="relative border-2 border-dashed border-base-300 rounded-lg  w-full" >
-            <canvas id="signature-canvas" class="cursor-crosshair w-full h-full checkerboard-bg" style="aspect-ratio: 16 / 6;"></canvas>
+        </div>
+        <div class="form-control">
+          <label class="label py-0" for="rdp-epsilon">
+            <span class="label-text text-xs">Reduce lines</span>
+          </label>
+          <div class="relative">
+            <select id="rdp-epsilon" class="select select-bordered w-full">
+              <option value="none" selected>Keep all</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-control">
+          <label class="label py-0" for="move-tolerance">
+            <span class="label-text text-xs"
+              >Move tolerance: <span id="move-tolerance-value">2</span>px</span
+            >
+          </label>
+          <input
+            type="range"
+            id="move-tolerance"
+            min="0"
+            max="20"
+            step="1"
+            value="2"
+            class="range range-xs range-primary"
+          />
+          <p class="text-xs opacity-60 mt-1">
+            Minimum pointer movement (px) required to register a new point. Increase to smooth
+            jitter.
+          </p>
         </div>
 
-        <div class="flex flex-wrap gap-2 mt-4">
-            <button id="clear-btn" class="btn btn-outline btn-error btn-sm">
-                <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> Clear
-            </button>
-            <button id="undo-btn" class="btn btn-ghost btn-sm" title="Undo (Ctrl+Z)">
-                <i data-lucide="corner-left-down" class="w-4 h-4 mr-1"></i> Undo
-            </button>
-            <button id="redo-btn" class="btn btn-ghost btn-sm" title="Redo (Ctrl+Y)">
-                <i data-lucide="corner-right-up" class="w-4 h-4 mr-1"></i> Redo
-            </button>
-            <div class="sm:grow"></div>
-
-          <button id="copy-clipboard" class="btn btn-ghost btn-sm">
-            <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
-            Copy to Clipboard
-          </button>
-
-            <!-- Direct download PNG -->
-            <button id="download-current-png-btn" class="btn btn-ghost btn-sm" title="Download PNG">
-                <i data-lucide="download" class="w-4 h-4 mr-1"></i> PNG
-            </button>
-
-            <!-- Direct download SVG -->
-            <button id="download-current-svg-btn" class="btn btn-ghost btn-sm" title="Download SVG">
-                <i data-lucide="file-code" class="w-4 h-4 mr-1"></i> SVG
-            </button>
-
-            <!-- Direct download Animated SVG -->
-            <button id="download-current-animated-btn" class="btn btn-ghost btn-sm" title="Download Video (WebM)">
-                <i data-lucide="play" class="w-4 h-4 mr-1"></i> Video
-            </button>
-
-            <button id="save-btn" class="btn btn-primary btn-sm">
-                <i data-lucide="save" class="w-4 h-4 mr-1"></i> Save Signature
-            </button>
+        <div class="form-control">
+          <label class="label py-0" for="min-width-factor">
+            <span class="label-text text-xs"
+              >Min width factor: <span id="min-width-factor-value">0.15</span></span
+            >
+          </label>
+          <input
+            type="range"
+            id="min-width-factor"
+            min="0.05"
+            max="1.0"
+            step="0.01"
+            value="0.15"
+            class="range range-xs range-primary"
+          />
+          <p class="text-xs opacity-60 mt-1">
+            Lowest allowed stroke width as a fraction of base width.
+          </p>
         </div>
+
+        <div class="form-control">
+          <label class="label py-0" for="max-width-factor">
+            <span class="label-text text-xs"
+              >Max width factor: <span id="max-width-factor-value">2.0</span></span
+            >
+          </label>
+          <input
+            type="range"
+            id="max-width-factor"
+            min="1.0"
+            max="4.0"
+            step="0.01"
+            value="2.0"
+            class="range range-xs range-primary"
+          />
+          <p class="text-xs opacity-60 mt-1">
+            Maximum stroke width multiplier relative to base width.
+          </p>
+        </div>
+
+        <div class="form-control">
+          <label class="label py-0" for="velocity-sensitivity">
+            <span class="label-text text-xs"
+              >Velocity sensitivity: <span id="velocity-sensitivity-value">0.85</span></span
+            >
+          </label>
+          <input
+            type="range"
+            id="velocity-sensitivity"
+            min="0"
+            max="2.0"
+            step="0.01"
+            value="0.85"
+            class="range range-xs range-primary"
+          />
+          <p class="text-xs opacity-60 mt-1">
+            Higher values make speed affect width more strongly (faster → thinner).
+          </p>
+        </div>
+
+        <div class="form-control">
+          <label class="label py-0" for="pressure-influence">
+            <span class="label-text text-xs"
+              >Pressure influence: <span id="pressure-influence-value">0.90</span></span
+            >
+          </label>
+          <input
+            type="range"
+            id="pressure-influence"
+            min="0"
+            max="1.0"
+            step="0.01"
+            value="0.90"
+            class="range range-xs range-primary"
+          />
+          <p class="text-xs opacity-60 mt-1">
+            How much pen pressure scales stroke width (0 = ignore pressure).
+          </p>
+        </div>
+
+        <div class="form-control">
+          <label class="label py-0" for="velocity-influence">
+            <span class="label-text text-xs"
+              >Velocity influence: <span id="velocity-influence-value">0.80</span></span
+            >
+          </label>
+          <input
+            type="range"
+            id="velocity-influence"
+            min="0"
+            max="1.0"
+            step="0.01"
+            value="0.80"
+            class="range range-xs range-primary"
+          />
+          <p class="text-xs opacity-60 mt-1">
+            Blend amount of velocity-based scaling into computed width (0..1).
+          </p>
+        </div>
+
+        <div class="form-control sm:col-span-2">
+          <label class="label py-0" for="width-smoothing">
+            <span class="label-text text-xs"
+              >Width smoothing: <span id="width-smoothing-value">0.65</span></span
+            >
+          </label>
+          <input
+            type="range"
+            id="width-smoothing"
+            min="0"
+            max="1.0"
+            step="0.01"
+            value="0.65"
+            class="range range-xs range-primary"
+          />
+          <p class="text-xs opacity-60 mt-1">
+            How much previous width is preserved when computing the next segment (higher =
+            smoother).
+          </p>
+        </div>
+      </div>
+    </details>
+
+    <div
+      id="canvas-container"
+      class="relative border-2 border-dashed border-base-300 rounded-lg w-full"
+    >
+      <canvas
+        id="signature-canvas"
+        class="cursor-crosshair w-full h-full checkerboard-bg"
+        style="aspect-ratio: 16 / 6"
+      ></canvas>
     </div>
 
-    <div id="saved-signatures-container" class="card bg-base-100 shadow-md p-6 hidden">
-        <h2 class="text-xl font-bold mb-4">Saved Signatures</h2>
+    <div class="flex flex-wrap gap-2 mt-4">
+      <button id="clear-btn" class="btn btn-outline btn-error btn-sm">
+        <i data-lucide="trash-2" class="w-4 h-4 mr-1"></i> Clear
+      </button>
+      <button id="undo-btn" class="btn btn-ghost btn-sm" title="Undo (Ctrl+Z)">
+        <i data-lucide="corner-left-down" class="w-4 h-4 mr-1"></i> Undo
+      </button>
+      <button id="redo-btn" class="btn btn-ghost btn-sm" title="Redo (Ctrl+Y)">
+        <i data-lucide="corner-right-up" class="w-4 h-4 mr-1"></i> Redo
+      </button>
+      <div class="sm:grow"></div>
 
-        <div>
-          <button id="export-signatures-btn" class="btn btn-ghost btn-sm" title="Export saved signatures as JSON">
-            <i data-lucide="download" class="w-4 h-4 mr-1"></i> Export
-          </button>
-          <button id="import-signatures-btn" class="btn btn-ghost btn-sm" title="Import signatures from JSON">
-            <i data-lucide="upload" class="w-4 h-4 mr-1"></i> Import
-          </button>
-          <input id="import-file-input" type="file" accept=".json,application/json" class="hidden" />
-        </div>
+      <button id="copy-clipboard" class="btn btn-ghost btn-sm">
+        <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+        Copy to Clipboard
+      </button>
 
-        <div id="signatures-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Signatures will be injected here -->
-        </div>
+      <!-- Direct download PNG -->
+      <button id="download-current-png-btn" class="btn btn-ghost btn-sm" title="Download PNG">
+        <i data-lucide="download" class="w-4 h-4 mr-1"></i> PNG
+      </button>
+
+      <!-- Direct download SVG -->
+      <button id="download-current-svg-btn" class="btn btn-ghost btn-sm" title="Download SVG">
+        <i data-lucide="file-code" class="w-4 h-4 mr-1"></i> SVG
+      </button>
+
+      <!-- Direct download Animated SVG -->
+      <button
+        id="download-current-animated-btn"
+        class="btn btn-ghost btn-sm"
+        title="Download Video (WebM)"
+      >
+        <i data-lucide="play" class="w-4 h-4 mr-1"></i> Video
+      </button>
+
+      <button id="save-btn" class="btn btn-primary btn-sm">
+        <i data-lucide="save" class="w-4 h-4 mr-1"></i> Save Signature
+      </button>
     </div>
+  </div>
+
+  <div id="saved-signatures-container" class="card bg-base-100 shadow-md p-6 hidden">
+    <h2 class="text-xl font-bold mb-4">Saved Signatures</h2>
+
+    <div>
+      <button
+        id="export-signatures-btn"
+        class="btn btn-ghost btn-sm"
+        title="Export saved signatures as JSON"
+      >
+        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Export
+      </button>
+      <button
+        id="import-signatures-btn"
+        class="btn btn-ghost btn-sm"
+        title="Import signatures from JSON"
+      >
+        <i data-lucide="upload" class="w-4 h-4 mr-1"></i> Import
+      </button>
+      <input id="import-file-input" type="file" accept=".json,application/json" class="hidden" />
+    </div>
+
+    <div id="signatures-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Signatures will be injected here -->
+    </div>
+  </div>
 </div>
 
 <template id="signature-item-template">
-    <div class="flex flex-col border border-base-300 rounded-lg p-4 bg-base-200/50">
-        <div class="checkerboard-bg rounded border border-base-300 mb-2 flex items-center justify-center overflow-hidden" style="height: 100px;">
-            <img class=" signature-preview max-h-full max-w-full object-contain" src="" alt="Signature preview">
-        </div>
-        <div class="flex justify-between items-center">
-            <span class="text-xs opacity-70 signature-date"></span>
-            <div class="flex gap-1">
-                <button class="btn btn-ghost btn-xs text-error delete-signature-btn" title="Delete">
-                    <i data-lucide="trash" class="w-3 h-3"></i>
-                </button>
-                <button class="btn btn-ghost btn-xs load-signature-btn" title="Load">
-                    <i data-lucide="corner-right-up" class="w-3 h-3"></i>
-                </button>
-                <button class="btn btn-ghost btn-xs download-svg-btn" title="Download SVG">
-                    <i data-lucide="file-code" class="w-3 h-3"></i>
-                </button>
-                <button class="btn btn-ghost btn-xs download-png-btn" title="Download PNG">
-                    <i data-lucide="download" class="w-3 h-3"></i>
-                </button>
-            </div>
-        </div>
+  <div class="flex flex-col border border-base-300 rounded-lg p-4 bg-base-200/50">
+    <div
+      class="checkerboard-bg rounded border border-base-300 mb-2 flex items-center justify-center overflow-hidden"
+      style="height: 100px"
+    >
+      <img
+        class="signature-preview max-h-full max-w-full object-contain"
+        src=""
+        alt="Signature preview"
+      />
     </div>
+    <div class="flex justify-between items-center">
+      <span class="text-xs opacity-70 signature-date"></span>
+      <div class="flex gap-1">
+        <button class="btn btn-ghost btn-xs text-error delete-signature-btn" title="Delete">
+          <i data-lucide="trash" class="w-3 h-3"></i>
+        </button>
+        <button class="btn btn-ghost btn-xs load-signature-btn" title="Load">
+          <i data-lucide="corner-right-up" class="w-3 h-3"></i>
+        </button>
+        <button class="btn btn-ghost btn-xs download-svg-btn" title="Download SVG">
+          <i data-lucide="file-code" class="w-3 h-3"></i>
+        </button>
+        <button class="btn btn-ghost btn-xs download-png-btn" title="Download PNG">
+          <i data-lucide="download" class="w-3 h-3"></i>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>

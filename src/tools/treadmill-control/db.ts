@@ -64,4 +64,3 @@ export async function deleteSession(id: number): Promise<void> {
     request.onsuccess = () => resolve();
   });
 }
-

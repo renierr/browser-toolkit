@@ -27,7 +27,7 @@ export const MODELS: Record<string, ModelConfig> = {
     inputSize: 320,
     mean: [0.485, 0.456, 0.406],
     std: [0.229, 0.224, 0.225],
-  }
+  },
 };
 
 export interface ProcessingOptions {
@@ -77,7 +77,11 @@ export function getProcessingOptions(): ProcessingOptions {
   return { threshold, smoothing, contrast, useGuidedFilter, modelId, forceWasm };
 }
 
-export async function convertBlobToFormat(blob: Blob, format: 'png' | 'webp', quality: number): Promise<Blob> {
+export async function convertBlobToFormat(
+  blob: Blob,
+  format: 'png' | 'webp',
+  quality: number
+): Promise<Blob> {
   if (format === 'png') return blob;
   return convertBlobFormat(blob, 'image/webp', quality);
 }

@@ -10,17 +10,32 @@ const ensureRegExper = async () => {
   // Provide a minimal event bus `eve` shim to satisfy libraries that expect a global `eve` (Raphael/regexper)
   if (typeof (window as any).eve === 'undefined') {
     const events: Record<string, Function[]> = {};
-    const eveFn: any = function(name: string, ...args: any[]) {
+    const eveFn: any = function (name: string, ...args: any[]) {
       const handlers = events[name];
-      if (handlers) handlers.forEach(h => { try { h.apply(null, args); } catch (e) { /* swallow handler errors */ } });
+      if (handlers)
+        handlers.forEach((h) => {
+          try {
+            h.apply(null, args);
+          } catch (e) {
+            /* swallow handler errors */
+          }
+        });
     };
-    eveFn.on = (name: string, fn: Function) => { (events[name] ||= []).push(fn); };
+    eveFn.on = (name: string, fn: Function) => {
+      (events[name] ||= []).push(fn);
+    };
     eveFn.un = (name: string, fn?: Function) => {
-      if (!fn) { delete events[name]; return; }
-      events[name] = (events[name] || []).filter(f => f !== fn);
+      if (!fn) {
+        delete events[name];
+        return;
+      }
+      events[name] = (events[name] || []).filter((f) => f !== fn);
     };
     eveFn.once = (name: string, fn: Function) => {
-      const wrapper = (...args: any[]) => { fn(...args); eveFn.un(name, wrapper); };
+      const wrapper = (...args: any[]) => {
+        fn(...args);
+        eveFn.un(name, wrapper);
+      };
       eveFn.on(name, wrapper);
     };
     (window as any).eve = eveFn;
@@ -39,11 +54,12 @@ const ensureRegExper = async () => {
 const scopeSvgStyles = (svg: SVGElement | null) => {
   if (!svg) return;
   try {
-    const id = svg.id || `regexper-${Date.now().toString(36)}-${Math.random().toString(36).slice(2,6)}`;
+    const id =
+      svg.id || `regexper-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
     svg.id = id;
 
     const styles = svg.querySelectorAll('style');
-    styles.forEach(style => {
+    styles.forEach((style) => {
       const css = style.textContent || '';
       // Very small parser: transform top-level rules by prefixing selectors with `#id `
       // Leave @-rules (like @keyframes, @font-face) untouched.
@@ -51,7 +67,10 @@ const scopeSvgStyles = (svg: SVGElement | null) => {
         const sel = String(selectors || '').trim();
         if (!sel || sel.startsWith('@')) return m; // skip @rules
         try {
-          const newSel = sel.split(',').map((s: string) => `#${id} ${s.trim()}`).join(', ');
+          const newSel = sel
+            .split(',')
+            .map((s: string) => `#${id} ${s.trim()}`)
+            .join(', ');
           return `${newSel} {${body}}`;
         } catch (e) {
           return m;
@@ -174,7 +193,6 @@ export default function init() {
           });
           mo.observe(diagramContainer, { childList: true, subtree: true });
         }
-
       } catch (renderErr) {
         // If regexper throws, surface an error
         console.error('regexper.render error', renderErr);
@@ -209,7 +227,7 @@ export default function init() {
 
   const onCopySvgClick = async () => {
     // Prefer the original RegExper output as authoritative
-    const svg = (diagramContainer.querySelector('svg') as SVGElement);
+    const svg = diagramContainer.querySelector('svg') as SVGElement;
     if (!svg) return showMessage('No SVG to copy', { type: 'warning' });
     const svgData = new XMLSerializer().serializeToString(svg);
     try {
@@ -222,7 +240,7 @@ export default function init() {
   };
 
   const onDownloadSvgClick = async () => {
-    const svg = (diagramContainer.querySelector('svg') as SVGElement);
+    const svg = diagramContainer.querySelector('svg') as SVGElement;
     if (!svg) return;
     const svgData = new XMLSerializer().serializeToString(svg);
     const blob = new Blob([svgData], { type: 'image/svg+xml' });
@@ -230,7 +248,7 @@ export default function init() {
   };
 
   const onDownloadPngClick = () => {
-    const svg = (diagramContainer.querySelector('svg') as SVGElement);
+    const svg = diagramContainer.querySelector('svg') as SVGElement;
     if (!svg) return;
     const svgData = new XMLSerializer().serializeToString(svg);
     const img = new Image();

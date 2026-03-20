@@ -47,7 +47,7 @@ export function imageToTensor(
 export function normalizeMask(
   raw: Float32Array,
   threshold: number = 128,
-  contrast: number = 1.0,
+  contrast: number = 1.0
 ): Uint8Array {
   let min = Infinity;
   let max = -Infinity;
@@ -77,7 +77,14 @@ export function normalizeMask(
   return out;
 }
 
-function boxFilter(data: Float32Array, width: number, height: number, radius: number, out?: Float32Array, scratch?: Float32Array): Float32Array {
+function boxFilter(
+  data: Float32Array,
+  width: number,
+  height: number,
+  radius: number,
+  out?: Float32Array,
+  scratch?: Float32Array
+): Float32Array {
   const output = out ?? new Float32Array(data.length);
   const winSize = 2 * radius + 1;
 
@@ -124,7 +131,7 @@ export function guidedFilter(
   height: number,
   radius: number = 4,
   eps: number = 0.01,
-  cachedDownscaledRgba?: Uint8ClampedArray,
+  cachedDownscaledRgba?: Uint8ClampedArray
 ): GuidedFilterResult {
   if (width <= GUIDED_FILTER_MAX_DIM && height <= GUIDED_FILTER_MAX_DIM) {
     return { mask: guidedFilterCore(sourceRgba, mask, width, height, radius, eps) };
@@ -145,20 +152,21 @@ export function guidedFilter(
   };
 }
 
-
 function guidedFilterCore(
   sourceRgba: Uint8ClampedArray,
   mask: Uint8Array,
   width: number,
   height: number,
   radius: number,
-  eps: number,
+  eps: number
 ): Uint8Array {
   const size = width * height;
 
   const I = new Float32Array(size);
   for (let i = 0; i < size; i++) {
-    I[i] = (sourceRgba[i * 4] * 0.299 + sourceRgba[i * 4 + 1] * 0.587 + sourceRgba[i * 4 + 2] * 0.114) / 255;
+    I[i] =
+      (sourceRgba[i * 4] * 0.299 + sourceRgba[i * 4 + 1] * 0.587 + sourceRgba[i * 4 + 2] * 0.114) /
+      255;
   }
 
   const p = new Float32Array(size);
@@ -206,7 +214,7 @@ export function resizeMask(
   srcW: number,
   srcH: number,
   dstW: number,
-  dstH: number,
+  dstH: number
 ): Uint8Array {
   if (srcW === dstW && srcH === dstH) return mask;
 
@@ -244,7 +252,7 @@ export function applyMask(
   mask: Uint8Array,
   maskWidth: number,
   maskHeight: number,
-  smoothing: number = 0,
+  smoothing: number = 0
 ): OffscreenCanvas {
   const canvas = new OffscreenCanvas(width, height);
   const ctx = canvas.getContext('2d', { alpha: true })!;
@@ -258,7 +266,11 @@ export function applyMask(
   maskCtx.putImageData(maskData, 0, 0);
 
   ctx.clearRect(0, 0, width, height);
-  ctx.putImageData(new ImageData(rgba as unknown as Uint8ClampedArray<ArrayBuffer>, width, height), 0, 0);
+  ctx.putImageData(
+    new ImageData(rgba as unknown as Uint8ClampedArray<ArrayBuffer>, width, height),
+    0,
+    0
+  );
 
   ctx.globalCompositeOperation = 'destination-in';
   if (smoothing > 0) {
@@ -276,13 +288,17 @@ function resizeRGBA(
   srcW: number,
   srcH: number,
   dstW: number,
-  dstH: number,
+  dstH: number
 ): Uint8ClampedArray {
   if (srcW === dstW && srcH === dstH) return src;
 
   const srcCanvas = new OffscreenCanvas(srcW, srcH);
   const srcCtx = srcCanvas.getContext('2d')!;
-  srcCtx.putImageData(new ImageData(src as unknown as Uint8ClampedArray<ArrayBuffer>, srcW, srcH), 0, 0);
+  srcCtx.putImageData(
+    new ImageData(src as unknown as Uint8ClampedArray<ArrayBuffer>, srcW, srcH),
+    0,
+    0
+  );
 
   const canvas = new OffscreenCanvas(dstW, dstH);
   const ctx = canvas.getContext('2d')!;

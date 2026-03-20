@@ -151,7 +151,9 @@ export async function switchToNextCamera(
   const nextDevice = videoDevices[nextIdx];
   if (!nextDevice) return prevStream;
 
-  console.debug(`[Camera] Switching to device ${nextIdx + 1}/${videoDevices.length}: ${nextDevice.label || nextDevice.deviceId}`);
+  console.debug(
+    `[Camera] Switching to device ${nextIdx + 1}/${videoDevices.length}: ${nextDevice.label || nextDevice.deviceId}`
+  );
   return startCamera({ videoEl, prevStream, deviceId: nextDevice.deviceId });
 }
 
@@ -333,7 +335,9 @@ export async function tapToFocus(
           if (track.readyState === 'live' && caps?.focusMode?.includes('continuous')) {
             await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] } as any);
           }
-        } catch { /* track may have ended */ }
+        } catch {
+          /* track may have ended */
+        }
       }, 2000);
       return true;
     }
@@ -348,7 +352,9 @@ export async function tapToFocus(
           if (track.readyState === 'live' && caps?.focusMode?.includes('continuous')) {
             await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] } as any);
           }
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }, 2000);
       return true;
     }
@@ -392,4 +398,3 @@ export async function capturePhoto(
 
   return blob;
 }
-

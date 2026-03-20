@@ -6,7 +6,7 @@ export const playForest = (engine: NoiseEngine, checkActive: () => boolean) => {
   const layer = engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'lowpass', freq: 400 },
-    gain: 0.15
+    gain: 0.15,
   });
 
   if (layer) {

@@ -1,7 +1,9 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">Regex Visualizer</h2>
-    <p class="text-base-content/70 mb-6">Visualize regular expressions as railroad diagrams to understand their matching logic.</p>
+    <p class="text-base-content/70 mb-6">
+      Visualize regular expressions as railroad diagrams to understand their matching logic.
+    </p>
 
     <div class="flex flex-col gap-6">
       <!-- Input Section -->
@@ -11,11 +13,20 @@
         </label>
         <div class="join w-full flex-wrap">
           <span class="join-item btn btn-ghost no-animation text-md font-mono">/</span>
-          <input type="text" id="regex-input" class="input input-bordered join-item flex-1 min-w-26 font-mono text-lg"
-                 placeholder="Enter regex here... (e.g. ^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$)">
+          <input
+            type="text"
+            id="regex-input"
+            class="input input-bordered join-item flex-1 min-w-26 font-mono text-lg"
+            placeholder="Enter regex here... (e.g. ^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$)"
+          />
           <span class="join-item btn btn-ghost no-animation text-md font-mono">/</span>
-          <input type="text" id="regex-flags" class="input input-bordered join-item w-16 font-mono text-lg"
-                 placeholder="flags" value="g">
+          <input
+            type="text"
+            id="regex-flags"
+            class="input input-bordered join-item w-16 font-mono text-lg"
+            placeholder="flags"
+            value="g"
+          />
         </div>
       </div>
 
@@ -48,9 +59,21 @@
 
       <!-- Result Section -->
       <div id="result-section" class="hidden mt-4">
-        <div id="diagram-container" class="bg-white rounded shadow-sm p-4 grid justify-items-center items-start overflow-auto max-h-[60vh]">
+        <div
+          id="diagram-container"
+          class="bg-white rounded shadow-sm p-4 grid justify-items-center items-start overflow-auto max-h-[60vh]"
+        >
           <!-- Keep SVG at its intrinsic size so overflow produces scrollbars instead of scaling it down -->
-          <style>#diagram-container svg{display:block;max-width:none;height:auto;} #diagram-container svg *{vector-effect: non-scaling-stroke;}</style>
+          <style>
+            #diagram-container svg {
+              display: block;
+              max-width: none;
+              height: auto;
+            }
+            #diagram-container svg * {
+              vector-effect: non-scaling-stroke;
+            }
+          </style>
           <!-- Diagram will be injected here -->
         </div>
       </div>

@@ -7,20 +7,20 @@ export const playAirplane = (engine: NoiseEngine, checkActive: () => boolean) =>
     type: 'brown',
     filter: { type: 'lowpass', freq: 160 },
     pan: 0,
-    gain: 0.6
+    gain: 0.6,
   });
 
   engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 1200, Q: 0.3 },
     pan: 0,
-    gain: 0.08
+    gain: 0.08,
   });
 
   engine.createOscillatorLayer({
     type: 'sine',
     freq: 240,
-    gain: 0.02
+    gain: 0.02,
   });
 
   const playAmbiance = () => {
@@ -78,12 +78,8 @@ export const playAirplane = (engine: NoiseEngine, checkActive: () => boolean) =>
       }
     }
 
-    engine.activeIntervals.push(
-      window.setTimeout(playAmbiance, (15 + Math.random() * 45) * 1000)
-    );
+    engine.activeIntervals.push(window.setTimeout(playAmbiance, (15 + Math.random() * 45) * 1000));
   };
 
-  engine.activeIntervals.push(
-    window.setTimeout(playAmbiance, (5 + Math.random() * 15) * 1000)
-  );
+  engine.activeIntervals.push(window.setTimeout(playAmbiance, (5 + Math.random() * 15) * 1000));
 };

@@ -104,7 +104,9 @@ const scrollTopOfViewer = (viewerEl: HTMLElement) => {
 };
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload | { pdfBytes: ArrayBuffer; fileName: string }) {
+export default function init(
+  payload?: SharedFilesPayload | { pdfBytes: ArrayBuffer; fileName: string }
+) {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files: FileList) => {
     showProgress('Load PDF file...');
     if (await showPdfViewer(files)) {
@@ -121,13 +123,17 @@ export default function init(payload?: SharedFilesPayload | { pdfBytes: ArrayBuf
 
   // Handle SharedFilesPayload (from PWA share target)
   if (payload && 'sharedFiles' in payload && payload.sharedFiles?.length) {
-    const pdfFiles = payload.sharedFiles.filter(f => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf'));
+    const pdfFiles = payload.sharedFiles.filter(
+      (f) => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf')
+    );
     if (pdfFiles.length > 0) {
       showProgress('Opening shared PDF...');
       showPdfViewer(pdfFiles as unknown as FileList).then((success) => {
         if (success) {
           toggleToolCard(false);
-          showMessage(`PDF "${pdfFiles.map(f => f.name).join(', ')}" loaded.`, { timeoutMs: 5000 });
+          showMessage(`PDF "${pdfFiles.map((f) => f.name).join(', ')}" loaded.`, {
+            timeoutMs: 5000,
+          });
         }
         hideProgress();
       });

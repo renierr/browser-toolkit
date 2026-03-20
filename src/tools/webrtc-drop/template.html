@@ -1,192 +1,264 @@
 <div class="tool-content p-4 space-y-6 max-w-4xl mx-auto">
-    <!-- Header/Self Info -->
-    <div class="card bg-base-200 shadow-sm border border-base-300">
-        <div class="card-body p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="avatar placeholder">
-                    <div class="bg-primary text-primary-content rounded-full w-12 flex items-center justify-center">
-                        <span id="self-initials" class="text-xl">?</span>
-                    </div>
-                </div>
-                <div>
-                    <h2 id="self-name" class="font-bold text-lg">Initializing...</h2>
-                    <p class="text-xs opacity-50">Local P2P File Transfer (Offline)</p>
-                </div>
-            </div>
-            <div class="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
-                <div class="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-2">
-                    <div id="quick-status" class="text-[10px] opacity-40 hidden">Quick Connect: Active</div>
-                    <div id="status-badge" class="badge badge-outline">Ready</div>
-                </div>
+  <!-- Header/Self Info -->
+  <div class="card bg-base-200 shadow-sm border border-base-300">
+    <div
+      class="card-body p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+    >
+      <div class="flex items-center gap-3">
+        <div class="avatar placeholder">
+          <div
+            class="bg-primary text-primary-content rounded-full w-12 flex items-center justify-center"
+          >
+            <span id="self-initials" class="text-xl">?</span>
+          </div>
+        </div>
+        <div>
+          <h2 id="self-name" class="font-bold text-lg">Initializing...</h2>
+          <p class="text-xs opacity-50">Local P2P File Transfer (Offline)</p>
+        </div>
+      </div>
+      <div class="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto">
+        <div class="flex items-center justify-between w-full sm:w-auto sm:justify-end gap-2">
+          <div id="quick-status" class="text-[10px] opacity-40 hidden">Quick Connect: Active</div>
+          <div id="status-badge" class="badge badge-outline">Ready</div>
+        </div>
 
-                <div class="mt-1 w-full sm:text-right">
-                    <label class="inline-flex items-center gap-2 cursor-pointer" for="discovery-toggle">
-                        <input id="discovery-toggle" type="checkbox" class="checkbox checkbox-xs" aria-label="Enable online discovery" />
-                        <span class="text-[11px] opacity-70">Enable online discovery</span>
-                    </label>
-                    <div class="mt-1 flex items-center justify-start sm:justify-end gap-2">
-                        <span id="discovery-status" class="text-[10px] opacity-50">Discovery: Off</span>
-                        <span id="discovery-dot" class="w-2 h-2 rounded-full bg-gray-300" title="Discovery status" aria-hidden="true"></span>
-                    </div>
-                </div>
-            </div>
+        <div class="mt-1 w-full sm:text-right">
+          <label class="inline-flex items-center gap-2 cursor-pointer" for="discovery-toggle">
+            <input
+              id="discovery-toggle"
+              type="checkbox"
+              class="checkbox checkbox-xs"
+              aria-label="Enable online discovery"
+            />
+            <span class="text-[11px] opacity-70">Enable online discovery</span>
+          </label>
+          <div class="mt-1 flex items-center justify-start sm:justify-end gap-2">
+            <span id="discovery-status" class="text-[10px] opacity-50">Discovery: Off</span>
+            <span
+              id="discovery-dot"
+              class="w-2 h-2 rounded-full bg-gray-300"
+              title="Discovery status"
+              aria-hidden="true"
+            ></span>
+          </div>
         </div>
-        <div class="px-4 pb-4">
-            <p class="text-[10px] opacity-50">When enabled, this advertises offers through an online service (ntfy.sh) so peers can discover you remotely.</p>
-        </div>
+      </div>
+    </div>
+    <div class="px-4 pb-4">
+      <p class="text-[10px] opacity-50">
+        When enabled, this advertises offers through an online service (ntfy.sh) so peers can
+        discover you remotely.
+      </p>
+    </div>
+  </div>
+
+  <!-- Connection Orchestrator -->
+  <div id="setup-view" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Discovered Peers (Online) -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm md:col-span-2 hidden">
+      <div class="card-body p-4">
+        <h3 class="card-title text-sm uppercase opacity-50">Discovered Peers (Online)</h3>
+        <p class="text-xs opacity-60">
+          Peers found via online discovery (opt-in). Select a peer below to join without scanning a
+          QR.
+        </p>
+        <div id="discovery-list" class="mt-3 grid grid-cols-1 gap-2"></div>
+      </div>
     </div>
 
-    <!-- Connection Orchestrator -->
-    <div id="setup-view" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Discovered Peers (Online) -->
-        <div class="card bg-base-100 border border-base-300 shadow-sm md:col-span-2 hidden">
-            <div class="card-body p-4">
-                <h3 class="card-title text-sm uppercase opacity-50">Discovered Peers (Online)</h3>
-                <p class="text-xs opacity-60">Peers found via online discovery (opt-in). Select a peer below to join without scanning a QR.</p>
-                <div id="discovery-list" class="mt-3 grid grid-cols-1 gap-2"></div>
-            </div>
+    <!-- Host Mode -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body">
+        <h3 class="card-title text-sm uppercase opacity-50">Host Mode</h3>
+        <p class="text-xs">
+          Create a connection to receive files or send to someone who scans you.
+        </p>
+        <div class="card-actions mt-4">
+          <button id="re-offer-btn" class="btn btn-ghost btn-block mt-2 hidden">
+            <i data-lucide="refresh-ccw" class="w-4 h-4 mr-2"></i> Re-offer (re-advertise)
+          </button>
+          <button id="host-btn" class="btn btn-primary btn-block">
+            <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Create Offer QR
+          </button>
         </div>
-
-        <!-- Host Mode -->
-        <div class="card bg-base-100 border border-base-300 shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title text-sm uppercase opacity-50">Host Mode</h3>
-                <p class="text-xs">Create a connection to receive files or send to someone who scans you.</p>
-                <div class="card-actions mt-4">
-                    <button id="re-offer-btn" class="btn btn-ghost btn-block mt-2 hidden">
-                        <i data-lucide="refresh-ccw" class="w-4 h-4 mr-2"></i> Re-offer (re-advertise)
-                    </button>
-                    <button id="host-btn" class="btn btn-primary btn-block">
-                        <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Create Offer QR
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Join Mode -->
-        <div class="card bg-base-100 border border-base-300 shadow-sm">
-            <div class="card-body">
-                <h3 class="card-title text-sm uppercase opacity-50">Join Mode</h3>
-                <p class="text-xs">Scan someone's Offer QR to establish a connection.</p>
-                <div class="card-actions mt-4">
-                    <button id="join-btn" class="btn btn-secondary btn-block">
-                        <i data-lucide="camera" class="w-4 h-4 mr-2"></i> Scan Offer QR
-                    </button>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
 
-    <!-- Handshake Real-time View (Shown during handshake) -->
-    <div id="handshake-view" class="hidden space-y-4">
-        <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
-            <div class="bg-base-200 p-3 flex items-center justify-between">
-                <span id="handshake-step-title" class="font-bold">Step: Exchange Handshake</span>
-                <button id="cancel-handshake" class="btn btn-ghost btn-xs">Cancel</button>
-            </div>
-            <div class="p-6 flex flex-col items-center gap-6">
-                <!-- QR Output -->
-                <div id="qr-output-container" class="hidden flex flex-col items-center gap-1 w-full max-w-[min(90vw,35vh,260px)] mx-auto overflow-hidden">
-                    <div class="bg-white p-1 rounded-lg shadow-inner w-full aspect-square flex items-center justify-center overflow-hidden">
-                        <canvas id="qr-canvas-output" class="max-w-full max-h-full object-contain block"></canvas>
-                    </div>
-                    <p class="text-[10px] font-bold text-primary text-center leading-tight mb-1" id="qr-instruction">Follow the steps below</p>
-                    <button id="host-scan-answer-btn" class="btn btn-primary btn-xs btn-block hidden py-2 h-auto">
-                        <i data-lucide="camera" class="w-3 h-3 mr-1"></i> I've Shared! Now Scan their Answer
-                    </button>
-                </div>
-
-                <!-- Scanner -->
-                <div id="scanner-container" class="hidden w-full max-w-sm rounded-xl overflow-hidden relative bg-black shadow-lg aspect-video">
-                    <video id="qr-video" class="w-full h-full object-cover"></video>
-                    <canvas id="qr-canvas" class="hidden"></canvas>
-                    <div class="absolute inset-0 flex items-center justify-center bg-black/60 group" id="scan-overlay">
-                        <button id="start-scan-btn" class="btn btn-primary btn-sm">
-                            <i data-lucide="camera" class="w-4 h-4 mr-2"></i> Start Camera Scan
-                        </button>
-                    </div>
-                    <div class="absolute inset-x-0 top-0 p-4 flex justify-center hidden" id="quick-connect-overlay">
-                        <button id="quick-connect-btn" class="btn btn-accent btn-sm shadow-lg animate-bounce">
-                            <i data-lucide="zap" class="w-4 h-4 mr-2"></i> Quick Connect to <span id="discovered-peer-name">?</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Manual Fallback -->
-                <div class="collapse collapse-arrow bg-base-200 w-full">
-                    <input type="checkbox" />
-                    <div class="collapse-title text-sm font-medium flex items-center gap-2">
-                        <i data-lucide="keyboard" class="w-4 h-4"></i>
-                        Manual Handshake (Base64)
-                    </div>
-                    <div class="collapse-content space-y-3">
-                        <p class="text-[10px] opacity-60">1. Host copies Offer. 2. Joiner pastes Offer. 3. Joiner copies Answer. 4. Host pastes Answer.</p>
-                        <div class="flex gap-2">
-                            <textarea id="sdp-text" aria-label="handshake code" class="textarea textarea-bordered flex-1 h-20 text-[10px] font-mono" placeholder="Paste handshake code here..."></textarea>
-                            <div class="flex flex-col gap-2">
-                                <button id="copy-sdp-btn" class="btn btn-sm btn-square" title="Copy My Code">
-                                    <i data-lucide="copy" class="w-4 h-4"></i>
-                                </button>
-                                <button id="paste-sdp-btn" class="btn btn-sm btn-square" title="Paste & Process">
-                                    <i data-lucide="clipboard-check" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <button id="sdp-action-btn" class="btn btn-sm btn-block btn-outline">Process Manually</button>
-                    </div>
-                </div>
-            </div>
+    <!-- Join Mode -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body">
+        <h3 class="card-title text-sm uppercase opacity-50">Join Mode</h3>
+        <p class="text-xs">Scan someone's Offer QR to establish a connection.</p>
+        <div class="card-actions mt-4">
+          <button id="join-btn" class="btn btn-secondary btn-block">
+            <i data-lucide="camera" class="w-4 h-4 mr-2"></i> Scan Offer QR
+          </button>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Connected View (Shown after handshake) -->
-    <div id="connected-view" class="hidden space-y-6">
-        <div class="alert alert-success py-2 sm:py-4 flex flex-col sm:flex-row items-center sm:items-center justify-between gap-2 sm:gap-4">
-            <div class="flex items-center gap-3 w-full sm:w-auto">
-                <i data-lucide="check-circle" class="w-5 h-5 shrink-0"></i>
-                <div class="flex-1">
-                    <h3 class="font-bold text-sm leading-tight">Connected!</h3>
-                    <div class="text-[10px] sm:text-xs opacity-70">Peer: <span id="remote-peer-name" class="font-bold"></span></div>
-                </div>
-            </div>
-            <button id="disconnect-btn" class="btn btn-xs sm:btn-sm btn-ghost w-full sm:w-auto mt-1 sm:mt-0">Disconnect</button>
+  <!-- Handshake Real-time View (Shown during handshake) -->
+  <div id="handshake-view" class="hidden space-y-4">
+    <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+      <div class="bg-base-200 p-3 flex items-center justify-between">
+        <span id="handshake-step-title" class="font-bold">Step: Exchange Handshake</span>
+        <button id="cancel-handshake" class="btn btn-ghost btn-xs">Cancel</button>
+      </div>
+      <div class="p-6 flex flex-col items-center gap-6">
+        <!-- QR Output -->
+        <div
+          id="qr-output-container"
+          class="hidden flex flex-col items-center gap-1 w-full max-w-[min(90vw,35vh,260px)] mx-auto overflow-hidden"
+        >
+          <div
+            class="bg-white p-1 rounded-lg shadow-inner w-full aspect-square flex items-center justify-center overflow-hidden"
+          >
+            <canvas
+              id="qr-canvas-output"
+              class="max-w-full max-h-full object-contain block"
+            ></canvas>
+          </div>
+          <p
+            class="text-[10px] font-bold text-primary text-center leading-tight mb-1"
+            id="qr-instruction"
+          >
+            Follow the steps below
+          </p>
+          <button
+            id="host-scan-answer-btn"
+            class="btn btn-primary btn-xs btn-block hidden py-2 h-auto"
+          >
+            <i data-lucide="camera" class="w-3 h-3 mr-1"></i> I've Shared! Now Scan their Answer
+          </button>
         </div>
 
-        <div id="dropzone" class="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center cursor-pointer hover:bg-primary/5 transition-colors">
-            <div class="mb-4 text-primary opacity-70">
-                <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto"></i>
-            </div>
-            <p class="font-medium text-lg">Send a file</p>
-            <p class="text-xs opacity-50 mt-1">Files are transferred directly P2P offline</p>
-            <input type="file" id="file-input" class="hidden" />
+        <!-- Scanner -->
+        <div
+          id="scanner-container"
+          class="hidden w-full max-w-sm rounded-xl overflow-hidden relative bg-black shadow-lg aspect-video"
+        >
+          <video id="qr-video" class="w-full h-full object-cover"></video>
+          <canvas id="qr-canvas" class="hidden"></canvas>
+          <div
+            class="absolute inset-0 flex items-center justify-center bg-black/60 group"
+            id="scan-overlay"
+          >
+            <button id="start-scan-btn" class="btn btn-primary btn-sm">
+              <i data-lucide="camera" class="w-4 h-4 mr-2"></i> Start Camera Scan
+            </button>
+          </div>
+          <div
+            class="absolute inset-x-0 top-0 p-4 flex justify-center hidden"
+            id="quick-connect-overlay"
+          >
+            <button id="quick-connect-btn" class="btn btn-accent btn-sm shadow-lg animate-bounce">
+              <i data-lucide="zap" class="w-4 h-4 mr-2"></i> Quick Connect to
+              <span id="discovered-peer-name">?</span>
+            </button>
+          </div>
         </div>
 
-        <!-- Transfer History -->
-        <div class="card bg-base-100 border border-base-300 shadow-sm mt-6">
-            <div class="card-body p-4">
-                <h3 class="card-title text-sm uppercase opacity-50 mb-4">Transfer History</h3>
-                <div id="transfer-history-list" class="space-y-2">
-                    <!-- History items will be injected here -->
-                    <div id="no-history-msg" class="text-xs opacity-40 italic py-4 text-center">No transfers yet.</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Incoming File Modal (Same as before) -->
-    <dialog id="receive-modal" class="modal">
-        <div class="modal-box">
-            <h3 class="font-bold text-lg">Incoming File</h3>
-            <p class="py-4">
-                <span id="sender-name" class="font-bold"></span> wants to send you:
-                <br/>
-                <span id="incoming-filename" class="text-primary break-all"></span>
-                (<span id="incoming-size"></span>)
+        <!-- Manual Fallback -->
+        <div class="collapse collapse-arrow bg-base-200 w-full">
+          <input type="checkbox" />
+          <div class="collapse-title text-sm font-medium flex items-center gap-2">
+            <i data-lucide="keyboard" class="w-4 h-4"></i>
+            Manual Handshake (Base64)
+          </div>
+          <div class="collapse-content space-y-3">
+            <p class="text-[10px] opacity-60">
+              1. Host copies Offer. 2. Joiner pastes Offer. 3. Joiner copies Answer. 4. Host pastes
+              Answer.
             </p>
-            <div class="modal-action">
-                <button id="reject-btn" class="btn btn-ghost">Decline</button>
-                <button id="accept-btn" class="btn btn-primary">Accept & Download</button>
+            <div class="flex gap-2">
+              <textarea
+                id="sdp-text"
+                aria-label="handshake code"
+                class="textarea textarea-bordered flex-1 h-20 text-[10px] font-mono"
+                placeholder="Paste handshake code here..."
+              ></textarea>
+              <div class="flex flex-col gap-2">
+                <button id="copy-sdp-btn" class="btn btn-sm btn-square" title="Copy My Code">
+                  <i data-lucide="copy" class="w-4 h-4"></i>
+                </button>
+                <button id="paste-sdp-btn" class="btn btn-sm btn-square" title="Paste & Process">
+                  <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+                </button>
+              </div>
             </div>
+            <button id="sdp-action-btn" class="btn btn-sm btn-block btn-outline">
+              Process Manually
+            </button>
+          </div>
         </div>
-    </dialog>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connected View (Shown after handshake) -->
+  <div id="connected-view" class="hidden space-y-6">
+    <div
+      class="alert alert-success py-2 sm:py-4 flex flex-col sm:flex-row items-center sm:items-center justify-between gap-2 sm:gap-4"
+    >
+      <div class="flex items-center gap-3 w-full sm:w-auto">
+        <i data-lucide="check-circle" class="w-5 h-5 shrink-0"></i>
+        <div class="flex-1">
+          <h3 class="font-bold text-sm leading-tight">Connected!</h3>
+          <div class="text-[10px] sm:text-xs opacity-70">
+            Peer: <span id="remote-peer-name" class="font-bold"></span>
+          </div>
+        </div>
+      </div>
+      <button
+        id="disconnect-btn"
+        class="btn btn-xs sm:btn-sm btn-ghost w-full sm:w-auto mt-1 sm:mt-0"
+      >
+        Disconnect
+      </button>
+    </div>
+
+    <div
+      id="dropzone"
+      class="border-2 border-dashed border-primary/30 rounded-xl p-12 text-center cursor-pointer hover:bg-primary/5 transition-colors"
+    >
+      <div class="mb-4 text-primary opacity-70">
+        <i data-lucide="upload-cloud" class="w-12 h-12 mx-auto"></i>
+      </div>
+      <p class="font-medium text-lg">Send a file</p>
+      <p class="text-xs opacity-50 mt-1">Files are transferred directly P2P offline</p>
+      <input type="file" id="file-input" class="hidden" />
+    </div>
+
+    <!-- Transfer History -->
+    <div class="card bg-base-100 border border-base-300 shadow-sm mt-6">
+      <div class="card-body p-4">
+        <h3 class="card-title text-sm uppercase opacity-50 mb-4">Transfer History</h3>
+        <div id="transfer-history-list" class="space-y-2">
+          <!-- History items will be injected here -->
+          <div id="no-history-msg" class="text-xs opacity-40 italic py-4 text-center">
+            No transfers yet.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incoming File Modal (Same as before) -->
+  <dialog id="receive-modal" class="modal">
+    <div class="modal-box">
+      <h3 class="font-bold text-lg">Incoming File</h3>
+      <p class="py-4">
+        <span id="sender-name" class="font-bold"></span> wants to send you:
+        <br />
+        <span id="incoming-filename" class="text-primary break-all"></span>
+        (<span id="incoming-size"></span>)
+      </p>
+      <div class="modal-action">
+        <button id="reject-btn" class="btn btn-ghost">Decline</button>
+        <button id="accept-btn" class="btn btn-primary">Accept & Download</button>
+      </div>
+    </div>
+  </dialog>
 </div>

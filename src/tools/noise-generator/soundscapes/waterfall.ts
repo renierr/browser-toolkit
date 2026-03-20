@@ -6,7 +6,7 @@ export const playWaterfall = (engine: NoiseEngine) => {
   const brown = engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 400 },
-    gain: 0.4
+    gain: 0.4,
   });
 
   if (brown) {
@@ -16,7 +16,7 @@ export const playWaterfall = (engine: NoiseEngine) => {
   const pink = engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 1200, Q: 0.8 },
-    gain: 0.15
+    gain: 0.15,
   });
 
   if (pink && pink.filter) {

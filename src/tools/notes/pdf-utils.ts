@@ -6,7 +6,10 @@ import type { Note } from './types.ts';
 
 export const removeMarkdownSyntax = (html: string): string => {
   let htmlContent = html.replace(/<span class="syntax-marker[^"]*">.*?<\/span>/g, '');
-  htmlContent = htmlContent.replace(/\sclass="(bullet-list|ordered-list|code-fence|hr-marker|blockquote|url-part)"/g, '');
+  htmlContent = htmlContent.replace(
+    /\sclass="(bullet-list|ordered-list|code-fence|hr-marker|blockquote|url-part)"/g,
+    ''
+  );
   htmlContent = htmlContent.replace(/\sclass=""/g, '');
   return htmlContent;
 };

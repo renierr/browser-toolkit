@@ -9,15 +9,15 @@ export interface DOMEls {
   toggleSidebarBtnShow: HTMLButtonElement;
   toggleSidebarBtnHide: HTMLButtonElement;
   sidebar: HTMLElement;
-  
+
   tableCount: HTMLElement;
   tableList: HTMLElement;
-  
+
   mainTabs: HTMLElement;
   tabContentData: HTMLElement;
   tabContentSchema: HTMLElement;
   tabContentQuery: HTMLElement;
-  
+
   dataEmptyState: HTMLElement;
   dataActiveState: HTMLElement;
   currentTableNameData: HTMLElement;
@@ -27,12 +27,12 @@ export interface DOMEls {
   paginationInfo: HTMLElement;
   btnPrevPage: HTMLButtonElement;
   btnNextPage: HTMLButtonElement;
-  
+
   schemaEmptyState: HTMLElement;
   schemaActiveState: HTMLElement;
   currentTableNameSchema: HTMLElement;
   schemaTableBody: HTMLElement;
-  
+
   customQueryInput: HTMLTextAreaElement;
   executeQueryBtn: HTMLButtonElement;
   queryError: HTMLElement;
@@ -49,7 +49,7 @@ export let UI: DOMEls;
 export function initDOM(containerId: string): boolean {
   const container = document.getElementById(containerId);
   if (!container) return false;
-  
+
   UI = {
     container,
     introContainer: document.getElementById('intro-container')!,
@@ -61,15 +61,15 @@ export function initDOM(containerId: string): boolean {
     toggleSidebarBtnShow: document.getElementById('toggle-sidebar-btn-show') as HTMLButtonElement,
     toggleSidebarBtnHide: document.getElementById('toggle-sidebar-btn-hide') as HTMLButtonElement,
     sidebar: document.getElementById('sidebar')!,
-    
+
     tableCount: document.getElementById('table-count')!,
     tableList: document.getElementById('table-list')!,
-    
+
     mainTabs: document.getElementById('main-tabs')!,
     tabContentData: document.getElementById('tab-content-data')!,
     tabContentSchema: document.getElementById('tab-content-schema')!,
     tabContentQuery: document.getElementById('tab-content-query')!,
-    
+
     dataEmptyState: document.getElementById('data-empty-state')!,
     dataActiveState: document.getElementById('data-active-state')!,
     currentTableNameData: document.getElementById('current-table-name-data')!,
@@ -79,12 +79,12 @@ export function initDOM(containerId: string): boolean {
     paginationInfo: document.getElementById('pagination-info')!,
     btnPrevPage: document.getElementById('btn-prev-page') as HTMLButtonElement,
     btnNextPage: document.getElementById('btn-next-page') as HTMLButtonElement,
-    
+
     schemaEmptyState: document.getElementById('schema-empty-state')!,
     schemaActiveState: document.getElementById('schema-active-state')!,
     currentTableNameSchema: document.getElementById('current-table-name-schema')!,
     schemaTableBody: document.getElementById('schema-table-body')!,
-    
+
     customQueryInput: document.getElementById('custom-query-input') as HTMLTextAreaElement,
     executeQueryBtn: document.getElementById('execute-query-btn') as HTMLButtonElement,
     queryError: document.getElementById('query-error')!,

@@ -55,12 +55,15 @@ export function parseRSCMeasurement(value: DataView): Partial<TreadmillData> {
  * Subscribe to RSC Measurement characteristic and call `onData` when parsed values arrive.
  * Returns a cleanup function that stops notifications and removes listeners.
  */
-export async function subscribeToRSC(device: BluetoothDevice | null, onData: (d: Partial<TreadmillData>) => void): Promise<() => Promise<void>> {
+export async function subscribeToRSC(
+  device: BluetoothDevice | null,
+  onData: (d: Partial<TreadmillData>) => void
+): Promise<() => Promise<void>> {
   if (!device || !device.gatt) return async () => {};
   try {
     const service = await device.gatt.getPrimaryService(0x1814);
     if (!service) return async () => {};
-    const char = await service.getCharacteristic(0x2A53);
+    const char = await service.getCharacteristic(0x2a53);
     if (!char) return async () => {};
 
     const listener = (ev: Event) => {
@@ -95,4 +98,3 @@ export async function subscribeToRSC(device: BluetoothDevice | null, onData: (d:
     return async () => {};
   }
 }
-

@@ -79,7 +79,7 @@ export default function init() {
       ctx.strokeStyle = '#ef4444'; // Red color (Tailwind red-500)
       ctx.beginPath();
 
-      const sliceWidth = (canvas.width) / bufferLength;
+      const sliceWidth = canvas.width / bufferLength;
       let x = 0;
 
       for (let i = 0; i < bufferLength; i++) {

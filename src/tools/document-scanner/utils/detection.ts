@@ -45,10 +45,10 @@ function logTiming(timing: PerformanceTiming) {
   const fmt = (ms: number) => ms.toFixed(2).padStart(6) + 'ms';
   console.log(
     `%c[Scanner Perf]%c ${timing.resolution} | Total: ${fmt(timing.total)} | ` +
-    `gray ${fmt(timing.grayscale)} blur ${fmt(timing.blur)} sobel ${fmt(timing.sobel)} ` +
-    `nms ${fmt(timing.nms)} hyst ${fmt(timing.hysteresis)} morph ${fmt(timing.morphClose)} ` +
-    `contour ${fmt(timing.contours)} hough ${fmt(timing.hough)} | ` +
-    `${timing.contourCount} contours, score ${timing.bestScore.toFixed(3)}, winner: ${timing.winner}`,
+      `gray ${fmt(timing.grayscale)} blur ${fmt(timing.blur)} sobel ${fmt(timing.sobel)} ` +
+      `nms ${fmt(timing.nms)} hyst ${fmt(timing.hysteresis)} morph ${fmt(timing.morphClose)} ` +
+      `contour ${fmt(timing.contours)} hough ${fmt(timing.hough)} | ` +
+      `${timing.contourCount} contours, score ${timing.bestScore.toFixed(3)}, winner: ${timing.winner}`,
     'color: #4fc3f7; font-weight: bold',
     'color: inherit'
   );
@@ -76,10 +76,13 @@ interface WorkerResult {
   timing?: PerformanceTiming;
 }
 
-let pendingRequests = new Map<string, {
-  resolve: (result: WorkerResult) => void;
-  reject: (err: Error) => void;
-}>();
+let pendingRequests = new Map<
+  string,
+  {
+    resolve: (result: WorkerResult) => void;
+    reject: (err: Error) => void;
+  }
+>();
 let requestIdCounter = 0;
 
 function getWorker(): Worker {
@@ -129,7 +132,6 @@ function sendToWorker(
 }
 
 // --- Public API ---
-
 
 export function isStable(
   oldPts: Point[] | null,

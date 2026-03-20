@@ -128,11 +128,20 @@ export function warp(
 
         const dstIdx = (rowOff + u) << 2;
         dstData.data[dstIdx] =
-          srcBytes[idx00] * w00 + srcBytes[idx10] * w10 + srcBytes[idx01] * w01 + srcBytes[idx11] * w11;
+          srcBytes[idx00] * w00 +
+          srcBytes[idx10] * w10 +
+          srcBytes[idx01] * w01 +
+          srcBytes[idx11] * w11;
         dstData.data[dstIdx + 1] =
-          srcBytes[idx00 + 1] * w00 + srcBytes[idx10 + 1] * w10 + srcBytes[idx01 + 1] * w01 + srcBytes[idx11 + 1] * w11;
+          srcBytes[idx00 + 1] * w00 +
+          srcBytes[idx10 + 1] * w10 +
+          srcBytes[idx01 + 1] * w01 +
+          srcBytes[idx11 + 1] * w11;
         dstData.data[dstIdx + 2] =
-          srcBytes[idx00 + 2] * w00 + srcBytes[idx10 + 2] * w10 + srcBytes[idx01 + 2] * w01 + srcBytes[idx11 + 2] * w11;
+          srcBytes[idx00 + 2] * w00 +
+          srcBytes[idx10 + 2] * w10 +
+          srcBytes[idx01 + 2] * w01 +
+          srcBytes[idx11 + 2] * w11;
         dstData.data[dstIdx + 3] = 255;
       }
     }

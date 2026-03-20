@@ -9,10 +9,7 @@ export class AudioRecorder {
   private onTimerUpdate: ((time: string) => void) | null = null;
   private onStop: ((url: string, date: Date) => void) | null = null;
 
-  constructor(
-    onTimerUpdate?: (time: string) => void,
-    onStop?: (url: string, date: Date) => void
-  ) {
+  constructor(onTimerUpdate?: (time: string) => void, onStop?: (url: string, date: Date) => void) {
     this.onTimerUpdate = onTimerUpdate || null;
     this.onStop = onStop || null;
   }
@@ -48,7 +45,6 @@ export class AudioRecorder {
       this.recordingInterval = window.setInterval(() => this.updateTimer(), 1000);
 
       return this.analyser;
-
     } catch (err) {
       console.error('Error accessing microphone:', err);
       throw err;
@@ -60,7 +56,7 @@ export class AudioRecorder {
       this.mediaRecorder.stop();
     }
     if (this.mediaStream) {
-      this.mediaStream.getTracks().forEach(track => track.stop());
+      this.mediaStream.getTracks().forEach((track) => track.stop());
     }
     if (this.recordingInterval) {
       clearInterval(this.recordingInterval);
@@ -74,7 +70,9 @@ export class AudioRecorder {
 
   private updateTimer() {
     const elapsed = Math.floor((Date.now() - this.recordingStartTime) / 1000);
-    const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const minutes = Math.floor(elapsed / 60)
+      .toString()
+      .padStart(2, '0');
     const seconds = (elapsed % 60).toString().padStart(2, '0');
     if (this.onTimerUpdate) {
       this.onTimerUpdate(`${minutes}:${seconds}`);

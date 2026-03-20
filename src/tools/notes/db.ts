@@ -42,7 +42,11 @@ export async function getNoteById(db: IDBDatabase, id: number): Promise<Note | u
   });
 }
 
-export async function saveNote(db: IDBDatabase, content: string, editingId: number | null): Promise<void> {
+export async function saveNote(
+  db: IDBDatabase,
+  content: string,
+  editingId: number | null
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
@@ -84,7 +88,10 @@ export async function deleteNote(db: IDBDatabase, id: number): Promise<void> {
   });
 }
 
-export async function importNotes(db: IDBDatabase, notes: Note[]): Promise<{ imported: number; skipped: number }> {
+export async function importNotes(
+  db: IDBDatabase,
+  notes: Note[]
+): Promise<{ imported: number; skipped: number }> {
   const existingNotes = await getAllNotes(db);
   const existingShortIds = new Set(existingNotes.map((n) => n.shortId).filter(Boolean));
 

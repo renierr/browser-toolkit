@@ -32,7 +32,11 @@ export interface ReleaseMessage {
   type: 'release';
 }
 
-export type WorkerInMessage = DetectMessage | DetectImageMessage | ResetHistoryMessage | ReleaseMessage;
+export type WorkerInMessage =
+  | DetectMessage
+  | DetectImageMessage
+  | ResetHistoryMessage
+  | ReleaseMessage;
 
 // --- Outgoing messages (worker → main thread) ---
 
@@ -62,4 +66,3 @@ export interface DetectImageResultMessage {
 }
 
 export type WorkerOutMessage = DetectResultMessage | DetectImageResultMessage;
-

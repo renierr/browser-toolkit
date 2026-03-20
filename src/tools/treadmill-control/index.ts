@@ -30,40 +30,40 @@ export function init() {
   const optionalMetrics = {
     steps: {
       display: document.getElementById('steps-display')!,
-      container: document.getElementById('steps-container')!
+      container: document.getElementById('steps-container')!,
     },
     cadence: {
       display: document.getElementById('cadence-display')!,
-      container: document.getElementById('cadence-container')!
+      container: document.getElementById('cadence-container')!,
     },
     remainingTime: {
       display: document.getElementById('remaining-time-display')!,
-      container: document.getElementById('remaining-time-container')!
+      container: document.getElementById('remaining-time-container')!,
     },
     averageSpeed: {
       display: document.getElementById('avg-speed-display')!,
-      container: document.getElementById('avg-speed-container')!
+      container: document.getElementById('avg-speed-container')!,
     },
     heartRate: {
       display: document.getElementById('hr-display')!,
-      container: document.getElementById('hr-container')!
+      container: document.getElementById('hr-container')!,
     },
     instantaneousPace: {
       display: document.getElementById('pace-display')!,
-      container: document.getElementById('pace-container')!
+      container: document.getElementById('pace-container')!,
     },
     averagePace: {
       display: document.getElementById('avg-pace-display')!,
-      container: document.getElementById('avg-pace-container')!
+      container: document.getElementById('avg-pace-container')!,
     },
     elevationGainPositive: {
       display: document.getElementById('elevation-display')!,
-      container: document.getElementById('elevation-container')!
+      container: document.getElementById('elevation-container')!,
     },
     metabolicEquivalent: {
       display: document.getElementById('mets-display')!,
-      container: document.getElementById('mets-container')!
-    }
+      container: document.getElementById('mets-container')!,
+    },
   };
 
   const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
@@ -73,7 +73,14 @@ export function init() {
   const inclineUpBtn = document.getElementById('incline-up-btn') as HTMLButtonElement;
   const inclineDownBtn = document.getElementById('incline-down-btn') as HTMLButtonElement;
 
-  const controlButtons = [startBtn, stopBtn, speedUpBtn, speedDownBtn, inclineUpBtn, inclineDownBtn];
+  const controlButtons = [
+    startBtn,
+    stopBtn,
+    speedUpBtn,
+    speedDownBtn,
+    inclineUpBtn,
+    inclineDownBtn,
+  ];
 
   let device: BluetoothDevice | null = null;
   let deviceType: TreadmillDeviceType | null = null;
@@ -101,7 +108,9 @@ export function init() {
       return;
     }
     statusMessage.classList.remove('hidden', 'alert-info', 'alert-error', 'alert-success');
-    statusMessage.classList.add(type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info');
+    statusMessage.classList.add(
+      type === 'error' ? 'alert-error' : type === 'success' ? 'alert-success' : 'alert-info'
+    );
     statusMessage.querySelector('span')!.textContent = msg;
   };
 
@@ -171,14 +180,16 @@ export function init() {
     }
     if (data.elevationGainPositive !== undefined) {
       optionalMetrics.elevationGainPositive.container.classList.remove('hidden');
-      optionalMetrics.elevationGainPositive.display.textContent = data.elevationGainPositive.toFixed(1);
+      optionalMetrics.elevationGainPositive.display.textContent =
+        data.elevationGainPositive.toFixed(1);
     }
     if (data.metabolicEquivalent !== undefined) {
       optionalMetrics.metabolicEquivalent.container.classList.remove('hidden');
       optionalMetrics.metabolicEquivalent.display.textContent = data.metabolicEquivalent.toFixed(1);
     }
     // Steps: prefer cumulativeStrideCount (from RSC or proprietary), fall back to PitPat steps
-    const cumulative = (data.cumulativeStrideCount !== undefined) ? data.cumulativeStrideCount : data.steps;
+    const cumulative =
+      data.cumulativeStrideCount !== undefined ? data.cumulativeStrideCount : data.steps;
     if (cumulative !== undefined) {
       optionalMetrics.steps.container.classList.remove('hidden');
       optionalMetrics.steps.display.textContent = String(cumulative);
@@ -217,10 +228,12 @@ export function init() {
       const row = document.createElement('tr');
       row.className = 'hover:bg-base-200 cursor-pointer';
       const date = new Date(session.startTime).toLocaleString();
-      const duration = session.endTime ? formatDuration(session.endTime - session.startTime) : '---';
+      const duration = session.endTime
+        ? formatDuration(session.endTime - session.startTime)
+        : '---';
 
-      const speeds = session.dataPoints.map(p => p.data.speed ?? 0);
-      const avgSpeed = speeds.length ? (speeds.reduce((a, b) => a + b, 0) / speeds.length) : 0;
+      const speeds = session.dataPoints.map((p) => p.data.speed ?? 0);
+      const avgSpeed = speeds.length ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
       const maxSpeed = speeds.length ? Math.max(...speeds) : 0;
 
       row.innerHTML = `
@@ -266,7 +279,7 @@ export function init() {
     updateStatus('Treadmill disconnected');
 
     // Reset visibility of optional metrics for next connection
-    Object.values(optionalMetrics).forEach(m => m.container.classList.add('hidden'));
+    Object.values(optionalMetrics).forEach((m) => m.container.classList.add('hidden'));
 
     // Cleanup sensor subscriptions if we started them
     if (sensorsHandle) {
@@ -279,7 +292,7 @@ export function init() {
     }
 
     // Enable all buttons (reset state)
-    controlButtons.forEach(btn => {
+    controlButtons.forEach((btn) => {
       btn.disabled = false;
       btn.classList.remove('btn-disabled');
       // Ensure any buttons hidden due to lack of support are shown again
@@ -296,12 +309,15 @@ export function init() {
       device = sensorsHandle.device;
       deviceType = sensorsHandle.type;
       simulatorRef = sensorsHandle.simulator ?? null;
-      const support = sensorsHandle.support ?? { controlSupported: false, speedControlSupported: false, inclineControlSupported: false };
+      const support = sensorsHandle.support ?? {
+        controlSupported: false,
+        speedControlSupported: false,
+        inclineControlSupported: false,
+      };
       if (sensorsHandle.writeChar && deviceType === 'PITPAT') {
         pitpatWriteChar = sensorsHandle.writeChar;
         startPitPatHeartbeat(device, pitpatWriteChar);
       }
-
 
       device.addEventListener('gattserverdisconnected', () => {
         handleDisconnect();
@@ -316,37 +332,46 @@ export function init() {
 
       // Check Support and Disable Controls
       if (!support.controlSupported) {
-        controlButtons.forEach(btn => {
+        controlButtons.forEach((btn) => {
           // hide unsupported controls to avoid confusion
           btn.disabled = true;
           btn.classList.add('btn-disabled');
           btn.classList.add('hidden');
         });
-        showMessage('Control Point not supported by this treadmill. Controls hidden.', { type: 'warning', timeoutMs: 7000 });
+        showMessage('Control Point not supported by this treadmill. Controls hidden.', {
+          type: 'warning',
+          timeoutMs: 7000,
+        });
       } else {
         if (!support.speedControlSupported) {
-          [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach(btn => {
-             // hide speed related controls if treadmill doesn't support them
-             btn.disabled = true;
-             btn.classList.add('btn-disabled');
-             btn.classList.add('hidden');
+          [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach((btn) => {
+            // hide speed related controls if treadmill doesn't support them
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
+            btn.classList.add('hidden');
           });
-          showMessage('Speed control not supported. Speed controls hidden.', { type: 'warning', timeoutMs: 5000 });
+          showMessage('Speed control not supported. Speed controls hidden.', {
+            type: 'warning',
+            timeoutMs: 5000,
+          });
         }
         if (!support.inclineControlSupported) {
-          [inclineUpBtn, inclineDownBtn].forEach(btn => {
-             // hide incline controls if not supported
-             btn.disabled = true;
-             btn.classList.add('btn-disabled');
-             btn.classList.add('hidden');
+          [inclineUpBtn, inclineDownBtn].forEach((btn) => {
+            // hide incline controls if not supported
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
+            btn.classList.add('hidden');
           });
-          showMessage('Incline control not supported. Incline controls hidden.', { type: 'warning', timeoutMs: 5000 });
+          showMessage('Incline control not supported. Incline controls hidden.', {
+            type: 'warning',
+            timeoutMs: 5000,
+          });
         }
       }
 
       // Some proprietary devices (PitPat) don't support incline control — hide those too
       if (deviceType === 'PITPAT') {
-        [inclineUpBtn, inclineDownBtn].forEach(btn => {
+        [inclineUpBtn, inclineDownBtn].forEach((btn) => {
           btn.disabled = true;
           btn.classList.add('btn-disabled');
           btn.classList.add('hidden');
@@ -478,22 +503,22 @@ export function init() {
       showMessage('Stop command sent');
 
       // Stop session recording and save
-        if (isRecording && currentSession) {
-          isRecording = false;
-          currentSession.endTime = Date.now();
-          if (currentSession.dataPoints.length > 0) {
-            await saveSession(currentSession);
-            updateStatus('Session saved', 'success');
-            loadSessions();
-          } else {
-            updateStatus('Session discarded (no data)', 'info');
-          }
-          if (releaseWakeLock) {
-            releaseWakeLock();
-            releaseWakeLock = null;
-          }
-          currentSession = null;
+      if (isRecording && currentSession) {
+        isRecording = false;
+        currentSession.endTime = Date.now();
+        if (currentSession.dataPoints.length > 0) {
+          await saveSession(currentSession);
+          updateStatus('Session saved', 'success');
+          loadSessions();
+        } else {
+          updateStatus('Session discarded (no data)', 'info');
         }
+        if (releaseWakeLock) {
+          releaseWakeLock();
+          releaseWakeLock = null;
+        }
+        currentSession = null;
+      }
     } catch (err: any) {
       showMessage(err.message || 'Failed to stop', { type: 'alert' });
     }
@@ -515,7 +540,7 @@ export function init() {
         await sendControlCommand(device, pkt[0], Array.from(pkt.slice(1)));
       } else {
         const speedUint16 = Math.round(nextSpeed * 100);
-        await sendControlCommand(device, 0x02, [speedUint16 & 0xFF, (speedUint16 >> 8) & 0xFF]);
+        await sendControlCommand(device, 0x02, [speedUint16 & 0xff, (speedUint16 >> 8) & 0xff]);
       }
     } catch (err: any) {
       showMessage('Speed change failed', { type: 'alert' });
@@ -532,13 +557,15 @@ export function init() {
         return;
       }
       const speedUint16 = Math.round(nextSpeed * 100);
-      await sendControlCommand(device, 0x02, [speedUint16 & 0xFF, (speedUint16 >> 8) & 0xFF]);
+      await sendControlCommand(device, 0x02, [speedUint16 & 0xff, (speedUint16 >> 8) & 0xff]);
     } catch (err: any) {
       showMessage('Speed change failed', { type: 'alert' });
     }
   });
 
-  const simulateConnectBtn = document.getElementById('simulate-connect-btn') as HTMLButtonElement | null;
+  const simulateConnectBtn = document.getElementById(
+    'simulate-connect-btn'
+  ) as HTMLButtonElement | null;
   if (simulateConnectBtn) {
     simulateConnectBtn.addEventListener('click', async () => {
       await connectSensors(true);
@@ -552,7 +579,11 @@ export function init() {
       device = sensorsHandle.device;
       deviceType = sensorsHandle.type;
       simulatorRef = (sensorsHandle as any).simulator ?? null;
-      const support = sensorsHandle.support ?? { controlSupported: false, speedControlSupported: false, inclineControlSupported: false };
+      const support = sensorsHandle.support ?? {
+        controlSupported: false,
+        speedControlSupported: false,
+        inclineControlSupported: false,
+      };
       if (sensorsHandle.writeChar && deviceType === 'PITPAT') {
         pitpatWriteChar = sensorsHandle.writeChar;
         startPitPatHeartbeat(device, pitpatWriteChar);
@@ -571,37 +602,46 @@ export function init() {
 
       // Check Support and Disable Controls
       if (!support.controlSupported) {
-        controlButtons.forEach(btn => {
+        controlButtons.forEach((btn) => {
           // hide unsupported controls to avoid confusion
           btn.disabled = true;
           btn.classList.add('btn-disabled');
           btn.classList.add('hidden');
         });
-        showMessage('Control Point not supported by this treadmill. Controls hidden.', { type: 'warning', timeoutMs: 7000 });
+        showMessage('Control Point not supported by this treadmill. Controls hidden.', {
+          type: 'warning',
+          timeoutMs: 7000,
+        });
       } else {
         if (!support.speedControlSupported) {
-          [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach(btn => {
-             // hide speed related controls if treadmill doesn't support them
-             btn.disabled = true;
-             btn.classList.add('btn-disabled');
-             btn.classList.add('hidden');
+          [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach((btn) => {
+            // hide speed related controls if treadmill doesn't support them
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
+            btn.classList.add('hidden');
           });
-          showMessage('Speed control not supported. Speed controls hidden.', { type: 'warning', timeoutMs: 5000 });
+          showMessage('Speed control not supported. Speed controls hidden.', {
+            type: 'warning',
+            timeoutMs: 5000,
+          });
         }
         if (!support.inclineControlSupported) {
-          [inclineUpBtn, inclineDownBtn].forEach(btn => {
-             // hide incline controls if not supported
-             btn.disabled = true;
-             btn.classList.add('btn-disabled');
-             btn.classList.add('hidden');
+          [inclineUpBtn, inclineDownBtn].forEach((btn) => {
+            // hide incline controls if not supported
+            btn.disabled = true;
+            btn.classList.add('btn-disabled');
+            btn.classList.add('hidden');
           });
-          showMessage('Incline control not supported. Incline controls hidden.', { type: 'warning', timeoutMs: 5000 });
+          showMessage('Incline control not supported. Incline controls hidden.', {
+            type: 'warning',
+            timeoutMs: 5000,
+          });
         }
       }
 
       // Some proprietary devices (PitPat) don't support incline control — hide those too
       if (deviceType === 'PITPAT') {
-        [inclineUpBtn, inclineDownBtn].forEach(btn => {
+        [inclineUpBtn, inclineDownBtn].forEach((btn) => {
           btn.disabled = true;
           btn.classList.add('btn-disabled');
           btn.classList.add('hidden');
@@ -635,10 +675,13 @@ export function init() {
       }
       if (deviceType === 'PITPAT') {
         // PitPat does not support incline in this implementation; inform user
-        showMessage('Incline control not supported for PitPat devices', { type: 'warning', timeoutMs: 3000 });
+        showMessage('Incline control not supported for PitPat devices', {
+          type: 'warning',
+          timeoutMs: 3000,
+        });
       } else {
         const inclineInt16 = Math.round(nextIncline * 10);
-        await sendControlCommand(device, 0x03, [inclineInt16 & 0xFF, (inclineInt16 >> 8) & 0xFF]);
+        await sendControlCommand(device, 0x03, [inclineInt16 & 0xff, (inclineInt16 >> 8) & 0xff]);
       }
     } catch (err: any) {
       showMessage('Incline change failed', { type: 'alert' });
@@ -655,16 +698,18 @@ export function init() {
         return;
       }
       if (deviceType === 'PITPAT') {
-        showMessage('Incline control not supported for PitPat devices', { type: 'warning', timeoutMs: 3000 });
+        showMessage('Incline control not supported for PitPat devices', {
+          type: 'warning',
+          timeoutMs: 3000,
+        });
       } else {
         const inclineInt16 = Math.round(nextIncline * 10);
-        await sendControlCommand(device, 0x03, [inclineInt16 & 0xFF, (inclineInt16 >> 8) & 0xFF]);
+        await sendControlCommand(device, 0x03, [inclineInt16 & 0xff, (inclineInt16 >> 8) & 0xff]);
       }
     } catch (err: any) {
       showMessage('Incline change failed', { type: 'alert' });
     }
   });
-
 
   // Export / Import / View JSON handlers
   if (exportAllBtn) {
@@ -701,9 +746,15 @@ export function init() {
           const allSessions = Array.isArray(data) ? data : [data];
           if (sessionToView && sessionToView.startTime && sessionToView.dataPoints) {
             details.showSessionDetails(sessionToView, allSessions);
-            showMessage('JSON loaded. Viewing first session in file.', { type: 'info', timeoutMs: 5000 });
+            showMessage('JSON loaded. Viewing first session in file.', {
+              type: 'info',
+              timeoutMs: 5000,
+            });
           } else {
-            showMessage('JSON does not appear to be a valid session or array of sessions', { type: 'warning', timeoutMs: 7000 });
+            showMessage('JSON does not appear to be a valid session or array of sessions', {
+              type: 'warning',
+              timeoutMs: 7000,
+            });
           }
         } catch (err) {
           console.error(err);

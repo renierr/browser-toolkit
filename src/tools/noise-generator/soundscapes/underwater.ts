@@ -6,7 +6,7 @@ export const playUnderwater = (engine: NoiseEngine, checkActive: () => boolean) 
   engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 150 },
-    gain: 0.6
+    gain: 0.6,
   });
 
   const playBubble = () => {
@@ -42,23 +42,23 @@ export const playUnderwater = (engine: NoiseEngine, checkActive: () => boolean) 
     source.start(t, Math.random() * 9);
     source.stop(t + 0.2);
 
-    setTimeout(
-      () => {
-        source.disconnect();
-        filter.disconnect();
-        panner.disconnect();
-        gain.disconnect();
-      },
-      300
-    );
+    setTimeout(() => {
+      source.disconnect();
+      filter.disconnect();
+      panner.disconnect();
+      gain.disconnect();
+    }, 300);
   };
 
   const scheduleBubble = () => {
     if (!checkActive()) return;
-    const id = window.setTimeout(() => {
-      playBubble();
-      scheduleBubble();
-    }, 200 + Math.random() * 1500);
+    const id = window.setTimeout(
+      () => {
+        playBubble();
+        scheduleBubble();
+      },
+      200 + Math.random() * 1500
+    );
     engine.activeIntervals.push(id);
   };
   scheduleBubble();

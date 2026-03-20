@@ -6,6 +6,6 @@ export const playGreenNoise = (engine: NoiseEngine) => {
   engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 1000, Q: 1.0 },
-    gain: 0.6
+    gain: 0.6,
   });
 };

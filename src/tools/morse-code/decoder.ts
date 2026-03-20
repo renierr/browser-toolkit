@@ -284,7 +284,10 @@ function applyBandpassFilter(data: Float32Array, sampleRate: number): Float32Arr
   return filtered;
 }
 
-export async function decodeFromFloat32(dataInput: Float32Array, sampleRate: number): Promise<string> {
+export async function decodeFromFloat32(
+  dataInput: Float32Array,
+  sampleRate: number
+): Promise<string> {
   let data: any = dataInput;
 
   // 0. Apply automatic gain control (normalize volume)
@@ -309,11 +312,11 @@ export async function decodeFromFloat32(dataInput: Float32Array, sampleRate: num
   }
 
   // 2.5 Apply median filter to remove impulse noise (clicks/pops)
-  const medianWindowSize = Math.max(3, Math.floor(15 / (1000 / sampleRate * hopSize))); // ~15ms median
+  const medianWindowSize = Math.max(3, Math.floor(15 / ((1000 / sampleRate) * hopSize))); // ~15ms median
   envelope = medianFilter(envelope, medianWindowSize);
 
   // 3. Smooth the envelope to reduce noise-induced fluctuations
-  const smoothWindowSize = Math.max(3, Math.floor(20 / (1000 / sampleRate * hopSize))); // ~20ms smoothing
+  const smoothWindowSize = Math.max(3, Math.floor(20 / ((1000 / sampleRate) * hopSize))); // ~20ms smoothing
   envelope = smoothEnvelope(envelope, smoothWindowSize);
 
   // 4. Calculate adaptive thresholds
@@ -328,7 +331,7 @@ export async function decodeFromFloat32(dataInput: Float32Array, sampleRate: num
   let states = schmittTrigger(envelope, highThreshold, lowThreshold);
 
   // 6. Debounce to remove short glitches (< 10ms equivalent)
-  const minDebounceLength = Math.max(2, Math.floor  (10 / (1000 / sampleRate * hopSize)));
+  const minDebounceLength = Math.max(2, Math.floor(10 / ((1000 / sampleRate) * hopSize)));
   states = debounceStates(states, minDebounceLength);
 
   // 7. Run Length Encoding
@@ -416,7 +419,9 @@ export async function decodeFromFloat32(dataInput: Float32Array, sampleRate: num
     .join(' ');
 }
 
-export async function decodeArrayBufferToMonoPCM(arrayBuffer: ArrayBuffer): Promise<{ audio: Float32Array; sampleRate: number }> {
+export async function decodeArrayBufferToMonoPCM(
+  arrayBuffer: ArrayBuffer
+): Promise<{ audio: Float32Array; sampleRate: number }> {
   const Ctor = window.AudioContext || (window as any).webkitAudioContext;
   const ctx = new Ctor();
   try {

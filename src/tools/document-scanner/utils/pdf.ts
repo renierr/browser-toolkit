@@ -37,12 +37,18 @@ export async function generateAndDownloadOrSharePDF(
 
     const pdfBytes = pdfDoc.saveToBuffer('compress,compress-images,garbage');
     if (share) {
-      await openInTool(pdfBytes.asUint8Array(), { filename: `scanned-doc-${Date.now()}.pdf`, mimeType: 'application/pdf'});
+      await openInTool(pdfBytes.asUint8Array(), {
+        filename: `scanned-doc-${Date.now()}.pdf`,
+        mimeType: 'application/pdf',
+      });
     } else {
-      await downloadFile(pdfBytes.asUint8Array(), `scanned-doc-${Date.now()}.pdf`, 'application/pdf');
+      await downloadFile(
+        pdfBytes.asUint8Array(),
+        `scanned-doc-${Date.now()}.pdf`,
+        'application/pdf'
+      );
       showMessage('PDF created successfully!', { type: 'info', timeoutMs: 5000 });
     }
-
   } catch (error) {
     console.error('Failed to generate PDF', error);
     showMessage('Failed to generate PDF.', { type: 'alert' });

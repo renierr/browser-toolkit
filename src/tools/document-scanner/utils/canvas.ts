@@ -1,7 +1,4 @@
-import {
-  blobToImage,
-  imageElToBlob,
-} from '../../../js/image-utils';
+import { blobToImage, imageElToBlob } from '../../../js/image-utils';
 
 export function sourceToCanvas(
   source: HTMLImageElement | HTMLVideoElement | HTMLCanvasElement

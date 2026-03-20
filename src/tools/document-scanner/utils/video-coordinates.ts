@@ -61,8 +61,10 @@ export function clientToNormalizedVideo(
   if (!video.videoWidth || !video.videoHeight) return null;
 
   const display = getContainedVideoRect(
-    video.videoWidth, video.videoHeight,
-    rect.width, rect.height
+    video.videoWidth,
+    video.videoHeight,
+    rect.width,
+    rect.height
   );
 
   const relX = clientX - rect.left - display.offsetX;
@@ -86,4 +88,3 @@ export function normalizedToOverlay(
     y: displayRect.offsetY + p.y * displayRect.height,
   }));
 }
-

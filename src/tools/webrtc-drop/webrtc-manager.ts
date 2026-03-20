@@ -1,200 +1,210 @@
 import { compressSDP, decompressSDP } from './sdp-utils';
 
 export interface PeerConnectionConfig {
-    onConnected: () => void;
-    onDisconnected: () => void;
-    onData: (data: any) => void;
-    onSDPGenerated: (compressedSDP: string, isHost: boolean) => void;
+  onConnected: () => void;
+  onDisconnected: () => void;
+  onData: (data: any) => void;
+  onSDPGenerated: (compressedSDP: string, isHost: boolean) => void;
 }
 
 export class WebRTCManager {
-    private pc: RTCPeerConnection | null = null;
-    private dataChannel: RTCDataChannel | null = null;
-    private config: PeerConnectionConfig;
-    private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private pc: RTCPeerConnection | null = null;
+  private dataChannel: RTCDataChannel | null = null;
+  private config: PeerConnectionConfig;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
-    constructor(config: PeerConnectionConfig) {
-        this.config = config;
+  constructor(config: PeerConnectionConfig) {
+    this.config = config;
+  }
+
+  async createPeer(isHost: boolean) {
+    console.debug('[WebRTC] createPeer, isHost=', isHost);
+    this.pc = new RTCPeerConnection({ iceServers: [] });
+
+    if (isHost) {
+      this.dataChannel = this.pc.createDataChannel('transfer', { ordered: true });
+      console.debug('[WebRTC] created data channel (host)');
+      this.setupDataChannel(this.dataChannel);
+    } else {
+      this.pc.ondatachannel = (ev) => {
+        console.debug('[WebRTC] received datachannel event', ev.channel.label);
+        this.dataChannel = ev.channel;
+        this.setupDataChannel(this.dataChannel);
+      };
     }
 
-    async createPeer(isHost: boolean) {
-        console.debug('[WebRTC] createPeer, isHost=', isHost);
-        this.pc = new RTCPeerConnection({ iceServers: [] });
+    this.pc.oniceconnectionstatechange = () => {
+      console.debug('[WebRTC] iceConnectionState=', this.pc?.iceConnectionState);
+      if (this.pc?.iceConnectionState === 'connected') {
+        this.config.onConnected();
+      } else if (
+        this.pc?.iceConnectionState === 'disconnected' ||
+        this.pc?.iceConnectionState === 'failed'
+      ) {
+        this.config.onDisconnected();
+      }
+    };
 
-        if (isHost) {
-            this.dataChannel = this.pc.createDataChannel('transfer', { ordered: true });
-            console.debug('[WebRTC] created data channel (host)');
-            this.setupDataChannel(this.dataChannel);
-        } else {
-            this.pc.ondatachannel = (ev) => {
-                console.debug('[WebRTC] received datachannel event', ev.channel.label);
-                this.dataChannel = ev.channel;
-                this.setupDataChannel(this.dataChannel);
-            };
+    this.pc.onicecandidate = () => {
+      // optional debug: we don't send candidates separately
+    };
+  }
+
+  private missedPongs = 0;
+
+  private setupDataChannel(channel: RTCDataChannel) {
+    channel.binaryType = 'arraybuffer';
+    channel.onopen = () => {
+      console.debug('[WebRTC] datachannel open');
+      this.startHeartbeat();
+      this.config.onConnected();
+    };
+    channel.onclose = () => {
+      console.debug('[WebRTC] datachannel close');
+      this.stopHeartbeat();
+      this.config.onDisconnected();
+    };
+    channel.onmessage = (ev) => {
+      // Filter out heartbeat pings/pongs
+      if (typeof ev.data === 'string') {
+        if (ev.data === '{"type":"ping"}') {
+          this.dataChannel?.send('{"type":"pong"}');
+          return;
         }
-
-        this.pc.oniceconnectionstatechange = () => {
-            console.debug('[WebRTC] iceConnectionState=', this.pc?.iceConnectionState);
-            if (this.pc?.iceConnectionState === 'connected') {
-                this.config.onConnected();
-            } else if (this.pc?.iceConnectionState === 'disconnected' || this.pc?.iceConnectionState === 'failed') {
-                this.config.onDisconnected();
-            }
-        };
-
-        this.pc.onicecandidate = () => {
-            // optional debug: we don't send candidates separately
-        };
-    }
-
-    private missedPongs = 0;
-
-    private setupDataChannel(channel: RTCDataChannel) {
-        channel.binaryType = 'arraybuffer';
-        channel.onopen = () => {
-            console.debug('[WebRTC] datachannel open');
-            this.startHeartbeat();
-            this.config.onConnected();
-        };
-        channel.onclose = () => {
-            console.debug('[WebRTC] datachannel close');
-            this.stopHeartbeat();
-            this.config.onDisconnected();
-        };
-        channel.onmessage = (ev) => {
-            // Filter out heartbeat pings/pongs
-            if (typeof ev.data === 'string') {
-                if (ev.data === '{"type":"ping"}') {
-                    this.dataChannel?.send('{"type":"pong"}');
-                    return;
-                }
-                if (ev.data === '{"type":"pong"}') {
-                    this.missedPongs = 0;
-                    return;
-                }
-            }
-            this.config.onData(ev.data);
-        };
-    }
-
-    private startHeartbeat() {
-        this.stopHeartbeat();
-        this.missedPongs = 0;
-        this.heartbeatInterval = setInterval(() => {
-            if (this.dataChannel?.readyState === 'open') {
-                if (this.missedPongs >= 3) {
-                    console.warn('[WebRTC] heartbeat timeout, closing connection');
-                    this.close();
-                    this.config.onDisconnected();
-                    return;
-                }
-                this.dataChannel.send('{"type":"ping"}');
-                this.missedPongs++;
-            }
-        }, 10000); // 10 seconds
-    }
-
-    private stopHeartbeat() {
-        if (this.heartbeatInterval) {
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = null;
+        if (ev.data === '{"type":"pong"}') {
+          this.missedPongs = 0;
+          return;
         }
-    }
+      }
+      this.config.onData(ev.data);
+    };
+  }
 
-    async generateHandshake(isHost: boolean) {
-        if (!this.pc) return;
-
-        console.debug('[WebRTC] generateHandshake, isHost=', isHost);
-        const offer = await (isHost ? this.pc.createOffer() : this.pc.createAnswer());
-        await this.pc.setLocalDescription(offer);
-        console.debug('[WebRTC] setLocalDescription complete, type=', this.pc.localDescription?.type);
-
-        await this.waitForIceGathering();
-
-        const sdp = this.pc.localDescription?.sdp || '';
-        const compressed = compressSDP(sdp);
-        console.debug('[WebRTC] handshake generated, compressed length=', compressed.length);
-        this.config.onSDPGenerated(compressed, isHost);
-    }
-
-    private async waitForIceGathering() {
-        if (!this.pc || this.pc.iceGatheringState === 'complete') return;
-
-        console.debug('[WebRTC] waiting for ICE gathering...');
-        await new Promise<void>(resolve => {
-            const check = () => {
-                if (this.pc?.iceGatheringState === 'complete') {
-                    this.pc.removeEventListener('icegatheringstatechange', check);
-                    console.debug('[WebRTC] ICE gathering complete');
-                    resolve();
-                }
-            };
-            this.pc?.addEventListener('icegatheringstatechange', check);
-            setTimeout(() => {
-                console.debug('[WebRTC] ICE gathering timeout fallback');
-                resolve();
-            }, 2000);
-        });
-    }
-
-    async processSDP(data: string) {
-        if (!this.pc) {
-            console.warn('[WebRTC] processSDP called but pc is null');
-            return;
+  private startHeartbeat() {
+    this.stopHeartbeat();
+    this.missedPongs = 0;
+    this.heartbeatInterval = setInterval(() => {
+      if (this.dataChannel?.readyState === 'open') {
+        if (this.missedPongs >= 3) {
+          console.warn('[WebRTC] heartbeat timeout, closing connection');
+          this.close();
+          this.config.onDisconnected();
+          return;
         }
+        this.dataChannel.send('{"type":"ping"}');
+        this.missedPongs++;
+      }
+    }, 10000); // 10 seconds
+  }
 
-        const isOffer = this.pc.signalingState === 'stable';
-        console.debug('[WebRTC] processSDP incoming, len=', data.length, 'isOffer=', isOffer, 'signalingState=', this.pc.signalingState);
-        let sdp = data;
+  private stopHeartbeat() {
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = null;
+    }
+  }
 
-        if (data.length < 1000) {
-            sdp = decompressSDP(data, isOffer);
-            console.debug('[WebRTC] decompressed SDP len=', sdp.length);
+  async generateHandshake(isHost: boolean) {
+    if (!this.pc) return;
+
+    console.debug('[WebRTC] generateHandshake, isHost=', isHost);
+    const offer = await (isHost ? this.pc.createOffer() : this.pc.createAnswer());
+    await this.pc.setLocalDescription(offer);
+    console.debug('[WebRTC] setLocalDescription complete, type=', this.pc.localDescription?.type);
+
+    await this.waitForIceGathering();
+
+    const sdp = this.pc.localDescription?.sdp || '';
+    const compressed = compressSDP(sdp);
+    console.debug('[WebRTC] handshake generated, compressed length=', compressed.length);
+    this.config.onSDPGenerated(compressed, isHost);
+  }
+
+  private async waitForIceGathering() {
+    if (!this.pc || this.pc.iceGatheringState === 'complete') return;
+
+    console.debug('[WebRTC] waiting for ICE gathering...');
+    await new Promise<void>((resolve) => {
+      const check = () => {
+        if (this.pc?.iceGatheringState === 'complete') {
+          this.pc.removeEventListener('icegatheringstatechange', check);
+          console.debug('[WebRTC] ICE gathering complete');
+          resolve();
         }
+      };
+      this.pc?.addEventListener('icegatheringstatechange', check);
+      setTimeout(() => {
+        console.debug('[WebRTC] ICE gathering timeout fallback');
+        resolve();
+      }, 2000);
+    });
+  }
 
-        if (isOffer) {
-            console.debug('[WebRTC] setting remote description as offer');
-            await this.pc.setRemoteDescription({ type: 'offer', sdp });
-            console.debug('[WebRTC] remote offer set, generating answer...');
-            await this.generateHandshake(false);
-        } else {
-            console.debug('[WebRTC] setting remote description as answer');
-            await this.pc.setRemoteDescription({ type: 'answer', sdp });
-        }
+  async processSDP(data: string) {
+    if (!this.pc) {
+      console.warn('[WebRTC] processSDP called but pc is null');
+      return;
     }
 
-    send(data: string | ArrayBuffer | Uint8Array) {
-        if (this.dataChannel?.readyState === 'open') {
-            this.dataChannel.send(data as any);
-        }
+    const isOffer = this.pc.signalingState === 'stable';
+    console.debug(
+      '[WebRTC] processSDP incoming, len=',
+      data.length,
+      'isOffer=',
+      isOffer,
+      'signalingState=',
+      this.pc.signalingState
+    );
+    let sdp = data;
+
+    if (data.length < 1000) {
+      sdp = decompressSDP(data, isOffer);
+      console.debug('[WebRTC] decompressed SDP len=', sdp.length);
     }
 
-    get bufferedAmount() {
-        return this.dataChannel?.bufferedAmount || 0;
+    if (isOffer) {
+      console.debug('[WebRTC] setting remote description as offer');
+      await this.pc.setRemoteDescription({ type: 'offer', sdp });
+      console.debug('[WebRTC] remote offer set, generating answer...');
+      await this.generateHandshake(false);
+    } else {
+      console.debug('[WebRTC] setting remote description as answer');
+      await this.pc.setRemoteDescription({ type: 'answer', sdp });
     }
+  }
 
-    set onBufferedAmountLow(fn: (() => void) | null) {
-        if (this.dataChannel) {
-            this.dataChannel.onbufferedamountlow = fn;
-        }
+  send(data: string | ArrayBuffer | Uint8Array) {
+    if (this.dataChannel?.readyState === 'open') {
+      this.dataChannel.send(data as any);
     }
+  }
 
-    close() {
-        this.stopHeartbeat();
-        this.pc?.close();
-        this.pc = null;
-        this.dataChannel = null;
-    }
+  get bufferedAmount() {
+    return this.dataChannel?.bufferedAmount || 0;
+  }
 
-    get isStable() {
-        return this.pc?.signalingState === 'stable';
+  set onBufferedAmountLow(fn: (() => void) | null) {
+    if (this.dataChannel) {
+      this.dataChannel.onbufferedamountlow = fn;
     }
+  }
 
-    get hasRemoteDescription() {
-        return !!this.pc?.remoteDescription;
-    }
+  close() {
+    this.stopHeartbeat();
+    this.pc?.close();
+    this.pc = null;
+    this.dataChannel = null;
+  }
 
-    get iceConnectionState() {
-        return this.pc?.iceConnectionState;
-    }
+  get isStable() {
+    return this.pc?.signalingState === 'stable';
+  }
+
+  get hasRemoteDescription() {
+    return !!this.pc?.remoteDescription;
+  }
+
+  get iceConnectionState() {
+    return this.pc?.iceConnectionState;
+  }
 }

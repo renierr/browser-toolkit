@@ -5,11 +5,11 @@ export const playSpace = (engine: NoiseEngine) => {
   engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 100 },
-    gain: 0.5
+    gain: 0.5,
   });
   engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 500, Q: 10 },
-    gain: 0.05
+    gain: 0.05,
   });
 };

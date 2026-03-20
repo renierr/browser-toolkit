@@ -191,7 +191,7 @@ export class NoiseEngine {
           (node as any).stop();
         }
         node.disconnect();
-      } catch (e) { }
+      } catch (e) {}
     });
     this.activeNodes = [];
     this.activeIntervals.forEach((id) => {

@@ -1,11 +1,15 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">SVG Optimizer</h2>
-    <p class="text-base-content/70 mb-6">Optimize and minify SVG files to reduce file size. Upload a file or paste SVG code.</p>
+    <p class="text-base-content/70 mb-6">
+      Optimize and minify SVG files to reduce file size. Upload a file or paste SVG code.
+    </p>
 
     <!-- Upload Section -->
-    <div id="dropzone"
-         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+    <div
+      id="dropzone"
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3"
+    >
       <div class="flex flex-col items-center gap-2">
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
@@ -50,8 +54,12 @@
           <span class="label-text font-semibold">Input SVG</span>
           <span class="label-text-alt" id="input-stats">0 bytes</span>
         </label>
-        <textarea id="svg-input" class="textarea textarea-bordered h-64 font-mono text-sm w-full"
-                  placeholder="Paste your SVG code here..." spellcheck="false"></textarea>
+        <textarea
+          id="svg-input"
+          class="textarea textarea-bordered h-64 font-mono text-sm w-full"
+          placeholder="Paste your SVG code here..."
+          spellcheck="false"
+        ></textarea>
       </div>
 
       <!-- Output Section -->
@@ -60,8 +68,13 @@
           <span class="label-text font-semibold">Optimized SVG</span>
           <span class="label-text-alt" id="output-stats">0 bytes</span>
         </label>
-        <textarea id="svg-output" class="textarea textarea-bordered h-64 font-mono text-sm bg-base-200 w-full" readonly
-                  placeholder="Optimized output will appear here..." spellcheck="false"></textarea>
+        <textarea
+          id="svg-output"
+          class="textarea textarea-bordered h-64 font-mono text-sm bg-base-200 w-full"
+          readonly
+          placeholder="Optimized output will appear here..."
+          spellcheck="false"
+        ></textarea>
       </div>
     </div>
 
@@ -76,19 +89,39 @@
             <!-- General Options -->
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="keep-xmlns" class="checkbox checkbox-sm" checked data-option data-setting="keepXmlns" />
+                <input
+                  type="checkbox"
+                  id="keep-xmlns"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="keepXmlns"
+                />
                 <span class="label-text">Keep XML namespace</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-multipass" class="checkbox checkbox-sm" checked data-option data-setting="multipass" />
+                <input
+                  type="checkbox"
+                  id="opt-multipass"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="multipass"
+                />
                 <span class="label-text">Multipass optimization</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-pretty" class="checkbox checkbox-sm" data-option data-setting="pretty" />
+                <input
+                  type="checkbox"
+                  id="opt-pretty"
+                  class="checkbox checkbox-sm"
+                  data-option
+                  data-setting="pretty"
+                />
                 <span class="label-text">Pretty output (formatted)</span>
               </label>
             </div>
@@ -96,79 +129,170 @@
             <!-- Cleanup Options -->
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeComments" class="checkbox checkbox-sm" checked data-option data-setting="removeComments" />
+                <input
+                  type="checkbox"
+                  id="opt-removeComments"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeComments"
+                />
                 <span class="label-text">Remove comments</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeMetadata" class="checkbox checkbox-sm" checked data-option data-setting="removeMetadata" />
+                <input
+                  type="checkbox"
+                  id="opt-removeMetadata"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeMetadata"
+                />
                 <span class="label-text">Remove metadata</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeTitle" class="checkbox checkbox-sm" checked data-option data-setting="removeTitle" />
+                <input
+                  type="checkbox"
+                  id="opt-removeTitle"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeTitle"
+                />
                 <span class="label-text">Remove title</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeDesc" class="checkbox checkbox-sm" checked data-option data-setting="removeDesc" />
+                <input
+                  type="checkbox"
+                  id="opt-removeDesc"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeDesc"
+                />
                 <span class="label-text">Remove description</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeEditorsNSData" class="checkbox checkbox-sm" checked data-option data-setting="removeEditorsNSData" />
+                <input
+                  type="checkbox"
+                  id="opt-removeEditorsNSData"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeEditorsNSData"
+                />
                 <span class="label-text">Remove editor data</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeEmptyAttrs" class="checkbox checkbox-sm" checked data-option data-setting="removeEmptyAttrs" />
+                <input
+                  type="checkbox"
+                  id="opt-removeEmptyAttrs"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeEmptyAttrs"
+                />
                 <span class="label-text">Remove empty attributes</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeEmptyContainers" class="checkbox checkbox-sm" checked data-option data-setting="removeEmptyContainers" />
+                <input
+                  type="checkbox"
+                  id="opt-removeEmptyContainers"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeEmptyContainers"
+                />
                 <span class="label-text">Remove empty containers</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeEmptyText" class="checkbox checkbox-sm" checked data-option data-setting="removeEmptyText" />
+                <input
+                  type="checkbox"
+                  id="opt-removeEmptyText"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeEmptyText"
+                />
                 <span class="label-text">Remove empty text</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeHiddenElems" class="checkbox checkbox-sm" checked data-option data-setting="removeHiddenElems" />
+                <input
+                  type="checkbox"
+                  id="opt-removeHiddenElems"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeHiddenElems"
+                />
                 <span class="label-text">Remove hidden elements</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeUselessDefs" class="checkbox checkbox-sm" checked data-option data-setting="removeUselessDefs" />
+                <input
+                  type="checkbox"
+                  id="opt-removeUselessDefs"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeUselessDefs"
+                />
                 <span class="label-text">Remove unused defs</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeUselessStrokeAndFill" class="checkbox checkbox-sm" checked data-option data-setting="removeUselessStrokeAndFill" />
+                <input
+                  type="checkbox"
+                  id="opt-removeUselessStrokeAndFill"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeUselessStrokeAndFill"
+                />
                 <span class="label-text">Remove useless stroke/fill</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeDoctype" class="checkbox checkbox-sm" checked data-option data-setting="removeDoctype" />
+                <input
+                  type="checkbox"
+                  id="opt-removeDoctype"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeDoctype"
+                />
                 <span class="label-text">Remove doctype</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeXMLProcInst" class="checkbox checkbox-sm" checked data-option data-setting="removeXMLProcInst" />
+                <input
+                  type="checkbox"
+                  id="opt-removeXMLProcInst"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="removeXMLProcInst"
+                />
                 <span class="label-text">Remove XML declaration</span>
               </label>
             </div>
@@ -176,73 +300,157 @@
             <!-- Optimization Options -->
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-cleanupIds" class="checkbox checkbox-sm" checked data-option data-setting="cleanupIds" />
+                <input
+                  type="checkbox"
+                  id="opt-cleanupIds"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="cleanupIds"
+                />
                 <span class="label-text">Cleanup IDs</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-cleanupNumericValues" class="checkbox checkbox-sm" checked data-option data-setting="cleanupNumericValues" />
+                <input
+                  type="checkbox"
+                  id="opt-cleanupNumericValues"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="cleanupNumericValues"
+                />
                 <span class="label-text">Cleanup numeric values</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-convertColors" class="checkbox checkbox-sm" checked data-option data-setting="convertColors" />
+                <input
+                  type="checkbox"
+                  id="opt-convertColors"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="convertColors"
+                />
                 <span class="label-text">Convert colors</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-convertPathData" class="checkbox checkbox-sm" checked data-option data-setting="convertPathData" />
+                <input
+                  type="checkbox"
+                  id="opt-convertPathData"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="convertPathData"
+                />
                 <span class="label-text">Optimize path data</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-convertShapeToPath" class="checkbox checkbox-sm" checked data-option data-setting="convertShapeToPath" />
+                <input
+                  type="checkbox"
+                  id="opt-convertShapeToPath"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="convertShapeToPath"
+                />
                 <span class="label-text">Convert shapes to paths</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-convertTransform" class="checkbox checkbox-sm" checked data-option data-setting="convertTransform" />
+                <input
+                  type="checkbox"
+                  id="opt-convertTransform"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="convertTransform"
+                />
                 <span class="label-text">Optimize transforms</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-mergePaths" class="checkbox checkbox-sm" checked data-option data-setting="mergePaths" />
+                <input
+                  type="checkbox"
+                  id="opt-mergePaths"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="mergePaths"
+                />
                 <span class="label-text">Merge paths</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-minifyStyles" class="checkbox checkbox-sm" checked data-option data-setting="minifyStyles" />
+                <input
+                  type="checkbox"
+                  id="opt-minifyStyles"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="minifyStyles"
+                />
                 <span class="label-text">Minify styles</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-inlineStyles" class="checkbox checkbox-sm" checked data-option data-setting="inlineStyles" />
+                <input
+                  type="checkbox"
+                  id="opt-inlineStyles"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="inlineStyles"
+                />
                 <span class="label-text">Inline styles</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-collapseGroups" class="checkbox checkbox-sm" checked data-option data-setting="collapseGroups" />
+                <input
+                  type="checkbox"
+                  id="opt-collapseGroups"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="collapseGroups"
+                />
                 <span class="label-text">Collapse groups</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-sortAttrs" class="checkbox checkbox-sm" checked data-option data-setting="sortAttrs" />
+                <input
+                  type="checkbox"
+                  id="opt-sortAttrs"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="sortAttrs"
+                />
                 <span class="label-text">Sort attributes</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-sortDefsChildren" class="checkbox checkbox-sm" checked data-option data-setting="sortDefsChildren" />
+                <input
+                  type="checkbox"
+                  id="opt-sortDefsChildren"
+                  class="checkbox checkbox-sm"
+                  checked
+                  data-option
+                  data-setting="sortDefsChildren"
+                />
                 <span class="label-text">Sort defs children</span>
               </label>
             </div>
@@ -250,13 +458,25 @@
             <!-- Dimension Options -->
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeDimensions" class="checkbox checkbox-sm" data-option data-setting="removeDimensions" />
+                <input
+                  type="checkbox"
+                  id="opt-removeDimensions"
+                  class="checkbox checkbox-sm"
+                  data-option
+                  data-setting="removeDimensions"
+                />
                 <span class="label-text">Remove width/height</span>
               </label>
             </div>
             <div class="form-control">
               <label class="label cursor-pointer justify-start gap-3 py-1">
-                <input type="checkbox" id="opt-removeViewBox" class="checkbox checkbox-sm" data-option data-setting="removeViewBox" />
+                <input
+                  type="checkbox"
+                  id="opt-removeViewBox"
+                  class="checkbox checkbox-sm"
+                  data-option
+                  data-setting="removeViewBox"
+                />
                 <span class="label-text">Remove viewBox</span>
               </label>
             </div>
@@ -271,11 +491,17 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div class="flex flex-col items-center">
           <span class="text-sm font-semibold mb-2">Original</span>
-          <div id="preview-original" class="border rounded-lg p-4 bg-base-200 w-full min-h-32 flex items-center justify-center overflow-hidden"></div>
+          <div
+            id="preview-original"
+            class="border rounded-lg p-4 bg-base-200 w-full min-h-32 flex items-center justify-center overflow-hidden"
+          ></div>
         </div>
         <div class="flex flex-col items-center">
           <span class="text-sm font-semibold mb-2">Optimized</span>
-          <div id="preview-optimized" class="border rounded-lg p-4 bg-base-200 w-full min-h-32 flex items-center justify-center overflow-hidden"></div>
+          <div
+            id="preview-optimized"
+            class="border rounded-lg p-4 bg-base-200 w-full min-h-32 flex items-center justify-center overflow-hidden"
+          ></div>
         </div>
       </div>
     </div>

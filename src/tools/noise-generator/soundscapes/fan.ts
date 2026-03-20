@@ -7,7 +7,7 @@ export const playFan = (engine: NoiseEngine) => {
     type: 'brown',
     filter: { type: 'lowpass', freq: 600 },
     pan: 0,
-    gain: 0.5
+    gain: 0.5,
   });
 
   if (layer && layer.panner) {
@@ -19,13 +19,13 @@ export const playFan = (engine: NoiseEngine) => {
     engine.createOscillatorLayer({
       type: 'sine',
       freq: freq,
-      gain: 0.05 / (freq / 60)
+      gain: 0.05 / (freq / 60),
     });
   });
 
   engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'lowpass', freq: 1500 },
-    gain: 0.15
+    gain: 0.15,
   });
 };

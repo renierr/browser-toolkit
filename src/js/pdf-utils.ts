@@ -1,4 +1,3 @@
-
 /**
  * Parses a PDF date string (e.g., D:20221008012831+00'00') into a readable format.
  */
@@ -103,7 +102,10 @@ export function parseXmpMetadata(xmpString: string): Record<string, any> {
     return null;
   };
 
-  const descriptions = xmlDoc.getElementsByTagNameNS('http://www.w3.org/1999/02/22-rdf-syntax-ns#', 'Description');
+  const descriptions = xmlDoc.getElementsByTagNameNS(
+    'http://www.w3.org/1999/02/22-rdf-syntax-ns#',
+    'Description'
+  );
   for (let i = 0; i < descriptions.length; i++) {
     const desc = descriptions[i];
     const parsed = parseNode(desc);
@@ -127,11 +129,15 @@ export function flattenXmpMetadata(obj: any, prefix = ''): Record<string, any> {
     const cleanKey = key.replace(/[a-zA-Z0-9]+:/g, '').replace(/^@/, '');
     const displayKey = prefix ? `${prefix} > ${cleanKey}` : cleanKey;
 
-    if (typeof value === 'string' && value.length > 100 && (key.toLowerCase().includes('image') || key.toLowerCase().includes('thumbnail'))) {
+    if (
+      typeof value === 'string' &&
+      value.length > 100 &&
+      (key.toLowerCase().includes('image') || key.toLowerCase().includes('thumbnail'))
+    ) {
       results[displayKey] = {
         type: 'image',
         data: value.replace(/\s/g, ''),
-        format: (obj['xmpGImg:format'] || obj['format'] || 'jpeg').toLowerCase()
+        format: (obj['xmpGImg:format'] || obj['format'] || 'jpeg').toLowerCase(),
       };
     } else if (Array.isArray(value)) {
       value.forEach((item, index) => {

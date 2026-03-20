@@ -62,7 +62,13 @@ export function createHandleDrag(deps: HandleDragDeps): HandleDrag {
     const targetX = (e.clientX - rect.left) * (canvas.width / rect.width);
     const targetY = (e.clientY - rect.top) * (canvas.height / rect.height);
 
-    const smoothed = calculateSmoothedPosition(targetX, targetY, smoothedX, smoothedY, SMOOTHING_FACTOR);
+    const smoothed = calculateSmoothedPosition(
+      targetX,
+      targetY,
+      smoothedX,
+      smoothedY,
+      SMOOTHING_FACTOR
+    );
     const dx = smoothed.x - smoothedX;
     const dy = smoothed.y - smoothedY;
     smoothedX = smoothed.x;
@@ -79,12 +85,16 @@ export function createHandleDrag(deps: HandleDragDeps): HandleDrag {
       const constrainedDy = isHorizontalEdge ? dy : 0;
 
       page.corners[i1] = constrainPoint(
-        page.corners[i1].x + constrainedDx, page.corners[i1].y + constrainedDy,
-        canvas.width, canvas.height
+        page.corners[i1].x + constrainedDx,
+        page.corners[i1].y + constrainedDy,
+        canvas.width,
+        canvas.height
       );
       page.corners[i2] = constrainPoint(
-        page.corners[i2].x + constrainedDx, page.corners[i2].y + constrainedDy,
-        canvas.width, canvas.height
+        page.corners[i2].x + constrainedDx,
+        page.corners[i2].y + constrainedDy,
+        canvas.width,
+        canvas.height
       );
     } else {
       let newX = smoothedX;

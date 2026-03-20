@@ -119,8 +119,8 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
       <button
         data-favorite="${tool.path}"
         class="absolute cursor-pointer top-2 right-1 leading-0 rounded-full bg-card/50 hover:bg-card text-heading transition-all z-2 focus:opacity-100 focus:ring-2 focus:ring-primary outline-none ${active
-        ? 'text-yellow-500 opacity-100'
-        : 'text-muted opacity-100'}"
+          ? 'text-yellow-500 opacity-100'
+          : 'text-muted opacity-100'}"
         aria-label="${active ? 'Remove from favorites' : 'Add to favorites'}"
         title="${active ? 'Remove from favorites' : 'Add to favorites'}"
       >
@@ -165,10 +165,10 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
         href="#${tool.path}"
         aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
         class="card card-compact hover:bg-base-200 bg-base-100 rounded-xl shadow shadow-black/50 dark:shadow-white/50 hover:shadow-md transition-all border-l-2 ${tool.draft
-      ? 'border-l-yellow-400'
-      : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
-        ? 'focus:ring-yellow-300'
-        : 'focus:ring-secondary'} h-full"
+          ? 'border-l-yellow-400'
+          : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
+          ? 'focus:ring-yellow-300'
+          : 'focus:ring-secondary'} h-full"
       >
         ${cardContent}
       </a>

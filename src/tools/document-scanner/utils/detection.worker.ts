@@ -28,8 +28,12 @@ function buildResultMessage(
     const eBuf = debug.edges.buffer as ArrayBuffer;
     const mBuf = debug.morph.buffer as ArrayBuffer;
     serializedDebug = {
-      grayscale: gBuf, blur: bBuf, edges: eBuf, morph: mBuf,
-      width: debug.width, height: debug.height,
+      grayscale: gBuf,
+      blur: bBuf,
+      edges: eBuf,
+      morph: mBuf,
+      width: debug.width,
+      height: debug.height,
     };
     transfers.push(gBuf, bBuf, eBuf, mBuf);
   }
@@ -46,7 +50,13 @@ self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
       const pixels = new Uint8ClampedArray(data.pixels);
       const result = detectDocumentCorners(pixels, data.width, data.height, data.debug);
       const smoothed = smoothCorners(result.corners);
-      const { msg, transfers } = buildResultMessage('detect-result', data.id, smoothed, result.debug, result.timing);
+      const { msg, transfers } = buildResultMessage(
+        'detect-result',
+        data.id,
+        smoothed,
+        result.debug,
+        result.timing
+      );
       (self as unknown as Worker).postMessage(msg, transfers);
       break;
     }
@@ -54,7 +64,13 @@ self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
     case 'detect-image': {
       const pixels = new Uint8ClampedArray(data.pixels);
       const result = detectDocumentCorners(pixels, data.width, data.height, data.debug);
-      const { msg, transfers } = buildResultMessage('detect-image-result', data.id, result.corners, result.debug, result.timing);
+      const { msg, transfers } = buildResultMessage(
+        'detect-image-result',
+        data.id,
+        result.corners,
+        result.debug,
+        result.timing
+      );
       (self as unknown as Worker).postMessage(msg, transfers);
       break;
     }
@@ -71,4 +87,3 @@ self.addEventListener('message', (event: MessageEvent<WorkerInMessage>) => {
     }
   }
 });
-

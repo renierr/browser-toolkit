@@ -6,14 +6,14 @@ export const playASMR = (engine: NoiseEngine, checkActive: () => boolean) => {
   engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'lowpass', freq: 400 },
-    gain: 0.05
+    gain: 0.05,
   });
 
   const sweep = engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 3000, Q: 0.5 },
     pan: 0,
-    gain: 0.15
+    gain: 0.15,
   });
 
   if (sweep && sweep.panner && sweep.gain) {
@@ -49,12 +49,15 @@ export const playASMR = (engine: NoiseEngine, checkActive: () => boolean) => {
     src.start(t, Math.random() * 9);
     src.stop(t + duration);
 
-    setTimeout(() => {
-      src.disconnect();
-      hp.disconnect();
-      panner.disconnect();
-      g.disconnect();
-    }, (duration + 0.1) * 1000);
+    setTimeout(
+      () => {
+        src.disconnect();
+        hp.disconnect();
+        panner.disconnect();
+        g.disconnect();
+      },
+      (duration + 0.1) * 1000
+    );
   };
 
   const playTap = () => {
@@ -104,15 +107,14 @@ export const playASMR = (engine: NoiseEngine, checkActive: () => boolean) => {
       let delay = 0;
       const count = 3 + Math.floor(Math.random() * 4);
       for (let i = 0; i < count; i++) {
-        setTimeout(() => { if (checkActive()) playTap(); }, delay);
+        setTimeout(() => {
+          if (checkActive()) playTap();
+        }, delay);
         delay += 100 + Math.random() * 150;
       }
     }
 
-    const id = window.setTimeout(
-      scheduleTriggers,
-      1500 + Math.random() * 3000
-    );
+    const id = window.setTimeout(scheduleTriggers, 1500 + Math.random() * 3000);
     engine.activeIntervals.push(id);
   };
 

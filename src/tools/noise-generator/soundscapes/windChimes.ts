@@ -27,12 +27,12 @@ export const playWindChimes = (engine: NoiseEngine, checkActive: () => boolean) 
       { ratio: 1, gain: 1, decayMax: duration },
       { ratio: 2.76, gain: 0.6, decayMax: duration * 0.5 },
       { ratio: 5.4, gain: 0.4, decayMax: duration * 0.2 },
-      { ratio: 8.93, gain: 0.25, decayMax: duration * 0.1 }
+      { ratio: 8.93, gain: 0.25, decayMax: duration * 0.1 },
     ];
 
     const nodesToCleanup: AudioNode[] = [panner, mainGain];
 
-    partials.forEach(p => {
+    partials.forEach((p) => {
       const osc = engine.ctx!.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(rootFreq * p.ratio, t);
@@ -52,7 +52,7 @@ export const playWindChimes = (engine: NoiseEngine, checkActive: () => boolean) 
 
     setTimeout(
       () => {
-        nodesToCleanup.forEach(n => n.disconnect());
+        nodesToCleanup.forEach((n) => n.disconnect());
       },
       (duration + 0.2) * 1000
     );

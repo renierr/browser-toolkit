@@ -4,18 +4,28 @@
     <div class="card bg-base-100 shadow-xl max-w-4xl mx-auto">
       <div class="card-body gap-4">
         <h2 class="card-title text-2xl font-bold">SQLite Database Explorer</h2>
-        <p class="text-sm opacity-60">Offline SQLite database viewer. Explore tables, schemas, and execute queries strictly locally in your browser.</p>
+        <p class="text-sm opacity-60">
+          Offline SQLite database viewer. Explore tables, schemas, and execute queries strictly
+          locally in your browser.
+        </p>
 
         <!-- Dropzone -->
-        <div id="dropzone"
-          class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+        <div
+          id="dropzone"
+          class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3"
+        >
           <div class="flex flex-col items-center gap-2">
             <div class="text-base-content/30 text-4xl">
               <i data-lucide="upload-cloud"></i>
             </div>
             <p class="text-lg font-medium">Click or drag SQLite database here</p>
           </div>
-          <input type="file" id="sql-input" class="hidden" accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3,application/sql,application/octet-stream" />
+          <input
+            type="file"
+            id="sql-input"
+            class="hidden"
+            accept=".sqlite,.sqlite3,.db,application/vnd.sqlite3,application/x-sqlite3,application/sql,application/octet-stream"
+          />
         </div>
       </div>
     </div>
@@ -24,7 +34,9 @@
   <!-- Active State -->
   <div id="active-container" class="hidden flex-1 flex flex-col h-full overflow-hidden">
     <!-- Header -->
-    <header class="bg-base-200 border-b border-base-300 p-4 flex justify-between items-center shrink-0">
+    <header
+      class="bg-base-200 border-b border-base-300 p-4 flex justify-between items-center shrink-0"
+    >
       <div>
         <h2 class="text-xl font-bold" id="db-filename">Database</h2>
         <span class="text-sm text-base-content/70" id="db-filesize"></span>
@@ -37,15 +49,27 @@
     <!-- Main Content -->
     <div class="flex flex-col md:flex-row flex-1 overflow-hidden">
       <!-- Sidebar: Tables -->
-      <aside id="sidebar" class="w-full md:w-64 bg-base-100 border-b md:border-b-0 md:border-r border-base-300 flex flex-col shrink-0 overflow-y-auto md:overflow-hidden max-h-48 md:max-h-none transition-all duration-300">
-        <div class="p-3 border-b border-base-300 flex justify-between items-center bg-base-200/50 sticky top-0 md:static z-10 w-full">
+      <aside
+        id="sidebar"
+        class="w-full md:w-64 bg-base-100 border-b md:border-b-0 md:border-r border-base-300 flex flex-col shrink-0 overflow-y-auto md:overflow-hidden max-h-48 md:max-h-none transition-all duration-300"
+      >
+        <div
+          class="p-3 border-b border-base-300 flex justify-between items-center bg-base-200/50 sticky top-0 md:static z-10 w-full"
+        >
           <span class="font-semibold">Tables (<span id="table-count">0</span>)</span>
-          <button id="toggle-sidebar-btn-hide" class="btn-square btn-ghost btn-xs cursor-pointer" title="Hide Tables">
+          <button
+            id="toggle-sidebar-btn-hide"
+            class="btn-square btn-ghost btn-xs cursor-pointer"
+            title="Hide Tables"
+          >
             <i data-lucide="menu"></i>
             <span class="sr-only">Hide Tables</span>
           </button>
         </div>
-        <ul id="table-list" class="menu menu-compact menu-horizontal md:menu-vertical p-2 overflow-y-auto flex-wrap flex-1 gap-1">
+        <ul
+          id="table-list"
+          class="menu menu-compact menu-horizontal md:menu-vertical p-2 overflow-y-auto flex-wrap flex-1 gap-1"
+        >
           <!-- Tables will be injected here -->
         </ul>
       </aside>
@@ -53,8 +77,15 @@
       <!-- Content Area -->
       <main class="flex-1 flex flex-col min-h-0 min-w-0 bg-base-100 relative">
         <!-- Tabs -->
-        <div class="tabs tabs-bordered pt-2 px-4 shrink-0 bg-base-100 flex items-center" id="main-tabs">
-          <button id="toggle-sidebar-btn-show" class="hidden btn btn-square btn-ghost btn-sm mr-2 z-10" title="Show Tables">
+        <div
+          class="tabs tabs-bordered pt-2 px-4 shrink-0 bg-base-100 flex items-center"
+          id="main-tabs"
+        >
+          <button
+            id="toggle-sidebar-btn-show"
+            class="hidden btn btn-square btn-ghost btn-sm mr-2 z-10"
+            title="Show Tables"
+          >
             <i data-lucide="menu" class="w-4 h-4 rotate-90"></i>
           </button>
           <button class="tab tab-active" data-tab="data">Data</button>
@@ -64,10 +95,12 @@
 
         <!-- Tab Contents -->
         <div class="flex-1 flex flex-col overflow-hidden">
-
           <!-- Data Tab -->
           <div id="tab-content-data" class="flex-1 flex flex-col p-4 overflow-hidden">
-            <div id="data-empty-state" class="flex-1 flex items-center justify-center text-base-content/50">
+            <div
+              id="data-empty-state"
+              class="flex-1 flex items-center justify-center text-base-content/50"
+            >
               Select a table from the sidebar
             </div>
 
@@ -75,18 +108,24 @@
               <div class="flex justify-between items-center mb-4 shrink-0">
                 <h3 class="font-bold text-lg" id="current-table-name-data">Table Data</h3>
                 <div class="flex items-center gap-2">
-                   <label class="text-sm text-base-content/70">Rows per page:</label>
-                   <select id="row-limit-select" data-setting="rowLimit" class="select select-bordered select-sm">
-                     <option value="50">50</option>
-                     <option value="100">100</option>
-                     <option value="500">500</option>
-                     <option value="1000">1000</option>
-                   </select>
+                  <label class="text-sm text-base-content/70">Rows per page:</label>
+                  <select
+                    id="row-limit-select"
+                    data-setting="rowLimit"
+                    class="select select-bordered select-sm"
+                  >
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="500">500</option>
+                    <option value="1000">1000</option>
+                  </select>
                 </div>
               </div>
 
               <!-- Data Table Container -->
-              <div class="flex-1 overflow-auto rounded-box border border-base-300 bg-base-100 shadow-sm min-h-0 max-h-[50dvh]">
+              <div
+                class="flex-1 overflow-auto rounded-box border border-base-300 bg-base-100 shadow-sm min-h-0 max-h-[50dvh]"
+              >
                 <table class="table table-sm table-pin-rows w-full">
                   <thead id="data-table-head" class="bg-base-200"></thead>
                   <tbody id="data-table-body"></tbody>
@@ -97,8 +136,12 @@
               <div class="flex justify-between items-center mt-4 shrink-0">
                 <div class="text-sm font-medium" id="pagination-info">Showing 0 of 0</div>
                 <div class="join">
-                  <button id="btn-prev-page" class="join-item btn btn-sm"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
-                  <button id="btn-next-page" class="join-item btn btn-sm"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+                  <button id="btn-prev-page" class="join-item btn btn-sm">
+                    <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                  </button>
+                  <button id="btn-next-page" class="join-item btn btn-sm">
+                    <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                  </button>
                 </div>
               </div>
             </div>
@@ -106,12 +149,22 @@
 
           <!-- Schema Tab -->
           <div id="tab-content-schema" class="hidden flex-1 flex flex-col p-4 overflow-hidden">
-            <div id="schema-empty-state" class="flex-1 flex items-center justify-center text-base-content/50">
+            <div
+              id="schema-empty-state"
+              class="flex-1 flex items-center justify-center text-base-content/50"
+            >
               Select a table from the sidebar
             </div>
-            <div id="schema-active-state" class="hidden flex-1 flex flex-col h-full overflow-hidden">
-              <h3 class="font-bold text-lg mb-4 shrink-0" id="current-table-name-schema">Table Schema</h3>
-              <div class="flex-1 overflow-auto rounded-box border border-base-300 bg-base-100 shadow-sm min-h-0 max-h-[50dvh]">
+            <div
+              id="schema-active-state"
+              class="hidden flex-1 flex flex-col h-full overflow-hidden"
+            >
+              <h3 class="font-bold text-lg mb-4 shrink-0" id="current-table-name-schema">
+                Table Schema
+              </h3>
+              <div
+                class="flex-1 overflow-auto rounded-box border border-base-300 bg-base-100 shadow-sm min-h-0 max-h-[50dvh]"
+              >
                 <table class="table table-sm table-pin-rows w-full">
                   <thead class="bg-base-200">
                     <tr>
@@ -131,40 +184,47 @@
 
           <!-- Query Tab -->
           <div id="tab-content-query" class="hidden flex-1 flex flex-col p-4 overflow-hidden gap-4">
-             <div class="flex flex-col gap-2 shrink-0">
-                <label class="font-bold">SQL Query</label>
-                <textarea
-                  id="custom-query-input"
-                  data-setting="customQueryInput"
-                  class="textarea textarea-bordered font-mono w-full h-32 resize-y"
-                  placeholder="SELECT * FROM sqlite_master;"
-                ></textarea>
-                <div class="flex justify-end mt-2">
-                   <button id="execute-query-btn" class="btn btn-primary btn-sm">
-                     <i data-lucide="play" class="w-4 h-4 mr-2"></i> Execute
-                   </button>
-                </div>
-             </div>
+            <div class="flex flex-col gap-2 shrink-0">
+              <label class="font-bold">SQL Query</label>
+              <textarea
+                id="custom-query-input"
+                data-setting="customQueryInput"
+                class="textarea textarea-bordered font-mono w-full h-32 resize-y"
+                placeholder="SELECT * FROM sqlite_master;"
+              ></textarea>
+              <div class="flex justify-end mt-2">
+                <button id="execute-query-btn" class="btn btn-primary btn-sm">
+                  <i data-lucide="play" class="w-4 h-4 mr-2"></i> Execute
+                </button>
+              </div>
+            </div>
 
-             <!-- Query Error -->
-             <div id="query-error" class="hidden alert alert-error shadow-sm py-2 shrink-0">
-                <i data-lucide="alert-circle" class="w-5 h-5"></i>
-                <span id="query-error-text"></span>
-             </div>
+            <!-- Query Error -->
+            <div id="query-error" class="hidden alert alert-error shadow-sm py-2 shrink-0">
+              <i data-lucide="alert-circle" class="w-5 h-5"></i>
+              <span id="query-error-text"></span>
+            </div>
 
-             <!-- Query Results Container -->
-             <div class="flex-1 overflow-auto rounded-box border border-base-300 bg-base-100 shadow-sm min-h-0 max-h-[50dvh] relative">
-               <div id="query-results-placeholder" class="absolute inset-0 flex items-center justify-center text-base-content/50">
-                 Results will appear here
-               </div>
-               <table id="query-results-table-container" class="hidden table table-sm table-pin-rows w-full">
-                 <thead id="query-results-head" class="bg-base-200"></thead>
-                 <tbody id="query-results-body"></tbody>
-               </table>
-             </div>
-             <div id="query-results-count" class="text-sm font-medium text-right shrink-0"></div>
+            <!-- Query Results Container -->
+            <div
+              class="flex-1 overflow-auto rounded-box border border-base-300 bg-base-100 shadow-sm min-h-0 max-h-[50dvh] relative"
+            >
+              <div
+                id="query-results-placeholder"
+                class="absolute inset-0 flex items-center justify-center text-base-content/50"
+              >
+                Results will appear here
+              </div>
+              <table
+                id="query-results-table-container"
+                class="hidden table table-sm table-pin-rows w-full"
+              >
+                <thead id="query-results-head" class="bg-base-200"></thead>
+                <tbody id="query-results-body"></tbody>
+              </table>
+            </div>
+            <div id="query-results-count" class="text-sm font-medium text-right shrink-0"></div>
           </div>
-
         </div>
       </main>
     </div>

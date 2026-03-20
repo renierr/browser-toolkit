@@ -11,7 +11,11 @@ export interface TranscodeOptions {
 /**
  * Generates the FFmpeg arguments based on user input and detected streams.
  */
-export function getFFmpegArgs(inputName: string, outputName: string, options: TranscodeOptions): string[] {
+export function getFFmpegArgs(
+  inputName: string,
+  outputName: string,
+  options: TranscodeOptions
+): string[] {
   const { format, preset, advancedArgs, cutStart, cutEnd, copyCodec, maxResolution } = options;
   let args: string[] = ['-y'];
 
@@ -56,7 +60,23 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
     } else if (format === 'gif') {
       args.push('-vf', `fps=10,scale=min(iw\\,${maxW}):-2:flags=lanczos`, '-f', 'gif');
     } else if (format === 'webp') {
-      args.push('-vf', `fps=10,scale=min(iw\\,${maxW}):-2:flags=lanczos`, '-c:v', 'libwebp', '-lossless', '0', '-compression_level', '4', '-q:v', '50', '-loop', '0', '-an', '-f', 'webp');
+      args.push(
+        '-vf',
+        `fps=10,scale=min(iw\\,${maxW}):-2:flags=lanczos`,
+        '-c:v',
+        'libwebp',
+        '-lossless',
+        '0',
+        '-compression_level',
+        '4',
+        '-q:v',
+        '50',
+        '-loop',
+        '0',
+        '-an',
+        '-f',
+        'webp'
+      );
     } else if (format === 'mp3') {
       args.push('-vn', '-ab', '192k', '-ar', '44100', '-f', 'mp3');
     }
@@ -76,16 +96,19 @@ export function getFFmpegArgs(inputName: string, outputName: string, options: Tr
 /**
  * Extract video duration and metadata from FFmpeg logs.
  */
-export async function getVideoMetadata(ffmpeg: any, inputName: string): Promise<{
-  duration: number,
-  width?: number,
-  height?: number,
-  vcodec?: string,
-  acodec?: string,
-  bitrate?: string,
-  fps?: string,
-  sampleRate?: string,
-  hasAudio: boolean
+export async function getVideoMetadata(
+  ffmpeg: any,
+  inputName: string
+): Promise<{
+  duration: number;
+  width?: number;
+  height?: number;
+  vcodec?: string;
+  acodec?: string;
+  bitrate?: string;
+  fps?: string;
+  sampleRate?: string;
+  hasAudio: boolean;
 }> {
   let duration = 0;
   let width: number | undefined;

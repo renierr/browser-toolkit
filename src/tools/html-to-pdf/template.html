@@ -1,7 +1,9 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">HTML to PDF</h2>
-    <p class="text-base-content/70 mb-6">Create a PDF from HTML content with custom styling and page settings.</p>
+    <p class="text-base-content/70 mb-6">
+      Create a PDF from HTML content with custom styling and page settings.
+    </p>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
       <button id="load-content" class="btn btn-secondary">
@@ -15,7 +17,11 @@
     </div>
 
     <div>
-      <div id="editor" class="bg-white border-2 border-base-300 rounded-lg overflow-hidden mb-6 min-h-60" style="height: 400px; max-height: 50vh; display: flex; flex-direction: column;"></div>
+      <div
+        id="editor"
+        class="bg-white border-2 border-base-300 rounded-lg overflow-hidden mb-6 min-h-60"
+        style="height: 400px; max-height: 50vh; display: flex; flex-direction: column"
+      ></div>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -30,7 +36,13 @@
       </div>
       <div class="form-control">
         <label class="label"><span class="label-text font-semibold">Font Size</span></label>
-        <input type="number" id="font-size" value="12" class="input input-bordered w-full" data-setting="fontSize">
+        <input
+          type="number"
+          id="font-size"
+          value="12"
+          class="input input-bordered w-full"
+          data-setting="fontSize"
+        />
       </div>
       <div class="form-control">
         <label class="label"><span class="label-text font-semibold">Page Size</span></label>
@@ -49,7 +61,11 @@
       </div>
       <div class="form-control">
         <label class="label"><span class="label-text font-semibold">Orientation</span></label>
-        <select id="page-orientation" class="select select-bordered w-full" data-setting="orientation">
+        <select
+          id="page-orientation"
+          class="select select-bordered w-full"
+          data-setting="orientation"
+        >
           <option value="portrait" selected>Portrait</option>
           <option value="landscape">Landscape</option>
         </select>
@@ -59,11 +75,25 @@
     <div id="custom-size-container" class="hidden grid grid-cols-2 gap-4 mb-8">
       <div class="form-control">
         <label class="label"><span class="label-text font-semibold">Width (pt)</span></label>
-        <input type="number" id="custom-width" value="595" min="1" class="input input-bordered w-full" data-setting="customWidth">
+        <input
+          type="number"
+          id="custom-width"
+          value="595"
+          min="1"
+          class="input input-bordered w-full"
+          data-setting="customWidth"
+        />
       </div>
       <div class="form-control">
         <label class="label"><span class="label-text font-semibold">Height (pt)</span></label>
-        <input type="number" id="custom-height" value="842" min="1" class="input input-bordered w-full" data-setting="customHeight">
+        <input
+          type="number"
+          id="custom-height"
+          value="842"
+          min="1"
+          class="input input-bordered w-full"
+          data-setting="customHeight"
+        />
       </div>
     </div>
 
@@ -81,7 +111,9 @@
           <i data-lucide="printer" class="w-4 h-4 mr-2"></i>
           Browser Print
         </button>
-        <p class="text-xs text-base-content/50 mt-1 ml-1">Uses browser engine for best formatting.</p>
+        <p class="text-xs text-base-content/50 mt-1 ml-1">
+          Uses browser engine for best formatting.
+        </p>
       </div>
     </div>
   </div>

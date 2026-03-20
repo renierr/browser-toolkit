@@ -67,7 +67,10 @@ export const playThunderstorm = (engine: NoiseEngine, checkActive: () => boolean
       const rumbleGain = engine.ctx.createGain();
       const layerDelay = i * (0.5 + Math.random() * 1.5);
       rumbleGain.gain.setValueAtTime(0, t + layerDelay);
-      rumbleGain.gain.linearRampToValueAtTime(2.0 / (i + 1), t + layerDelay + 2.0 + Math.random() * 2.0);
+      rumbleGain.gain.linearRampToValueAtTime(
+        2.0 / (i + 1),
+        t + layerDelay + 2.0 + Math.random() * 2.0
+      );
 
       engine.addMicroLFO(rumbleGain.gain, 0.1 + i * 0.1, 0.8);
       engine.addMicroLFO(rumbleFilter.frequency, 0.05 + i * 0.05, 120);

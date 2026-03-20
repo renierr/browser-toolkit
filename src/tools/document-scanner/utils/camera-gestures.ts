@@ -2,11 +2,7 @@
  * Camera gesture handlers: tap-to-focus and pinch-to-zoom.
  * Extracted from index.ts for readability.
  */
-import {
-  getZoomCapabilities,
-  setZoom,
-  tapToFocus,
-} from './camera';
+import { getZoomCapabilities, setZoom, tapToFocus } from './camera';
 import { clientToNormalizedVideo } from './video-coordinates';
 
 export interface CameraGestureOptions {
@@ -18,7 +14,6 @@ export interface CameraGestureOptions {
   getZoom: () => number;
   setCurrentZoom: (zoom: number) => void;
 }
-
 
 export function createCameraGestures(opts: CameraGestureOptions) {
   const { video, cameraView, focusRing, zoomIndicator, getStream, getZoom, setCurrentZoom } = opts;
@@ -121,4 +116,3 @@ export function createCameraGestures(opts: CameraGestureOptions) {
     },
   };
 }
-

@@ -1,11 +1,15 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">Images to PDF</h2>
-    <p class="text-base-content/70 mb-6">Select or drag and drop images to create a PDF. You can reorder them before
-      generating the file.</p>
+    <p class="text-base-content/70 mb-6">
+      Select or drag and drop images to create a PDF. You can reorder them before generating the
+      file.
+    </p>
 
-    <div id="drop-zone"
-         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+    <div
+      id="drop-zone"
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3"
+    >
       <div class="flex flex-col items-center gap-2">
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
@@ -16,7 +20,10 @@
       <input type="file" id="file-input" class="hidden" accept="image/*" multiple />
     </div>
 
-    <div id="image-list" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6">
+    <div
+      id="image-list"
+      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-6"
+    >
       <!-- Images will be added here -->
     </div>
 

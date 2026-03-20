@@ -46,7 +46,7 @@ export class NoiseGenerator {
       case 'brown':
         this.engine.createNoiseLayer({
           type: type as 'white' | 'pink' | 'brown',
-          gain: 1.0
+          gain: 1.0,
         });
         break;
       case 'rain':
@@ -106,7 +106,7 @@ export class NoiseGenerator {
       default:
         this.engine.createNoiseLayer({
           type: 'pink',
-          gain: 1.0
+          gain: 1.0,
         });
     }
   }

@@ -1,4 +1,10 @@
-import { type OnnxModelConfig, loadSession, runInference, createTensor, releaseSession } from '../../js/onnx-utils';
+import {
+  type OnnxModelConfig,
+  loadSession,
+  runInference,
+  createTensor,
+  releaseSession,
+} from '../../js/onnx-utils';
 import { blobToImageData } from '../../js/image-utils';
 import type { ProcessingOptions } from './utils.ts';
 
@@ -36,8 +42,8 @@ function imageDataToTensor(imgData: ImageData, config: any): Float32Array {
     for (let c = 0; c < 3; c++) {
       const pix = data[rgbaIdx + c] / 255.0;
       const val = (pix * rangeWidth + min - mean[c]) / std[c];
-      
-      const targetC = isBGR ? (2 - c) : c;
+
+      const targetC = isBGR ? 2 - c : c;
       floatData[targetC * numPixels + i] = val;
     }
   }
@@ -49,7 +55,12 @@ function imageDataToTensor(imgData: ImageData, config: any): Float32Array {
  * Denormalizes tensor data back into an ImageData object.
  * Reverses normalization and range mapping.
  */
-function tensorToImageData(tensorData: Float32Array, width: number, height: number, config: any): ImageData {
+function tensorToImageData(
+  tensorData: Float32Array,
+  width: number,
+  height: number,
+  config: any
+): ImageData {
   const numPixels = width * height;
   const rgbaData = new Uint8ClampedArray(numPixels * 4);
   const channels = Math.floor(tensorData.length / numPixels);
@@ -65,7 +76,7 @@ function tensorToImageData(tensorData: Float32Array, width: number, height: numb
 
     for (let c = 0; c < 3; c++) {
       let val;
-      const sourceC = isBGR ? (2 - c) : c;
+      const sourceC = isBGR ? 2 - c : c;
       if (channels === 1) {
         val = tensorData[i];
       } else {
@@ -76,11 +87,11 @@ function tensorToImageData(tensorData: Float32Array, width: number, height: numb
       // For grayscale, we use mean[0] and std[0] if provided, else defaults
       const m = mean[c] !== undefined ? mean[c] : mean[0];
       const s = std[c] !== undefined ? std[c] : std[0];
-      
-      const afterRange = (val * s) + m;
+
+      const afterRange = val * s + m;
       const normalized = (afterRange - min) / rangeWidth;
       const pix = normalized * 255.0;
-      
+
       rgbaData[rgbaIdx + c] = Math.max(0, Math.min(255, Math.round(pix)));
     }
     rgbaData[rgbaIdx + 3] = 255; // Alpha
@@ -206,7 +217,7 @@ self.onmessage = (e: MessageEvent) => {
   } else if (type === 'CLEAR_CACHE') {
     // Release all sessions known to us
     import('./utils.ts').then(({ MODELS }) => {
-      Object.values(MODELS).forEach(m => releaseSession(m.url));
+      Object.values(MODELS).forEach((m) => releaseSession(m.url));
       console.log('[Worker] Model cache cleared.');
     });
   }

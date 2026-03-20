@@ -120,7 +120,7 @@ export function updateCornerHandles(
       handle.className = 'edge-handle';
       // Edge 0 (TL→TR) = top, Edge 2 (BR→BL) = bottom → Y axis only
       // Edge 1 (TR→BR) = right, Edge 3 (BL→TL) = left → X axis only
-      handle.dataset.axis = (i === 0 || i === 2) ? 'y' : 'x';
+      handle.dataset.axis = i === 0 || i === 2 ? 'y' : 'x';
       handle.addEventListener('pointerdown', (e) => onStart(e as PointerEvent, i, true));
       container.appendChild(handle);
     }
@@ -247,12 +247,12 @@ export function renderPageList(
 ) {
   container.innerHTML = '';
   pages.forEach((page, index) => {
-
     const card = document.createElement('div');
-    card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${index === currentPageIndex
+    card.className = `page-card relative group aspect-[3/4] bg-base-100 rounded-lg overflow-hidden border-2 cursor-pointer touch-none ${
+      index === currentPageIndex
         ? 'active border-primary ring-2 ring-primary/20'
         : 'border-base-300'
-      }`;
+    }`;
     card.dataset.index = index.toString();
 
     const thumb = document.createElement('img');

@@ -1,10 +1,15 @@
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">PDF Un-/locker & Restriction Manager</h2>
-    <p class="text-base-content/70 mb-6">User / Owner Passwort to protect the PDF<br>Remove or set printing, copying, and editing restrictions on your PDF files.</p>
+    <p class="text-base-content/70 mb-6">
+      User / Owner Passwort to protect the PDF<br />Remove or set printing, copying, and editing
+      restrictions on your PDF files.
+    </p>
 
-    <div id="pdf-dropzone"
-         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8">
+    <div
+      id="pdf-dropzone"
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8"
+    >
       <div class="flex flex-col items-center gap-2">
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
@@ -15,55 +20,67 @@
     </div>
 
     <div id="restrictions-config" class="hidden mt-6 border-t pt-4">
-        <div id="no-restrictions-msg" class="alert alert-info mb-4 hidden">
-            <i data-lucide="info" class="w-4 h-4"></i>
-            <span>This document currently has no restrictions.</span>
-        </div>
+      <div id="no-restrictions-msg" class="alert alert-info mb-4 hidden">
+        <i data-lucide="info" class="w-4 h-4"></i>
+        <span>This document currently has no restrictions.</span>
+      </div>
 
-        <h3 class="font-bold mb-2">Configure Restrictions</h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <label class="label cursor-pointer justify-start gap-2">
-                <input type="checkbox" id="perm-print" class="checkbox checkbox-primary" checked />
-                <span class="label-text">Allow Printing</span>
-            </label>
-            <label class="label cursor-pointer justify-start gap-2">
-                <input type="checkbox" id="perm-copy" class="checkbox checkbox-primary" checked />
-                <span class="label-text">Allow Copying Content</span>
-            </label>
-            <label class="label cursor-pointer justify-start gap-2">
-                <input type="checkbox" id="perm-edit" class="checkbox checkbox-primary" checked />
-                <span class="label-text">Allow Editing/Modifying</span>
-            </label>
-            <label class="label cursor-pointer justify-start gap-2">
-                <input type="checkbox" id="perm-annotate" class="checkbox checkbox-primary" checked />
-                <span class="label-text">Allow Annotating</span>
-            </label>
+      <h3 class="font-bold mb-2">Configure Restrictions</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" id="perm-print" class="checkbox checkbox-primary" checked />
+          <span class="label-text">Allow Printing</span>
+        </label>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" id="perm-copy" class="checkbox checkbox-primary" checked />
+          <span class="label-text">Allow Copying Content</span>
+        </label>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" id="perm-edit" class="checkbox checkbox-primary" checked />
+          <span class="label-text">Allow Editing/Modifying</span>
+        </label>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" id="perm-annotate" class="checkbox checkbox-primary" checked />
+          <span class="label-text">Allow Annotating</span>
+        </label>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <div>
+          <label class="label">
+            <span class="label-text"
+              >User Password (to open - leave empty for no restriction to open)</span
+            >
+          </label>
+          <input
+            type="password"
+            id="user-password"
+            class="input input-bordered w-full"
+            placeholder="Optional"
+          />
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            <div>
-                <label class="label">
-                    <span class="label-text">User Password (to open - leave empty for no restriction to open)</span>
-                </label>
-                <input type="password" id="user-password" class="input input-bordered w-full" placeholder="Optional" />
-            </div>
-            <div>
-                <label class="label">
-                    <span class="label-text">Owner Password (to protect settings)</span>
-                </label>
-                <input type="password" id="owner-password" class="input input-bordered w-full" placeholder="Optional" />
-            </div>
+        <div>
+          <label class="label">
+            <span class="label-text">Owner Password (to protect settings)</span>
+          </label>
+          <input
+            type="password"
+            id="owner-password"
+            class="input input-bordered w-full"
+            placeholder="Optional"
+          />
         </div>
-        <div class="flex flex-col gap-2 mt-6">
-            <button id="apply-btn" class="btn btn-primary">
-                <i data-lucide="shield-check" class="w-4 h-4 mr-2"></i> Apply & Download
-            </button>
-            <button id="remove-all-btn" class="btn btn-outline btn-secondary">
-                <i data-lucide="unlock" class="w-4 h-4 mr-2"></i> Remove All Restrictions & Download
-            </button>
-            <button id="start-over-btn" class="btn btn-ghost">
-              <i data-lucide="refresh-ccw" class="w-4 h-4 mr-2"></i> Start Over
-            </button>
-        </div>
+      </div>
+      <div class="flex flex-col gap-2 mt-6">
+        <button id="apply-btn" class="btn btn-primary">
+          <i data-lucide="shield-check" class="w-4 h-4 mr-2"></i> Apply & Download
+        </button>
+        <button id="remove-all-btn" class="btn btn-outline btn-secondary">
+          <i data-lucide="unlock" class="w-4 h-4 mr-2"></i> Remove All Restrictions & Download
+        </button>
+        <button id="start-over-btn" class="btn btn-ghost">
+          <i data-lucide="refresh-ccw" class="w-4 h-4 mr-2"></i> Start Over
+        </button>
+      </div>
     </div>
   </div>
 </div>

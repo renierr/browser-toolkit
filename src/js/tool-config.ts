@@ -136,9 +136,15 @@ export function parseToolConfig(
   }
   if (raw.shareTarget !== undefined) {
     if (!isRecord(raw.shareTarget)) {
-      failOrSkip(`${ctx}: Field "shareTarget" must be an object, got ${typeOf(raw.shareTarget)}.`, strict);
+      failOrSkip(
+        `${ctx}: Field "shareTarget" must be an object, got ${typeOf(raw.shareTarget)}.`,
+        strict
+      );
     } else if (!asStringArray(raw.shareTarget.accept)) {
-      failOrSkip(`${ctx}: Field "shareTarget.accept" must be a string[], got ${typeOf(raw.shareTarget.accept)}.`, strict);
+      failOrSkip(
+        `${ctx}: Field "shareTarget.accept" must be a string[], got ${typeOf(raw.shareTarget.accept)}.`,
+        strict
+      );
     }
   }
 

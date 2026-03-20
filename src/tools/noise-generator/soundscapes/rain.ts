@@ -1,6 +1,10 @@
 import { NoiseEngine } from '../noise-engine';
 
-export const playRain = (engine: NoiseEngine, isCity: boolean = false, checkActive: () => boolean) => {
+export const playRain = (
+  engine: NoiseEngine,
+  isCity: boolean = false,
+  checkActive: () => boolean
+) => {
   if (!engine.ctx || !engine.masterGain) return;
 
   // Layer 1: Pink noise (Rain hiss)
@@ -8,7 +12,7 @@ export const playRain = (engine: NoiseEngine, isCity: boolean = false, checkActi
     type: 'pink',
     filter: { type: 'highpass', freq: isCity ? 1200 : 1600 },
     pan: -0.2,
-    gain: 0.04
+    gain: 0.04,
   });
 
   // Layer 2: Brown noise (Rain rumble)
@@ -16,7 +20,7 @@ export const playRain = (engine: NoiseEngine, isCity: boolean = false, checkActi
     type: 'brown',
     filter: { type: 'lowpass', freq: isCity ? 150 : 200 },
     pan: 0.2,
-    gain: 0.05
+    gain: 0.05,
   });
 
   // Layer 3: Discrete Droplets
@@ -55,15 +59,12 @@ export const playRain = (engine: NoiseEngine, isCity: boolean = false, checkActi
     source.start(t, Math.random() * 9);
     source.stop(t + 0.1);
 
-    setTimeout(
-      () => {
-        source.disconnect();
-        filter.disconnect();
-        panner.disconnect();
-        gain.disconnect();
-      },
-      200
-    );
+    setTimeout(() => {
+      source.disconnect();
+      filter.disconnect();
+      panner.disconnect();
+      gain.disconnect();
+    }, 200);
   };
 
   const scheduleNextDroplet = () => {

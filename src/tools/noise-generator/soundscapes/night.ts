@@ -7,7 +7,7 @@ export const playNight = (engine: NoiseEngine, checkActive: () => boolean) => {
   const layer = engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'lowpass', freq: 400 },
-    gain: 0.1
+    gain: 0.1,
   });
 
   if (layer) {
@@ -123,16 +123,24 @@ export const playNight = (engine: NoiseEngine, checkActive: () => boolean) => {
         if (checkActive()) playOwl();
       }, 1000);
     } else {
-      const id = window.setTimeout(() => {
-        if (checkActive()) playOwl();
-      }, (15 + Math.random() * 25) * 1000);
+      const id = window.setTimeout(
+        () => {
+          if (checkActive()) playOwl();
+        },
+        (15 + Math.random() * 25) * 1000
+      );
       engine.activeIntervals.push(id);
     }
   };
 
-  engine.activeIntervals.push(window.setTimeout(() => {
-    if (checkActive()) playOwl();
-  }, (2 + Math.random() * 3) * 1000));
+  engine.activeIntervals.push(
+    window.setTimeout(
+      () => {
+        if (checkActive()) playOwl();
+      },
+      (2 + Math.random() * 3) * 1000
+    )
+  );
 
   const scheduleCar = () => {
     if (!checkActive()) return;
@@ -145,8 +153,12 @@ export const playNight = (engine: NoiseEngine, checkActive: () => boolean) => {
     engine.activeIntervals.push(id);
   };
 
-  engine.activeIntervals.push(window.setTimeout(() => {
-    if (checkActive()) scheduleCar();
-  }, (10 + Math.random() * 15) * 1000));
+  engine.activeIntervals.push(
+    window.setTimeout(
+      () => {
+        if (checkActive()) scheduleCar();
+      },
+      (10 + Math.random() * 15) * 1000
+    )
+  );
 };
-

@@ -6,7 +6,7 @@ export const playTrain = (engine: NoiseEngine, checkActive: () => boolean) => {
   const layer = engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 150 },
-    gain: 0.3
+    gain: 0.3,
   });
 
   if (layer && layer.filter) {

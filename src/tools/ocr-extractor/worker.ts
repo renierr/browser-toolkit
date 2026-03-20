@@ -1,4 +1,3 @@
-
 import { PaddleOCR } from './paddle-ocr';
 
 const ocr = new PaddleOCR();

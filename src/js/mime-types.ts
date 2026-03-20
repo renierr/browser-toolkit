@@ -109,10 +109,7 @@ export const MIME_TYPE_FALLBACKS: Record<string, string> = {
   '.vcf': 'text/vcard',
 };
 
-export function getMimeTypeFromFileName(
-  mime: string,
-  fileName: string
-): string {
+export function getMimeTypeFromFileName(mime: string, fileName: string): string {
   if (mime && mime !== 'application/octet-stream') {
     return mime;
   }

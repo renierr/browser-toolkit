@@ -4,12 +4,12 @@
       <i data-lucide="crop" class="w-6 h-6"></i>
       Image Converter / Redactor
     </h2>
-    <p class="text-sm opacity-70 mb-6">
-      Upload an image to convert, crop or redact
-    </p>
+    <p class="text-sm opacity-70 mb-6">Upload an image to convert, crop or redact</p>
 
-    <div id="dropzone"
-         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3">
+    <div
+      id="dropzone"
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3"
+    >
       <div class="flex flex-col items-center gap-2">
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
@@ -25,25 +25,44 @@
     </div>
 
     <div id="editor-container" class="hidden flex flex-col h-full gap-4 relative">
-
       <!-- Non-sticky Action Bar -->
       <div class="flex flex-wrap gap-2 justify-between px-1 items-center">
         <div class="flex gap-2 flex-wrap">
           <div id="format-control" class="flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
-            <label for="export-format" class="text-xs font-medium whitespace-nowrap">Export as:</label>
+            <label for="export-format" class="text-xs font-medium whitespace-nowrap"
+              >Export as:</label
+            >
             <select id="export-format" class="select select-xs focus:outline-none">
               <option value="image/png">PNG</option>
               <option value="image/jpeg">JPEG</option>
               <option value="image/webp">WebP</option>
             </select>
           </div>
-          <div id="intensity-control" class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
+          <div
+            id="intensity-control"
+            class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1"
+          >
             <label for="tool-intensity" class="text-xs font-medium">Intensity:</label>
-            <input type="range" min="1" max="100" value="50" class="range range-xs range-primary w-24" id="tool-intensity" />
+            <input
+              type="range"
+              min="1"
+              max="100"
+              value="50"
+              class="range range-xs range-primary w-24"
+              id="tool-intensity"
+            />
           </div>
-          <div id="color-control" class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1">
+          <div
+            id="color-control"
+            class="hidden flex items-center gap-2 bg-base-200 rounded-lg px-2 py-1"
+          >
             <label for="tool-color" class="text-xs font-medium">Color:</label>
-            <input type="color" value="#000000" class="w-8 h-6 p-0 border-0 bg-transparent cursor-pointer rounded" id="tool-color" />
+            <input
+              type="color"
+              value="#000000"
+              class="w-8 h-6 p-0 border-0 bg-transparent cursor-pointer rounded"
+              id="tool-color"
+            />
           </div>
         </div>
         <div class="flex flex-wrap gap-2 justify-end flex-1">
@@ -66,12 +85,19 @@
       </div>
 
       <!-- Sticky Tool Bar - Direct child of editor-container to allow sticking across the whole view -->
-      <div class="sticky top-0 z-20 bg-base-200/95 backdrop-blur p-2 rounded-box shadow-md flex flex-wrap gap-2 items-center justify-between border border-base-300">
+      <div
+        class="sticky top-0 z-20 bg-base-200/95 backdrop-blur p-2 rounded-box shadow-md flex flex-wrap gap-2 items-center justify-between border border-base-300"
+      >
         <div class="join flex-wrap">
           <button class="btn btn-sm join-item btn-primary" data-tool="move" title="Move/Zoom">
             <i data-lucide="move" class="w-4 h-4"></i>
           </button>
-          <button class="btn btn-sm join-item" id="btn-tool-crop" data-tool="crop" title="Zuschneiden Modus">
+          <button
+            class="btn btn-sm join-item"
+            id="btn-tool-crop"
+            data-tool="crop"
+            title="Zuschneiden Modus"
+          >
             <i data-lucide="crop" class="w-4 h-4"></i> Crop
           </button>
           <button class="btn btn-sm join-item" data-tool="pixelate">Pixel</button>
@@ -90,19 +116,44 @@
         </div>
       </div>
 
-      <div class="relative flex-1 bg-base-200/50 rounded-xl overflow-hidden flex items-center justify-center border border-base-300 shadow-inner select-none" id="canvas-wrapper">
-        <div class="checkerboard-bg border-2 border-accent shadow-lg ">
+      <div
+        class="relative flex-1 bg-base-200/50 rounded-xl overflow-hidden flex items-center justify-center border border-base-300 shadow-inner select-none"
+        id="canvas-wrapper"
+      >
+        <div class="checkerboard-bg border-2 border-accent shadow-lg">
           <canvas id="editor-canvas" class="touch-auto max-w-full max-h-full cursor-move"></canvas>
         </div>
-        <div id="selection-overlay" class="absolute border-2 border-white outline outline-black pointer-events-none hidden shadow-sm">
-          <div class="absolute -top-5 left-1/2 -translate-x-1/2 text-white drop-shadow-xs drop-shadow-black"><i data-lucide="chevron-up" class="w-5 h-5"></i></div>
-          <div class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-white drop-shadow-xs drop-shadow-black"><i data-lucide="chevron-down" class="w-5 h-5"></i></div>
-          <div class="absolute -left-4 top-1/2 -translate-y-1/2 text-white drop-shadow-xs drop-shadow-black"><i data-lucide="chevron-left" class="w-5 h-5"></i></div>
-          <div class="absolute -right-4 top-1/2 -translate-y-1/2 text-white drop-shadow-xs drop-shadow-black"><i data-lucide="chevron-right" class="w-5 h-5"></i></div>
+        <div
+          id="selection-overlay"
+          class="absolute border-2 border-white outline outline-black pointer-events-none hidden shadow-sm"
+        >
+          <div
+            class="absolute -top-5 left-1/2 -translate-x-1/2 text-white drop-shadow-xs drop-shadow-black"
+          >
+            <i data-lucide="chevron-up" class="w-5 h-5"></i>
+          </div>
+          <div
+            class="absolute -bottom-5 left-1/2 -translate-x-1/2 text-white drop-shadow-xs drop-shadow-black"
+          >
+            <i data-lucide="chevron-down" class="w-5 h-5"></i>
+          </div>
+          <div
+            class="absolute -left-4 top-1/2 -translate-y-1/2 text-white drop-shadow-xs drop-shadow-black"
+          >
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          </div>
+          <div
+            class="absolute -right-4 top-1/2 -translate-y-1/2 text-white drop-shadow-xs drop-shadow-black"
+          >
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+          </div>
         </div>
       </div>
 
-      <div id="crop-actions" class="hidden gap-2 items-center justify-center p-2 bg-base-200 rounded-box shadow-sm">
+      <div
+        id="crop-actions"
+        class="hidden gap-2 items-center justify-center p-2 bg-base-200 rounded-box shadow-sm"
+      >
         <button id="btn-cancel-crop" class="btn btn-sm btn-error text-white gap-2">
           <i data-lucide="x" class="w-4 h-4"></i> Cancel
         </button>

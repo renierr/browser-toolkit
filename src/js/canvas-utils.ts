@@ -93,5 +93,4 @@ export class CanvasExporter {
       hideProgress();
     }
   }
-
 }

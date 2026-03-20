@@ -17,7 +17,9 @@
     border-radius: 4px;
     position: relative;
     z-index: 10;
-    box-shadow: 0 0 0 2px var(--color-primary), 0 0 10px var(--color-primary);
+    box-shadow:
+      0 0 0 2px var(--color-primary),
+      0 0 10px var(--color-primary);
   }
 
   .hex-byte.focused::after {
@@ -85,14 +87,20 @@
   <div class="card bg-base-100 shadow-xl">
     <div class="card-body gap-4">
       <h2 class="card-title text-2xl font-bold">Hex Editor</h2>
-      <p class="text-sm opacity-60">High-performance hexadecimal editor. Supports streaming search and direct editing
-        for files of any size.</p>
+      <p class="text-sm opacity-60">
+        High-performance hexadecimal editor. Supports streaming search and direct editing for files
+        of any size.
+      </p>
 
       <!-- File metadata -->
-      <div id="file-info-header"
-        class="hidden flex flex-wrap items-center gap-x-6 gap-y-2 bg-base-200 p-4 rounded-xl text-sm font-mono border border-base-300">
+      <div
+        id="file-info-header"
+        class="hidden flex flex-wrap items-center gap-x-6 gap-y-2 bg-base-200 p-4 rounded-xl text-sm font-mono border border-base-300"
+      >
         <div class="flex flex-col">
-          <span class="text-[10px] opacity-50 uppercase font-black tracking-widest text-primary">Filename</span>
+          <span class="text-[10px] opacity-50 uppercase font-black tracking-widest text-primary"
+            >Filename</span
+          >
           <span id="info-filename" class="text-primary font-bold">file.bin</span>
         </div>
         <div class="divider divider-horizontal"></div>
@@ -108,9 +116,13 @@
       </div>
 
       <!-- Dropzone -->
-      <div id="hex-dropzone"
-        class="mt-2 flex items-center justify-center border-2 border-dashed rounded-xl cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-48 group hover:bg-base-300">
-        <div class="flex flex-col items-center gap-3 text-center transition-transform group-hover:scale-105">
+      <div
+        id="hex-dropzone"
+        class="mt-2 flex items-center justify-center border-2 border-dashed rounded-xl cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-48 group hover:bg-base-300"
+      >
+        <div
+          class="flex flex-col items-center gap-3 text-center transition-transform group-hover:scale-105"
+        >
           <div class="text-primary/30 text-5xl">
             <i data-lucide="upload-cloud"></i>
           </div>
@@ -125,11 +137,17 @@
   <!-- Main Toolbar and Editor -->
   <div id="editor-container" class="hidden flex flex-col gap-4">
     <div
-      class="flex flex-wrap items-center justify-between gap-4 bg-base-100 p-4 rounded-xl shadow-lg border border-base-200">
+      class="flex flex-wrap items-center justify-between gap-4 bg-base-100 p-4 rounded-xl shadow-lg border border-base-200"
+    >
       <div class="flex flex-wrap items-center gap-6">
         <!-- Display Toggles -->
         <label class="label cursor-pointer gap-2 p-0">
-          <input type="checkbox" id="toggle-ascii" class="toggle toggle-sm checkbox-secondary" checked />
+          <input
+            type="checkbox"
+            id="toggle-ascii"
+            class="toggle toggle-sm checkbox-secondary"
+            checked
+          />
           <span class="label-text font-bold uppercase text-[10px] tracking-widest">ASCII View</span>
         </label>
 
@@ -138,12 +156,21 @@
         <!-- Search Bar -->
         <div class="flex items-center gap-2">
           <div class="join shadow-sm border border-base-300">
-            <select id="search-type" aria-label="text/hex" class="select select-bordered select-sm join-item bg-base-200">
+            <select
+              id="search-type"
+              aria-label="text/hex"
+              class="select select-bordered select-sm join-item bg-base-200"
+            >
               <option value="text">Text</option>
               <option value="hex">Hex</option>
             </select>
-            <input type="text" id="search-input" aria-label="Search" placeholder="Search..."
-              class="input input-bordered input-sm join-item w-32 sm:w-48 font-mono" />
+            <input
+              type="text"
+              id="search-input"
+              aria-label="Search"
+              placeholder="Search..."
+              class="input input-bordered input-sm join-item w-32 sm:w-48 font-mono"
+            />
             <button id="search-btn" class="btn btn-sm btn-primary join-item px-4">
               <i data-lucide="search" class="w-4 h-4"></i>
             </button>
@@ -155,11 +182,18 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <button id="btn-reset" class="btn btn-sm btn-ghost text-error no-animation hover:bg-error/10">
+        <button
+          id="btn-reset"
+          class="btn btn-sm btn-ghost text-error no-animation hover:bg-error/10"
+        >
           <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i>
           Reset
         </button>
-        <button id="show-strings-btn" class="btn btn-sm btn-ghost gap-2" title="Find printable strings in the file">
+        <button
+          id="show-strings-btn"
+          class="btn btn-sm btn-ghost gap-2"
+          title="Find printable strings in the file"
+        >
           <i data-lucide="type" class="w-4 h-4"></i>
           Strings
         </button>
@@ -173,7 +207,8 @@
     <!-- Hex Editor View -->
     <div class="card shadow-2xl overflow-hidden bg-base-100 border border-base-300">
       <div
-        class="bg-base-200 px-6 py-3 flex text-[10px] font-mono font-black uppercase opacity-60 border-b tracking-[0.2em] select-none">
+        class="bg-base-200 px-6 py-3 flex text-[10px] font-mono font-black uppercase opacity-60 border-b tracking-[0.2em] select-none"
+      >
         <div class="w-22 shrink-0">Offset</div>
         <div class="flex-1 text-center">Hexadecimal Representation</div>
         <div id="ascii-header" class="w-40 shrink-0 text-center">ASCII</div>
@@ -181,28 +216,45 @@
 
       <div id="hex-viewer" tabindex="0" class="select-none font-mono relative">
         <!-- Hidden input to trigger virtual keyboard on mobile and capture desktop keys -->
-        <input type="text" id="hex-keyboard-input" aria-label="hidden input"
+        <input
+          type="text"
+          id="hex-keyboard-input"
+          aria-label="hidden input"
           class="absolute opacity-0 pointer-events-none w-0 h-0"
-          inputmode="text" autocorrect="off" autocapitalize="none" spellcheck="false" autocomplete="off" />
+          inputmode="text"
+          autocorrect="off"
+          autocapitalize="none"
+          spellcheck="false"
+          autocomplete="off"
+        />
 
         <div id="hex-content" class="relative">
-          <div id="hex-stretcher" style="width: 1px; visibility: hidden;"></div>
-          <div id="hex-visible-rows" class="absolute top-0 left-0 w-full flex flex-col will-change-transform">
+          <div id="hex-stretcher" style="width: 1px; visibility: hidden"></div>
+          <div
+            id="hex-visible-rows"
+            class="absolute top-0 left-0 w-full flex flex-col will-change-transform"
+          >
             <!-- Rows injected by index.ts -->
           </div>
         </div>
 
         <!-- Loading Overlay -->
-        <div id="hex-viewer-overlay"
-          class="absolute inset-0 z-50 flex items-center justify-center opacity-0 transition-opacity">
-          <div class="bg-base-300 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-primary/20">
+        <div
+          id="hex-viewer-overlay"
+          class="absolute inset-0 z-50 flex items-center justify-center opacity-0 transition-opacity"
+        >
+          <div
+            class="bg-base-300 px-6 py-3 rounded-full shadow-2xl flex items-center gap-3 border border-primary/20"
+          >
             <span class="loading loading-spinner loading-md text-primary"></span>
             <span class="text-sm font-bold tracking-tight">Loading data...</span>
           </div>
         </div>
       </div>
 
-      <div class="bg-base-200 px-6 py-2 flex justify-between items-center text-[10px] sm:text-xs border-t font-mono">
+      <div
+        class="bg-base-200 px-6 py-2 flex justify-between items-center text-[10px] sm:text-xs border-t font-mono"
+      >
         <div id="status-selection" class="font-bold text-primary">Offset: 0x00000000</div>
         <div id="status-stats" class="opacity-50">Size: 0 bytes</div>
       </div>
@@ -217,16 +269,24 @@
     <div class="bg-base-300 p-8 rounded-2xl flex items-center justify-around gap-4">
       <div class="text-center">
         <span class="text-[10px] uppercase font-bold opacity-50 block mb-2">Hex</span>
-        <input type="text" id="edit-hex-input"
+        <input
+          type="text"
+          id="edit-hex-input"
           class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner focus:input-primary"
-          maxlength="2" aria-label="Hex" />
+          maxlength="2"
+          aria-label="Hex"
+        />
       </div>
       <div class="divider divider-horizontal mx-0 h-10 self-end mb-4"></div>
       <div class="text-center">
         <span class="text-[10px] uppercase font-bold opacity-50 block mb-2">ASCII</span>
-        <input type="text" id="edit-ascii-input"
+        <input
+          type="text"
+          id="edit-ascii-input"
           class="input input-bordered w-24 text-center font-mono text-4xl h-20 shadow-inner focus:input-primary"
-          maxlength="1" aria-label="ASCII" />
+          maxlength="1"
+          aria-label="ASCII"
+        />
       </div>
     </div>
     <div class="modal-action">
@@ -240,7 +300,10 @@
 <dialog id="strings-modal" class="modal">
   <div class="modal-box max-w-4xl w-full">
     <h3 class="font-bold text-lg mb-2">Printable Strings</h3>
-    <p class="text-sm opacity-60 mb-4">Scans the loaded file for sequences of printable ASCII characters (like the Unix `strings` tool). This scan is performed in chunks to avoid loading the entire file into memory.</p>
+    <p class="text-sm opacity-60 mb-4">
+      Scans the loaded file for sequences of printable ASCII characters (like the Unix `strings`
+      tool). This scan is performed in chunks to avoid loading the entire file into memory.
+    </p>
 
     <div class="flex items-center gap-3 mb-4">
       <label class="label p-0 m-0" for="strings-minlen">Min length</label>
@@ -250,7 +313,10 @@
       <div id="strings-progress" class="text-sm opacity-60 ml-auto">Idle</div>
     </div>
 
-    <div id="strings-results" class="h-64 overflow-auto bg-base-200 rounded-md font-mono text-sm text-[13px]">
+    <div
+      id="strings-results"
+      class="h-64 overflow-auto bg-base-200 rounded-md font-mono text-sm text-[13px]"
+    >
       <table class="table table-xs table-pin-rows">
         <thead>
           <tr>

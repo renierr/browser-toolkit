@@ -15,7 +15,7 @@ export interface TransferConfig {
 export class TransferManager {
   private manager: WebRTCManager | null = null;
   private config: TransferConfig;
-  
+
   private incomingChunks: (Uint8Array | ArrayBuffer)[] = [];
   private incomingMeta: any = null;
   private receivedSize = 0;
@@ -97,15 +97,15 @@ export class TransferManager {
     const percent = Math.round((this.receivedSize / this.incomingMeta.size) * 100);
     const duration = (Date.now() - this.transferStartTime) / 1000;
     const speed = duration > 0 ? this.receivedSize / duration : 0;
-    
+
     this.config.onProgress(
-      `Receiving ${this.incomingMeta.name}... (${Utils.formatBytes(this.incomingMeta.size - this.receivedSize)} remaining, ${Utils.formatBytes(speed)}/s)`, 
+      `Receiving ${this.incomingMeta.name}... (${Utils.formatBytes(this.incomingMeta.size - this.receivedSize)} remaining, ${Utils.formatBytes(speed)}/s)`,
       percent
     );
 
     if (this.receivedSize >= this.incomingMeta.size) {
       this.finishTransfer();
-      
+
       if (this.writableStream) {
         await this.writableStream.close();
         this.writableStream = null;
@@ -173,12 +173,13 @@ export class TransferManager {
     this.transferStartTime = Date.now();
     this.transferBytesProcessed = 0;
     this.releaseWakeLock = acquireWakeLock();
-    
+
     const CHUNK_SIZE = 256 * 1024;
     let offset = 0;
 
     while (offset < file.size) {
-      if (this.manager.bufferedAmount > 8 * 1024 * 1024) { // 8MB buffer threshold
+      if (this.manager.bufferedAmount > 8 * 1024 * 1024) {
+        // 8MB buffer threshold
         await new Promise((resolve) => {
           this.manager!.onBufferedAmountLow = () => {
             this.manager!.onBufferedAmountLow = null;
@@ -186,19 +187,19 @@ export class TransferManager {
           };
         });
       }
-      
+
       const chunk = file.slice(offset, offset + CHUNK_SIZE);
       const buffer = await chunk.arrayBuffer();
       this.manager.send(buffer);
       offset += buffer.byteLength;
       this.transferBytesProcessed = offset;
-      
+
       const duration = (Date.now() - this.transferStartTime) / 1000;
       const speed = duration > 0 ? offset / duration : 0;
       const remainingBytes = file.size - offset;
       const progressPercent = Math.round((offset / file.size) * 100);
       this.config.onProgress(
-        `Sending ${file.name}... (${Utils.formatBytes(remainingBytes)} remaining, ${Utils.formatBytes(speed)}/s)`, 
+        `Sending ${file.name}... (${Utils.formatBytes(remainingBytes)} remaining, ${Utils.formatBytes(speed)}/s)`,
         progressPercent
       );
     }

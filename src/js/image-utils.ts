@@ -28,7 +28,7 @@ export interface DecodeImageResult {
  */
 export async function decodeImageToRgba(
   blob: Blob,
-  maxDimension?: number,
+  maxDimension?: number
 ): Promise<DecodeImageResult> {
   const bitmap = maxDimension
     ? await createBitmapWithLimit(blob, maxDimension)
@@ -51,10 +51,7 @@ export async function decodeImageToRgba(
  * Decode a Blob into an ImageData object via OffscreenCanvas.
  * Works in both main thread and Web Workers.
  */
-export async function blobToImageData(
-  blob: Blob,
-  maxDimension?: number,
-): Promise<ImageData> {
+export async function blobToImageData(blob: Blob, maxDimension?: number): Promise<ImageData> {
   const bitmap = maxDimension
     ? await createBitmapWithLimit(blob, maxDimension)
     : await createImageBitmap(blob);
@@ -80,7 +77,7 @@ export async function blobToImageData(
 export async function createBitmapWithLimit(
   blob: Blob,
   maxDim: number,
-  quality: 'low' | 'medium' | 'high' = 'high',
+  quality: 'low' | 'medium' | 'high' = 'high'
 ): Promise<ImageBitmap> {
   const probe = await createImageBitmap(blob);
   if (probe.width <= maxDim && probe.height <= maxDim) return probe;
@@ -105,7 +102,7 @@ export async function createBitmapWithLimit(
 export async function convertBlobFormat(
   blob: Blob,
   format: ImageMimeType,
-  quality?: number,
+  quality?: number
 ): Promise<Blob> {
   // Fast path: already the right type
   if (blob.type === format) return blob;
@@ -137,7 +134,7 @@ export async function ensurePngBlob(blob: Blob): Promise<Blob> {
 export function offscreenCanvasToBlob(
   canvas: OffscreenCanvas,
   format: ImageMimeType = 'image/png',
-  quality?: number,
+  quality?: number
 ): Promise<Blob> {
   return canvas.convertToBlob({ type: format, quality });
 }
@@ -174,7 +171,7 @@ export function blobToImage(blob: Blob): Promise<HTMLImageElement> {
 export function imageElToBlob(
   img: HTMLImageElement,
   format: ImageMimeType = 'image/png',
-  quality?: number,
+  quality?: number
 ): Promise<Blob> {
   const width = img.naturalWidth || img.width;
   const height = img.naturalHeight || img.height;
@@ -187,7 +184,6 @@ export function imageElToBlob(
   return canvas.convertToBlob({ type: format, quality });
 }
 
-
 // ── [main-thread] Clipboard ────────────────────────────────────────────
 
 /**
@@ -197,8 +193,5 @@ export function imageElToBlob(
  */
 export async function copyImageBlobToClipboard(blob: Blob): Promise<void> {
   const pngBlob = await ensurePngBlob(blob);
-  await navigator.clipboard.write([
-    new ClipboardItem({ [pngBlob.type]: pngBlob }),
-  ]);
+  await navigator.clipboard.write([new ClipboardItem({ [pngBlob.type]: pngBlob })]);
 }
-

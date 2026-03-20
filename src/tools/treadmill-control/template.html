@@ -31,10 +31,15 @@
             <li>Ensure the treadmill is NOT connected to another app/phone.</li>
             <li>Turn Bluetooth off and on in your system settings.</li>
             <li>Restart the treadmill (power cycle).</li>
-            <li>If it says "NetworkError", try unpairing/forgetting the device from your system's Bluetooth settings first.</li>
+            <li>
+              If it says "NetworkError", try unpairing/forgetting the device from your system's
+              Bluetooth settings first.
+            </li>
           </ul>
           <div class="mt-3">
-            <button id="simulate-connect-btn" class="btn btn-sm btn-outline btn-primary">Start Simulation</button>
+            <button id="simulate-connect-btn" class="btn btn-sm btn-outline btn-primary">
+              Start Simulation
+            </button>
           </div>
         </div>
       </div>
@@ -43,7 +48,6 @@
         <i data-lucide="info" class="size-4"></i>
         <span></span>
       </div>
-
     </div>
   </div>
 
@@ -70,10 +74,18 @@
             </button>
           </div>
           <div class="flex flex-wrap gap-2">
-            <button id="speed-down-btn" class="btn btn-circle btn-outline btn-md" aria-label="Decrease Speed">
+            <button
+              id="speed-down-btn"
+              class="btn btn-circle btn-outline btn-md"
+              aria-label="Decrease Speed"
+            >
               <i data-lucide="minus"></i>
             </button>
-            <button id="speed-up-btn" class="btn btn-circle btn-outline btn-md" aria-label="Increase Speed">
+            <button
+              id="speed-up-btn"
+              class="btn btn-circle btn-outline btn-md"
+              aria-label="Increase Speed"
+            >
               <i data-lucide="plus"></i>
             </button>
           </div>
@@ -120,7 +132,10 @@
       </div>
 
       <!-- Remaining Time (Optional) -->
-      <div id="remaining-time-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div
+        id="remaining-time-container"
+        class="card bg-base-100 shadow-xl border border-base-300 hidden"
+      >
         <div class="card-body p-4 items-center gap-1">
           <span class="text-xs font-bold opacity-50 uppercase">Remaining</span>
           <span id="remaining-time-display" class="text-3xl font-bold tabular-nums">--:--</span>
@@ -129,7 +144,10 @@
       </div>
 
       <!-- Average Speed (Optional) -->
-      <div id="avg-speed-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div
+        id="avg-speed-container"
+        class="card bg-base-100 shadow-xl border border-base-300 hidden"
+      >
         <div class="card-body p-4 items-center gap-1">
           <span class="text-xs font-bold opacity-50 uppercase">Avg Speed</span>
           <span id="avg-speed-display" class="text-3xl font-bold tabular-nums">0.0</span>
@@ -168,7 +186,10 @@
       </div>
 
       <!-- Elevation Gain (Optional) -->
-      <div id="elevation-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div
+        id="elevation-container"
+        class="card bg-base-100 shadow-xl border border-base-300 hidden"
+      >
         <div class="card-body p-4 items-center gap-1">
           <span class="text-xs font-bold opacity-50 uppercase">Elevation</span>
           <span id="elevation-display" class="text-3xl font-bold tabular-nums">0.0</span>
@@ -199,18 +220,25 @@
         <div class="card-body p-4 items-center gap-1">
           <span class="text-xs font-bold opacity-50 uppercase">Incline</span>
           <div class="flex items-center gap-4">
-            <button id="incline-down-btn" class="btn btn-xs btn-circle btn-ghost border border-base-300" aria-label="Decrease Incline">
+            <button
+              id="incline-down-btn"
+              class="btn btn-xs btn-circle btn-ghost border border-base-300"
+              aria-label="Decrease Incline"
+            >
               <i data-lucide="chevron-down" class="size-3"></i>
             </button>
             <span id="incline-display" class="text-3xl font-bold tabular-nums">0.0</span>
-            <button id="incline-up-btn" class="btn btn-xs btn-circle btn-ghost border border-base-300" aria-label="Increase Incline">
+            <button
+              id="incline-up-btn"
+              class="btn btn-xs btn-circle btn-ghost border border-base-300"
+              aria-label="Increase Incline"
+            >
               <i data-lucide="chevron-up" class="size-3"></i>
             </button>
           </div>
           <span class="text-xs font-semibold opacity-40">%</span>
         </div>
       </div>
-
     </div>
   </div>
 </div>
@@ -234,20 +262,22 @@
     <div class="overflow-x-auto">
       <table class="table table-zebra w-full">
         <thead>
-        <tr>
-          <th>ID</th>
-          <th>Date</th>
-          <th>Duration</th>
-          <th>Avg Speed</th>
-          <th>Max Speed</th>
-          <th class="text-right">Actions</th>
-        </tr>
+          <tr>
+            <th>ID</th>
+            <th>Date</th>
+            <th>Duration</th>
+            <th>Avg Speed</th>
+            <th>Max Speed</th>
+            <th class="text-right">Actions</th>
+          </tr>
         </thead>
         <tbody id="sessions-list">
-        <!-- Sessions will be loaded here -->
-        <tr id="no-sessions">
-          <td colspan="6" class="text-center text-base-content/50 py-8">No sessions recorded yet.</td>
-        </tr>
+          <!-- Sessions will be loaded here -->
+          <tr id="no-sessions">
+            <td colspan="6" class="text-center text-base-content/50 py-8">
+              No sessions recorded yet.
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -263,7 +293,11 @@
     <div class="flex items-center justify-between gap-4 mb-4">
       <div id="modal-title" class="font-bold text-lg text-primary">Session Details</div>
       <div id="session-select-container" class="hidden">
-        <select id="session-select" aria-label="Sessions" class="select select-sm select-bordered w-full max-w-xs">
+        <select
+          id="session-select"
+          aria-label="Sessions"
+          class="select select-sm select-bordered w-full max-w-xs"
+        >
           <!-- Sessions will be added here -->
         </select>
       </div>
@@ -296,7 +330,9 @@
         </h4>
         <div class="form-control">
           <label class="label cursor-pointer gap-2">
-            <span class="label-text text-xs uppercase font-semibold text-base-content/60">Show Data Table</span>
+            <span class="label-text text-xs uppercase font-semibold text-base-content/60"
+              >Show Data Table</span
+            >
             <input type="checkbox" id="toggle-data" class="toggle toggle-primary toggle-sm" />
           </label>
         </div>
@@ -315,15 +351,15 @@
         <div class="max-h-64 overflow-y-auto">
           <table class="table table-xs table-zebra w-full">
             <thead>
-            <tr class="sticky top-0 bg-base-300 z-10">
-              <th>#</th>
-              <th>Time</th>
-              <th>Speed</th>
-              <th>Incline</th>
-            </tr>
+              <tr class="sticky top-0 bg-base-300 z-10">
+                <th>#</th>
+                <th>Time</th>
+                <th>Speed</th>
+                <th>Incline</th>
+              </tr>
             </thead>
             <tbody id="modal-data-body">
-            <!-- Data points will be loaded here -->
+              <!-- Data points will be loaded here -->
             </tbody>
           </table>
         </div>
@@ -340,4 +376,3 @@
     <button>close</button>
   </form>
 </dialog>
-

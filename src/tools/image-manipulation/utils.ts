@@ -8,7 +8,7 @@ export interface ModelConfig {
   output: string;
   padToMultipleOf?: number;
   mean?: number[]; // [r, g, b] default [0, 0, 0]
-  std?: number[];  // [r, g, b] default [1, 1, 1]
+  std?: number[]; // [r, g, b] default [1, 1, 1]
   normalizeRange?: [number, number]; // e.g. [0, 1] or [-1, 1], default [0, 1]
   outputMean?: number[];
   outputStd?: number[];

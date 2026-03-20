@@ -53,9 +53,9 @@ export function createSimulator(mergeAndEmit: (partial: Partial<TreadmillData>) 
 
     // Small elevation gain simulation: increase positive gain when incline increases
     if (incline > 0 && speed > 0) {
-      elevationGainPositive += Math.max(0, incline / 10.0 * (speed / 6.0));
+      elevationGainPositive += Math.max(0, (incline / 10.0) * (speed / 6.0));
     } else if (incline < 0 && speed > 0) {
-      elevationGainNegative += Math.abs(incline) / 10.0 * (speed / 6.0);
+      elevationGainNegative += (Math.abs(incline) / 10.0) * (speed / 6.0);
     }
 
     // Build partial payload with all optional fields
@@ -99,9 +99,11 @@ export function createSimulator(mergeAndEmit: (partial: Partial<TreadmillData>) 
     _emit(ev: string) {
       const arr = (this._listeners.get(ev) as Function[]) || [];
       arr.forEach((cb: any) => {
-        try { cb.call(this); } catch (_) {}
+        try {
+          cb.call(this);
+        } catch (_) {}
       });
-    }
+    },
   };
 
   // Emit initial state (with extended optional fields)
@@ -162,7 +164,7 @@ export function createSimulator(mergeAndEmit: (partial: Partial<TreadmillData>) 
       setIncline: (n: number) => {
         incline = Math.max(-3, Math.min(15, n));
         emitCurrent();
-      }
+      },
     },
     cleanup: async () => {
       if (intervalId !== null) {
@@ -172,7 +174,6 @@ export function createSimulator(mergeAndEmit: (partial: Partial<TreadmillData>) 
       // mark disconnected and notify listeners
       fakeDevice.gatt.connected = false;
       fakeDevice._emit && fakeDevice._emit('gattserverdisconnected');
-    }
+    },
   };
 }
-

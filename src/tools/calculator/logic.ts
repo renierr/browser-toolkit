@@ -68,9 +68,7 @@ export class CalculatorLogic {
       }
 
       // Format the result to avoid long floating point issues
-      const formattedResult = Number.isInteger(result)
-        ? result
-        : parseFloat(result.toFixed(10));
+      const formattedResult = Number.isInteger(result) ? result : parseFloat(result.toFixed(10));
 
       return { expression, result: formattedResult };
     } catch (e) {

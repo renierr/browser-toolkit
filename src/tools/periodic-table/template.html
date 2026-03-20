@@ -1,30 +1,54 @@
 <div class="p-4 sm:p-6 w-full max-w-[100vw] overflow-x-hidden">
   <div class="max-w-7xl mx-auto">
     <div class="mb-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-      <h1 class="text-3xl font-bold text-primary text-center sm:text-left">Periodic Table of Elements</h1>
+      <h1 class="text-3xl font-bold text-primary text-center sm:text-left">
+        Periodic Table of Elements
+      </h1>
       <div id="element-search-container" class="w-full sm:w-64">
-        <input type="text" id="element-search" aria-label="Search elements" placeholder="Search elements..." class="input input-bordered w-full" />
+        <input
+          type="text"
+          id="element-search"
+          aria-label="Search elements"
+          placeholder="Search elements..."
+          class="input input-bordered w-full"
+        />
       </div>
     </div>
 
     <div class="w-full overflow-x-auto pb-4 custom-scrollbar">
-      <div id="periodic-table-grid" class="grid gap-1 min-w-300 lg:min-w-0 p-1" style="grid-template-columns: repeat(18, minmax(0, 1fr));">
+      <div
+        id="periodic-table-grid"
+        class="grid gap-1 min-w-300 lg:min-w-0 p-1"
+        style="grid-template-columns: repeat(18, minmax(0, 1fr))"
+      >
         <!-- Elements will be injected here -->
       </div>
     </div>
 
     <div class="mt-8 grid grid-cols-1 md:grid-cols-4 gap-6 items-start">
-      <div id="selected-element-card" class="md:col-span-3 card bg-base-100 shadow-xl overflow-hidden hidden min-h-75 md:min-h-100">
+      <div
+        id="selected-element-card"
+        class="md:col-span-3 card bg-base-100 shadow-xl overflow-hidden hidden min-h-75 md:min-h-100"
+      >
         <div class="flex flex-col md:flex-row h-full">
           <div class="p-4 sm:p-6 flex-1 order-1">
             <div class="flex justify-between items-start mb-4">
               <div>
                 <h2 id="detail-name" class="text-2xl sm:text-4xl font-black mb-1"></h2>
-                <p id="detail-category" class="uppercase tracking-widest text-[10px] sm:text-xs font-bold opacity-70"></p>
+                <p
+                  id="detail-category"
+                  class="uppercase tracking-widest text-[10px] sm:text-xs font-bold opacity-70"
+                ></p>
               </div>
-              <div id="detail-symbol-box" class="w-12 h-12 sm:w-16 sm:h-16 flex flex-col items-center justify-center border-2 sm:border-4 rounded-lg">
-                  <span id="detail-number" class="text-[10px] sm:text-xs font-bold self-start pl-1"></span>
-                  <span id="detail-symbol" class="text-xl sm:text-2xl font-black"></span>
+              <div
+                id="detail-symbol-box"
+                class="w-12 h-12 sm:w-16 sm:h-16 flex flex-col items-center justify-center border-2 sm:border-4 rounded-lg"
+              >
+                <span
+                  id="detail-number"
+                  class="text-[10px] sm:text-xs font-bold self-start pl-1"
+                ></span>
+                <span id="detail-symbol" class="text-xl sm:text-2xl font-black"></span>
               </div>
             </div>
 
@@ -48,8 +72,8 @@
             </div>
 
             <div class="mb-4">
-               <p class="text-[10px] sm:text-xs opacity-60 mb-1 uppercase">Electron Shells</p>
-               <div id="detail-shells" class="flex gap-1 flex-wrap"></div>
+              <p class="text-[10px] sm:text-xs opacity-60 mb-1 uppercase">Electron Shells</p>
+              <div id="detail-shells" class="flex gap-1 flex-wrap"></div>
             </div>
 
             <div class="collapse collapse-arrow bg-base-200">
@@ -70,16 +94,33 @@
             </div>
           </div>
 
-          <div id="element-viz" class="w-full md:w-1/2 h-48 sm:h-64 md:h-auto flex items-center justify-center bg-base-200 p-4 relative order-2">
+          <div
+            id="element-viz"
+            class="w-full md:w-1/2 h-48 sm:h-64 md:h-auto flex items-center justify-center bg-base-200 p-4 relative order-2"
+          >
             <!-- Atomic visualization will be here -->
             <canvas id="atomic-canvas" class="max-w-full max-h-full"></canvas>
           </div>
         </div>
       </div>
 
-      <div id="empty-selection" class="md:col-span-3 flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-base-200 rounded-xl border-2 border-dashed border-base-300 min-h-75 md:min-h-100">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-12 h-12 sm:w-16 sm:h-16 opacity-20 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.673.337a2 2 0 00-.81 1.106l-.312 1.248a1 1 0 01-1.273.733l-3.992-1.33a1 1 0 00-.899.11l-1.933 1.288a1 1 0 00-.348 1.17l.56 1.4a1 1 0 00.916.634h11.23a1 1 0 00.916-.634l.56-1.4a1 1 0 00-.348-1.17l-1.933-1.288a1 1 0 00-.899-.11l-3.992 1.33a1 1 0 01-1.273-.733l-.312-1.248a2 2 0 00-.81-1.106l-.673-.337a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547" />
+      <div
+        id="empty-selection"
+        class="md:col-span-3 flex flex-col items-center justify-center p-8 sm:p-12 text-center bg-base-200 rounded-xl border-2 border-dashed border-base-300 min-h-75 md:min-h-100"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="w-12 h-12 sm:w-16 sm:h-16 opacity-20 mb-4"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="1.5"
+            d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.673.337a2 2 0 00-.81 1.106l-.312 1.248a1 1 0 01-1.273.733l-3.992-1.33a1 1 0 00-.899.11l-1.933 1.288a1 1 0 00-.348 1.17l.56 1.4a1 1 0 00.916.634h11.23a1 1 0 00.916-.634l.56-1.4a1 1 0 00-.348-1.17l-1.933-1.288a1 1 0 00-.899-.11l-3.992 1.33a1 1 0 01-1.273-.733l-.312-1.248a2 2 0 00-.81-1.106l-.673-.337a6 6 0 00-3.86-.517l-2.387.477a2 2 0 00-1.022.547"
+          />
         </svg>
         <p class="text-base sm:text-lg opacity-60">Select an element to see details</p>
       </div>
@@ -88,17 +129,69 @@
         <input type="checkbox" class="collapse-toggle" aria-label="Legend toggle" checked />
         <div class="collapse-title font-medium text-xs sm:text-sm">Filter by Category</div>
         <div class="collapse-content md:p-0 flex flex-wrap gap-2 content-start">
-          <button data-category="non-metal" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-blue-200 text-blue-900 border-blue-300 hover:brightness-95 transition-all">Non-metal</button>
-          <button data-category="noble-gas" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-yellow-200 text-yellow-900 border-yellow-300 hover:brightness-95 transition-all">Noble Gas</button>
-          <button data-category="alkali-metal" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-red-200 text-red-900 border-red-300 hover:brightness-95 transition-all">Alkali Metal</button>
-          <button data-category="alkaline-earth" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-orange-200 text-orange-900 border-orange-300 hover:brightness-95 transition-all">Alkaline Earth</button>
-          <button data-category="metalloid" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-purple-200 text-purple-900 border-purple-300 hover:brightness-95 transition-all">Metalloid</button>
-          <button data-category="halogen" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-green-200 text-green-900 border-green-300 hover:brightness-95 transition-all">Halogen</button>
-          <button data-category="transition-metal" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-pink-200 text-pink-900 border-pink-300 hover:brightness-95 transition-all">Transition Metal</button>
-          <button data-category="post-transition" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-slate-200 text-slate-900 border-slate-300 hover:brightness-95 transition-all">Post-transition</button>
-          <button data-category="lanthanide" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-indigo-200 text-indigo-900 border-indigo-300 hover:brightness-95 transition-all">Lanthanide</button>
-          <button data-category="actinide" class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-cyan-200 text-cyan-900 border-cyan-300 hover:brightness-95 transition-all">Actinide</button>
-          <button id="clear-filter" class="btn btn-ghost btn-xs w-full mt-2 hidden">Clear Filter</button>
+          <button
+            data-category="non-metal"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-blue-200 text-blue-900 border-blue-300 hover:brightness-95 transition-all"
+          >
+            Non-metal
+          </button>
+          <button
+            data-category="noble-gas"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-yellow-200 text-yellow-900 border-yellow-300 hover:brightness-95 transition-all"
+          >
+            Noble Gas
+          </button>
+          <button
+            data-category="alkali-metal"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-red-200 text-red-900 border-red-300 hover:brightness-95 transition-all"
+          >
+            Alkali Metal
+          </button>
+          <button
+            data-category="alkaline-earth"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-orange-200 text-orange-900 border-orange-300 hover:brightness-95 transition-all"
+          >
+            Alkaline Earth
+          </button>
+          <button
+            data-category="metalloid"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-purple-200 text-purple-900 border-purple-300 hover:brightness-95 transition-all"
+          >
+            Metalloid
+          </button>
+          <button
+            data-category="halogen"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-green-200 text-green-900 border-green-300 hover:brightness-95 transition-all"
+          >
+            Halogen
+          </button>
+          <button
+            data-category="transition-metal"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-pink-200 text-pink-900 border-pink-300 hover:brightness-95 transition-all"
+          >
+            Transition Metal
+          </button>
+          <button
+            data-category="post-transition"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-slate-200 text-slate-900 border-slate-300 hover:brightness-95 transition-all"
+          >
+            Post-transition
+          </button>
+          <button
+            data-category="lanthanide"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-indigo-200 text-indigo-900 border-indigo-300 hover:brightness-95 transition-all"
+          >
+            Lanthanide
+          </button>
+          <button
+            data-category="actinide"
+            class="legend-btn badge badge-sm sm:badge-lg gap-2 bg-cyan-200 text-cyan-900 border-cyan-300 hover:brightness-95 transition-all"
+          >
+            Actinide
+          </button>
+          <button id="clear-filter" class="btn btn-ghost btn-xs w-full mt-2 hidden">
+            Clear Filter
+          </button>
         </div>
       </div>
     </div>
@@ -107,39 +200,41 @@
 
 <!--suppress CssUnusedSymbol -->
 <style>
-.element-card {
-  aspect-ratio: 1/1;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  cursor: pointer;
-}
-
-.element-card:hover {
-  transform: scale(1.1);
-  z-index: 10;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.element-card.active {
-  box-shadow: 0 0 0 3px var(--color-primary);
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  height: 8px;
-}
-@media (min-width: 1024px) {
-  .overflow-x-auto.custom-scrollbar::-webkit-scrollbar {
-    display: none;
+  .element-card {
+    aspect-ratio: 1/1;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
   }
-  .overflow-x-auto.custom-scrollbar {
-    scrollbar-width: none;
+
+  .element-card:hover {
+    transform: scale(1.1);
+    z-index: 10;
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--color-base-300);
-  border-radius: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--color-base-content), transparent 80%);
-  border-radius: 4px;
-}
+
+  .element-card.active {
+    box-shadow: 0 0 0 3px var(--color-primary);
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    height: 8px;
+  }
+  @media (min-width: 1024px) {
+    .overflow-x-auto.custom-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .overflow-x-auto.custom-scrollbar {
+      scrollbar-width: none;
+    }
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-base-300);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--color-base-content), transparent 80%);
+    border-radius: 4px;
+  }
 </style>

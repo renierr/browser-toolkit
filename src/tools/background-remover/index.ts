@@ -623,7 +623,8 @@ export default function init(payload?: SharedFilesPayload) {
             const format = getSelectedFormat();
             const quality = getWebpQuality();
             const outputBlob = await convertBlobToFormat(item.resultBlob, format, quality);
-            const mime = format === 'webp' ? 'image/webp' : format === 'png' ? 'image/png' : 'image/jpeg';
+            const mime =
+              format === 'webp' ? 'image/webp' : format === 'png' ? 'image/png' : 'image/jpeg';
             const filename = getOutputFilename(file.name, format);
             await openInTool(outputBlob, { filename, mimeType: mime });
           } catch (err) {
@@ -666,7 +667,7 @@ export default function init(payload?: SharedFilesPayload) {
             modalShare.onclick = () => {
               previewModal.close();
               btnShare.click();
-            }
+            };
             previewModal.showModal();
           }
         };

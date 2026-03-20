@@ -258,26 +258,27 @@ export default function init(payload?: any) {
       const worker = new DecodeWorker();
       const id = 1;
 
-      const resultObj = await new Promise<{ text: string | null; reason?: string }>((resolve, reject) => {
-        const onmsg = (ev: MessageEvent<WorkerOutMessage>) => {
-          const m = ev.data;
-          if (m.id === id && m.type === 'decode-result') {
-            worker.removeEventListener('message', onmsg);
+      const resultObj = await new Promise<{ text: string | null; reason?: string }>(
+        (resolve, reject) => {
+          const onmsg = (ev: MessageEvent<WorkerOutMessage>) => {
+            const m = ev.data;
+            if (m.id === id && m.type === 'decode-result') {
+              worker.removeEventListener('message', onmsg);
+              worker.terminate();
+              resolve({ text: m.text ?? null, reason: m.reason });
+            }
+          };
+          worker.addEventListener('message', onmsg);
+          const msg = { type: 'decode-pcm', id, audio: audioForWorker, sampleRate } as const;
+          try {
+            // Transfer the underlying ArrayBuffer of the Float32Array to avoid copy when possible
+            worker.postMessage(msg, [audioForWorker.buffer]);
+          } catch (e) {
             worker.terminate();
-            resolve({ text: m.text ?? null, reason: m.reason });
+            reject(e);
           }
-        };
-        worker.addEventListener('message', onmsg);
-        const msg = { type: 'decode-pcm', id, audio: audioForWorker, sampleRate } as const;
-        try {
-          // Transfer the underlying ArrayBuffer of the Float32Array to avoid copy when possible
-          worker.postMessage(msg, [audioForWorker.buffer]);
-        } catch (e) {
-          worker.terminate();
-          reject(e);
         }
-      });
-
+      );
 
       // If decode failed and we have a reason from the worker, show it
       if (resultObj.text) {
@@ -290,7 +291,6 @@ export default function init(payload?: any) {
       } else {
         showMessage('No Morse detected in audio.', { type: 'info' });
       }
-
     } catch (err) {
       console.error(err);
       showMessage('Error decoding audio', { type: 'alert' });

@@ -77,7 +77,7 @@ export const playCafe = (engine: NoiseEngine, checkActive: () => boolean) => {
     const partials = [1, 2.3 + Math.random() * 0.2, 3.8 + Math.random() * 0.4];
     const nodesToDisconnect: AudioNode[] = [panner, mainGain];
 
-    partials.forEach(ratio => {
+    partials.forEach((ratio) => {
       const osc = engine.ctx!.createOscillator();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(baseFreq * ratio, t);
@@ -89,7 +89,7 @@ export const playCafe = (engine: NoiseEngine, checkActive: () => boolean) => {
 
     setTimeout(
       () => {
-        nodesToDisconnect.forEach(n => n.disconnect());
+        nodesToDisconnect.forEach((n) => n.disconnect());
       },
       (duration + 0.2) * 1000
     );

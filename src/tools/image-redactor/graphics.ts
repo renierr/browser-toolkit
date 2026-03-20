@@ -5,10 +5,15 @@ let _srcCanvas: HTMLCanvasElement | null = null;
 let _dstCanvas: HTMLCanvasElement | null = null;
 let noiseCanvas: HTMLCanvasElement | null = null;
 
-function getWorkCanvas(width: number, height: number, index: 0 | 1 = 0): [HTMLCanvasElement, CanvasRenderingContext2D] {
-  const canvas = index === 0
-    ? (_srcCanvas ??= document.createElement('canvas'))
-    : (_dstCanvas ??= document.createElement('canvas'));
+function getWorkCanvas(
+  width: number,
+  height: number,
+  index: 0 | 1 = 0
+): [HTMLCanvasElement, CanvasRenderingContext2D] {
+  const canvas =
+    index === 0
+      ? (_srcCanvas ??= document.createElement('canvas'))
+      : (_dstCanvas ??= document.createElement('canvas'));
 
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
@@ -106,7 +111,6 @@ export function drawRedactPreview(
   ctx.fillStyle = color ? color + '1A' : 'rgba(255,0,0,0.1)'; // 1A is approx 10% alpha
   ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
 }
-
 
 export function applyEffect(
   ctx: CanvasRenderingContext2D,

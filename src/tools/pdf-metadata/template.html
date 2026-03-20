@@ -1,10 +1,14 @@
 <div id="pdf-metadata-card" class="card bg-base-100 shadow-xl border">
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-4">PDF Metadata Viewer</h2>
-    <p class="text-base-content/70 mb-6">Upload a PDF to see its internal metadata and properties.</p>
+    <p class="text-base-content/70 mb-6">
+      Upload a PDF to see its internal metadata and properties.
+    </p>
 
-    <div id="pdf-dropzone"
-         class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8">
+    <div
+      id="pdf-dropzone"
+      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8"
+    >
       <div class="flex flex-col items-center gap-2">
         <div class="text-base-content/30 text-4xl">
           <i data-lucide="upload-cloud"></i>
@@ -23,9 +27,15 @@
         </button>
       </div>
 
-      <div id="thumbnail-container" class="hidden flex flex-wrap justify-center gap-4 p-6 bg-base-200 rounded-xl border border-base-300">
-          <span class="w-full text-center text-xs font-bold uppercase tracking-wider mb-2 text-base-content/70">Document Thumbnail</span>
-          <!-- Thumbnail will be inserted here -->
+      <div
+        id="thumbnail-container"
+        class="hidden flex flex-wrap justify-center gap-4 p-6 bg-base-200 rounded-xl border border-base-300"
+      >
+        <span
+          class="w-full text-center text-xs font-bold uppercase tracking-wider mb-2 text-base-content/70"
+          >Document Thumbnail</span
+        >
+        <!-- Thumbnail will be inserted here -->
       </div>
 
       <div class="overflow-x-auto">

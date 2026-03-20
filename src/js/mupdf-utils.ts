@@ -26,7 +26,6 @@ export function addImageToPDFDocument(
     resources.destroy();
     pdfImage.destroy();
   }
-
 }
 
 export interface HtmlToPdfOptions {
@@ -59,9 +58,14 @@ export async function htmlToPdfBuffer(
     writer.close();
     return new Uint8Array(buf.asUint8Array());
   } finally {
-    try { writer.destroy(); } catch (e) {}
-    try { buf.destroy(); } catch (e) {}
-    try { doc.destroy(); } catch (e) {}
+    try {
+      writer.destroy();
+    } catch (e) {}
+    try {
+      buf.destroy();
+    } catch (e) {}
+    try {
+      doc.destroy();
+    } catch (e) {}
   }
 }
-

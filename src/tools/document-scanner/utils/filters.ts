@@ -57,7 +57,11 @@ export function applyFilters(
         const x0 = Math.max(0, x - radius);
         const x1 = Math.min(w, x + radius + 1);
         const area = (x1 - x0) * (y1 - y0);
-        const sum = integral[y1 * iw + x1] - integral[y0 * iw + x1] - integral[y1 * iw + x0] + integral[y0 * iw + x0];
+        const sum =
+          integral[y1 * iw + x1] -
+          integral[y0 * iw + x1] -
+          integral[y1 * iw + x0] +
+          integral[y0 * iw + x0];
         const localMean = sum / area;
         const px = gray[y * w + x];
 

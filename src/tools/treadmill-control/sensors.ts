@@ -47,7 +47,8 @@ export async function startSensors(
     if (partial.cumulativeStrideCount !== undefined) {
       if (stepsMode === 'session') {
         if (initialStride === null) initialStride = partial.cumulativeStrideCount as number;
-        current.cumulativeStrideCount = (partial.cumulativeStrideCount as number) - (initialStride || 0);
+        current.cumulativeStrideCount =
+          (partial.cumulativeStrideCount as number) - (initialStride || 0);
       } else {
         current.cumulativeStrideCount = partial.cumulativeStrideCount;
       }
@@ -82,7 +83,9 @@ export async function startSensors(
   // Subscribe to RSC if possible
   let rscCleanup: (() => Promise<void>) | null = null;
   try {
-    rscCleanup = await subscribeToRSC(result.device, (p) => mergeAndEmit(p as Partial<TreadmillData>));
+    rscCleanup = await subscribeToRSC(result.device, (p) =>
+      mergeAndEmit(p as Partial<TreadmillData>)
+    );
   } catch (e) {
     rscCleanup = null;
   }
@@ -118,7 +121,6 @@ export async function startSensors(
         rscCleanup = null;
       }
       // leave device connection management to caller (they may want to disconnect explicitly)
-    }
+    },
   };
 }
-

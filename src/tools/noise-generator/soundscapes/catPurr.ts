@@ -46,7 +46,15 @@ export const playCatPurr = (engine: NoiseEngine, checkActive: () => boolean) => 
   oscVoice2.start();
   breathLfo.start();
 
-  engine.activeNodes.push(oscVoice1, oscVoice2, throatFilter, breathLfo, breathVolMod, masterPurrGain, pitchMod);
+  engine.activeNodes.push(
+    oscVoice1,
+    oscVoice2,
+    throatFilter,
+    breathLfo,
+    breathVolMod,
+    masterPurrGain,
+    pitchMod
+  );
 
   // Subtle Organic Meows
   const playMeow = () => {
@@ -66,7 +74,7 @@ export const playCatPurr = (engine: NoiseEngine, checkActive: () => boolean) => 
       const offset = i === 1 ? 1.01 : 1.0;
       freqParam.setValueAtTime(baseFreq * offset, t);
       freqParam.exponentialRampToValueAtTime((baseFreq + 100) * offset, t + duration * 0.3);
-      freqParam.exponentialRampToValueAtTime((baseFreq * 0.8) * offset, t + duration);
+      freqParam.exponentialRampToValueAtTime(baseFreq * 0.8 * offset, t + duration);
     });
 
     const formant1 = engine.ctx.createBiquadFilter();
@@ -104,14 +112,22 @@ export const playCatPurr = (engine: NoiseEngine, checkActive: () => boolean) => 
     engine.activeNodes.push(osc1, osc2, formant1, formant2, meowGain);
 
     engine.activeIntervals.push(
-      window.setTimeout(() => {
-        if (checkActive()) playMeow();
-      }, (8 + Math.random() * 12) * 1000)
+      window.setTimeout(
+        () => {
+          if (checkActive()) playMeow();
+        },
+        (8 + Math.random() * 12) * 1000
+      )
     );
   };
 
   // First meow happens very quickly (0.5 to 2.5 seconds)
-  engine.activeIntervals.push(window.setTimeout(() => {
-    if (checkActive()) playMeow();
-  }, (0.5 + Math.random() * 2) * 1000));
+  engine.activeIntervals.push(
+    window.setTimeout(
+      () => {
+        if (checkActive()) playMeow();
+      },
+      (0.5 + Math.random() * 2) * 1000
+    )
+  );
 };

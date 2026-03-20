@@ -64,7 +64,9 @@ async function isWebGpuAvailable(): Promise<boolean> {
     if (typeof navigator === 'undefined' || !('gpu' in navigator)) {
       webgpuSupported = false;
     } else {
-      const adapter = await (navigator as unknown as { gpu: { requestAdapter(): Promise<unknown | null> } }).gpu.requestAdapter();
+      const adapter = await (
+        navigator as unknown as { gpu: { requestAdapter(): Promise<unknown | null> } }
+      ).gpu.requestAdapter();
       webgpuSupported = adapter != null;
     }
   } catch {
@@ -105,7 +107,7 @@ export async function loadSession(config: OnnxModelConfig): Promise<ort.Inferenc
   if (cached) return cached;
 
   const timeout = config.timeoutMs ?? ONNX_SESSION_TIMEOUT_MS;
-  const providers = config.executionProviders ?? await defaultProviders();
+  const providers = config.executionProviders ?? (await defaultProviders());
 
   const session = await createSessionWithFallback(config.modelPath, providers, timeout);
   console.info('[onnx-utils] Session created with providers:', providers.join(', '));
@@ -121,18 +123,16 @@ export async function loadSession(config: OnnxModelConfig): Promise<ort.Inferenc
 async function createSessionWithFallback(
   modelPath: string,
   providers: ort.InferenceSession.ExecutionProviderConfig[],
-  timeout: number,
+  timeout: number
 ): Promise<ort.InferenceSession> {
-  const canFallback = providers.some(
-    (p) => (typeof p === 'string' ? p : p.name) !== 'wasm',
-  );
+  const canFallback = providers.some((p) => (typeof p === 'string' ? p : p.name) !== 'wasm');
 
   try {
     return await withTimeout(
       ort.InferenceSession.create(modelPath, { executionProviders: providers }),
       timeout,
       `ONNX session creation timed out after ${timeout / 1000}s – the WASM runtime may have failed to load. ` +
-      `Check the browser console for CORS or network errors.`,
+        `Check the browser console for CORS or network errors.`
     );
   } catch (err) {
     if (!canFallback) throw err;
@@ -140,13 +140,13 @@ async function createSessionWithFallback(
     const names = providers.map((p) => (typeof p === 'string' ? p : p.name)).join(', ');
     console.warn(
       `[onnx-utils] Session creation failed with providers [${names}]. Falling back to WASM. Original error:`,
-      err,
+      err
     );
 
     return withTimeout(
       ort.InferenceSession.create(modelPath, { executionProviders: ['wasm'] }),
       timeout,
-      `ONNX WASM-fallback session creation timed out after ${timeout / 1000}s.`,
+      `ONNX WASM-fallback session creation timed out after ${timeout / 1000}s.`
     );
   }
 }
@@ -175,7 +175,7 @@ export async function runInference(
 
     console.warn(
       '[onnx-utils] Inference failed. Recreating session with WASM fallback. Original error:',
-      err,
+      err
     );
 
     // Remove the broken session from the cache. We intentionally do NOT call
@@ -186,7 +186,7 @@ export async function runInference(
     const fallbackSession = await withTimeout(
       ort.InferenceSession.create(modelPath, { executionProviders: ['wasm'] }),
       ONNX_SESSION_TIMEOUT_MS,
-      'ONNX WASM-fallback session creation timed out.',
+      'ONNX WASM-fallback session creation timed out.'
     );
 
     sessionCache.set(modelPath, fallbackSession);
@@ -210,12 +210,8 @@ export function releaseSession(modelPath: string): void {
   }
 }
 
-export function createTensor(
-  data: Float32Array,
-  dims: readonly number[],
-): ort.Tensor {
+export function createTensor(data: Float32Array, dims: readonly number[]): ort.Tensor {
   return new ort.Tensor('float32', data, dims);
 }
 
 export { ort };
-

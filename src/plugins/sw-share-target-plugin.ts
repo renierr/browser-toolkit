@@ -15,13 +15,13 @@ export function swShareTargetPlugin(): Plugin {
   function readMimeTypes(): string {
     if (!existsSync(mimeTypesPath)) return '';
     const source = readFileSync(mimeTypesPath, 'utf-8');
-    
+
     // Find the MIME_TYPE_FALLBACKS object by counting braces
     const startIdx = source.indexOf('export const MIME_TYPE_FALLBACKS');
     let braceCount = 0;
     let inObject = false;
     let endIdx = startIdx;
-    
+
     for (let i = startIdx; i < source.length; i++) {
       const char = source[i];
       if (char === '{') {
@@ -35,11 +35,11 @@ export function swShareTargetPlugin(): Plugin {
         }
       }
     }
-    
+
     const fullObject = source.substring(startIdx, endIdx);
     const match = fullObject.match(/export const MIME_TYPE_FALLBACKS[^=]*=\s*\{([\s\S]*)\}/);
     const fallbackObj = match ? match[1] : '';
-    
+
     return `
 const MIME_TYPE_FALLBACKS = {${fallbackObj}};
 

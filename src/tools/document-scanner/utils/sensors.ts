@@ -12,28 +12,26 @@ export function startLevelSensor(
     // Compensate for screen orientation so the dot moves in the
     // correct visual direction regardless of how the device is held.
     // beta  = front/back tilt (-180..180), gamma = left/right tilt (-90..90)
-    const angle = screen.orientation?.angle
-      ?? (window as any).orientation
-      ?? 0;
+    const angle = screen.orientation?.angle ?? (window as any).orientation ?? 0;
 
     let xTilt: number;
     let yTilt: number;
 
     switch (angle) {
-      case 90:   // landscape — device rotated left
+      case 90: // landscape — device rotated left
         xTilt = beta;
         yTilt = -gamma;
         break;
-      case -90:  // landscape — device rotated right
+      case -90: // landscape — device rotated right
       case 270:
         xTilt = -beta;
         yTilt = gamma;
         break;
-      case 180:  // upside-down portrait
+      case 180: // upside-down portrait
         xTilt = -gamma;
         yTilt = -beta;
         break;
-      default:   // 0 — natural portrait
+      default: // 0 — natural portrait
         xTilt = gamma;
         yTilt = beta;
         break;
