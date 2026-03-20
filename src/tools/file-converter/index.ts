@@ -3,8 +3,9 @@ import { hideProgress, showMessage, showProgress } from '../../js/ui';
 import { loadSharedFiles } from '../../js/share-target';
 import type { SharedFilesPayload } from '../../js/share-target';
 import { identifyFileType, isPandocSupportedInput, getFileTypeLabel } from '../../js/magic-bytes';
+import { openInTool } from '../../js/tool-chooser';
 
-import { convertBuffer } from './lib/converter';
+import { convertBuffer, detectInputFormat } from './lib/converter';
 
 type FileEntry = { data: Uint8Array; name: string; mime?: string };
 
@@ -13,6 +14,10 @@ const FORMAT_LABELS: Record<string, string> = {
   html: 'HTML (.html)',
   docx: 'DOCX (.docx)',
   epub: 'EPUB (.epub)',
+  plaintext: 'Plain Text (.txt)',
+  latex: 'LaTeX (.tex)',
+  rst: 'reStructuredText (.rst)',
+  odt: 'ODT (.odt)',
 };
 
 function getExt(name: string): string {
@@ -33,20 +38,77 @@ export default async function init(payload?: SharedFilesPayload) {
   const files: File[] = [];
   const outputs: FileEntry[] = [];
 
+  const convertBtn = document.getElementById('fc-convert-btn') as HTMLButtonElement;
+  const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement;
+  const shareBtn = document.getElementById('fc-share-btn') as HTMLButtonElement;
+  const actionButtons = document.getElementById('fc-action-buttons') as HTMLDivElement;
+  const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
+
+  if (!convertBtn || !formatSel) return;
+
+  let lastConversionKey = '';
+
+  function updateButtonStates() {
+    const hasOutputs = outputs.length > 0;
+    const hasFiles = files.length > 0;
+    const currentKey = getConversionKey();
+    const alreadyConverted = hasOutputs && lastConversionKey === currentKey;
+
+    if (!hasFiles) {
+      actionButtons.classList.add('hidden');
+      return;
+    }
+
+    actionButtons.classList.remove('hidden');
+    downloadBtn.disabled = !alreadyConverted;
+    shareBtn.disabled = !alreadyConverted;
+    convertBtn.disabled = alreadyConverted;
+  }
+
+  function updateFormatOptions() {
+    if (files.length === 0) return;
+
+    const inputFormat = detectInputFormat(files[0].name);
+    const options = formatSel.options;
+
+    for (let i = 0; i < options.length; i++) {
+      const option = options[i];
+      const formatValue = option.value;
+
+      if (formatValue === inputFormat) {
+        option.disabled = true;
+        option.textContent = `${FORMAT_LABELS[formatValue]} (same as input)`;
+      } else {
+        option.disabled = false;
+        option.textContent = FORMAT_LABELS[formatValue] || formatValue;
+      }
+    }
+
+    if (formatSel.value === inputFormat) {
+      for (let i = 0; i < options.length; i++) {
+        if (!options[i].disabled) {
+          formatSel.value = options[i].value;
+          break;
+        }
+      }
+    }
+  }
+
   function renderFileInfo() {
     const container = document.getElementById('fc-file-info')!;
     const resultContainer = document.getElementById('result-container')!;
     const preview = document.getElementById('fc-preview')!;
-    const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
 
     if (files.length === 0) {
       container.classList.add('hidden');
       resultContainer.classList.add('hidden');
+      updateButtonStates();
       return;
     }
 
     container.classList.remove('hidden');
     resultContainer.classList.remove('hidden');
+    updateFormatOptions();
 
     if (files.length === 1) {
       const f = files[0];
@@ -100,14 +162,8 @@ export default async function init(payload?: SharedFilesPayload) {
     preview.classList.remove('hidden');
     document.getElementById('fc-convert-from')!.textContent = getExt(files[0].name);
     document.getElementById('fc-convert-to')!.textContent = FORMAT_LABELS[target] || target;
+    updateButtonStates();
   }
-
-  const convertBtn = document.getElementById('fc-convert-btn') as HTMLButtonElement;
-  const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
-
-  if (!convertBtn || !formatSel) return;
-
-  let lastConversionKey = '';
 
   function getConversionKey(): string {
     const fileKeys = files.map((f) => `${f.name}:${f.size}`).join('|');
@@ -127,6 +183,17 @@ export default async function init(payload?: SharedFilesPayload) {
     showMessage('Download started.', { type: 'info', timeoutMs: 3000 });
   }
 
+  async function doShare() {
+    if (outputs.length === 0) return;
+
+    const outputFiles = outputs.map((o) => {
+      const mime = o.mime || 'application/octet-stream';
+      return new File([o.data.buffer as ArrayBuffer], o.name, { type: mime });
+    });
+
+    await openInTool(outputFiles);
+  }
+
   setupFileDropzone('dropzone', 'fc-file-input', (newFiles) => {
     for (const file of newFiles) {
       if (!files.some((f) => f.name === file.name && f.size === file.size)) {
@@ -143,7 +210,19 @@ export default async function init(payload?: SharedFilesPayload) {
     if (outputs.length > 0) {
       outputs.length = 0;
       lastConversionKey = '';
-      renderFileInfo();
+      updateButtonStates();
+    }
+  });
+
+  downloadBtn.addEventListener('click', async () => {
+    if (outputs.length > 0) {
+      await doDownload();
+    }
+  });
+
+  shareBtn.addEventListener('click', async () => {
+    if (outputs.length > 0) {
+      await doShare();
     }
   });
 
@@ -236,13 +315,6 @@ export default async function init(payload?: SharedFilesPayload) {
       return;
     }
 
-    const currentKey = getConversionKey();
-
-    if (outputs.length > 0 && lastConversionKey === currentKey) {
-      await doDownload();
-      return;
-    }
-
     const target = formatSel.value;
     convertBtn.disabled = true;
 
@@ -261,6 +333,7 @@ export default async function init(payload?: SharedFilesPayload) {
       }
 
       outputs.length = 0;
+      lastConversionKey = getConversionKey();
       showProgress('Loading Pandoc…', { visible: true, progress: 0, tooLongMs: 5000 });
 
       for (let i = 0; i < valid.length; i++) {
@@ -275,16 +348,13 @@ export default async function init(payload?: SharedFilesPayload) {
         outputs.push(result);
       }
 
-      lastConversionKey = currentKey;
       renderFileInfo();
       showMessage('Conversion complete!', { type: 'info', timeoutMs: 3000 });
-      await doDownload();
     } catch (e: unknown) {
       showMessage('Conversion failed: ' + (e instanceof Error ? e.message : String(e)), {
         type: 'alert',
       });
     } finally {
-      convertBtn.disabled = false;
       hideProgress();
     }
   });

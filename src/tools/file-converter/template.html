@@ -13,7 +13,8 @@
         </div>
         <p class="text-lg font-medium">Click or drag files here</p>
         <p class="text-sm text-base-content/50">
-          Supports HTML, Markdown, DOCX, EPUB. Unsupported files will be skipped.
+          Supports HTML, Markdown, DOCX, EPUB, LaTeX, ODT, and more. Unsupported files will be
+          skipped.
         </p>
       </div>
       <input
@@ -21,7 +22,7 @@
         id="fc-file-input"
         class="hidden"
         multiple
-        accept=".html,.htm,.xhtml,.md,.markdown,.docx,.epub,.xml,.txt"
+        accept=".html,.htm,.xhtml,.md,.markdown,.mdown,.mkd,.mkdn,.docx,.doc,.epub,.xml,.txt,.rtf,.odt,.latex,.tex,.rst,.org,.textile,.jira,.twiki,.creole,.docbook,.fb2,.opml,.bib,.csljson"
       />
     </div>
 
@@ -39,6 +40,10 @@
           <option value="html">HTML (.html)</option>
           <option value="docx">DOCX (.docx)</option>
           <option value="epub">EPUB (.epub)</option>
+          <option value="plaintext">Plain Text (.txt)</option>
+          <option value="latex">LaTeX (.tex)</option>
+          <option value="rst">reStructuredText (.rst)</option>
+          <option value="odt">ODT (.odt)</option>
         </select>
       </div>
 
@@ -50,10 +55,18 @@
         </div>
       </div>
 
-      <div class="card-actions justify-end">
+      <div id="fc-action-buttons" class="card-actions justify-end gap-2 hidden">
+        <button id="fc-share-btn" class="btn btn-outline" disabled>
+          <i data-lucide="share-2" class="w-4 h-4 mr-2"></i>
+          Share
+        </button>
+        <button id="fc-download-btn" class="btn btn-outline" disabled>
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+          Download
+        </button>
         <button id="fc-convert-btn" class="btn btn-primary">
           <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
-          Convert &amp; Download
+          Convert
         </button>
       </div>
     </div>
