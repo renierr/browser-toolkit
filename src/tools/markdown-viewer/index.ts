@@ -51,7 +51,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
       if (isMarkdownFile(file)) {
         loadFile(file);
       } else {
-        showMessage('Please select a Markdown file (.md)', { type: 'alert' });
+        showMessage('Please select a Markdown file (.md, .txt)', { type: 'alert' });
       }
     }
   };
@@ -62,7 +62,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
 
   function loadFile(file: File) {
     if (!isMarkdownFile(file)) {
-      showMessage('Please select a Markdown file (.md)', { type: 'alert' });
+      showMessage('Please select a Markdown file (.md, .txt)', { type: 'alert' });
       return;
     }
 
@@ -114,8 +114,10 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
     return (
       name.endsWith('.md') ||
       name.endsWith('.markdown') ||
+      name.endsWith('.txt') ||
       file.type === 'text/markdown' ||
-      file.type === 'text/x-markdown'
+      file.type === 'text/x-markdown' ||
+      file.type === 'text/plain'
     );
   }
 

@@ -18,8 +18,6 @@ export default function init(payload?: SharedFilesPayload) {
   const receivedFilesContainer = document.getElementById(
     'received-files-container'
   ) as HTMLDivElement;
-  const sharedTextContainer = document.getElementById('shared-text-container') as HTMLDivElement;
-  const sharedTextContent = document.getElementById('shared-text-content') as HTMLDivElement;
   const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
   const simulateShareBtn = document.getElementById('simulate-share-btn') as HTMLButtonElement;
   const debugInfo = document.getElementById('debug-info') as HTMLPreElement;
@@ -91,16 +89,10 @@ export default function init(payload?: SharedFilesPayload) {
     logDebug('Received payload on init', {
       fileCount: payload.sharedFiles?.length,
       mimeTypes: payload.mimeTypes,
-      hasText: !!payload.text,
     });
 
     if (payload.sharedFiles?.length) {
       addFiles(payload.sharedFiles);
-    }
-
-    if (payload.text) {
-      sharedTextContainer.classList.remove('hidden');
-      sharedTextContent.textContent = payload.text;
     }
   } else {
     logDebug('No payload received on init');
@@ -129,9 +121,7 @@ export default function init(payload?: SharedFilesPayload) {
     });
     files = [];
     renderFiles();
-    sharedTextContainer.classList.add('hidden');
-    sharedTextContent.textContent = '';
-    logDebug('Cleared all files and text');
+    logDebug('Cleared all files');
   });
 
   simulateShareBtn.addEventListener('click', async () => {

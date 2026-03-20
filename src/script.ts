@@ -520,11 +520,7 @@ async function boot() {
   cleanupOldSharedFiles().catch((e) => console.warn('Cleanup shared files failed', e));
 
   // Helper to route files to the appropriate tool
-  const routeFilesToTool = async (
-    files: File[],
-    mimeTypes: string[],
-    text?: string
-  ): Promise<boolean> => {
+  const routeFilesToTool = async (files: File[], mimeTypes: string[]): Promise<boolean> => {
     if (files.length === 0) return false;
 
     const matchingTools = findAllToolsForMimeTypes(tools, mimeTypes);
@@ -545,7 +541,6 @@ async function boot() {
       const payload: SharedFilesPayload = {
         sharedFiles: files,
         mimeTypes,
-        text,
       };
       router.goTo(targetTool.path, payload);
       return true;
@@ -579,7 +574,7 @@ async function boot() {
       clearSharedParams();
 
       if (sharedFiles.length > 0) {
-        if (await routeFilesToTool(sharedFiles, sharedInfo.mimeTypes, sharedInfo.text)) {
+        if (await routeFilesToTool(sharedFiles, sharedInfo.mimeTypes)) {
           handledByLaunchOrShare = true;
         }
       } else {

@@ -66,10 +66,8 @@ export async function cleanupOldSharedFiles(): Promise<void> {
 
 export interface SharedContent {
   fileNames?: string[];
-  title?: string;
   keys: string[];
   mimeTypes: string[];
-  text?: string;
 }
 
 export function getSharedContentInfo(): SharedContent | null {
@@ -78,14 +76,12 @@ export function getSharedContentInfo(): SharedContent | null {
 
   const keysParam = params.get('keys');
   const mimesParam = params.get('mimes');
-  const text = params.get('text') || undefined;
-  const title = params.get('title') || undefined;
   const namesParam = params.get('names');
 
-  if (!keysParam && !text) return null;
+  if (!keysParam) return null;
 
-  const keys = keysParam ? keysParam.split(',').filter(Boolean) : [];
-  const mimes = mimesParam?.split(',') ?? (text ? ['text/plain'] : []);
+  const keys = keysParam.split(',').filter(Boolean);
+  const mimes = mimesParam?.split(',') ?? [];
   const fileNames = namesParam?.split(',').filter(Boolean) ?? [];
 
   const mimeTypes = mimes.map((mime, i) => getMimeTypeFromFileName(mime, fileNames[i] ?? ''));
@@ -94,8 +90,6 @@ export function getSharedContentInfo(): SharedContent | null {
     keys,
     mimeTypes,
     fileNames: fileNames.length > 0 ? fileNames : undefined,
-    text,
-    title,
   };
 }
 
@@ -137,9 +131,7 @@ export function clearSharedParams(): void {
   url.searchParams.delete('shared');
   url.searchParams.delete('keys');
   url.searchParams.delete('mimes');
-  url.searchParams.delete('text');
   url.searchParams.delete('names');
-  url.searchParams.delete('title');
   history.replaceState(null, '', url.href);
 }
 
@@ -190,7 +182,6 @@ export function findAllToolsForMimeTypes(tools: Tool[], mimeTypes: string[]): To
 export interface SharedFilesPayload {
   sharedFiles: File[];
   mimeTypes: string[];
-  text?: string;
 }
 
 export function setupLaunchHandler(callback: (files: File[]) => void): () => void {

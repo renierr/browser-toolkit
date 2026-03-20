@@ -71,28 +71,12 @@ self.addEventListener('fetch', (event: FetchEvent) => {
             fileNames.push((f as File).name || '');
           }
 
-          const rawText = (form.get('text') as string) || '';
-          const title = (form.get('title') as string) || '';
-          const text = encodeURIComponent(rawText);
-
-          // Handle text-only shares (when no files are present)
-          if (blobs.length === 0 && rawText) {
-            const key = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-            const textBlob = new Blob([rawText], { type: 'text/plain' });
-            await idbPut(key, textBlob);
-            keys.push(key);
-            mimeTypes.push('text/plain');
-            fileNames.push('shared-text.txt');
-          }
-
           // Always redirect to index.html - the app will show tool chooser if multiple tools match
           const redirectUrl = new URL('./index.html', self.location.href);
           redirectUrl.searchParams.set('shared', '1');
           redirectUrl.searchParams.set('keys', keys.join(','));
           redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
           redirectUrl.searchParams.set('names', fileNames.join(','));
-          if (text) redirectUrl.searchParams.set('text', text);
-          if (title) redirectUrl.searchParams.set('title', encodeURIComponent(title));
 
           return Response.redirect(redirectUrl.href, 303);
         } catch (err) {
