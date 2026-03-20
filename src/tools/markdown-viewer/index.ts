@@ -21,7 +21,6 @@ const state: State = {
 export default function init(payload?: SharedFilesPayload): (() => void) | undefined {
   const renderer = createMarkdownRenderer();
 
-  const dropzone = document.getElementById('dropzone') as HTMLElement;
   const viewer = document.getElementById('viewer') as HTMLElement;
   const fileName = document.getElementById('file-name') as HTMLElement;
   const toggleBtn = document.getElementById('toggle-view') as HTMLButtonElement;
@@ -31,6 +30,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
   const renderedContent = document.getElementById('rendered-content') as HTMLElement;
   const sourceView = document.getElementById('source-view') as HTMLElement;
   const newFileBtn = document.getElementById('new-file-btn') as HTMLButtonElement;
+  const toolCard = document.getElementById('tool-card') as HTMLElement;
 
   setupFileDropzone('dropzone', 'file-input', (files) => {
     loadFile(files[0]);
@@ -75,7 +75,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
 
       fileName.textContent = file.name;
 
-      dropzone.classList.add('hidden');
+      toolCard.classList.add('hidden');
       viewer.classList.remove('hidden');
       viewer.classList.add('flex');
 
@@ -131,7 +131,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
     sourceView.innerHTML = '';
     viewer.classList.remove('flex');
     viewer.classList.add('hidden');
-    dropzone.classList.remove('hidden');
+    toolCard.classList.remove('hidden');
     updateView();
   }
 
