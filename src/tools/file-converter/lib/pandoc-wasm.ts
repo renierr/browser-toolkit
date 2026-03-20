@@ -53,7 +53,7 @@ function createPandocInstance(wasmBinary: ArrayBuffer): Promise<PandocInstance> 
 
     exp.hs_init_with_rtsopts(argcPtr, argvPtr);
 
-    async function convert(options: any, input: string | Uint8Array | Blob, _inputName: string) {
+    async function convert(options: any, input: string | Uint8Array | Blob, inputName: string) {
       const optsStr = JSON.stringify(options);
       const encoded = new TextEncoder().encode(optsStr);
       const optsPtr = exp.malloc(encoded.length);
@@ -76,9 +76,14 @@ function createPandocInstance(wasmBinary: ArrayBuffer): Promise<PandocInstance> 
       } else {
         inputData = input;
       }
+
       const stdinFile = fileSystem.get('stdin')!;
       stdinFile.data = inputData;
       stdinFile.readonly = false;
+
+      if (inputName) {
+        fileSystem.set(inputName, new File(inputData, { readonly: false }));
+      }
 
       exp.convert(optsPtr, encoded.length);
 
