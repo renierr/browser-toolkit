@@ -38,7 +38,6 @@ export default async function init(payload?: SharedFilesPayload) {
     const resultContainer = document.getElementById('result-container')!;
     const preview = document.getElementById('fc-preview')!;
     const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
-    const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement;
 
     if (files.length === 0) {
       container.classList.add('hidden');
@@ -48,7 +47,6 @@ export default async function init(payload?: SharedFilesPayload) {
 
     container.classList.remove('hidden');
     resultContainer.classList.remove('hidden');
-    downloadBtn.disabled = outputs.length === 0;
 
     if (files.length === 1) {
       const f = files[0];
@@ -105,10 +103,29 @@ export default async function init(payload?: SharedFilesPayload) {
   }
 
   const convertBtn = document.getElementById('fc-convert-btn') as HTMLButtonElement;
-  const downloadBtn = document.getElementById('fc-download-btn') as HTMLButtonElement;
   const formatSel = document.getElementById('fc-target-format') as HTMLSelectElement;
 
-  if (!convertBtn || !downloadBtn || !formatSel) return;
+  if (!convertBtn || !formatSel) return;
+
+  let lastConversionKey = '';
+
+  function getConversionKey(): string {
+    const fileKeys = files.map((f) => `${f.name}:${f.size}`).join('|');
+    return `${fileKeys}->${formatSel.value}`;
+  }
+
+  async function doDownload() {
+    if (outputs.length === 1) {
+      const o = outputs[0];
+      await downloadFile(o.data, o.name, o.mime || 'application/octet-stream');
+    } else {
+      await downloadAsZip(
+        outputs.map((o) => ({ data: o.data.buffer, name: o.name })),
+        'converted-files.zip'
+      );
+    }
+    showMessage('Download started.', { type: 'info', timeoutMs: 3000 });
+  }
 
   setupFileDropzone('dropzone', 'fc-file-input', (newFiles) => {
     for (const file of newFiles) {
@@ -123,6 +140,11 @@ export default async function init(payload?: SharedFilesPayload) {
   formatSel.addEventListener('change', () => {
     document.getElementById('fc-convert-to')!.textContent =
       FORMAT_LABELS[formatSel.value] || formatSel.value;
+    if (outputs.length > 0) {
+      outputs.length = 0;
+      lastConversionKey = '';
+      renderFileInfo();
+    }
   });
 
   if (payload?.sharedFiles?.length) {
@@ -214,6 +236,13 @@ export default async function init(payload?: SharedFilesPayload) {
       return;
     }
 
+    const currentKey = getConversionKey();
+
+    if (outputs.length > 0 && lastConversionKey === currentKey) {
+      await doDownload();
+      return;
+    }
+
     const target = formatSel.value;
     convertBtn.disabled = true;
 
@@ -246,8 +275,10 @@ export default async function init(payload?: SharedFilesPayload) {
         outputs.push(result);
       }
 
+      lastConversionKey = currentKey;
       renderFileInfo();
       showMessage('Conversion complete!', { type: 'info', timeoutMs: 3000 });
+      await doDownload();
     } catch (e: unknown) {
       showMessage('Conversion failed: ' + (e instanceof Error ? e.message : String(e)), {
         type: 'alert',
@@ -255,26 +286,6 @@ export default async function init(payload?: SharedFilesPayload) {
     } finally {
       convertBtn.disabled = false;
       hideProgress();
-    }
-  });
-
-  downloadBtn.addEventListener('click', async () => {
-    if (!outputs.length) return;
-    downloadBtn.disabled = true;
-
-    try {
-      if (outputs.length === 1) {
-        const o = outputs[0];
-        await downloadFile(o.data, o.name, o.mime || 'application/octet-stream');
-      } else {
-        await downloadAsZip(
-          outputs.map((o) => ({ data: o.data.buffer, name: o.name })),
-          'converted-files.zip'
-        );
-      }
-      showMessage('Download started.', { type: 'info', timeoutMs: 3000 });
-    } finally {
-      downloadBtn.disabled = false;
     }
   });
 
