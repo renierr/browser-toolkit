@@ -554,38 +554,35 @@ async function boot() {
   // We wrap each check in a try-catch to ensure one failure doesn't block the app
   let handledByLaunchOrShare = false;
 
+  // 1. Setup persistent Launch Handler API (Windows/macOS "Open with")
   try {
-    // 1. Check for Launch Handler API (Windows/macOS "Open with")
-    const launchFiles = await setupLaunchHandler();
-    if (launchFiles && launchFiles.length > 0) {
-      const mimeTypes = launchFiles.map((f) => f.type || '');
-      if (await routeFilesToTool(launchFiles, mimeTypes)) {
-        handledByLaunchOrShare = true;
+    setupLaunchHandler(async (launchFiles) => {
+      if (launchFiles.length > 0) {
+        const mimeTypes = launchFiles.map((f) => f.type || 'application/octet-stream');
+        await routeFilesToTool(launchFiles, mimeTypes);
+      }
+    });
+  } catch (e) {
+    console.warn('[script] Launch handler setup failed:', e);
+  }
+
+  try {
+    // 2. Check for shared content from Service Worker (Android share)
+    const sharedInfo = getSharedContentInfo();
+    if (sharedInfo) {
+      const sharedFiles = await loadSharedFiles(sharedInfo.keys);
+      clearSharedParams();
+
+      if (sharedFiles.length > 0) {
+        if (await routeFilesToTool(sharedFiles, sharedInfo.mimeTypes, sharedInfo.text)) {
+          handledByLaunchOrShare = true;
+        }
+      } else {
+        console.warn('[script] No tool found for shared MIME types:', sharedInfo.mimeTypes);
       }
     }
   } catch (e) {
-    console.warn('[script] Launch handler failed:', e);
-  }
-
-  if (!handledByLaunchOrShare) {
-    try {
-      // 2. Check for shared content from Service Worker (Android share)
-      const sharedInfo = getSharedContentInfo();
-      if (sharedInfo) {
-        const sharedFiles = await loadSharedFiles(sharedInfo.keys);
-        clearSharedParams();
-
-        if (sharedFiles.length > 0) {
-          if (await routeFilesToTool(sharedFiles, sharedInfo.mimeTypes, sharedInfo.text)) {
-            handledByLaunchOrShare = true;
-          }
-        } else {
-          console.warn('[script] No tool found for shared MIME types:', sharedInfo.mimeTypes);
-        }
-      }
-    } catch (e) {
-      console.warn('[script] Share target handling failed:', e);
-    }
+    console.warn('[script] Share target handling failed:', e);
   }
 
   // Always render the initial route if not handled by launch/share

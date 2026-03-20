@@ -1,8 +1,49 @@
 import type { Tool } from './types';
 
-/**
- * IndexedDB helper for reading shared files stored by the service worker.
- */
+const MIME_TYPE_FALLBACKS: Record<string, string> = {
+  '.md': 'text/markdown',
+  '.markdown': 'text/markdown',
+  '.txt': 'text/plain',
+  '.json': 'application/json',
+  '.xml': 'application/xml',
+  '.html': 'text/html',
+  '.css': 'text/css',
+  '.js': 'application/javascript',
+  '.ts': 'application/typescript',
+  '.yaml': 'application/x-yaml',
+  '.yml': 'application/x-yaml',
+  '.py': 'text/x-python',
+  '.pdf': 'application/pdf',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.bmp': 'image/bmp',
+  '.ico': 'image/x-icon',
+  '.tiff': 'image/tiff',
+  '.heic': 'image/heic',
+  '.avif': 'image/avif',
+  '.wav': 'audio/wav',
+  '.mp3': 'audio/mpeg',
+  '.ogg': 'audio/ogg',
+  '.flac': 'audio/flac',
+  '.m4a': 'audio/mp4',
+  '.aac': 'audio/aac',
+  '.mp4': 'video/mp4',
+  '.mov': 'video/quicktime',
+  '.avi': 'video/x-msvideo',
+  '.mkv': 'video/x-matroska',
+};
+
+function getMimeTypeFromFileName(mime: string, fileName: string): string {
+  if (mime && mime !== 'application/octet-stream') return mime;
+  const ext = fileName?.split('.').pop()?.toLowerCase();
+  if (ext && MIME_TYPE_FALLBACKS['.' + ext]) return MIME_TYPE_FALLBACKS['.' + ext];
+  return mime || 'text/plain';
+}
+
 function openDbClient(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open('shared-db', 1);
@@ -35,9 +76,6 @@ async function idbDelete(key: string): Promise<void> {
   });
 }
 
-/**
- * Cleanup old shared files from IndexedDB (files older than 1 hour).
- */
 export async function cleanupOldSharedFiles(): Promise<void> {
   try {
     const db = await openDbClient();
@@ -69,41 +107,44 @@ export async function cleanupOldSharedFiles(): Promise<void> {
   }
 }
 
-/**
- * Information about shared content from the URL parameters.
- */
 export interface SharedContent {
+  fileNames?: string[];
+  title?: string;
   keys: string[];
   mimeTypes: string[];
   text?: string;
 }
 
-/**
- * Check if there are shared files in the URL parameters.
- */
 export function getSharedContentInfo(): SharedContent | null {
   const params = new URLSearchParams(location.search);
   if (!params.get('shared')) return null;
 
   const keysParam = params.get('keys');
   const mimesParam = params.get('mimes');
+  const text = params.get('text') || undefined;
+  const title = params.get('title') || undefined;
+  const namesParam = params.get('names');
 
-  if (!keysParam) return null;
+  if (!keysParam && !text) return null;
+
+  const keys = keysParam ? keysParam.split(',').filter(Boolean) : [];
+  const mimes = mimesParam?.split(',') ?? (text ? ['text/plain'] : []);
+  const fileNames = namesParam?.split(',').filter(Boolean) ?? [];
+
+  const mimeTypes = mimes.map((mime, i) => getMimeTypeFromFileName(mime, fileNames[i] ?? ''));
 
   return {
-    keys: keysParam.split(',').filter(Boolean),
-    mimeTypes: mimesParam?.split(',') ?? [],
-    text: params.get('text') || undefined,
+    keys,
+    mimeTypes,
+    fileNames: fileNames.length > 0 ? fileNames : undefined,
+    text,
+    title,
   };
 }
 
-/**
- * Load shared files from IndexedDB with timeout protection.
- */
 export async function loadSharedFiles(keys: string[]): Promise<File[]> {
   const files: File[] = [];
 
-  // Add timeout protection - if loading takes too long, return what we have
   const timeoutMs = 5000;
   const timeoutPromise = new Promise<'timeout'>((resolve) =>
     setTimeout(() => resolve('timeout'), timeoutMs)
@@ -118,15 +159,12 @@ export async function loadSharedFiles(keys: string[]): Promise<File[]> {
       }
       const fileOrBlob = result;
       if (fileOrBlob) {
-        // Convert Blob to File if necessary
         if (fileOrBlob instanceof File) {
           files.push(fileOrBlob);
         } else {
-          // Create a File from Blob with a generic name
           const file = new File([fileOrBlob], 'shared-file', { type: fileOrBlob.type });
           files.push(file);
         }
-        // Clean up after loading
         await idbDelete(key).catch(() => { });
       }
     } catch (e) {
@@ -137,35 +175,25 @@ export async function loadSharedFiles(keys: string[]): Promise<File[]> {
   return files;
 }
 
-/**
- * Clear shared content parameters from URL without reloading.
- */
 export function clearSharedParams(): void {
   const url = new URL(location.href);
   url.searchParams.delete('shared');
   url.searchParams.delete('keys');
   url.searchParams.delete('mimes');
   url.searchParams.delete('text');
+  url.searchParams.delete('names');
+  url.searchParams.delete('title');
   history.replaceState(null, '', url.href);
 }
 
-/**
- * Check if a MIME type matches an accept pattern.
- * Supports wildcards like "image/*".
- */
 export function mimeTypeMatches(mimeType: string, pattern: string): boolean {
   if (!mimeType || !pattern) return false;
 
   const mime = mimeType.toLowerCase();
   const pat = pattern.toLowerCase();
 
-  // Exact match
   if (mime === pat) return true;
-
-  // Global wildcard
   if (pat === '*/*') return true;
-
-  // Wildcard match (e.g., "image/*" matches "image/png")
   if (pat.endsWith('/*')) {
     const category = pat.split('/')[0] + '/';
     if (mime.startsWith(category)) return true;
@@ -174,23 +202,14 @@ export function mimeTypeMatches(mimeType: string, pattern: string): boolean {
   return false;
 }
 
-/**
- * Find a tool that can handle the given MIME types.
- * Returns the first matching tool or undefined.
- */
 export function findToolForMimeTypes(tools: Tool[], mimeTypes: string[]): Tool | undefined {
   const matches = findAllToolsForMimeTypes(tools, mimeTypes);
   return matches.length > 0 ? matches[0] : undefined;
 }
 
-/**
- * Find all tools that can handle the given MIME types.
- * Returns an array of matching tools, sorted by order (ascending) then name.
- */
 export function findAllToolsForMimeTypes(tools: Tool[], mimeTypes: string[]): Tool[] {
   if (!mimeTypes.length) return [];
 
-  // Use the first file's MIME type to determine the tool
   const primaryMime = mimeTypes[0];
   const matches: Tool[] = [];
 
@@ -200,91 +219,63 @@ export function findAllToolsForMimeTypes(tools: Tool[], mimeTypes: string[]): To
     for (const pattern of tool.shareTarget.accept) {
       if (mimeTypeMatches(primaryMime, pattern)) {
         matches.push(tool);
-        break; // Don't add same tool twice
+        break;
       }
     }
   }
 
-  // Sort by order (ascending) then by name
   return matches.sort((a, b) => {
     if (a.order !== b.order) return a.order - b.order;
     return a.name.localeCompare(b.name);
   });
 }
 
-/**
- * Payload passed to tools when shared files are received.
- */
 export interface SharedFilesPayload {
   sharedFiles: File[];
   mimeTypes: string[];
   text?: string;
 }
 
-/**
- * Setup the Launch Handler API for file_handlers (Windows/macOS "Open with").
- * Returns a promise that resolves with the files when they are received,
- * or null if no files are pending.
- */
-export function setupLaunchHandler(): Promise<File[] | null> {
-  return new Promise((resolve) => {
-    if (!('launchQueue' in window)) {
-      resolve(null);
+export function setupLaunchHandler(callback: (files: File[]) => void): () => void {
+  if (!('launchQueue' in window)) {
+    return () => {};
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+  const handleLaunch = async (launchParams: any) => {
+    const files = launchParams?.files;
+    if (!files || !Array.isArray(files) || files.length === 0) {
       return;
     }
 
-    const collectedFiles: File[] = [];
-    let resolved = false;
-    let resolveTimeout: ReturnType<typeof setTimeout> | null = null;
-
-    const doResolve = (files: File[] | null) => {
-      if (resolved) return;
-      resolved = true;
-      if (resolveTimeout) clearTimeout(resolveTimeout);
-      resolve(files);
-    };
-
-    // Set initial timeout - if no launch event arrives, assume none are coming
-    const initialTimeout = setTimeout(() => {
-      doResolve(null);
-    }, 300);
-
-    try {
-      (window as any).launchQueue.setConsumer(async (launchParams: any) => {
-        clearTimeout(initialTimeout);
-
-        // Check if this launch has files
-        const files = launchParams?.files;
-        if (!files || !Array.isArray(files) || files.length === 0) {
-          // No files in this launch - resolve null immediately
-          doResolve(null);
-          return;
-        }
-
-        // Collect files from this launch event with individual error handling
-        for (const fileHandle of files) {
-          try {
-            const file = await fileHandle.getFile();
-            collectedFiles.push(file);
-          } catch (e) {
-            console.error('Failed to get file from handle:', e);
-          }
-        }
-
-        // Reset the resolve timeout - wait a bit for more files
-        if (resolveTimeout) {
-          clearTimeout(resolveTimeout);
-        }
-        resolveTimeout = setTimeout(() => {
-          doResolve(collectedFiles.length > 0 ? collectedFiles : null);
-        }, 150);
-      });
-    } catch (e) {
-      // If setConsumer fails, resolve null
-      clearTimeout(initialTimeout);
-      console.warn('launchQueue.setConsumer failed:', e);
-      doResolve(null);
+    if (timeoutId) {
+      clearTimeout(timeoutId);
     }
-  });
-}
 
+    timeoutId = setTimeout(async () => {
+      const collectedFiles: File[] = [];
+      for (const fileHandle of files) {
+        try {
+          const file = await fileHandle.getFile();
+          collectedFiles.push(file);
+        } catch (e) {
+          console.error('Failed to get file from handle:', e);
+        }
+      }
+      if (collectedFiles.length > 0) {
+        callback(collectedFiles);
+      }
+    }, 150);
+  };
+
+  try {
+    (window as any).launchQueue.setConsumer(handleLaunch);
+  } catch (e) {
+    console.warn('launchQueue.setConsumer failed:', e);
+  }
+
+  return () => {
+    if (timeoutId) clearTimeout(timeoutId);
+  };
+}
