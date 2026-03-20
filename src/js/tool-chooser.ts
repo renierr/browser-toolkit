@@ -4,6 +4,28 @@ import { tools } from './tools';
 import router from './router';
 import { findAllToolsForMimeTypes, type SharedFilesPayload } from './share-target.ts';
 import { showMessage } from './ui.ts';
+import { getSettings } from './settings.ts';
+
+const LAST_USED_KEY = 'bk:lastUsed';
+
+function sortTools(toolsToSort: Tool[], sortBy: string): Tool[] {
+  if (sortBy === 'name') {
+    return [...toolsToSort].sort((a, b) => a.name.localeCompare(b.name));
+  }
+  if (sortBy === 'recent') {
+    const raw = localStorage.getItem(LAST_USED_KEY);
+    const map = raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    return [...toolsToSort].sort((a, b) => {
+      const ta = map[a.path] ?? 0;
+      const tb = map[b.path] ?? 0;
+      return tb - ta || a.name.localeCompare(b.name);
+    });
+  }
+  return [...toolsToSort].sort((a, b) => {
+    if (a.order !== b.order) return a.order - b.order;
+    return a.name.localeCompare(b.name);
+  });
+}
 
 /**
  * Opens the provided content in a tool selected by the user.
@@ -68,6 +90,10 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
         ? firstName
         : `${firstName} and ${fileCount - 1} more file${fileCount > 2 ? 's' : ''}`;
 
+    const settings = getSettings('overview');
+    const sortBy = (settings.get('sortBy', 'order') as string) ?? 'order';
+    const sortedTools = sortTools(tools, sortBy);
+
     // Create modal backdrop
     const backdrop = document.createElement('div');
     backdrop.className =
@@ -96,7 +122,7 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
     const list = document.createElement('div');
     list.className = 'p-2 max-h-80 overflow-y-auto';
 
-    tools.forEach((tool, index) => {
+    sortedTools.forEach((tool, index) => {
       const button = document.createElement('button');
       button.className = `
         w-full flex items-center gap-3 p-3 rounded-xl
