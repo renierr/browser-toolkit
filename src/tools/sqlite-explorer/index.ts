@@ -23,6 +23,8 @@ let settingsCleanup: (() => void) | undefined;
 export default function init(payload?: SharedFilesPayload) {
   if (!initDOM('sqlite-explorer-app')) return;
 
+  let pendingFile: File | null = null;
+
   // Settings Bind
   const settings = getSettings('sqlite-explorer');
   settingsCleanup = settings.bind(UI.container);
@@ -36,7 +38,47 @@ export default function init(payload?: SharedFilesPayload) {
   worker = new SqlWorker();
 
   worker.onmessage = (e) => {
-    handleWorkerMessage(e.data);
+    const data = e.data;
+
+    if (data.type === 'INIT_SUCCESS') {
+      console.log('SQL.js WebWorker initialized');
+      if (pendingFile) {
+        loadFile(pendingFile);
+        pendingFile = null;
+      }
+    } else if (data.type === 'ERROR') {
+      console.error('[WebWorker SQL Error]', data.payload.message);
+      const activeTab = UI.mainTabs.querySelector('.tab-active') as HTMLElement;
+      if (activeTab?.dataset.tab === 'query') {
+        UI.queryError.classList.remove('hidden');
+        UI.queryErrorText.textContent = data.payload.message;
+        UI.queryResultsPlaceholder.classList.add('hidden');
+      } else {
+        showMessage('SQL Error: ' + data.payload.message, { type: 'alert', timeoutMs: 5000 });
+      }
+    } else if (data.type === 'LOAD_DB_SUCCESS') {
+      UI.introContainer.classList.add('hidden');
+      UI.activeContainer.classList.remove('hidden');
+      worker?.postMessage({ req: { type: 'GET_TABLES' } as WorkerRequest });
+    } else if (data.type === 'GET_TABLES_SUCCESS') {
+      renderTableList(data.payload.tables, selectTable);
+    } else if (data.type === 'GET_SCHEMA_SUCCESS') {
+      if (data.payload.table === currentTable) {
+        renderSchemaTable(data.payload.schema);
+      }
+    } else if (data.type === 'GET_DATA_SUCCESS') {
+      if (data.payload.table === currentTable) {
+        renderDataTable(
+          data.payload.columns,
+          data.payload.rows,
+          data.payload.totalCount,
+          currentOffset,
+          currentLimit
+        );
+      }
+    } else if (data.type === 'EXECUTE_QUERY_SUCCESS') {
+      renderCustomQueryResult(data.payload.columns, data.payload.rows);
+    }
   };
 
   // initialize sql.js in worker
@@ -49,7 +91,7 @@ export default function init(payload?: SharedFilesPayload) {
 
   // Handle Shared Files
   if (payload?.sharedFiles?.length) {
-    loadFile(payload.sharedFiles[0]);
+    pendingFile = payload.sharedFiles[0];
   }
 
   return () => {
@@ -173,50 +215,6 @@ function executeCustomQuery() {
   UI.queryResultsPlaceholder.classList.remove('hidden');
   UI.queryResultsTableContainer.classList.add('hidden');
   worker?.postMessage({ req: { type: 'EXECUTE_QUERY', payload: { sql } } as WorkerRequest });
-}
-
-// ---------------------------------------------------------------------------
-// Worker Message Handling
-// ---------------------------------------------------------------------------
-
-function handleWorkerMessage(data: any) {
-  if (data.type === 'INIT_SUCCESS') {
-    console.log('SQL.js WebWorker initialized');
-  } else if (data.type === 'ERROR') {
-    console.error('[WebWorker SQL Error]', data.payload.message);
-    // If we are on query tab, show it specifically
-    const activeTab = UI.mainTabs.querySelector('.tab-active') as HTMLElement;
-    if (activeTab?.dataset.tab === 'query') {
-      UI.queryError.classList.remove('hidden');
-      UI.queryErrorText.textContent = data.payload.message;
-      UI.queryResultsPlaceholder.classList.add('hidden');
-    } else {
-      showMessage('SQL Error: ' + data.payload.message, { type: 'alert', timeoutMs: 5000 });
-    }
-  } else if (data.type === 'LOAD_DB_SUCCESS') {
-    // Reveal main UI
-    UI.introContainer.classList.add('hidden');
-    UI.activeContainer.classList.remove('hidden');
-    worker?.postMessage({ req: { type: 'GET_TABLES' } as WorkerRequest });
-  } else if (data.type === 'GET_TABLES_SUCCESS') {
-    renderTableList(data.payload.tables, selectTable);
-  } else if (data.type === 'GET_SCHEMA_SUCCESS') {
-    if (data.payload.table === currentTable) {
-      renderSchemaTable(data.payload.schema);
-    }
-  } else if (data.type === 'GET_DATA_SUCCESS') {
-    if (data.payload.table === currentTable) {
-      renderDataTable(
-        data.payload.columns,
-        data.payload.rows,
-        data.payload.totalCount,
-        currentOffset,
-        currentLimit
-      );
-    }
-  } else if (data.type === 'EXECUTE_QUERY_SUCCESS') {
-    renderCustomQueryResult(data.payload.columns, data.payload.rows);
-  }
 }
 
 // ---------------------------------------------------------------------------
