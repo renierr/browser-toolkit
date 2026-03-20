@@ -1,58 +1,15 @@
 import path from 'path';
-import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
 import { swShareTargetPlugin } from './src/plugins/sw-share-target-plugin';
+import { onnxStaticPlugin } from './src/plugins/onnx-static-plugin';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// ---------------------------------------------------------------------------
-// Vite plugin: copy onnxruntime-web WASM + MJS files from node_modules
-// ---------------------------------------------------------------------------
-const ONNX_DIST = path.resolve(__dirname, 'node_modules/onnxruntime-web/dist');
-const ONNX_FILES = fs.readdirSync(ONNX_DIST).filter((f) => /^ort-wasm.*\.(mjs|wasm)$/.test(f));
-
-function onnxStaticPlugin(): Plugin {
-  return {
-    name: 'vite-plugin-onnx-static',
-
-    configureServer(server) {
-      server.middlewares.use((req, res, next) => {
-        if (req.url?.startsWith('/onnx/')) {
-          const fileName = req.url.slice('/onnx/'.length).split('?')[0];
-          if (ONNX_FILES.includes(fileName)) {
-            const filePath = path.join(ONNX_DIST, fileName);
-            const contentType = fileName.endsWith('.wasm')
-              ? 'application/wasm'
-              : 'application/javascript';
-            res.setHeader('Content-Type', contentType);
-            res.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
-            res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
-            fs.createReadStream(filePath).pipe(res);
-            return;
-          }
-        }
-        next();
-      });
-    },
-
-    generateBundle() {
-      for (const fileName of ONNX_FILES) {
-        const source = fs.readFileSync(path.join(ONNX_DIST, fileName));
-        this.emitFile({
-          type: 'asset',
-          fileName: `onnx/${fileName}`,
-          source,
-        });
-      }
-    },
-  };
-}
 
 export default defineConfig({
   base: './',
@@ -144,6 +101,8 @@ export default defineConfig({
                 '.py',
                 '.sh',
                 '.php',
+                '.csv',
+                '.mdx',
               ],
               'image/*': [
                 '.png',
@@ -157,9 +116,41 @@ export default defineConfig({
                 '.tiff',
                 '.heic',
                 '.avif',
+                '.psd',
+                '.ai',
               ],
-              'audio/*': ['.wav', '.mp3', '.ogg', '.webm', '.flac', '.m4a', '.aac'],
-              'video/*': ['.mp4', '.webm', '.ogg', '.mov', '.avi', '.mkv'],
+              'audio/*': [
+                '.wav',
+                '.mp3',
+                '.ogg',
+                '.webm',
+                '.flac',
+                '.m4a',
+                '.aac',
+                '.opus',
+              ],
+              'video/*': [
+                '.mp4',
+                '.webm',
+                '.ogg',
+                '.mov',
+                '.avi',
+                '.mkv',
+                '.flv',
+                '.wmv',
+                '.mpeg',
+                '.3gp',
+              ],
+              'application/vnd.sqlite3': ['.sqlite', '.sqlite3', '.db'],
+              'application/msword': ['.doc'],
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+              'application/vnd.ms-excel': ['.xls', '.xlsx'],
+              'application/vnd.ms-powerpoint': ['.ppt', '.pptx'],
+              'application/vnd.oasis.opendocument.text': ['.odt'],
+              'application/vnd.oasis.opendocument.spreadsheet': ['.ods'],
+              'application/vnd.oasis.opendocument.presentation': ['.odp'],
+              'application/epub+zip': ['.epub'],
+              'application/zip': ['.zip', '.rar', '.7z', '.tar', '.gz'],
               'application/octet-stream': [
                 '.bin',
                 '.dat',
@@ -172,14 +163,7 @@ export default defineConfig({
                 '.hex',
                 '.vmdk',
                 '.vhd',
-                '.7z',
-                '.zip',
-                '.rar',
-                '.tar',
-                '.gz',
               ],
-              'application/vnd.sqlite3': ['.sqlite', '.sqlite3', '.db'],
-              'application/x-sqlite3': ['.sqlite', '.sqlite3', '.db'],
             },
           },
         ],
@@ -247,7 +231,7 @@ export default defineConfig({
         pdf: path.resolve(__dirname, 'pdf.html'),
       },
     },
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 3000,
   },
   optimizeDeps: {
     include: ['lucide'],
