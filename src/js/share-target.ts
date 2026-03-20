@@ -1,48 +1,7 @@
 import type { Tool } from './types';
+import { getMimeTypeFromFileName } from './mime-types';
 
-const MIME_TYPE_FALLBACKS: Record<string, string> = {
-  '.md': 'text/markdown',
-  '.markdown': 'text/markdown',
-  '.txt': 'text/plain',
-  '.json': 'application/json',
-  '.xml': 'application/xml',
-  '.html': 'text/html',
-  '.css': 'text/css',
-  '.js': 'application/javascript',
-  '.ts': 'application/typescript',
-  '.yaml': 'application/x-yaml',
-  '.yml': 'application/x-yaml',
-  '.py': 'text/x-python',
-  '.pdf': 'application/pdf',
-  '.png': 'image/png',
-  '.jpg': 'image/jpeg',
-  '.jpeg': 'image/jpeg',
-  '.gif': 'image/gif',
-  '.webp': 'image/webp',
-  '.svg': 'image/svg+xml',
-  '.bmp': 'image/bmp',
-  '.ico': 'image/x-icon',
-  '.tiff': 'image/tiff',
-  '.heic': 'image/heic',
-  '.avif': 'image/avif',
-  '.wav': 'audio/wav',
-  '.mp3': 'audio/mpeg',
-  '.ogg': 'audio/ogg',
-  '.flac': 'audio/flac',
-  '.m4a': 'audio/mp4',
-  '.aac': 'audio/aac',
-  '.mp4': 'video/mp4',
-  '.mov': 'video/quicktime',
-  '.avi': 'video/x-msvideo',
-  '.mkv': 'video/x-matroska',
-};
 
-function getMimeTypeFromFileName(mime: string, fileName: string): string {
-  if (mime && mime !== 'application/octet-stream') return mime;
-  const ext = fileName?.split('.').pop()?.toLowerCase();
-  if (ext && MIME_TYPE_FALLBACKS['.' + ext]) return MIME_TYPE_FALLBACKS['.' + ext];
-  return mime || 'text/plain';
-}
 
 function openDbClient(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
