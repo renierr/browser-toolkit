@@ -20,6 +20,7 @@ import { showToolChooser, getLastUsedMap, setLastUsed } from './js/tool-chooser.
 import { setTools, tools } from './js/tools.ts';
 import { getSettings } from './js/settings.ts';
 import { getMimeTypeFromFileName } from './js/mime-types';
+import { showMessage } from './js/ui.ts';
 
 // apply config values
 document.title = siteContext.config.title;
@@ -569,7 +570,9 @@ async function boot() {
   try {
     // 2. Check for shared content from Service Worker (Android share)
     const sharedInfo = getSharedContentInfo();
-    if (sharedInfo) {
+    if (typeof sharedInfo === 'string') {
+      showMessage('shared target error: ' + sharedInfo, { type: 'alert' });
+    } else if (sharedInfo) {
       const sharedFiles = await loadSharedFiles(sharedInfo.keys);
       clearSharedParams();
 

@@ -70,13 +70,16 @@ export interface SharedContent {
   mimeTypes: string[];
 }
 
-export function getSharedContentInfo(): SharedContent | null {
+export function getSharedContentInfo(): SharedContent | null | string {
   const params = new URLSearchParams(location.search);
   if (!params.get('shared')) return null;
 
   const keysParam = params.get('keys');
   const mimesParam = params.get('mimes');
   const namesParam = params.get('names');
+  const errorParam = params.get('sw_error');
+
+  if (errorParam !== null) return errorParam;
 
   if (!keysParam) return null;
 
