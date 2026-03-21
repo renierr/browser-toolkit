@@ -218,15 +218,6 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         pdf: path.resolve(__dirname, 'pdf.html'),
-        'sw-share-target': path.resolve(__dirname, 'src/sw-share-target.ts'),
-      },
-      output: {
-        entryFileNames: (chunkInfo) => {
-          if (chunkInfo.name.startsWith('sw-')) {
-            return '[name].js';
-          }
-          return 'assets/[name]-[hash].js';
-        },
       },
     },
     chunkSizeWarningLimit: 3000,
