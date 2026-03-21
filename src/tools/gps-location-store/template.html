@@ -8,6 +8,21 @@
       <div id="current-location-display" class="text-sm space-y-1">
         <div class="opacity-50">Click "Get Location" to start</div>
       </div>
+      <div id="current-location-actions" class="mt-3 hidden flex flex-col sm:flex-row gap-2">
+        <button id="view-current-map-btn" class="btn btn-outline btn-sm flex-1">
+          <i data-lucide="map" class="w-4 h-4"></i>
+          OSM
+        </button>
+        <a
+          id="google-maps-current-link"
+          href="#"
+          target="_blank"
+          class="btn btn-outline btn-sm flex-1"
+        >
+          <i data-lucide="external-link" class="w-4 h-4"></i>
+          Google Maps
+        </a>
+      </div>
       <div class="mt-3 flex flex-col gap-2">
         <button id="get-location-btn" class="btn btn-primary btn-sm">
           <i data-lucide="map-pin" class="w-4 h-4"></i>
@@ -32,11 +47,20 @@
       <div id="last-saved-display" class="text-sm space-y-1">
         <div class="opacity-50">No saved locations</div>
       </div>
-      <div id="last-saved-actions" class="mt-3 hidden">
-        <button id="view-last-map-btn" class="btn btn-secondary btn-sm">
+      <div id="last-saved-actions" class="mt-3 hidden flex flex-col sm:flex-row gap-2">
+        <button id="view-last-map-btn" class="btn btn-secondary btn-sm flex-1">
           <i data-lucide="map" class="w-4 h-4"></i>
-          View on Map
+          OSM
         </button>
+        <a
+          id="google-maps-last-link"
+          href="#"
+          target="_blank"
+          class="btn btn-secondary btn-sm flex-1"
+        >
+          <i data-lucide="external-link" class="w-4 h-4"></i>
+          Google Maps
+        </a>
       </div>
     </div>
   </div>

@@ -70,6 +70,13 @@ export default async function init() {
     const clearAllBtn = document.getElementById('clear-all-btn') as HTMLButtonElement;
     const descriptionInput = document.getElementById('location-description') as HTMLInputElement;
     const viewLastMapBtn = document.getElementById('view-last-map-btn') as HTMLButtonElement;
+    const viewCurrentMapBtn = document.getElementById('view-current-map-btn') as HTMLButtonElement;
+    const googleMapsCurrentLink = document.getElementById(
+      'google-maps-current-link'
+    ) as HTMLAnchorElement;
+    const googleMapsLastLink = document.getElementById(
+      'google-maps-last-link'
+    ) as HTMLAnchorElement;
     const getApproxBtn = document.getElementById('get-approx-btn') as HTMLButtonElement;
 
     getLocationBtn.addEventListener('click', handleGetLocation);
@@ -78,6 +85,13 @@ export default async function init() {
     descriptionInput.addEventListener('input', updateSaveButtonState);
     viewLastMapBtn.addEventListener('click', () => showMapForLocation(allLocations[0]));
     getApproxBtn.addEventListener('click', handleGetApproximateLocation);
+    viewCurrentMapBtn.addEventListener('click', handleViewCurrentMap);
+    googleMapsCurrentLink.addEventListener('click', (e) => {
+      if (!currentPosition) e.preventDefault();
+    });
+    googleMapsLastLink.addEventListener('click', (e) => {
+      if (allLocations.length === 0) e.preventDefault();
+    });
   }
 
   function getSourceLabel(source: PositionResult['source']): string {
@@ -94,6 +108,8 @@ export default async function init() {
   function updateCurrentLocationDisplay(pos: PositionResult): void {
     const display = document.getElementById('current-location-display') as HTMLDivElement;
     const approxBtn = document.getElementById('approx-btn-container') as HTMLDivElement;
+    const actions = document.getElementById('current-location-actions') as HTMLDivElement;
+    const googleLink = document.getElementById('google-maps-current-link') as HTMLAnchorElement;
 
     display.innerHTML = `
       <div class="grid grid-cols-2 gap-2">
@@ -105,6 +121,16 @@ export default async function init() {
     `;
 
     approxBtn.classList.add('hidden');
+    actions.classList.remove('hidden');
+    googleLink.href = gpsGenerateGoogleMapsLink(pos.lat, pos.lon);
+  }
+
+  function handleViewCurrentMap(): void {
+    if (!currentPosition) return;
+    showMapForLocation({
+      latitude: currentPosition.lat,
+      longitude: currentPosition.lon,
+    } as SavedLocation);
   }
 
   async function handleGetLocation(): Promise<void> {
@@ -196,8 +222,10 @@ export default async function init() {
     currentPosition = null;
 
     const display = document.getElementById('current-location-display') as HTMLDivElement;
+    const actions = document.getElementById('current-location-actions') as HTMLDivElement;
     display.innerHTML =
       '<div class="opacity-50">Location saved! Click "Get Location" to track again</div>';
+    actions.classList.add('hidden');
     updateSaveButtonState();
 
     await loadLocations();
@@ -209,6 +237,7 @@ export default async function init() {
   function updateLastSavedDisplay(): void {
     const display = document.getElementById('last-saved-display') as HTMLDivElement;
     const actions = document.getElementById('last-saved-actions') as HTMLDivElement;
+    const googleLink = document.getElementById('google-maps-last-link') as HTMLAnchorElement;
 
     if (allLocations.length === 0) {
       display.innerHTML = '<div class="opacity-50">No saved locations</div>';
@@ -242,6 +271,7 @@ export default async function init() {
     `;
 
     actions.classList.remove('hidden');
+    googleLink.href = gpsGenerateGoogleMapsLink(last.latitude, last.longitude);
   }
 
   function renderHistory(): void {
