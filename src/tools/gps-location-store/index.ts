@@ -1,0 +1,291 @@
+import {
+  openDB,
+  saveLocation,
+  getAllLocations,
+  deleteLocation,
+  clearAllLocations,
+  generateDefaultDescription,
+} from './db.ts';
+import type { SavedLocation } from './types.ts';
+import { showMessage } from '../../js/ui.ts';
+import { gpsGenerateGoogleMapsLink } from '../../js/utils.ts';
+import {
+  calculateDistance,
+  formatDistance,
+  formatCoordinate,
+  formatTimestamp,
+  createOsmEmbedUrl,
+} from './utils.ts';
+
+export default async function init() {
+  let currentPosition: { lat: number; lon: number; accuracy: number } | null = null;
+  let db: IDBDatabase | null = null;
+  let allLocations: SavedLocation[] = [];
+
+  db = await openDB();
+  await loadLocations();
+  setupEventListeners();
+  updateLastSavedDisplay();
+
+  return () => {
+    currentPosition = null;
+    if (db) {
+      db.close();
+      db = null;
+    }
+    allLocations = [];
+  };
+
+  async function loadLocations(): Promise<void> {
+    if (!db) return;
+    allLocations = await getAllLocations(db);
+    renderHistory();
+  }
+
+  function setupEventListeners(): void {
+    const getLocationBtn = document.getElementById('get-location-btn') as HTMLButtonElement;
+    const saveLocationBtn = document.getElementById('save-location-btn') as HTMLButtonElement;
+    const clearAllBtn = document.getElementById('clear-all-btn') as HTMLButtonElement;
+    const descriptionInput = document.getElementById('location-description') as HTMLInputElement;
+    const viewLastMapBtn = document.getElementById('view-last-map-btn') as HTMLButtonElement;
+
+    getLocationBtn.addEventListener('click', handleGetLocation);
+    saveLocationBtn.addEventListener('click', handleSaveLocation);
+    clearAllBtn.addEventListener('click', handleClearAll);
+    descriptionInput.addEventListener('input', updateSaveButtonState);
+    viewLastMapBtn.addEventListener('click', () => showMapForLocation(allLocations[0]));
+  }
+
+  async function handleGetLocation(): Promise<void> {
+    const display = document.getElementById('current-location-display') as HTMLDivElement;
+    const btn = document.getElementById('get-location-btn') as HTMLButtonElement;
+
+    if (!navigator.geolocation) {
+      showMessage('Geolocation is not supported by this browser.', { type: 'alert' });
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Getting...';
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        currentPosition = {
+          lat: position.coords.latitude,
+          lon: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        };
+
+        display.innerHTML = `
+          <div class="grid grid-cols-2 gap-2">
+            <div><span class="opacity-70">Latitude:</span> ${formatCoordinate(currentPosition.lat, true)}</div>
+            <div><span class="opacity-70">Longitude:</span> ${formatCoordinate(currentPosition.lon, false)}</div>
+            <div><span class="opacity-70">Accuracy:</span> ±${currentPosition.accuracy.toFixed(0)} m</div>
+          </div>
+        `;
+
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> Get Location';
+
+        updateSaveButtonState();
+        updateLastSavedDisplay();
+      },
+      (error) => {
+        let msg = 'Failed to get location.';
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            msg = 'Location permission denied. Please enable location access.';
+            break;
+          case error.POSITION_UNAVAILABLE:
+            msg = 'Location information unavailable.';
+            break;
+          case error.TIMEOUT:
+            msg = 'Location request timed out.';
+            break;
+        }
+        showMessage(msg, { type: 'alert' });
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> Get Location';
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  }
+
+  function updateSaveButtonState(): void {
+    const saveBtn = document.getElementById('save-location-btn') as HTMLButtonElement;
+    saveBtn.disabled = !currentPosition;
+  }
+
+  async function handleSaveLocation(): Promise<void> {
+    if (!db || !currentPosition) return;
+
+    const descriptionInput = document.getElementById('location-description') as HTMLInputElement;
+    const description = descriptionInput.value.trim() || generateDefaultDescription();
+
+    const location: Omit<SavedLocation, 'id'> = {
+      latitude: currentPosition.lat,
+      longitude: currentPosition.lon,
+      description,
+      accuracy: currentPosition.accuracy,
+      timestamp: Date.now(),
+    };
+
+    await saveLocation(db, location);
+
+    descriptionInput.value = '';
+    currentPosition = null;
+
+    document.getElementById('current-location-display')!.innerHTML =
+      '<div class="opacity-50">Location saved! Click "Get Location" to track again</div>';
+    updateSaveButtonState();
+
+    await loadLocations();
+    updateLastSavedDisplay();
+
+    showMessage('Location saved successfully!');
+  }
+
+  function updateLastSavedDisplay(): void {
+    const display = document.getElementById('last-saved-display') as HTMLDivElement;
+    const actions = document.getElementById('last-saved-actions') as HTMLDivElement;
+
+    if (allLocations.length === 0) {
+      display.innerHTML = '<div class="opacity-50">No saved locations</div>';
+      actions.classList.add('hidden');
+      return;
+    }
+
+    const last = allLocations[0];
+    let distanceHtml = '';
+
+    if (currentPosition) {
+      const dist = calculateDistance(
+        currentPosition.lat,
+        currentPosition.lon,
+        last.latitude,
+        last.longitude
+      );
+      distanceHtml = `<div><span class="opacity-70">Distance:</span> ${formatDistance(dist)}</div>`;
+    }
+
+    const hasDescription = last.description && !last.description.startsWith('Location saved on');
+
+    display.innerHTML = `
+      <div class="grid grid-cols-2 gap-1 text-xs">
+        <div><span class="opacity-70">Latitude:</span> ${last.latitude.toFixed(5)}°</div>
+        <div><span class="opacity-70">Longitude:</span> ${last.longitude.toFixed(5)}°</div>
+        ${distanceHtml}
+        ${hasDescription ? `<div class="col-span-2 text-primary font-medium">"${last.description}"</div>` : ''}
+        <div><span class="opacity-70">Saved:</span> ${formatTimestamp(last.timestamp)}</div>
+      </div>
+    `;
+
+    actions.classList.remove('hidden');
+  }
+
+  function renderHistory(): void {
+    const container = document.getElementById('history-container') as HTMLDivElement;
+
+    if (allLocations.length === 0) {
+      container.innerHTML =
+        '<div class="text-center p-4 opacity-50 italic">No locations saved yet</div>';
+      return;
+    }
+
+    const historyItems = allLocations.slice(1);
+
+    container.innerHTML = historyItems
+      .map(
+        (loc, idx) => `
+      <div class="collapse collapse-arrow bg-base-100 border border-base-300">
+        <input type="checkbox" />
+        <div class="collapse-title flex justify-between items-center pr-12 min-h-auto py-2">
+          <div class="text-sm">
+            <span class="font-medium">Location ${allLocations.length - idx}</span>
+            <span class="opacity-70 ml-2">${formatTimestamp(loc.timestamp)}</span>
+          </div>
+          <button
+            class="btn btn-ghost btn-xs btn-circle delete-btn"
+            data-id="${loc.id}"
+            onclick="event.stopPropagation();"
+          >
+            <i data-lucide="trash-2" class="w-4 h-4 text-error"></i>
+          </button>
+        </div>
+        <div class="collapse-content text-sm">
+          <div class="grid grid-cols-2 gap-2 mb-2">
+            <div><span class="opacity-70">Latitude:</span> ${formatCoordinate(loc.latitude, true)}</div>
+            <div><span class="opacity-70">Longitude:</span> ${formatCoordinate(loc.longitude, false)}</div>
+            <div><span class="opacity-70">Accuracy:</span> ±${loc.accuracy.toFixed(0)} m</div>
+            <div><span class="opacity-70">Saved:</span> ${formatTimestamp(loc.timestamp)}</div>
+          </div>
+          ${
+            loc.description
+              ? `<div class="mb-2"><span class="opacity-70">Description:</span> "${loc.description}"</div>`
+              : ''
+          }
+          <div class="flex gap-2 mt-3">
+            <button class="btn btn-outline btn-sm view-map-btn" data-lat="${loc.latitude}" data-lon="${loc.longitude}">
+              <i data-lucide="map" class="w-4 h-4"></i>
+              View on Map
+            </button>
+            <a
+              href="${gpsGenerateGoogleMapsLink(loc.latitude, loc.longitude)}"
+              target="_blank"
+              class="btn btn-outline btn-sm"
+            >
+              <i data-lucide="external-link" class="w-4 h-4"></i>
+              Google Maps
+            </a>
+          </div>
+        </div>
+      </div>
+    `
+      )
+      .join('');
+
+    container.querySelectorAll('.delete-btn').forEach((btn) => {
+      btn.addEventListener('click', async (e) => {
+        const id = parseInt((e.currentTarget as HTMLElement).getAttribute('data-id') || '0');
+        if (confirm('Delete this location?')) {
+          await deleteLocation(db!, id);
+          await loadLocations();
+          updateLastSavedDisplay();
+          showMessage('Location deleted');
+        }
+      });
+    });
+
+    container.querySelectorAll('.view-map-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const lat = parseFloat((e.currentTarget as HTMLElement).getAttribute('data-lat') || '0');
+        const lon = parseFloat((e.currentTarget as HTMLElement).getAttribute('data-lon') || '0');
+        showMapForLocation({ latitude: lat, longitude: lon } as SavedLocation);
+      });
+    });
+  }
+
+  function showMapForLocation(loc: SavedLocation): void {
+    const modal = document.getElementById('map-modal') as HTMLDialogElement;
+    const iframe = document.getElementById('map-frame') as HTMLIFrameElement;
+    iframe.src = createOsmEmbedUrl(loc.latitude, loc.longitude);
+    modal.showModal();
+  }
+
+  async function handleClearAll(): Promise<void> {
+    if (!db) return;
+
+    if (allLocations.length === 0) {
+      showMessage('No locations to clear.');
+      return;
+    }
+
+    if (confirm(`Delete all ${allLocations.length} saved locations? This cannot be undone.`)) {
+      await clearAllLocations(db);
+      allLocations = [];
+      renderHistory();
+      updateLastSavedDisplay();
+      showMessage('All locations cleared');
+    }
+  }
+}

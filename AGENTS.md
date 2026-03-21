@@ -1,4 +1,4 @@
-# Gemini Code Assist - Project Rules & Context
+# Code Assist - Project Rules & Context
 
 ## 1. Role & Objective
 
@@ -84,7 +84,18 @@ It is a **TypeScript** project built with **Vite**.
 
 ## Context info for tools
 
-see @docs/index.md for more context about the tools.
+See @docs/index.md for more context about the tools.
+
+Do not create module level variables because they do not get cleared.
+If needed always clean then. Always cleanup tools (cleanup handling exisits).
+
+If using WASM in Browser free and destroy variabled and allocated memory.
+
+The index.ts for each tool is for orchestration and DOM and Listener stuff. extract util functions in fitting files local inside the tool folder, structure code well.
+
+Use existing utils and pre exising functions from main js folder - if multiple tools need them also add some.
+
+
 
 ## Coding Conventions
 

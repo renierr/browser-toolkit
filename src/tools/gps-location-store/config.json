@@ -1,0 +1,7 @@
+{
+  "name": "GPS Location Store",
+  "description": "Store and track your GPS locations offline with history and distance calculation.",
+  "icon": "map-pin",
+  "sectionId": "general",
+  "order": 10
+}
