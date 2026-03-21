@@ -3,12 +3,6 @@
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
-svg.icon {
-  display: inline-block;
-  height: 1em;
-  width: 1em;
-}
-
 /* View transitions: fade old out, fade new in (short, smooth) */
 ::view-transition-old(#app) {
   animation: vt-fade-out 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
