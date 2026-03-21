@@ -1,50 +1,46 @@
-<div class="flex flex-col lg:flex-row gap-4 mb-6">
-  <!-- Current Location Card -->
-  <div class="card bg-base-100 border border-primary flex-1 shadow-lg shadow-primary/20">
-    <div class="card-body p-4">
-      <h3 class="card-title text-base flex items-center gap-2">
-        <i data-lucide="crosshair" class="w-4 h-4"></i>
-        Current Location
-      </h3>
-      <div id="current-location-display" class="text-sm space-y-1">
-        <div class="opacity-50">Click "Get Location" to start</div>
-      </div>
-      <div class="mt-3 flex flex-col gap-2">
-        <button id="get-location-btn" class="btn btn-primary btn-sm">
-          <i data-lucide="map-pin" class="w-4 h-4"></i>
-          Get Location
-        </button>
-        <div id="approx-btn-container" class="hidden">
-          <button id="get-approx-btn" class="btn btn-outline btn-sm w-full">
-            <i data-lucide="globe" class="w-4 h-4"></i>
-            Get Approximate Location (IP)
-          </button>
-        </div>
-      </div>
+<div class="card bg-base-100 border border-base-300 mb-6">
+  <div class="card-body p-4">
+    <h3 class="card-title text-base flex items-center gap-2">
+      <i data-lucide="crosshair" class="w-4 h-4"></i>
+      Current Location
+    </h3>
+    <div id="current-location-display" class="text-sm space-y-1">
+      <div class="opacity-50">Click "Get Location" to start</div>
     </div>
-  </div>
-
-  <!-- Last Saved Card -->
-  <div class="card bg-base-100 border border-secondary flex-1 shadow-lg shadow-secondary/20">
-    <div class="card-body p-4">
-      <h3 class="card-title text-base flex items-center gap-2">
-        <i data-lucide="star" class="w-4 h-4 text-secondary"></i>
-        Last Saved
-      </h3>
-      <div id="last-saved-display" class="text-sm space-y-1">
-        <div class="opacity-50">No saved locations</div>
-      </div>
-      <div id="last-saved-actions" class="mt-3 hidden">
-        <button id="view-last-map-btn" class="btn btn-secondary btn-sm">
-          <i data-lucide="map" class="w-4 h-4"></i>
-          View on Map
+    <div class="mt-3 flex flex-col gap-2">
+      <button id="get-location-btn" class="btn btn-primary btn-sm">
+        <i data-lucide="map-pin" class="w-4 h-4"></i>
+        Get Location
+      </button>
+      <div id="approx-btn-container" class="hidden">
+        <button id="get-approx-btn" class="btn btn-outline btn-sm w-full">
+          <i data-lucide="globe" class="w-4 h-4"></i>
+          Get Approximate Location (IP)
         </button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Save Location Form -->
+<!-- Last Saved Card -->
+<div class="card bg-base-100 border border-secondary shadow-lg shadow-secondary/20 mb-6">
+  <div class="card-body p-4">
+    <h3 class="card-title text-base flex items-center gap-2">
+      <i data-lucide="star" class="w-4 h-4 text-secondary"></i>
+      Last Saved
+    </h3>
+    <div id="last-saved-display" class="text-sm space-y-1">
+      <div class="opacity-50">No saved locations</div>
+    </div>
+    <div id="last-saved-actions" class="mt-3 hidden">
+      <button id="view-last-map-btn" class="btn btn-secondary btn-sm">
+        <i data-lucide="map" class="w-4 h-4"></i>
+        View on Map
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="card bg-base-100 border border-base-300 mb-6">
   <div class="card-body p-4">
     <h3 class="card-title text-base">Save Current Location</h3>
@@ -68,7 +64,6 @@
   </div>
 </div>
 
-<!-- History Section -->
 <div class="flex justify-between items-center mb-3">
   <h3 class="text-lg font-semibold">History</h3>
   <button id="clear-all-btn" class="btn btn-error btn-outline btn-sm">
@@ -81,7 +76,6 @@
   <div class="text-center p-4 opacity-50 italic">No locations saved yet</div>
 </div>
 
-<!-- Map Modal -->
 <dialog id="map-modal" class="modal modal-bottom sm:modal-middle">
   <div class="modal-box p-0 max-h-[90dvh]">
     <div class="p-4 flex justify-between items-center border-b border-base-300">

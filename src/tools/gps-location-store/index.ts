@@ -253,7 +253,7 @@ export default async function init() {
       return;
     }
 
-    const historyItems = allLocations.slice(1);
+    const historyItems = allLocations;
 
     container.innerHTML = historyItems
       .map(
@@ -262,7 +262,7 @@ export default async function init() {
         <input type="checkbox" />
         <div class="collapse-title flex justify-between items-center pr-12 min-h-auto py-2">
           <div class="text-sm">
-            <span class="font-medium">Location ${allLocations.length - idx}</span>
+            <span class="font-medium">${idx === 0 ? '★ ' : ''}Location ${allLocations.length - idx}</span>
             <span class="opacity-70 ml-2">${formatTimestamp(loc.timestamp)}</span>
           </div>
           <button
