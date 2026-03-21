@@ -88,8 +88,8 @@ export function renderEmptyState(): string {
   return `
     <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
       <div class="avatar placeholder mb-4">
-        <div class="bg-base-200 text-base-content/30 rounded-full w-16">
-          <i data-lucide="bluetooth" class="w-8 h-8"></i>
+        <div class="flex justify-center items-center bg-base-200 text-base-content/30 rounded-full w-16">
+          <i data-lucide="bluetooth" class="w-14! h-14!"></i>
         </div>
       </div>
       <h3 class="text-lg font-medium text-base-content/60 mb-2">No devices found</h3>
