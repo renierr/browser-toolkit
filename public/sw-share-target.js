@@ -153,13 +153,59 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     (async () => {
-      let form;
+      const contentType = req.headers.get('content-type') || '';
+
+      if (contentType.includes('application/x-www-form-urlencoded')) {
+        const clonedReq = req.clone();
+        const body = await clonedReq.text();
+        const params = new URLSearchParams(body);
+        const textValue = params.get('text');
+        const titleValue = params.get('title') || 'shared.txt';
+
+        if (textValue) {
+          const keys = [];
+          const mimeTypes = [];
+          const fileNames = [];
+          const mime = getMimeTypeFromFileName('', titleValue);
+          const blob = new Blob([textValue], { type: mime });
+          const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
+          await idbPut(key, blob);
+          keys.push(key);
+          mimeTypes.push(mime);
+          fileNames.push(titleValue);
+
+          const redirectUrl = new URL('./index.html', self.registration.scope);
+          redirectUrl.searchParams.set('shared', '1');
+          redirectUrl.searchParams.set('keys', keys.join(','));
+          redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
+          redirectUrl.searchParams.set('names', fileNames.join(','));
+          return Response.redirect(redirectUrl.href, 303);
+        }
+      }
+
+      let form = null;
+      let bodyText = null;
+
       try {
-        form = await req.formData();
+        const clonedReq = req.clone();
+        form = await clonedReq.formData();
       } catch (err) {
-        const contentType = req.headers.get('content-type') || 'unknown';
+        try {
+          const clonedReq2 = req.clone();
+          bodyText = await clonedReq2.text();
+        } catch {}
+      }
+
+      if (!form && bodyText) {
         const errMsg = encodeURIComponent(
-          `formData failed | content-type: ${contentType} | error: ${err}`
+          `formData failed, body preview: ${bodyText.slice(0, 500)} | content-type: ${contentType}`
+        );
+        return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
+      }
+
+      if (!form) {
+        const errMsg = encodeURIComponent(
+          `formData and text failed | content-type: ${contentType}`
         );
         return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
       }
