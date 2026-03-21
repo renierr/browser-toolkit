@@ -173,7 +173,7 @@ self.addEventListener('fetch', (event) => {
         }
 
         //const basePath = self.location.pathname.replace(/[^/]*$/, '');
-        const redirectUrl = new URL('./index.html', self.location.origin);
+        const redirectUrl = new URL('./index.html', self.location.href);
         redirectUrl.searchParams.set('shared', '1');
         redirectUrl.searchParams.set('keys', keys.join(','));
         redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
@@ -183,7 +183,7 @@ self.addEventListener('fetch', (event) => {
       } catch (err) {
         console.error('[SW] Share failed:', err);
         console.error('SW: Share processing failed', err);
-        return new Response('Share processing failed', { status: 500 });
+        return new Response('Share processing failed: ' + String(err), { status: 500 });
         // const basePath = self.location.pathname.replace(/[^/]*$/, '');
         // return Response.redirect(basePath + 'index.html?sw_error=1', 303);
       }
