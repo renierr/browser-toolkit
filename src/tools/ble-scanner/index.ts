@@ -1,5 +1,5 @@
 import { BLEScanner, isBluetoothSupported } from './scanner';
-import { renderDeviceCard, renderEmptyState, updateDeviceCard } from './ui';
+import { renderDeviceGroups } from './ui';
 import type { ParsedDevice } from './parser';
 import { showMessage } from '../../js/ui';
 
@@ -7,6 +7,7 @@ interface ScannerState {
   scanner: BLEScanner | null;
   isScanning: boolean;
   devices: Map<string, ParsedDevice>;
+  collapsedCategories: Set<string>;
   updateInterval: number | null;
 }
 
@@ -25,35 +26,27 @@ export default function init() {
     return;
   }
 
-  deviceList.innerHTML = renderEmptyState();
-
   const state: ScannerState = {
     scanner: null,
     isScanning: false,
     devices: new Map(),
+    collapsedCategories: new Set(),
     updateInterval: null,
   };
+
+  const renderAllGroups = () => {
+    deviceList.innerHTML = renderDeviceGroups(state.devices, state.collapsedCategories);
+  };
+
+  renderAllGroups();
 
   const handleDeviceFound = (device: ParsedDevice) => {
     state.devices.set(device.id, device);
     updateDeviceCount();
-
-    const existingCard = deviceList.querySelector(`[data-device-id="${device.id}"]`);
-    if (existingCard) {
-      updateDeviceCard(device);
-    } else {
-      const card = renderDeviceCard(device);
-      const emptyState = deviceList.querySelector('.col-span-full');
-      if (emptyState) {
-        emptyState.outerHTML = card;
-      } else {
-        deviceList.insertAdjacentHTML('beforeend', card);
-      }
-    }
+    renderAllGroups();
   };
 
   const handleError = (error: Error) => {
-    console.error('BLE Scanner Error:', error);
     showMessage(error.message, { type: 'alert' });
     stopScanning();
   };
@@ -89,12 +82,7 @@ export default function init() {
     }
 
     state.updateInterval = window.setInterval(() => {
-      if (state.devices.size > 0) {
-        deviceList.innerHTML = '';
-        state.devices.forEach((device) => {
-          deviceList.insertAdjacentHTML('beforeend', renderDeviceCard(device));
-        });
-      }
+      renderAllGroups();
     }, 5000);
   };
 
@@ -103,7 +91,8 @@ export default function init() {
       state.scanner.clearDevices();
     }
     state.devices.clear();
-    deviceList.innerHTML = renderEmptyState();
+    state.collapsedCategories.clear();
+    deviceList.innerHTML = renderDeviceGroups(state.devices, state.collapsedCategories);
     updateDeviceCount();
   };
 
@@ -123,14 +112,32 @@ export default function init() {
     deviceCount.textContent = `${state.devices.size} device${state.devices.size !== 1 ? 's' : ''}`;
   };
 
+  const handleCollapseToggle = (event: Event) => {
+    const target = event.target as HTMLElement;
+    const collapse = target.closest('.collapse');
+    if (!collapse) return;
+
+    const category = collapse.getAttribute('data-category');
+    if (!category) return;
+
+    const checkbox = collapse.querySelector('input[type="checkbox"]') as HTMLInputElement;
+    if (checkbox?.checked) {
+      state.collapsedCategories.delete(category);
+    } else {
+      state.collapsedCategories.add(category);
+    }
+  };
+
   scanBtn.addEventListener('click', startScanning);
   stopBtn.addEventListener('click', stopScanning);
   clearBtn.addEventListener('click', clearDevices);
+  deviceList.addEventListener('click', handleCollapseToggle);
 
   return () => {
     stopScanning();
     scanBtn.removeEventListener('click', startScanning);
     stopBtn.removeEventListener('click', stopScanning);
     clearBtn.removeEventListener('click', clearDevices);
+    deviceList.removeEventListener('click', handleCollapseToggle);
   };
 }

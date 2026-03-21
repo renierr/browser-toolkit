@@ -12,7 +12,6 @@ export interface ScanOptions {
 export class BLEScanner {
   private activeDevices: Map<string, ParsedDevice> = new Map();
   private currentScan: BluetoothLEScan | null = null;
-  private advertisementHandler: ((event: BluetoothAdvertisingEvent) => void) | null = null;
   private onDeviceFound: ScanCallback;
   private onError: ErrorCallback;
 
@@ -34,30 +33,28 @@ export class BLEScanner {
     }
 
     try {
-      this.advertisementHandler = (event: BluetoothAdvertisingEvent) => {
-        const parsedDevice = parseAdvertisingEvent(event);
-        this.activeDevices.set(parsedDevice.id, parsedDevice);
-        this.onDeviceFound(parsedDevice);
-      };
-
-      navigator.bluetooth.addEventListener(
-        'advertisementreceived',
-        this.advertisementHandler as EventListener
-      );
-
       this.currentScan = await navigator.bluetooth.requestLEScan({
         acceptAllAdvertisements: true,
         keepRepeatedDevices: true,
       });
     } catch (error) {
-      if (error instanceof Error && error.name === 'NotFoundError') {
-        return;
-      }
       if (error instanceof Error && error.name === 'NotAllowedError') {
         return;
       }
       this.onError(error instanceof Error ? error : new Error(String(error)));
+      return;
     }
+
+    const advertisementHandler = (event: BluetoothAdvertisingEvent) => {
+      const parsedDevice = parseAdvertisingEvent(event);
+      this.activeDevices.set(parsedDevice.id, parsedDevice);
+      this.onDeviceFound(parsedDevice);
+    };
+
+    navigator.bluetooth.addEventListener(
+      'advertisementreceived',
+      advertisementHandler as EventListener
+    );
   }
 
   stopScan(): void {
@@ -65,15 +62,6 @@ export class BLEScanner {
       this.currentScan.stop();
       this.currentScan = null;
     }
-
-    if (this.advertisementHandler) {
-      navigator.bluetooth.removeEventListener(
-        'advertisementreceived',
-        this.advertisementHandler as EventListener
-      );
-      this.advertisementHandler = null;
-    }
-
     this.activeDevices.clear();
   }
 

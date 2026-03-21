@@ -1,49 +1,131 @@
 import type { ParsedDevice } from './parser';
 
+export function renderDeviceGroups(
+  devices: Map<string, ParsedDevice>,
+  collapsedCategories: Set<string>
+): string {
+  const grouped = groupByCategory(devices);
+
+  if (grouped.size === 0) {
+    return renderEmptyState();
+  }
+
+  const sortedCategories = Array.from(grouped.keys()).sort();
+
+  return sortedCategories
+    .map((category) => {
+      const categoryDevices = grouped.get(category)!;
+      const isCollapsed = collapsedCategories.has(category);
+      const categoryBadgeClass = getCategoryBadgeClass(category);
+      const icon = getCategoryIcon(category);
+
+      const deviceCards = categoryDevices.map((device) => renderDeviceCard(device)).join('');
+
+      return `
+        <div class="collapse collapse-arrow bg-base-200 mb-2" data-category="${category}">
+          <input type="checkbox" class="peer" ${isCollapsed ? '' : 'checked'} />
+          <div class="collapse-title cursor-pointer flex items-center gap-2 min-h-0 py-2">
+            <i data-lucide="${icon}" class="w-5 h-5"></i>
+            <span class="font-semibold">${category}</span>
+            <span class="badge badge-sm ${categoryBadgeClass} ml-auto">${categoryDevices.length}</span>
+          </div>
+          <div class="collapse-content p-0">
+            <div class="grid gap-3 p-2 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+              ${deviceCards}
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+}
+
+export function renderCategoryGroup(
+  category: string,
+  devices: ParsedDevice[],
+  isCollapsed: boolean
+): string {
+  const categoryBadgeClass = getCategoryBadgeClass(category);
+  const icon = getCategoryIcon(category);
+
+  const deviceCards = devices.map((device) => renderDeviceCard(device)).join('');
+
+  return `
+    <div class="collapse collapse-arrow bg-base-200 mb-2" data-category="${category}">
+      <input type="checkbox" class="peer" ${isCollapsed ? 'checked' : ''} />
+      <div class="collapse-title cursor-pointer flex items-center gap-2 min-h-0 py-2">
+        <i data-lucide="${icon}" class="w-5 h-5"></i>
+        <span class="font-semibold">${category}</span>
+        <span class="badge badge-sm ${categoryBadgeClass} ml-auto">${devices.length}</span>
+      </div>
+      <div class="collapse-content p-0">
+        <div class="grid gap-3 p-2 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
+          ${deviceCards}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function groupByCategory(devices: Map<string, ParsedDevice>): Map<string, ParsedDevice[]> {
+  const grouped = new Map<string, ParsedDevice[]>();
+
+  for (const device of devices.values()) {
+    const category = device.identifiedCategory;
+    if (!grouped.has(category)) {
+      grouped.set(category, []);
+    }
+    grouped.get(category)!.push(device);
+  }
+
+  return grouped;
+}
+
 export function renderDeviceCard(device: ParsedDevice): string {
   const signalBars = getSignalBars(device.rssi);
   const timeSinceUpdate = getTimeSinceUpdate(device.timestamp);
-  const categoryBadgeClass = getCategoryBadgeClass(device.identifiedCategory);
 
   return `
     <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border" data-device-id="${device.id}">
-      <div class="card-body p-4">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex items-center gap-3">
-            <div class="avatar placeholder">
-              <div class="bg-neutral text-neutral-content rounded-full w-10">
-                <i data-lucide="${getCategoryIcon(device.identifiedCategory)}" class="w-5 h-5"></i>
+      <div class="card-body p-3 sm:p-4">
+        <div class="flex items-start justify-between gap-2 min-w-0">
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <div class="avatar placeholder items-center justify-center">
+              <div class="bg-neutral text-neutral-content rounded-full w-8 sm:w-10 flex items-center justify-center">
+                <i data-lucide="${getCategoryIcon(device.identifiedCategory)}" class="w-4 h-4 sm:w-5 sm:h-5"></i>
               </div>
             </div>
-            <div>
-              <h3 class="font-semibold truncate max-w-[180px]" title="${device.name}">${device.name}</h3>
-              <p class="text-sm text-base-content/60">
+            <div class="min-w-0 flex-1">
+              <h3 class="font-semibold truncate text-sm sm:text-base" title="${device.name}">${device.name}</h3>
+              <p class="text-xs sm:text-sm text-base-content/60 truncate">
                 ${device.manufacturer ? device.manufacturer : device.identifiedType}
               </p>
             </div>
           </div>
-          <div class="flex flex-col items-end gap-1">
-            <span class="badge ${categoryBadgeClass}">${device.identifiedCategory}</span>
+          <div class="flex flex-col items-end gap-1 shrink-0">
             ${signalBars}
           </div>
         </div>
 
-        <div class="divider my-2"></div>
+        <div class="divider my-1 sm:my-2"></div>
 
-        <div class="space-y-2 text-sm">
+        <div class="space-y-1 sm:space-y-2 text-xs sm:text-sm min-w-0">
           ${
             device.advertisedServices.length > 0
               ? `
             <div>
               <p class="text-base-content/50 text-xs mb-1">Services</p>
-              <div class="flex flex-wrap gap-1">
+              <div class="flex flex-wrap gap-1 overflow-hidden">
                 ${device.advertisedServices
-                  .slice(0, 6)
-                  .map((service) => `<span class="badge badge-sm badge-outline">${service}</span>`)
+                  .slice(0, 4)
+                  .map(
+                    (service) =>
+                      `<span class="badge badge-sm badge-outline truncate max-w-[120px]" title="${service}">${service}</span>`
+                  )
                   .join('')}
                 ${
-                  device.advertisedServices.length > 6
-                    ? `<span class="badge badge-sm badge-ghost">+${device.advertisedServices.length - 6}</span>`
+                  device.advertisedServices.length > 4
+                    ? `<span class="badge badge-sm badge-ghost">+${device.advertisedServices.length - 4}</span>`
                     : ''
                 }
               </div>
@@ -55,11 +137,10 @@ export function renderDeviceCard(device: ParsedDevice): string {
           ${
             device.manufacturerData && device.manufacturerData.length > 0
               ? `
-            <div>
+            <div class="min-w-0">
               <p class="text-base-content/50 text-xs mb-1">Manufacturer</p>
-              <div class="font-mono text-xs bg-base-200 rounded px-2 py-1 truncate" title="${device.manufacturerData.map((m) => `${m.name}: ${m.data}`).join(', ')}">
+              <div class="text-xs bg-base-200 rounded px-2 py-1 truncate" title="${device.manufacturerData[0].name}${device.manufacturerData[0].data ? ': ' + device.manufacturerData[0].data : ''}">
                 ${device.manufacturerData[0].name}
-                ${device.manufacturerData[0].data ? `: ${device.manufacturerData[0].data}` : ''}
               </div>
             </div>
           `
@@ -67,10 +148,10 @@ export function renderDeviceCard(device: ParsedDevice): string {
           }
         </div>
 
-        <div class="flex items-center justify-between mt-3 pt-2 border-t border-base-200 text-xs text-base-content/40">
-          <span class="font-mono" title="MAC">${formatDeviceId(device.id)}</span>
-          ${device.rssi !== null ? `<span>${device.rssi} dBm</span>` : ''}
-          <span>${timeSinceUpdate}</span>
+        <div class="flex items-center justify-between mt-2 pt-2 border-t border-base-200 text-xs text-base-content/40 min-w-0 gap-2">
+          <span class="truncate" title="MAC: ${device.id}">${formatDeviceId(device.id)}</span>
+          ${device.rssi !== null ? `<span class="shrink-0">${device.rssi} dBm</span>` : ''}
+          <span class="shrink-0">${timeSinceUpdate}</span>
         </div>
       </div>
     </div>
@@ -88,8 +169,8 @@ export function renderEmptyState(): string {
   return `
     <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
       <div class="avatar placeholder mb-4">
-        <div class="flex justify-center items-center bg-base-200 text-base-content/30 rounded-full w-16">
-          <i data-lucide="bluetooth" class="w-14! h-14!"></i>
+        <div class="bg-base-200 text-base-content/30 rounded-full w-16 flex items-center justify-center">
+          <i data-lucide="bluetooth" class="w-8 h-8"></i>
         </div>
       </div>
       <h3 class="text-lg font-medium text-base-content/60 mb-2">No devices found</h3>
@@ -124,12 +205,12 @@ function getSignalBars(rssi: number | null): string {
 
 function getTimeSinceUpdate(timestamp: number): string {
   const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 5) return 'just now';
-  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 5) return 'now';
+  if (seconds < 60) return `${seconds}s`;
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 60) return `${minutes}m`;
   const hours = Math.floor(minutes / 60);
-  return `${hours}h ago`;
+  return `${hours}h`;
 }
 
 function formatDeviceId(id: string): string {
