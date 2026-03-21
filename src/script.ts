@@ -568,14 +568,13 @@ async function boot() {
   }
 
   try {
-    // 2. Check for shared content from Service Worker (Android share)
     const sharedInfo = getSharedContentInfo();
+    const hasShareParams = sharedInfo !== null;
+
     if (typeof sharedInfo === 'string') {
       showMessage('shared target error: ' + sharedInfo, { type: 'alert' });
     } else if (sharedInfo) {
       const sharedFiles = await loadSharedFiles(sharedInfo.keys);
-      clearSharedParams();
-
       if (sharedFiles.length > 0) {
         if (await routeFilesToTool(sharedFiles, sharedInfo.mimeTypes)) {
           handledByLaunchOrShare = true;
@@ -583,6 +582,10 @@ async function boot() {
       } else {
         console.warn('[script] No tool found for shared MIME types:', sharedInfo.mimeTypes);
       }
+    }
+
+    if (hasShareParams) {
+      clearSharedParams();
     }
   } catch (e) {
     console.warn('[script] Share target handling failed:', e);

@@ -157,8 +157,10 @@ self.addEventListener('fetch', (event) => {
       try {
         form = await req.formData();
       } catch (err) {
-        console.error('[SW] formData() failed:', err);
-        const errMsg = encodeURIComponent(`formData: ${err}`);
+        const contentType = req.headers.get('content-type') || 'unknown';
+        const errMsg = encodeURIComponent(
+          `formData failed | content-type: ${contentType} | error: ${err}`
+        );
         return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
       }
 

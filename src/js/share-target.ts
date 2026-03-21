@@ -135,6 +135,7 @@ export function clearSharedParams(): void {
   url.searchParams.delete('keys');
   url.searchParams.delete('mimes');
   url.searchParams.delete('names');
+  url.searchParams.delete('sw_error');
   history.replaceState(null, '', url.href);
 }
 
