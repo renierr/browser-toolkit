@@ -3,8 +3,12 @@ import { getMimeTypeFromFileName } from '../../js/mime-types';
 import { setupFileDropzone } from '../../js/file-utils';
 
 export default function init(payload?: SharedFilesPayload): (() => void) | undefined {
+  let currentFiles: File[] = [];
+  let selectedFileIndex = 0;
+
   setupFileDropzone('dropzone', 'file-input', (files) => {
-    if (files[0]) displayFileInfo(files[0]);
+    currentFiles = Array.from(files);
+    displayFileList(currentFiles);
   });
 
   const shareStatus = document.getElementById('share-status') as HTMLElement;
@@ -35,8 +39,17 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
   }
 
   if (payload?.sharedFiles?.length) {
-    displayFileInfo(payload.sharedFiles[0]);
+    currentFiles = payload.sharedFiles;
+    displayFileList(currentFiles);
   }
+
+  document.getElementById('file-selector')?.addEventListener('change', (e) => {
+    const select = e.target as HTMLSelectElement;
+    selectedFileIndex = parseInt(select.value, 10);
+    if (currentFiles[selectedFileIndex]) {
+      displayFileInfo(currentFiles[selectedFileIndex]);
+    }
+  });
 
   function displayFileInfo(file: File) {
     const container = document.getElementById('file-info-container') as HTMLElement;
@@ -63,6 +76,35 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
 
     loadPreview(file);
     checkBinaryContent(file);
+  }
+
+  function displayFileList(files: File[]) {
+    if (files.length === 0) return;
+
+    const container = document.getElementById('file-info-container') as HTMLElement;
+    const selectorContainer = document.getElementById('file-selector-container') as HTMLElement;
+    const noFilesCard = document.getElementById('no-files-card') as HTMLElement;
+    const selector = document.getElementById('file-selector') as HTMLSelectElement;
+
+    container.classList.remove('hidden');
+    noFilesCard.classList.add('hidden');
+
+    if (files.length > 1) {
+      selectorContainer.classList.remove('hidden');
+      selector.innerHTML = '';
+      files.forEach((file, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = `${index + 1}. ${file.name} (${formatBytes(file.size)})`;
+        selector.appendChild(option);
+      });
+      selector.selectedIndex = 0;
+      selectedFileIndex = 0;
+    } else {
+      selectorContainer.classList.add('hidden');
+    }
+
+    displayFileInfo(files[0]);
   }
 
   function loadPreview(file: File) {

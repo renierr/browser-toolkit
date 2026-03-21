@@ -22,6 +22,19 @@
   </div>
 </div>
 
+<div id="file-selector-container" class="hidden mt-4">
+  <div class="card bg-base-100 shadow-xl border">
+    <div class="card-body">
+      <label class="form-control">
+        <div class="label">
+          <span class="label-text font-semibold">Select File</span>
+        </div>
+        <select id="file-selector" class="select select-bordered w-full max-w-xs"></select>
+      </label>
+    </div>
+  </div>
+</div>
+
 <div id="file-info-container" class="hidden mt-4 space-y-4">
   <div id="file-card" class="card bg-base-100 shadow-xl border">
     <div class="card-body">
@@ -107,9 +120,9 @@
         <div class="text-base-content/30 text-3xl">
           <i data-lucide="upload"></i>
         </div>
-        <p class="text-base font-medium">Click or drop a file here</p>
+        <p class="text-base font-medium">Click or drop file(s) here</p>
       </div>
-      <input type="file" id="file-input" class="hidden" />
+      <input type="file" id="file-input" class="hidden" multiple />
     </div>
   </div>
 </div>
