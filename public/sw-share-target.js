@@ -153,60 +153,11 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     (async () => {
-      const contentType = req.headers.get('content-type') || '';
-
-      if (contentType.includes('application/x-www-form-urlencoded')) {
-        const clonedReq = req.clone();
-        const body = await clonedReq.text();
-        const params = new URLSearchParams(body);
-        const textValue = params.get('text');
-        const titleValue = params.get('title') || 'shared.txt';
-
-        if (textValue) {
-          const keys = [];
-          const mimeTypes = [];
-          const fileNames = [];
-          const mime = getMimeTypeFromFileName('', titleValue);
-          const blob = new Blob([textValue], { type: mime });
-          const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
-          await idbPut(key, blob);
-          keys.push(key);
-          mimeTypes.push(mime);
-          fileNames.push(titleValue);
-
-          const redirectUrl = new URL('./index.html', self.registration.scope);
-          redirectUrl.searchParams.set('shared', '1');
-          redirectUrl.searchParams.set('keys', keys.join(','));
-          redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
-          redirectUrl.searchParams.set('names', fileNames.join(','));
-          return Response.redirect(redirectUrl.href, 303);
-        }
-      }
-
-      let form = null;
-      let bodyText = null;
-
+      let form;
       try {
-        const clonedReq = req.clone();
-        form = await clonedReq.formData();
+        form = await req.formData();
       } catch (err) {
-        try {
-          const clonedReq2 = req.clone();
-          bodyText = await clonedReq2.text();
-        } catch {}
-      }
-
-      if (!form && bodyText) {
-        const errMsg = encodeURIComponent(
-          `formData failed, body preview: ${bodyText.slice(0, 500)} | content-type: ${contentType}`
-        );
-        return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
-      }
-
-      if (!form) {
-        const errMsg = encodeURIComponent(
-          `formData and text failed | content-type: ${contentType}`
-        );
+        const errMsg = encodeURIComponent(String(err));
         return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
       }
 
@@ -224,8 +175,7 @@ self.addEventListener('fetch', (event) => {
         try {
           await idbPut(key, f);
         } catch (err) {
-          console.error('[SW] idbPut failed:', err);
-          const errMsg = encodeURIComponent(`idbPut: ${err}`);
+          const errMsg = encodeURIComponent(String(err));
           return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
         }
         keys.push(key);
@@ -237,13 +187,12 @@ self.addEventListener('fetch', (event) => {
       const titleValue = form.get('title');
 
       if (blobs.length === 0 && textValue && typeof textValue === 'string') {
-        const content = textValue;
         const fileName =
           titleValue && typeof titleValue === 'string' && titleValue.trim()
             ? titleValue.trim()
             : 'shared-text.txt';
         const mime = getMimeTypeFromFileName('', fileName);
-        const blob = new Blob([content], { type: mime });
+        const blob = new Blob([textValue], { type: mime });
         const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
         try {
           await idbPut(key, blob);
@@ -251,8 +200,7 @@ self.addEventListener('fetch', (event) => {
           mimeTypes.push(mime);
           fileNames.push(fileName);
         } catch (err) {
-          console.error('[SW] idbPut text failed:', err);
-          const errMsg = encodeURIComponent(`idbPut text: ${err}`);
+          const errMsg = encodeURIComponent(String(err));
           return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
         }
       }
