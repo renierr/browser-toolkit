@@ -159,7 +159,7 @@ self.addEventListener('fetch', (event) => {
       } catch (err) {
         console.error('[SW] formData() failed:', err);
         const errMsg = encodeURIComponent(`formData: ${err}`);
-        return Response.redirect(`./index.html?sw_error=${errMsg}`, 303);
+        return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
       }
 
       const keys = [];
@@ -178,11 +178,35 @@ self.addEventListener('fetch', (event) => {
         } catch (err) {
           console.error('[SW] idbPut failed:', err);
           const errMsg = encodeURIComponent(`idbPut: ${err}`);
-          return Response.redirect(`./index.html?sw_error=${errMsg}`, 303);
+          return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
         }
         keys.push(key);
         mimeTypes.push(getMimeTypeFromFileName(f.type || '', f.name || ''));
         fileNames.push(f.name || '');
+      }
+
+      const textValue = form.get('text');
+      const titleValue = form.get('title');
+
+      if (blobs.length === 0 && textValue && typeof textValue === 'string') {
+        const content = textValue;
+        const fileName =
+          titleValue && typeof titleValue === 'string' && titleValue.trim()
+            ? titleValue.trim()
+            : 'shared-text.txt';
+        const mime = getMimeTypeFromFileName('', fileName);
+        const blob = new Blob([content], { type: mime });
+        const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
+        try {
+          await idbPut(key, blob);
+          keys.push(key);
+          mimeTypes.push(mime);
+          fileNames.push(fileName);
+        } catch (err) {
+          console.error('[SW] idbPut text failed:', err);
+          const errMsg = encodeURIComponent(`idbPut text: ${err}`);
+          return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
+        }
       }
 
       const redirectUrl = new URL('./index.html', self.registration.scope);
