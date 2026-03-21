@@ -1,26 +1,46 @@
 <div class="flex flex-col gap-4">
   <div class="card bg-base-100 shadow-xl border">
     <div class="card-body">
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div class="flex items-center gap-2">
-          <button id="scan-btn" class="btn btn-primary">
-            <i data-lucide="scan" class="w-5 h-5"></i>
-            <span>Scan</span>
-          </button>
-          <button id="stop-btn" class="btn btn-error hidden">
-            <i data-lucide="bluetooth-off" class="w-5 h-5"></i>
-            <span>Stop</span>
-          </button>
-          <button id="clear-btn" class="btn btn-ghost">
-            <i data-lucide="trash-2" class="w-5 h-5"></i>
-          </button>
+      <div class="flex flex-col gap-3">
+        <div class="flex items-start justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div>
+              <h2 class="card-title text-xl">BLE Scanner</h2>
+              <p class="text-sm text-base-content/60">
+                Scan and identify nearby Bluetooth Low Energy devices
+              </p>
+            </div>
+          </div>
+          <div class="flex items-center gap-3 shrink-0">
+            <span id="device-count" class="badge badge-neutral">0 devices</span>
+            <span id="scan-status" class="badge badge-primary hidden">
+              <span class="loading loading-dots loading-xs"></span>
+              Scanning
+            </span>
+          </div>
         </div>
-        <div class="flex items-center gap-3">
-          <span id="device-count" class="badge badge-neutral">0 devices</span>
-          <span id="scan-status" class="badge badge-primary hidden">
-            <span class="loading loading-dots loading-xs"></span>
-            Scanning
-          </span>
+
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <button id="scan-btn" class="btn btn-primary">
+              <i data-lucide="scan" class="w-5 h-5"></i>
+              <span>Scan</span>
+            </button>
+            <button id="stop-btn" class="btn btn-error hidden">
+              <i data-lucide="bluetooth-off" class="w-5 h-5"></i>
+              <span>Stop</span>
+            </button>
+            <button id="clear-btn" class="btn btn-ghost">
+              <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+          </div>
+          <div class="alert alert-info py-2 px-3 text-xs">
+            <i data-lucide="info" class="w-4 h-4"></i>
+            <span>
+              Experimental: Needs to Enable
+              'chrome://flags/#enable-experimental-web-platform-features'
+            </span>
+          </div>
         </div>
       </div>
     </div>
