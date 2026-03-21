@@ -1,0 +1,10 @@
+{
+  "name": "Share Debug",
+  "description": "Debug tool to inspect shared files and their MIME types",
+  "icon": "bug",
+  "sectionId": "utilities",
+  "order": 100,
+  "shareTarget": {
+    "accept": ["*/*"]
+  }
+}

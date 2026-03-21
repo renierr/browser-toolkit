@@ -1,0 +1,115 @@
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">Share Debug</h2>
+    <p class="text-base-content/70 mb-6">Inspect shared files and their MIME type information.</p>
+
+    <div id="share-info" class="space-y-4">
+      <div class="alert">
+        <i data-lucide="info" class="w-5 h-5"></i>
+        <span id="share-status">No shared files detected</span>
+      </div>
+
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">URL Parameters</span>
+        </label>
+        <pre
+          id="url-params"
+          class="bg-base-200 p-3 rounded-lg text-sm font-mono overflow-x-auto"
+        ></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="file-info-container" class="hidden mt-4 space-y-4">
+  <div id="file-card" class="card bg-base-100 shadow-xl border">
+    <div class="card-body">
+      <h3 class="card-title text-lg">File Info</h3>
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <tbody>
+            <tr>
+              <td class="font-semibold">File Name</td>
+              <td id="info-name" class="font-mono"></td>
+            </tr>
+            <tr>
+              <td class="font-semibold">File Size</td>
+              <td id="info-size"></td>
+            </tr>
+            <tr>
+              <td class="font-semibold">Raw MIME Type</td>
+              <td id="info-raw-mime" class="font-mono"></td>
+            </tr>
+            <tr>
+              <td class="font-semibold">Calculated MIME Type</td>
+              <td id="info-calc-mime" class="font-mono"></td>
+            </tr>
+            <tr>
+              <td class="font-semibold">File Extension</td>
+              <td id="info-extension" class="font-mono"></td>
+            </tr>
+            <tr>
+              <td class="font-semibold">Content Type</td>
+              <td id="info-content-type"></td>
+            </tr>
+            <tr>
+              <td class="font-semibold">Last Modified</td>
+              <td id="info-last-modified"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="preview-card" class="card bg-base-100 shadow-xl border">
+    <div class="card-body">
+      <div class="flex items-center justify-between mb-2">
+        <h3 class="card-title text-lg">Content Preview</h3>
+        <span id="preview-size" class="text-sm text-base-content/50"></span>
+      </div>
+      <div class="tabs tabs-boxed">
+        <input type="radio" name="preview_tabs" id="tab-text" class="tab" checked />
+        <label for="tab-text" class="tab">Text</label>
+        <input type="radio" name="preview_tabs" id="tab-hex" class="tab" />
+        <label for="tab-hex" class="tab">Hex</label>
+      </div>
+      <div id="preview-text" class="bg-base-200 p-3 rounded-lg mt-2 overflow-x-auto max-h-64">
+        <pre class="text-sm font-mono whitespace-pre-wrap"></pre>
+      </div>
+      <div id="preview-hex" class="hidden bg-base-200 p-3 rounded-lg mt-2 overflow-x-auto max-h-64">
+        <pre class="text-sm font-mono"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div id="binary-check-card" class="card bg-base-100 shadow-xl border">
+    <div class="card-body">
+      <h3 class="card-title text-lg">Binary Detection</h3>
+      <div class="flex items-center gap-2">
+        <span class="text-sm font-semibold">Result:</span>
+        <span id="binary-result" class="badge badge-lg"></span>
+      </div>
+      <p id="binary-explanation" class="text-sm text-base-content/70 mt-2"></p>
+    </div>
+  </div>
+</div>
+
+<div id="no-files-card" class="card bg-base-100 shadow-xl border mt-4">
+  <div class="card-body">
+    <h3 class="card-title text-lg">Test with a file</h3>
+    <div
+      id="dropzone"
+      class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-6"
+    >
+      <div class="flex flex-col items-center gap-2">
+        <div class="text-base-content/30 text-3xl">
+          <i data-lucide="upload"></i>
+        </div>
+        <p class="text-base font-medium">Click or drop a file here</p>
+      </div>
+      <input type="file" id="file-input" class="hidden" />
+    </div>
+  </div>
+</div>
