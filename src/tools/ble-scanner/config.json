@@ -1,0 +1,7 @@
+{
+  "name": "BLE Scanner",
+  "description": "Scan for nearby Bluetooth Low Energy devices and identify them using an extensive device database",
+  "icon": "bluetooth",
+  "sectionId": "devices",
+  "order": 10
+}

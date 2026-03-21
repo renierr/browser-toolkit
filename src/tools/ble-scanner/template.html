@@ -1,0 +1,35 @@
+<div class="flex flex-col gap-4">
+  <div class="card bg-base-100 shadow-xl border">
+    <div class="card-body">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2">
+          <button id="scan-btn" class="btn btn-primary">
+            <i data-lucide="scan" class="w-5 h-5"></i>
+            <span>Scan</span>
+          </button>
+          <button id="stop-btn" class="btn btn-error hidden">
+            <i data-lucide="bluetooth-off" class="w-5 h-5"></i>
+            <span>Stop</span>
+          </button>
+          <button id="clear-btn" class="btn btn-ghost">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+          </button>
+        </div>
+        <div class="flex items-center gap-3">
+          <span id="device-count" class="badge badge-neutral">0 devices</span>
+          <span id="scan-status" class="badge badge-primary hidden">
+            <span class="loading loading-dots loading-xs"></span>
+            Scanning
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="device-list" class="grid gap-3 sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"></div>
+
+  <div id="no-bluetooth" class="alert alert-error hidden">
+    <i data-lucide="bluetooth-off" class="w-6 h-6"></i>
+    <span>Web Bluetooth API is not supported in this browser</span>
+  </div>
+</div>
