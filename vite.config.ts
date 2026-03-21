@@ -5,7 +5,6 @@ import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import wasm from 'vite-plugin-wasm';
 import topLevelAwait from 'vite-plugin-top-level-await';
-import { swShareTargetPlugin } from './src/plugins/sw-share-target-plugin';
 import { onnxStaticPlugin } from './src/plugins/onnx-static-plugin';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,7 +13,6 @@ const __dirname = path.dirname(__filename);
 export default defineConfig({
   base: './',
   plugins: [
-    swShareTargetPlugin(),
     onnxStaticPlugin(),
     wasm(),
     topLevelAwait(),
@@ -66,7 +64,7 @@ export default defineConfig({
           },
         ],
         share_target: {
-          action: './index.html',
+          action: 'index.html',
           method: 'POST',
           enctype: 'multipart/form-data',
           params: {
@@ -83,7 +81,7 @@ export default defineConfig({
         },
         file_handlers: [
           {
-            action: './index.html',
+            action: 'index.html',
             accept: {
               'application/pdf': ['.pdf'],
               'text/markdown': ['.md', '.markdown'],
@@ -167,7 +165,7 @@ export default defineConfig({
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
-        importScripts: ['./sw-share-target.js', './sw-timer.js'],
+        importScripts: ['sw-share-target.js', 'sw-timer.js'],
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -220,6 +218,15 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, 'index.html'),
         pdf: path.resolve(__dirname, 'pdf.html'),
+        'sw-share-target': path.resolve(__dirname, 'src/sw-share-target.ts'),
+      },
+      output: {
+        entryFileNames: (chunkInfo) => {
+          if (chunkInfo.name.startsWith('sw-')) {
+            return '[name].js';
+          }
+          return 'assets/[name]-[hash].js';
+        },
       },
     },
     chunkSizeWarningLimit: 3000,
