@@ -38,7 +38,22 @@
 <div id="file-info-container" class="hidden mt-4 space-y-4">
   <div id="file-card" class="card bg-base-100 shadow-xl border">
     <div class="card-body">
-      <h3 class="card-title text-lg">File Info</h3>
+      <div class="flex items-center justify-between">
+        <h3 class="card-title text-lg">File Info</h3>
+        <button id="share-btn" class="btn btn-primary btn-sm gap-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="h-4 w-4"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z"
+            />
+          </svg>
+          Share
+        </button>
+      </div>
       <div class="overflow-x-auto">
         <table class="table table-sm">
           <tbody>

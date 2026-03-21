@@ -1,6 +1,11 @@
 import type { SharedFilesPayload } from '../../js/share-target';
 import { getMimeTypeFromFileName } from '../../js/mime-types';
 import { setupFileDropzone } from '../../js/file-utils';
+import { showToolChooser } from '../../js/tool-chooser';
+import { findAllToolsForMimeTypes } from '../../js/share-target';
+import { tools } from '../../js/tools';
+import router from '../../js/router';
+import { showMessage } from '../../js/ui';
 
 export default function init(payload?: SharedFilesPayload): (() => void) | undefined {
   let currentFiles: File[] = [];
@@ -48,6 +53,28 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
     selectedFileIndex = parseInt(select.value, 10);
     if (currentFiles[selectedFileIndex]) {
       displayFileInfo(currentFiles[selectedFileIndex]);
+    }
+  });
+
+  document.getElementById('share-btn')?.addEventListener('click', async () => {
+    if (currentFiles.length === 0) return;
+
+    const mimeTypes = currentFiles.map((f) => f.type);
+    const matchingTools = findAllToolsForMimeTypes(tools, mimeTypes);
+
+    if (matchingTools.length === 0) {
+      showMessage('No tools found that can handle these files', { type: 'warning' });
+      return;
+    }
+
+    const selectedTool = await showToolChooser(matchingTools, currentFiles);
+
+    if (selectedTool) {
+      const payload: SharedFilesPayload = {
+        sharedFiles: currentFiles,
+        mimeTypes: mimeTypes,
+      };
+      router.goTo(selectedTool.path, payload);
     }
   });
 
