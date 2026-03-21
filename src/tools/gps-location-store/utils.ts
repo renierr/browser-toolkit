@@ -34,3 +34,31 @@ export function createOsmEmbedUrl(lat: number, lon: number): string {
   const bbox = `${lon - 0.01},${lat - 0.01},${lon + 0.01},${lat + 0.01}`;
   return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`;
 }
+
+export interface IpLocationResult {
+  lat: number;
+  lon: number;
+  accuracy: number;
+  source: 'ip';
+}
+
+export async function getPositionViaIp(): Promise<IpLocationResult | null> {
+  try {
+    const response = await fetch('https://ipinfo.io/json/', {
+      cache: 'no-store',
+    });
+    if (!response.ok) return null;
+    const data: { loc?: string } = await response.json();
+    if (!data.loc) return null;
+    const [lat, lon] = data.loc.split(',').map(Number);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    return {
+      lat,
+      lon,
+      accuracy: 5000,
+      source: 'ip',
+    };
+  } catch {
+    return null;
+  }
+}

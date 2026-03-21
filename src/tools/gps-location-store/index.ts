@@ -15,10 +15,32 @@ import {
   formatCoordinate,
   formatTimestamp,
   createOsmEmbedUrl,
+  getPositionViaIp,
 } from './utils.ts';
 
+interface PositionResult {
+  lat: number;
+  lon: number;
+  accuracy: number;
+  source: 'gps' | 'network' | 'ip';
+}
+
+function getPosition(highAccuracy: boolean): Promise<GeolocationPosition> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('unsupported'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: highAccuracy,
+      timeout: 10000,
+      maximumAge: 0,
+    });
+  });
+}
+
 export default async function init() {
-  let currentPosition: { lat: number; lon: number; accuracy: number } | null = null;
+  let currentPosition: PositionResult | null = null;
   let db: IDBDatabase | null = null;
   let allLocations: SavedLocation[] = [];
 
@@ -48,17 +70,47 @@ export default async function init() {
     const clearAllBtn = document.getElementById('clear-all-btn') as HTMLButtonElement;
     const descriptionInput = document.getElementById('location-description') as HTMLInputElement;
     const viewLastMapBtn = document.getElementById('view-last-map-btn') as HTMLButtonElement;
+    const getApproxBtn = document.getElementById('get-approx-btn') as HTMLButtonElement;
 
     getLocationBtn.addEventListener('click', handleGetLocation);
     saveLocationBtn.addEventListener('click', handleSaveLocation);
     clearAllBtn.addEventListener('click', handleClearAll);
     descriptionInput.addEventListener('input', updateSaveButtonState);
     viewLastMapBtn.addEventListener('click', () => showMapForLocation(allLocations[0]));
+    getApproxBtn.addEventListener('click', handleGetApproximateLocation);
+  }
+
+  function getSourceLabel(source: PositionResult['source']): string {
+    switch (source) {
+      case 'gps':
+        return 'GPS';
+      case 'network':
+        return 'Network';
+      case 'ip':
+        return 'IP-based (approx)';
+    }
+  }
+
+  function updateCurrentLocationDisplay(pos: PositionResult): void {
+    const display = document.getElementById('current-location-display') as HTMLDivElement;
+    const approxBtn = document.getElementById('approx-btn-container') as HTMLDivElement;
+
+    display.innerHTML = `
+      <div class="grid grid-cols-2 gap-2">
+        <div><span class="opacity-70">Latitude:</span> ${formatCoordinate(pos.lat, true)}</div>
+        <div><span class="opacity-70">Longitude:</span> ${formatCoordinate(pos.lon, false)}</div>
+        <div><span class="opacity-70">Accuracy:</span> ±${pos.accuracy.toFixed(0)} m</div>
+        <div><span class="opacity-70">Source:</span> <span class="badge badge-sm">${getSourceLabel(pos.source)}</span></div>
+      </div>
+    `;
+
+    approxBtn.classList.add('hidden');
   }
 
   async function handleGetLocation(): Promise<void> {
     const display = document.getElementById('current-location-display') as HTMLDivElement;
     const btn = document.getElementById('get-location-btn') as HTMLButtonElement;
+    const approxBtn = document.getElementById('approx-btn-container') as HTMLDivElement;
 
     if (!navigator.geolocation) {
       showMessage('Geolocation is not supported by this browser.', { type: 'alert' });
@@ -66,49 +118,57 @@ export default async function init() {
     }
 
     btn.disabled = true;
+    approxBtn.classList.add('hidden');
     btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Getting...';
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        currentPosition = {
-          lat: position.coords.latitude,
-          lon: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-        };
+    try {
+      const position = await getPosition(true);
+      currentPosition = {
+        lat: position.coords.latitude,
+        lon: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        source: 'gps',
+      };
+      updateCurrentLocationDisplay(currentPosition);
+    } catch {
+      btn.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> Get Location';
+      btn.disabled = false;
+      display.innerHTML =
+        '<div class="opacity-50">Exact location unavailable. Try approximate location below.</div>';
+      approxBtn.classList.remove('hidden');
+      return;
+    }
 
-        display.innerHTML = `
-          <div class="grid grid-cols-2 gap-2">
-            <div><span class="opacity-70">Latitude:</span> ${formatCoordinate(currentPosition.lat, true)}</div>
-            <div><span class="opacity-70">Longitude:</span> ${formatCoordinate(currentPosition.lon, false)}</div>
-            <div><span class="opacity-70">Accuracy:</span> ±${currentPosition.accuracy.toFixed(0)} m</div>
-          </div>
-        `;
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> Get Location';
+    updateSaveButtonState();
+    updateLastSavedDisplay();
+  }
 
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> Get Location';
+  async function handleGetApproximateLocation(): Promise<void> {
+    const display = document.getElementById('current-location-display') as HTMLDivElement;
+    const btn = document.getElementById('get-location-btn') as HTMLButtonElement;
+    const approxBtn = document.getElementById('approx-btn-container') as HTMLDivElement;
 
-        updateSaveButtonState();
-        updateLastSavedDisplay();
-      },
-      (error) => {
-        let msg = 'Failed to get location.';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            msg = 'Location permission denied. Please enable location access.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            msg = 'Location information unavailable.';
-            break;
-          case error.TIMEOUT:
-            msg = 'Location request timed out.';
-            break;
-        }
-        showMessage(msg, { type: 'alert' });
-        btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> Get Location';
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-    );
+    btn.disabled = true;
+    approxBtn.classList.add('hidden');
+    btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Getting...';
+    display.innerHTML = '<div class="opacity-50">Fetching approximate location via IP...</div>';
+
+    const ipPos = await getPositionViaIp();
+    if (ipPos) {
+      currentPosition = ipPos;
+      updateCurrentLocationDisplay(currentPosition);
+    } else {
+      display.innerHTML =
+        '<div class="text-error">Failed to get approximate location. Please try again.</div>';
+      approxBtn.classList.remove('hidden');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> Get Location';
+    updateSaveButtonState();
+    updateLastSavedDisplay();
   }
 
   function updateSaveButtonState(): void {
@@ -135,7 +195,8 @@ export default async function init() {
     descriptionInput.value = '';
     currentPosition = null;
 
-    document.getElementById('current-location-display')!.innerHTML =
+    const display = document.getElementById('current-location-display') as HTMLDivElement;
+    display.innerHTML =
       '<div class="opacity-50">Location saved! Click "Get Location" to track again</div>';
     updateSaveButtonState();
 
