@@ -74,7 +74,7 @@ export default defineConfig({
             files: [
               {
                 name: 'files',
-                accept: ['*/*'],
+                accept: ['text/markdown', 'text/x-markdown', 'text/plain', 'text/*', '*/*'],
               },
             ],
           },

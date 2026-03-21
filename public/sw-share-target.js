@@ -153,38 +153,45 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     (async () => {
+      let form;
       try {
-        const form = await req.formData();
-        const keys = [];
-        const mimeTypes = [];
-        const fileNames = [];
-
-        const blobs = Array.from(form.entries())
-          .filter(([, value]) => value instanceof Blob)
-          .map(([, value]) => value);
-
-        for (let i = 0; i < blobs.length; i++) {
-          const f = blobs[i];
-          const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-${i}`;
-          await idbPut(key, f);
-          keys.push(key);
-          mimeTypes.push(getMimeTypeFromFileName(f.type || '', f.name || ''));
-          fileNames.push(f.name || '');
-        }
-
-        const redirectUrl = new URL('./index.html', self.registration.scope);
-        redirectUrl.searchParams.set('shared', '1');
-        redirectUrl.searchParams.set('keys', keys.join(','));
-        redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
-        redirectUrl.searchParams.set('names', fileNames.join(','));
-
-        return Response.redirect(redirectUrl.href, 303);
+        form = await req.formData();
       } catch (err) {
-        console.error('[SW] Share failed:', err);
-        const errMsg = encodeURIComponent(String(err || 'unknown'));
-        const redirectUrl = new URL(`./index.html?sw_error=${errMsg}`, self.registration.scope);
-        return Response.redirect(redirectUrl.href, 303);
+        console.error('[SW] formData() failed:', err);
+        const errMsg = encodeURIComponent(`formData: ${err}`);
+        return Response.redirect(`./index.html?sw_error=${errMsg}`, 303);
       }
+
+      const keys = [];
+      const mimeTypes = [];
+      const fileNames = [];
+
+      const blobs = Array.from(form.entries())
+        .filter(([, value]) => value instanceof Blob)
+        .map(([, value]) => value);
+
+      for (let i = 0; i < blobs.length; i++) {
+        const f = blobs[i];
+        const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-${i}`;
+        try {
+          await idbPut(key, f);
+        } catch (err) {
+          console.error('[SW] idbPut failed:', err);
+          const errMsg = encodeURIComponent(`idbPut: ${err}`);
+          return Response.redirect(`./index.html?sw_error=${errMsg}`, 303);
+        }
+        keys.push(key);
+        mimeTypes.push(getMimeTypeFromFileName(f.type || '', f.name || ''));
+        fileNames.push(f.name || '');
+      }
+
+      const redirectUrl = new URL('./index.html', self.registration.scope);
+      redirectUrl.searchParams.set('shared', '1');
+      redirectUrl.searchParams.set('keys', keys.join(','));
+      redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
+      redirectUrl.searchParams.set('names', fileNames.join(','));
+
+      return Response.redirect(redirectUrl.href, 303);
     })()
   );
 });
