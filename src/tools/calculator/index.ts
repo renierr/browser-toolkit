@@ -150,14 +150,60 @@ export default function init() {
     updateDisplay();
   };
 
+  const handleBracket = () => {
+    if (currentInput === '0') {
+      currentInput = '(';
+      updateDisplay();
+      return;
+    }
+
+    const lastChar = currentInput[currentInput.length - 1];
+
+    if (lastChar === '(') {
+      currentInput += '(';
+      updateDisplay();
+      return;
+    }
+
+    if (lastChar === ')') {
+      currentInput += '(';
+      updateDisplay();
+      return;
+    }
+
+    const openCount = (currentInput.match(/\(/g) || []).length;
+    const closeCount = (currentInput.match(/\)/g) || []).length;
+
+    if (openCount > closeCount) {
+      currentInput += ')';
+    } else {
+      currentInput += '(';
+    }
+    updateDisplay();
+  };
+
+  const handleNegate = () => {
+    if (currentInput === '0') return;
+
+    if (currentInput.startsWith('-')) {
+      currentInput = currentInput.slice(1);
+    } else {
+      currentInput = '-' + currentInput;
+    }
+    updateDisplay();
+  };
+
   // Event Listeners
-  document.querySelectorAll('[data-val], [data-key], [data-op]').forEach((btn) => {
+  document.querySelectorAll('[data-val], [data-op]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const val =
-        btn.getAttribute('data-val') || btn.getAttribute('data-key') || btn.getAttribute('data-op');
+      const val = btn.getAttribute('data-val') || btn.getAttribute('data-op');
       if (val) handleInput(val);
     });
   });
+
+  document.getElementById('calc-bracket')?.addEventListener('click', handleBracket);
+
+  document.getElementById('calc-negate')?.addEventListener('click', handleNegate);
 
   document.getElementById('calc-clear')?.addEventListener('click', () => {
     currentInput = '0';
@@ -222,7 +268,7 @@ export default function init() {
     if (/[0-9]/.test(e.key)) handleInput(e.key);
     if (['+', '-', '*', '/', '^'].includes(e.key)) handleInput(e.key);
     if (e.key === '.') handleInput('.');
-    if (e.key === '(' || e.key === ')') handleInput(e.key);
+    if (e.key === '(' || e.key === ')') handleBracket();
     if (e.key === 'Backspace') handleBackspace();
     if (e.key === 'Enter' || e.key === '=') {
       e.preventDefault();
