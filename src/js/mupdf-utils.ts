@@ -1,4 +1,93 @@
-import mupdf, { type PDFDocument, Pixmap } from 'mupdf';
+import mupdf, { type Font, type PDFDocument, Pixmap } from 'mupdf';
+
+const fontCache: Map<string, Font> = new Map();
+
+const FONT_FILES: Record<string, string> = {
+  'NotoSans-Regular': './fonts/NotoSans-Regular.ttf',
+  'NotoSans-Bold': './fonts/NotoSans-Bold.ttf',
+  'NotoSans-Italic': './fonts/NotoSans-Italic.ttf',
+  'NotoSans-BoldItalic': './fonts/NotoSans-BoldItalic.ttf',
+  cjk: './fonts/NotoSansCJK-Regular.ttc',
+  emoji: './fonts/NotoEmoji-Regular.ttf',
+};
+
+let fontLoaderInitialized = false;
+
+async function loadFontFromUrl(url: string): Promise<Uint8Array> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to load font: ${url}`);
+  }
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+async function ensureFontLoaded(name: string): Promise<Font | null> {
+  if (fontCache.has(name)) {
+    return fontCache.get(name)!;
+  }
+
+  const fontUrl = FONT_FILES[name];
+  if (!fontUrl) {
+    return null;
+  }
+
+  try {
+    const fontData = await loadFontFromUrl(fontUrl);
+    const font = new mupdf.Font(name, fontData);
+    fontCache.set(name, font);
+    return font;
+  } catch (e) {
+    console.warn(`Failed to load font ${name}:`, e);
+    return null;
+  }
+}
+
+function createFontLoader(): (
+  name: string,
+  script: string,
+  bold: boolean,
+  italic: boolean
+) => Font | null {
+  return (name: string, script: string, bold: boolean, italic: boolean): Font | null => {
+    const cjkScripts = ['Hans', 'Hant', 'Jpan', 'Kore', 'Hira', 'Kana'];
+    const emojiScripts = ['Zsye'];
+
+    if (emojiScripts.includes(script) || name === 'emoji' || name === 'NotoEmoji') {
+      return fontCache.get('emoji') || null;
+    }
+
+    if (cjkScripts.includes(script) || name === 'cjk' || name === 'NotoSansCJK') {
+      return fontCache.get('cjk') || null;
+    }
+
+    let fontName = 'NotoSans-Regular';
+    if (bold && italic) {
+      fontName = 'NotoSans-BoldItalic';
+    } else if (bold) {
+      fontName = 'NotoSans-Bold';
+    } else if (italic) {
+      fontName = 'NotoSans-Italic';
+    }
+    return fontCache.get(fontName) || null;
+  };
+}
+
+export async function initUnicodeFontLoader(): Promise<void> {
+  if (fontLoaderInitialized) {
+    return;
+  }
+
+  try {
+    for (const name of Object.keys(FONT_FILES)) {
+      await ensureFontLoaded(name);
+    }
+
+    mupdf.installLoadFontFunction(createFontLoader());
+    fontLoaderInitialized = true;
+  } catch (e) {
+    console.error('Failed to initialize Unicode font loader:', e);
+  }
+}
 
 export function addImageToPDFDocument(
   pdfDoc: PDFDocument,
@@ -38,6 +127,8 @@ export async function htmlToPdfBuffer(
   html: string,
   options: HtmlToPdfOptions = {}
 ): Promise<Uint8Array> {
+  await initUnicodeFontLoader();
+
   const { width = 595, height = 842, fontSize = 12 } = options;
   const encoded = new TextEncoder().encode(html);
   const doc = mupdf.Document.openDocument(encoded, 'application/xhtml+xml');
