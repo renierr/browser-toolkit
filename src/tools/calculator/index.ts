@@ -107,6 +107,11 @@ export default function init() {
   };
 
   const handleInput = (val: string) => {
+    if (currentInput === 'Error') {
+      currentInput = '0';
+      lastOp.innerText = '';
+    }
+
     const isOperator = (s: string) => /[+\-*/^]/.test(s);
 
     if (currentInput === '0') {

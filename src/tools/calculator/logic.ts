@@ -20,6 +20,10 @@ export class CalculatorLogic {
       let sanitized = expression
         .replace(/×/g, '*')
         .replace(/÷/g, '/')
+        // Add implicit multiplication for ")" + "(" -> ")*("
+        .replace(/\)\(/g, ')*(')
+        // Add implicit multiplication for "number(" -> "number*("
+        .replace(/(?<=\d)\(/g, '*(')
         // Convert percentage like 50%, 12.5% or (2+3)% to ((...)/100)
         .replace(/(\d+(?:\.\d+)?|\([^)]*\))%/g, '($1/100)')
         .replace(/\bpow\(/gi, 'Math.pow(')
