@@ -15,17 +15,17 @@ function wrapTextByScript(html: string): string {
 
   result = result.replace(
     cjkRegex,
-    '<span style="font-family: cjk, NotoSansCJK, sans-serif;">$1</span>'
+    '<span style="font-family: cjk, sans-serif;">$1</span>'
   );
 
   result = result.replace(
     emojiRegex,
-    '<span style="font-family: emoji, NotoEmoji, sans-serif;">$1</span>'
+    '<span style="font-family: emoji, sans-serif;">$1</span>'
   );
 
   result = result.replace(
     specialCharsRegex,
-    '<span style="font-family: emoji, NotoEmoji, sans-serif;">$1</span>'
+    '<span style="font-family: emoji, sans-serif;">$1</span>'
   );
 
   return result;
@@ -49,7 +49,7 @@ export async function exportNoteToPdf(note: Note): Promise<void> {
 <html>
 <head>
   <style>
-    body { font-family: 'NotoSans', sans-serif; padding: 20px; line-height: 1.5; color: #000; background: #fff; }
+    body { font-family: system-ui, sans-serif; padding: 20px; line-height: 1.5; color: #000; background: #fff; }
     h1, h2, h3 { font-weight: bold; margin-top: 0.5em; margin-bottom: 0.2em; }
     h1 { font-size: 1.5em; }
     h2 { font-size: 1.25em; }

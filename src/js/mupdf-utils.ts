@@ -59,16 +59,21 @@ function createFontLoader(): (
     if (cjkScripts.includes(script) || name === 'cjk' || name === 'NotoSansCJK') {
       return fontCache.get('cjk') || null;
     }
-
-    let fontName = 'NotoSans-Regular';
-    if (bold && italic) {
-      fontName = 'NotoSans-BoldItalic';
-    } else if (bold) {
-      fontName = 'NotoSans-Bold';
-    } else if (italic) {
-      fontName = 'NotoSans-Italic';
+    
+    if (name === 'NotoSans') {
+      let fontName = 'NotoSans-Regular';
+      if (bold && italic) {
+        fontName = 'NotoSans-BoldItalic';
+      } else if (bold) {
+        fontName = 'NotoSans-Bold';
+      } else if (italic) {
+        fontName = 'NotoSans-Italic';
+      }
+      return fontCache.get(fontName) || null;
     }
-    return fontCache.get(fontName) || null;
+    
+    return null;
+
   };
 }
 
