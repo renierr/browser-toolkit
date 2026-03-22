@@ -1,0 +1,115 @@
+<!--suppress CssUnusedSymbol -->
+<style>
+  .char-card {
+    @apply flex flex-col items-center justify-center p-3 rounded-lg bg-base-200 border border-base-300 transition-all duration-200;
+  }
+  .char-card:hover {
+    @apply bg-base-300 border-primary shadow-md transform -translate-y-0.5;
+  }
+  .char-card .letter {
+    @apply text-lg font-bold text-base-content mb-1;
+  }
+  .char-card .braille-unicode {
+    @apply text-2xl font-mono text-primary;
+  }
+  .char-card .braille-visual {
+    @apply text-3xl leading-none mb-1;
+  }
+  .char-card .asl-svg {
+    @apply w-12 h-12 text-primary;
+  }
+  .char-card .name {
+    @apply text-xs text-base-content/60;
+  }
+
+  .tab-btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200;
+  }
+  .tab-btn.active {
+    @apply bg-primary text-primary-content;
+  }
+  .tab-btn:not(.active) {
+    @apply bg-base-200 text-base-content/70 hover:bg-base-300;
+  }
+
+  #output-grid {
+    @apply grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3;
+  }
+
+  .empty-state {
+    @apply flex flex-col items-center justify-center py-16 text-base-content/50;
+  }
+  .empty-state svg {
+    @apply w-16 h-16 mb-4 opacity-50;
+  }
+</style>
+
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">
+      <i data-lucide="hand" class="w-6 h-6"></i>
+      Braille & Sign Language
+    </h2>
+    <p class="text-base-content/70 mb-6">
+      Visual reference tool translating typed words into Braille patterns and ASL alphabet
+      illustrations.
+    </p>
+
+    <!-- Tab Switcher -->
+    <div class="flex gap-2 mb-6">
+      <button id="tab-braille" class="tab-btn active">
+        <i data-lucide="grid-3x3" class="w-4 h-4 inline-block mr-2"></i>
+        Braille
+      </button>
+      <button id="tab-asl" class="tab-btn">
+        <i data-lucide="hand" class="w-4 h-4 inline-block mr-2"></i>
+        ASL Alphabet
+      </button>
+    </div>
+
+    <!-- Input -->
+    <div class="form-control w-full mb-6">
+      <label class="label" for="input-text">
+        <span class="label-text font-semibold">Your Text</span>
+        <button id="btn-clear" class="btn btn-xs btn-ghost">
+          <i data-lucide="x" class="w-3 h-3"></i>
+          Clear
+        </button>
+      </label>
+      <input
+        type="text"
+        id="input-text"
+        class="input input-bordered w-full"
+        placeholder="Type text to translate (letters and numbers)..."
+        autocomplete="off"
+      />
+    </div>
+
+    <!-- Output Grid -->
+    <div id="output-container">
+      <div class="label mb-3">
+        <span class="label-text font-semibold">Translation</span>
+        <button id="btn-copy-braille" class="btn btn-xs btn-ghost hidden">
+          <i data-lucide="copy" class="w-3 h-3 mr-1"></i>
+          Copy Braille
+        </button>
+      </div>
+      <div id="output-grid">
+        <div class="empty-state col-span-full">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+          </svg>
+          <p>Type text above to see translation</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="status" class="mt-4 text-sm text-base-content/60 text-center"></div>
+  </div>
+</div>

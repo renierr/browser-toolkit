@@ -1,0 +1,7 @@
+{
+  "name": "Braille & Sign Language",
+  "description": "Visual reference tool translating typed words into Braille patterns and ASL alphabet illustrations",
+  "icon": "hand",
+  "sectionId": "general",
+  "order": 10
+}
