@@ -125,6 +125,8 @@ use tsc for error checking no full build.
 - `pnpm dev`: Start development server.
 - `pnpm build`: Build for production.
 
+Do NOT start the dev server and avoid build (use tsc for error checking)
+
 ## General Guidelines
 
 - Ensure all code is compatible with modern browsers.
