@@ -140,7 +140,7 @@ export async function htmlToPdfBuffer(
   doc.layout(width, height, fontSize);
 
   const buf = new mupdf.Buffer();
-  const writer = new mupdf.DocumentWriter(buf, 'pdf', 'compress');
+  const writer = new mupdf.DocumentWriter(buf, 'pdf', 'compress,garbage=2,fonts=subset');
 
   try {
     for (let i = 0; i < doc.countPages(); i++) {
