@@ -72,8 +72,7 @@ function renderEncodeOutput(text: string): string {
           if (a) {
             chars.push(`
             <div class="char-row">
-              <span class="char-asl">${a.letter.toUpperCase()}</span>
-              <span class="char-letter">${a.letter.toUpperCase()}</span>
+              <span class="char-asl">${a.letter}</span>
             </div>
           `);
           }
@@ -102,15 +101,18 @@ function renderDecodeOutput(text: string): string {
 
   const chars = text.split('');
   let aslIndex = 0;
+  let decodedIndex = 0;
 
   const brailleHtml = chars
     .map((char) => {
       if (/\s/.test(char)) {
         return `<div class="word-space"></div>`;
       }
+      const decoded = decodedText[decodedIndex++] || '';
       return `
         <div class="char-row">
           <span class="char-braille">${char}</span>
+          <span class="char-letter">${decoded.toUpperCase()}</span>
         </div>
       `;
     })
