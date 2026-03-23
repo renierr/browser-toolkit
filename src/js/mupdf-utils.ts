@@ -135,7 +135,7 @@ export async function htmlToPdfBuffer(
 
   const { width = 595, height = 842, fontSize = 12 } = options;
   const encoded = new TextEncoder().encode(html);
-  const doc = mupdf.Document.openDocument(encoded, 'application/xhtml+xml');
+  const doc = mupdf.Document.openDocument(encoded, 'text/html');
   doc.layout(width, height, fontSize);
 
   const buf = new mupdf.Buffer();
