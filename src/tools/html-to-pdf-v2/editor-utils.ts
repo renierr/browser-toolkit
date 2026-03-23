@@ -1,10 +1,26 @@
+export const selectImageContainer = (container: HTMLElement): void => {
+  const selection = window.getSelection();
+  if (!selection) return;
+
+  const range = document.createRange();
+  range.selectNode(container);
+  selection.removeAllRanges();
+  selection.addRange(range);
+
+  container.classList.add('editor-image-container--selected');
+};
+
 export const setupImageResize = (container: HTMLElement, img: HTMLImageElement): void => {
   if (!container || !img) return;
 
   const resizeHandle = container.querySelector('.editor-image-container__handle') as HTMLElement;
   if (!resizeHandle) return;
 
-  img.setAttribute('draggable', 'true');
+  img.setAttribute('draggable', 'false');
+
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
 
   const startResize = (e: PointerEvent) => {
     e.preventDefault();
@@ -31,15 +47,88 @@ export const setupImageResize = (container: HTMLElement, img: HTMLImageElement):
     container.addEventListener('pointerup', stopResize);
   };
 
-  let isResizing = false;
-  let startX = 0;
-  let startWidth = 0;
-
   resizeHandle.addEventListener('pointerdown', startResize);
+
+  let isDragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+
+  const startDrag = (e: PointerEvent) => {
+    if ((e.target as HTMLElement).classList.contains('editor-image-container__handle')) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    container.classList.add('editor-image-container--dragging');
+  };
+
+  const doDrag = (ev: PointerEvent) => {
+    if (!isDragging) return;
+
+    const diffX = Math.abs(ev.clientX - dragStartX);
+    const diffY = Math.abs(ev.clientY - dragStartY);
+
+    if (diffX > 5 || diffY > 5) {
+      const editor = document.getElementById('editor');
+      if (!editor) return;
+
+      const editorRect = editor.getBoundingClientRect();
+      const mouseX = ev.clientX - editorRect.left + editor.scrollLeft;
+
+      let targetContainer: HTMLElement | null = null;
+      const containers = editor.querySelectorAll('.editor-image-container');
+      for (const c of containers) {
+        if (c === container) continue;
+        const rect = c.getBoundingClientRect();
+        const cLeft = rect.left - editorRect.left + editor.scrollLeft;
+        if (mouseX < cLeft + rect.width / 2) {
+          targetContainer = c as HTMLElement;
+          break;
+        }
+      }
+
+      if (targetContainer) {
+        editor.insertBefore(container, targetContainer);
+      } else {
+        editor.appendChild(container);
+      }
+    }
+  };
+
+  const stopDrag = () => {
+    if (!isDragging) return;
+    isDragging = false;
+    container.classList.remove('editor-image-container--dragging');
+
+    const selection = window.getSelection();
+    if (selection) {
+      const range = document.createRange();
+      range.selectNode(container);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  };
+
+  container.addEventListener('pointerdown', startDrag);
+  container.addEventListener('pointermove', doDrag);
+  container.addEventListener('pointerup', stopDrag);
+  container.addEventListener('pointerleave', () => {
+    if (isDragging) stopDrag();
+  });
 
   const selectImage = (e: MouseEvent | PointerEvent) => {
     e.stopPropagation();
-    container.classList.add('editor-image-container--selected');
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      if (range.collapsed || !container.contains(range.commonAncestorContainer)) {
+        selectImageContainer(container);
+      }
+    } else {
+      selectImageContainer(container);
+    }
   };
 
   container.addEventListener('click', selectImage);
@@ -49,6 +138,7 @@ export const setupImageResize = (container: HTMLElement, img: HTMLImageElement):
 export const wrapImageInContainer = (img: HTMLImageElement): HTMLElement => {
   const container = document.createElement('div');
   container.className = 'editor-image-container';
+  container.setAttribute('contenteditable', 'false');
 
   const resizeHandle = document.createElement('div');
   resizeHandle.className = 'editor-image-container__handle';
@@ -98,6 +188,7 @@ export const insertImageToEditor = (editor: HTMLElement, file: File, fileContent
     if (editor.contains(range.commonAncestorContainer)) {
       const imgContainer = document.createElement('div');
       imgContainer.className = 'editor-image-container';
+      imgContainer.setAttribute('contenteditable', 'false');
 
       const img = document.createElement('img');
       img.src = fileContent;
@@ -114,11 +205,7 @@ export const insertImageToEditor = (editor: HTMLElement, file: File, fileContent
         range.insertNode(imgContainer);
         inserted = true;
 
-        const newRange = document.createRange();
-        newRange.setStartAfter(imgContainer);
-        newRange.setEndAfter(imgContainer);
-        selection.removeAllRanges();
-        selection.addRange(newRange);
+        selectImageContainer(imgContainer);
       } catch (e) {
         console.warn('Failed to insert at cursor, appending to editor:', e);
       }
@@ -128,17 +215,20 @@ export const insertImageToEditor = (editor: HTMLElement, file: File, fileContent
   if (!inserted) {
     const imgContainer = document.createElement('div');
     imgContainer.className = 'editor-image-container';
+    imgContainer.setAttribute('contenteditable', 'false');
 
     const img = document.createElement('img');
     img.src = fileContent;
     img.alt = file.name;
 
     const resizeHandle = document.createElement('div');
-    resizeHandle.className = 'resize-handle';
+    resizeHandle.className = 'editor-image-container__handle';
 
     imgContainer.appendChild(img);
     imgContainer.appendChild(resizeHandle);
     editor.appendChild(imgContainer);
+
+    selectImageContainer(imgContainer);
   }
 
   setupAllImages(editor);
