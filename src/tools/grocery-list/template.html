@@ -1,0 +1,83 @@
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body p-1 md:p-4">
+    <h2 class="card-title text-2xl font-bold mb-4">Grocery List</h2>
+    <p class="text-base-content/70 mb-6">
+      Manage your grocery items with amounts, reuse from history, and check off items.
+    </p>
+
+    <div class="flex flex-col gap-4 mb-6">
+      <div class="flex flex-wrap gap-2 items-end">
+        <div class="form-control flex-1 min-w-48">
+          <label class="label"><span class="label-text">Item name</span></label>
+          <div class="relative">
+            <input
+              id="item-name-input"
+              type="text"
+              placeholder="e.g., Milk, Bread, Eggs..."
+              class="input input-bordered w-full pr-10"
+              autocomplete="off"
+            />
+            <div
+              id="suggestions-dropdown"
+              class="hidden absolute top-full left-0 right-0 bg-base-100 border border-base-300 rounded-box shadow-lg z-10 max-h-48 overflow-y-auto"
+            ></div>
+          </div>
+        </div>
+        <div class="form-control w-20">
+          <label class="label"><span class="label-text">Qty</span></label>
+          <input
+            id="item-amount-input"
+            type="number"
+            min="1"
+            value="1"
+            class="input input-bordered"
+          />
+        </div>
+        <div class="form-control w-24">
+          <label class="label"><span class="label-text">Unit</span></label>
+          <select id="item-unit-select" class="select select-bordered">
+            <option value="pcs">pcs</option>
+            <option value="kg">kg</option>
+            <option value="g">g</option>
+            <option value="lb">lb</option>
+            <option value="oz">oz</option>
+            <option value="L">L</option>
+            <option value="ml">ml</option>
+            <option value="box">box</option>
+            <option value="pack">pack</option>
+          </select>
+        </div>
+        <button id="add-item-btn" class="btn btn-primary">Add</button>
+      </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-4 items-center justify-between mb-4">
+      <div class="text-sm opacity-70">
+        <span id="unchecked-count">0</span> to buy, <span id="checked-count">0</span> bought
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button id="re-add-btn" class="btn btn-outline btn-sm">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          Re-add bought
+        </button>
+        <button id="clear-bought-btn" class="btn btn-outline btn-sm">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+          Clear bought
+        </button>
+        <button id="import-btn" class="btn btn-outline btn-sm" title="Import JSON">
+          <i data-lucide="file-up" class="w-4 h-4"></i>
+          Import
+        </button>
+        <button id="export-btn" class="btn btn-outline btn-sm" title="Export as JSON">
+          <i data-lucide="file-output" class="w-4 h-4"></i>
+          Export
+        </button>
+        <input type="file" id="import-input" class="hidden" accept=".json" />
+      </div>
+    </div>
+
+    <div id="items-container" class="flex flex-col gap-2">
+      <!-- Items will be rendered here -->
+    </div>
+  </div>
+</div>

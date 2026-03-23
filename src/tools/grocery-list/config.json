@@ -1,0 +1,7 @@
+{
+  "name": "Grocery List",
+  "description": "Manage your grocery items with amounts, reuse from history, and check off items.",
+  "icon": "shopping-cart",
+  "sectionId": "general",
+  "order": 10
+}
