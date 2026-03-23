@@ -229,15 +229,6 @@ export default function init() {
         const selection = window.getSelection();
         if (!selection || !selection.anchorNode) return;
 
-        if (selection.anchorNode.nodeType === Node.ELEMENT_NODE) {
-          const el = selection.anchorNode as Element;
-          if (el.closest('.editor-image-container')) return;
-        }
-        if (selection.anchorNode.nodeType === Node.TEXT_NODE) {
-          const textNode = selection.anchorNode as Text;
-          if (textNode.parentElement?.closest('.editor-image-container')) return;
-        }
-
         const preEl =
           selection.anchorNode.nodeType === Node.TEXT_NODE
             ? (selection.anchorNode as Text).parentElement?.closest('pre')
@@ -265,15 +256,6 @@ export default function init() {
       } else if (e.key === 'ArrowDown') {
         const selection = window.getSelection();
         if (!selection || !selection.anchorNode) return;
-
-        if (selection.anchorNode.nodeType === Node.ELEMENT_NODE) {
-          const el = selection.anchorNode as Element;
-          if (el.closest('.editor-image-container')) return;
-        }
-        if (selection.anchorNode.nodeType === Node.TEXT_NODE) {
-          const textNode = selection.anchorNode as Text;
-          if (textNode.parentElement?.closest('.editor-image-container')) return;
-        }
 
         const preEl =
           selection.anchorNode.nodeType === Node.TEXT_NODE
