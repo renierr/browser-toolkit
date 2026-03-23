@@ -201,9 +201,18 @@
     display: inline-block;
     position: relative;
     margin: 8px 0;
+    max-width: 100%;
   }
   .editor-image-container.selected {
-    outline: 2px solid #3b82f6;
+    outline: none;
+  }
+  .editor-image-container.selected::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid #3b82f6;
+    border-radius: 4px;
+    pointer-events: none;
   }
   .editor-image-container img {
     display: block;
@@ -213,21 +222,42 @@
   }
   .resize-handle {
     position: absolute;
-    bottom: -8px;
-    right: -8px;
-    background: #3b82f6;
-    color: white;
-    padding: 4px 6px;
-    font-size: 10px;
+    right: 0;
+    bottom: 0;
+    width: 24px;
+    height: 24px;
+    background: linear-gradient(135deg, transparent 50%, #3b82f6 50%);
     cursor: se-resize;
-    border-radius: 4px;
-    user-select: none;
+    border-radius: 0 0 4px 0;
     opacity: 0;
     transition: opacity 0.2s;
+  }
+  .resize-handle::before {
+    content: '';
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid white;
+    border-bottom: 2px solid white;
+  }
+  .resize-handle::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid white;
+    border-bottom: 2px solid white;
   }
   .editor-image-container:hover .resize-handle,
   .editor-image-container.selected .resize-handle {
     opacity: 1;
+  }
+  .editor-image-container .resize-handle * {
+    pointer-events: none;
   }
 
   #editor h1 {

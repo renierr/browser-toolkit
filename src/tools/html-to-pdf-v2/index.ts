@@ -2,7 +2,7 @@ import { downloadFile } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
 import { wrapHtmlForPdf, getPageSettings, getPrintCss } from './pdf-generator.ts';
-import { insertImageToEditor } from './editor-utils.ts';
+import { insertImageToEditor, setupAllImages, handleEditorClick } from './editor-utils.ts';
 import {
   setupToolbarListeners,
   updateToolbarState,
@@ -217,7 +217,19 @@ export default function init() {
         const selection = window.getSelection();
         if (!selection || !selection.anchorNode) return;
 
-        const preEl = (selection.anchorNode as Text).parentElement?.closest('pre');
+        if (selection.anchorNode.nodeType === Node.ELEMENT_NODE) {
+          const el = selection.anchorNode as Element;
+          if (el.closest('.editor-image-container')) return;
+        }
+        if (selection.anchorNode.nodeType === Node.TEXT_NODE) {
+          const textNode = selection.anchorNode as Text;
+          if (textNode.parentElement?.closest('.editor-image-container')) return;
+        }
+
+        const preEl =
+          selection.anchorNode.nodeType === Node.TEXT_NODE
+            ? (selection.anchorNode as Text).parentElement?.closest('pre')
+            : null;
         if (preEl) {
           const range = selection.getRangeAt(0);
           if (range.startOffset === 0 && range.endOffset === 0) {
@@ -237,7 +249,19 @@ export default function init() {
         const selection = window.getSelection();
         if (!selection || !selection.anchorNode) return;
 
-        const preEl = (selection.anchorNode as Text).parentElement?.closest('pre');
+        if (selection.anchorNode.nodeType === Node.ELEMENT_NODE) {
+          const el = selection.anchorNode as Element;
+          if (el.closest('.editor-image-container')) return;
+        }
+        if (selection.anchorNode.nodeType === Node.TEXT_NODE) {
+          const textNode = selection.anchorNode as Text;
+          if (textNode.parentElement?.closest('.editor-image-container')) return;
+        }
+
+        const preEl =
+          selection.anchorNode.nodeType === Node.TEXT_NODE
+            ? (selection.anchorNode as Text).parentElement?.closest('pre')
+            : null;
         if (preEl) {
           const range = selection.getRangeAt(0);
           const textLength = preEl.textContent?.length || 0;
@@ -266,8 +290,22 @@ export default function init() {
     editor.addEventListener('keyup', updateToolbarState);
     editor.addEventListener('pointerup', updateToolbarState);
 
+    editor.addEventListener('click', handleEditorClick);
+    editor.addEventListener('pointerdown', handleEditorClick);
+
+    let imageDebounce: number | undefined;
+    const imageObserver = new MutationObserver(() => {
+      if (imageDebounce) clearTimeout(imageDebounce);
+      imageDebounce = window.setTimeout(() => {
+        setupAllImages(editor);
+      }, 100);
+    });
+    imageObserver.observe(editor, { childList: true, subtree: true });
+
     if (!editor.innerHTML.trim()) {
       editor.innerHTML = '<p><br></p>';
     }
+
+    setupAllImages(editor);
   }
 }
