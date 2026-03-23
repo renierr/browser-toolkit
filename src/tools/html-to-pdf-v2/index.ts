@@ -225,7 +225,7 @@ export default function init() {
         } else {
           lastBlockTag = '';
         }
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      } else if (e.key === 'ArrowUp') {
         const selection = window.getSelection();
         if (!selection || !selection.anchorNode) return;
 
@@ -242,13 +242,18 @@ export default function init() {
           selection.anchorNode.nodeType === Node.TEXT_NODE
             ? (selection.anchorNode as Text).parentElement?.closest('pre')
             : null;
-        if (preEl) {
+        const bqEl =
+          selection.anchorNode.nodeType === Node.TEXT_NODE
+            ? (selection.anchorNode as Text).parentElement?.closest('blockquote')
+            : null;
+        const blockEl = preEl || bqEl;
+        if (blockEl && blockEl === blockEl.parentElement?.firstChild) {
           const range = selection.getRangeAt(0);
           if (range.startOffset === 0 && range.endOffset === 0) {
             e.preventDefault();
             const newP = document.createElement('p');
             newP.innerHTML = '<br>';
-            preEl.parentNode?.insertBefore(newP, preEl);
+            blockEl.parentNode?.insertBefore(newP, blockEl);
             const newRange = document.createRange();
             newRange.setStart(newP, 0);
             newRange.setEnd(newP, 0);
@@ -257,7 +262,7 @@ export default function init() {
           }
         }
         lastBlockTag = '';
-      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      } else if (e.key === 'ArrowDown') {
         const selection = window.getSelection();
         if (!selection || !selection.anchorNode) return;
 
@@ -274,24 +279,25 @@ export default function init() {
           selection.anchorNode.nodeType === Node.TEXT_NODE
             ? (selection.anchorNode as Text).parentElement?.closest('pre')
             : null;
-        if (preEl) {
-          const range = selection.getRangeAt(0);
-          const textLength = preEl.textContent?.length || 0;
-          if (range.startOffset >= textLength - 1) {
-            e.preventDefault();
-            const newP = document.createElement('p');
-            newP.innerHTML = '<br>';
-            if (preEl.nextSibling) {
-              preEl.parentNode?.insertBefore(newP, preEl.nextSibling);
-            } else {
-              preEl.parentNode?.appendChild(newP);
-            }
-            const newRange = document.createRange();
-            newRange.setStart(newP, 0);
-            newRange.setEnd(newP, 0);
-            selection.removeAllRanges();
-            selection.addRange(newRange);
+        const bqEl =
+          selection.anchorNode.nodeType === Node.TEXT_NODE
+            ? (selection.anchorNode as Text).parentElement?.closest('blockquote')
+            : null;
+        const blockEl = preEl || bqEl;
+        if (blockEl && blockEl === blockEl.parentElement?.lastChild) {
+          e.preventDefault();
+          const newP = document.createElement('p');
+          newP.innerHTML = '<br>';
+          if (blockEl.nextSibling) {
+            blockEl.parentNode?.insertBefore(newP, blockEl.nextSibling);
+          } else {
+            blockEl.parentNode?.appendChild(newP);
           }
+          const newRange = document.createRange();
+          newRange.setStart(newP, 0);
+          newRange.setEnd(newP, 0);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
         }
         lastBlockTag = '';
       } else {
