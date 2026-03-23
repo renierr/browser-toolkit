@@ -14,7 +14,7 @@
       </button>
     </div>
 
-    <div class="border-2 border-base-300 rounded-lg overflow-hidden mb-6">
+    <div id="editor-container" class="border-2 border-base-300 rounded-lg overflow-hidden mb-6">
       <div
         id="editor-toolbar"
         class="flex flex-wrap items-center gap-1 p-2 bg-base-200 border-b border-base-300"
@@ -82,6 +82,9 @@
         </button>
         <button type="button" id="btn-image" class="btn btn-xs btn-ghost" title="Insert Image">
           <i data-lucide="image" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-fullscreen" class="btn btn-xs btn-ghost" title="Fullscreen">
+          <i data-lucide="maximize" class="w-4 h-4"></i>
         </button>
       </div>
       <div
@@ -175,7 +178,7 @@
       <div class="w-full">
         <button id="generate-pdf" class="btn btn-primary w-full">
           <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
-          Generate PDF (MuPDF)
+          Generate PDF
         </button>
         <p class="text-xs text-base-content/50 mt-1 ml-1">Fast PDF with embedded fonts.</p>
       </div>
@@ -419,5 +422,24 @@
     background: oklch(var(--p));
     color: oklch(var(--pc));
     border-color: oklch(var(--p));
+  }
+  #editor-container.fullscreen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+    height: 100dvh !important;
+    max-height: none !important;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+    
+    #editor {
+      max-height: none !important;
+      height: 100% !important;
+    }
   }
 </style>

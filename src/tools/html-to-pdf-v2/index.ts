@@ -187,6 +187,24 @@ const setupPageSettings = (): void => {
   });
 };
 
+let isFullscreen = false;
+
+const toggleFullscreen = (): void => {
+  const editorContainer = document.getElementById('editor-container');
+  const btn = document.getElementById('btn-fullscreen');
+
+  if (!editorContainer || !btn) return;
+
+  isFullscreen = !isFullscreen;
+
+  if (isFullscreen) {
+    editorContainer.classList.add('fullscreen');
+  } else {
+    editorContainer.classList.remove('fullscreen');
+  }
+  document.getElementById('editor')?.focus();
+};
+
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   setupToolbarListeners();
@@ -198,6 +216,7 @@ export default function init() {
   document.getElementById('load-content')?.addEventListener('click', loadContent);
   document.getElementById('btn-link')?.addEventListener('click', insertLink);
   document.getElementById('btn-image')?.addEventListener('click', insertImage);
+  document.getElementById('btn-fullscreen')?.addEventListener('click', toggleFullscreen);
 
   const editor = document.getElementById('editor');
   if (editor) {
@@ -212,6 +231,11 @@ export default function init() {
     });
 
     editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        toggleFullscreen();
+        return;
+      }
+
       if (e.key === 'Enter') {
         const blockFormat = getCurrentBlockFormat();
         if (blockFormat && (blockFormat.tag === 'blockquote' || blockFormat.tag === 'pre')) {
