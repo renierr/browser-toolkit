@@ -158,17 +158,11 @@ function renderOutput(text: string): void {
 
 function switchMode(mode: Mode): void {
   currentMode = mode;
-  const encodeBtn = document.getElementById('mode-encode') as HTMLButtonElement;
-  const decodeBtn = document.getElementById('mode-decode') as HTMLButtonElement;
   const input = document.getElementById('input-text') as HTMLInputElement;
 
   if (mode === 'encode') {
-    encodeBtn.classList.add('active');
-    decodeBtn.classList.remove('active');
     input.placeholder = 'Type text to translate...';
   } else {
-    encodeBtn.classList.remove('active');
-    decodeBtn.classList.add('active');
     input.placeholder = 'Paste Braille text to decode...';
   }
 
@@ -187,8 +181,7 @@ export default function init() {
   const btnCopy = document.getElementById('btn-copy-braille') as HTMLButtonElement;
   const aslSizeInput = document.getElementById('asl-size') as HTMLInputElement;
   const aslSizeValue = document.getElementById('asl-size-value') as HTMLSpanElement;
-  const modeEncode = document.getElementById('mode-encode') as HTMLButtonElement;
-  const modeDecode = document.getElementById('mode-decode') as HTMLButtonElement;
+  const modeToggle = document.getElementById('mode-decode') as HTMLInputElement;
 
   aslSizeInput.addEventListener('input', () => {
     const size = parseInt(aslSizeInput.value);
@@ -198,8 +191,9 @@ export default function init() {
   aslSizeValue.textContent = `${parseInt(aslSizeInput.value)}rem`;
   applyAslSize(parseInt(aslSizeInput.value));
 
-  modeEncode.addEventListener('click', () => switchMode('encode'));
-  modeDecode.addEventListener('click', () => switchMode('decode'));
+  modeToggle.addEventListener('change', () => {
+    switchMode(modeToggle.checked ? 'decode' : 'encode');
+  });
 
   input.addEventListener('input', updateOutput);
 
@@ -231,7 +225,6 @@ export default function init() {
     btnClear.removeEventListener('click', () => {});
     btnCopy.removeEventListener('click', () => {});
     aslSizeInput.removeEventListener('input', () => {});
-    modeEncode.removeEventListener('click', () => {});
-    modeDecode.removeEventListener('click', () => {});
+    modeToggle.removeEventListener('change', () => {});
   };
 }

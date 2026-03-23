@@ -75,15 +75,8 @@
   }
 
   .mode-btn.active {
-    background-color: var(--p) !important;
-    color: var(--pc) !important;
-  }
-  .mode-btn:not(.active) {
-    background-color: var(--b2);
-    color: var(--bc);
-  }
-  .mode-btn:not(.active):hover {
-    background-color: var(--b3);
+    background-color: oklch(var(--p));
+    color: oklch(var(--pc));
   }
 
   .decoded-text {
@@ -125,7 +118,7 @@
     </p>
 
     <!-- Settings -->
-    <div class="flex items-center gap-4 mb-6">
+    <div class="flex items-center justify-between gap-4 mb-6">
       <div class="form-control flex-row items-center gap-3">
         <label class="label py-0">
           <span class="label-text text-sm">ASL Size</span>
@@ -142,13 +135,8 @@
         <span id="asl-size-value" class="text-sm font-mono w-12">10rem</span>
       </div>
       <div class="form-control flex-row items-center gap-3">
-        <span class="label-text text-sm">Mode:</span>
-        <div class="join" role="group">
-          <button id="mode-encode" class="btn btn-sm join-item btn-primary mode-btn active">
-            Encode
-          </button>
-          <button id="mode-decode" class="btn btn-sm join-item btn-ghost mode-btn">Decode</button>
-        </div>
+        <span class="label-text text-sm">Decode Mode</span>
+        <input type="checkbox" id="mode-decode" class="toggle toggle-primary" />
       </div>
     </div>
 
