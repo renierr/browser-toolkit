@@ -24,6 +24,8 @@ export default async function init() {
     theme: isDarkMode() ? 'cave' : 'solar',
   })[0];
 
+  const exportInputBtn = document.getElementById('export-input-btn') as HTMLButtonElement;
+
   let editingId: number | null = null;
 
   async function loadNotes(query = '') {
@@ -224,6 +226,27 @@ export default async function init() {
       importInput.value = '';
     }
   }
+
+  async function handleExportInputPdf() {
+    const content = overType.getValue().trim();
+    if (!content) return;
+
+    try {
+      const tempNote = { content, id: 0, shortId: 'input' } as Note;
+      await exportNoteToPdf(tempNote);
+    } catch (e) {
+      console.error('Failed to export input:', e);
+      showMessage('Failed to export PDF.', { type: 'alert' });
+    }
+  }
+
+  function updateExportButtonState() {
+    const content = overType.getValue().trim();
+    exportInputBtn.disabled = !content;
+  }
+
+  exportInputBtn.addEventListener('click', handleExportInputPdf);
+  noteInput.addEventListener('input', updateExportButtonState);
 
   addBtn.addEventListener('click', handleSave);
   cancelBtn.addEventListener('click', resetForm);
