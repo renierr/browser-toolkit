@@ -192,15 +192,20 @@ let isFullscreen = false;
 const toggleFullscreen = (): void => {
   const editorContainer = document.getElementById('editor-container');
   const btn = document.getElementById('btn-fullscreen');
+  const toolContent = document.getElementById('tool-content');
 
-  if (!editorContainer || !btn) return;
+  if (!editorContainer || !btn || !toolContent) return;
 
   isFullscreen = !isFullscreen;
 
   if (isFullscreen) {
     editorContainer.classList.add('fullscreen');
+    toolContent.style.maxHeight = '0';
+    toolContent.style.overflow = 'hidden';
   } else {
     editorContainer.classList.remove('fullscreen');
+    toolContent.style.maxHeight = '';
+    toolContent.style.overflow = '';
   }
   document.getElementById('editor')?.focus();
 };
