@@ -202,6 +202,7 @@
     position: relative;
     margin: 8px 0;
     max-width: 100%;
+    user-select: none;
   }
   .editor-image-container.selected {
     outline: none;
@@ -218,7 +219,7 @@
     display: block;
     max-width: 300px;
     height: auto;
-    cursor: move;
+    pointer-events: none;
   }
   .resize-handle {
     position: absolute;
@@ -231,6 +232,7 @@
     border-radius: 0 0 4px 0;
     opacity: 0;
     transition: opacity 0.2s;
+    pointer-events: auto;
   }
   .resize-handle::before {
     content: '';
@@ -252,7 +254,6 @@
     border-right: 2px solid white;
     border-bottom: 2px solid white;
   }
-  .editor-image-container:hover .resize-handle,
   .editor-image-container.selected .resize-handle {
     opacity: 1;
   }

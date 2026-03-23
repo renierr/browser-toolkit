@@ -294,13 +294,22 @@ export default function init() {
     editor.addEventListener('pointerdown', handleEditorClick);
 
     let imageDebounce: number | undefined;
-    const imageObserver = new MutationObserver(() => {
+    const reSetupImages = () => {
       if (imageDebounce) clearTimeout(imageDebounce);
       imageDebounce = window.setTimeout(() => {
         setupAllImages(editor);
-      }, 100);
+      }, 50);
+    };
+
+    const imageObserver = new MutationObserver(() => {
+      reSetupImages();
     });
-    imageObserver.observe(editor, { childList: true, subtree: true });
+    imageObserver.observe(editor, { childList: true, subtree: true, characterData: true });
+
+    editor.addEventListener('input', reSetupImages);
+    editor.addEventListener('paste', () => {
+      setTimeout(reSetupImages, 150);
+    });
 
     if (!editor.innerHTML.trim()) {
       editor.innerHTML = '<p><br></p>';

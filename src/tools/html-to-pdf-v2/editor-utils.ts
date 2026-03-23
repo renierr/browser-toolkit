@@ -1,12 +1,17 @@
 export const setupImageResize = (container: HTMLElement, img: HTMLImageElement): void => {
   if (!container || !img) return;
 
+  if (img.dataset.imageSetup === 'true') return;
+  img.dataset.imageSetup = 'true';
+
   let isResizing = false;
   let startX = 0;
   let startWidth = 0;
 
   const resizeHandle = container.querySelector('.resize-handle') as HTMLElement;
   if (!resizeHandle) return;
+
+  img.setAttribute('draggable', 'true');
 
   const startResize = (e: PointerEvent) => {
     e.preventDefault();
@@ -46,14 +51,32 @@ export const setupImageResize = (container: HTMLElement, img: HTMLImageElement):
   });
 };
 
+export const wrapImageInContainer = (img: HTMLImageElement): HTMLElement => {
+  const container = document.createElement('div');
+  container.className = 'editor-image-container';
+
+  const resizeHandle = document.createElement('div');
+  resizeHandle.className = 'resize-handle';
+
+  img.parentNode?.insertBefore(container, img);
+  container.appendChild(img);
+  container.appendChild(resizeHandle);
+
+  return container;
+};
+
 export const setupAllImages = (editor: HTMLElement): void => {
-  const containers = editor.querySelectorAll('.editor-image-container');
-  containers.forEach((container) => {
-    const img = (container as HTMLElement).querySelector('img');
-    const handle = (container as HTMLElement).querySelector('.resize-handle');
-    if (img && handle && !container.classList.contains('resize-ready')) {
-      setupImageResize(container as HTMLElement, img);
-      container.classList.add('resize-ready');
+  const images = editor.querySelectorAll('img');
+  images.forEach((img) => {
+    let container = img.closest('.editor-image-container') as HTMLElement;
+    if (!container) {
+      container = wrapImageInContainer(img);
+    }
+
+    const handle = container.querySelector('.resize-handle') as HTMLElement;
+    if (handle) {
+      img.dataset.imageSetup = 'false';
+      setupImageResize(container, img);
     }
   });
 };
