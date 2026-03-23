@@ -3,7 +3,11 @@ import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
 import { wrapHtmlForPdf, getPageSettings, getPrintCss } from './pdf-generator.ts';
 import { insertImageToEditor } from './editor-utils.ts';
-import { setupToolbarListeners, updateToolbarState } from './toolbar-utils.ts';
+import {
+  setupToolbarListeners,
+  updateToolbarState,
+  getCurrentBlockFormat,
+} from './toolbar-utils.ts';
 
 const generatePdfMupdf = async (): Promise<void> => {
   const editor = document.getElementById('editor');
@@ -187,9 +191,75 @@ export default function init() {
   if (editor) {
     editor.focus();
 
+    let lastBlockTag = '';
+
     editor.addEventListener('input', () => {
       if (!editor.innerHTML.trim()) {
         editor.innerHTML = '<p><br></p>';
+      }
+    });
+
+    editor.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const blockFormat = getCurrentBlockFormat();
+        if (blockFormat && (blockFormat.tag === 'blockquote' || blockFormat.tag === 'pre')) {
+          if (lastBlockTag === blockFormat.tag) {
+            document.execCommand('formatBlock', false, 'p');
+            lastBlockTag = '';
+            setTimeout(updateToolbarState, 0);
+          } else {
+            lastBlockTag = blockFormat.tag;
+          }
+        } else {
+          lastBlockTag = '';
+        }
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        const selection = window.getSelection();
+        if (!selection || !selection.anchorNode) return;
+
+        const preEl = (selection.anchorNode as Text).parentElement?.closest('pre');
+        if (preEl) {
+          const range = selection.getRangeAt(0);
+          if (range.startOffset === 0 && range.endOffset === 0) {
+            e.preventDefault();
+            const newP = document.createElement('p');
+            newP.innerHTML = '<br>';
+            preEl.parentNode?.insertBefore(newP, preEl);
+            const newRange = document.createRange();
+            newRange.setStart(newP, 0);
+            newRange.setEnd(newP, 0);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+          }
+        }
+        lastBlockTag = '';
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        const selection = window.getSelection();
+        if (!selection || !selection.anchorNode) return;
+
+        const preEl = (selection.anchorNode as Text).parentElement?.closest('pre');
+        if (preEl) {
+          const range = selection.getRangeAt(0);
+          const textLength = preEl.textContent?.length || 0;
+          if (range.startOffset >= textLength - 1) {
+            e.preventDefault();
+            const newP = document.createElement('p');
+            newP.innerHTML = '<br>';
+            if (preEl.nextSibling) {
+              preEl.parentNode?.insertBefore(newP, preEl.nextSibling);
+            } else {
+              preEl.parentNode?.appendChild(newP);
+            }
+            const newRange = document.createRange();
+            newRange.setStart(newP, 0);
+            newRange.setEnd(newP, 0);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+          }
+        }
+        lastBlockTag = '';
+      } else {
+        lastBlockTag = '';
       }
     });
 

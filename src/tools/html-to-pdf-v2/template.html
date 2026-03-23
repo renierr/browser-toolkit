@@ -255,28 +255,62 @@
     margin: 2.33em 0;
   }
 
-  #editor blockquote {
+  #editor blockquote,
+  #editor blockquote p {
     margin: 1em 0;
-    padding: 0.5em 1em;
-    border-left: 4px solid oklch(var(--p));
-    background: oklch(var(--b2));
+    padding: 0.75em 1em 0.75em 0.75em;
+    border-left: 4px solid #3b82f6;
+    background: #f3f4f6;
+    font-style: italic;
+    color: #374151;
+  }
+
+  #editor blockquote:empty::before {
+    content: 'Quote...';
+    color: #9ca3af;
     font-style: italic;
   }
 
+  [data-theme='dark'] #editor blockquote,
+  [data-theme='dark'] #editor blockquote p {
+    background: #1f2937;
+    border-left-color: #60a5fa;
+    color: #d1d5db;
+  }
+
+  [data-theme='dark'] #editor blockquote:empty::before {
+    color: #6b7280;
+  }
+
   #editor pre,
+  #editor pre code,
   #editor code {
     font-family: 'Courier New', Courier, monospace;
-    background: oklch(var(--b2));
+    background: #f3f4f6;
     border-radius: 4px;
+    color: #374151;
   }
   #editor pre {
     margin: 1em 0;
     padding: 1em;
     overflow-x: auto;
+    border: 1px solid #d1d5db;
+  }
+  #editor pre:empty::before {
+    content: 'Code block...';
+    color: #9ca3af;
   }
   #editor code {
     padding: 0.2em 0.4em;
     font-size: 0.9em;
+  }
+
+  [data-theme='dark'] #editor pre,
+  [data-theme='dark'] #editor pre code,
+  [data-theme='dark'] #editor code {
+    background: #1f2937;
+    color: #d1d5db;
+    border-color: #374151;
   }
 
   #editor ul,
