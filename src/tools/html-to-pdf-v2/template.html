@@ -1,0 +1,191 @@
+<div class="card bg-base-100 shadow-xl border">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">HTML to PDF v2</h2>
+    <p class="text-base-content/70 mb-6">Create a PDF from HTML content using MuPDF engine.</p>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <button id="load-content" class="btn btn-secondary">
+        <i data-lucide="file-code" class="w-4 h-4 mr-2"></i>
+        Load HTML
+      </button>
+      <button id="save-content" class="btn btn-outline">
+        <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+        Save HTML
+      </button>
+    </div>
+
+    <div class="border-2 border-base-300 rounded-lg overflow-hidden mb-6">
+      <div class="flex flex-wrap items-center gap-1 p-2 bg-base-200 border-b border-base-300">
+        <select id="heading-select" class="select select-xs select-bordered">
+          <option value="">Paragraph</option>
+          <option value="h1">Heading 1</option>
+          <option value="h2">Heading 2</option>
+          <option value="h3">Heading 3</option>
+          <option value="h4">Heading 4</option>
+          <option value="h5">Heading 5</option>
+          <option value="h6">Heading 6</option>
+        </select>
+        <div class="divider divider-horizontal mx-0 h-6"></div>
+        <button type="button" id="btn-bold" class="btn btn-xs btn-ghost" title="Bold">
+          <i data-lucide="bold" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-italic" class="btn btn-xs btn-ghost" title="Italic">
+          <i data-lucide="italic" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-underline" class="btn btn-xs btn-ghost" title="Underline">
+          <i data-lucide="underline" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-strike" class="btn btn-xs btn-ghost" title="Strikethrough">
+          <i data-lucide="strikethrough" class="w-4 h-4"></i>
+        </button>
+        <div class="divider divider-horizontal mx-0 h-6"></div>
+        <button type="button" id="btn-ul" class="btn btn-xs btn-ghost" title="Bullet List">
+          <i data-lucide="list" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-ol" class="btn btn-xs btn-ghost" title="Numbered List">
+          <i data-lucide="list-ordered" class="w-4 h-4"></i>
+        </button>
+        <div class="divider divider-horizontal mx-0 h-6"></div>
+        <button type="button" id="btn-align-left" class="btn btn-xs btn-ghost" title="Align Left">
+          <i data-lucide="align-left" class="w-4 h-4"></i>
+        </button>
+        <button
+          type="button"
+          id="btn-align-center"
+          class="btn btn-xs btn-ghost"
+          title="Align Center"
+        >
+          <i data-lucide="align-center" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-align-right" class="btn btn-xs btn-ghost" title="Align Right">
+          <i data-lucide="align-right" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-align-justify" class="btn btn-xs btn-ghost" title="Justify">
+          <i data-lucide="align-justify" class="w-4 h-4"></i>
+        </button>
+        <div class="divider divider-horizontal mx-0 h-6"></div>
+        <button type="button" id="btn-blockquote" class="btn btn-xs btn-ghost" title="Blockquote">
+          <i data-lucide="quote" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-code" class="btn btn-xs btn-ghost" title="Code Block">
+          <i data-lucide="code" class="w-4 h-4"></i>
+        </button>
+        <div class="divider divider-horizontal mx-0 h-6"></div>
+        <button type="button" id="btn-link" class="btn btn-xs btn-ghost" title="Insert Link">
+          <i data-lucide="link" class="w-4 h-4"></i>
+        </button>
+        <button type="button" id="btn-image" class="btn btn-xs btn-ghost" title="Insert Image">
+          <i data-lucide="image" class="w-4 h-4"></i>
+        </button>
+      </div>
+      <div
+        id="editor"
+        class="bg-base-100 text-base-content min-h-60 p-4 prose max-w-none focus:outline-none"
+        contenteditable="true"
+        style="height: 400px; max-height: 50vh; overflow-y: auto"
+      ></div>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Font Family</span></label>
+        <select id="font-family" class="select select-bordered w-full">
+          <option value="sans-serif" selected>Sans-serif (default)</option>
+          <option value="NotoSans, sans-serif">NotoSans</option>
+          <option value="serif">Serif</option>
+          <option value="monospace">Monospace</option>
+        </select>
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Font Size</span></label>
+        <input
+          type="number"
+          id="font-size"
+          value="12"
+          min="6"
+          max="72"
+          class="input input-bordered w-full"
+        />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Page Size</span></label>
+        <select id="page-size" class="select select-bordered w-full">
+          <optgroup label="ISO A Series">
+            <option value="A4" selected>A4</option>
+            <option value="A3">A3</option>
+            <option value="A5">A5</option>
+          </optgroup>
+          <optgroup label="North American">
+            <option value="Letter">Letter</option>
+            <option value="Legal">Legal</option>
+          </optgroup>
+          <option value="Custom">Custom</option>
+        </select>
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Orientation</span></label>
+        <select id="page-orientation" class="select select-bordered w-full">
+          <option value="portrait" selected>Portrait</option>
+          <option value="landscape">Landscape</option>
+        </select>
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Margin (pt)</span></label>
+        <input
+          type="number"
+          id="margin-size"
+          value="20"
+          min="0"
+          max="100"
+          class="input input-bordered w-full"
+        />
+      </div>
+    </div>
+
+    <div id="custom-size-container" class="hidden grid grid-cols-2 gap-4 mb-8">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Width (pt)</span></label>
+        <input
+          type="number"
+          id="custom-width"
+          value="595"
+          min="1"
+          class="input input-bordered w-full"
+        />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold">Height (pt)</span></label>
+        <input
+          type="number"
+          id="custom-height"
+          value="842"
+          min="1"
+          class="input input-bordered w-full"
+        />
+      </div>
+    </div>
+
+    <div class="card-actions flex-col gap-4">
+      <div class="w-full">
+        <button id="generate-pdf" class="btn btn-primary w-full">
+          <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
+          Generate PDF (MuPDF)
+        </button>
+        <p class="text-xs text-base-content/50 mt-1 ml-1">Fast PDF with embedded fonts.</p>
+      </div>
+
+      <div class="w-full">
+        <button id="print-to-pdf" class="btn btn-outline w-full">
+          <i data-lucide="printer" class="w-4 h-4 mr-2"></i>
+          Browser Print
+        </button>
+        <p class="text-xs text-base-content/50 mt-1 ml-1">
+          Uses browser engine for best formatting.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" accept=".html,.htm,.txt" class="hidden" />
+<input type="file" id="image-input" accept="image/*" class="hidden" />
