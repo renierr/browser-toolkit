@@ -74,6 +74,28 @@
     line-height: 1;
   }
 
+  .mode-btn.active {
+    background-color: var(--p) !important;
+    color: var(--pc) !important;
+  }
+  .mode-btn:not(.active) {
+    background-color: var(--b2);
+    color: var(--bc);
+  }
+  .mode-btn:not(.active):hover {
+    background-color: var(--b3);
+  }
+
+  .decoded-text {
+    font-size: 1.5rem;
+    font-weight: bold;
+    letter-spacing: 0.25em;
+    color: var(--p);
+    padding: 0.5rem 1rem;
+    background-color: var(--b2);
+    border-radius: var(--rounded-btn, 0.5rem);
+  }
+
   #output-content {
     border: 1px solid var(--b3);
     border-radius: var(--rounded-box, 0.5rem);
@@ -116,9 +138,17 @@
           max="10"
           value="10"
           step="1"
-          data-setting="aslSize"
         />
         <span id="asl-size-value" class="text-sm font-mono w-12">10rem</span>
+      </div>
+      <div class="form-control flex-row items-center gap-3">
+        <span class="label-text text-sm">Mode:</span>
+        <div class="join" role="group">
+          <button id="mode-encode" class="btn btn-sm join-item btn-primary mode-btn active">
+            Encode
+          </button>
+          <button id="mode-decode" class="btn btn-sm join-item btn-ghost mode-btn">Decode</button>
+        </div>
       </div>
     </div>
 
@@ -135,7 +165,7 @@
         type="text"
         id="input-text"
         class="input input-bordered w-full"
-        placeholder="Type text to translate (letters and numbers)..."
+        placeholder="Type text to translate..."
         autocomplete="off"
       />
     </div>

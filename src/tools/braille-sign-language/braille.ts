@@ -166,3 +166,35 @@ export function getBrailleUnicode(text: string): string {
   const brailleChars = textToBraille(text);
   return brailleChars.map((b) => b.unicode).join('');
 }
+
+const brailleToLetterMap: Record<string, string> = {};
+brailleAlphabet.forEach((b) => {
+  brailleToLetterMap[b.unicode] = b.letter;
+});
+
+export function brailleToText(brailleText: string): string {
+  const result: string[] = [];
+  let i = 0;
+
+  while (i < brailleText.length) {
+    const char = brailleText[i];
+
+    if (char === brailleNumberSign) {
+      result.push('#');
+      i++;
+      continue;
+    }
+
+    const letter = brailleToLetterMap[char];
+    if (letter) {
+      result.push(letter);
+    } else if (!/\s/.test(char) && char.trim() !== '') {
+      result.push(char);
+    } else if (/\s/.test(char)) {
+      result.push(' ');
+    }
+    i++;
+  }
+
+  return result.join('');
+}
