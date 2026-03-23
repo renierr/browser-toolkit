@@ -16,7 +16,8 @@ export const setupImageResize = (container: HTMLElement, img: HTMLImageElement):
   const resizeHandle = container.querySelector('.editor-image-container__handle') as HTMLElement;
   if (!resizeHandle) return;
 
-  img.setAttribute('draggable', 'false');
+  container.setAttribute('draggable', 'true');
+  img.removeAttribute('draggable');
 
   let isResizing = false;
   let startX = 0;
