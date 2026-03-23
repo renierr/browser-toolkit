@@ -1,4 +1,4 @@
-import mupdf, { type Font, type PDFDocument, Pixmap } from 'mupdf';
+import mupdf, { type Font, type Document, type PDFDocument, Pixmap } from 'mupdf';
 
 const fontCache: Map<string, Font> = new Map();
 
@@ -59,7 +59,7 @@ function createFontLoader(): (
     if (cjkScripts.includes(script) || name === 'cjk' || name === 'NotoSansCJK') {
       return fontCache.get('cjk') || null;
     }
-    
+
     if (name === 'NotoSans') {
       let fontName = 'NotoSans-Regular';
       if (bold && italic) {
@@ -71,9 +71,8 @@ function createFontLoader(): (
       }
       return fontCache.get(fontName) || null;
     }
-    
-    return null;
 
+    return null;
   };
 }
 
@@ -140,7 +139,10 @@ export async function htmlToPdfBuffer(
   doc.layout(width, height, fontSize);
 
   const buf = new mupdf.Buffer();
-  const writer = new mupdf.DocumentWriter(buf, 'pdf', 'compress,garbage=2,fonts=subset');
+  const writer = new mupdf.DocumentWriter(buf, 'pdf', 'compress');
+
+  let pdfDoc: (Document & PDFDocument) | null = null;
+  let outBuf: any = null;
 
   try {
     for (let i = 0; i < doc.countPages(); i++) {
@@ -152,16 +154,40 @@ export async function htmlToPdfBuffer(
       page.destroy();
     }
     writer.close();
-    return new Uint8Array(buf.asUint8Array());
-  } finally {
+    writer.destroy();
+
+    const pdfData = buf.asUint8Array();
+    buf.destroy();
+
+    pdfDoc = mupdf.Document.openDocument(pdfData, 'application/pdf').asPDF();
+    if (pdfDoc === null) return pdfData;
+    
+    pdfDoc.subsetFonts();
+
+    outBuf = pdfDoc.saveToBuffer('compress,compress-fonts,compress-images');
+    const result = new Uint8Array(outBuf.asUint8Array());
+
+    outBuf.destroy();
+    pdfDoc.destroy();
+    doc.destroy();
+
+    return result;
+  } catch (e) {
     try {
       writer.destroy();
-    } catch (e) {}
+    } catch (ee) {}
     try {
       buf.destroy();
-    } catch (e) {}
+    } catch (ee) {}
+    try {
+      outBuf?.destroy();
+    } catch (ee) {}
+    try {
+      pdfDoc?.destroy();
+    } catch (ee) {}
     try {
       doc.destroy();
-    } catch (e) {}
+    } catch (ee) {}
+    throw e;
   }
 }
