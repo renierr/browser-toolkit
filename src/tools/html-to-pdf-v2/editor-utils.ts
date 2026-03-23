@@ -35,28 +35,34 @@ export const setupImageResize = (container: HTMLElement, img: HTMLImageElement):
   let startWidth = 0;
 
   const startResize = (e: PointerEvent) => {
+    if (isResizing) return;
     e.preventDefault();
     e.stopPropagation();
     isResizing = true;
     startX = e.clientX;
     startWidth = img.offsetWidth;
 
-    const doResize = (ev: PointerEvent) => {
-      if (!isResizing) return;
-      const diff = ev.clientX - startX;
-      const newWidth = Math.max(50, Math.min(startWidth + diff, 800));
-      img.style.width = newWidth + 'px';
-      img.style.maxWidth = 'none';
-    };
+    resizeHandle.setPointerCapture(e.pointerId);
+    resizeHandle.addEventListener('pointermove', doResize, { passive: false });
+    resizeHandle.addEventListener('pointerup', stopResize, { passive: false });
+    resizeHandle.addEventListener('pointercancel', stopResize, { passive: false });
+  };
 
-    const stopResize = () => {
-      isResizing = false;
-      container.removeEventListener('pointermove', doResize);
-      container.removeEventListener('pointerup', stopResize);
-    };
+  const doResize = (ev: PointerEvent) => {
+    if (!isResizing) return;
+    const diff = ev.clientX - startX;
+    const newWidth = Math.max(50, Math.min(startWidth + diff, 800));
+    img.style.width = newWidth + 'px';
+    img.style.maxWidth = 'none';
+  };
 
-    container.addEventListener('pointermove', doResize);
-    container.addEventListener('pointerup', stopResize);
+  const stopResize = (ev: PointerEvent) => {
+    if (!isResizing) return;
+    isResizing = false;
+    resizeHandle.removeEventListener('pointermove', doResize);
+    resizeHandle.removeEventListener('pointerup', stopResize);
+    resizeHandle.removeEventListener('pointercancel', stopResize);
+    resizeHandle.releasePointerCapture(ev.pointerId);
   };
 
   resizeHandle.addEventListener('pointerdown', startResize);
