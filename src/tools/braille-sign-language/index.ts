@@ -2,6 +2,10 @@ import { showMessage } from '../../js/ui.ts';
 import { textToBraille, getBrailleUnicode } from './braille.ts';
 import { textToASL } from './asl.ts';
 
+function applyAslSize(size: number): void {
+  document.documentElement.style.setProperty('--asl-size', `${size}rem`);
+}
+
 function renderOutput(text: string): void {
   const output = document.getElementById('output-content') as HTMLDivElement;
   const copyBtn = document.getElementById('btn-copy-braille') as HTMLButtonElement;
@@ -122,6 +126,16 @@ export default function init() {
   const input = document.getElementById('input-text') as HTMLInputElement;
   const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
   const btnCopy = document.getElementById('btn-copy-braille') as HTMLButtonElement;
+  const aslSizeInput = document.getElementById('asl-size') as HTMLInputElement;
+  const aslSizeValue = document.getElementById('asl-size-value') as HTMLSpanElement;
+
+  aslSizeInput.addEventListener('input', () => {
+    const size = parseInt(aslSizeInput.value);
+    applyAslSize(size);
+    aslSizeValue.textContent = `${size}rem`;
+  });
+  aslSizeValue.textContent = `${parseInt(aslSizeInput.value)}rem`
+  applyAslSize(parseInt(aslSizeInput.value));
 
   input.addEventListener('input', updateOutput);
 
@@ -145,5 +159,6 @@ export default function init() {
     input.removeEventListener('input', updateOutput);
     btnClear.removeEventListener('click', () => {});
     btnCopy.removeEventListener('click', () => {});
+    aslSizeInput.removeEventListener('input', () => {});
   };
 }

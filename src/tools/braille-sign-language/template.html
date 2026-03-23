@@ -69,7 +69,7 @@
   }
   .char-row .char-asl {
     font-family: 'AmericanSignLanguage', sans-serif;
-    font-size: 3rem;
+    font-size: var(--asl-size, 10rem);
     color: var(--p);
     line-height: 1;
   }
@@ -101,6 +101,26 @@
       Visual reference tool translating typed words into Braille patterns and ASL alphabet
       illustrations.
     </p>
+
+    <!-- Settings -->
+    <div class="flex items-center gap-4 mb-6">
+      <div class="form-control flex-row items-center gap-3">
+        <label class="label py-0">
+          <span class="label-text text-sm">ASL Size</span>
+        </label>
+        <input
+          type="range"
+          id="asl-size"
+          class="range range-primary range-xs w-32"
+          min="2"
+          max="10"
+          value="10"
+          step="1"
+          data-setting="aslSize"
+        />
+        <span id="asl-size-value" class="text-sm font-mono w-12">10rem</span>
+      </div>
+    </div>
 
     <!-- Input -->
     <div class="form-control w-full mb-6">
