@@ -3,33 +3,8 @@ import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import { MarkdownParser } from 'overtype/parser';
 import type { Note } from './types.ts';
+import { wrapTextByScript } from '../../js/pdf-utils.ts';
 
-function wrapTextByScript(html: string): string {
-  const cjkRegex =
-    /([\u4e00-\u9fff\u3400-\u4dbf\u{20000}-\u{2a6df}\u{2a700}-\u{2b73f}\u{2b740}-\u{2b81f}\u{2b820}-\u{2ceaf}\u{2ceb0}-\u{2ebef}\u{3000}-\u{303f}\u{3040}-\u{309f}\u{30a0}-\u{30ff}\u{3100}-\u{312f}\u{3131}-\u{318e}\u{3190}-\u{319f}\u{31a0}-\u{31bf}\u{31f0}-\u{31ff}\u{3300}-\u{33ff}\u{f900}-\u{faff}]+)/gu;
-  const emojiRegex =
-    /([\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F600}-\u{1F64F}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]+)/gu;
-  const specialCharsRegex = /([✔️✓✗✘©®™§¶†‡•…‰′″¤€£¥¢±∞≠≈÷×☑☒]+)/gu;
-
-  let result = html;
-
-  result = result.replace(
-    cjkRegex,
-    '<span style="font-family: cjk, sans-serif;">$1</span>'
-  );
-
-  result = result.replace(
-    emojiRegex,
-    '<span style="font-family: emoji, sans-serif;">$1</span>'
-  );
-
-  result = result.replace(
-    specialCharsRegex,
-    '<span style="font-family: emoji, sans-serif;">$1</span>'
-  );
-
-  return result;
-}
 
 export const removeMarkdownSyntax = (html: string): string => {
   let htmlContent = html.replace(/<span class="syntax-marker[^"]*">.*?<\/span>/g, '');

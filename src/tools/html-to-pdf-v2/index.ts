@@ -1,6 +1,7 @@
 import { downloadFile } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
+import { wrapTextByScript } from '../../js/pdf-utils.ts';
 
 const PageSizes: { [key: string]: [number, number] } = {
   A0: [2383.94, 3370.39],
@@ -49,6 +50,8 @@ const wrapHtmlForPdf = (htmlContent: string, fontFamilyOption: string): string =
     'sans-serif';
   const fontSize = (document.getElementById('font-size') as HTMLInputElement)?.value || '12';
   const margin = (document.getElementById('margin-size') as HTMLInputElement)?.value || '20';
+  
+  const htmlOut = wrapTextByScript(htmlContent);
 
   return `<!DOCTYPE html>
 <html>
@@ -98,7 +101,7 @@ s, strike { text-decoration: line-through; }
 </style>
 </head>
 <body>
-${htmlContent}
+${htmlOut}
 </body>
 </html>`;
 };
