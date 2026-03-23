@@ -103,18 +103,28 @@ function renderDecodeOutput(text: string): string {
   const chars = text.split('');
   let aslIndex = 0;
 
+  const brailleHtml = chars
+    .map((char) => {
+      if (/\s/.test(char)) {
+        return `<div class="word-space"></div>`;
+      }
+      return `
+        <div class="char-row">
+          <span class="char-braille">${char}</span>
+        </div>
+      `;
+    })
+    .join('');
+
   const aslHtml = chars
     .map((char) => {
       if (/\s/.test(char)) {
         return `<div class="word-space"></div>`;
       }
-      const decoded = brailleToText(char);
       const asl = aslChars[aslIndex++];
       return `
         <div class="char-row">
-          <span class="char-braille">${char}</span>
           <span class="char-asl">${asl ? asl.letter.toUpperCase() : ''}</span>
-          <span class="char-letter">${decoded.toUpperCase()}</span>
         </div>
       `;
     })
@@ -122,8 +132,8 @@ function renderDecodeOutput(text: string): string {
 
   return `
     <div class="output-section">
-      <div class="output-label">Decoded Text</div>
-      <div class="output-inline decoded-text">${decodedText.toUpperCase()}</div>
+      <div class="output-label">Braille</div>
+      <div class="output-inline">${brailleHtml}</div>
     </div>
     <div class="output-divider"></div>
     <div class="output-section">
@@ -159,14 +169,26 @@ function renderOutput(text: string): void {
 function switchMode(mode: Mode): void {
   currentMode = mode;
   const input = document.getElementById('input-text') as HTMLInputElement;
+  const copyBtn = document.getElementById('btn-copy-braille') as HTMLButtonElement;
+
+  input.value = '';
 
   if (mode === 'encode') {
     input.placeholder = 'Type text to translate...';
+    copyBtn.classList.add('hidden');
   } else {
     input.placeholder = 'Paste Braille text to decode...';
+    copyBtn.classList.add('hidden');
   }
 
-  renderOutput(input.value);
+  const output = document.getElementById('output-content') as HTMLDivElement;
+  output.innerHTML = `
+    <div class="empty-state">
+      <p>Type text above to see translation</p>
+    </div>
+  `;
+
+  input.focus();
 }
 
 function updateOutput(): void {
