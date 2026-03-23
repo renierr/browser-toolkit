@@ -50,7 +50,7 @@ const wrapHtmlForPdf = (htmlContent: string, fontFamilyOption: string): string =
     'sans-serif';
   const fontSize = (document.getElementById('font-size') as HTMLInputElement)?.value || '12';
   const margin = (document.getElementById('margin-size') as HTMLInputElement)?.value || '20';
-  
+
   const htmlOut = wrapTextByScript(htmlContent);
 
   return `<!DOCTYPE html>
@@ -281,6 +281,9 @@ const loadContent = (): void => {
 };
 
 const insertLink = (): void => {
+  const editor = document.getElementById('editor');
+  if (!editor) return;
+  editor.focus();
   const url = prompt('Enter URL:');
   if (url) {
     document.execCommand('createLink', false, url);
@@ -300,8 +303,28 @@ const insertImage = (): void => {
       const editor = document.getElementById('editor');
       const fileContent = event.target?.result;
       if (editor && typeof fileContent === 'string') {
-        const img = `<img src="${fileContent}" alt="${file.name}" style="max-width: 100%;">`;
-        editor.insertAdjacentHTML('beforeend', img);
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'editor-image-container';
+        imgContainer.style.display = 'inline-block';
+        imgContainer.style.position = 'relative';
+        imgContainer.style.margin = '8px 0';
+
+        const img = document.createElement('img');
+        img.src = fileContent;
+        img.alt = file.name;
+        img.style.maxWidth = '300px';
+        img.style.display = 'block';
+        img.style.cursor = 'move';
+
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'resize-handle';
+        resizeHandle.innerHTML = '⋮⋮';
+
+        imgContainer.appendChild(img);
+        imgContainer.appendChild(resizeHandle);
+        editor.appendChild(imgContainer);
+
+        setupImageResize(imgContainer, img);
       }
     };
     reader.readAsDataURL(file);
@@ -310,27 +333,152 @@ const insertImage = (): void => {
   input.click();
 };
 
-const toggleFormat = (command: string, value?: string): void => {
+const setupImageResize = (container: HTMLElement, img: HTMLImageElement): void => {
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
+
+  const resizeHandle = container.querySelector('.resize-handle') as HTMLElement;
+  if (!resizeHandle) return;
+
+  const startResize = (e: MouseEvent) => {
+    e.preventDefault();
+    isResizing = true;
+    startX = e.clientX;
+    startWidth = img.offsetWidth;
+    document.addEventListener('mousemove', doResize);
+    document.addEventListener('mouseup', stopResize);
+  };
+
+  const doResize = (e: MouseEvent) => {
+    if (!isResizing) return;
+    const diff = e.clientX - startX;
+    const newWidth = Math.max(50, Math.min(startWidth + diff, 800));
+    img.style.width = newWidth + 'px';
+    img.style.maxWidth = 'none';
+  };
+
+  const stopResize = () => {
+    isResizing = false;
+    document.removeEventListener('mousemove', doResize);
+    document.removeEventListener('mouseup', stopResize);
+  };
+
+  resizeHandle.addEventListener('mousedown', startResize);
+
+  img.addEventListener('click', () => {
+    container.classList.toggle('selected');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!container.contains(e.target as Node)) {
+      container.classList.remove('selected');
+    }
+  });
+};
+
+const addEditorStyles = (): void => {
+  const style = document.createElement('style');
+  style.textContent = `
+    .editor-image-container {
+      display: inline-block;
+      position: relative;
+      margin: 8px 0;
+    }
+    .editor-image-container.selected {
+      outline: 2px solid #3b82f6;
+    }
+    .editor-image-container img {
+      display: block;
+      max-width: 300px;
+      height: auto;
+      cursor: move;
+    }
+    .resize-handle {
+      position: absolute;
+      bottom: -8px;
+      right: -8px;
+      background: #3b82f6;
+      color: white;
+      padding: 4px 6px;
+      font-size: 10px;
+      cursor: se-resize;
+      border-radius: 4px;
+      user-select: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .editor-image-container:hover .resize-handle,
+    .editor-image-container.selected .resize-handle {
+      opacity: 1;
+    }
+  `;
+  document.head.appendChild(style);
+};
+
+const execCommand = (command: string, value?: string): void => {
+  const editor = document.getElementById('editor');
+  if (editor) {
+    editor.focus();
+  }
   if (value) {
     document.execCommand(command, false, value);
   } else {
     document.execCommand(command, false);
   }
+  updateToolbarState();
 };
 
 const formatBlock = (tag: string): void => {
+  const editor = document.getElementById('editor');
+  if (editor) {
+    editor.focus();
+  }
   document.execCommand('formatBlock', false, tag);
+  updateToolbarState();
+};
+
+const updateToolbarState = (): void => {
+  const buttons: Record<string, string> = {
+    'btn-bold': 'bold',
+    'btn-italic': 'italic',
+    'btn-underline': 'underline',
+    'btn-strike': 'strikeThrough',
+    'btn-ul': 'insertUnorderedList',
+    'btn-ol': 'insertOrderedList',
+    'btn-align-left': 'justifyLeft',
+    'btn-align-center': 'justifyCenter',
+    'btn-align-right': 'justifyRight',
+    'btn-align-justify': 'justifyFull',
+  };
+
+  for (const [btnId, cmd] of Object.entries(buttons)) {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      try {
+        const state = document.queryCommandState(cmd);
+        btn.classList.toggle('btn-active', state);
+        btn.classList.toggle('btn-ghost', !state);
+      } catch {
+        btn.classList.remove('btn-active');
+        btn.classList.add('btn-ghost');
+      }
+    }
+  }
 };
 
 const setupToolbar = (): void => {
-  document.getElementById('btn-bold')?.addEventListener('click', () => toggleFormat('bold'));
-  document.getElementById('btn-italic')?.addEventListener('click', () => toggleFormat('italic'));
+  document.getElementById('btn-bold')?.addEventListener('click', () => execCommand('bold'));
+  document.getElementById('btn-italic')?.addEventListener('click', () => execCommand('italic'));
   document
     .getElementById('btn-underline')
-    ?.addEventListener('click', () => toggleFormat('underline'));
+    ?.addEventListener('click', () => execCommand('underline'));
   document
     .getElementById('btn-strike')
-    ?.addEventListener('click', () => toggleFormat('strikeThrough'));
+    ?.addEventListener('click', () => execCommand('strikeThrough'));
+  document
+    .getElementById('btn-clear')
+    ?.addEventListener('click', () => execCommand('removeFormat'));
 
   document.getElementById('heading-select')?.addEventListener('change', (e) => {
     const value = (e.target as HTMLSelectElement).value;
@@ -342,23 +490,23 @@ const setupToolbar = (): void => {
 
   document
     .getElementById('btn-ul')
-    ?.addEventListener('click', () => toggleFormat('insertUnorderedList'));
+    ?.addEventListener('click', () => execCommand('insertUnorderedList'));
   document
     .getElementById('btn-ol')
-    ?.addEventListener('click', () => toggleFormat('insertOrderedList'));
+    ?.addEventListener('click', () => execCommand('insertOrderedList'));
 
   document
     .getElementById('btn-align-left')
-    ?.addEventListener('click', () => toggleFormat('justifyLeft'));
+    ?.addEventListener('click', () => execCommand('justifyLeft'));
   document
     .getElementById('btn-align-center')
-    ?.addEventListener('click', () => toggleFormat('justifyCenter'));
+    ?.addEventListener('click', () => execCommand('justifyCenter'));
   document
     .getElementById('btn-align-right')
-    ?.addEventListener('click', () => toggleFormat('justifyRight'));
+    ?.addEventListener('click', () => execCommand('justifyRight'));
   document
     .getElementById('btn-align-justify')
-    ?.addEventListener('click', () => toggleFormat('justifyFull'));
+    ?.addEventListener('click', () => execCommand('justifyFull'));
 
   document
     .getElementById('btn-blockquote')
@@ -367,6 +515,20 @@ const setupToolbar = (): void => {
 
   document.getElementById('btn-link')?.addEventListener('click', insertLink);
   document.getElementById('btn-image')?.addEventListener('click', insertImage);
+
+  document.addEventListener('selectionchange', () => {
+    const selection = window.getSelection();
+    if (selection && selection.anchorNode) {
+      let node: Node | null = selection.anchorNode;
+      while (node && node.nodeType === Node.TEXT_NODE) {
+        node = node.parentNode;
+      }
+      const editor = document.getElementById('editor');
+      if (node && editor && (node === editor || editor.contains(node))) {
+        updateToolbarState();
+      }
+    }
+  });
 };
 
 const setupPageSettings = (): void => {
@@ -384,6 +546,7 @@ const setupPageSettings = (): void => {
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
+  addEditorStyles();
   setupToolbar();
   setupPageSettings();
 
