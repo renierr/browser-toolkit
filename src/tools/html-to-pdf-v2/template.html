@@ -15,7 +15,10 @@
     </div>
 
     <div class="border-2 border-base-300 rounded-lg overflow-hidden mb-6">
-      <div class="flex flex-wrap items-center gap-1 p-2 bg-base-200 border-b border-base-300">
+      <div
+        id="editor-toolbar"
+        class="flex flex-wrap items-center gap-1 p-2 bg-base-200 border-b border-base-300"
+      >
         <select id="heading-select" class="select select-xs select-bordered">
           <option value="">Paragraph</option>
           <option value="h1">Heading 1</option>
@@ -225,5 +228,98 @@
   .editor-image-container:hover .resize-handle,
   .editor-image-container.selected .resize-handle {
     opacity: 1;
+  }
+
+  #editor h1 {
+    font-size: 2em;
+    margin: 0.67em 0;
+  }
+  #editor h2 {
+    font-size: 1.5em;
+    margin: 0.83em 0;
+  }
+  #editor h3 {
+    font-size: 1.17em;
+    margin: 1em 0;
+  }
+  #editor h4 {
+    font-size: 1em;
+    margin: 1.33em 0;
+  }
+  #editor h5 {
+    font-size: 0.83em;
+    margin: 1.67em 0;
+  }
+  #editor h6 {
+    font-size: 0.67em;
+    margin: 2.33em 0;
+  }
+
+  #editor blockquote {
+    margin: 1em 0;
+    padding: 0.5em 1em;
+    border-left: 4px solid oklch(var(--p));
+    background: oklch(var(--b2));
+    font-style: italic;
+  }
+
+  #editor pre,
+  #editor code {
+    font-family: 'Courier New', Courier, monospace;
+    background: oklch(var(--b2));
+    border-radius: 4px;
+  }
+  #editor pre {
+    margin: 1em 0;
+    padding: 1em;
+    overflow-x: auto;
+  }
+  #editor code {
+    padding: 0.2em 0.4em;
+    font-size: 0.9em;
+  }
+
+  #editor ul,
+  #editor ol {
+    margin: 0.5em 0;
+    padding-left: 2em;
+    display: block;
+  }
+  #editor ul {
+    list-style-type: disc;
+  }
+  #editor ul ul {
+    list-style-type: circle;
+  }
+  #editor ol {
+    list-style-type: decimal;
+  }
+  #editor li {
+    margin: 0.25em 0;
+    display: list-item;
+  }
+
+  #editor .btn-ghost {
+    opacity: 0.7;
+  }
+  #editor .btn-ghost:hover {
+    opacity: 1;
+  }
+
+  [data-theme='dark'] .card #editor-toolbar .btn-ghost {
+    background: transparent;
+    color: oklch(var(--bc));
+    border: 1px solid oklch(var(--bc) / 0.2);
+  }
+
+  [data-theme='dark'] .card #editor-toolbar .btn-ghost:hover {
+    background: oklch(var(--b2));
+    border-color: oklch(var(--bc) / 0.4);
+  }
+
+  [data-theme='dark'] .card #editor-toolbar .btn-active {
+    background: oklch(var(--p));
+    color: oklch(var(--pc));
+    border-color: oklch(var(--p));
   }
 </style>

@@ -3,7 +3,7 @@ import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
 import { wrapHtmlForPdf, getPageSettings, getPrintCss } from './pdf-generator.ts';
 import { insertImageToEditor } from './editor-utils.ts';
-import { setupToolbarListeners } from './toolbar-utils.ts';
+import { setupToolbarListeners, updateToolbarState } from './toolbar-utils.ts';
 
 const generatePdfMupdf = async (): Promise<void> => {
   const editor = document.getElementById('editor');
@@ -192,6 +192,9 @@ export default function init() {
         editor.innerHTML = '<p><br></p>';
       }
     });
+
+    editor.addEventListener('keyup', updateToolbarState);
+    editor.addEventListener('pointerup', updateToolbarState);
 
     if (!editor.innerHTML.trim()) {
       editor.innerHTML = '<p><br></p>';
