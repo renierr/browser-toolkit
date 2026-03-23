@@ -1,14 +1,7 @@
 export const setupImageResize = (container: HTMLElement, img: HTMLImageElement): void => {
   if (!container || !img) return;
 
-  if (img.dataset.imageSetup === 'true') return;
-  img.dataset.imageSetup = 'true';
-
-  let isResizing = false;
-  let startX = 0;
-  let startWidth = 0;
-
-  const resizeHandle = container.querySelector('.resize-handle') as HTMLElement;
+  const resizeHandle = container.querySelector('.editor-image-container__handle') as HTMLElement;
   if (!resizeHandle) return;
 
   img.setAttribute('draggable', 'true');
@@ -38,17 +31,19 @@ export const setupImageResize = (container: HTMLElement, img: HTMLImageElement):
     container.addEventListener('pointerup', stopResize);
   };
 
+  let isResizing = false;
+  let startX = 0;
+  let startWidth = 0;
+
   resizeHandle.addEventListener('pointerdown', startResize);
 
-  container.addEventListener('click', (e) => {
+  const selectImage = (e: MouseEvent | PointerEvent) => {
     e.stopPropagation();
-    container.classList.add('selected');
-  });
+    container.classList.add('editor-image-container--selected');
+  };
 
-  container.addEventListener('pointerdown', (e) => {
-    e.stopPropagation();
-    container.classList.add('selected');
-  });
+  container.addEventListener('click', selectImage);
+  container.addEventListener('pointerdown', selectImage);
 };
 
 export const wrapImageInContainer = (img: HTMLImageElement): HTMLElement => {
@@ -56,7 +51,7 @@ export const wrapImageInContainer = (img: HTMLImageElement): HTMLElement => {
   container.className = 'editor-image-container';
 
   const resizeHandle = document.createElement('div');
-  resizeHandle.className = 'resize-handle';
+  resizeHandle.className = 'editor-image-container__handle';
 
   img.parentNode?.insertBefore(container, img);
   container.appendChild(img);
@@ -73,7 +68,7 @@ export const setupAllImages = (editor: HTMLElement): void => {
       container = wrapImageInContainer(img);
     }
 
-    const handle = container.querySelector('.resize-handle') as HTMLElement;
+    const handle = container.querySelector('.editor-image-container__handle') as HTMLElement;
     if (handle) {
       img.dataset.imageSetup = 'false';
       setupImageResize(container, img);
@@ -89,7 +84,7 @@ export const handleEditorClick = (e: MouseEvent | PointerEvent): void => {
   const allImages = editor.querySelectorAll('.editor-image-container');
   allImages.forEach((imgContainer) => {
     if (!imgContainer.contains(target)) {
-      imgContainer.classList.remove('selected');
+      imgContainer.classList.remove('editor-image-container--selected');
     }
   });
 };
@@ -109,7 +104,7 @@ export const insertImageToEditor = (editor: HTMLElement, file: File, fileContent
       img.alt = file.name;
 
       const resizeHandle = document.createElement('div');
-      resizeHandle.className = 'resize-handle';
+      resizeHandle.className = 'editor-image-container__handle';
 
       imgContainer.appendChild(img);
       imgContainer.appendChild(resizeHandle);

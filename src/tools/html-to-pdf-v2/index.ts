@@ -17,7 +17,7 @@ const generatePdfMupdf = async (): Promise<void> => {
 
   try {
     const settings = getPageSettings();
-    const htmlContent = editor.innerHTML;
+    const htmlContent = cleanEditorContent(editor);
     const wrappedHtml = wrapHtmlForPdf(htmlContent);
 
     const pdfBuffer = await htmlToPdfBuffer(wrappedHtml, {
@@ -73,7 +73,7 @@ const usePrintToPdf = (): void => {
       </head>
       <body>
         ${printInstructions}
-        ${editor.innerHTML}
+        ${cleanEditorContent(editor)}
       </body>
     </html>
   `);
@@ -86,12 +86,24 @@ const usePrintToPdf = (): void => {
   };
 };
 
+const cleanEditorContent = (editor: HTMLElement): string => {
+  const clone = editor.cloneNode(true) as HTMLElement;
+  const containers = clone.querySelectorAll('.editor-image-container');
+  containers.forEach((container) => {
+    const handle = container.querySelector('.editor-image-container__handle');
+    if (handle) handle.remove();
+    container.classList.remove('editor-image-container--selected');
+    container.removeAttribute('data-image-setup');
+  });
+  return clone.innerHTML;
+};
+
 const saveContent = (): void => {
   const editor = document.getElementById('editor');
   if (!editor) return;
 
   try {
-    const htmlContent = editor.innerHTML;
+    const htmlContent = cleanEditorContent(editor);
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const filename = `document-${new Date().toISOString().slice(0, 10)}.html`;
     downloadFile(blob, filename, 'text/html');

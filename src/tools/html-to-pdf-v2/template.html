@@ -204,10 +204,10 @@
     max-width: 100%;
     user-select: none;
   }
-  .editor-image-container.selected {
+  .editor-image-container--selected {
     outline: none;
   }
-  .editor-image-container.selected::before {
+  .editor-image-container--selected::before {
     content: '';
     position: absolute;
     inset: 0;
@@ -221,7 +221,7 @@
     height: auto;
     pointer-events: none;
   }
-  .resize-handle {
+  .editor-image-container__handle {
     position: absolute;
     right: 0;
     bottom: 0;
@@ -233,8 +233,9 @@
     opacity: 0;
     transition: opacity 0.2s;
     pointer-events: auto;
+    tabindex: -1;
   }
-  .resize-handle::before {
+  .editor-image-container__handle::before {
     content: '';
     position: absolute;
     right: 4px;
@@ -243,6 +244,32 @@
     height: 6px;
     border-right: 2px solid white;
     border-bottom: 2px solid white;
+  }
+  .editor-image-container__handle::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid white;
+    border-bottom: 2px solid white;
+  }
+  .editor-image-container--selected .editor-image-container__handle {
+    opacity: 1;
+  }
+  .editor-image-container__handle * {
+    pointer-events: none;
+  }
+  .editor-image-container,
+  .editor-image-container__handle {
+    -webkit-user-select: none;
+    user-select: none;
+    outline: none;
+  }
+  .editor-image-container:focus,
+  .editor-image-container__handle:focus {
+    outline: none;
   }
   .resize-handle::after {
     content: '';
@@ -254,7 +281,7 @@
     border-right: 2px solid white;
     border-bottom: 2px solid white;
   }
-  .editor-image-container.selected .resize-handle {
+  .editor-image-container.selected .editor-image-container__handle {
     opacity: 1;
   }
   .editor-image-container .resize-handle * {
