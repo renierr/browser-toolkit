@@ -8,6 +8,7 @@ import {
   updateToolbarState,
   getCurrentBlockFormat,
 } from './toolbar-utils.ts';
+import { sanitizeHtml } from './sanitizer.ts';
 
 const generatePdfMupdf = async (): Promise<void> => {
   const editor = document.getElementById('editor');
@@ -82,7 +83,7 @@ const loadContent = (): void => {
       const editor = document.getElementById('editor');
       const fileContent = event.target?.result;
       if (editor && typeof fileContent === 'string') {
-        editor.innerHTML = fileContent;
+        editor.innerHTML = sanitizeHtml(fileContent);
         input.value = '';
         setTimeout(() => {
           updateToolbarState();
@@ -335,7 +336,31 @@ export default function init() {
     imageObserver.observe(editor, { childList: true, subtree: true, characterData: true });
 
     editor.addEventListener('input', reSetupImages);
-    editor.addEventListener('paste', () => {
+    editor.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const clipboardData = e.clipboardData;
+      if (!clipboardData) return;
+
+      const html = clipboardData.getData('text/html');
+      const text = clipboardData.getData('text/plain');
+
+      const selection = window.getSelection();
+      if (!selection || !selection.rangeCount) return;
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+
+      if (html) {
+        const sanitized = sanitizeHtml(html);
+        const temp = document.createElement('div');
+        temp.innerHTML = sanitized;
+        range.insertNode(temp);
+        range.collapse(false);
+      } else if (text) {
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+        range.collapse(false);
+      }
+
       setTimeout(reSetupImages, 150);
     });
 
