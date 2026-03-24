@@ -1,3 +1,18 @@
+export const isCursorInLink = (): boolean => {
+  const selection = window.getSelection();
+  if (!selection || !selection.anchorNode) return false;
+
+  let node: Node | null = selection.anchorNode;
+  while (node && node.nodeType === Node.TEXT_NODE) {
+    node = node.parentNode;
+  }
+
+  if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+
+  const element = node as Element;
+  return !!element.closest('a');
+};
+
 export const updateToolbarState = (): void => {
   const blockFormat = getCurrentBlockFormat();
   const isHeading = blockFormat && /^h[1-6]$/.test(blockFormat.tag);
@@ -54,6 +69,13 @@ export const updateToolbarState = (): void => {
     const isCode = blockFormat?.tag === 'pre';
     codeBtn.classList.toggle('btn-active', isCode);
     codeBtn.classList.toggle('btn-ghost', !isCode);
+  }
+
+  const linkBtn = document.getElementById('btn-link');
+  if (linkBtn) {
+    const isInLink = isCursorInLink();
+    linkBtn.classList.toggle('btn-active', isInLink);
+    linkBtn.classList.toggle('btn-ghost', !isInLink);
   }
 };
 

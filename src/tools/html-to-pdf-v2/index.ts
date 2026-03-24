@@ -100,9 +100,36 @@ const insertLink = (): void => {
   const editor = document.getElementById('editor');
   if (!editor) return;
   editor.focus();
-  const url = prompt('Enter URL:');
-  if (url) {
-    document.execCommand('createLink', false, url);
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const anchorNode = selection.anchorNode;
+
+  let existingLink: HTMLAnchorElement | null = null;
+  if (anchorNode) {
+    existingLink = anchorNode.parentElement?.closest('a') as HTMLAnchorElement | null;
+  }
+
+  if (existingLink) {
+    const currentUrl = existingLink.href;
+    const newUrl = prompt('Edit link URL:', currentUrl);
+    if (newUrl !== null) {
+      if (newUrl.trim() === '') {
+        const parent = existingLink.parentNode;
+        while (existingLink.firstChild) {
+          parent?.insertBefore(existingLink.firstChild, existingLink);
+        }
+        parent?.removeChild(existingLink);
+      } else {
+        existingLink.href = newUrl;
+      }
+    }
+  } else {
+    const url = prompt('Enter URL:');
+    if (url) {
+      document.execCommand('createLink', false, url);
+    }
   }
 };
 
