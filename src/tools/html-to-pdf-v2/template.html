@@ -1,14 +1,18 @@
+<!--suppress CssUnusedSymbol -->
 <div class="card bg-base-100 shadow-xl border">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">HTML to PDF v2</h2>
-    <p class="text-base-content/70 mb-6">Create a PDF from HTML content using MuPDF engine.</p>
+    <h2 class="card-title text-2xl font-bold mb-4">HTML to PDF</h2>
 
     <div id="editor-container" class="border-2 border-base-300 rounded-lg overflow-hidden mb-6">
       <div
         id="editor-toolbar"
         class="flex flex-wrap items-center gap-1 p-2 bg-base-200 border-b border-base-300"
       >
-        <select id="heading-select" class="select select-xs select-bordered">
+        <select
+          id="heading-select"
+          class="select select-xs select-bordered"
+          aria-label="Heading Level"
+        >
           <option value="">Paragraph</option>
           <option value="h1">Heading 1</option>
           <option value="h2">Heading 2</option>
@@ -94,7 +98,9 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
       <div class="form-control">
-        <label class="label"><span class="label-text font-semibold">Font Family</span></label>
+        <label class="label" for="font-family"
+          ><span class="label-text font-semibold">Font Family</span></label
+        >
         <select id="font-family" class="select select-bordered w-full" data-setting="fontFamily">
           <option value="sans-serif" selected>Sans-serif (default)</option>
           <option value="NotoSans, sans-serif">NotoSans</option>
@@ -103,7 +109,9 @@
         </select>
       </div>
       <div class="form-control">
-        <label class="label"><span class="label-text font-semibold">Font Size</span></label>
+        <label class="label" for="font-size"
+          ><span class="label-text font-semibold">Font Size</span></label
+        >
         <input
           type="number"
           id="font-size"
@@ -115,7 +123,9 @@
         />
       </div>
       <div class="form-control">
-        <label class="label"><span class="label-text font-semibold">Page Size</span></label>
+        <label class="label" for="page-size"
+          ><span class="label-text font-semibold">Page Size</span></label
+        >
         <select id="page-size" class="select select-bordered w-full" data-setting="pageSize">
           <optgroup label="ISO A Series">
             <option value="A4" selected>A4</option>
@@ -130,7 +140,9 @@
         </select>
       </div>
       <div class="form-control">
-        <label class="label"><span class="label-text font-semibold">Orientation</span></label>
+        <label class="label" for="page-orientation"
+          ><span class="label-text font-semibold">Orientation</span></label
+        >
         <select
           id="page-orientation"
           class="select select-bordered w-full"
@@ -141,7 +153,9 @@
         </select>
       </div>
       <div class="form-control">
-        <label class="label"><span class="label-text font-semibold">Margin (pt)</span></label>
+        <label class="label" for="margin-size"
+          ><span class="label-text font-semibold">Margin (pt)</span></label
+        >
         <input
           type="number"
           id="margin-size"
@@ -156,7 +170,9 @@
 
     <div id="custom-size-container" class="hidden grid grid-cols-2 gap-4 mb-8">
       <div class="form-control">
-        <label class="label"><span class="label-text font-semibold">Width (pt)</span></label>
+        <label class="label" for="custom-width"
+          ><span class="label-text font-semibold">Width (pt)</span></label
+        >
         <input
           type="number"
           id="custom-width"
@@ -167,7 +183,9 @@
         />
       </div>
       <div class="form-control">
-        <label class="label"><span class="label-text font-semibold">Height (pt)</span></label>
+        <label class="label" for="custom-height"
+          ><span class="label-text font-semibold">Height (pt)</span></label
+        >
         <input
           type="number"
           id="custom-height"

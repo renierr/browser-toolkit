@@ -83,6 +83,11 @@ const loadContent = (): void => {
       const fileContent = event.target?.result;
       if (editor && typeof fileContent === 'string') {
         editor.innerHTML = fileContent;
+        input.value = '';
+        setTimeout(() => {
+          updateToolbarState();
+          updateGenerateButtonState();
+        }, 0);
       } else {
         showMessage('Failed to read file content.', { type: 'alert' });
       }
@@ -94,6 +99,14 @@ const loadContent = (): void => {
   };
 
   input.click();
+};
+
+const updateGenerateButtonState = (): void => {
+  const btnToolbar = document.getElementById('btn-generate-pdf');
+  const btnMain = document.getElementById('generate-pdf');
+  const hasContent = document.getElementById('editor')?.innerText.trim();
+  btnToolbar?.toggleAttribute('disabled', !hasContent);
+  btnMain?.toggleAttribute('disabled', !hasContent);
 };
 
 const insertLink = (): void => {
@@ -301,14 +314,6 @@ export default function init() {
 
     editor.addEventListener('keyup', updateToolbarState);
     editor.addEventListener('pointerup', updateToolbarState);
-
-    const updateGenerateButtonState = (): void => {
-      const btnToolbar = document.getElementById('btn-generate-pdf');
-      const btnMain = document.getElementById('generate-pdf');
-      const hasContent = !!editor.innerText.trim();
-      btnToolbar?.toggleAttribute('disabled', !hasContent);
-      btnMain?.toggleAttribute('disabled', !hasContent);
-    };
 
     editor.addEventListener('input', updateGenerateButtonState);
     editor.addEventListener('keyup', updateGenerateButtonState);
