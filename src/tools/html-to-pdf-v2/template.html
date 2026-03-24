@@ -95,7 +95,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
       <div class="form-control">
         <label class="label"><span class="label-text font-semibold">Font Family</span></label>
-        <select id="font-family" class="select select-bordered w-full">
+        <select id="font-family" class="select select-bordered w-full" data-setting="fontFamily">
           <option value="sans-serif" selected>Sans-serif (default)</option>
           <option value="NotoSans, sans-serif">NotoSans</option>
           <option value="serif">Serif</option>
@@ -111,11 +111,12 @@
           min="6"
           max="72"
           class="input input-bordered w-full"
+          data-setting="fontSize"
         />
       </div>
       <div class="form-control">
         <label class="label"><span class="label-text font-semibold">Page Size</span></label>
-        <select id="page-size" class="select select-bordered w-full">
+        <select id="page-size" class="select select-bordered w-full" data-setting="pageSize">
           <optgroup label="ISO A Series">
             <option value="A4" selected>A4</option>
             <option value="A3">A3</option>
@@ -130,7 +131,11 @@
       </div>
       <div class="form-control">
         <label class="label"><span class="label-text font-semibold">Orientation</span></label>
-        <select id="page-orientation" class="select select-bordered w-full">
+        <select
+          id="page-orientation"
+          class="select select-bordered w-full"
+          data-setting="orientation"
+        >
           <option value="portrait" selected>Portrait</option>
           <option value="landscape">Landscape</option>
         </select>
@@ -144,6 +149,7 @@
           min="0"
           max="100"
           class="input input-bordered w-full"
+          data-setting="pageMargin"
         />
       </div>
     </div>
@@ -157,6 +163,7 @@
           value="595"
           min="1"
           class="input input-bordered w-full"
+          data-setting="customWidth"
         />
       </div>
       <div class="form-control">
@@ -167,6 +174,7 @@
           value="842"
           min="1"
           class="input input-bordered w-full"
+          data-setting="customHeight"
         />
       </div>
     </div>

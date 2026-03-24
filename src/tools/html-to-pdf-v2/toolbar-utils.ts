@@ -37,6 +37,8 @@ export const updateToolbarState = (): void => {
         let state = false;
         if (cmd === 'bold' && isHeading) {
           state = false;
+        } else if (cmd === 'underline' && isCursorInLink()) {
+          state = false;
         } else {
           state = document.queryCommandState(cmd);
         }
