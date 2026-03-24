@@ -115,26 +115,3 @@ ${htmlContent}
 </body>
 </html>`;
 };
-
-export const getPrintCss = (): string => {
-  const settings = getPageSettings();
-  return `
-@page {
-  margin: ${settings.margin}pt;
-  size: ${settings.width}pt ${settings.height}pt;
-}
-body {
-  font-family: ${settings.fontFamily};
-  font-size: ${settings.fontSize}pt;
-  line-height: 1.4;
-  color: #000;
-  margin: 0;
-  padding: 0;
-}
-${getBaseCss(settings)}
-.print-instructions { display: none; }
-@media print {
-  .print-instructions { display: none !important; }
-}
-`;
-};

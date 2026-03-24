@@ -1,7 +1,7 @@
 import { downloadFile } from '../../js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
 import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
-import { wrapHtmlForPdf, getPageSettings, getPrintCss } from './pdf-generator.ts';
+import { wrapHtmlForPdf, getPageSettings } from './pdf-generator.ts';
 import { insertImageToEditor, setupAllImages, handleEditorClick } from './editor-utils.ts';
 import {
   setupToolbarListeners,
@@ -35,55 +35,6 @@ const generatePdfMupdf = async (): Promise<void> => {
   } finally {
     hideProgress();
   }
-};
-
-const usePrintToPdf = (): void => {
-  const editor = document.getElementById('editor');
-  if (!editor) return;
-
-  const printWin = window.open('', '_blank');
-  if (!printWin) {
-    showMessage('Could not open print window. Please check your popup blocker.', { type: 'alert' });
-    return;
-  }
-
-  const settings = getPageSettings();
-  const orientation =
-    (document.getElementById('page-orientation') as HTMLSelectElement)?.value || 'portrait';
-
-  const printInstructions = `
-    <div class="print-instructions" style="position: relative; background: #ffffe0; border: 1px solid #e6e6e6; padding: 15px; margin-bottom: 20px; border-radius: 5px; font-family: sans-serif; font-size: 12pt;">
-      <button onclick="window.print()" style="background: #007bff; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12pt; margin-right: 10px;">Print</button>
-      <button onclick="window.close()" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 12pt;">Close</button>
-      <h4 style="margin: 15px 0 10px 0;">Recommended Print Settings</h4>
-      <ul style="margin: 5px 0 0 20px; padding: 0;">
-        <li><strong>Paper Size:</strong> ${settings.width}x${settings.height}pt (${orientation})</li>
-        <li><strong>Margins:</strong> 'Default' or 'None'</li>
-      </ul>
-    </div>
-  `;
-
-  printWin.document.write(`
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <title>Document</title>
-        <meta charset="utf-8">
-        <style>${getPrintCss()}</style>
-      </head>
-      <body>
-        ${printInstructions}
-        ${cleanEditorContent(editor)}
-      </body>
-    </html>
-  `);
-
-  printWin.document.close();
-  printWin.focus();
-
-  printWin.onafterprint = () => {
-    printWin.close();
-  };
 };
 
 const cleanEditorContent = (editor: HTMLElement): string => {
@@ -216,7 +167,7 @@ export default function init() {
   setupPageSettings();
 
   document.getElementById('generate-pdf')?.addEventListener('click', generatePdfMupdf);
-  document.getElementById('print-to-pdf')?.addEventListener('click', usePrintToPdf);
+  document.getElementById('btn-generate-pdf')?.addEventListener('click', generatePdfMupdf);
   document.getElementById('save-content')?.addEventListener('click', saveContent);
   document.getElementById('load-content')?.addEventListener('click', loadContent);
   document.getElementById('btn-link')?.addEventListener('click', insertLink);
