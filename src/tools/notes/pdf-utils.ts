@@ -3,8 +3,6 @@ import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import { MarkdownParser } from 'overtype/parser';
 import type { Note } from './types.ts';
-import { wrapTextByScript } from '../../js/pdf-utils.ts';
-
 
 export const removeMarkdownSyntax = (html: string): string => {
   let htmlContent = html.replace(/<span class="syntax-marker[^"]*">.*?<\/span>/g, '');
@@ -17,9 +15,7 @@ export const removeMarkdownSyntax = (html: string): string => {
 };
 
 export async function exportNoteToPdf(note: Note): Promise<void> {
-  let htmlContent = removeMarkdownSyntax(MarkdownParser.parse(note.content));
-  htmlContent = wrapTextByScript(htmlContent);
-
+  const htmlContent = removeMarkdownSyntax(MarkdownParser.parse(note.content));
   const fullHtml = `<!DOCTYPE html>
 <html>
 <head>
