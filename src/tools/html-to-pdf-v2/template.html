@@ -3,17 +3,6 @@
     <h2 class="card-title text-2xl font-bold mb-4">HTML to PDF v2</h2>
     <p class="text-base-content/70 mb-6">Create a PDF from HTML content using MuPDF engine.</p>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <button id="load-content" class="btn btn-secondary">
-        <i data-lucide="file-code" class="w-4 h-4 mr-2"></i>
-        Load HTML
-      </button>
-      <button id="save-content" class="btn btn-outline">
-        <i data-lucide="save" class="w-4 h-4 mr-2"></i>
-        Save HTML
-      </button>
-    </div>
-
     <div id="editor-container" class="border-2 border-base-300 rounded-lg overflow-hidden mb-6">
       <div
         id="editor-toolbar"
@@ -182,13 +171,19 @@
       </div>
     </div>
 
-    <div class="card-actions flex-col gap-4">
-      <div class="w-full">
-        <button id="generate-pdf" class="btn btn-primary w-full">
-          <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
-          Generate PDF
-        </button>
-      </div>
+    <div class="card-actions justify-end gap-4">
+      <button id="load-content" class="btn btn-secondary">
+        <i data-lucide="file-code" class="w-4 h-4 mr-2"></i>
+        Load HTML
+      </button>
+      <button id="save-content" class="btn btn-outline">
+        <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+        Save HTML
+      </button>
+      <button id="generate-pdf" class="btn btn-primary">
+        <i data-lucide="file-text" class="w-4 h-4 mr-2"></i>
+        Generate PDF
+      </button>
     </div>
   </div>
 </div>
