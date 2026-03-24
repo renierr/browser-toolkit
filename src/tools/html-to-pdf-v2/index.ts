@@ -13,6 +13,11 @@ const generatePdfMupdf = async (): Promise<void> => {
   const editor = document.getElementById('editor');
   if (!editor) return;
 
+  if (!editor.innerText.trim()) {
+    showMessage('Please add some content before generating PDF.', { type: 'alert' });
+    return;
+  }
+
   showProgress('Generating PDF...');
 
   try {
@@ -270,6 +275,17 @@ export default function init() {
     editor.addEventListener('keyup', updateToolbarState);
     editor.addEventListener('pointerup', updateToolbarState);
 
+    const updateGenerateButtonState = (): void => {
+      const btnToolbar = document.getElementById('btn-generate-pdf');
+      const btnMain = document.getElementById('generate-pdf');
+      const hasContent = !!editor.innerText.trim();
+      btnToolbar?.toggleAttribute('disabled', !hasContent);
+      btnMain?.toggleAttribute('disabled', !hasContent);
+    };
+
+    editor.addEventListener('input', updateGenerateButtonState);
+    editor.addEventListener('keyup', updateGenerateButtonState);
+
     editor.addEventListener('click', handleEditorClick);
     editor.addEventListener('pointerdown', handleEditorClick);
 
@@ -296,5 +312,6 @@ export default function init() {
     }
 
     setupAllImages(editor);
+    updateGenerateButtonState();
   }
 }
