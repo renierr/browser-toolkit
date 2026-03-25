@@ -5,7 +5,6 @@ export interface ArchiveEntry {
   path: string;
   isDirectory: boolean;
   size: number;
-  rawData?: Uint8Array;
   children?: ArchiveEntry[];
 }
 
@@ -101,31 +100,26 @@ export function buildFileTree(entries: ArchiveEntry[]): ArchiveEntry[] {
   return sortEntries(root);
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let zipInstance: any = null;
+let tarFilesCache: Map<string, Uint8Array> = new Map();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let sevenZipInstance: any = null;
+
 export async function parseZip(file: File): Promise<ParsedArchive> {
   const JSZip = (await import('jszip')).default;
-  const zip = await JSZip.loadAsync(file);
-  const entries: ArchiveEntry[] = [];
+  zipInstance = await JSZip.loadAsync(file);
 
-  for (const [path, zipEntry] of Object.entries(zip.files)) {
+  const entries: ArchiveEntry[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  for (const [path, zipEntry] of Object.entries(zipInstance.files as Record<string, any>)) {
     if (path === '') continue;
     entries.push({
       name: path.split('/').pop() || path,
       path: path.replace(/\/$/, ''),
       isDirectory: zipEntry.dir,
-      size: 0,
+      size: zipEntry._data?.uncompressedSize ?? 0,
     });
-  }
-
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    if (!entry.isDirectory) {
-      const zipEntry = zip.file(entry.path);
-      if (zipEntry) {
-        const data = await zipEntry.async('uint8array');
-        entry.rawData = data;
-        entry.size = data.length;
-      }
-    }
   }
 
   return {
@@ -134,6 +128,19 @@ export async function parseZip(file: File): Promise<ParsedArchive> {
     totalSize: entries.reduce((sum, e) => sum + e.size, 0),
     entries: buildFileTree(entries),
   };
+}
+
+export async function loadEntryData(path: string): Promise<Uint8Array | null> {
+  if (zipInstance) {
+    const entry = zipInstance.file(path);
+    if (entry) return entry.async('uint8array');
+  }
+
+  if (tarFilesCache.has(path)) {
+    return tarFilesCache.get(path) ?? null;
+  }
+
+  return null;
 }
 
 export async function parseTar(file: File, isGzipped: boolean): Promise<ParsedArchive> {
@@ -149,13 +156,19 @@ export async function parseTar(file: File, isGzipped: boolean): Promise<ParsedAr
   const { parseTar: tarparser } = await import('tarparser');
   const tarFiles = await tarparser(tarData);
 
-  const entries: ArchiveEntry[] = tarFiles.map((f: FileDescription) => ({
-    name: f.name.split('/').pop() || f.name,
-    path: f.name.replace(/\/$/, ''),
-    isDirectory: f.type === 'directory' || f.name.endsWith('/'),
-    size: f.size || 0,
-    rawData: f.data,
-  }));
+  tarFilesCache.clear();
+  const entries: ArchiveEntry[] = tarFiles.map((f: FileDescription) => {
+    const entryPath = f.name.replace(/\/$/, '');
+    if (!f.name.endsWith('/')) {
+      tarFilesCache.set(entryPath, f.data);
+    }
+    return {
+      name: f.name.split('/').pop() || f.name,
+      path: entryPath,
+      isDirectory: f.type === 'directory' || f.name.endsWith('/'),
+      size: f.size || 0,
+    };
+  });
 
   return {
     filename: file.name,
@@ -167,34 +180,34 @@ export async function parseTar(file: File, isGzipped: boolean): Promise<ParsedAr
 
 export async function parse7z(file: File): Promise<ParsedArchive> {
   const SevenZip = (await import('7z-wasm')).default;
-  const sevenZip = await SevenZip();
+  sevenZipInstance = await SevenZip();
 
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
 
-  sevenZip.FS.mkdir('/input');
-  sevenZip.FS.mkdir('/output');
-  const stream = sevenZip.FS.open('/input/archive.7z', 'w+');
-  sevenZip.FS.write(stream, uint8Array, 0, uint8Array.length);
-  sevenZip.FS.close(stream);
+  sevenZipInstance.FS.mkdir('/input');
+  sevenZipInstance.FS.mkdir('/output');
+  const stream = sevenZipInstance.FS.open('/input/archive.7z', 'w+');
+  sevenZipInstance.FS.write(stream, uint8Array, 0, uint8Array.length);
+  sevenZipInstance.FS.close(stream);
 
   try {
-    sevenZip.callMain(['x', '-y', '/input/archive.7z', '-o/output']);
+    sevenZipInstance.callMain(['x', '-y', '/input/archive.7z', '-o/output']);
   } catch {
     throw new Error('7z extraction failed');
   }
 
   const entries: ArchiveEntry[] = [];
   const readDir = (dirPath: string) => {
-    const files = sevenZip.FS.readdir(dirPath);
+    const files = sevenZipInstance!.FS.readdir(dirPath);
     for (const f of files) {
       if (f === '.' || f === '..') continue;
       const fullPath = dirPath === '/' ? '/' + f : dirPath + '/' + f;
-      const stat = sevenZip.FS.stat(fullPath);
-      if (sevenZip.FS.isDir(stat.mode)) {
+      const stat = sevenZipInstance!.FS.stat(fullPath);
+      if (sevenZipInstance!.FS.isDir(stat.mode)) {
         readDir(fullPath);
       } else {
-        const data = sevenZip.FS.readFile(fullPath);
+        const data = sevenZipInstance!.FS.readFile(fullPath);
         const name = f;
         const path = fullPath.replace(/^\//, '').replace(/\/$/, '');
         entries.push({
@@ -202,7 +215,6 @@ export async function parse7z(file: File): Promise<ParsedArchive> {
           path,
           isDirectory: false,
           size: data.length,
-          rawData: data,
         });
       }
     }
@@ -215,6 +227,12 @@ export async function parse7z(file: File): Promise<ParsedArchive> {
     totalSize: entries.reduce((sum, e) => sum + e.size, 0),
     entries: buildFileTree(entries),
   };
+}
+
+export function clearCache(): void {
+  zipInstance = null;
+  tarFilesCache.clear();
+  sevenZipInstance = null;
 }
 
 export async function loadArchive(file: File): Promise<ParsedArchive> {

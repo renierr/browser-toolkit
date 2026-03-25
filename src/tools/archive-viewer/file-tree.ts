@@ -57,23 +57,24 @@ export function formatSize(bytes: number): string {
   return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${units[i]}`;
 }
 
-export type EntryClickHandler = (entry: ArchiveEntry) => void;
+export type PreviewHandler = (entry: ArchiveEntry) => Promise<void>;
 export type SelectionChangeHandler = (path: string, selected: boolean) => void;
 
 export function renderEntries(
   entries: ArchiveEntry[],
   container: HTMLElement,
-  onEntryClick: EntryClickHandler,
+  onPreview: PreviewHandler,
   onSelectionChange: SelectionChangeHandler,
   level = 0
 ): void {
   for (const entry of entries) {
     const row = document.createElement('tr');
-    row.className = 'file-row hover cursor-pointer';
+    row.className = 'file-row hover';
     row.dataset.path = entry.path;
     row.dataset.size = String(entry.size);
     if (entry.isDirectory) row.dataset.directory = 'true';
 
+    // Column 1: Checkbox
     const checkbox = document.createElement('td');
     checkbox.className = 'p-0';
     if (!entry.isDirectory) {
@@ -87,13 +88,8 @@ export function renderEntries(
     }
     row.appendChild(checkbox);
 
+    // Column 2: Icon/Expand button
     const iconCell = document.createElement('td');
-    const iconDiv = document.createElement('div');
-    iconDiv.className = 'flex items-center gap-1';
-    const icon = document.createElement('i');
-    icon.setAttribute('data-lucide', getIconForFile(entry.name, entry.isDirectory));
-    icon.className = 'entry-icon';
-    iconDiv.appendChild(icon);
     if (entry.isDirectory) {
       const expandBtn = document.createElement('button');
       expandBtn.className = 'btn btn-xs btn-ghost btn-square expand-btn';
@@ -105,23 +101,49 @@ export function renderEntries(
           childContainer.classList.toggle('hidden');
         }
       });
-      iconDiv.appendChild(expandBtn);
+      iconCell.appendChild(expandBtn);
+    } else {
+      const icon = document.createElement('i');
+      icon.setAttribute('data-lucide', getIconForFile(entry.name, entry.isDirectory));
+      icon.className = 'entry-icon';
+      iconCell.appendChild(icon);
     }
-    iconDiv.appendChild(document.createTextNode(entry.name));
-    iconCell.appendChild(iconDiv);
     row.appendChild(iconCell);
 
+    // Column 3: Name
+    const nameCell = document.createElement('td');
+    nameCell.textContent = entry.name;
+    nameCell.className = 'truncate max-w-xs';
+    row.appendChild(nameCell);
+
+    // Column 4: Size
     const sizeCell = document.createElement('td');
     sizeCell.textContent = formatSize(entry.size);
-    sizeCell.className = 'font-mono text-xs';
+    sizeCell.className = 'font-mono text-xs whitespace-nowrap';
     row.appendChild(sizeCell);
 
+    // Column 5: Type
     const typeCell = document.createElement('td');
     typeCell.textContent = entry.isDirectory
       ? 'Folder'
       : entry.name.split('.').pop()?.toUpperCase() || 'File';
-    typeCell.className = 'text-xs opacity-60';
+    typeCell.className = 'text-xs opacity-60 whitespace-nowrap';
     row.appendChild(typeCell);
+
+    // Column 6: Actions
+    const actionsCell = document.createElement('td');
+    if (!entry.isDirectory) {
+      const previewBtn = document.createElement('button');
+      previewBtn.className = 'btn btn-xs btn-ghost btn-square';
+      previewBtn.title = 'Preview';
+      previewBtn.innerHTML = '<i data-lucide="eye" class="w-3 h-3"></i>';
+      previewBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        onPreview(entry);
+      });
+      actionsCell.appendChild(previewBtn);
+    }
+    row.appendChild(actionsCell);
 
     container.appendChild(row);
 
@@ -129,21 +151,14 @@ export function renderEntries(
       const childContainer = document.createElement('tr');
       childContainer.className = 'children-container hidden';
       const childCell = document.createElement('td');
-      childCell.colSpan = 5;
+      childCell.colSpan = 6;
       const childTable = document.createElement('table');
       childTable.className = 'table table-xs w-full';
       childTable.style.marginLeft = `${(level + 1) * 20}px`;
-      renderEntries(entry.children, childTable, onEntryClick, onSelectionChange, level + 1);
+      renderEntries(entry.children, childTable, onPreview, onSelectionChange, level + 1);
       childCell.appendChild(childTable);
       childContainer.appendChild(childCell);
       container.appendChild(childContainer);
     }
-
-    row.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).tagName === 'INPUT') return;
-      if (!entry.isDirectory && entry.rawData) {
-        onEntryClick(entry);
-      }
-    });
   }
 }

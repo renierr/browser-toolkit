@@ -1,6 +1,12 @@
 import { showMessage } from '../../js/ui';
-import { downloadFile, downloadAsZip } from '../../js/file-utils';
-import { loadArchive, type ParsedArchive, type ArchiveEntry } from './archive-parser';
+import { downloadFile } from '../../js/file-utils';
+import {
+  loadArchive,
+  loadEntryData,
+  clearCache,
+  type ParsedArchive,
+  type ArchiveEntry,
+} from './archive-parser';
 import { renderEntries, formatSize } from './file-tree';
 
 interface ViewerState {
@@ -28,31 +34,42 @@ function updateToolbarButtons(state: ViewerState): void {
   }
 }
 
-function showPreview(entry: ArchiveEntry): void {
-  const modal = document.getElementById('preview-modal') as HTMLDialogElement;
-  const filenameEl = document.getElementById('preview-filename');
-  const infoEl = document.getElementById('preview-info');
-  const contentEl = document.getElementById('preview-content');
-  const downloadBtn = document.getElementById('preview-download') as HTMLButtonElement;
+async function handlePreview(entry: ArchiveEntry): Promise<void> {
+  const loading = document.getElementById('loading-overlay');
+  loading?.classList.remove('hidden');
 
-  if (filenameEl) filenameEl.textContent = entry.name;
-  if (infoEl) {
-    infoEl.textContent = `Size: ${formatSize(entry.size)} | Type: ${entry.name.split('.').pop()?.toUpperCase() || 'file'}`;
-  }
+  try {
+    const data = await loadEntryData(entry.path);
+    if (!data) {
+      showMessage('Failed to load file content', { type: 'alert' });
+      return;
+    }
 
-  if (entry.rawData) {
-    const text = new TextDecoder().decode(entry.rawData);
+    const modal = document.getElementById('preview-modal') as HTMLDialogElement;
+    const filenameEl = document.getElementById('preview-filename');
+    const infoEl = document.getElementById('preview-info');
+    const contentEl = document.getElementById('preview-content');
+    const downloadBtn = document.getElementById('preview-download') as HTMLButtonElement;
+
+    if (filenameEl) filenameEl.textContent = entry.name;
+    if (infoEl) {
+      infoEl.textContent = `Size: ${formatSize(entry.size)} | Type: ${entry.name.split('.').pop()?.toUpperCase() || 'file'}`;
+    }
+
+    const text = new TextDecoder().decode(data);
     if (contentEl) {
       contentEl.textContent = text.slice(0, 10000);
       if (text.length > 10000) contentEl.textContent += '\n\n... (truncated)';
     }
+
+    downloadBtn.onclick = () => {
+      downloadFile(data, entry.name);
+    };
+
+    modal?.showModal();
+  } finally {
+    loading?.classList.add('hidden');
   }
-
-  downloadBtn.onclick = () => {
-    if (entry.rawData) downloadFile(entry.rawData, entry.name);
-  };
-
-  modal?.showModal();
 }
 
 function findEntry(entries: ArchiveEntry[], path: string): ArchiveEntry | null {
@@ -69,41 +86,69 @@ function findEntry(entries: ArchiveEntry[], path: string): ArchiveEntry | null {
 async function handleDownloadSelected(state: ViewerState): Promise<void> {
   if (!state.archive || state.selectedEntries.size === 0) return;
 
-  const filesToDownload: { data: ArrayBuffer; name: string }[] = [];
+  const loading = document.getElementById('loading-overlay');
+  loading?.classList.remove('hidden');
 
-  for (const path of state.selectedEntries) {
-    const entry = findEntry(state.archive.entries, path);
-    if (entry && entry.rawData) {
-      filesToDownload.push({ data: entry.rawData.buffer as ArrayBuffer, name: entry.name });
+  try {
+    const filesToDownload: { data: Uint8Array; name: string }[] = [];
+
+    for (const path of state.selectedEntries) {
+      const entry = findEntry(state.archive.entries, path);
+      if (entry) {
+        const data = await loadEntryData(path);
+        if (data) {
+          filesToDownload.push({ data, name: entry.name });
+        }
+      }
     }
-  }
 
-  if (filesToDownload.length === 1) {
-    const f = filesToDownload[0];
-    downloadFile(new Uint8Array(f.data), f.name);
-  } else if (filesToDownload.length > 1) {
-    await downloadAsZip(filesToDownload, 'extracted-files.zip');
+    for (const f of filesToDownload) {
+      downloadFile(f.data, f.name);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  } finally {
+    loading?.classList.add('hidden');
   }
 }
 
 async function handleDownloadAll(state: ViewerState): Promise<void> {
   if (!state.archive) return;
 
-  const files: { data: ArrayBuffer; name: string }[] = [];
+  const loading = document.getElementById('loading-overlay');
+  loading?.classList.remove('hidden');
 
-  const collectFiles = (entries: ArchiveEntry[]) => {
-    for (const entry of entries) {
-      if (!entry.isDirectory && entry.rawData) {
-        files.push({ data: entry.rawData.buffer as ArrayBuffer, name: entry.name });
+  try {
+    const files: { data: Uint8Array; name: string }[] = [];
+
+    const collectEntries = (entries: ArchiveEntry[]): string[] => {
+      const paths: string[] = [];
+      for (const entry of entries) {
+        if (!entry.isDirectory) {
+          paths.push(entry.path);
+        }
+        if (entry.children) {
+          paths.push(...collectEntries(entry.children));
+        }
       }
-      if (entry.children) collectFiles(entry.children);
+      return paths;
+    };
+
+    const allPaths = collectEntries(state.archive.entries);
+
+    for (const path of allPaths) {
+      const data = await loadEntryData(path);
+      if (data) {
+        const entry = findEntry(state.archive.entries, path);
+        files.push({ data, name: entry?.name || path });
+      }
     }
-  };
 
-  collectFiles(state.archive.entries);
-
-  if (files.length > 0) {
-    await downloadAsZip(files, state.archive.filename.replace(/\.[^.]+$/, '') + '-extracted.zip');
+    for (const f of files) {
+      downloadFile(f.data, f.name);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  } finally {
+    loading?.classList.add('hidden');
   }
 }
 
@@ -132,7 +177,7 @@ async function handleArchiveLoad(file: File, state: ViewerState): Promise<void> 
     if (contentArea) contentArea.classList.remove('hidden');
     if (fileList) {
       fileList.innerHTML = '';
-      renderEntries(archive.entries, fileList, showPreview, (path, selected) => {
+      renderEntries(archive.entries, fileList, handlePreview, (path, selected) => {
         if (selected) state.selectedEntries.add(path);
         else state.selectedEntries.delete(path);
         updateToolbarButtons(state);
@@ -224,5 +269,6 @@ export default function init() {
   return () => {
     state.archive = null;
     state.selectedEntries.clear();
+    clearCache();
   };
 }
