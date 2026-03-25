@@ -1,9 +1,30 @@
-# Vanilla Toolkit
+# Browser Toolkit
 
 ![Preview](readme-preview.png)
 
 Minimalistic, lightning-fast tool collection  
 Vite + TypeScript + Tailwind – **no React, no framework**
+
+## Commands
+
+```bash
+# Development
+pnpm dev              # Start Vite dev server
+pnpm preview         # Preview production build on port 5000
+
+# Build & Type Check
+pnpm build            # Run tsc (type check) + Vite build
+pnpm tsc             # Type check only (tsc --noEmit)
+
+# Formatting
+pnpm format          # Format all source files with Prettier
+pnpm format:check    # Check formatting without writing
+
+# Utilities
+pnpm clean           # Remove dist and node_modules/.vite
+pnpm upgrade:check   # Check outdated dependencies
+pnpm upgrade:deps    # Update dependencies to latest
+```
 
 ## Features
 
@@ -14,7 +35,7 @@ Vite + TypeScript + Tailwind – **no React, no framework**
 
 ## Create a new tool (30 seconds)
 
-Create a folder inside `src/tools/`. 
+Create a folder inside `src/tools/`.
 The folder name becomes the tool’s **path/URL slug**.
 
 ```bash
@@ -38,22 +59,28 @@ Minimal example:
 ```
 
 Notes:
+
 - `name` and `description` are shown on the overview page and used for search.
 - `draft: true` hides the tool from the normal overview (useful while you’re still building it).
 - `example: true` is intended for template/demo tools (you can ignore it in real projects).
 
 Optional fields you can add later:
+
 - `icon`: an icon id (see **Tool Icons (Lucide)** below)
 - `order` / `sectionId`: for sorting & grouping (see next section)
+- `hideHeader`: set to `true` to hide the site header for this tool
+- `hideFooter`: set to `true` to hide the site footer for this tool
 
 ### 2) Add `template.html`
 
 This is the tool’s UI. Keep it small and composable (cards, inputs, buttons).
+
 - Prefer semantic HTML (`label`, `input`, `button`)—it improves accessibility quickly.
 - Prefer using daisyUI component classes together with Tailwind utility classes for consistent UI patterns.
 - Avoid heavy use of Tailwind's `dark:` prefix — prefer daisyUI themes or CSS variables for theme-aware styling (examples below).
 
 Practical tips:
+
 - Give your tool a single root container so it’s easy to render/replace.
 - Prefer semantic HTML (`label`, `input`, `button`)—it improves accessibility quickly.
 
@@ -61,11 +88,13 @@ Practical tips:
 
 If your tool is interactive, put the logic in `index.ts`.
 Typical responsibilities:
+
 - Wire up event listeners (click, input, submit)
 - Read/write values from the DOM
 - Implement the actual tool logic (formatting, conversions, generators, etc.)
 
 Keep it defensive:
+
 - Validate user input before processing
 - Handle empty states (e.g. “nothing entered yet”)
 - Avoid throwing on malformed input—show a message instead
@@ -89,24 +118,25 @@ export function init() {
 **Important: cleanup when navigating between tools**
 
 Tools can be opened/closed via routing, so your `index.ts` may run multiple times.
-If you attach any **global** listeners (e.g. `document.addEventListener`, `window.addEventListener`), timers (`setInterval`), observers, etc.,    
+If you attach any **global** listeners (e.g. `document.addEventListener`, `window.addEventListener`), timers (`setInterval`), observers, etc.,  
 make sure you return a **cleanup function** that removes them.
 
 ```ts
-export default function init() { 
-    const onKeyDown = (e: KeyboardEvent) => { 
-        // ... 
-    };
-    document.addEventListener('keydown', onKeyDown);
-    
-    // Return cleanup to prevent duplicate listeners when navigating away/back 
-    return () => { 
-        document.removeEventListener('keydown', onKeyDown); 
-    }; 
+export default function init() {
+  const onKeyDown = (e: KeyboardEvent) => {
+    // ...
+  };
+  document.addEventListener('keydown', onKeyDown);
+
+  // Return cleanup to prevent duplicate listeners when navigating away/back
+  return () => {
+    document.removeEventListener('keydown', onKeyDown);
+  };
 }
 ```
 
 Rule of thumb:
+
 - Listeners on elements that get replaced with the tool DOM are usually fine.
 - Anything attached to `document` / `window` should be cleaned up.
 
@@ -120,6 +150,7 @@ pnpm run dev
 
 Your tool should appear automatically on the overview page.
 If it doesn’t:
+
 - Check that the folder is directly under `src/tools/<tool-name>/`
 - Ensure `config.json` is valid JSON (no trailing commas)
 - Restart the dev server after renaming folders/files
@@ -132,14 +163,15 @@ If it doesn’t:
 
 ## Tool-specific dependencies (`pnpm-workspace.yaml`)
 
-Each tool can declare its own dependencies by adding a `package.json` inside its folder.   
+Each tool can declare its own dependencies by adding a `package.json` inside its folder.  
 This is supported by the project’s `pnpm-workspace.yaml` setup.
 
 **Example:**  
-The tool `example-package` in this project add its own dependencies:    
+The tool `example-package` in this project add its own dependencies:  
 _(demo purpose only with a lightweight dependency)_
 
 `// src/tools/example-package/package.json`
+
 ```json
 {
   "name": "example-package",
@@ -154,9 +186,8 @@ _(demo purpose only with a lightweight dependency)_
 - Each tool’s dependencies are isolated and won’t affect others.
 
 > Note:
-> This allows tools to use different libraries or versions as needed, 
+> This allows tools to use different libraries or versions as needed,
 > without polluting the main project dependencies.
-
 
 ## Optional: `src/main.ts` (custom startup invocation)
 
@@ -175,17 +206,17 @@ This is useful for global, one-time setup such as:
 You can provide either a default export **or** a named `init` export. Both may be `async`:
 
 ```ts
-// src/main.ts 
+// src/main.ts
 import type { CustomMainContext } from './js/types';
 
-export default function main(ctx: CustomMainContext) { 
-    console.log('Loaded tools:', ctx.tools.length); 
-    // global setup... 
+export default function main(ctx: CustomMainContext) {
+  console.log('Loaded tools:', ctx.tools.length);
+  // global setup...
 }
 
-// alternatively: 
-export function init(ctx: CustomMainContext) { 
-    // ... 
+// alternatively:
+export function init(ctx: CustomMainContext) {
+  // ...
 }
 ```
 
@@ -202,7 +233,6 @@ If you register global side effects here
 (e.g. `window.addEventListener`, timers, observers),
 you are responsible for managing cleanup yourself — unlike tool `index.ts`,
 which can return a cleanup function.
-
 
 ## Share Target for Tools (PWA)
 
@@ -225,6 +255,7 @@ Add a `shareTarget` field to your tool's `config.json`:
 ```
 
 The `accept` array contains MIME type patterns:
+
 - Exact types: `"image/png"`, `"application/pdf"`, `"text/plain"`
 - Wildcards: `"image/*"` (matches all image types), `"text/*"` (matches all text types)
 
@@ -242,7 +273,7 @@ export default function init(payload?: SharedFilesPayload) {
     // Process the shared file
     loadFile(file);
   }
-  
+
   // ... rest of your tool logic
 }
 ```
@@ -251,9 +282,9 @@ The `SharedFilesPayload` interface:
 
 ```ts
 interface SharedFilesPayload {
-  sharedFiles: File[];      // Array of shared files
-  mimeTypes: string[];      // MIME types of the shared files
-  text?: string;            // Optional shared text
+  sharedFiles: File[]; // Array of shared files
+  mimeTypes: string[]; // MIME types of the shared files
+  text?: string; // Optional shared text
 }
 ```
 
@@ -272,23 +303,22 @@ interface SharedFilesPayload {
 - Shared files are automatically cleaned up from IndexedDB after 1 hour
 - Make sure your tool's dropzone/file input accepts the same file types
 
-
 ## Ordering & Section grouping (Overview page)
 
 Tools can be **sorted** and **grouped into sections** on the overview page by adding two optional fields to a tool’s `config.json`:
 
-- `order` *(number)*: controls the position within a section (ascending)
-- `sectionId` *(string)*: groups tools into a named section
+- `order` _(number)_: controls the position within a section (ascending)
+- `sectionId` _(string)_: groups tools into a named section
 
 ### Example `config.json`
 
 ```json
-{ 
-  "name": "My Tool", 
-  "description": "Does something useful", 
-  "draft": false, 
-  "example": false, 
-  "sectionId": "examples", 
+{
+  "name": "My Tool",
+  "description": "Does something useful",
+  "draft": false,
+  "example": false,
+  "sectionId": "examples",
   "order": 1
 }
 ```
@@ -296,8 +326,8 @@ Tools can be **sorted** and **grouped into sections** on the overview page by ad
 ### How sorting works
 
 - Tools are sorted by:
-    1. `order` (ascending)
-    2. `name` (A → Z) as a tie-breaker
+  1. `order` (ascending)
+  2. `name` (A → Z) as a tie-breaker
 
 This means you can keep the list stable and intentional, even when multiple tools share the same `order`.
 
@@ -313,28 +343,27 @@ This means you can keep the list stable and intentional, even when multiple tool
 Section titles and descriptions live in the site configuration.
 
 1. Copy the template config:
-    - `src/config/site.config.template.ts` → `src/config/site.config.ts`
+   - `src/config/site.config.template.ts` → `src/config/site.config.ts`
 2. Define your sections (keys are the `sectionId`s):
 
 ```ts
-export const siteConfig = { 
-  // ... 
-  toolSections: { 
-      examples: { title: 'Examples', description: 'Demo tools that show how the template works.', }, 
-      general: { title: 'General', description: 'Everyday helpers and utilities.', }, 
-  }, 
+export const siteConfig = {
+  // ...
+  toolSections: {
+    examples: { title: 'Examples', description: 'Demo tools that show how the template works.' },
+    general: { title: 'General', description: 'Everyday helpers and utilities.' },
+  },
 };
 ```
+
 **Section order:**  
 Sections are rendered in the insertion order of `toolSections` first, followed by any additional sections discovered at runtime.
 
-
 ### Site configuration override
 
-The default configuration lives in `src/config/site.config.template.ts`.     
+The default configuration lives in `src/config/site.config.template.ts`.  
 To customize the configuration for your project, copy the file to the Name `site.config.ts` and change any configuration values.
 See types in `src/config/site.config.ts` for possible values.
-
 
 ## Tool Icons (Lucide)
 
@@ -353,36 +382,133 @@ You can add additional icons registering them at startup (see `src/main.ts`).
 
 This template exposes an icon registry so derived projects can add (or override) icon IDs without editing `src/js/tool-icons.ts`.
 
-1) Import `registerToolIcons` in your entry file (e.g. `src/script.ts`).
+1. Import `registerToolIcons` in your entry file (e.g. `src/script.ts`).
 
-2) Import any additional icons you want from `lucide` or any other source follwing the syntax.
+2. Import any additional icons you want from `lucide` or any other source follwing the syntax.
 
-3) Register them at once during startup (see `main.ts` hook above).
+3. Register them at once during startup (see `main.ts` hook above).
 
 ```ts
-import { registerToolIcons } from 
-        './src/js/tool-icons';
+import { registerToolIcons } from './src/js/tool-icons';
 import { ArrowLeft } from '@lucide/icons';
-    
+
 registerToolIcons({
-    ArrowLeft: ArrowLeft,
-    // add more icons here
+  ArrowLeft: ArrowLeft,
+  // add more icons here
 });
 ```
 
 Now you can reference your new icon IDs from any tool `config.json`:
 
 ```json
-{ 
-  "name": "My Tool", 
-  "description": "Does something useful", 
+{
+  "name": "My Tool",
+  "description": "Does something useful",
   "icon": "arrow-left"
 }
 ```
 
 Notes:
+
 - If an ID is unknown, the renderer falls back to a default icon.
 - If you register an existing ID, it will override the built-in icon for that ID.
+
+---
+
+## WebAssembly (WASM) Modules
+
+This project includes Vite aliases for several WASM modules, available for tools that need them:
+
+- `@ffmpeg` - FFmpeg for audio/video processing
+- `pandoc-wasm` - Document conversion
+- `onnx` - ONNX runtime for ML inference
+
+**Usage:** Use dynamic imports for lazy loading:
+
+```ts
+const onnx = await import('onnxruntime-web');
+// use onnx for inference
+```
+
+**Important:** When using WASM, always free and destroy allocated memory when done to prevent memory leaks.
+
+---
+
+## Modern Browser APIs
+
+Use modern browser features freely. Always check for API availability and provide user feedback when unavailable.
+
+```ts
+// Clipboard API with detection
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (!navigator.clipboard) {
+    console.warn('Clipboard API not supported');
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    console.warn('Clipboard access denied');
+    return false;
+  }
+}
+```
+
+**Common APIs to check:**
+
+- `navigator.clipboard` - Clipboard access
+- `navigator.share` - Web Share API
+- `window.showOpenFilePicker` - File System Access API
+- `navigator.bluetooth` - Web Bluetooth
+- `navigator.serial` - Web Serial
+- `navigator.usb` - Web USB
+
+---
+
+## Touch & Responsive Design
+
+Tools must work on touch devices with varying screen sizes.
+
+### Pointer Events
+
+Use pointer events instead of mouse/touch listeners for cross-device compatibility:
+
+```ts
+// Good - works on all input types
+element.addEventListener('pointerdown', handlePointerDown);
+
+// Avoid - mouse only
+element.addEventListener('mousedown', handleMouseDown);
+
+// Avoid - touch only
+element.addEventListener('touchstart', handleTouchStart);
+```
+
+### Responsive Layout
+
+- Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) for adaptive layouts
+- Use DaisyUI components which are responsive by default
+- Design for mobile first, then enhance for larger screens
+- Use flexible layouts (`flex`, `grid`) that adapt to available space
+- Ensure interactive elements are easily tappable with appropriate spacing
+
+---
+
+## Error Handling
+
+- **No empty catch blocks** - never swallow exceptions silently
+- **Log meaningful messages** with context: `console.error('[MyTool] Failed to process:', error)`
+- **Show user-friendly messages** in the UI (toast, alert, inline text)
+- **Validate user input** before processing
+- **Handle empty states** gracefully (show "nothing entered yet" message)
+- **Avoid throwing** on malformed input - show a message instead
+
+---
+
+## Shared Utilities
+
+Common utility functions are available in `src/js/` for tasks like file handling, theming, and UI. Check the folder when multiple tools need similar functionality.
 
 ---
 
@@ -390,16 +516,18 @@ Notes:
 
 Brief and practical:
 {% raw %}
+
 - Syntax: Use `{{ key.path }}` inside your HTML templates, e.g. `{{ config.title }}`.
 - When they are replaced: Placeholders are replaced by the central function `replacePlaceholders()` (see `src/js/utils.ts`). In this codebase the header and footer templates are processed before being inserted into the DOM (`src/js/render.ts`).
 - Where the values come from: Values are read from the exported `siteContext` in `src/config/index.ts`. `siteContext` merges the defaults from `site.config.template.ts` with an optional `src/config/site.config.ts` file.
 - How it works: `replacePlaceholders()` uses the regex `/\{\{(.+?)\}\}/g`, trims the path and resolves the value using dot-notation with `getValueByDotNotation()`.
-- Missing values: If a placeholder cannot be resolved, a console warning is emitted and the placeholder is replaced with a visible marker such as `[{{...} NOT FOUND]` to make the issue obvious.
+- Missing values: If a placeholder cannot be resolved, a console warning is emitted and the placeholder is replaced with a visible marker such as `[{{...} NOT FOUND]` to make the issue obvious. 
 {% endraw %}
- 
+
 Example (Template → Result):
 
 {% raw %}
+
 ```html
 <!-- Template -->
 <h1>{{ config.title }}</h1>
@@ -407,6 +535,7 @@ Example (Template → Result):
 <!-- After replacement -->
 <h1>Vanilla Toolkit</h1>
 ```
+
 {% endraw %}
 
 ---
@@ -416,6 +545,7 @@ Example (Template → Result):
 This project works with Tailwind's class strategy but also supports daisyUI's theme system. In practice prefer daisyUI theme tokens and components instead of sprinkling many `dark:` utilities across your templates.
 
 Why prefer daisyUI tokens?
+
 - daisyUI exposes semantic tokens (e.g. `bg-base-100`, `text-base-content`, `border-base-300`) that automatically adapt to the active theme.
 - You get ready-made components (`btn`, `card`, `input`, `form-control`, etc.) and consistent spacing/colors with minimal classes.
 - Theme switching is handled via the `data-theme` attribute on `<html>` (or `document.documentElement`), which is simpler than toggling many `dark:` variants.
@@ -440,6 +570,7 @@ Quick daisyUI examples (concise):
 ```
 
 Theme-aware tokens (preferred replacements for common pairs):
+
 - Use `bg-base-100` instead of `bg-white` / `dark:bg-slate-800`.
 - Use `text-base-content` instead of `text-gray-900` / `dark:text-white`.
 - Use `border-base-300` instead of `border-gray-200` / `dark:border-slate-700`.
@@ -455,14 +586,17 @@ const theme = document.documentElement.getAttribute('data-theme');
 ```
 
 When to still use `dark:`
+
 - For very small, local overrides where a single property needs a different value in dark mode.
 - For legacy templates that already rely on `dark:` variants and where migration isn't worth the effort.
 
 Rule of thumb:
+
 - Prefer daisyUI tokens and components for most UI work.
 - Use `dark:` sparingly for edge-case, one-off style changes.
 
 ### Focus & Hover States with daisyUI
+
 Most components include sensible focus/hover styles. If you need custom behavior, combine tokens with Tailwind utilities:
 
 ```html
@@ -471,8 +605,8 @@ Most components include sensible focus/hover styles. If you need custom behavior
 ```
 
 ### Custom styles
-Add your own custom styles to `src/css/styles.css` below the marker comment to avoid conflicts with the template styles on merge. 
 
+Add your own custom styles to `src/css/styles.css` below the marker comment to avoid conflicts with the template styles on merge.
 
 ---
 
@@ -486,22 +620,22 @@ This template is meant to be cloned (GitHub template). To allow project-specific
 
 ### How to use it in your cloned project
 
-1) Create a declaration file (any name is fine), for example:
+1. Create a declaration file (any name is fine), for example:
 
 - `src/site-context.custom.d.ts`
 
-2) Add your custom fields by extending `SiteContextCustom`:
+2. Add your custom fields by extending `SiteContextCustom`:
 
 ```ts
 declare global {
-    interface SiteContextCustom {
-        custom?: { foo: string; bar?: number; };
-    }
+  interface SiteContextCustom {
+    custom?: { foo: string; bar?: number };
+  }
 }
 export {};
 ```
 
-After this, your `SiteContext` type will include `custom`, `features`, etc. everywhere it’s used.    
+After this, your `SiteContext` type will include `custom`, `features`, etc. everywhere it’s used.  
 You can now use it in your tool configs and templates.
 
 ### Notes / troubleshooting
@@ -509,13 +643,12 @@ You can now use it in your tool configs and templates.
 - Make sure TypeScript includes the file. Your `tsconfig.json` should include something like `src/**/*.d.ts` (or `src/**`).
 - To avoid naming collisions, consider grouping your additions under a single top-level key (e.g. `custom`).
 
-
 ---
 
 ## Keeping Derived Projects Up-to-Date (Template Sync Workflow)
 
-This template supports automatic updates for derived repositories using a GitHub Actions workflow. 
-The workflow uses [`AndreasAugustin/actions-template-sync`](https://github.com/AndreasAugustin/actions-template-sync) 
+This template supports automatic updates for derived repositories using a GitHub Actions workflow.
+The workflow uses [`AndreasAugustin/actions-template-sync`](https://github.com/AndreasAugustin/actions-template-sync)
 to regularly or manually sync changes from the template repository into your project.
 
 ### Workflow Setup
@@ -532,7 +665,7 @@ You can also trigger it manually at any time via the GitHub Actions UI.
 
 ### Ignoring files during sync
 
-To prevent certain files or folders from being overwritten, a `.templatesyncignore` exist in the `.github` directory.    
+To prevent certain files or folders from being overwritten, a `.templatesyncignore` exist in the `.github` directory.  
 Use glob patterns to specify files to ignore.
 
 ---
