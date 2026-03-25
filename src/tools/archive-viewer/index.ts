@@ -3,13 +3,22 @@ import { downloadFile, downloadAsZip } from '../../js/file-utils';
 import { loadArchive, type ParsedArchive, type ArchiveEntry } from './archive-parser';
 import { renderEntries, formatSize } from './file-tree';
 
-let currentArchive: ParsedArchive | null = null;
-let selectedEntries: Set<string> = new Set();
+interface ViewerState {
+  archive: ParsedArchive | null;
+  selectedEntries: Set<string>;
+}
 
-function updateToolbarButtons(): void {
+function createState(): ViewerState {
+  return {
+    archive: null,
+    selectedEntries: new Set(),
+  };
+}
+
+function updateToolbarButtons(state: ViewerState): void {
   const downloadBtn = document.getElementById('btn-download-selected') as HTMLButtonElement;
   if (downloadBtn) {
-    downloadBtn.disabled = selectedEntries.size === 0;
+    downloadBtn.disabled = state.selectedEntries.size === 0;
   }
 
   const selectAll = document.getElementById('select-all') as HTMLInputElement;
@@ -57,13 +66,13 @@ function findEntry(entries: ArchiveEntry[], path: string): ArchiveEntry | null {
   return null;
 }
 
-async function handleDownloadSelected(): Promise<void> {
-  if (!currentArchive || selectedEntries.size === 0) return;
+async function handleDownloadSelected(state: ViewerState): Promise<void> {
+  if (!state.archive || state.selectedEntries.size === 0) return;
 
   const filesToDownload: { data: ArrayBuffer; name: string }[] = [];
 
-  for (const path of selectedEntries) {
-    const entry = findEntry(currentArchive.entries, path);
+  for (const path of state.selectedEntries) {
+    const entry = findEntry(state.archive.entries, path);
     if (entry && entry.rawData) {
       filesToDownload.push({ data: entry.rawData.buffer as ArrayBuffer, name: entry.name });
     }
@@ -77,8 +86,8 @@ async function handleDownloadSelected(): Promise<void> {
   }
 }
 
-async function handleDownloadAll(): Promise<void> {
-  if (!currentArchive) return;
+async function handleDownloadAll(state: ViewerState): Promise<void> {
+  if (!state.archive) return;
 
   const files: { data: ArrayBuffer; name: string }[] = [];
 
@@ -91,21 +100,21 @@ async function handleDownloadAll(): Promise<void> {
     }
   };
 
-  collectFiles(currentArchive.entries);
+  collectFiles(state.archive.entries);
 
   if (files.length > 0) {
-    await downloadAsZip(files, currentArchive.filename.replace(/\.[^.]+$/, '') + '-extracted.zip');
+    await downloadAsZip(files, state.archive.filename.replace(/\.[^.]+$/, '') + '-extracted.zip');
   }
 }
 
-async function handleArchiveLoad(file: File): Promise<void> {
+async function handleArchiveLoad(file: File, state: ViewerState): Promise<void> {
   const loading = document.getElementById('loading-overlay');
   loading?.classList.remove('hidden');
 
   try {
     const archive = await loadArchive(file);
-    currentArchive = archive;
-    selectedEntries.clear();
+    state.archive = archive;
+    state.selectedEntries.clear();
 
     const infoEl = document.getElementById('archive-info');
     const filenameEl = document.getElementById('info-filename');
@@ -124,9 +133,9 @@ async function handleArchiveLoad(file: File): Promise<void> {
     if (fileList) {
       fileList.innerHTML = '';
       renderEntries(archive.entries, fileList, showPreview, (path, selected) => {
-        if (selected) selectedEntries.add(path);
-        else selectedEntries.delete(path);
-        updateToolbarButtons();
+        if (selected) state.selectedEntries.add(path);
+        else state.selectedEntries.delete(path);
+        updateToolbarButtons(state);
       });
     }
   } catch (error) {
@@ -139,7 +148,7 @@ async function handleArchiveLoad(file: File): Promise<void> {
   }
 }
 
-function setupEventListeners(): void {
+function setupEventListeners(state: ViewerState): void {
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
   const selectAll = document.getElementById('select-all') as HTMLInputElement;
@@ -165,13 +174,13 @@ function setupEventListeners(): void {
     dropzone.classList.remove('dropzone-active');
     const files = e.dataTransfer?.files;
     if (files && files.length > 0) {
-      handleArchiveLoad(files[0]);
+      handleArchiveLoad(files[0], state);
     }
   });
 
   fileInput?.addEventListener('change', () => {
     if (fileInput.files && fileInput.files.length > 0) {
-      handleArchiveLoad(fileInput.files[0]);
+      handleArchiveLoad(fileInput.files[0], state);
     }
   });
 
@@ -181,16 +190,16 @@ function setupEventListeners(): void {
       cb.checked = selectAll.checked;
       if (selectAll.checked) {
         const row = cb.closest('.file-row') as HTMLElement;
-        if (row) selectedEntries.add(row.dataset.path || '');
+        if (row) state.selectedEntries.add(row.dataset.path || '');
       } else {
-        selectedEntries.clear();
+        state.selectedEntries.clear();
       }
     });
-    updateToolbarButtons();
+    updateToolbarButtons(state);
   });
 
-  downloadSelected?.addEventListener('click', handleDownloadSelected);
-  downloadAll?.addEventListener('click', handleDownloadAll);
+  downloadSelected?.addEventListener('click', () => handleDownloadSelected(state));
+  downloadAll?.addEventListener('click', () => handleDownloadAll(state));
 
   expandAll?.addEventListener('click', () => {
     const containers = document.querySelectorAll('.children-container');
@@ -209,10 +218,11 @@ function setupEventListeners(): void {
 }
 
 export default function init() {
-  setupEventListeners();
+  const state = createState();
+  setupEventListeners(state);
 
   return () => {
-    currentArchive = null;
-    selectedEntries.clear();
+    state.archive = null;
+    state.selectedEntries.clear();
   };
 }
