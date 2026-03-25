@@ -7,6 +7,16 @@ You are a Senior Software Engineer. Your goal is to generate efficient, maintain
 Answers should be short and concise. Check manually made changes of code edits before editing files.
 Do not change unwanted areas of the existing code.
 
+## Quick Reference
+
+| Pattern                   | How To                                                                                    |
+| ------------------------- | ----------------------------------------------------------------------------------------- |
+| **Auto-discovery**        | Tools discovered via `import.meta.glob('@tools/**/config.json')` — no code changes needed |
+| **Tool-specific deps**    | Add `package.json` in tool folder (pnpm-workspace pattern)                                |
+| **WASM modules**          | Use Vite aliases `@ffmpeg`, `pandoc-wasm`, `onnx` from vite.config.ts                     |
+| **Template placeholders** | `{{ config.title }}` syntax — resolved from `siteContext`                                 |
+| **Shared files**          | Tool receives `SharedFilesPayload` in `init(payload?: SharedFilesPayload)`                |
+
 ## Project Overview
 
 This is a **Browser Toolkit** - a collection of browser-only tools built with TypeScript and Vite.
@@ -184,8 +194,7 @@ Tools are navigated via URL hash: `https://example.com/#my-tool` or `/#pdf-viewe
 
 ### Module-Level State
 
-- Module-level variables persist across tool navigation
-- Always return cleanup functions from `init()` to clean up event listeners, timers, observers
+Module-level variables persist across tool navigation. See [Cleanup Pattern](#cleanup-pattern) above — always return cleanup functions from `init()`.
 
 ## Code Style Guidelines
 
@@ -268,6 +277,12 @@ If needed, always clean them up. The cleanup handling pattern exists for this re
 ### WASM Memory Management
 
 If using WebAssembly, free and destroy variables and allocated memory when done.
+
+**WASM modules in this project:**
+
+- Vite aliases configured: `@ffmpeg`, `pandoc-wasm`, `onnx`
+- Use dynamic imports for lazy loading WASM modules
+- Check for WASM support before use
 
 ### index.ts Orchestration
 
@@ -375,27 +390,34 @@ element.addEventListener('touchstart', handleTouchStart);
 
 ## Additional Reference
 
+**AGENTS.md** covers: quick rules, patterns, code style, shared utilities.
+
+**docs/index.md** covers: detailed tutorials, step-by-step guides, configuration options.
+
 For detailed documentation on these topics, see `docs/index.md`:
 
 - **Share Target (PWA)**: Receive files from other apps
-- **Tool-specific dependencies**: pnpm-workspace pattern
-- **Section configuration**: Custom section titles
-- **Template placeholders**: `{{ config.title }}` syntax
-- **Custom icons**: Register additional Lucide icons
-- **SiteContext extension**: Add custom config fields
+- **Tool-specific dependencies**: pnpm-workspace pattern (per-tool package.json)
+- **Section configuration**: Custom section titles in site.config.ts
+- **Template placeholders**: `{{ config.title }}` syntax (resolved from siteContext)
+- **Custom icons**: Register additional Lucide icons via main.ts
+- **SiteContext extension**: Add custom config fields via declaration merging
 - **Theme switching**: Dark/light mode via daisyUI
+- **main.ts hook**: Project-level startup logic
 
 ## Shared Utilities
 
 Available in `src/js/`. This is not a complete list — if you find a utility is needed by multiple tools, add it to the shared folder.
 
-| Module            | Functions                                                                                                                                                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ui.ts`           | `showMessage()`, `showProgress()`, `hideProgress()`, `yieldToUI()`                                                                                                                                                        |
-| `file-utils.ts`   | `setupFileDropzone()`, `downloadFile()`, `downloadAsZip()`, `retrieveImageBlobFromClipboard()`                                                                                                                            |
-| `theme.ts`        | `isDarkMode()`, `setTheme()`, `setupThemeToggle()`                                                                                                                                                                        |
-| `utils.ts`        | `fuzzyScore()`, `replacePlaceholders()`, `debounce()`, `throttleTrailing()`, `acquireWakeLock()`, `withTimeout()`, `isImageFile()`, `hashUint8Array()`, `gpsParseCoordinateFromExifTags()`, `gpsGenerateGoogleMapsLink()` |
-| `mime-types.ts`   | MIME type detection                                                                                                                                                                                                       |
-| `share-target.ts` | `SharedFilesPayload` type for PWA file receiving                                                                                                                                                                          |
+| Module            | Functions                                                                                                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `ui.ts`           | `showMessage(msg, opts)`, `showProgress(id, msg)`, `hideProgress(id)`, `yieldToUI()`                                                                                                                      |
+| `file-utils.ts`   | `setupFileDropzone(el, onFiles)`, `downloadFile(blob, name)`, `downloadAsZip(files, name)`, `retrieveImageBlobFromClipboard()`                                                                            |
+| `theme.ts`        | `isDarkMode()`, `setTheme('dark'                                                                                                                                                                          | 'light')`, `setupThemeToggle(btn)` |
+| `utils.ts`        | `fuzzyScore(query, text)`, `replacePlaceholders(html, ctx)`, `debounce(fn, ms)`, `throttleTrailing(fn, ms)`, `acquireWakeLock()`, `withTimeout(promise, ms)`, `isImageFile(file)`, `hashUint8Array(data)` |
+| `mime-types.ts`   | `detectMimeType(filename): string`                                                                                                                                                                        |
+| `share-target.ts` | `SharedFilesPayload` interface, `loadSharedFiles(): Promise<SharedFilesPayload>`, `findToolForMimeTypes(types): Tool \| null`                                                                             |
+| `favorites.ts`    | `getFavorites(): string[]`, `toggleFavorite(toolId)`, `isFavorite(toolId): boolean`                                                                                                                       |
+| `tool-config.ts`  | `parseToolConfig(json): ToolConfig`, `buildTool(config): Promise<ToolModule>`                                                                                                                             |
 
 Import with: `import { functionName } from '../../js/filename';`
