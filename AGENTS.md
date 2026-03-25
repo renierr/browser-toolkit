@@ -14,6 +14,11 @@ It uses Tailwind CSS + DaisyUI for styling. There is no test framework - do not 
 
 ## Commands
 
+**Important:**
+
+- Use **pnpm** only - never use npm
+- Do NOT start the dev server (it's likely already running). Use `pnpm tsc` for type checking instead.
+
 ```bash
 # Development
 pnpm dev              # Start Vite dev server
