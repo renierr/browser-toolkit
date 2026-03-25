@@ -226,16 +226,80 @@ const updateColorIndicator = (indicatorId: string, hexColor: string): void => {
 
 const applyColor = (command: 'foreColor' | 'hiliteColor', hex: string): void => {
   if (hex === 'transparent') {
-    if (command === 'foreColor') {
-      // Remove all formatting (including color)
-      document.execCommand('removeFormat', false);
-    } else {
-      // For background color, set to transparent (remove highlight)
+    document.execCommand('removeFormat', false);
+    // For background color, also set to transparent (remove highlight)
+    if (command === 'hiliteColor') {
       document.execCommand('hiliteColor', false, 'transparent');
     }
+    // For foreColor, removeFormat already removes color formatting
   } else {
     document.execCommand(command, false, hex);
   }
+  updateToolbarState();
+  const editor = document.getElementById('editor');
+  if (editor) {
+    editor.focus();
+  }
+};
+
+const clearFormatting = (): void => {
+  if (!isSelectionInEditor()) return;
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  let range = selection.getRangeAt(0);
+
+  // If selection is collapsed (just a cursor), expand to include one character forward
+  if (range.collapsed) {
+    const startContainer = range.startContainer;
+    const startOffset = range.startOffset;
+
+    // Check if there's a next character in the same text node
+    if (startContainer.nodeType === Node.TEXT_NODE) {
+      const textLength = startContainer.textContent?.length || 0;
+      if (startOffset < textLength) {
+        // Expand range to include the next character
+        range = document.createRange();
+        range.setStart(startContainer, startOffset);
+        range.setEnd(startContainer, startOffset + 1);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        // At the end of a text node, try to move to previous character
+        if (startOffset > 0) {
+          range = document.createRange();
+          range.setStart(startContainer, startOffset - 1);
+          range.setEnd(startContainer, startOffset);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        } else {
+          // Empty text node? Just return.
+          return;
+        }
+      }
+    } else {
+      // Not a text node, maybe an element node. Try to select the first child text node.
+      const child = startContainer.childNodes[startOffset];
+      if (child && child.nodeType === Node.TEXT_NODE) {
+        range = document.createRange();
+        range.setStart(child, 0);
+        range.setEnd(child, Math.min(1, child.textContent?.length || 0));
+        selection.removeAllRanges();
+        selection.addRange(range);
+      } else {
+        return;
+      }
+    }
+  }
+
+  // Now we have a non-collapsed selection
+  // Remove all formatting from the selection
+  document.execCommand('removeFormat', false);
+
+  // Collapse selection to end (after the cleared region)
+  selection.collapseToEnd();
+
   updateToolbarState();
   const editor = document.getElementById('editor');
   if (editor) {
@@ -267,9 +331,7 @@ export const setupToolbarListeners = (): void => {
   document
     .getElementById('btn-strike')
     ?.addEventListener('click', () => execFormatCommand('strikeThrough'));
-  document
-    .getElementById('btn-clear')
-    ?.addEventListener('click', () => execFormatCommand('removeFormat'));
+  document.getElementById('btn-clear')?.addEventListener('click', clearFormatting);
 
   document.getElementById('heading-select')?.addEventListener('change', (e) => {
     const value = (e.target as HTMLSelectElement).value;
