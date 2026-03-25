@@ -84,7 +84,7 @@ src/
 
    - Any Lucide icon ID can be used (e.g., `"icon": "crop"`) - all Lucide icons are available automatically
    - Use existing `sectionId` values (e.g., `"general"`, `"images"`, `"pdf"`). Do not create new sections unless necessary. If a tool doesn't fit existing sections, warn the user.
-   - Optional: `order`, `shareTarget`, etc. See `@docs/index.md` for full reference
+   - Optional: `order`, `shareTarget`, etc. See `docs/index.md` for full reference
    - `draft: true` hides the tool from the overview (useful while building)
 
 3. **Add `template.html`**: Each tool must have a `template.html` file. This file is auto-discovered and injected into the page when the tool is accessed. All HTML, styles, and UI for the tool must be placed here. Use semantic HTML + DaisyUI components + Tailwind utilities. The UI should match the look and feel of existing tools.
@@ -107,7 +107,7 @@ export default function init() {
 }
 ```
 
-**Reference:** See `@docs/index.md` for complete documentation on:
+**Reference:** See `docs/index.md` for complete documentation on:
 
 - Tool-specific dependencies (pnpm-workspace)
 - Share targets (PWA file receiving)
@@ -126,10 +126,10 @@ export default function init() {
 - **Use modern, non-deprecated APIs.** Avoid deprecated libraries or methods.
 
 - **Strict mode enabled** (`strict: true` in tsconfig)
-- **Prefer `interface`** over `type` for object definitions
+- **Use `type` over `interface`** for object definitions (aligns with erasableSyntaxOnly)
 - **Use explicit return types** for exported functions
 - **Avoid `any`**; use `unknown` if necessary
-- **Use `erasableSyntaxOnly`**: Use `type` instead of `interface` where possible, prefer `readonly` modifiers
+- **Use `readonly` modifiers** for immutability
 
 ### Imports
 
@@ -236,5 +236,4 @@ Extract utility functions into separate files within the tool folder.
 
 - Ensure all code is compatible with modern browsers
 - Use helper/util functions from `src/js/` - contains common global functions for file handling, UI, theming, etc. If multiple tools need them, add to the shared folder
-- When adding a new tool, ensure it has entries in `src/tools/` and `src/pages/`
-- Reference `@docs/index.md` for complete tool creation documentation
+- Reference `docs/index.md` for complete tool creation documentation
