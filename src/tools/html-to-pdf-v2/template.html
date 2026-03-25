@@ -34,6 +34,160 @@
         <button type="button" id="btn-strike" class="btn btn-xs btn-ghost" title="Strikethrough">
           <i data-lucide="strikethrough" class="w-4 h-4"></i>
         </button>
+        <!-- Forecolor dropdown -->
+        <div class="dropdown dropdown-bottom">
+          <label tabindex="0" class="btn btn-xs btn-ghost relative" title="Text Color">
+            <i data-lucide="palette" class="w-4 h-4"></i>
+            <span
+              class="color-indicator"
+              id="forecolor-indicator"
+              style="background-color: #000000"
+            ></span>
+          </label>
+          <div
+            tabindex="0"
+            id="forecolor-dropdown"
+            class="dropdown-content z-50 p-2 shadow bg-base-100 rounded-box w-48 border"
+          >
+            <div class="grid grid-cols-5 gap-1 mb-2">
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #000000"
+                data-color="#000000"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #ffffff; border: 1px solid #ccc"
+                data-color="#FFFFFF"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #ff0000"
+                data-color="#FF0000"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #00ff00"
+                data-color="#00FF00"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #0000ff"
+                data-color="#0000FF"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #ffff00"
+                data-color="#FFFF00"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #ff00ff"
+                data-color="#FF00FF"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #00ffff"
+                data-color="#00FFFF"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #808080"
+                data-color="#808080"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #c0c0c0"
+                data-color="#C0C0C0"
+              ></button>
+            </div>
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                id="forecolor-picker"
+                class="w-8 h-8 p-0 border-0 cursor-pointer"
+              />
+              <button id="forecolor-remove" class="btn btn-xs btn-ghost">Clear</button>
+            </div>
+          </div>
+        </div>
+        <!-- Hilitecolor dropdown -->
+        <div class="dropdown dropdown-bottom">
+          <label tabindex="0" class="btn btn-xs btn-ghost relative" title="Highlight Color">
+            <i data-lucide="highlighter" class="w-4 h-4"></i>
+            <span
+              class="color-indicator"
+              id="hilitecolor-indicator"
+              style="background-color: transparent; border: 1px solid #ccc"
+            ></span>
+          </label>
+          <div
+            tabindex="0"
+            id="hilitecolor-dropdown"
+            class="dropdown-content z-50 p-2 shadow bg-base-100 rounded-box w-48 border"
+          >
+            <div class="grid grid-cols-5 gap-1 mb-2">
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: transparent; border: 1px solid #ccc"
+                data-color="transparent"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #ffff00"
+                data-color="#FFFF00"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #00ff00"
+                data-color="#00FF00"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #00ffff"
+                data-color="#00FFFF"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #ff00ff"
+                data-color="#FF00FF"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #ff9900"
+                data-color="#FF9900"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #ff0000"
+                data-color="#FF0000"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #0000ff"
+                data-color="#0000FF"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #800080"
+                data-color="#800080"
+              ></button>
+              <button
+                class="color-swatch w-6 h-6 rounded"
+                style="background-color: #008000"
+                data-color="#008000"
+              ></button>
+            </div>
+            <div class="flex items-center gap-2">
+              <input
+                type="color"
+                id="hilitecolor-picker"
+                class="w-8 h-8 p-0 border-0 cursor-pointer"
+              />
+              <button id="hilitecolor-remove" class="btn btn-xs btn-ghost">Clear</button>
+            </div>
+          </div>
+        </div>
         <button type="button" id="btn-clear" class="btn btn-xs btn-ghost" title="Clear Formatting">
           <i data-lucide="eraser" class="w-4 h-4"></i>
         </button>
@@ -469,5 +623,24 @@
       max-height: none !important;
       height: 100% !important;
     }
+  }
+  .color-indicator {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 3px;
+    border-radius: 1px;
+  }
+  .dropdown-content {
+    margin-top: 4px;
+  }
+  .color-swatch {
+    border: 1px solid transparent;
+    transition: transform 0.1s;
+  }
+  .color-swatch:hover {
+    transform: scale(1.2);
   }
 </style>

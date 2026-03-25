@@ -79,6 +79,15 @@ export const updateToolbarState = (): void => {
     linkBtn.classList.toggle('btn-active', isInLink);
     linkBtn.classList.toggle('btn-ghost', !isInLink);
   }
+
+  // Update color indicators
+  const foreColorValue = document.queryCommandValue('foreColor');
+  const foreColorHex = colorStringToHex(foreColorValue);
+  updateColorIndicator('forecolor-indicator', foreColorHex);
+
+  const hiliteColorValue = document.queryCommandValue('hiliteColor');
+  const hiliteColorHex = colorStringToHex(hiliteColorValue);
+  updateColorIndicator('hilitecolor-indicator', hiliteColorHex);
 };
 
 export const restoreEditorFocus = (): void => {
@@ -139,6 +148,9 @@ export const getCurrentBlockFormat = (): { tag: string; level?: number } | null 
 };
 
 export const execFormatCommand = (command: string, value?: string): void => {
+  if (!isSelectionInEditor()) {
+    return;
+  }
   if (value) {
     document.execCommand(command, false, value);
   } else {
@@ -165,6 +177,70 @@ export const execBlockFormat = (tag: string): void => {
       editor.focus();
     }
   }, 0);
+};
+
+const rgbToHex = (r: number, g: number, b: number): string => {
+  return (
+    '#' +
+    [r, g, b]
+      .map((x) => {
+        const hex = Math.round(Math.max(0, Math.min(255, x))).toString(16);
+        return hex.length === 1 ? '0' + hex : hex;
+      })
+      .join('')
+      .toUpperCase()
+  );
+};
+
+const colorStringToHex = (colorString: string): string => {
+  if (!colorString || colorString === 'transparent' || colorString === 'rgba(0, 0, 0, 0)') {
+    return 'transparent';
+  }
+  // Handle rgb(r, g, b) format
+  const rgbMatch = colorString.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1], 10);
+    const g = parseInt(rgbMatch[2], 10);
+    const b = parseInt(rgbMatch[3], 10);
+    return rgbToHex(r, g, b);
+  }
+  // Handle hex format
+  if (colorString.startsWith('#')) {
+    return colorString.toUpperCase();
+  }
+  // Return black as default
+  return '#000000';
+};
+
+const updateColorIndicator = (indicatorId: string, hexColor: string): void => {
+  const indicator = document.getElementById(indicatorId);
+  if (!indicator) return;
+  if (hexColor === 'transparent') {
+    indicator.style.backgroundColor = 'transparent';
+    indicator.style.border = '1px solid #ccc';
+  } else {
+    indicator.style.backgroundColor = hexColor;
+    indicator.style.border = 'none';
+  }
+};
+
+const applyColor = (command: 'foreColor' | 'hiliteColor', hex: string): void => {
+  if (hex === 'transparent') {
+    if (command === 'foreColor') {
+      // Remove all formatting (including color)
+      document.execCommand('removeFormat', false);
+    } else {
+      // For background color, set to transparent (remove highlight)
+      document.execCommand('hiliteColor', false, 'transparent');
+    }
+  } else {
+    document.execCommand(command, false, hex);
+  }
+  updateToolbarState();
+  const editor = document.getElementById('editor');
+  if (editor) {
+    editor.focus();
+  }
 };
 
 export const isSelectionInEditor = (): boolean => {
@@ -228,6 +304,46 @@ export const setupToolbarListeners = (): void => {
     .getElementById('btn-blockquote')
     ?.addEventListener('click', () => execBlockFormat('blockquote'));
   document.getElementById('btn-code')?.addEventListener('click', () => execBlockFormat('pre'));
+
+  // Color swatch listeners
+  const setupColorDropdown = (
+    dropdownId: string,
+    command: 'foreColor' | 'hiliteColor',
+    indicatorId: string
+  ) => {
+    const dropdown = document.getElementById(dropdownId);
+    if (!dropdown) return;
+    dropdown.querySelectorAll('.color-swatch').forEach((swatch) => {
+      swatch.addEventListener('click', (e) => {
+        const color = (e.target as HTMLElement).dataset.color;
+        if (color) {
+          applyColor(command, color);
+          updateColorIndicator(indicatorId, color);
+          // Close dropdown by blurring the label
+          const label = dropdown.previousElementSibling as HTMLLabelElement;
+          if (label) label.blur();
+        }
+      });
+    });
+    const picker = dropdown.querySelector(`input[type="color"]`) as HTMLInputElement;
+    if (picker) {
+      picker.addEventListener('input', (e) => {
+        const color = (e.target as HTMLInputElement).value;
+        applyColor(command, color.toUpperCase());
+        updateColorIndicator(indicatorId, color.toUpperCase());
+      });
+    }
+    const removeBtn = dropdown.querySelector('button[id$="-remove"]') as HTMLButtonElement;
+    if (removeBtn) {
+      removeBtn.addEventListener('click', () => {
+        applyColor(command, 'transparent');
+        updateColorIndicator(indicatorId, 'transparent');
+      });
+    }
+  };
+
+  setupColorDropdown('forecolor-dropdown', 'foreColor', 'forecolor-indicator');
+  setupColorDropdown('hilitecolor-dropdown', 'hiliteColor', 'hilitecolor-indicator');
 
   document.addEventListener('selectionchange', () => {
     if (isSelectionInEditor()) {

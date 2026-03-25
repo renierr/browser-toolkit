@@ -52,6 +52,52 @@ const cleanEditorContent = (editor: HTMLElement): string => {
     container.classList.remove('editor-image-container--selected');
     container.removeAttribute('data-image-setup');
   });
+  // Convert <font> elements to <span> with inline styles
+  const fontElements = clone.querySelectorAll('font');
+  fontElements.forEach((font) => {
+    const span = document.createElement('span');
+    // Copy all attributes
+    for (let i = 0; i < font.attributes.length; i++) {
+      const attr = font.attributes[i];
+      span.setAttribute(attr.name, attr.value);
+    }
+    // Convert color attribute to style
+    const color = font.getAttribute('color');
+    if (color) {
+      span.style.color = color;
+      span.removeAttribute('color');
+    }
+    // Convert face attribute to font-family
+    const face = font.getAttribute('face');
+    if (face) {
+      span.style.fontFamily = face;
+      span.removeAttribute('face');
+    }
+    // Convert size attribute (HTML font size 1-7) to approximate CSS font-size
+    const size = font.getAttribute('size');
+    if (size) {
+      // Mapping from HTML font size to CSS font-size (approx)
+      const sizeMap: Record<string, string> = {
+        '1': 'xx-small',
+        '2': 'x-small',
+        '3': 'small',
+        '4': 'medium',
+        '5': 'large',
+        '6': 'x-large',
+        '7': 'xx-large',
+      };
+      const cssSize = sizeMap[size];
+      if (cssSize) {
+        span.style.fontSize = cssSize;
+        span.removeAttribute('size');
+      }
+    }
+    // Move children
+    while (font.firstChild) {
+      span.appendChild(font.firstChild);
+    }
+    font.parentNode?.replaceChild(span, font);
+  });
   return clone.innerHTML;
 };
 
