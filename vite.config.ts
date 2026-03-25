@@ -231,6 +231,7 @@ export default defineConfig({
       '@ffmpeg/ffmpeg',
       '@ffmpeg/util',
       'onnxruntime-web',
+      '7z-wasm',
     ],
   },
   assetsInclude: ['**/*.wasm'],

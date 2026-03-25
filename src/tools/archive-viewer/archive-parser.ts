@@ -19,7 +19,9 @@ const FORMAT_EXTENSIONS: Record<string, string[]> = {
   zip: ['.zip'],
   tar: ['.tar'],
   gz: ['.gz', '.tgz', '.tar.gz', '.tar.gzip'],
+  xz: ['.xz', '.tar.xz'],
   '7z': ['.7z'],
+  tarxz: ['.tar.xz'],
 };
 
 export function detectFormat(filename: string): string | null {
@@ -143,12 +145,40 @@ export async function loadEntryData(path: string): Promise<Uint8Array | null> {
   return null;
 }
 
-export async function parseTar(file: File, isGzipped: boolean): Promise<ParsedArchive> {
+export async function parseTar(
+  file: File,
+  compression: 'none' | 'gzip' | 'xz'
+): Promise<ParsedArchive> {
   let tarData: ArrayBuffer;
 
-  if (isGzipped) {
+  if (compression === 'gzip') {
     const response = new Response(file.stream().pipeThrough(new DecompressionStream('gzip')));
     tarData = await response.arrayBuffer();
+  } else if (compression === 'xz') {
+    const SevenZip = (await import('7z-wasm')).default;
+    const sz = await SevenZip();
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+
+    sz.FS.mkdir('/input');
+    sz.FS.mkdir('/output');
+    const stream = sz.FS.open('/input/archive.tar.xz', 'w+');
+    sz.FS.write(stream, uint8Array, 0, uint8Array.length);
+    sz.FS.close(stream);
+
+    try {
+      sz.callMain(['x', '-y', '-so', '/input/archive.tar.xz']);
+    } catch {
+      throw new Error('Failed to decompress xz');
+    }
+
+    const outputFiles = sz.FS.readdir('/output');
+    if (outputFiles.length > 0) {
+      const data = sz.FS.readFile('/output/' + outputFiles[0]);
+      tarData = data.buffer as ArrayBuffer;
+    } else {
+      tarData = new ArrayBuffer(0);
+    }
   } else {
     tarData = await file.arrayBuffer();
   }
@@ -170,9 +200,10 @@ export async function parseTar(file: File, isGzipped: boolean): Promise<ParsedAr
     };
   });
 
+  const formatLabel = compression === 'gzip' ? 'TAR.GZ' : compression === 'xz' ? 'TAR.XZ' : 'TAR';
   return {
     filename: file.name,
-    format: isGzipped ? 'TAR.GZ' : 'TAR',
+    format: formatLabel,
     totalSize: entries.reduce((sum, e) => sum + e.size, 0),
     entries: buildFileTree(entries),
   };
@@ -244,9 +275,11 @@ export async function loadArchive(file: File): Promise<ParsedArchive> {
   if (format === 'zip') {
     return parseZip(file);
   } else if (format === 'tar') {
-    return parseTar(file, false);
+    return parseTar(file, 'none');
   } else if (format === 'gz') {
-    return parseTar(file, true);
+    return parseTar(file, 'gzip');
+  } else if (format === 'xz') {
+    return parseTar(file, 'xz');
   } else if (format === '7z') {
     return parse7z(file);
   }
