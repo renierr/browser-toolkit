@@ -76,16 +76,43 @@ src/
    {
      "name": "My Tool",
      "description": "Does something useful",
-     "draft": false,
      "icon": "crop",
-     "sectionId": "general"
+     "sectionId": "general",
+     "order": 1,
+     "draft": false,
+     "example": false,
+     "hideHeader": false,
+     "hideFooter": false,
+     "shareTarget": {
+       "accept": ["image/*"]
+     }
    }
    ```
 
+   | Field                  | Type     | Default          | Description                                                      |
+   | ---------------------- | -------- | ---------------- | ---------------------------------------------------------------- |
+   | **Required**           |
+   | `name`                 | string   | (folder name)    | Tool name shown in overview + search                             |
+   | `description`          | string   | "No description" | Tool description (powers search)                                 |
+   | **Sorting & Grouping** |
+   | `sectionId`            | string   | -                | Groups tool into a section (e.g., "general", "images", "pdf")    |
+   | `order`                | number   | 0                | Position within section (ascending)                              |
+   | **Visibility**         |
+   | `draft`                | boolean  | false            | Hide from overview while building                                |
+   | `example`              | boolean  | false            | Mark as template/demo tool                                       |
+   | **Metadata**           |
+   | `icon`                 | string   | -                | Lucide icon id (e.g., "crop", "image")                           |
+   | **Layout**             |
+   | `hideHeader`           | boolean  | false            | Hide site header for this tool                                   |
+   | `hideFooter`           | boolean  | false            | Hide site footer for this tool                                   |
+   | **PWA Share Target**   |
+   | `shareTarget.accept`   | string[] | -                | MIME types to receive (e.g., `["image/*"]`, `"application/pdf"`) |
+
+   **Notes:**
    - Any Lucide icon ID can be used (e.g., `"icon": "crop"`) - all Lucide icons are available automatically
    - Use existing `sectionId` values (e.g., `"general"`, `"images"`, `"pdf"`). Do not create new sections unless necessary. If a tool doesn't fit existing sections, warn the user.
-   - Optional: `order`, `shareTarget`, etc. See `docs/index.md` for full reference
    - `draft: true` hides the tool from the overview (useful while building)
+   - `shareTarget.accept` supports wildcards: `"image/*"` matches all images, `"text/*"` matches all text types
 
 3. **Add `template.html`**: Each tool must have a `template.html` file. This file is auto-discovered and injected into the page when the tool is accessed. All HTML, styles, and UI for the tool must be placed here. Use semantic HTML + DaisyUI components + Tailwind utilities. The UI should match the look and feel of existing tools.
 4. **Add `index.ts`** (optional): Export `init()` function with cleanup support
