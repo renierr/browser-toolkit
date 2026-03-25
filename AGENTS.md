@@ -38,6 +38,8 @@ pnpm upgrade:check    # Check outdated dependencies
 pnpm upgrade:deps    # Update dependencies to latest
 ```
 
+**Note:** No ESLint configured - use `pnpm tsc` for type checking instead.
+
 ## Project Structure
 
 ```
@@ -59,6 +61,8 @@ src/
 └── script.ts                 # Main app entry point
 
 > **Note on `main.ts`:** Rarely needed. Only useful for project-level setup (e.g., registering custom icons). Most tools don't need this.
+
+> **Note on `src/pages/`:** Contains global HTML entry points (e.g., main index, PDF viewer). Most tools don't need a pages entry - tools are auto-discovered from `src/tools/`.
 ```
 
 ## Creating a New Tool
@@ -73,12 +77,15 @@ src/
      "name": "My Tool",
      "description": "Does something useful",
      "draft": false,
-     "icon": "crop"
+     "icon": "crop",
+     "sectionId": "general"
    }
    ```
 
    - Any Lucide icon ID can be used (e.g., `"icon": "crop"`) - all Lucide icons are available automatically
-   - Optional: `order`, `sectionId`, `shareTarget`, etc. See `@docs/index.md` for full reference
+   - Use existing `sectionId` values (e.g., `"general"`, `"images"`, `"pdf"`). Do not create new sections unless necessary. If a tool doesn't fit existing sections, warn the user.
+   - Optional: `order`, `shareTarget`, etc. See `@docs/index.md` for full reference
+   - `draft: true` hides the tool from the overview (useful while building)
 
 3. **Add `template.html`**: Use semantic HTML + DaisyUI components + Tailwind utilities
 4. **Add `index.ts`** (optional): Export `init()` function with cleanup support
