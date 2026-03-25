@@ -87,7 +87,7 @@ src/
    - Optional: `order`, `shareTarget`, etc. See `@docs/index.md` for full reference
    - `draft: true` hides the tool from the overview (useful while building)
 
-3. **Add `template.html`**: Use semantic HTML + DaisyUI components + Tailwind utilities
+3. **Add `template.html`**: Each tool must have a `template.html` file. This file is auto-discovered and injected into the page when the tool is accessed. All HTML, styles, and UI for the tool must be placed here. Use semantic HTML + DaisyUI components + Tailwind utilities. The UI should match the look and feel of existing tools.
 4. **Add `index.ts`** (optional): Export `init()` function with cleanup support
 
 **Critical: Cleanup Pattern**
