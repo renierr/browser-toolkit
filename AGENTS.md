@@ -12,6 +12,25 @@ Do not change unwanted areas of the existing code.
 This is a **Browser Toolkit** - a collection of browser-only tools built with TypeScript and Vite.
 It uses Tailwind CSS + DaisyUI for styling. There is no test framework - do not write tests.
 
+## PWA & Offline Distribution
+
+This is a **Progressive Web App** deployed to GitHub Pages with full offline support.
+
+### Key Constraints
+
+- **No CDN or online loading**: All assets must be bundled or locally available. Never fetch external scripts, libraries, or data at runtime
+- **No backend**: All logic runs entirely in the browser
+- **Offline-first**: Service worker (Workbox) caches all assets for offline use
+- **File handling**: Tools can receive files via PWA share target
+
+### PWA Behavior
+
+- Auto-updates in background (`registerType: 'autoUpdate'`)
+- Works completely offline after initial load
+- Share target receives files via `SharedFilesPayload` type
+- Service worker handles offline navigation
+- All data persists in browser storage (IndexedDB, localStorage)
+
 ## Commands
 
 **Important:**
@@ -142,6 +161,32 @@ export default function init() {
 - Template placeholders
 - Dark/Light mode with DaisyUI
 
+## Tool Loading Architecture
+
+### Hash-Based Routing
+
+Tools are navigated via URL hash: `https://example.com/#my-tool` or `/#pdf-viewer`
+
+### Auto-Discovery & Lazy Loading
+
+- Tools are auto-discovered from `src/tools/*/config.json`
+- Tool scripts are **lazy-loaded on demand** (not bundled into main chunk)
+- Bundle size is not a concern - prioritize functionality over size
+- Each tool's `index.ts` exports `init()` function called when tool activates
+
+### Tool Lifecycle
+
+1. User navigates to tool URL (e.g., `/#pdf-viewer`)
+2. Tool's `template.html` is injected into the page
+3. If tool has `index.ts`, its `init()` function is called
+4. Tool receives files via `SharedFilesPayload` if configured
+5. On navigation away, cleanup function is called (see "Cleanup Pattern" above)
+
+### Module-Level State
+
+- Module-level variables persist across tool navigation
+- Always return cleanup functions from `init()` to clean up event listeners, timers, observers
+
 ## Code Style Guidelines
 
 ### Language
@@ -228,6 +273,69 @@ If using WebAssembly, free and destroy variables and allocated memory when done.
 
 The `index.ts` in each tool is for orchestration and DOM/listener management.
 Extract utility functions into separate files within the tool folder.
+
+### Modern Browser APIs
+
+Use modern browser features freely - no polyfills needed. Always check for API availability and provide user feedback when unavailable.
+
+```typescript
+// Example: Clipboard API with detection
+async function copyToClipboard(text: string): Promise<boolean> {
+  if (!navigator.clipboard) {
+    showMessage('Clipboard API not supported', { type: 'warning' });
+    return false;
+  }
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (error) {
+    showMessage('Clipboard access denied', { type: 'warning' });
+    return false;
+  }
+}
+```
+
+**Common APIs to check:**
+
+- `navigator.clipboard` - Clipboard access
+- `navigator.share` - Web Share API
+- `window.showOpenFilePicker` - File System Access API
+- `navigator.bluetooth` - Web Bluetooth
+- `navigator.serial` - Web Serial
+- `navigator.usb` - Web USB
+
+## Touch & Responsive Design
+
+Tools must work on touch devices (phones, tablets) with varying screen sizes.
+
+### Pointer Events
+
+Use pointer events instead of mouse/touch listeners for cross-device compatibility:
+
+```typescript
+// Good - works on all input types
+element.addEventListener('pointerdown', handlePointerDown);
+
+// Avoid - mouse only
+element.addEventListener('mousedown', handleMouseDown);
+
+// Avoid - touch only
+element.addEventListener('touchstart', handleTouchStart);
+```
+
+### Responsive Layout
+
+- Use Tailwind responsive prefixes (`sm:`, `md:`, `lg:`) for adaptive layouts
+- Use DaisyUI components which are responsive by default
+- Design for mobile first, then enhance for larger screens
+- Use flexible layouts (`flex`, `grid`) that adapt to available space
+
+### Touch-Friendly Considerations
+
+- Ensure interactive elements are easily tappable
+- Use appropriate spacing between interactive elements
+- Consider landscape and portrait orientations
+- Use CSS `touch-action` when implementing custom gestures
 
 ## Error Handling
 
