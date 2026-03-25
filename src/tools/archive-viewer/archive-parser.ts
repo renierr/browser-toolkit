@@ -167,18 +167,34 @@ export async function parseTar(
     sz.FS.close(stream);
 
     try {
-      sz.callMain(['x', '-y', '-so', '/input/archive.tar.xz']);
+      sz.callMain(['x', '-y', '/input/archive.tar.xz', '-o/output']);
     } catch {
       throw new Error('Failed to decompress xz');
     }
 
-    const outputFiles = sz.FS.readdir('/output');
-    if (outputFiles.length > 0) {
-      const data = sz.FS.readFile('/output/' + outputFiles[0]);
-      tarData = data.buffer as ArrayBuffer;
-    } else {
-      tarData = new ArrayBuffer(0);
+    const readTarFromDir = (dirPath: string): Uint8Array | null => {
+      const files = sz.FS.readdir(dirPath);
+      for (const f of files) {
+        if (f === '.' || f === '..') continue;
+        const fullPath = dirPath + '/' + f;
+        const stat = sz.FS.stat(fullPath);
+        if (sz.FS.isDir(stat.mode)) {
+          const result = readTarFromDir(fullPath);
+          if (result) return result;
+        } else {
+          if (f.endsWith('.tar')) {
+            return sz.FS.readFile(fullPath);
+          }
+        }
+      }
+      return null;
+    };
+
+    const tarFileData = readTarFromDir('/output');
+    if (!tarFileData) {
+      throw new Error('Failed to extract tar from xz');
     }
+    tarData = tarFileData.buffer as ArrayBuffer;
   } else {
     tarData = await file.arrayBuffer();
   }

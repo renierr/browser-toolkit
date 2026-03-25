@@ -34,6 +34,15 @@ function updateToolbarButtons(state: ViewerState): void {
   }
 }
 
+function isBinary(data: Uint8Array, sampleSize = 512): boolean {
+  const sample = data.slice(0, sampleSize);
+  let nullCount = 0;
+  for (let i = 0; i < sample.length; i++) {
+    if (sample[i] === 0) nullCount++;
+  }
+  return nullCount > sampleSize * 0.1;
+}
+
 async function handlePreview(entry: ArchiveEntry): Promise<void> {
   const loading = document.getElementById('loading-overlay');
   loading?.classList.remove('hidden');
@@ -56,10 +65,15 @@ async function handlePreview(entry: ArchiveEntry): Promise<void> {
       infoEl.textContent = `Size: ${formatSize(entry.size)} | Type: ${entry.name.split('.').pop()?.toUpperCase() || 'file'}`;
     }
 
-    const text = new TextDecoder().decode(data);
     if (contentEl) {
-      contentEl.textContent = text.slice(0, 10000);
-      if (text.length > 10000) contentEl.textContent += '\n\n... (truncated)';
+      if (isBinary(data)) {
+        contentEl.textContent =
+          'Binary file - preview not available.\n\nUse the Download button to save this file.';
+      } else {
+        const text = new TextDecoder().decode(data);
+        contentEl.textContent = text.slice(0, 10000);
+        if (text.length > 10000) contentEl.textContent += '\n\n... (truncated)';
+      }
     }
 
     downloadBtn.onclick = () => {
