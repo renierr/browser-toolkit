@@ -1,134 +1,217 @@
 # Code Assist - Project Rules & Context
 
-## 1. Role & Objective
+## Role & Objective
 
-You are a Senior Software Engineer and Software Architect. Your goal is to generate efficient, maintainable, secure, and scalable code.
+You are a Senior Software Engineer. Your goal is to generate efficient, maintainable, secure, and scalable code.
 **CRITICAL:** Before generating new code, always analyze the existing context to determine if similar functionality already exists. **Avoid redundancy at all costs.**
-Answers should be short and concise check manual made changes of code edits bevore editing files.
+Answers should be short and concise. Check manually made changes of code edits before editing files.
 Do not change unwanted areas of the existing code.
-
-## 2. General Coding Standards
-
-Adhere strictly to these principles:
-
-### **Language & Localization (STRICT)**
-
-- **English Only:** All code (variable names, method names, class names) **AND** all comments/documentation must be written in **English**.
-- **Naming Conventions:**
-  - _Rule:_ Names must be descriptive. Avoid generic names like `Manager` or `Data` unless strictly necessary.
-
-### **Architecture & Design**
-
-- **SOLID Principles:** Follow SOLID strictly, especially the Single Responsibility Principle.
-- **Immutability:** Prefer `final` (or `const`/`val`) variables and immutable data structures wherever possible.
-- **Early Return:** Avoid deep nesting (nested `if/else`). Use Guard Clauses to handle edge cases early.
-
-## 3. DRY (Don't Repeat Yourself) & Reusability
-
-To prevent repetitive code:
-
-- **Utility Check:** Before writing a helper function (e.g., date formatting, string validation), assume a utility class might already exist. Ask or check for existing Utils.
-- **Composition over Inheritance:** Prioritize composition to share behavior instead of deep inheritance hierarchies.
-- **Generics:** Use generics to create type-safe, reusable components instead of duplicating logic for different types.
-
-## 4. Error Handling & Logging
-
-- **No Empty Catch Blocks:** Never swallow exceptions silently.
-- **Logging:** Use the project's standard logger (e.g., SLF4J). Log meaningful messages with context.
-- **Exceptions:** Throw specific, custom exceptions rather than generic `Exception` or `RuntimeException`.
-
-## 5. Code Generation Instructions
-
-When generating code, follow these steps:
-
-1.  **Docs:** Add JavaDoc/KDoc/JSDoc **only** for public interfaces and complex logic. Keep it concise and in English.
-2.  **Modern APIs:** Do not use deprecated libraries or methods.
-3.  **Refactoring:** If you see an opportunity to refactor existing code to reduce duplication while implementing a new feature, suggest it.
-4.  **Dependencies:** Avoid introducing new dependencies, for smaller helper / functions implement them or ask before adding new ones.
-
-## 6. Formatting
-
-- **Use Prettier:** This project uses Prettier for code formatting (configured in `.prettierrc`).
-- **Local dependency only:** Prettier is installed as a local dependency, not used globally.
-- **Targeted formatting:** When running Prettier, **always specify the exact files changed** to avoid corrupting unrelated files:
-  ```bash
-  pnpm exec prettier --write src/tools/my-tool/index.ts src/tools/my-tool/template.html
-  ```
-- **Never run global format:** Do NOT run `pnpm format` without file arguments - it processes all files and can corrupt files unexpectedly.
-
-# Project Rules for Gemini Code Assist
 
 ## Project Overview
 
-This project is a **Browser Toolkit**, a collection of browser-only tools.
-It is a **TypeScript** project built with **Vite**.
+This is a **Browser Toolkit** - a collection of browser-only tools built with TypeScript and Vite.
+It uses Tailwind CSS + DaisyUI for styling. There is no test framework - do not write tests.
 
-## Tech Stack
+## Commands
 
-- **Language**: TypeScript (Target ES2022, Module ESNext)
-- **Build Tool**: Vite 7
-- **Package Manager**: pnpm
-- **Styling**: Tailwind CSS 4, DaisyUI 5
-- **Formatting**: Prettier
+```bash
+# Development
+pnpm dev              # Start Vite dev server
+pnpm preview          # Preview production build on port 5000
+
+# Build & Type Check
+pnpm build            # Run tsc (type check) + Vite build
+pnpm tsc              # Type check only (tsc --noEmit)
+
+# Formatting
+pnpm format           # Format all source files with Prettier
+pnpm format:check     # Check formatting without writing
+
+# Utilities
+pnpm clean            # Remove dist and node_modules/.vite
+pnpm upgrade:check    # Check outdated dependencies
+pnpm upgrade:deps    # Update dependencies to latest
+```
 
 ## Project Structure
 
-- `src/`: Source code
-  - `tools/`: Implementation of individual tools
-  - `pages/`: HTML pages for tools
-  - `components/`: Shared HTML components (header, footer)
-  - `js/`: Shared JavaScript utilities and types
-  - `css/`: Global styles
-- `public/`: Static assets
-- `dist/`: Build output
+```
+src/
+├── tools/                    # Each tool is a subfolder (becomes URL slug)
+│   ├── my-tool/
+│   │   ├── config.json       # Tool metadata (name, description, icon)
+│   │   ├── template.html     # Tool UI layout
+│   │   ├── index.ts          # Tool logic (optional)
+│   │   └── package.json      # Tool-specific deps (optional)
+│   └── ...
+├── pages/                    # HTML entry points
+├── components/                # Shared HTML components (header, footer)
+├── js/                       # Shared utilities and types
+├── css/                      # Global styles
+├── config/                   # Site configuration
+├── types/                    # Global TypeScript types
+├── main.ts                   # Optional: project-level startup hook
+└── script.ts                 # Main app entry point
+```
 
-## Context info for tools
+## Creating a New Tool
 
-See @docs/index.md for more context about the tools.
+**Quick Summary (4 steps):**
 
-Do not create module level variables because they do not get cleared.
-If needed always clean then. Always cleanup tools (cleanup handling exisits).
+1. **Create folder**: `src/tools/my-tool/`
+2. **Add `config.json`**:
+   ```json
+   { "name": "My Tool", "description": "Does something useful", "draft": false }
+   ```
+3. **Add `template.html`**: Use semantic HTML + DaisyUI components + Tailwind utilities
+4. **Add `index.ts`** (optional): Export `init()` function with cleanup support
 
-If using WASM in Browser free and destroy variabled and allocated memory.
+**Critical: Cleanup Pattern**
 
-The index.ts for each tool is for orchestration and DOM and Listener stuff. extract util functions in fitting files local inside the tool folder, structure code well.
+If your tool attaches global listeners (document/window), timers, or observers, return a cleanup function:
 
-Use existing utils and pre exising functions from main js folder - if multiple tools need them also add some.
+```ts
+export default function init() {
+  const onKeyDown = (e: KeyboardEvent) => {
+    /* ... */
+  };
+  document.addEventListener('keydown', onKeyDown);
 
+  return () => {
+    document.removeEventListener('keydown', onKeyDown);
+  };
+}
+```
 
+**Reference:** See `@docs/index.md` for complete documentation on:
 
-## Coding Conventions
+- Tool-specific dependencies (pnpm-workspace)
+- Share targets (PWA file receiving)
+- Ordering & section grouping
+- Custom icons (Lucide)
+- Template placeholders
+- Dark/Light mode with DaisyUI
+
+## Code Style Guidelines
+
+### Language
+
+- **English Only:** All code (variable names, method names, class names) AND all comments/documentation must be written in **English**.
 
 ### TypeScript
 
-- Use strict type checking (`strict: true` in tsconfig).
-- Prefer `interface` over `type` for object definitions.
-- Use explicit return types for exported functions.
-- Avoid `any`; use `unknown` if necessary.
+- **Use modern, non-deprecated APIs.** Avoid deprecated libraries or methods.
 
-### Styling (Tailwind CSS & DaisyUI)
+- **Strict mode enabled** (`strict: true` in tsconfig)
+- **Prefer `interface`** over `type` for object definitions
+- **Use explicit return types** for exported functions
+- **Avoid `any`**; use `unknown` if necessary
+- **Use `erasableSyntaxOnly`**: Use `type` instead of `interface` where possible, prefer `readonly` modifiers
 
-- Use utility classes for styling.
-- Leverage DaisyUI components for UI elements.
-- Keep custom CSS in `src/css` minimal.
+### Imports
+
+- Use **relative imports** (e.g., `import { foo } from '../utils'`)
+- No path aliases configured in this project
+- Import types with `import type` to avoid runtime overhead
 
 ### File Naming
 
-- Use kebab-case for file names (e.g., `pdf-viewer.ts`).
-- Component files should be descriptive.
+- **kebab-case** for all files (e.g., `pdf-viewer.ts`, `my-tool.config.json`)
+- Descriptive names that indicate purpose
 
-### Build & Scripts
+### Naming Conventions
 
-never use npm we use pnpm.
-use tsc for error checking no full build.
+- **Variables/functions**: camelCase
+- **Types/interfaces**: PascalCase
+- **Constants**: UPPER_SNAKE_CASE or camelCase with prefix (e.g., `defaultConfig`)
 
-- `pnpm dev`: Start development server.
-- `pnpm build`: Build for production.
+### Comments
 
-Do NOT start the dev server and avoid build (use tsc for error checking)
+- **JSDoc** only for public APIs and complex logic
+- Keep comments concise and in English
+- Avoid obvious comments (e.g., `// Increment counter`)
+
+### Formatting (Prettier)
+
+```json
+{
+  "printWidth": 100,
+  "tabWidth": 2,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": true,
+  "trailingComma": "es5",
+  "bracketSpacing": true,
+  "arrowParens": "always"
+}
+```
+
+**Run Prettier on specific files only:**
+
+```bash
+pnpm exec prettier --write src/tools/my-tool/index.ts src/tools/my-tool/template.html
+```
+
+**Never run global format** (`pnpm format` without args) - it processes all files.
+
+## Browser-Specific Guidelines
+
+### No Node.js APIs
+
+This is a **browser-only toolkit**. Avoid Node.js-specific APIs:
+
+- Use `fetch` instead of `fs.readFile`
+- Use `URL` and `URLSearchParams` for URL manipulation
+- Use `IndexedDB` for persistent storage
+- Use Web APIs (`Blob`, `FileReader`, etc.)
+
+### Module-Level Variables
+
+**Do not create module-level variables** - they persist across tool navigation and cause bugs.
+If needed, always clean them up. The cleanup handling pattern exists for this reason.
+
+### WASM Memory Management
+
+If using WebAssembly, free and destroy variables and allocated memory when done.
+
+### index.ts Orchestration
+
+The `index.ts` in each tool is for orchestration and DOM/listener management.
+Extract utility functions into separate files within the tool folder.
+
+## Error Handling
+
+- **No empty catch blocks** - never swallow exceptions silently
+- **Log meaningful messages** with context: `console.error('[MyTool] Failed to process:', error)`
+- **Show user-friendly messages** in the UI (toast, alert, inline text)
+- **Validate user input** before processing
+- **Handle empty states** gracefully (show "nothing entered yet" message)
+- **Avoid throwing** on malformed input - show a message instead
+
+## Architecture & Design
+
+- **SOLID Principles**: Follow Single Responsibility Principle strictly
+- **Immutability**: Prefer `const` and immutable data structures
+- **Early Return**: Avoid deep nesting; use guard clauses
+- **DRY**: Check for existing utilities before writing helper functions. If you see an opportunity to refactor existing code to reduce duplication while implementing a new feature, suggest it.
+- **Composition over Inheritance**: Share behavior through composition
+
+## Styling (Tailwind CSS + DaisyUI)
+
+- Use **utility classes** for styling
+- Leverage **DaisyUI components** (`btn`, `card`, `input`, `form-control`)
+- Use **DaisyUI tokens** for theme-aware styling:
+  - `bg-base-100` instead of `bg-white` / `dark:bg-slate-800`
+  - `text-base-content` instead of `text-gray-900`
+  - `border-base-300` instead of `border-gray-200`
+- Use `dark:` sparingly - prefer DaisyUI themes
+- Keep **custom CSS** in `src/css/styles.css` minimal
 
 ## General Guidelines
 
-- Ensure all code is compatible with modern browsers.
-- This is a browser-only toolkit; avoid Node.js specific APIs in client-side code.
-- When adding a new tool, ensure it has a corresponding entry in `src/tools` and `src/pages`.
+- **Dependencies:** Avoid introducing new dependencies. For small helpers/functions, implement them locally or ask before adding packages.
+
+- Ensure all code is compatible with modern browsers
+- Use existing utilities from `src/js/` - if multiple tools need them, add to the shared folder
+- When adding a new tool, ensure it has entries in `src/tools/` and `src/pages/`
+- Reference `@docs/index.md` for complete tool creation documentation
