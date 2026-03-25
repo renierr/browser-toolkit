@@ -1,0 +1,182 @@
+<!--suppress CssUnusedSymbol -->
+<style>
+  .tree-line {
+    position: relative;
+  }
+  .tree-line::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--color-base-300);
+  }
+  .tree-line::after {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 14px;
+    width: 10px;
+    height: 1px;
+    background: var(--color-base-300);
+  }
+  .file-row:hover {
+    background: var(--color-base-200);
+  }
+  .file-row.selected {
+    background: var(--color-primary) / 10;
+  }
+  .entry-icon {
+    width: 16px;
+    height: 16px;
+  }
+</style>
+
+<div class="flex flex-col gap-4 p-4">
+  <!-- Header -->
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body gap-4">
+      <h2 class="card-title text-2xl font-bold">Archive Viewer</h2>
+      <p class="text-sm opacity-60">
+        View contents and extract individual files from ZIP, TAR, TAR.GZ and 7Z archives. All
+        processing happens locally in your browser.
+      </p>
+
+      <!-- Archive Info -->
+      <div
+        id="archive-info"
+        class="hidden flex flex-wrap items-center gap-x-6 gap-y-2 bg-base-200 p-4 rounded-xl text-sm font-mono border border-base-300"
+      >
+        <div class="flex flex-col">
+          <span class="text-[10px] opacity-50 uppercase font-black tracking-widest text-primary"
+            >Filename</span
+          >
+          <span id="info-filename" class="text-primary font-bold truncate max-w-48"
+            >archive.zip</span
+          >
+        </div>
+        <div class="divider divider-horizontal"></div>
+        <div class="flex flex-col">
+          <span class="text-[10px] opacity-50 uppercase font-black tracking-widest">Format</span>
+          <span id="info-format" class="badge badge-secondary badge-sm mt-1">ZIP</span>
+        </div>
+        <div class="divider divider-horizontal"></div>
+        <div class="flex flex-col">
+          <span class="text-[10px] opacity-50 uppercase font-black tracking-widest">Files</span>
+          <span id="info-count" class="font-bold">0</span>
+        </div>
+        <div class="divider divider-horizontal"></div>
+        <div class="flex flex-col">
+          <span class="text-[10px] opacity-50 uppercase font-black tracking-widest">Size</span>
+          <span id="info-size" class="font-bold">0 bytes</span>
+        </div>
+      </div>
+
+      <!-- Dropzone -->
+      <div
+        id="dropzone"
+        class="mt-2 flex items-center justify-center border-2 border-dashed rounded-xl cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-8 h-40 group hover:bg-base-300"
+      >
+        <div
+          class="flex flex-col items-center gap-3 text-center transition-transform group-hover:scale-105"
+        >
+          <div class="text-primary/30 text-4xl">
+            <i data-lucide="archive"></i>
+          </div>
+          <p class="text-lg font-bold">Select or drag archive here</p>
+          <p class="text-xs opacity-50">Supports: ZIP, TAR, TAR.GZ, 7Z</p>
+        </div>
+        <input type="file" id="file-input" class="hidden" accept=".zip,.tar,.tar.gz,.tgz,.7z,.gz" />
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="content-area" class="hidden flex flex-col gap-4">
+    <!-- Toolbar -->
+    <div
+      class="flex flex-wrap items-center justify-between gap-4 bg-base-100 p-4 rounded-xl shadow-lg border border-base-200"
+    >
+      <div class="flex items-center gap-3">
+        <button id="btn-expand-all" class="btn btn-sm btn-ghost gap-1">
+          <i data-lucide="chevrons-down-right" class="w-4 h-4"></i>
+          Expand All
+        </button>
+        <button id="btn-collapse-all" class="btn btn-sm btn-ghost gap-1">
+          <i data-lucide="chevrons-up-left" class="w-4 h-4"></i>
+          Collapse All
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="btn-download-selected" class="btn btn-sm btn-primary gap-2" disabled>
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Download Selected
+        </button>
+        <button id="btn-download-all" class="btn btn-sm btn-outline gap-2">
+          <i data-lucide="package" class="w-4 h-4"></i>
+          Extract All as ZIP
+        </button>
+      </div>
+    </div>
+
+    <!-- File Tree -->
+    <div class="card shadow-xl bg-base-100 border border-base-300 overflow-hidden">
+      <div class="overflow-x-auto max-h-[60dvh]">
+        <table class="table table-xs">
+          <thead class="sticky top-0 bg-base-200 z-10">
+            <tr>
+              <th class="w-8">
+                <input type="checkbox" id="select-all" class="checkbox checkbox-sm" />
+              </th>
+              <th class="w-8"></th>
+              <th>Name</th>
+              <th class="w-24">Size</th>
+              <th class="w-24">Type</th>
+            </tr>
+          </thead>
+          <tbody id="file-list">
+            <!-- File entries will be injected here -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div
+    id="loading-overlay"
+    class="hidden fixed inset-0 bg-base-100/80 z-50 flex items-center justify-center"
+  >
+    <div
+      class="bg-base-300 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-primary/20"
+    >
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+      <span class="text-lg font-bold tracking-tight">Loading archive...</span>
+    </div>
+  </div>
+</div>
+
+<!-- Preview Modal -->
+<dialog id="preview-modal" class="modal">
+  <div class="modal-box max-w-4xl w-full max-h-[80vh] flex flex-col">
+    <h3 id="preview-filename" class="font-bold text-lg mb-2 truncate">filename.txt</h3>
+    <div class="text-xs opacity-60 mb-4" id="preview-info">Size: 0 bytes | Type: text/plain</div>
+    <div class="flex-1 overflow-hidden rounded-lg bg-base-200 border border-base-300">
+      <pre
+        id="preview-content"
+        class="p-4 text-sm font-mono overflow-auto whitespace-pre-wrap max-h-96"
+      ></pre>
+    </div>
+    <div class="modal-action">
+      <button id="preview-download" class="btn btn-primary">
+        <i data-lucide="download" class="w-4 h-4"></i>
+        Download
+      </button>
+      <button id="preview-close" class="btn">Close</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

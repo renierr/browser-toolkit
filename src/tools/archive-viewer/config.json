@@ -1,0 +1,15 @@
+{
+  "name": "Archive Viewer",
+  "description": "View and extract files from ZIP, TAR, TAR.GZ and 7Z archives without extracting the entire archive.",
+  "icon": "archive",
+  "sectionId": "utilities",
+  "order": 11,
+  "shareTarget": {
+    "accept": [
+      "application/zip",
+      "application/x-tar",
+      "application/gzip",
+      "application/x-7z-compressed"
+    ]
+  }
+}
