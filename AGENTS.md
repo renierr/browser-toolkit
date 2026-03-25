@@ -57,6 +57,8 @@ src/
 ├── types/                    # Global TypeScript types
 ├── main.ts                   # Optional: project-level startup hook
 └── script.ts                 # Main app entry point
+
+> **Note on `main.ts`:** Rarely needed. Only useful for project-level setup (e.g., registering custom icons). Most tools don't need this.
 ```
 
 ## Creating a New Tool
@@ -65,9 +67,19 @@ src/
 
 1. **Create folder**: `src/tools/my-tool/`
 2. **Add `config.json`**:
+
    ```json
-   { "name": "My Tool", "description": "Does something useful", "draft": false }
+   {
+     "name": "My Tool",
+     "description": "Does something useful",
+     "draft": false,
+     "icon": "crop"
+   }
    ```
+
+   - Any Lucide icon ID can be used (e.g., `"icon": "crop"`) - all Lucide icons are available automatically
+   - Optional: `order`, `sectionId`, `shareTarget`, etc. See `@docs/index.md` for full reference
+
 3. **Add `template.html`**: Use semantic HTML + DaisyUI components + Tailwind utilities
 4. **Add `index.ts`** (optional): Export `init()` function with cleanup support
 
@@ -93,7 +105,6 @@ export default function init() {
 - Tool-specific dependencies (pnpm-workspace)
 - Share targets (PWA file receiving)
 - Ordering & section grouping
-- Custom icons (Lucide)
 - Template placeholders
 - Dark/Light mode with DaisyUI
 
@@ -217,6 +228,6 @@ Extract utility functions into separate files within the tool folder.
 - **Dependencies:** Avoid introducing new dependencies. For small helpers/functions, implement them locally or ask before adding packages.
 
 - Ensure all code is compatible with modern browsers
-- Use existing utilities from `src/js/` - if multiple tools need them, add to the shared folder
+- Use helper/util functions from `src/js/` - contains common global functions for file handling, UI, theming, etc. If multiple tools need them, add to the shared folder
 - When adding a new tool, ensure it has entries in `src/tools/` and `src/pages/`
 - Reference `@docs/index.md` for complete tool creation documentation
