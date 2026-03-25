@@ -237,3 +237,30 @@ Extract utility functions into separate files within the tool folder.
 - Ensure all code is compatible with modern browsers
 - Use helper/util functions from `src/js/` - contains common global functions for file handling, UI, theming, etc. If multiple tools need them, add to the shared folder
 - Reference `docs/index.md` for complete tool creation documentation
+
+## Additional Reference
+
+For detailed documentation on these topics, see `docs/index.md`:
+
+- **Share Target (PWA)**: Receive files from other apps
+- **Tool-specific dependencies**: pnpm-workspace pattern
+- **Section configuration**: Custom section titles
+- **Template placeholders**: `{{ config.title }}` syntax
+- **Custom icons**: Register additional Lucide icons
+- **SiteContext extension**: Add custom config fields
+- **Theme switching**: Dark/light mode via daisyUI
+
+## Shared Utilities
+
+Available in `src/js/`. This is not a complete list — if you find a utility is needed by multiple tools, add it to the shared folder.
+
+| Module            | Functions                                                                                                                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ui.ts`           | `showMessage()`, `showProgress()`, `hideProgress()`, `yieldToUI()`                                                                                                                                                        |
+| `file-utils.ts`   | `setupFileDropzone()`, `downloadFile()`, `downloadAsZip()`, `retrieveImageBlobFromClipboard()`                                                                                                                            |
+| `theme.ts`        | `isDarkMode()`, `setTheme()`, `setupThemeToggle()`                                                                                                                                                                        |
+| `utils.ts`        | `fuzzyScore()`, `replacePlaceholders()`, `debounce()`, `throttleTrailing()`, `acquireWakeLock()`, `withTimeout()`, `isImageFile()`, `hashUint8Array()`, `gpsParseCoordinateFromExifTags()`, `gpsGenerateGoogleMapsLink()` |
+| `mime-types.ts`   | MIME type detection                                                                                                                                                                                                       |
+| `share-target.ts` | `SharedFilesPayload` type for PWA file receiving                                                                                                                                                                          |
+
+Import with: `import { functionName } from '../../js/filename';`
