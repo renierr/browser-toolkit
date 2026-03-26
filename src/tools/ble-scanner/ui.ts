@@ -86,7 +86,7 @@ export function renderDeviceCard(device: ParsedDevice): string {
   const timeSinceUpdate = getTimeSinceUpdate(device.timestamp);
 
   return `
-    <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow border" data-device-id="${device.id}">
+    <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow" data-device-id="${device.id}">
       <div class="card-body p-3 sm:p-4">
         <div class="flex items-start justify-between gap-2 min-w-0">
           <div class="flex items-center gap-2 min-w-0 flex-1">
