@@ -55,12 +55,14 @@ async function buildToolsList(): Promise<Tool[]> {
 
     // only now load the heavier assets if present
     const htmlKey = Object.keys(htmlModules).find((k) => k === `${prefix}/${folder}/template.html`);
-    let html = `<p>No content found, provide a template.html file for your tool <strong>${folder}</strong></p>`;
+    let loadHtml: (() => Promise<string>) | undefined;
     if (htmlKey) {
       const importerOrValue = (htmlModules as any)[htmlKey];
-      const loaded =
-        typeof importerOrValue === 'function' ? await importerOrValue() : importerOrValue;
-      html = (loaded as any).default ?? (loaded as any);
+      loadHtml = async () => {
+        const loaded =
+          typeof importerOrValue === 'function' ? await importerOrValue() : importerOrValue;
+        return (loaded as any).default ?? (loaded as any);
+      };
     }
 
     const scriptKey = Object.keys(scriptModules).find((k) => k === `${prefix}/${folder}/index.ts`);
@@ -69,7 +71,7 @@ async function buildToolsList(): Promise<Tool[]> {
       loadScript = scriptModules[scriptKey] as () => Promise<ToolModule>;
     }
 
-    result.push(buildTool({ folder, html, loadScript, config: toolConfig }));
+    result.push(buildTool({ folder, html: '', loadHtml, loadScript, config: toolConfig }));
   }
 
   return result;

@@ -54,6 +54,11 @@ export interface Tool {
   shareTarget?: ShareTargetConfig;
 
   /**
+   * Optional lazy loading function for the tool HTML template.
+   */
+  loadHtml?: () => Promise<string>;
+
+  /**
    * Optional lazy loading function for the tool script.
    */
   loadScript?: () => Promise<ToolModule>;

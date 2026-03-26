@@ -41,6 +41,17 @@ export function renderLayout(content: string, hideHeader?: boolean, hideFooter: 
 }
 
 export async function renderTool(tool: Tool | undefined, payload?: any) {
+  // Lazy load HTML if we have a loader
+  if (tool?.loadHtml) {
+    try {
+      tool.html = await tool.loadHtml();
+      delete tool.loadHtml; // Clean up after loading
+    } catch (err) {
+      console.error('[render] Failed to load tool HTML:', err);
+      tool.html = `<p class="text-error">Failed to load tool content</p>`;
+    }
+  }
+
   renderLayout(toolPageHtml, tool?.hideHeader, tool?.hideFooter);
 
   const noToolHtml = `

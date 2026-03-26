@@ -26,6 +26,7 @@ export type ToolConfig = {
 type BuildToolParams = {
   folder: string;
   html: string;
+  loadHtml?: () => Promise<string>;
   loadScript?: () => Promise<ToolModule>;
   config: ToolConfig;
 };
@@ -174,12 +175,13 @@ export function parseToolConfig(
   };
 }
 
-export function buildTool({ folder, html, loadScript, config }: BuildToolParams): Tool {
+export function buildTool({ folder, html, loadHtml, loadScript, config }: BuildToolParams): Tool {
   return {
     name: config.name,
     description: config.description,
     path: folder,
     html,
+    loadHtml,
     loadScript,
     draft: config.draft,
     example: config.example,
