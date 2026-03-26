@@ -1,4 +1,4 @@
-import type { FileDescription } from 'tarparser';
+import type { ZipInfo } from 'unzipit';
 
 export interface ArchiveEntry {
   name: string;
@@ -102,25 +102,22 @@ export function buildFileTree(entries: ArchiveEntry[]): ArchiveEntry[] {
   return sortEntries(root);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let zipInstance: any = null;
-let tarFilesCache: Map<string, Uint8Array> = new Map();
+let zipInfo: ZipInfo | null = null;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let sevenZipInstance: any = null;
 
 export async function parseZip(file: File): Promise<ParsedArchive> {
-  const JSZip = (await import('jszip')).default;
-  zipInstance = await JSZip.loadAsync(file);
+  const { unzip } = await import('unzipit');
+  zipInfo = await unzip(file);
 
   const entries: ArchiveEntry[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const [path, zipEntry] of Object.entries(zipInstance.files as Record<string, any>)) {
+  for (const [path, entry] of Object.entries(zipInfo.entries)) {
     if (path === '') continue;
     entries.push({
       name: path.split('/').pop() || path,
-      path: path.replace(/\/$/, ''),
-      isDirectory: zipEntry.dir,
-      size: zipEntry._data?.uncompressedSize ?? 0,
+      path: path,
+      isDirectory: entry.isDirectory,
+      size: entry.size,
     });
   }
 
@@ -133,13 +130,12 @@ export async function parseZip(file: File): Promise<ParsedArchive> {
 }
 
 export async function loadEntryData(path: string): Promise<Uint8Array | null> {
-  if (zipInstance) {
-    const entry = zipInstance.file(path);
-    if (entry) return entry.async('uint8array');
-  }
-
-  if (tarFilesCache.has(path)) {
-    return tarFilesCache.get(path) ?? null;
+  if (zipInfo) {
+    const entry = zipInfo.entries[path];
+    if (entry && !entry.isDirectory) {
+      const data = await entry.arrayBuffer();
+      return new Uint8Array(data);
+    }
   }
 
   return null;
@@ -149,12 +145,7 @@ export async function parseTar(
   file: File,
   compression: 'none' | 'gzip' | 'xz'
 ): Promise<ParsedArchive> {
-  let tarData: ArrayBuffer;
-
-  if (compression === 'gzip') {
-    const response = new Response(file.stream().pipeThrough(new DecompressionStream('gzip')));
-    tarData = await response.arrayBuffer();
-  } else if (compression === 'xz') {
+  if (compression === 'xz') {
     const SevenZip = (await import('7z-wasm')).default;
     const sz = await SevenZip();
     const arrayBuffer = await file.arrayBuffer();
@@ -194,31 +185,62 @@ export async function parseTar(
     if (!tarFileData) {
       throw new Error('Failed to extract tar from xz');
     }
-    tarData = tarFileData.buffer as ArrayBuffer;
-  } else {
-    tarData = await file.arrayBuffer();
+    const tarStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(tarFileData);
+        controller.close();
+      },
+    });
+    return parseTarStream(tarStream, file.name, compression);
   }
 
-  const { parseTar: tarparser } = await import('tarparser');
-  const tarFiles = await tarparser(tarData);
+  let stream: ReadableStream<Uint8Array>;
+  if (compression === 'gzip') {
+    stream = file.stream().pipeThrough(new DecompressionStream('gzip'));
+  } else {
+    stream = file.stream();
+  }
 
-  tarFilesCache.clear();
-  const entries: ArchiveEntry[] = tarFiles.map((f: FileDescription) => {
-    const entryPath = f.name.replace(/\/$/, '');
-    if (!f.name.endsWith('/')) {
-      tarFilesCache.set(entryPath, f.data);
-    }
-    return {
-      name: f.name.split('/').pop() || f.name,
+  return parseTarStream(stream, file.name, compression);
+}
+
+async function parseTarStream(
+  stream: ReadableStream<Uint8Array>,
+  filename: string,
+  compression: 'none' | 'gzip' | 'xz'
+): Promise<ParsedArchive> {
+  const { createTarDecoder } = await import('modern-tar');
+
+  const decoder = createTarDecoder();
+  // @ts-expect-error - modern-tar returns a ReadableStream but TS types are incomplete
+  const readable: ReadableStream<{
+    header: { name: string; type: string; size: number };
+    body: ReadableStream<Uint8Array>;
+  }> = stream.pipeThrough(decoder);
+
+  const entries: ArchiveEntry[] = [];
+
+  const iterator = (readable as any)[Symbol.asyncIterator]();
+  let result = await iterator.next();
+  while (!result.done) {
+    const entry = result.value;
+    const entryPath = entry.header.name.replace(/\/$/, '');
+    const isDir = entry.header.type === 'directory' || entry.header.name.endsWith('/');
+
+    entries.push({
+      name: entryPath.split('/').pop() || entryPath,
       path: entryPath,
-      isDirectory: f.type === 'directory' || f.name.endsWith('/'),
-      size: f.size || 0,
-    };
-  });
+      isDirectory: isDir,
+      size: entry.header.size || 0,
+    });
+
+    await entry.body.cancel();
+    result = await iterator.next();
+  }
 
   const formatLabel = compression === 'gzip' ? 'TAR.GZ' : compression === 'xz' ? 'TAR.XZ' : 'TAR';
   return {
-    filename: file.name,
+    filename,
     format: formatLabel,
     totalSize: entries.reduce((sum, e) => sum + e.size, 0),
     entries: buildFileTree(entries),
@@ -277,8 +299,7 @@ export async function parse7z(file: File): Promise<ParsedArchive> {
 }
 
 export function clearCache(): void {
-  zipInstance = null;
-  tarFilesCache.clear();
+  zipInfo = null;
   sevenZipInstance = null;
 }
 
