@@ -60,6 +60,16 @@ pnpm upgrade:deps    # Update dependencies to latest
 
 > **Important:** Skip the full build during development. Running `pnpm tsc` (type check only) is sufficient to verify correctness. Only run `pnpm build` when you absolutely must test the production build or preview with `pnpm preview`.
 
+## AI Agent Guidelines
+
+- **Don't assume libraries exist** - Check `package.json` first before using any package
+- **Don't assume APIs exist** - Always check for browser APIs (`navigator.clipboard`, etc.)
+- **Don't assume endpoints exist** - Tools are accessed via hash URL: `/#tool-folder-name`
+- **Check existing code first** - Use grep to find similar implementations before writing new code
+- **Check shared utilities** - Always look in `src/js/` before writing helper functions
+- **Use standard error format**: `console.error('[ToolName] message')`
+- **When uncertain, ask the user** - Don't guess at conventions
+
 ## Project Structure
 
 ```
@@ -136,10 +146,43 @@ src/
 
 3. **Add `template.html`**: Each tool must have a `template.html` file. This file is auto-discovered and injected into the page when the tool is accessed. All HTML, styles, and UI for the tool must be placed here. Use semantic HTML + DaisyUI components + Tailwind utilities. The UI should match the look and feel of existing tools.
 4. **Add `index.ts`** (optional): Export `init()` function with cleanup support
+   - UI-only → template.html only
+   - Need JS/cleanup → add index.ts with init() function
 
-**Critical: Cleanup Pattern**
+**Critical: Cleanup Pattern (REQUIRED)**
 
-If your tool attaches global listeners (document/window), timers, or observers, return a cleanup function:
+If your tool attaches any global listeners, timers, or observers, you MUST return a cleanup function.
+
+**AVOID these patterns:**
+
+- **Module-level variables** - Persist across tool navigation and cause bugs
+- **Global listeners on document/window** - Hard to track and cleanup
+- **Global DOM elements** - Hard to manage lifecycle
+
+**PREFERRED pattern - Use local tool DOM elements:**
+
+- Attach listeners to tool-specific container elements, not document/window
+- Tool DOM gets destroyed on navigation, automatically cleaning up listeners
+- Use event delegation on a container element instead of individual global listeners
+
+```ts
+// Good - local to container, auto-cleaned on navigation
+export default function init() {
+  const container = document.getElementById('tool-container');
+  const onClick = (e) => {
+    /* ... */
+  };
+  container?.addEventListener('click', onClick);
+
+  return () => container?.removeEventListener('click', onClick);
+}
+
+// Bad - global listener, hard to track and cleanup
+export default function init() {
+  document.addEventListener('keydown', handleKey); // Avoid this
+  window.addEventListener('resize', handleResize); // Avoid this
+}
+```
 
 ```ts
 export default function init() {
@@ -255,10 +298,11 @@ pnpm exec prettier --write src/tools/my-tool/index.ts src/tools/my-tool/template
 
 This is a **browser-only toolkit**. Avoid Node.js-specific APIs:
 
-- Use `fetch` instead of `fs.readFile`
+- NO `fs`, `path`, `os`, `child_process`, `crypto` (Node.js modules)
+- Use `fetch` instead of file system operations
 - Use `URL` and `URLSearchParams` for URL manipulation
-- Use `IndexedDB` for persistent storage
-- Use Web APIs (`Blob`, `FileReader`, etc.)
+- Use IndexedDB for persistent storage (not local files)
+- Use Web APIs only (`Blob`, `FileReader`, `crypto.subtle`, etc.)
 
 ### Module-Level Variables
 
