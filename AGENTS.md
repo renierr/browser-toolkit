@@ -369,6 +369,42 @@ element.addEventListener('touchstart', handleTouchStart);
 - Use `dark:` sparingly - prefer DaisyUI themes
 - Keep **custom CSS** in `src/css/styles.css` minimal
 
+## File Dropzone Pattern
+
+All tools with file upload functionality should use this standardized dropzone pattern:
+
+```html
+<div id="dropzone" class="... min-h-40 group hover:bg-base-300">
+  <div class="... transition-transform group-hover:scale-105">
+    <!-- icon + text + paste button -->
+  </div>
+  <input type="file" class="hidden" ... />
+</div>
+```
+
+### Standard Dropzone Classes
+
+- **Container**: `flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40 group hover:bg-base-300`
+- **Inner wrapper**: `flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105`
+
+### Optional: Paste Button
+
+For image tools that support pasting from clipboard, add inside the inner wrapper:
+
+```html
+<button id="paste-btn" class="btn btn-outline flex-1 sm:flex-none">
+  <i data-lucide="clipboard" class="w-4 h-4 mr-2"></i>
+  or click here to Paste from clipboard
+</button>
+```
+
+### Key Points
+
+- Always use `min-h-40` for consistent height across all tools
+- Include `group` on the container and `group-hover:scale-105` on the inner wrapper for the hover scale animation
+- Include `hover:bg-base-300` on the container for the background color change on hover
+- Keep paste buttons only where applicable (e.g., image processing tools)
+
 ## General Guidelines
 
 - **Dependencies:** Avoid introducing new dependencies. For small helpers/functions, implement them locally or ask before adding packages.
