@@ -1,4 +1,4 @@
-import { showMessage } from '../../js/ui';
+import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import { downloadFile } from '../../js/file-utils';
 import {
   loadArchive,
@@ -44,8 +44,7 @@ function isBinary(data: Uint8Array, sampleSize = 512): boolean {
 }
 
 async function handlePreview(entry: ArchiveEntry, loader: ArchiveLoader): Promise<void> {
-  const loading = document.getElementById('loading-overlay');
-  loading?.classList.remove('hidden');
+  showProgress('Loading file preview...');
 
   try {
     const data = await loader.loadEntry(entry.path);
@@ -82,7 +81,7 @@ async function handlePreview(entry: ArchiveEntry, loader: ArchiveLoader): Promis
 
     modal?.showModal();
   } finally {
-    loading?.classList.add('hidden');
+    hideProgress();
   }
 }
 
@@ -100,8 +99,7 @@ function findEntry(entries: ArchiveEntry[], path: string): ArchiveEntry | null {
 async function handleDownloadSelected(state: ViewerState): Promise<void> {
   if (!state.loader || state.selectedEntries.size === 0) return;
 
-  const loading = document.getElementById('loading-overlay');
-  loading?.classList.remove('hidden');
+  showProgress('Preparing downloads...');
 
   try {
     const entries = await state.loader.loadEntryData();
@@ -122,15 +120,14 @@ async function handleDownloadSelected(state: ViewerState): Promise<void> {
       await new Promise((r) => setTimeout(r, 100));
     }
   } finally {
-    loading?.classList.add('hidden');
+    hideProgress();
   }
 }
 
 async function handleDownloadAll(state: ViewerState): Promise<void> {
   if (!state.loader) return;
 
-  const loading = document.getElementById('loading-overlay');
-  loading?.classList.remove('hidden');
+  showProgress('Preparing extraction...');
 
   try {
     const entries = await state.loader.loadEntryData();
@@ -164,13 +161,37 @@ async function handleDownloadAll(state: ViewerState): Promise<void> {
       await new Promise((r) => setTimeout(r, 100));
     }
   } finally {
-    loading?.classList.add('hidden');
+    hideProgress();
   }
 }
 
+function resetUI(): void {
+  const dropzone = document.getElementById('dropzone');
+  const archiveInfo = document.getElementById('archive-info');
+  const contentArea = document.getElementById('content-area');
+  const fileList = document.getElementById('file-list');
+  const fileInput = document.getElementById('file-input') as HTMLInputElement;
+  const selectAll = document.getElementById('select-all') as HTMLInputElement;
+
+  if (dropzone) dropzone.classList.remove('hidden');
+  if (archiveInfo) archiveInfo.classList.add('hidden');
+  if (contentArea) contentArea.classList.add('hidden');
+  if (fileList) fileList.innerHTML = '';
+  if (fileInput) fileInput.value = '';
+  if (selectAll) selectAll.checked = false;
+}
+
+function handleStartOver(state: ViewerState): void {
+  if (state.loader) {
+    state.loader.close();
+    state.loader = null;
+  }
+  state.selectedEntries.clear();
+  resetUI();
+}
+
 async function handleArchiveLoad(file: File, state: ViewerState): Promise<void> {
-  const loading = document.getElementById('loading-overlay');
-  loading?.classList.remove('hidden');
+  showProgress('Loading archive...');
 
   try {
     const loader = await loadArchive(file);
@@ -180,6 +201,7 @@ async function handleArchiveLoad(file: File, state: ViewerState): Promise<void> 
     const entries = await loader.loadEntryData();
     const treeEntries = buildFileTree(entries);
 
+    const dropzone = document.getElementById('dropzone');
     const infoEl = document.getElementById('archive-info');
     const filenameEl = document.getElementById('info-filename');
     const formatEl = document.getElementById('info-format');
@@ -188,6 +210,7 @@ async function handleArchiveLoad(file: File, state: ViewerState): Promise<void> 
     const contentArea = document.getElementById('content-area');
     const fileList = document.getElementById('file-list');
 
+    if (dropzone) dropzone.classList.add('hidden');
     if (infoEl) infoEl.classList.remove('hidden');
     if (filenameEl) filenameEl.textContent = loader.filename;
     if (formatEl) formatEl.textContent = loader.format;
@@ -213,7 +236,7 @@ async function handleArchiveLoad(file: File, state: ViewerState): Promise<void> 
       type: 'alert',
     });
   } finally {
-    loading?.classList.add('hidden');
+    hideProgress();
   }
 }
 
@@ -225,6 +248,7 @@ function setupEventListeners(state: ViewerState): void {
   const downloadAll = document.getElementById('btn-download-all');
   const expandAll = document.getElementById('btn-expand-all');
   const collapseAll = document.getElementById('btn-collapse-all');
+  const startOver = document.getElementById('btn-start-over');
   const previewClose = document.getElementById('preview-close');
 
   dropzone?.addEventListener('click', () => fileInput?.click());
@@ -269,6 +293,7 @@ function setupEventListeners(state: ViewerState): void {
 
   downloadSelected?.addEventListener('click', () => handleDownloadSelected(state));
   downloadAll?.addEventListener('click', () => handleDownloadAll(state));
+  startOver?.addEventListener('click', () => handleStartOver(state));
 
   expandAll?.addEventListener('click', () => {
     const containers = document.querySelectorAll('.children-container');

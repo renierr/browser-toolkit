@@ -76,7 +76,6 @@ export function renderEntries(
 
     // Column 1: Checkbox
     const checkbox = document.createElement('td');
-    checkbox.className = 'p-0';
     if (!entry.isDirectory) {
       const cb = document.createElement('input');
       cb.type = 'checkbox';

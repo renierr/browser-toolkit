@@ -104,6 +104,10 @@
       class="flex flex-wrap items-center justify-between gap-4 bg-base-100 p-4 rounded-xl shadow-lg border border-base-200"
     >
       <div class="flex items-center gap-3">
+        <button id="btn-start-over" class="btn btn-sm btn-ghost gap-1">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          Start Over
+        </button>
         <button id="btn-expand-all" class="btn btn-sm btn-ghost gap-1">
           <i data-lucide="chevrons-down" class="w-4 h-4"></i>
           Expand All
@@ -149,40 +153,27 @@
     </div>
   </div>
 
-  <!-- Loading Overlay -->
-  <div
-    id="loading-overlay"
-    class="hidden fixed inset-0 bg-base-100/80 z-50 flex items-center justify-center"
-  >
-    <div
-      class="bg-base-300 px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border border-primary/20"
-    >
-      <span class="loading loading-spinner loading-lg text-primary"></span>
-      <span class="text-lg font-bold tracking-tight">Loading archive...</span>
+  <!-- Preview Modal -->
+  <dialog id="preview-modal" class="modal">
+    <div class="modal-box max-w-4xl w-full max-h-[80vh] flex flex-col">
+      <h3 id="preview-filename" class="font-bold text-lg mb-2 truncate">filename.txt</h3>
+      <div class="text-xs opacity-60 mb-4" id="preview-info">Size: 0 bytes | Type: text/plain</div>
+      <div class="flex-1 overflow-hidden rounded-lg bg-base-200 border border-base-300">
+        <pre
+          id="preview-content"
+          class="p-4 text-sm font-mono overflow-auto whitespace-pre-wrap max-h-96"
+        ></pre>
+      </div>
+      <div class="modal-action">
+        <button id="preview-download" class="btn btn-primary">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Download
+        </button>
+        <button id="preview-close" class="btn">Close</button>
+      </div>
     </div>
-  </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
 </div>
-
-<!-- Preview Modal -->
-<dialog id="preview-modal" class="modal">
-  <div class="modal-box max-w-4xl w-full max-h-[80vh] flex flex-col">
-    <h3 id="preview-filename" class="font-bold text-lg mb-2 truncate">filename.txt</h3>
-    <div class="text-xs opacity-60 mb-4" id="preview-info">Size: 0 bytes | Type: text/plain</div>
-    <div class="flex-1 overflow-hidden rounded-lg bg-base-200 border border-base-300">
-      <pre
-        id="preview-content"
-        class="p-4 text-sm font-mono overflow-auto whitespace-pre-wrap max-h-96"
-      ></pre>
-    </div>
-    <div class="modal-action">
-      <button id="preview-download" class="btn btn-primary">
-        <i data-lucide="download" class="w-4 h-4"></i>
-        Download
-      </button>
-      <button id="preview-close" class="btn">Close</button>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
