@@ -2,21 +2,21 @@ import { showMessage } from '../../js/ui';
 import { downloadFile } from '../../js/file-utils';
 import {
   loadArchive,
-  loadEntryData,
-  clearCache,
-  type ParsedArchive,
+  type ArchiveLoader,
   type ArchiveEntry,
+  formatSize,
+  buildFileTree,
 } from './archive-parser';
-import { renderEntries, formatSize } from './file-tree';
+import { renderEntries } from './file-tree';
 
 interface ViewerState {
-  archive: ParsedArchive | null;
+  loader: ArchiveLoader | null;
   selectedEntries: Set<string>;
 }
 
 function createState(): ViewerState {
   return {
-    archive: null,
+    loader: null,
     selectedEntries: new Set(),
   };
 }
@@ -43,12 +43,12 @@ function isBinary(data: Uint8Array, sampleSize = 512): boolean {
   return nullCount > sampleSize * 0.1;
 }
 
-async function handlePreview(entry: ArchiveEntry): Promise<void> {
+async function handlePreview(entry: ArchiveEntry, loader: ArchiveLoader): Promise<void> {
   const loading = document.getElementById('loading-overlay');
   loading?.classList.remove('hidden');
 
   try {
-    const data = await loadEntryData(entry.path);
+    const data = await loader.loadEntry(entry.path);
     if (!data) {
       showMessage('Failed to load file content', { type: 'alert' });
       return;
@@ -98,18 +98,19 @@ function findEntry(entries: ArchiveEntry[], path: string): ArchiveEntry | null {
 }
 
 async function handleDownloadSelected(state: ViewerState): Promise<void> {
-  if (!state.archive || state.selectedEntries.size === 0) return;
+  if (!state.loader || state.selectedEntries.size === 0) return;
 
   const loading = document.getElementById('loading-overlay');
   loading?.classList.remove('hidden');
 
   try {
+    const entries = await state.loader.loadEntryData();
     const filesToDownload: { data: Uint8Array; name: string }[] = [];
 
     for (const path of state.selectedEntries) {
-      const entry = findEntry(state.archive.entries, path);
+      const entry = findEntry(entries, path);
       if (entry) {
-        const data = await loadEntryData(path);
+        const data = await state.loader.loadEntry(path);
         if (data) {
           filesToDownload.push({ data, name: entry.name });
         }
@@ -126,12 +127,13 @@ async function handleDownloadSelected(state: ViewerState): Promise<void> {
 }
 
 async function handleDownloadAll(state: ViewerState): Promise<void> {
-  if (!state.archive) return;
+  if (!state.loader) return;
 
   const loading = document.getElementById('loading-overlay');
   loading?.classList.remove('hidden');
 
   try {
+    const entries = await state.loader.loadEntryData();
     const files: { data: Uint8Array; name: string }[] = [];
 
     const collectEntries = (entries: ArchiveEntry[]): string[] => {
@@ -147,12 +149,12 @@ async function handleDownloadAll(state: ViewerState): Promise<void> {
       return paths;
     };
 
-    const allPaths = collectEntries(state.archive.entries);
+    const allPaths = collectEntries(entries);
 
     for (const path of allPaths) {
-      const data = await loadEntryData(path);
+      const data = await state.loader.loadEntry(path);
       if (data) {
-        const entry = findEntry(state.archive.entries, path);
+        const entry = findEntry(entries, path);
         files.push({ data, name: entry?.name || path });
       }
     }
@@ -171,9 +173,12 @@ async function handleArchiveLoad(file: File, state: ViewerState): Promise<void> 
   loading?.classList.remove('hidden');
 
   try {
-    const archive = await loadArchive(file);
-    state.archive = archive;
+    const loader = await loadArchive(file);
+    state.loader = loader;
     state.selectedEntries.clear();
+
+    const entries = await loader.loadEntryData();
+    const treeEntries = buildFileTree(entries);
 
     const infoEl = document.getElementById('archive-info');
     const filenameEl = document.getElementById('info-filename');
@@ -184,18 +189,23 @@ async function handleArchiveLoad(file: File, state: ViewerState): Promise<void> 
     const fileList = document.getElementById('file-list');
 
     if (infoEl) infoEl.classList.remove('hidden');
-    if (filenameEl) filenameEl.textContent = archive.filename;
-    if (formatEl) formatEl.textContent = archive.format;
-    if (countEl) countEl.textContent = String(archive.entries.length);
-    if (sizeEl) sizeEl.textContent = formatSize(archive.totalSize);
+    if (filenameEl) filenameEl.textContent = loader.filename;
+    if (formatEl) formatEl.textContent = loader.format;
+    if (countEl) countEl.textContent = String(entries.length);
+    if (sizeEl) sizeEl.textContent = formatSize(loader.totalSize);
     if (contentArea) contentArea.classList.remove('hidden');
     if (fileList) {
       fileList.innerHTML = '';
-      renderEntries(archive.entries, fileList, handlePreview, (path, selected) => {
-        if (selected) state.selectedEntries.add(path);
-        else state.selectedEntries.delete(path);
-        updateToolbarButtons(state);
-      });
+      renderEntries(
+        treeEntries,
+        fileList,
+        (entry) => handlePreview(entry, loader),
+        (path, selected) => {
+          if (selected) state.selectedEntries.add(path);
+          else state.selectedEntries.delete(path);
+          updateToolbarButtons(state);
+        }
+      );
     }
   } catch (error) {
     console.error('[ArchiveViewer] Failed to parse archive:', error);
@@ -281,8 +291,8 @@ export default function init() {
   setupEventListeners(state);
 
   return () => {
-    state.archive = null;
+    state.loader?.close();
+    state.loader = null;
     state.selectedEntries.clear();
-    clearCache();
   };
 }
