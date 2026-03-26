@@ -58,6 +58,8 @@ pnpm upgrade:deps    # Update dependencies to latest
 
 **Note:** No ESLint configured - use `pnpm tsc` for type checking instead.
 
+> **Important:** Skip the full build during development. Running `pnpm tsc` (type check only) is sufficient to verify correctness. Only run `pnpm build` when you absolutely must test the production build or preview with `pnpm preview`.
+
 ## Project Structure
 
 ```
