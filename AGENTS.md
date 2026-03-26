@@ -69,6 +69,7 @@ pnpm upgrade:deps    # Update dependencies to latest
 - **Check shared utilities** - Always look in `src/js/` before writing helper functions
 - **Use standard error format**: `console.error('[ToolName] message')`
 - **When uncertain, ask the user** - Don't guess at conventions
+- **Be decisive** - When you have high confidence in a reasonable approach, proceed without asking. Only ask when tradeoffs are unclear or the task has significant ambiguity.
 
 ## Project Structure
 
