@@ -1,4 +1,4 @@
-import type { TrackerState, Instrument, CellData } from './tracker-state';
+import type { TrackerState, Instrument, CellData, Pattern } from './tracker-state';
 import { noteToFrequency } from './tracker-state';
 
 type Voice = {
@@ -24,6 +24,7 @@ export class TrackerAudio {
   private readonly scheduleInterval = 25;
   private onPositionChange: ((pattern: number, row: number) => void) | null = null;
   private onStop: (() => void) | null = null;
+  private consecutiveEmptyRows = 0;
 
   constructor() {
     this.initAudio();
@@ -101,6 +102,21 @@ export class TrackerAudio {
     const pattern = this.state.patterns[patternIdx];
     if (!pattern) return;
 
+    if (this.currentRow === 0 && !this.hasNotes(pattern)) {
+      if (this.state.isLooping) {
+        this.currentPatternIdx++;
+        if (this.currentPatternIdx >= this.state.order.length) {
+          this.currentPatternIdx = 0;
+        }
+        return;
+      } else {
+        this.stop();
+        return;
+      }
+    }
+
+    const rowHasNotes = this.rowHasNotes(pattern, this.currentRow);
+
     const row = pattern.rows[this.currentRow];
     for (let ch = 0; ch < row.length; ch++) {
       const cell = row[ch];
@@ -114,9 +130,33 @@ export class TrackerAudio {
       this.onPositionChange(pattern.id, this.currentRow);
     }
 
+    if (!rowHasNotes) {
+      this.consecutiveEmptyRows++;
+      if (this.consecutiveEmptyRows >= 3) {
+        const hasMoreNotes = this.hasNotesFromRow(pattern, this.currentRow + 1);
+        if (!hasMoreNotes) {
+          this.consecutiveEmptyRows = 0;
+          if (this.state.isLooping) {
+            this.currentPatternIdx++;
+            if (this.currentPatternIdx >= this.state.order.length) {
+              this.currentPatternIdx = 0;
+            }
+            this.currentRow = 0;
+            return;
+          } else {
+            this.stop();
+            return;
+          }
+        }
+      }
+    } else {
+      this.consecutiveEmptyRows = 0;
+    }
+
     this.currentRow++;
     if (this.currentRow >= this.state.rowsPerPattern) {
       this.currentRow = 0;
+      this.consecutiveEmptyRows = 0;
       this.currentPatternIdx++;
       if (this.currentPatternIdx >= this.state.order.length) {
         if (this.state.isLooping) {
@@ -267,6 +307,38 @@ export class TrackerAudio {
     }
 
     return null;
+  }
+
+  private hasNotes(pattern: Pattern): boolean {
+    for (const row of pattern.rows) {
+      for (const cell of row) {
+        if (cell.note !== null && cell.octave !== null) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private hasNotesFromRow(pattern: Pattern, startRow: number): boolean {
+    for (let r = startRow; r < pattern.rows.length; r++) {
+      for (const cell of pattern.rows[r]) {
+        if (cell.note !== null && cell.octave !== null) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private rowHasNotes(pattern: Pattern, row: number): boolean {
+    if (row >= pattern.rows.length) return false;
+    for (const cell of pattern.rows[row]) {
+      if (cell.note !== null && cell.octave !== null) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private stopAllVoices(): void {

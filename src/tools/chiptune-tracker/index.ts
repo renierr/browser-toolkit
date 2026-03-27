@@ -387,9 +387,9 @@ function renderPatternOrder() {
   const container = document.getElementById('pattern-order') as HTMLElement;
   container.innerHTML = '';
 
-  state.order.forEach((patternId, idx) => {
+  state.order.forEach((patternId) => {
     const btn = document.createElement('button');
-    btn.className = `btn btn-xs w-full mb-1 ${idx === 0 ? 'btn-primary' : 'btn-ghost'}`;
+    btn.className = `btn btn-xs w-full mb-1 ${patternId === state.currentPattern ? 'btn-primary' : 'btn-ghost'}`;
     btn.textContent = `P${patternId}`;
     btn.addEventListener('click', () => {
       state.currentPattern = patternId;
