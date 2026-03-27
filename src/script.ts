@@ -175,7 +175,8 @@ function renderOverview() {
 
     // Pagination / flat-list settings
     const flatList = settings.get('flatList', false);
-    const pageSize = Number(settings.get('pageSize', 24)) || 24;
+    const pageSizeSetting = settings.get('pageSize', '24') as string;
+    const pageSize = pageSizeSetting === 'all' ? Infinity : Number(pageSizeSetting) || 24;
     let currentPage = Number(settings.get('page', 1)) || 1;
     const setPageStored = (p: number) => settings.set('page', p);
 
@@ -214,13 +215,19 @@ function renderOverview() {
       if (currentPage > totalPages) currentPage = totalPages;
       setPageStored(currentPage);
 
-      const startIdx = (currentPage - 1) * pageSize;
-      const pageItems = allTools.slice(startIdx, startIdx + pageSize);
+      const startIdx = pageSize === Infinity ? 0 : (currentPage - 1) * pageSize;
+      const pageItems =
+        pageSize === Infinity ? allTools : allTools.slice(startIdx, startIdx + pageSize);
 
+      const showPagination = pageSize !== Infinity;
       outHtml += html`
         <div class="mb-4 flex items-center justify-between">
           <h3 class="text-2xl font-bold text-heading">All Tools</h3>
-          <div class="text-sm text-muted">${total} tools — Page ${currentPage} / ${totalPages}</div>
+          <div class="text-sm text-muted">
+            ${showPagination
+              ? `${total} tools — Page ${currentPage} / ${totalPages}`
+              : `${total} tools`}
+          </div>
         </div>
 
         <div
@@ -230,15 +237,23 @@ function renderOverview() {
           ${pageItems.map((tool) => renderToolCard(tool, false, compactMode)).join('')}
         </div>
 
-        <div class="mt-4 flex items-center justify-center gap-2" aria-label="Pagination">
-          <button class="btn btn-sm" id="page-prev" ${currentPage <= 1 ? 'disabled' : ''}>
-            Prev
-          </button>
-          <div class="text-sm text-muted px-2">Page ${currentPage} of ${totalPages}</div>
-          <button class="btn btn-sm" id="page-next" ${currentPage >= totalPages ? 'disabled' : ''}>
-            Next
-          </button>
-        </div>
+        ${showPagination
+          ? html`
+              <div class="mt-4 flex items-center justify-center gap-2" aria-label="Pagination">
+                <button class="btn btn-sm" id="page-prev" ${currentPage <= 1 ? 'disabled' : ''}>
+                  Prev
+                </button>
+                <div class="text-sm text-muted px-2">Page ${currentPage} of ${totalPages}</div>
+                <button
+                  class="btn btn-sm"
+                  id="page-next"
+                  ${currentPage >= totalPages ? 'disabled' : ''}
+                >
+                  Next
+                </button>
+              </div>
+            `
+          : ''}
       `;
     } else {
       // Render each section as a collapsible block containing its own grid
