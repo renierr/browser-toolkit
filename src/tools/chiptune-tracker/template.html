@@ -1,6 +1,20 @@
 <div class="flex flex-col h-full gap-2">
+  <!-- Project Actions -->
+  <div class="flex flex-wrap gap-2 p-2 bg-base-200 rounded-lg">
+    <button id="btn-export-wav" class="btn btn-sm btn-outline">
+      <i data-lucide="download" class="w-4 h-4 mr-1"></i> Export WAV
+    </button>
+    <button id="btn-save-project" class="btn btn-sm btn-outline">
+      <i data-lucide="save" class="w-4 h-4 mr-1"></i> Save
+    </button>
+    <button id="btn-load-project" class="btn btn-sm btn-outline">
+      <i data-lucide="folder-open" class="w-4 h-4 mr-1"></i> Load
+    </button>
+    <input type="file" id="file-load" class="hidden" accept=".json" />
+  </div>
+
   <!-- Transport Controls -->
-  <div class="flex items-center gap-3 p-2 bg-base-200 rounded-lg">
+  <div class="flex flex-wrap items-center gap-2 sm:gap-3 p-2 bg-base-200 rounded-lg">
     <button id="btn-play" class="btn btn-sm btn-primary">
       <i data-lucide="play" class="w-4 h-4"></i>
     </button>
@@ -32,32 +46,28 @@
       <span class="text-sm font-semibold">Pos:</span>
       <span id="position-display" class="font-mono text-sm">Pat: 00 Row: 00</span>
     </div>
-
-    <div class="flex-1"></div>
-
-    <button id="btn-export-wav" class="btn btn-sm btn-outline">
-      <i data-lucide="download" class="w-4 h-4 mr-1"></i> Export WAV
-    </button>
-    <button id="btn-save-project" class="btn btn-sm btn-outline">
-      <i data-lucide="save" class="w-4 h-4 mr-1"></i> Save
-    </button>
-    <button id="btn-load-project" class="btn btn-sm btn-outline">
-      <i data-lucide="folder-open" class="w-4 h-4 mr-1"></i> Load
-    </button>
-    <input type="file" id="file-load" class="hidden" accept=".json" />
   </div>
 
   <!-- Main Content -->
-  <div class="flex flex-1 gap-2 overflow-hidden">
+  <div class="flex flex-col sm:flex-row flex-1 gap-2 overflow-hidden">
     <!-- Pattern List -->
-    <div class="w-20 flex flex-col">
-      <div class="text-xs font-semibold text-center p-1 bg-base-200 rounded-t">Order</div>
-      <div id="pattern-order" class="flex-1 overflow-y-auto bg-base-200 rounded-b">
+    <div class="w-full sm:w-16 flex flex-col sm:content-start">
+      <div
+        class="text-xs font-semibold text-center p-1 bg-base-200 rounded-t sm:rounded-tl sm:rounded-tr sm:w-full"
+      >
+        Order
+      </div>
+      <div
+        id="pattern-order"
+        class="flex-1 overflow-y-auto bg-base-200 rounded-b flex flex-row md:flex-col sm:w-full max-h-24 sm:max-h-none"
+      >
         <!-- Pattern buttons will be inserted here -->
       </div>
-      <div class="flex gap-1 mt-1">
-        <button id="btn-add-pattern" class="btn btn-xs btn-outline flex-1">+</button>
-        <button id="btn-remove-pattern" class="btn btn-xs btn-outline flex-1">-</button>
+      <div class="flex gap-1 mt-1 sm:mt-0 sm:w-full sm:justify-center">
+        <button id="btn-add-pattern" class="btn btn-xs btn-outline flex-1 sm:flex-none">+</button>
+        <button id="btn-remove-pattern" class="btn btn-xs btn-outline flex-1 sm:flex-none">
+          -
+        </button>
       </div>
     </div>
 
@@ -88,7 +98,7 @@
     </div>
 
     <!-- Instrument Panel -->
-    <div class="w-56 flex flex-col gap-2">
+    <div class="w-full sm:w-56 flex flex-col gap-2">
       <!-- Note buttons -->
       <div class="p-2 bg-base-200 rounded-lg">
         <div class="text-xs font-semibold mb-1">Notes</div>
@@ -114,7 +124,7 @@
         <!-- Octave selector -->
         <div class="mt-2">
           <div class="text-xs font-semibold mb-1">Octave</div>
-          <div class="flex gap-1 justify-center">
+          <div class="flex flex-wrap gap-1 justify-start">
             <button class="octave-btn btn btn-xs btn-outline" data-octave="1">1</button>
             <button class="octave-btn btn btn-xs btn-outline" data-octave="2">2</button>
             <button class="octave-btn btn btn-xs btn-outline" data-octave="3">3</button>
@@ -128,7 +138,7 @@
       <!-- Instrument controls -->
       <div class="p-2 bg-base-200 rounded-lg">
         <h3 class="font-semibold text-sm mb-2">Instrument</h3>
-        <div class="flex gap-1 mb-2" id="instrument-tabs">
+        <div class="flex flex-wrap gap-1 mb-2" id="instrument-tabs">
           <!-- Instrument buttons -->
         </div>
 

@@ -415,7 +415,7 @@ export default function init(): () => void {
 
     state.order.forEach((patternId) => {
       const btn = document.createElement('button');
-      btn.className = `btn btn-xs w-full mb-1 ${patternId === state.currentPattern ? 'btn-primary' : 'btn-ghost'}`;
+      btn.className = `btn btn-xs w-auto mb-1 sm:mb-0 sm:mr-1 ${patternId === state.currentPattern ? 'btn-primary' : 'btn-ghost'}`;
       btn.textContent = `P${patternId}`;
       btn.addEventListener('click', () => {
         state.currentPattern = patternId;
