@@ -282,7 +282,15 @@
   #tracker-grid tr:hover .tracker-cell {
     background-color: var(--color-base-300);
   }
+  #tracker-grid tr:hover .tracker-cell.selected {
+    background-color: var(--color-primary);
+    color: var(--color-primary-content);
+  }
   #tracker-grid tr.active-row .tracker-cell:not(.row-num) {
-    background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+  }
+  #tracker-grid tr.active-row .tracker-cell.selected:not(.row-num) {
+    background-color: var(--color-primary);
+    color: var(--color-primary-content);
   }
 </style>
