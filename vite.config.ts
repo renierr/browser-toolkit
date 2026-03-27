@@ -74,7 +74,7 @@ export default defineConfig({
             files: [
               {
                 name: 'files',
-                accept: ['text/markdown', 'text/x-markdown', 'text/plain', 'text/*', '*/*'],
+                accept: ['*/*'],
               },
             ],
           },
@@ -139,7 +139,12 @@ export default defineConfig({
               'application/vnd.oasis.opendocument.spreadsheet': ['.ods'],
               'application/vnd.oasis.opendocument.presentation': ['.odp'],
               'application/epub+zip': ['.epub'],
-              'application/zip': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+              'application/zip': ['.zip'],
+              'application/x-tar': ['.tar'],
+              'application/gzip': ['.gz', '.tar.gz', '.tgz'],
+              'application/x-7z-compressed': ['.7z'],
+              'application/x-xz': ['.xz', '.tar.xz'],
+              'application/x-rar-compressed': ['.rar'],
               'application/octet-stream': [
                 '.bin',
                 '.dat',

@@ -9,7 +9,8 @@
       "application/zip",
       "application/x-tar",
       "application/gzip",
-      "application/x-7z-compressed"
+      "application/x-7z-compressed",
+      "application/x-xz"
     ]
   }
 }

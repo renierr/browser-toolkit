@@ -1,5 +1,6 @@
 import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import { downloadFile } from '../../js/file-utils';
+import type { SharedFilesPayload } from '../../js/share-target';
 import {
   loadArchive,
   type ArchiveLoader,
@@ -311,9 +312,13 @@ function setupEventListeners(state: ViewerState): void {
   });
 }
 
-export default function init() {
+export default function init(payload?: SharedFilesPayload) {
   const state = createState();
   setupEventListeners(state);
+
+  if (payload?.sharedFiles?.length) {
+    handleArchiveLoad(payload.sharedFiles[0], state);
+  }
 
   return () => {
     state.loader?.close();
