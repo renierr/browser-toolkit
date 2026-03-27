@@ -115,6 +115,7 @@
         <div class="mt-2">
           <div class="text-xs font-semibold mb-1">Octave</div>
           <div class="flex gap-1 justify-center">
+            <button class="octave-btn btn btn-xs btn-outline" data-octave="1">1</button>
             <button class="octave-btn btn btn-xs btn-outline" data-octave="2">2</button>
             <button class="octave-btn btn btn-xs btn-outline" data-octave="3">3</button>
             <button class="octave-btn btn btn-xs btn-outline btn-active" data-octave="4">4</button>
@@ -257,21 +258,31 @@
 
 <style>
   .tracker-cell {
-    @apply px-1 py-0.5 text-xs text-center cursor-pointer hover:bg-primary/20 transition-colors;
+    padding: 0.125rem 0.25rem;
+    font-size: 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    transition:
+      background-color 0.15s,
+      color 0.15s;
+  }
+  .tracker-cell:hover {
+    background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
   }
   .tracker-cell.selected {
-    @apply bg-primary text-primary-content;
+    background-color: var(--color-primary);
+    color: var(--color-primary-content);
   }
   .tracker-cell.note-cell {
-    @apply font-mono;
+    font-family: monospace;
   }
   .tracker-cell.empty {
-    @apply text-base-content/30;
+    color: color-mix(in srgb, var(--color-base-content) 30%, transparent);
   }
   #tracker-grid tr:hover .tracker-cell {
-    @apply bg-base-300;
+    background-color: var(--color-base-300);
   }
   #tracker-grid tr.active-row .tracker-cell:not(.row-num) {
-    @apply bg-primary/30;
+    background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
   }
 </style>
