@@ -440,6 +440,8 @@ function initScrollToTop() {
 }
 
 // === Routing ===
+let activeViewTransition: any = null;
+
 function handleRoute(path: string | null, payload?: any) {
   const doRender = () => {
     if (path) {
@@ -463,8 +465,14 @@ function handleRoute(path: string | null, payload?: any) {
 
   const docAny = document as any;
   if (typeof docAny.startViewTransition === 'function') {
+    // Skip view transition if one is already active to prevent race conditions
+    if (activeViewTransition && activeViewTransition.state === 'pending') {
+      doRender();
+      return;
+    }
+
     try {
-      docAny.startViewTransition(() => doRender());
+      activeViewTransition = docAny.startViewTransition(() => doRender());
     } catch (err) {
       // If anything goes wrong, fall back to direct rendering.
       console.warn('[script] View Transition failed, falling back to direct render', err);

@@ -28,9 +28,10 @@ class Router {
 
   public goOverview() {
     const currentTool = this.currentPath;
-    const scrollAfterNavigation = () => {
+
+    const setupScrollHandler = () => {
       let called = false;
-      let doScroll = () => {
+      const doScroll = () => {
         if (called) return;
         called = true;
         if (currentTool) {
@@ -47,10 +48,12 @@ class Router {
         requestAnimationFrame(() => requestAnimationFrame(doScroll));
       };
 
-      // Add one-time listeners
       window.addEventListener('hashchange', handler, { once: true });
       window.addEventListener('popstate', handler, { once: true });
     };
+
+    // Always set up scroll handler first
+    setupScrollHandler();
 
     // Try to use the new Navigation API to find the earliest entry that points to the overview
     // (no hash or a lone '#') and navigate back to it using history.go(delta).
@@ -84,7 +87,6 @@ class Router {
 
           if (foundIndex >= 0 && foundIndex < currentIndex) {
             const delta = foundIndex - currentIndex; // negative number -> go back
-            scrollAfterNavigation();
             history.go(delta);
             return;
           }
@@ -96,10 +98,7 @@ class Router {
       }
     }
 
-    // Fallback: set hash to overview (empty) and scroll the previously open tool into view if present.
-    if (currentTool) {
-      scrollAfterNavigation();
-    }
+    // Fallback: set hash to overview (empty)
     this.goTo('');
   }
 
