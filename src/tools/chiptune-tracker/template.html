@@ -89,6 +89,42 @@
 
     <!-- Instrument Panel -->
     <div class="w-56 flex flex-col gap-2">
+      <!-- Note buttons -->
+      <div class="p-2 bg-base-200 rounded-lg">
+        <div class="text-xs font-semibold mb-1">Notes</div>
+        <div class="grid grid-cols-4 gap-1">
+          <button class="note-btn btn btn-xs btn-ghost" data-note="C">C</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="C#">C#</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="D">D</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="D#">D#</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1 mt-1">
+          <button class="note-btn btn btn-xs btn-ghost" data-note="E">E</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="F">F</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="F#">F#</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="G">G</button>
+        </div>
+        <div class="grid grid-cols-4 gap-1 mt-1">
+          <button class="note-btn btn btn-xs btn-ghost" data-note="G#">G#</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="A">A</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="A#">A#</button>
+          <button class="note-btn btn btn-xs btn-ghost" data-note="B">B</button>
+        </div>
+
+        <!-- Octave selector -->
+        <div class="mt-2">
+          <div class="text-xs font-semibold mb-1">Octave</div>
+          <div class="flex gap-1 justify-center">
+            <button class="octave-btn btn btn-xs btn-outline" data-octave="2">2</button>
+            <button class="octave-btn btn btn-xs btn-outline" data-octave="3">3</button>
+            <button class="octave-btn btn btn-xs btn-outline btn-active" data-octave="4">4</button>
+            <button class="octave-btn btn btn-xs btn-outline" data-octave="5">5</button>
+            <button class="octave-btn btn btn-xs btn-outline" data-octave="6">6</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Instrument controls -->
       <div class="p-2 bg-base-200 rounded-lg">
         <h3 class="font-semibold text-sm mb-2">Instrument</h3>
         <div class="flex gap-1 mb-2" id="instrument-tabs">
@@ -188,43 +224,31 @@
               class="range range-xs"
             />
           </div>
-        </div>
-      </div>
 
-      <!-- Note Reference -->
-      <div class="p-2 bg-base-200 rounded-lg flex-1">
-        <h3 class="font-semibold text-sm mb-2">Notes</h3>
-        <div class="text-xs font-mono space-y-1">
-          <div class="grid grid-cols-4 gap-1">
-            <button class="note-btn btn btn-xs btn-ghost" data-note="C">C</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="C#">C#</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="D">D</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="D#">D#</button>
+          <!-- Volume slider -->
+          <div class="mt-2">
+            <div class="text-xs font-semibold mb-1">Volume</div>
+            <div class="flex items-center gap-2">
+              <input
+                type="range"
+                id="volume-slider"
+                min="0"
+                max="64"
+                value="32"
+                class="range range-xs range-primary flex-1"
+              />
+              <span id="volume-display" class="text-xs w-6 text-right">32</span>
+            </div>
           </div>
-          <div class="grid grid-cols-4 gap-1">
-            <button class="note-btn btn btn-xs btn-ghost" data-note="E">E</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="F">F</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="F#">F#</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="G">G</button>
+        </div>
+
+        <!-- Actions -->
+        <div class="mt-3">
+          <div class="flex gap-1">
+            <button id="btn-clear-cell" class="btn btn-xs btn-outline flex-1">Clear</button>
+            <button id="btn-copy-cell" class="btn btn-xs btn-outline flex-1">Copy</button>
+            <button id="btn-paste-cell" class="btn btn-xs btn-outline flex-1">Paste</button>
           </div>
-          <div class="grid grid-cols-4 gap-1">
-            <button class="note-btn btn btn-xs btn-ghost" data-note="G#">G#</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="A">A</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="A#">A#</button>
-            <button class="note-btn btn btn-xs btn-ghost" data-note="B">B</button>
-          </div>
-          <div class="divider my-1">Octave</div>
-          <div class="flex gap-1 justify-center">
-            <button class="octave-btn btn btn-xs btn-outline" data-octave="2">2</button>
-            <button class="octave-btn btn btn-xs btn-outline" data-octave="3">3</button>
-            <button class="octave-btn btn btn-xs btn-outline btn-active" data-octave="4">4</button>
-            <button class="octave-btn btn btn-xs btn-outline" data-octave="5">5</button>
-            <button class="octave-btn btn btn-xs btn-outline" data-octave="6">6</button>
-          </div>
-          <div class="divider my-1">Actions</div>
-          <button id="btn-clear-cell" class="btn btn-xs btn-outline w-full">Clear Cell</button>
-          <button id="btn-copy-cell" class="btn btn-xs btn-outline w-full">Copy</button>
-          <button id="btn-paste-cell" class="btn btn-xs btn-outline w-full">Paste</button>
         </div>
       </div>
     </div>

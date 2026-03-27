@@ -25,6 +25,7 @@ export default function init(): () => void {
   let selectedNote = 'C';
   let selectedOctave = 4;
   let selectedInstrument = 1;
+  let selectedVolume = 32;
   let selectedChannel = 0;
   let selectedRow = 0;
   let clipboard: ClipboardData | null = null;
@@ -81,6 +82,7 @@ export default function init(): () => void {
     setupNoteButtons();
     cleanupKeyboard = setupKeyboardInput();
     setupInstrumentControls();
+    setupVolumeControl();
   }
 
   function setupKeyboardInput(): () => void {
@@ -323,6 +325,16 @@ export default function init(): () => void {
     (document.getElementById('duty-display') as HTMLElement).textContent = `${inst.duty}%`;
   }
 
+  function setupVolumeControl() {
+    const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
+    const volumeDisplay = document.getElementById('volume-display') as HTMLElement;
+
+    volumeSlider.addEventListener('input', () => {
+      selectedVolume = parseInt(volumeSlider.value);
+      volumeDisplay.textContent = selectedVolume.toString();
+    });
+  }
+
   function previewCurrentNote() {
     const inst = getCurrentInstrument();
     if (inst) {
@@ -431,7 +443,8 @@ export default function init(): () => void {
         noteTd.className = 'tracker-cell note-cell';
         noteTd.setAttribute('data-channel', ch.toString());
         noteTd.setAttribute('data-row', row.toString());
-        noteTd.addEventListener('click', () => handleCellClick(ch, row));
+        noteTd.setAttribute('data-type', 'note');
+        noteTd.addEventListener('click', () => handleCellClick(ch, row, 'note'));
         if (cell.note) {
           noteTd.textContent = `${cell.note}${cell.octave ?? ''}`;
           noteTd.classList.remove('empty');
@@ -445,7 +458,8 @@ export default function init(): () => void {
         insTd.className = 'tracker-cell';
         insTd.setAttribute('data-channel', ch.toString());
         insTd.setAttribute('data-row', row.toString());
-        insTd.addEventListener('click', () => handleCellClick(ch, row));
+        insTd.setAttribute('data-type', 'ins');
+        insTd.addEventListener('click', () => handleCellClick(ch, row, 'ins'));
         if (cell.instrument !== null) {
           insTd.textContent = cell.instrument.toString();
           insTd.classList.remove('empty');
@@ -459,7 +473,8 @@ export default function init(): () => void {
         volTd.className = 'tracker-cell';
         volTd.setAttribute('data-channel', ch.toString());
         volTd.setAttribute('data-row', row.toString());
-        volTd.addEventListener('click', () => handleCellClick(ch, row));
+        volTd.setAttribute('data-type', 'volume');
+        volTd.addEventListener('click', () => handleCellClick(ch, row, 'volume'));
         if (cell.volume !== null) {
           volTd.textContent = cell.volume.toString();
           volTd.classList.remove('empty');
@@ -476,7 +491,7 @@ export default function init(): () => void {
     highlightCurrentRow();
   }
 
-  function handleCellClick(channel: number, row: number) {
+  function handleCellClick(channel: number, row: number, type?: string) {
     selectedChannel = channel;
     selectedRow = row;
     highlightSelectedCell();
@@ -484,11 +499,14 @@ export default function init(): () => void {
     const pattern = state.patterns[state.currentPattern];
     const cell = pattern.rows[row][channel];
 
-    cell.note = selectedNote;
-    cell.octave = selectedOctave;
-    cell.instrument = selectedInstrument;
-
-    previewCurrentNote();
+    if (type === 'volume') {
+      cell.volume = selectedVolume;
+    } else {
+      cell.note = selectedNote;
+      cell.octave = selectedOctave;
+      cell.instrument = selectedInstrument;
+      previewCurrentNote();
+    }
 
     renderTrackerGrid();
     highlightSelectedCell();
