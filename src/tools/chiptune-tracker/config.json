@@ -1,0 +1,7 @@
+{
+  "name": "Chiptune Tracker",
+  "description": "Classic 8-bit tracker interface to compose retro music with Web Audio API. Export as WAV.",
+  "icon": "music",
+  "sectionId": "media",
+  "order": 2
+}

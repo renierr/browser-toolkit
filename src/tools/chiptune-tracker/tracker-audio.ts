@@ -1,0 +1,337 @@
+import type { TrackerState, Instrument, CellData } from './tracker-state';
+import { noteToFrequency } from './tracker-state';
+
+type Voice = {
+  osc: OscillatorNode | null;
+  gain: GainNode;
+  active: boolean;
+  note: number;
+  instrument: Instrument | null;
+  releaseTime: number;
+};
+
+export class TrackerAudio {
+  private audioContext: AudioContext | null = null;
+  private masterGain: GainNode | null = null;
+  private voices: Voice[] = [];
+  private state: TrackerState | null = null;
+  private isPlaying = false;
+  private currentPatternIdx = 0;
+  private currentRow = 0;
+  private nextNoteTime = 0;
+  private schedulerTimer: number | null = null;
+  private readonly lookAhead = 0.1;
+  private readonly scheduleInterval = 25;
+  private onPositionChange: ((pattern: number, row: number) => void) | null = null;
+  private onStop: (() => void) | null = null;
+
+  constructor() {
+    this.initAudio();
+  }
+
+  private initAudio(): void {
+    try {
+      this.audioContext = new AudioContext();
+      this.masterGain = this.audioContext.createGain();
+      this.masterGain.gain.value = 0.5;
+      this.masterGain.connect(this.audioContext.destination);
+    } catch (e) {
+      console.error('[Tracker] Failed to init audio:', e);
+    }
+  }
+
+  setState(state: TrackerState): void {
+    this.state = state;
+  }
+
+  setOnPositionChange(cb: (pattern: number, row: number) => void): void {
+    this.onPositionChange = cb;
+  }
+
+  setOnStop(cb: () => void): void {
+    this.onStop = cb;
+  }
+
+  play(): void {
+    if (!this.audioContext || !this.state) return;
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume();
+    }
+    this.isPlaying = true;
+    this.currentPatternIdx = this.state.order.indexOf(this.state.currentPattern);
+    if (this.currentPatternIdx < 0) this.currentPatternIdx = 0;
+    this.currentRow = this.state.currentRow;
+    this.nextNoteTime = this.audioContext.currentTime;
+    this.scheduler();
+  }
+
+  stop(): void {
+    this.isPlaying = false;
+    if (this.schedulerTimer !== null) {
+      clearTimeout(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+    this.stopAllVoices();
+    if (this.onStop) this.onStop();
+  }
+
+  pause(): void {
+    this.isPlaying = false;
+    if (this.schedulerTimer !== null) {
+      clearTimeout(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+    this.stopAllVoices();
+  }
+
+  private scheduler(): void {
+    if (!this.isPlaying || !this.audioContext || !this.state) return;
+
+    while (this.nextNoteTime < this.audioContext.currentTime + this.lookAhead) {
+      this.scheduleNote();
+    }
+
+    this.schedulerTimer = window.setTimeout(() => this.scheduler(), this.scheduleInterval);
+  }
+
+  private scheduleNote(): void {
+    if (!this.audioContext || !this.state) return;
+
+    const patternIdx = this.state.order[this.currentPatternIdx];
+    const pattern = this.state.patterns[patternIdx];
+    if (!pattern) return;
+
+    const row = pattern.rows[this.currentRow];
+    for (let ch = 0; ch < row.length; ch++) {
+      const cell = row[ch];
+      this.playCell(ch, cell, this.nextNoteTime);
+    }
+
+    const rowDuration = 60 / this.state.bpm / 4;
+    this.nextNoteTime += rowDuration;
+
+    if (this.onPositionChange) {
+      this.onPositionChange(pattern.id, this.currentRow);
+    }
+
+    this.currentRow++;
+    if (this.currentRow >= this.state.rowsPerPattern) {
+      this.currentRow = 0;
+      this.currentPatternIdx++;
+      if (this.currentPatternIdx >= this.state.order.length) {
+        if (this.state.isLooping) {
+          this.currentPatternIdx = 0;
+        } else {
+          this.stop();
+          return;
+        }
+      }
+    }
+  }
+
+  private playCell(_channel: number, cell: CellData, time: number): void {
+    if (!this.audioContext || !this.state) return;
+    if (cell.note === null || cell.octave === null) return;
+
+    const instrumentId = cell.instrument ?? 1;
+    const instrument =
+      this.state.instruments.find((i) => i.id === instrumentId) ?? this.state.instruments[0];
+    if (!instrument) return;
+
+    const freq = noteToFrequency(cell.note, cell.octave);
+    if (freq <= 0) return;
+
+    const voice = this.getFreeVoice();
+    if (!voice) return;
+
+    voice.active = true;
+    voice.note = freq;
+    voice.instrument = instrument;
+
+    if (instrument.waveform === 'noise') {
+      this.playNoise(voice, time, cell.volume);
+    } else {
+      this.playTone(voice, freq, time, cell.volume, instrument);
+    }
+  }
+
+  private playTone(
+    voice: Voice,
+    freq: number,
+    time: number,
+    volume: number | null,
+    instrument: Instrument
+  ): void {
+    if (!this.audioContext || !voice.gain) return;
+
+    const osc = this.audioContext.createOscillator();
+    const oscType =
+      instrument.waveform === 'pulse'
+        ? 'square'
+        : instrument.waveform === 'noise'
+          ? 'sawtooth'
+          : instrument.waveform;
+    osc.type = oscType as OscillatorType;
+    osc.frequency.value = freq;
+
+    if (instrument.waveform === 'pulse' && (this.audioContext as any).createOscillator) {
+      const pulseWidth = instrument.duty / 100;
+      const realOsc = this.audioContext.createOscillator();
+      realOsc.type = 'square';
+      realOsc.frequency.value = freq;
+
+      const pwm = this.audioContext.createGain();
+      pwm.gain.value = pulseWidth;
+
+      const inv = this.audioContext.createGain();
+      inv.gain.value = 1 - pulseWidth * 2;
+
+      osc.disconnect();
+      osc.connect(pwm);
+      osc.connect(inv);
+      pwm.connect(voice.gain.gain);
+      inv.connect(voice.gain.gain);
+    }
+
+    osc.connect(voice.gain);
+
+    const vol = volume !== null ? volume / 64 : 1;
+    const now = time;
+    const attack = instrument.attack;
+    const decay = instrument.decay;
+    const sustain = instrument.sustain * vol;
+    const release = instrument.release;
+
+    voice.gain.gain.setValueAtTime(0, now);
+    voice.gain.gain.linearRampToValueAtTime(vol, now + attack);
+    voice.gain.gain.linearRampToValueAtTime(sustain, now + attack + decay);
+    voice.gain.gain.setValueAtTime(sustain, now + 0.5);
+    voice.gain.gain.linearRampToValueAtTime(0, now + 0.5 + release);
+
+    osc.start(now);
+    osc.stop(now + 0.5 + release + 0.1);
+
+    voice.osc = osc;
+    voice.releaseTime = time + 0.5 + release;
+  }
+
+  private playNoise(voice: Voice, time: number, volume: number | null): void {
+    if (!this.audioContext || !voice.gain) return;
+
+    const bufferSize = this.audioContext.sampleRate * 0.1;
+    const buffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+
+    const noiseGain = this.audioContext.createGain();
+    const vol = volume !== null ? volume / 64 : 0.5;
+    noiseGain.gain.setValueAtTime(vol, time);
+    noiseGain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
+
+    source.connect(noiseGain);
+    noiseGain.connect(voice.gain);
+    source.start(time);
+    source.stop(time + 0.1);
+  }
+
+  private getFreeVoice(): Voice | null {
+    const now = this.audioContext?.currentTime ?? 0;
+
+    for (const voice of this.voices) {
+      if (!voice.active || (voice.releaseTime && now >= voice.releaseTime)) {
+        voice.active = true;
+        return voice;
+      }
+    }
+
+    if (this.voices.length < 16) {
+      if (!this.masterGain || !this.audioContext) return null;
+      const gain = this.audioContext.createGain();
+      gain.gain.value = 0;
+      gain.connect(this.masterGain);
+      const voice: Voice = {
+        osc: null,
+        gain,
+        active: true,
+        note: 0,
+        instrument: null,
+        releaseTime: 0,
+      };
+      this.voices.push(voice);
+      return voice;
+    }
+
+    return null;
+  }
+
+  private stopAllVoices(): void {
+    for (const voice of this.voices) {
+      if (voice.osc) {
+        try {
+          voice.osc.stop();
+        } catch {}
+        voice.osc = null;
+      }
+      voice.active = false;
+    }
+  }
+
+  setMasterVolume(vol: number): void {
+    if (this.masterGain) {
+      this.masterGain.gain.value = vol;
+    }
+  }
+
+  previewNote(instrument: Instrument, note: string, octave: number): void {
+    if (!this.audioContext) return;
+    if (this.audioContext.state === 'suspended') {
+      this.audioContext.resume();
+    }
+
+    const freq = noteToFrequency(note, octave);
+    if (freq <= 0) return;
+
+    const osc = this.audioContext.createOscillator();
+    const oscType =
+      instrument.waveform === 'pulse'
+        ? 'square'
+        : instrument.waveform === 'noise'
+          ? 'sawtooth'
+          : instrument.waveform;
+    osc.type = oscType as OscillatorType;
+    osc.frequency.value = freq;
+
+    const gain = this.audioContext.createGain();
+    gain.gain.value = 0.3;
+
+    osc.connect(gain);
+    gain.connect(this.masterGain!);
+
+    const now = this.audioContext.currentTime;
+    const attack = instrument.attack;
+    const decay = instrument.decay;
+    const sustain = instrument.sustain * 0.3;
+    const release = instrument.release;
+
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + attack);
+    gain.gain.linearRampToValueAtTime(sustain, now + attack + decay);
+    gain.gain.linearRampToValueAtTime(0, now + attack + decay + release);
+
+    osc.start(now);
+    osc.stop(now + attack + decay + release + 0.1);
+  }
+
+  cleanup(): void {
+    this.stop();
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+  }
+}
