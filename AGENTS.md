@@ -416,6 +416,39 @@ element.addEventListener('touchstart', handleTouchStart);
 - Use `dark:` sparingly - prefer DaisyUI themes
 - Keep **custom CSS** in `src/css/styles.css` minimal
 
+### DaisyUI CSS Variables
+
+**IMPORTANT:** Do NOT use short TailwindCSS/DaisyUI variables like `--p`, `--pc`, `--b1`, `--b2`, `--b3`, `--bc`, etc. These are internal implementation details and may not work correctly in custom CSS.
+
+Use the full CSS variable names instead:
+
+| Variable                    | Description             |
+| --------------------------- | ----------------------- |
+| `--color-primary`           | Primary brand color     |
+| `--color-primary-content`   | Foreground on primary   |
+| `--color-secondary`         | Secondary brand color   |
+| `--color-secondary-content` | Foreground on secondary |
+| `--color-accent`            | Accent brand color      |
+| `--color-accent-content`    | Foreground on accent    |
+| `--color-neutral`           | Neutral dark color      |
+| `--color-neutral-content`   | Foreground on neutral   |
+| `--color-base-100`          | Base background         |
+| `--color-base-200`          | Base darker             |
+| `--color-base-300`          | Base even darker        |
+| `--color-base-content`      | Foreground on base      |
+
+**For opacity**, use CSS `color-mix()`:
+
+```css
+/* Correct */
+background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
+
+/* Incorrect - DO NOT USE short vars */
+background-color: oklch(var(--p) / 0.2);
+```
+
+**Never use `@apply`** in custom `<style>` blocks - use plain CSS with DaisyUI variables.
+
 ## File Dropzone Pattern
 
 All tools with file upload functionality should use this standardized dropzone pattern:
