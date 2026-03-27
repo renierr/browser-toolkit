@@ -73,7 +73,97 @@ function setupEventListeners() {
   btnPasteCell.addEventListener('click', handlePasteCell);
 
   setupNoteButtons();
+  setupKeyboardInput();
   setupInstrumentControls();
+}
+
+function setupKeyboardInput() {
+  document.addEventListener('keydown', (e: KeyboardEvent) => {
+    // Arrow keys to navigate
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedRow = Math.max(0, selectedRow - 1);
+      highlightSelectedCell();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedRow = Math.min(ROWS - 1, selectedRow + 1);
+      highlightSelectedCell();
+      return;
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      selectedChannel = Math.max(0, selectedChannel - 1);
+      highlightSelectedCell();
+      return;
+    }
+    if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      selectedChannel = Math.min(CHANNELS - 1, selectedChannel + 1);
+      highlightSelectedCell();
+      return;
+    }
+
+    // Note input keys
+    const noteMap: Record<string, string> = {
+      z: 'C',
+      s: 'C#',
+      x: 'D',
+      d: 'D#',
+      c: 'E',
+      v: 'F',
+      g: 'F#',
+      b: 'G',
+      h: 'G#',
+      n: 'A',
+      j: 'A#',
+      m: 'B',
+    };
+
+    const key = e.key.toLowerCase();
+    if (noteMap[key]) {
+      e.preventDefault();
+      selectedNote = noteMap[key];
+      updateNoteSelection();
+      placeNoteInCell();
+      previewCurrentNote();
+      return;
+    }
+
+    // Octave change
+    if (e.key >= '1' && e.key <= '6') {
+      selectedOctave = parseInt(e.key);
+      updateOctaveSelection();
+      placeNoteInCell();
+      previewCurrentNote();
+      return;
+    }
+
+    // Delete/Backspace to clear cell
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      handleClearCell();
+      return;
+    }
+
+    // Space to toggle play
+    if (e.key === ' ') {
+      e.preventDefault();
+      togglePlay();
+      return;
+    }
+  });
+}
+
+function placeNoteInCell() {
+  const pattern = state.patterns[state.currentPattern];
+  const cell = pattern.rows[selectedRow][selectedChannel];
+  cell.note = selectedNote;
+  cell.octave = selectedOctave;
+  cell.instrument = selectedInstrument;
+  renderTrackerGrid();
+  highlightSelectedCell();
 }
 
 function setupNoteButtons() {
@@ -386,15 +476,16 @@ function handleCellClick(channel: number, row: number) {
   const pattern = state.patterns[state.currentPattern];
   const cell = pattern.rows[row][channel];
 
-  if (cell.note) {
-    selectedNote = cell.note;
-    selectedOctave = cell.octave ?? 4;
-    if (cell.instrument) selectedInstrument = cell.instrument;
-    updateNoteSelection();
-    updateOctaveSelection();
-    renderInstrumentTabs();
-    updateInstrumentControls();
-  }
+  // Place current selected note into cell
+  cell.note = selectedNote;
+  cell.octave = selectedOctave;
+  cell.instrument = selectedInstrument;
+
+  // Play preview sound
+  previewCurrentNote();
+
+  renderTrackerGrid();
+  highlightSelectedCell();
 }
 
 function highlightSelectedCell() {
