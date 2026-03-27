@@ -295,12 +295,13 @@ export default function init(): () => void {
     const container = document.getElementById('instrument-tabs') as HTMLElement;
     container.innerHTML = '';
 
-    for (let i = 1; i <= state.instruments.length; i++) {
+    for (const inst of state.instruments) {
       const btn = document.createElement('button');
-      btn.className = `btn btn-xs ${i === selectedInstrument ? 'btn-primary' : 'btn-outline'}`;
-      btn.textContent = i.toString();
+      btn.className = `btn btn-xs ${inst.id === selectedInstrument ? 'btn-primary' : 'btn-outline'}`;
+      btn.textContent = inst.name;
+      btn.title = `Instrument ${inst.id}`;
       btn.addEventListener('click', () => {
-        selectedInstrument = i;
+        selectedInstrument = inst.id;
         renderInstrumentTabs();
         updateInstrumentControls();
       });
