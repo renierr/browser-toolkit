@@ -202,7 +202,7 @@ export class TrackerAudio {
     volume: number | null,
     instrument: Instrument
   ): void {
-    if (!this.audioContext || !voice.gain) return;
+    if (!this.audioContext || !voice.gain || !this.state) return;
 
     const osc = this.audioContext.createOscillator();
     const oscType =
@@ -242,17 +242,20 @@ export class TrackerAudio {
     const sustain = instrument.sustain * vol;
     const release = instrument.release;
 
+    const rowDuration = 60 / this.state.bpm / 4;
+    const noteDuration = rowDuration * 0.9;
+
     voice.gain.gain.setValueAtTime(0, now);
     voice.gain.gain.linearRampToValueAtTime(vol, now + attack);
     voice.gain.gain.linearRampToValueAtTime(sustain, now + attack + decay);
-    voice.gain.gain.setValueAtTime(sustain, now + 0.5);
-    voice.gain.gain.linearRampToValueAtTime(0, now + 0.5 + release);
+    voice.gain.gain.setValueAtTime(sustain, now + noteDuration);
+    voice.gain.gain.linearRampToValueAtTime(0, now + noteDuration + release);
 
     osc.start(now);
-    osc.stop(now + 0.5 + release + 0.1);
+    osc.stop(now + noteDuration + release + 0.05);
 
     voice.osc = osc;
-    voice.releaseTime = time + 0.5 + release;
+    voice.releaseTime = time + noteDuration + release;
   }
 
   private playNoise(voice: Voice, time: number, volume: number | null): void {
