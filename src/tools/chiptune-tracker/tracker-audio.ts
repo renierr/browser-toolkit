@@ -59,9 +59,9 @@ export class TrackerAudio {
       this.audioContext.resume();
     }
     this.isPlaying = true;
-    this.currentPatternIdx = this.state.order.indexOf(this.state.currentPattern);
-    if (this.currentPatternIdx < 0) this.currentPatternIdx = 0;
-    this.currentRow = this.state.currentRow;
+    this.currentPatternIdx = 0;
+    this.currentRow = 0;
+    this.consecutiveEmptyRows = 0;
     this.nextNoteTime = this.audioContext.currentTime;
     this.scheduler();
   }

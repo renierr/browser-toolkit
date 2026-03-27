@@ -362,10 +362,16 @@ export default function init(): () => void {
       audio.pause();
       state.isPlaying = false;
     } else {
+      state.currentPattern = 0;
+      state.currentRow = 0;
       audio.play();
       state.isPlaying = true;
     }
     updatePlayButton();
+    renderPatternOrder();
+    renderTrackerGrid();
+    updatePositionDisplay();
+    highlightCurrentRow();
   }
 
   function stopPlayback() {
@@ -380,7 +386,7 @@ export default function init(): () => void {
   function toggleLoop() {
     state.isLooping = !state.isLooping;
     const btn = document.getElementById('btn-loop') as HTMLButtonElement;
-    btn.classList.toggle('btn-active', state.isLooping);
+    btn.classList.toggle('btn-outline', state.isLooping);
   }
 
   function updatePlayButton() {
