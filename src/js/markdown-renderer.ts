@@ -1,5 +1,5 @@
 import MarkdownIt from 'markdown-it';
-import { full as emoji } from 'markdown-it-emoji';
+import * as emoji from 'markdown-it-emoji';
 import footnote from 'markdown-it-footnote';
 import taskLists from 'markdown-it-task-lists';
 import container from 'markdown-it-container';
@@ -21,7 +21,7 @@ export function createMarkdownRenderer(): MarkdownRenderer {
     breaks: true,
   });
 
-  md.use(emoji);
+  md.use(emoji.full as unknown as Parameters<typeof md.use>[0]);
   md.use(footnote);
   md.use(taskLists, { enabled: true, label: true, labelAfter: true });
   md.use(container, 'success', {

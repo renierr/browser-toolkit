@@ -1,7 +1,7 @@
 import { setupFileDropzone } from '../../js/file-utils';
 import { showMessage } from '../../js/ui';
 import type { SharedFilesPayload } from '../../js/share-target';
-import { createMarkdownRenderer } from './markdown-renderer';
+import { createMarkdownRenderer } from '../../js/markdown-renderer';
 import { MarkdownParser } from 'overtype/parser';
 
 interface State {
