@@ -1,0 +1,173 @@
+{
+  "categories": [
+    { "id": "fire", "name": "Fire Starting", "icon": "flame" },
+    { "id": "water", "name": "Water & Purification", "icon": "droplet" },
+    { "id": "first-aid", "name": "First Aid", "icon": "heart-pulse" },
+    { "id": "shelter", "name": "Shelter", "icon": "home" },
+    { "id": "navigation", "name": "Navigation", "icon": "compass" },
+    { "id": "food", "name": "Food & Foraging", "icon": "utensils" },
+    { "id": "signaling", "name": "Signaling & Rescue", "icon": "radio" }
+  ],
+  "guides": [
+    {
+      "id": "fire-bow-drill",
+      "title": "Bow Drill Fire Starting",
+      "excerpt": "Start a fire using friction with a bow drill spindle and fireboard. A primitive but effective method when no modern tools are available.",
+      "category": "fire",
+      "tags": ["fire", "friction", "primitive", "wood", "bow-drill"],
+      "contentPath": "fire/bow-drill/content.md"
+    },
+    {
+      "id": "fire-flint-steel",
+      "title": "Flint and Steel",
+      "excerpt": "Create sparks using flint and steel to ignite tinder. Reliable technique that works in any weather condition.",
+      "category": "fire",
+      "tags": ["fire", "spark", "flint", "steel", "fire-starter"],
+      "contentPath": "fire/flint-steel/content.md"
+    },
+    {
+      "id": "fire-plow",
+      "title": "Fire Plow",
+      "excerpt": "Create fire by rubbing a hardwood stick in a groove of a softer wood board. One of the oldest fire-making methods.",
+      "category": "fire",
+      "tags": ["fire", "friction", "primitive", "fire-plow"],
+      "contentPath": "fire/fire-plow/content.md"
+    },
+    {
+      "id": "water-filtration",
+      "title": "Water Filtration",
+      "excerpt": "Filter dirty water through layers of sand, charcoal, and gravel to remove sediment and improve clarity.",
+      "category": "water",
+      "tags": ["water", "filtration", "filter", "sediment"],
+      "contentPath": "water/filtration/content.md"
+    },
+    {
+      "id": "water-boiling",
+      "title": "Boiling Water",
+      "excerpt": "Boil water for at least 1 minute to kill pathogens. The most reliable method of water purification in the wild.",
+      "category": "water",
+      "tags": ["water", "boiling", "purification", "sterilize"],
+      "contentPath": "water/boiling/content.md"
+    },
+    {
+      "id": "water-collection",
+      "title": "Water Collection",
+      "excerpt": "Collect water from rain, dew, rivers, and natural springs. Learn various techniques to source water in the wilderness.",
+      "category": "water",
+      "tags": ["water", "collection", "rain", "dew", "sources"],
+      "contentPath": "water/collection/content.md"
+    },
+    {
+      "id": "first-aid-fracture",
+      "title": "Treating Fractures",
+      "excerpt": "Improvise splints and slings to stabilize broken bones when professional medical help is unavailable.",
+      "category": "first-aid",
+      "tags": ["first-aid", "fracture", "bone", "splint", "emergency"],
+      "contentPath": "first-aid/fracture/content.md"
+    },
+    {
+      "id": "first-aid-bleeding",
+      "title": "Controlling Bleeding",
+      "excerpt": "Stop severe bleeding using direct pressure, elevation, and improvised tourniquets. Critical emergency skills.",
+      "category": "first-aid",
+      "tags": ["first-aid", "bleeding", "blood", "tourniquet", "emergency"],
+      "contentPath": "first-aid/bleeding/content.md"
+    },
+    {
+      "id": "first-aid-shock",
+      "title": "Treating Shock",
+      "excerpt": "Recognize and treat shock. Keep the victim warm, elevate legs, and maintain body temperature until help arrives.",
+      "category": "first-aid",
+      "tags": ["first-aid", "shock", "emergency", "unconscious"],
+      "contentPath": "first-aid/shock/content.md"
+    },
+    {
+      "id": "first-aid-burns",
+      "title": "Treating Burns",
+      "excerpt": "Properly treat thermal burns, including cooling, covering, and recognizing when professional care is needed.",
+      "category": "first-aid",
+      "tags": ["first-aid", "burns", "fire", "injury"],
+      "contentPath": "first-aid/burns/content.md"
+    },
+    {
+      "id": "shelter-debris-hut",
+      "title": "Debris Hut",
+      "excerpt": "Build an insulated debris hut using only natural materials. Excellent for cold weather survival shelter.",
+      "category": "shelter",
+      "tags": ["shelter", "debris-hut", "debris", "insulation", "cold"],
+      "contentPath": "shelter/debris-hut/content.md"
+    },
+    {
+      "id": "shelter-snow-cave",
+      "title": "Snow Cave",
+      "excerpt": "Construct an insulated shelter from snow. Snow is an excellent insulator and can provide life-saving warmth.",
+      "category": "shelter",
+      "tags": ["shelter", "snow", "cave", "winter", "cold"],
+      "contentPath": "shelter/snow-cave/content.md"
+    },
+    {
+      "id": "shelter-lean-to",
+      "title": "Lean-to Shelter",
+      "excerpt": "Build a simple lean-to shelter using logs and branches. Quick to construct and provides good protection.",
+      "category": "shelter",
+      "tags": ["shelter", "lean-to", "logs", "quick"],
+      "contentPath": "shelter/lean-to/content.md"
+    },
+    {
+      "id": "navigation-sun",
+      "title": "Navigation by Sun",
+      "excerpt": "Find direction using the sun, shadow stick method, and watch method. Reliable navigation without any tools.",
+      "category": "navigation",
+      "tags": ["navigation", "sun", "direction", "shadow", "compass"],
+      "contentPath": "navigation/sun/content.md"
+    },
+    {
+      "id": "navigation-stars",
+      "title": "Navigation by Stars",
+      "excerpt": "Use the North Star and other constellations to find direction at night. Essential night navigation skill.",
+      "category": "navigation",
+      "tags": ["navigation", "stars", "night", "north-star", "polaris"],
+      "contentPath": "navigation/stars/content.md"
+    },
+    {
+      "id": "navigation-water",
+      "title": "Following Water",
+      "excerpt": "Use rivers and streams to find civilization. Water flows downhill and often leads to populated areas.",
+      "category": "navigation",
+      "tags": ["navigation", "water", "river", "stream", "direction"],
+      "contentPath": "navigation/water/content.md"
+    },
+    {
+      "id": "food-foraging",
+      "title": "Basic Foraging",
+      "excerpt": "Identify edible plants, berries, and mushrooms. Learn which wild foods are safe to eat and how to prepare them.",
+      "category": "food",
+      "tags": ["food", "foraging", "plants", "edible", "berries"],
+      "contentPath": "food/foraging/content.md"
+    },
+    {
+      "id": "food-trapping",
+      "title": "Simple Traps",
+      "excerpt": "Build basic snares and traps to catch small game. Essential skills for procuring meat in survival situations.",
+      "category": "food",
+      "tags": ["food", "trapping", "snare", "hunting", "trap"],
+      "contentPath": "food/trapping/content.md"
+    },
+    {
+      "id": "signaling-fire",
+      "title": "Fire Signals",
+      "excerpt": "Create signal fires to attract rescue. Use smoke, light, and specific patterns to maximize visibility.",
+      "category": "signaling",
+      "tags": ["signaling", "fire", "rescue", "signal", "smoke"],
+      "contentPath": "signaling/fire-signals/content.md"
+    },
+    {
+      "id": "signaling-mirror",
+      "title": "Signal Mirror",
+      "excerpt": "Use a mirror or reflective surface to signal aircraft and distant rescuers. Can be seen for miles.",
+      "category": "signaling",
+      "tags": ["signaling", "mirror", "reflective", "rescue", "signal"],
+      "contentPath": "signaling/mirror/content.md"
+    }
+  ]
+}
