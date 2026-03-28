@@ -43,23 +43,23 @@
           <span id="status-text">Checking...</span>
         </div>
 
-        <div class="stats stats-vertical shadow w-full bg-base-200">
-          <div class="stat px-4 py-3">
-            <div class="stat-title text-xs">Battery Level</div>
-            <div class="stat-value text-2xl" id="stat-level">--%</div>
-            <div class="stat-desc" id="stat-level-desc">0% = empty, 100% = full</div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+          <div class="bg-base-200 rounded-xl p-4 text-center">
+            <div class="text-xs text-base-content/60 mb-1">Battery Level</div>
+            <div class="text-2xl font-bold" id="stat-level">--%</div>
+            <div class="text-xs text-base-content/50" id="stat-level-desc">0-100%</div>
           </div>
 
-          <div class="stat px-4 py-3">
-            <div class="stat-title text-xs">Charging Status</div>
-            <div class="stat-value text-lg" id="stat-charging">--</div>
-            <div class="stat-desc" id="stat-charging-desc">Current power state</div>
+          <div class="bg-base-200 rounded-xl p-4 text-center">
+            <div class="text-xs text-base-content/60 mb-1">Status</div>
+            <div class="text-lg font-semibold" id="stat-charging">--</div>
+            <div class="text-xs text-base-content/50" id="stat-charging-desc">Power state</div>
           </div>
 
-          <div class="stat px-4 py-3">
-            <div class="stat-title text-xs">Time Remaining</div>
-            <div class="stat-value text-2xl" id="stat-time">--</div>
-            <div class="stat-desc" id="stat-time-desc">Estimated time</div>
+          <div class="bg-base-200 rounded-xl p-4 text-center">
+            <div class="text-xs text-base-content/60 mb-1">Time Remaining</div>
+            <div class="text-2xl font-bold" id="stat-time">--</div>
+            <div class="text-xs text-base-content/50" id="stat-time-desc">Estimated</div>
           </div>
         </div>
 
