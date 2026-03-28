@@ -382,18 +382,53 @@ export default function init() {
     imageObserver.observe(editor, { childList: true, subtree: true, characterData: true });
 
     editor.addEventListener('input', reSetupImages);
-    editor.addEventListener('paste', (e) => {
+    editor.addEventListener('paste', async (e) => {
       e.preventDefault();
       const clipboardData = e.clipboardData;
       if (!clipboardData) return;
-
-      const html = clipboardData.getData('text/html');
-      const text = clipboardData.getData('text/plain');
 
       const selection = window.getSelection();
       if (!selection || !selection.rangeCount) return;
       const range = selection.getRangeAt(0);
       range.deleteContents();
+
+      const imageFiles: File[] = [];
+      if (clipboardData.files?.length) {
+        for (const file of clipboardData.files) {
+          if (file.type.startsWith('image/')) {
+            imageFiles.push(file);
+          }
+        }
+      }
+
+      if (!imageFiles.length && clipboardData.items?.length) {
+        for (const item of clipboardData.items) {
+          if (item.type.startsWith('image/')) {
+            const blob = item.getAsFile();
+            if (blob) {
+              imageFiles.push(blob as File);
+            }
+          }
+        }
+      }
+
+      if (imageFiles.length) {
+        for (const file of imageFiles) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const fileContent = event.target?.result;
+            if (typeof fileContent === 'string') {
+              insertImageToEditor(editor, file, fileContent);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+        setTimeout(reSetupImages, 150);
+        return;
+      }
+
+      const html = clipboardData.getData('text/html');
+      const text = clipboardData.getData('text/plain');
 
       if (html) {
         const sanitized = sanitizeHtml(html);
