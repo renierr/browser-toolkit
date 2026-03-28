@@ -3,7 +3,7 @@
   "description": "Insert HTML and convert it to a PDF",
   "icon": "file-pen-line",
   "draft": false,
-  "example": false,
+  "example": true,
   "sectionId": "pdf",
   "order": 2
 }

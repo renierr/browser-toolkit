@@ -1,9 +1,9 @@
 {
-  "name": "HTML to PDF v2",
-  "description": "Create PDF from HTML using MuPDF",
-  "icon": "file-text",
+  "name": "HTML to PDF",
+  "description": "Create PDF from HTML",
+  "icon": "file-pen-line",
   "draft": false,
   "example": false,
   "sectionId": "pdf",
-  "order": 3
+  "order": 2
 }
