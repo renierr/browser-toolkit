@@ -21,7 +21,7 @@ type IndexData = {
   guides: Guide[];
 };
 
-const BASE_PATH = '/survival-guide/';
+const BASE_PATH = new URL('./survival-guide/', document.baseURI).href;
 const renderer = createMarkdownRenderer();
 
 function fuzzyScore(query: string, target: string): number {

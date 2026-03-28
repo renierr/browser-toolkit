@@ -49,8 +49,7 @@
       "excerpt": "Arrange your firewood for optimal burning. Different fire lays for different purposes - cooking, warmth, signals.",
       "category": "fire",
       "tags": ["fire", "lay", "wood", "arrangement", "tepee", "cabin"],
-      "contentPath": "fire/fire-lay/content.md",
-      "images": ["fire/fire-lay/diagram.svg"]
+      "contentPath": "fire/fire-lay/content.md"
     },
     {
       "id": "fire-waterproof",
@@ -138,8 +137,7 @@
       "excerpt": "Cardiopulmonary resuscitation. Life-saving technique when someone stops breathing or has no heartbeat.",
       "category": "first-aid",
       "tags": ["first-aid", "cpr", "breathing", "heart", "emergency"],
-      "contentPath": "first-aid/cpr/content.md",
-      "images": ["first-aid/cpr/diagram.svg"]
+      "contentPath": "first-aid/cpr/content.md"
     },
     {
       "id": "first-aid-choking",
@@ -219,8 +217,7 @@
       "excerpt": "Find direction using the sun, shadow stick method, and watch method. Reliable navigation without any tools.",
       "category": "navigation",
       "tags": ["navigation", "sun", "direction", "shadow", "compass"],
-      "contentPath": "navigation/sun/content.md",
-      "images": ["navigation/sun/diagram.svg"]
+      "contentPath": "navigation/sun/content.md"
     },
     {
       "id": "navigation-stars",

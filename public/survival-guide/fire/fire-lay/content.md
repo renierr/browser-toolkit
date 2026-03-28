@@ -2,7 +2,7 @@
 
 The fire lay is how you arrange your firewood. A good fire lay ensures proper airflow, steady burning, and easy flame propagation.
 
-![Fire lay diagram](diagram.svg)
+![Fire lay diagram](./survival-guide/fire/fire-lay/diagram.svg)
 
 ## The Tepee Fire Lay
 

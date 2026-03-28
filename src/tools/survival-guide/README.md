@@ -133,28 +133,15 @@ public/survival-guide/
 
 #### Display in Text
 
-Reference images inline in your content.md where they are most relevant:
+Reference images inline in your content.md where they are most relevant. Use path relative to public folder:
 
 ```markdown
-![Description of image](diagram.svg)
+![Description of image](./survival-guide/fire/bow-drill/diagram.svg)
 ```
 
-The image will appear where you place it in the text.
+The path starts with `./survival-guide/` followed by the path to the image file.
 
-#### Display in UI Gallery
-
-To also show images in the guide detail view gallery (at top), add them to index.json:
-
-```json
-{
-  "id": "fire-bow-drill",
-  "title": "Bow Drill",
-  "contentPath": "fire/bow-drill/content.md",
-  "images": ["fire/bow-drill/diagram.svg"]
-}
-```
-
-**Note:** Images in `images` array appear in the UI gallery above the content. Images referenced in markdown appear inline where placed. You can use both methods.
+**Note:** Only use inline images in markdown. The `images` array in index.json is deprecated.
 
 ### Adding a New Category
 
