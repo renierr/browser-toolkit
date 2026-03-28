@@ -15,6 +15,10 @@ This is the most reliable sun-based method:
 7. **Determine north**: The first mark is west, second is east
 8. **North is perpendicular**: Stand with first mark on left, second on right - you face north
 
+:::tip
+Use the longest shadow possible for accuracy. Morning and evening give the best results.
+:::
+
 ## Watch Method (Northern Hemisphere)
 
 1. **Use analog watch**: Point hour hand at sun
@@ -31,29 +35,18 @@ This is the most reliable sun-based method:
 
 ## Additional Clues
 
-- **Sun rises in east**: Facing sunrise, north is to your left (in Northern Hemisphere)
-- **Sun sets in west**: Facing sunset, north is to your right (in Northern Hemisphere)
+- **Sun rises in east**: Facing sunrise, north is to your left (Northern Hemisphere)
+- **Sun sets in west**: Facing sunset, north is to your right (Northern Hemisphere)
 - **Sun is in south**: At noon in Northern Hemisphere, sun is due south
 - **Sun is in north**: At noon in Southern Hemisphere, sun is due north
 
-## Celestial noon
-
-The sun is at its highest point at celestial noon:
-
-- This is true solar noon, not clock noon
-- Shadow points directly north (in Northern Hemisphere) at this time
-- The shortest shadow of the day indicates this
-
-## Limitations
-
-- Won't work at night
-- Less accurate near equator
-- Cloud cover can block sun
-- Polar regions have extreme variations
+:::warning
+These methods won't work at night. Won't work near the poles where the sun stays very low.
+:::
 
 ## Tips for Accuracy
 
-- Use longest shadow possible (morning/evening)
-- Wait at least 15-20 minutes for shadow movement
-- Combine with other methods for confirmation
-- Use multiple readings to verify
+- [ ] Use longest shadow possible (morning/evening)
+- [ ] Wait at least 15-20 minutes for shadow movement
+- [ ] Combine with other methods for confirmation
+- [ ] Use multiple readings to verify

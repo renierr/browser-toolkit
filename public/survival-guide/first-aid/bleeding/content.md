@@ -9,19 +9,17 @@ Severe bleeding is a life-threatening emergency. Quick action can save a life.
 3. **Call for help** if possible
 4. **Prepare for shock** (see shock guide)
 
+:::error
+This is a life-threatening emergency. Act fast but stay calm.
+:::
+
 ## Direct Pressure Method
 
 1. **Apply pressure**: Use a clean cloth, clothing, or bandage
-
 2. **Press firmly**: Apply strong, steady pressure
-
 3. **Don't remove**: Keep pressure on - don't check the wound
-
 4. **Add more material**: If blood soaks through, add more cloth on top
-
-5. **Maintain pressure** for at least 10-15 minutes
-
-6. **Secure**: Once bleeding slows, secure the bandage in place
+5. **Maintain pressure**: For at least 10-15 minutes
 
 ## Elevation
 
@@ -37,23 +35,19 @@ Severe bleeding is a life-threatening emergency. Quick action can save a life.
 - Amputation or near-amputation
 - Life-threatening bleeding from limb
 
+:::warning
+Once applied, a tourniquet should NOT be removed except by medical professionals.
+:::
+
 ### Tourniquet Steps
 
 1. **Find material**: Belt, rope, strip of cloth, or improvise
-
 2. **Place 2-3 inches** above the wound (between wound and heart)
-
 3. **Tie a half-knot**
-
 4. **Add a stick** or rigid object
-
 5. **Twist** to tighten until bleeding stops
-
 6. **Secure the stick** in place
-
 7. **Mark time** - write the time on the victim if possible
-
-**IMPORTANT**: Once applied, a tourniquet should NOT be removed except by medical professionals.
 
 ## Special Situations
 
@@ -72,11 +66,13 @@ Severe bleeding is a life-threatening emergency. Quick action can save a life.
 - Rapid weak pulse
 - Confusion or unconsciousness
 
-**Seek immediate medical attention for any signs of internal bleeding.**
+:::error
+Seek immediate medical attention for any signs of internal bleeding.
+:::
 
 ## Key Points
 
-- Stay calm and act quickly
-- Don't remove embedded objects
-- Don't apply tourniquets except as last resort
-- Monitor for signs of shock
+- [ ] Stay calm and act quickly
+- [ ] Don't remove embedded objects
+- [ ] Don't apply tourniquets except as last resort
+- [ ] Monitor for signs of shock

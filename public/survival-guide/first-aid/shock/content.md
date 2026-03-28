@@ -17,19 +17,23 @@ Shock occurs when the body doesn't get enough blood flow. It's a life-threatenin
 
 1. **Call for help** - This is an emergency
 2. **Control any bleeding** - See bleeding guide
-3. **Position the victim**:
+3. **Position the victim**
    - If conscious: Lay them on their back
    - If unconscious but breathing: Place in recovery position
    - Elevate legs 12 inches if no spinal injury suspected
 4. **Keep warm** - Cover with blankets or clothing
 5. **Reassure** - Keep the victim calm and comfortable
 
+:::error
+Shock requires immediate professional medical treatment. These measures are to stabilize the victim until help arrives.
+:::
+
 ## Do NOT
 
-- Give food or water if unconscious
-- Let the victim move around
-- Leave the victim alone
-- Apply direct heat (like a hot water bottle directly on skin)
+- [ ] Give food or water if unconscious
+- [ ] Let the victim move around
+- [ ] Leave the victim alone
+- [ ] Apply direct heat (like a hot water bottle directly on skin)
 
 ## Different Types of Shock
 
@@ -59,9 +63,7 @@ Caused by severe allergic reaction
 
 ## Monitoring
 
-- Check breathing every few minutes
-- Keep victim talking if conscious
-- Be prepared to perform CPR if needed
-- Stay with victim until help arrives
-
-**Shock requires immediate professional medical treatment. These measures are to stabilize the victim until help arrives.**
+- [ ] Check breathing every few minutes
+- [ ] Keep victim talking if conscious
+- [ ] Be prepared to perform CPR if needed
+- [ ] Stay with victim until help arrives

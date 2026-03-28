@@ -15,22 +15,32 @@ Filtering water removes sediment and improves clarity, but may not remove all pa
 
 ### Steps
 
-1. **Prepare container**: Cut the bottom off a plastic bottle or use any available container
+1. **Prepare container**
+   - Cut the bottom off a plastic bottle
+   - Or use any available container
 
-2. **Create layers** (bottom to top):
-   - Place cloth at the bottom to prevent small particles from passing through
+2. **Create layers** (bottom to top)
+   - Place cloth at the bottom to prevent small particles passing through
    - Add 2 inches of charcoal (crushed into small pieces)
    - Add 2 inches of fine sand
    - Add 2 inches of coarse sand
    - Add 1 inch of small pebbles on top
 
-3. **Pre-filter**: Pour water through a cloth first to remove large debris
+3. **Pre-filter**
+   - Pour water through a cloth first to remove large debris
 
-4. **Filter slowly**: Pour water through your filter slowly
+4. **Filter slowly**
+   - Pour water through your filter slowly
 
-5. **Let it settle**: Allow filtered water to settle before drinking
+5. **Let it settle**
+   - Allow filtered water to settle before drinking
 
-6. **Treat the water**: Filtered water is clearer but still needs purification
+6. **Treat the water**
+   - Filtered water is clearer but still needs purification
+
+:::tip
+The charcoal is crucial - it helps remove taste and some contaminants that sand alone cannot.
+:::
 
 ## Using Natural Materials
 
@@ -41,9 +51,13 @@ In the wild, you can use:
 - **Grass**: Layers of grass can filter large particles
 - **Bark**: Inner bark of some trees can help filter
 
-## Tips
+:::warning
+This removes sediment and some contaminants, but NOT all pathogens. Always boil or treat filtered water.
+:::
 
-- The charcoal is crucial - it helps remove taste and some contaminants
-- Replace the sand when it becomes clogged
-- Pre-filter through grass or cloth to extend filter life
-- Dig a hole near a water source and let it seep through sand for a natural filter
+## Filter Maintenance
+
+- [ ] Replace sand when clogged
+- [ ] Pre-filter through cloth to extend filter life
+- [ ] Clean charcoal between uses
+- [ ] Rebuild filter if water flows too slowly

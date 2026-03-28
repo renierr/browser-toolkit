@@ -9,6 +9,10 @@ A debris hut uses natural materials to create an insulated shelter. Properly bui
 3. **Check for hazards** - Dead branches above, anthills, unstable ground
 4. **Near resources** - Wood for fire, water source, and materials
 
+:::tip
+A good site is half the work. Spend time finding the right location.
+:::
+
 ## Materials Needed
 
 - **Ridgepole**: Strong pole, 9-12 feet long
@@ -57,13 +61,9 @@ A debris hut uses natural materials to create an insulated shelter. Properly bui
 2. Reflects heat back into shelter
 3. Keep fire 4-6 feet from shelter wall
 
-## Tips
-
-- The debris layer is the insulation - not the branches
-- You need a HUGE pile of debris - armful after armful
-- Make the entrance small to retain heat
-- Ventilate slightly to prevent CO2 buildup
-- Build smaller than you think - easier to heat
+:::warning
+The debris layer is the insulation - not the branches. You need a HUGE pile of debris.
+:::
 
 ## Sizes
 

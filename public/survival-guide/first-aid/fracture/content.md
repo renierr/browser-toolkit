@@ -17,6 +17,10 @@ A fracture is a broken bone. Without professional medical care, proper stabiliza
 3. **Control any bleeding** (see bleeding guide)
 4. **Keep victim still** until splint is ready
 
+:::warning
+Do not try to set or realign the bone. Leave that to medical professionals.
+:::
+
 ## Making a Splint
 
 ### Materials
@@ -27,15 +31,15 @@ A fracture is a broken bone. Without professional medical care, proper stabiliza
 
 ### Steps
 
-1. **Find rigid material** long enough to extend past the joint above and below the break
+1. Find rigid material long enough to extend past the joint above and below the break
+2. Pad the splint with soft material
+3. Immobilize the joint above and below the fracture
+4. Secure firmly but not too tight
+5. Check circulation regularly (pulse, warmth, color)
 
-2. **Pad the splint** with soft material
-
-3. **Immobilize the joint** above and below the fracture
-
-4. **Secure firmly** but not too tight - check circulation
-
-5. **Check circulation** regularly (pulse, warmth, color)
+:::tip
+A good splint should be snug but not tight. You should be able to slip two fingers under the binding.
+:::
 
 ## Specific Fractures
 
@@ -64,11 +68,13 @@ A fracture is a broken bone. Without professional medical care, proper stabiliza
 4. **Splint as normal**
 5. **Seek professional help immediately**
 
+:::error
+This is a medical emergency. Seek professional help as soon as possible.
+:::
+
 ## Signs of Complications
 
-- Numbness or tingling
-- Blue or pale fingers/toes
-- Cold extremity below splint
-- Severe pain despite immobilization
-
-**IMPORTANT**: These are emergency measures. Seek professional medical care as soon as possible.
+- [ ] Numbness or tingling
+- [ ] Blue or pale fingers/toes
+- [ ] Cold extremity below splint
+- [ ] Severe pain despite immobilization

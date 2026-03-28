@@ -53,28 +53,14 @@ Burns are tissue damage caused by heat, chemicals, electricity, or sunlight. Pro
 6. **Monitor for shock** - See shock guide
 7. **Keep warm** - Burns cause body temperature to drop
 
-## Important Warnings
+:::warning
+Never apply ice directly to burns. Never use butter, oil, or grease on burns.
+:::
 
-- **Never** apply ice directly to burns
-- **Never** use butter, oil, or grease on burns
-- **Never** break blisters
-- **Never** use adhesive bandages directly on burns
-- **Seek medical help** for burns larger than your palm
-- **Seek help** for burns on face, hands, feet, groin, or joints
-- **Seek help** for all third-degree burns
+## When to Seek Help
 
-## Chemical Burns
-
-1. Remove contaminated clothing
-2. Brush off dry chemicals
-3. Rinse with large amounts of cool water
-4. Cover with clean bandage
-5. Seek medical attention
-
-## Electrical Burns
-
-1. Ensure power source is off before touching victim
-2. Check breathing and pulse
-3. Treat for shock
-4. Look for entry and exit wounds
-5. Seek immediate medical attention
+- [ ] Burns larger than your palm
+- [ ] Burns on face, hands, feet, groin, or joints
+- [ ] All third-degree burns
+- [ ] Chemical or electrical burns
+- [ ] Signs of infection
