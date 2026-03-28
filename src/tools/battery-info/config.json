@@ -1,0 +1,7 @@
+{
+  "name": "Battery Info",
+  "description": "View battery status and detailed information for this device.",
+  "icon": "battery",
+  "sectionId": "general",
+  "order": 11
+}
