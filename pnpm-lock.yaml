@@ -159,12 +159,6 @@ importers:
         specifier: ^1.2.6
         version: 1.2.6
 
-  src/tools/notes:
-    dependencies:
-      overtype:
-        specifier: ^2.3.5
-        version: 2.3.5
-
   src/tools/ocr-extractor: {}
 
   src/tools/qr-generator:
