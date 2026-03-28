@@ -108,6 +108,7 @@ export default async function init() {
 
     try {
       await saveNote(db, content, editingId);
+      showMessage('Note saved successfully!', { type: 'info', timeoutMs: 3000 });
       resetForm();
       loadNotes(searchInput.value);
     } catch (e) {
@@ -156,6 +157,7 @@ export default async function init() {
       const note = await getNoteById(db, id);
       if (note) {
         await exportNoteToPdf(note);
+        showMessage('PDF exported successfully!', { type: 'info', timeoutMs: 3000 });
       }
     } catch (e) {
       console.error('Failed to export note:', e);
@@ -170,6 +172,7 @@ export default async function init() {
         const filename = `note-${note.shortId || note.id}.md`;
         const blob = new Blob([note.content], { type: 'text/markdown' });
         await downloadFile(blob, filename, 'text/markdown');
+        showMessage('Markdown exported successfully!', { type: 'info', timeoutMs: 3000 });
       }
     } catch (e) {
       console.error('Failed to export markdown:', e);
@@ -190,6 +193,7 @@ export default async function init() {
       const blob = new Blob([json], { type: 'application/json' });
       const date = new Date().toISOString().split('T')[0];
       await downloadFile(blob, `notes-backup-${date}.json`, 'application/json');
+      showMessage('All notes exported successfully!', { type: 'info', timeoutMs: 3000 });
     } catch (e) {
       console.error('Failed to export all notes:', e);
       showMessage('Failed to export all notes.', { type: 'alert' });
@@ -236,6 +240,7 @@ export default async function init() {
     try {
       const tempNote = { content, id: 0, shortId: 'input' } as Note;
       await exportNoteToPdf(tempNote);
+      showMessage('PDF exported successfully!', { type: 'info', timeoutMs: 3000 });
     } catch (e) {
       console.error('Failed to export input:', e);
       showMessage('Failed to export PDF.', { type: 'alert' });
