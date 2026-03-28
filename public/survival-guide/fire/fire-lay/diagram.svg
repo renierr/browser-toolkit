@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300">
+  <rect width="400" height="300" fill="#f5f5f4"/>
+  
+  <!-- Tepee Fire -->
+  <text x="70" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#444">Tepee</text>
+  <line x1="70" y1="35" x2="70" y2="90" stroke="#8B4513" stroke-width="4"/>
+  <line x1="40" y1="50" x2="70" y2="35" stroke="#8B4513" stroke-width="3"/>
+  <line x1="100" y1="50" x2="70" y2="35" stroke="#8B4513" stroke-width="3"/>
+  <line x1="30" y1="80" x2="70" y2="45" stroke="#8B4513" stroke-width="3"/>
+  <line x1="110" y1="80" x2="70" y2="45" stroke="#8B4513" stroke-width="3"/>
+  <ellipse cx="70" cy="90" rx="20" ry="8" fill="#FF6B35"/>
+  
+  <!-- Log Cabin -->
+  <text x="200" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#444">Log Cabin</text>
+  <rect x="170" y="40" width="60" height="50" fill="none" stroke="#8B4513" stroke-width="3"/>
+  <line x1="175" y1="48" x2="225" y2="48" stroke="#8B4513" stroke-width="3"/>
+  <line x1="175" y1="58" x2="225" y2="58" stroke="#8B4513" stroke-width="3"/>
+  <line x1="175" y1="68" x2="225" y2="68" stroke="#8B4513" stroke-width="3"/>
+  <line x1="175" y1="78" x2="225" y2="78" stroke="#8B4513" stroke-width="3"/>
+  <line x1="185" y1="40" x2="185" y2="90" stroke="#8B4513" stroke-width="2"/>
+  <line x1="215" y1="40" x2="215" y2="90" stroke="#8B4513" stroke-width="2"/>
+  <ellipse cx="200" cy="95" rx="25" ry="10" fill="#FF6B35"/>
+  
+  <!-- Star Fire -->
+  <text x="330" y="25" text-anchor="middle" font-size="14" font-weight="bold" fill="#444">Star</text>
+  <line x1="330" y1="90" x2="280" y2="50" stroke="#8B4513" stroke-width="4"/>
+  <line x1="330" y1="90" x2="380" y2="50" stroke="#8B4513" stroke-width="4"/>
+  <line x1="330" y1="90" x2="260" y2="90" stroke="#8B4513" stroke-width="4"/>
+  <line x1="330" y1="90" x2="400" y2="90" stroke="#8B4513" stroke-width="4"/>
+  <line x1="330" y1="90" x2="280" y2="130" stroke="#8B4513" stroke-width="4"/>
+  <line x1="330" y1="90" x2="380" y2="130" stroke="#8B4513" stroke-width="4"/>
+  <ellipse cx="330" cy="90" rx="15" ry="15" fill="#FF6B35"/>
+  
+  <!-- Legend -->
+  <text x="200" y="150" text-anchor="middle" font-size="12" fill="#666">Wood</text>
+  <line x1="170" y1="155" x2="190" y2="155" stroke="#8B4513" stroke-width="3"/>
+  <text x="200" y="175" text-anchor="middle" font-size="12" fill="#666">Fire</text>
+  <ellipse cx="190" cy="175" rx="10" ry="5" fill="#FF6B35"/>
+  
+  <!-- Descriptions -->
+  <text x="70" y="130" text-anchor="middle" font-size="10" fill="#666">Good for starting</text>
+  <text x="70" y="142" text-anchor="middle" font-size="10" fill="#666">fires, wet wood</text>
+  
+  <text x="200" y="130" text-anchor="middle" font-size="10" fill="#666">Long lasting,</text>
+  <text x="200" y="142" text-anchor="middle" font-size="10" fill="#666">cooking</text>
+  
+  <text x="330" y="170" text-anchor="middle" font-size="10" fill="#666">Slow burn,</text>
+  <text x="330" y="182" text-anchor="middle" font-size="10" fill="#666">overnight fires</text>
+</svg>

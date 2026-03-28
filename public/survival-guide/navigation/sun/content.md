@@ -2,6 +2,8 @@
 
 The sun can be used to find direction during the day. These methods work anywhere in the world.
 
+![Compass directions](diagram.svg)
+
 ## Shadow Stick Method
 
 This is the most reliable sun-based method:

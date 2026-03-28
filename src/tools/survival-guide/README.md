@@ -119,6 +119,8 @@ type IndexData = {
 
 ### Adding Images
 
+**Prefer SVG format** - SVGs scale perfectly on all screen sizes and work well for diagrams, illustrations, and charts.
+
 Place images in the guide folder:
 
 ```
@@ -126,25 +128,33 @@ public/survival-guide/
 ├── fire/
 │   └── bow-drill/
 │       ├── content.md
-│       └── diagram.jpg
+│       └── diagram.svg
 ```
 
-Reference in content.md:
+#### Display in Text
+
+Reference images inline in your content.md where they are most relevant:
 
 ```markdown
-![Description of image](bow-drill/diagram.jpg)
+![Description of image](diagram.svg)
 ```
 
-To display images in the UI, add them to index.json:
+The image will appear where you place it in the text.
+
+#### Display in UI Gallery
+
+To also show images in the guide detail view gallery (at top), add them to index.json:
 
 ```json
 {
   "id": "fire-bow-drill",
   "title": "Bow Drill",
   "contentPath": "fire/bow-drill/content.md",
-  "images": ["fire/bow-drill/diagram.jpg"]
+  "images": ["fire/bow-drill/diagram.svg"]
 }
 ```
+
+**Note:** Images in `images` array appear in the UI gallery above the content. Images referenced in markdown appear inline where placed. You can use both methods.
 
 ### Adding a New Category
 

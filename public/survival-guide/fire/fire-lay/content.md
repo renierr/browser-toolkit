@@ -2,6 +2,8 @@
 
 The fire lay is how you arrange your firewood. A good fire lay ensures proper airflow, steady burning, and easy flame propagation.
 
+![Fire lay diagram](diagram.svg)
+
 ## The Tepee Fire Lay
 
 Best for: Starting fires, wet conditions
