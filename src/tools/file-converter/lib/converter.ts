@@ -1,4 +1,5 @@
 import { convertInput } from './pandoc-wasm';
+import { htmlToPdfBuffer } from '../../../js/mupdf-utils.ts';
 
 type ConvertResult = { data: Uint8Array; name: string; mime?: string };
 
@@ -14,6 +15,7 @@ const TARGET_FORMATS: Record<string, { ext: string; mime?: string }> = {
   latex: { ext: 'tex', mime: 'application/x-latex' },
   rst: { ext: 'rst', mime: 'text/x-rst' },
   odt: { ext: 'odt', mime: 'application/vnd.oasis.opendocument.text' },
+  pdf: { ext: 'pdf', mime: 'application/pdf' },
 };
 
 export function detectInputFormat(name: string): string {
@@ -49,6 +51,45 @@ export async function convertBuffer(
   const base = originalName.replace(/\.[^/.]+$/, '') || 'output';
   const outName = `${base}.${targetInfo.ext}`;
   const from = detectInputFormat(originalName);
+
+  if (target === 'pdf') {
+    if (from === 'html') {
+      onProgress?.(10);
+      const htmlText = new TextDecoder().decode(input);
+      const pdfData = await htmlToPdfBuffer(htmlText, { fontSize: 14 });
+      onProgress?.(100);
+      return { data: pdfData, name: outName, mime: targetInfo.mime };
+    }
+
+    onProgress?.(5);
+    const htmlConvertOptions: Record<string, unknown> = {
+      from,
+      to: 'html',
+      'embed-resources': true,
+      standalone: true,
+    };
+    const htmlResult = await convertInput(htmlConvertOptions, input, originalName);
+    onProgress?.(50);
+
+    const htmlOutput =
+      htmlResult.output.length > 0
+        ? htmlResult.output
+        : htmlResult.stdout.length > 0
+          ? new TextEncoder().encode(htmlResult.stdout)
+          : new Uint8Array();
+
+    if (htmlOutput.length === 0) {
+      throw new Error('pandoc-wasm did not return an HTML output');
+    }
+
+    const htmlText = new TextDecoder().decode(htmlOutput);
+    onProgress?.(70);
+    const pdfData = await htmlToPdfBuffer(htmlText, { fontSize: 14 });
+    onProgress?.(100);
+
+    return { data: pdfData, name: outName, mime: targetInfo.mime };
+  }
+
   const to =
     targetInfo.ext === 'md' ? 'markdown' : targetInfo.ext === 'txt' ? 'plaintext' : targetInfo.ext;
 

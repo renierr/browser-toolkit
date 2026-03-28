@@ -12,6 +12,7 @@ type FileEntry = { data: Uint8Array; name: string; mime?: string };
 const FORMAT_LABELS: Record<string, string> = {
   markdown: 'Markdown (.md)',
   html: 'HTML (.html)',
+  pdf: 'PDF (.pdf)',
   docx: 'DOCX (.docx)',
   epub: 'EPUB (.epub)',
   plaintext: 'Plain Text (.txt)',
