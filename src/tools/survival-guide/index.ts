@@ -72,22 +72,31 @@ export default function init(): () => void {
     }
   }
 
+  function getCategoryCount(categoryId: string): number {
+    if (!indexData) return 0;
+    if (categoryId === 'all') return indexData.guides.length;
+    return indexData.guides.filter((g) => g.category === categoryId).length;
+  }
+
   function renderCategories(): void {
     if (!indexData || !categoriesContainer) return;
 
     const btns = indexData.categories
-      .map(
-        (cat) => `
-      <button class="btn btn-sm btn-ghost sg-category-btn" data-category="${cat.id}">
-        ${cat.name}
-      </button>
-    `
-      )
+      .map((cat) => {
+        const count = getCategoryCount(cat.id);
+        return `
+        <button class="btn btn-sm btn-ghost sg-category-btn" data-category="${cat.id}">
+          ${cat.name} <span class="badge badge-sm sg-cat-count" data-count-category="${cat.id}">${count}</span>
+        </button>
+      `;
+      })
       .join('');
+
+    const totalCount = getCategoryCount('all');
 
     categoriesContainer.innerHTML = `
       <button class="btn btn-sm btn-ghost sg-category-btn ${activeCategory === 'all' ? 'sg-category-active' : ''}" data-category="all">
-        All
+        All <span id="sg-total-count" class="badge badge-sm">${totalCount}</span>
       </button>
       ${btns}
     `;
@@ -134,9 +143,45 @@ export default function init(): () => void {
     });
   }
 
+  function updateCategoryCounts(): void {
+    if (!indexData || !categoriesContainer) return;
+    const query = searchInput.value.trim().toLowerCase();
+
+    const totalCountEl = document.getElementById('sg-total-count');
+    if (totalCountEl) {
+      const totalFiltered = getFilteredGuides().length;
+      totalCountEl.textContent = totalFiltered.toString();
+    }
+
+    const data = indexData;
+    const container = categoriesContainer;
+    data.categories.forEach((cat) => {
+      const countEl = container.querySelector(`.sg-cat-count[data-count-category="${cat.id}"]`);
+      if (countEl) {
+        let count: number;
+        if (!query) {
+          count = data.guides.filter((g) => g.category === cat.id).length;
+        } else {
+          count = data.guides.filter((g) => {
+            const matchesCategory = g.category === cat.id;
+            if (!matchesCategory) return false;
+            const score =
+              fuzzyScore(query, g.title) +
+              fuzzyScore(query, g.excerpt) +
+              g.tags.reduce((sum, tag) => sum + fuzzyScore(query, tag), 0);
+            return score > 0;
+          }).length;
+        }
+        countEl.textContent = count.toString();
+      }
+    });
+  }
+
   function renderGuideList(): void {
     if (!guideList) return;
     const guides = getFilteredGuides();
+
+    updateCategoryCounts();
 
     if (guides.length === 0) {
       guideList.innerHTML =
