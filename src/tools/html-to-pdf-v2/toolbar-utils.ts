@@ -22,6 +22,8 @@ export const updateToolbarState = (): void => {
     'btn-italic': 'italic',
     'btn-underline': 'underline',
     'btn-strike': 'strikeThrough',
+    'btn-sup': 'superscript',
+    'btn-sub': 'subscript',
     'btn-ul': 'insertUnorderedList',
     'btn-ol': 'insertOrderedList',
     'btn-align-left': 'justifyLeft',
@@ -331,6 +333,12 @@ export const setupToolbarListeners = (): void => {
   document
     .getElementById('btn-strike')
     ?.addEventListener('click', () => execFormatCommand('strikeThrough'));
+  document
+    .getElementById('btn-sup')
+    ?.addEventListener('click', () => execFormatCommand('superscript'));
+  document
+    .getElementById('btn-sub')
+    ?.addEventListener('click', () => execFormatCommand('subscript'));
   document.getElementById('btn-clear')?.addEventListener('click', clearFormatting);
 
   document.getElementById('heading-select')?.addEventListener('change', (e) => {
