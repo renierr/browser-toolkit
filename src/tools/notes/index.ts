@@ -25,6 +25,8 @@ export default async function init() {
   })[0];
 
   const exportInputBtn = document.getElementById('export-input-btn') as HTMLButtonElement;
+  const importMdBtn = document.getElementById('import-md-btn') as HTMLButtonElement;
+  const importMdInput = document.getElementById('import-md-input') as HTMLInputElement;
 
   let editingId: number | null = null;
 
@@ -240,6 +242,22 @@ export default async function init() {
     }
   }
 
+  async function handleImportMarkdown(e: Event) {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      overType.setValue(text);
+      updateExportButtonState();
+    } catch (e) {
+      console.error('Failed to import markdown:', e);
+      showMessage('Failed to import markdown file.', { type: 'alert' });
+    } finally {
+      importMdInput.value = '';
+    }
+  }
+
   function updateExportButtonState() {
     const content = overType.getValue().trim();
     exportInputBtn.disabled = !content;
@@ -254,6 +272,8 @@ export default async function init() {
   exportAllBtn.addEventListener('click', handleGlobalExport);
   importBtn.addEventListener('click', () => importInput.click());
   importInput.addEventListener('change', handleGlobalImport);
+  importMdBtn.addEventListener('click', () => importMdInput.click());
+  importMdInput.addEventListener('change', handleImportMarkdown);
 
   container.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
