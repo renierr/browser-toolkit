@@ -308,6 +308,14 @@
       "contentPath": "signaling/whistle/content.md"
     },
     {
+      "id": "signaling-alarm-signals",
+      "title": "Alarm Siren Signals",
+      "excerpt": "Understand what different alarm siren patterns mean. International maritime, civil defense, and country-specific emergency signals.",
+      "category": "signaling",
+      "tags": ["signaling", "siren", "alarm", "emergency", "international"],
+      "contentPath": "signaling/alarm-signals/content.md"
+    },
+    {
       "id": "signaling-ground-signals",
       "title": "Ground-to-Air Signals",
       "excerpt": "Create large visual signals visible from aircraft. Universal ground signals for rescue.",
