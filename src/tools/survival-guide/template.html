@@ -1,13 +1,13 @@
 <div class="flex flex-col h-full">
   <!-- Search Bar -->
   <div class="p-4 border-b border-base-300 bg-base-200/50">
-    <div class="flex gap-2">
+    <div class="flex flex-wrap gap-2">
       <div class="relative flex-1">
         <input
           type="text"
           id="sg-search"
           placeholder="Search guides..."
-          class="input input-bordered w-full pl-10"
+          class="input input-bordered w-full pl-10 min-w-36"
         />
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -43,7 +43,7 @@
           </svg>
         </button>
       </div>
-      <select id="sg-language" class="select select-bordered select-sm"></select>
+      <select id="sg-language" class="select select-bordered select-sm w-auto"></select>
     </div>
   </div>
 
