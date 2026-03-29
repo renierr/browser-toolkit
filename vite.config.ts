@@ -166,7 +166,7 @@ export default defineConfig({
         enabled: true,
       },
       workbox: {
-        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx}'],
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx,md,json}'],
         navigateFallbackDenylist: [/\.html($|\?)/],
         skipWaiting: true,
         clientsClaim: true,
