@@ -1,6 +1,6 @@
-# Bohrstock Feuer machen
+# Feuerbohrer Feuer machen
 
-Der Bohrstock ist eine der effektivsten primitiven Feuerentzungsmethoden. Er nutzt Reibung, um einen Glühspan aus einem hölzernen Stab und einem Feuerbrett zu erzeugen.
+Der Feuerbohrer ist eine der effektivsten primitiven Feuerentzungsmethoden. Er nutzt Reibung, um einen Glut aus einem hölzernen Stab und einem Feuerbrett zu erzeugen.
 
 ## Was du brauchst
 
@@ -9,7 +9,7 @@ Der Bohrstock ist eine der effektivsten primitiven Feuerentzungsmethoden. Er nut
 - **Bogen**: Ein gebogener Stock mit einer Schnur befestigt
 - **Socket/Handgriff**: Ein harter Stein, Muschel oder Hartholzstück
 - **Schnur**: Naturfaserseil oder Ranke
-- **Zunder**: Trockenes Gras, Rindenfasern oder Kattauschwanzwolle
+- **Zunder**: Trockenes Gras, Rindenfasern oder Rohrkolbenwolle
 
 :::tip
 Halte alles trocken - Feuchtigkeit ist dein Feind beim Feuer machen.
@@ -20,7 +20,7 @@ Halte alles trocken - Feuchtigkeit ist dein Feind beim Feuer machen.
 1. **Bereite das Feuerbrett vor**
    - Schneide eine kleine Vertiefung nahe dem Rand des Feuerbretts
 
-2. **Erschaffe den Stab**
+2. **Schnitze die Spindel**
    - Bearbeite den Stab auf ca. 23 cm Länge
    - Mache ihn ca. 1 cm dick
    - Spitze beide Enden leicht an
@@ -43,15 +43,15 @@ Halte alles trocken - Feuchtigkeit ist dein Feind beim Feuer machen.
 8. **Halte Druck auf**
    - Übe Druck nach unten mit dem Handgriff beim Bohren
 
-9. **Erschaffe einen Glühspan**
+9. **Erzeuge Glut**
    - Nach 20-30 Sekunden konstanten Bohrens wird Rauch erscheinen
-   - Ein kleiner schwarzer Glühspan wird sich in der Vertiefung bilden
+   - Ein kleiner schwarzer Glut wird sich in der Vertiefung bilden
 
 10. **Übertrage zum Zunder**
-    - Bewege vorsichtig den glühenden Glühspan zu deinem Zunderbündel
+    - Bewege vorsichtig den glühenden Glut zu deinem Zunderbündel
 
 11. **Pflege die Flamme**
-    - Blase vorsichtig auf den Glühspan, bis er sich entzündet
+    - Blase vorsichtig auf den Glut, bis er sich entzündet
 
 :::warning
 Arbeite in einem offenen, feuer sicheren Bereich. Halte Wasser in der Nähe beim Üben.
@@ -61,9 +61,9 @@ Arbeite in einem offenen, feuer sicheren Bereich. Halte Wasser in der Nähe beim
 
 - [ ] Sammle alle Materialien bevor du beginnst
 - [ ] Stelle sicher, dass das Holz trocken ist
-- [ ] Erschaffe die richtige Kerbe im Feuerbrett
+- [ ] Schneide die richtige Kerbe im Feuerbrett
 - [ ] Halte einen gleichmäßigen Bohr-Rhythmus aufrecht
-- [ ] Übertrage den Glühspan schnell zum Zunder
+- [ ] Übertrage den Glut schnell zum Zunder
 
 :::tip
 Der Stab sollte trockenes Weichholz sein für beste Ergebnisse. Verwende eine Wiegebewegung statt nur zu drücken.

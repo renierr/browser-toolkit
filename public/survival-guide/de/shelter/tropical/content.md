@@ -14,7 +14,7 @@ In tropischen Umgebungen ist Schutz vor Regen und Insekten wichtiger als Wärme.
 1. Finde zwei Stützen (Bäume, Stöcke)
 2. Spanne Poncho oder Plane zwischen ihnen
 3. Winkel ab, um Regen abzuleiten
-4. Erschaffe Wände mit Blättern oder zusätzlichem Material
+4. Baue Wände mit Blättern oder zusätzlichem Material
 
 ## Das Tropische Blätterdach
 
@@ -40,4 +40,4 @@ In tropischen Gebieten konzentriere dich darauf, Regen abzuhalten und Luftstrom 
 - [ ] Mache Dach mit steilem Winkel für Abfluss
 - [ ] Überlappe Blätter/Material wie Dachziegel
 - [ ] Baue Wände, um von Wind getriebenen Regen fernzuhalten
-- [ ] Erschaffe überdachten Bereich zum Kochen
+- [ ] Baue einen überdachten Bereich zum Kochen

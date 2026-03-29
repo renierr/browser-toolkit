@@ -16,7 +16,7 @@ Konzentriere dich darauf, trockenen Zunder und Anzündholz zu finden - Brennholz
 
 ## Vorbereitung
 
-1. **Erschaffe ein trockenes Bett**: Entferne nassen Boden, verwende Scheite oder Felsen
+1. **Richte einen trockenen Untergrund ein**: Entferne nassen Boden, verwende Scheite oder Felsen
 2. **Baue ein Dach**: Verwende Scheite, Äste oder improvisiere
 3. **Sammle extra Zunder**: Du wirst mehr als gewöhnlich brauchen
 4. **Bereite Federstäbe vor**: Zum Funken fangen
@@ -30,7 +30,7 @@ Konzentriere dich darauf, trockenen Zunder und Anzündholz zu finden - Brennholz
 3. Baue Feuer im Loch
 4. Das Loch schützt Feuer vor Wind und Regen
 
-### Das Hügelfeuer
+### Das Feuer auf einem Hügel
 
 1. Finde einen flachen Felsen oder Stamm
 2. Baue Feuer darauf

@@ -1,14 +1,50 @@
 {
   "categories": [
-    { "id": "fire", "name": "Fire Starting", "icon": "flame" },
-    { "id": "water", "name": "Water & Purification", "icon": "droplet" },
-    { "id": "first-aid", "name": "First Aid", "icon": "heart-pulse" },
-    { "id": "shelter", "name": "Shelter", "icon": "home" },
-    { "id": "navigation", "name": "Navigation", "icon": "compass" },
-    { "id": "food", "name": "Food & Foraging", "icon": "utensils" },
-    { "id": "signaling", "name": "Signaling & Rescue", "icon": "radio" },
-    { "id": "weather", "name": "Weather", "icon": "cloud" },
-    { "id": "general", "name": "General", "icon": "backpack" }
+    {
+      "id": "fire",
+      "name": "Fire Starting",
+      "icon": "flame"
+    },
+    {
+      "id": "water",
+      "name": "Water & Purification",
+      "icon": "droplet"
+    },
+    {
+      "id": "first-aid",
+      "name": "First Aid",
+      "icon": "heart-pulse"
+    },
+    {
+      "id": "shelter",
+      "name": "Shelter",
+      "icon": "home"
+    },
+    {
+      "id": "navigation",
+      "name": "Navigation",
+      "icon": "compass"
+    },
+    {
+      "id": "food",
+      "name": "Food & Foraging",
+      "icon": "utensils"
+    },
+    {
+      "id": "signaling",
+      "name": "Signaling & Rescue",
+      "icon": "radio"
+    },
+    {
+      "id": "weather",
+      "name": "Weather",
+      "icon": "cloud"
+    },
+    {
+      "id": "general",
+      "name": "General",
+      "icon": "backpack"
+    }
   ],
   "guides": [
     {
@@ -16,7 +52,13 @@
       "title": "Bow Drill Fire Starting",
       "excerpt": "Start a fire using friction with a bow drill spindle and fireboard. A primitive but effective method when no modern tools are available.",
       "category": "fire",
-      "tags": ["fire", "friction", "primitive", "wood", "bow-drill"],
+      "tags": [
+        "fire",
+        "friction",
+        "primitive",
+        "wood",
+        "bow-drill"
+      ],
       "contentPath": "fire/bow-drill/content.md"
     },
     {
@@ -24,7 +66,13 @@
       "title": "Flint and Steel",
       "excerpt": "Create sparks using flint and steel to ignite tinder. Reliable technique that works in any weather condition.",
       "category": "fire",
-      "tags": ["fire", "spark", "flint", "steel", "fire-starter"],
+      "tags": [
+        "fire",
+        "spark",
+        "flint",
+        "steel",
+        "fire-starter"
+      ],
       "contentPath": "fire/flint-steel/content.md"
     },
     {
@@ -32,7 +80,12 @@
       "title": "Fire Plow",
       "excerpt": "Create fire by rubbing a hardwood stick in a groove of a softer wood board. One of the oldest fire-making methods.",
       "category": "fire",
-      "tags": ["fire", "friction", "primitive", "fire-plow"],
+      "tags": [
+        "fire",
+        "friction",
+        "primitive",
+        "fire-plow"
+      ],
       "contentPath": "fire/fire-plow/content.md"
     },
     {
@@ -40,7 +93,12 @@
       "title": "Fire Tinder",
       "excerpt": "Learn which materials make the best tinder for starting fires. The foundation of every successful fire.",
       "category": "fire",
-      "tags": ["fire", "tinder", "dry", "materials"],
+      "tags": [
+        "fire",
+        "tinder",
+        "dry",
+        "materials"
+      ],
       "contentPath": "fire/tinder/content.md"
     },
     {
@@ -48,7 +106,14 @@
       "title": "Fire Lay",
       "excerpt": "Arrange your firewood for optimal burning. Different fire lays for different purposes - cooking, warmth, signals.",
       "category": "fire",
-      "tags": ["fire", "lay", "wood", "arrangement", "tepee", "cabin"],
+      "tags": [
+        "fire",
+        "lay",
+        "wood",
+        "arrangement",
+        "tepee",
+        "cabin"
+      ],
       "contentPath": "fire/fire-lay/content.md"
     },
     {
@@ -56,7 +121,13 @@
       "title": "Water-Proof Fire",
       "excerpt": "Start and maintain a fire in wet conditions. Techniques for rain, snow, and damp environments.",
       "category": "fire",
-      "tags": ["fire", "rain", "wet", "weather", "dakota"],
+      "tags": [
+        "fire",
+        "rain",
+        "wet",
+        "weather",
+        "dakota"
+      ],
       "contentPath": "fire/waterproof/content.md"
     },
     {
@@ -64,7 +135,12 @@
       "title": "Water Filtration",
       "excerpt": "Filter dirty water through layers of sand, charcoal, and gravel to remove sediment and improve clarity.",
       "category": "water",
-      "tags": ["water", "filtration", "filter", "sediment"],
+      "tags": [
+        "water",
+        "filtration",
+        "filter",
+        "sediment"
+      ],
       "contentPath": "water/filtration/content.md"
     },
     {
@@ -72,7 +148,12 @@
       "title": "Boiling Water",
       "excerpt": "Boil water for at least 1 minute to kill pathogens. The most reliable method of water purification in the wild.",
       "category": "water",
-      "tags": ["water", "boiling", "purification", "sterilize"],
+      "tags": [
+        "water",
+        "boiling",
+        "purification",
+        "sterilize"
+      ],
       "contentPath": "water/boiling/content.md"
     },
     {
@@ -80,7 +161,13 @@
       "title": "Water Collection",
       "excerpt": "Collect water from rain, dew, rivers, and natural springs. Learn various techniques to source water in the wilderness.",
       "category": "water",
-      "tags": ["water", "collection", "rain", "dew", "sources"],
+      "tags": [
+        "water",
+        "collection",
+        "rain",
+        "dew",
+        "sources"
+      ],
       "contentPath": "water/collection/content.md"
     },
     {
@@ -88,7 +175,13 @@
       "title": "Solar Disinfection (SODIS)",
       "excerpt": "Use sunlight to purify water. Simple, effective method that requires no fuel.",
       "category": "water",
-      "tags": ["water", "sodis", "solar", "sun", "purification"],
+      "tags": [
+        "water",
+        "sodis",
+        "solar",
+        "sun",
+        "purification"
+      ],
       "contentPath": "water/sodis/content.md"
     },
     {
@@ -96,7 +189,13 @@
       "title": "Improvised Water Filters",
       "excerpt": "Make effective water filters from natural or available materials when you have no commercial filter.",
       "category": "water",
-      "tags": ["water", "filter", "improvised", "bottle", "charcoal"],
+      "tags": [
+        "water",
+        "filter",
+        "improvised",
+        "bottle",
+        "charcoal"
+      ],
       "contentPath": "water/improvised-filter/content.md"
     },
     {
@@ -104,7 +203,13 @@
       "title": "Treating Fractures",
       "excerpt": "Improvise splints and slings to stabilize broken bones when professional medical help is unavailable.",
       "category": "first-aid",
-      "tags": ["first-aid", "fracture", "bone", "splint", "emergency"],
+      "tags": [
+        "first-aid",
+        "fracture",
+        "bone",
+        "splint",
+        "emergency"
+      ],
       "contentPath": "first-aid/fracture/content.md"
     },
     {
@@ -112,7 +217,13 @@
       "title": "Controlling Bleeding",
       "excerpt": "Stop severe bleeding using direct pressure, elevation, and improvised tourniquets. Critical emergency skills.",
       "category": "first-aid",
-      "tags": ["first-aid", "bleeding", "blood", "tourniquet", "emergency"],
+      "tags": [
+        "first-aid",
+        "bleeding",
+        "blood",
+        "tourniquet",
+        "emergency"
+      ],
       "contentPath": "first-aid/bleeding/content.md"
     },
     {
@@ -120,7 +231,12 @@
       "title": "Treating Shock",
       "excerpt": "Recognize and treat shock. Keep the victim warm, elevate legs, and maintain body temperature until help arrives.",
       "category": "first-aid",
-      "tags": ["first-aid", "shock", "emergency", "unconscious"],
+      "tags": [
+        "first-aid",
+        "shock",
+        "emergency",
+        "unconscious"
+      ],
       "contentPath": "first-aid/shock/content.md"
     },
     {
@@ -128,7 +244,12 @@
       "title": "Treating Burns",
       "excerpt": "Properly treat thermal burns, including cooling, covering, and recognizing when professional care is needed.",
       "category": "first-aid",
-      "tags": ["first-aid", "burns", "fire", "injury"],
+      "tags": [
+        "first-aid",
+        "burns",
+        "fire",
+        "injury"
+      ],
       "contentPath": "first-aid/burns/content.md"
     },
     {
@@ -136,7 +257,13 @@
       "title": "CPR",
       "excerpt": "Cardiopulmonary resuscitation. Life-saving technique when someone stops breathing or has no heartbeat.",
       "category": "first-aid",
-      "tags": ["first-aid", "cpr", "breathing", "heart", "emergency"],
+      "tags": [
+        "first-aid",
+        "cpr",
+        "breathing",
+        "heart",
+        "emergency"
+      ],
       "contentPath": "first-aid/cpr/content.md"
     },
     {
@@ -144,7 +271,13 @@
       "title": "Choking",
       "excerpt": "How to help someone who is choking. The Heimlich maneuver and other techniques to clear airway.",
       "category": "first-aid",
-      "tags": ["first-aid", "choking", "heimlich", "airway", "emergency"],
+      "tags": [
+        "first-aid",
+        "choking",
+        "heimlich",
+        "airway",
+        "emergency"
+      ],
       "contentPath": "first-aid/choking/content.md"
     },
     {
@@ -152,7 +285,13 @@
       "title": "Snake Bites",
       "excerpt": "Respond to snake bites. What to do - and what NOT to do - when bitten by a venomous snake.",
       "category": "first-aid",
-      "tags": ["first-aid", "snake", "bite", "venom", "emergency"],
+      "tags": [
+        "first-aid",
+        "snake",
+        "bite",
+        "venom",
+        "emergency"
+      ],
       "contentPath": "first-aid/snake-bites/content.md"
     },
     {
@@ -160,7 +299,13 @@
       "title": "Hypothermia",
       "excerpt": "Recognize and treat hypothermia. Life-threatening cold emergency that requires immediate action.",
       "category": "first-aid",
-      "tags": ["first-aid", "hypothermia", "cold", "temperature", "emergency"],
+      "tags": [
+        "first-aid",
+        "hypothermia",
+        "cold",
+        "temperature",
+        "emergency"
+      ],
       "contentPath": "first-aid/hypothermia/content.md"
     },
     {
@@ -168,7 +313,13 @@
       "title": "Heat Stroke",
       "excerpt": "Recognize and treat heat stroke. Life-threatening emergency that occurs when body overheats.",
       "category": "first-aid",
-      "tags": ["first-aid", "heat", "stroke", "hot", "emergency"],
+      "tags": [
+        "first-aid",
+        "heat",
+        "stroke",
+        "hot",
+        "emergency"
+      ],
       "contentPath": "first-aid/heat-stroke/content.md"
     },
     {
@@ -176,7 +327,13 @@
       "title": "Debris Hut",
       "excerpt": "Build an insulated debris hut using only natural materials. Excellent for cold weather survival shelter.",
       "category": "shelter",
-      "tags": ["shelter", "debris-hut", "debris", "insulation", "cold"],
+      "tags": [
+        "shelter",
+        "debris-hut",
+        "debris",
+        "insulation",
+        "cold"
+      ],
       "contentPath": "shelter/debris-hut/content.md"
     },
     {
@@ -184,7 +341,13 @@
       "title": "Snow Cave",
       "excerpt": "Construct an insulated shelter from snow. Snow is an excellent insulator and can provide life-saving warmth.",
       "category": "shelter",
-      "tags": ["shelter", "snow", "cave", "winter", "cold"],
+      "tags": [
+        "shelter",
+        "snow",
+        "cave",
+        "winter",
+        "cold"
+      ],
       "contentPath": "shelter/snow-cave/content.md"
     },
     {
@@ -192,7 +355,12 @@
       "title": "Lean-to Shelter",
       "excerpt": "Build a simple lean-to shelter using logs and branches. Quick to construct and provides good protection.",
       "category": "shelter",
-      "tags": ["shelter", "lean-to", "logs", "quick"],
+      "tags": [
+        "shelter",
+        "lean-to",
+        "logs",
+        "quick"
+      ],
       "contentPath": "shelter/lean-to/content.md"
     },
     {
@@ -200,7 +368,13 @@
       "title": "Tropical Shelter",
       "excerpt": "Build shelter in hot, humid environments. Focus on rain and insect protection rather than warmth.",
       "category": "shelter",
-      "tags": ["shelter", "tropical", "rain", "insects", "hot"],
+      "tags": [
+        "shelter",
+        "tropical",
+        "rain",
+        "insects",
+        "hot"
+      ],
       "contentPath": "shelter/tropical/content.md"
     },
     {
@@ -208,7 +382,12 @@
       "title": "A-Frame Shelter",
       "excerpt": "Build a simple A-frame shelter. Quick to construct, sturdy, and provides good protection from elements.",
       "category": "shelter",
-      "tags": ["shelter", "a-frame", "simple", "quick"],
+      "tags": [
+        "shelter",
+        "a-frame",
+        "simple",
+        "quick"
+      ],
       "contentPath": "shelter/a-frame/content.md"
     },
     {
@@ -216,7 +395,13 @@
       "title": "Navigation by Sun",
       "excerpt": "Find direction using the sun, shadow stick method, and watch method. Reliable navigation without any tools.",
       "category": "navigation",
-      "tags": ["navigation", "sun", "direction", "shadow", "compass"],
+      "tags": [
+        "navigation",
+        "sun",
+        "direction",
+        "shadow",
+        "compass"
+      ],
       "contentPath": "navigation/sun/content.md"
     },
     {
@@ -224,7 +409,13 @@
       "title": "Navigation by Stars",
       "excerpt": "Use the North Star and other constellations to find direction at night. Essential night navigation skill.",
       "category": "navigation",
-      "tags": ["navigation", "stars", "night", "north-star", "polaris"],
+      "tags": [
+        "navigation",
+        "stars",
+        "night",
+        "north-star",
+        "polaris"
+      ],
       "contentPath": "navigation/stars/content.md"
     },
     {
@@ -232,7 +423,13 @@
       "title": "Following Water",
       "excerpt": "Use rivers and streams to find civilization. Water flows downhill and often leads to populated areas.",
       "category": "navigation",
-      "tags": ["navigation", "water", "river", "stream", "direction"],
+      "tags": [
+        "navigation",
+        "water",
+        "river",
+        "stream",
+        "direction"
+      ],
       "contentPath": "navigation/water/content.md"
     },
     {
@@ -240,7 +437,13 @@
       "title": "Making a Compass",
       "excerpt": "Create an improvised compass using a needle, magnet, and floating material. Find direction without a proper compass.",
       "category": "navigation",
-      "tags": ["navigation", "compass", "improvised", "needle", "magnet"],
+      "tags": [
+        "navigation",
+        "compass",
+        "improvised",
+        "needle",
+        "magnet"
+      ],
       "contentPath": "navigation/compass/content.md"
     },
     {
@@ -248,7 +451,12 @@
       "title": "Cloud Reading",
       "excerpt": "Use clouds to predict weather and find direction. Learn what different cloud types tell you about coming conditions.",
       "category": "navigation",
-      "tags": ["navigation", "clouds", "weather", "prediction"],
+      "tags": [
+        "navigation",
+        "clouds",
+        "weather",
+        "prediction"
+      ],
       "contentPath": "navigation/clouds/content.md"
     },
     {
@@ -256,7 +464,13 @@
       "title": "Basic Foraging",
       "excerpt": "Identify edible plants, berries, and mushrooms. Learn which wild foods are safe to eat and how to prepare them.",
       "category": "food",
-      "tags": ["food", "foraging", "plants", "edible", "berries"],
+      "tags": [
+        "food",
+        "foraging",
+        "plants",
+        "edible",
+        "berries"
+      ],
       "contentPath": "food/foraging/content.md"
     },
     {
@@ -264,7 +478,13 @@
       "title": "Simple Traps",
       "excerpt": "Build basic snares and traps to catch small game. Essential skills for procuring meat in survival situations.",
       "category": "food",
-      "tags": ["food", "trapping", "snare", "hunting", "trap"],
+      "tags": [
+        "food",
+        "trapping",
+        "snare",
+        "hunting",
+        "trap"
+      ],
       "contentPath": "food/trapping/content.md"
     },
     {
@@ -272,7 +492,13 @@
       "title": "Improvised Fishing",
       "excerpt": "Catch fish with minimal equipment. Simple fishing methods and traps that work in survival situations.",
       "category": "food",
-      "tags": ["food", "fishing", "fish", "trap", "bait"],
+      "tags": [
+        "food",
+        "fishing",
+        "fish",
+        "trap",
+        "bait"
+      ],
       "contentPath": "food/fishing/content.md"
     },
     {
@@ -280,7 +506,13 @@
       "title": "Cooking Without a Pot",
       "excerpt": "Cook food without traditional cookware. Improvised methods using hot rocks, coals, and spit roasting.",
       "category": "food",
-      "tags": ["food", "cooking", "improvised", "fire", "roasting"],
+      "tags": [
+        "food",
+        "cooking",
+        "improvised",
+        "fire",
+        "roasting"
+      ],
       "contentPath": "food/cooking/content.md"
     },
     {
@@ -288,7 +520,13 @@
       "title": "Fire Signals",
       "excerpt": "Create signal fires to attract rescue. Use smoke, light, and specific patterns to maximize visibility.",
       "category": "signaling",
-      "tags": ["signaling", "fire", "rescue", "signal", "smoke"],
+      "tags": [
+        "signaling",
+        "fire",
+        "rescue",
+        "signal",
+        "smoke"
+      ],
       "contentPath": "signaling/fire-signals/content.md"
     },
     {
@@ -296,7 +534,13 @@
       "title": "Signal Mirror",
       "excerpt": "Use a mirror or reflective surface to signal aircraft and distant rescuers. Can be seen for miles.",
       "category": "signaling",
-      "tags": ["signaling", "mirror", "reflective", "rescue", "signal"],
+      "tags": [
+        "signaling",
+        "mirror",
+        "reflective",
+        "rescue",
+        "signal"
+      ],
       "contentPath": "signaling/mirror/content.md"
     },
     {
@@ -304,7 +548,13 @@
       "title": "Whistle Signals",
       "excerpt": "Use a whistle for communication and distress signals. Three blasts is the universal distress signal.",
       "category": "signaling",
-      "tags": ["signaling", "whistle", "sound", "distress", "communication"],
+      "tags": [
+        "signaling",
+        "whistle",
+        "sound",
+        "distress",
+        "communication"
+      ],
       "contentPath": "signaling/whistle/content.md"
     },
     {
@@ -312,7 +562,13 @@
       "title": "Alarm Siren Signals",
       "excerpt": "Understand what different alarm siren patterns mean. International maritime, civil defense, and country-specific emergency signals.",
       "category": "signaling",
-      "tags": ["signaling", "siren", "alarm", "emergency", "international"],
+      "tags": [
+        "signaling",
+        "siren",
+        "alarm",
+        "emergency",
+        "international"
+      ],
       "contentPath": "signaling/alarm-signals/content.md"
     },
     {
@@ -320,7 +576,13 @@
       "title": "Ground-to-Air Signals",
       "excerpt": "Create large visual signals visible from aircraft. Universal ground signals for rescue.",
       "category": "signaling",
-      "tags": ["signaling", "ground", "air", "rescue", "visual"],
+      "tags": [
+        "signaling",
+        "ground",
+        "air",
+        "rescue",
+        "visual"
+      ],
       "contentPath": "signaling/ground-signals/content.md"
     },
     {
@@ -328,7 +590,13 @@
       "title": "Storm Warning Signs",
       "excerpt": "Recognize weather changes before storms arrive. Cloud signs, pressure changes, and animal behavior.",
       "category": "weather",
-      "tags": ["weather", "storms", "clouds", "signs", "lightning"],
+      "tags": [
+        "weather",
+        "storms",
+        "clouds",
+        "signs",
+        "lightning"
+      ],
       "contentPath": "weather/storms/content.md"
     },
     {
@@ -336,8 +604,155 @@
       "title": "Emergency Kit Checklist",
       "excerpt": "Essential items for survival and emergency preparedness. What to have in your kit and bug out bag.",
       "category": "general",
-      "tags": ["general", "kit", "emergency", "preparation", "bug-out"],
+      "tags": [
+        "general",
+        "kit",
+        "emergency",
+        "preparation",
+        "bug-out"
+      ],
       "contentPath": "general/emergency-kit/content.md"
+    },
+    {
+      "id": "general-knots",
+      "title": "Essential Survival Knots",
+      "excerpt": "Learn the most important knots for survival: Bowline, Taut-line hitch, and Square knot.",
+      "category": "general",
+      "tags": [
+        "knots",
+        "rope",
+        "tying",
+        "bowline",
+        "hitch"
+      ],
+      "contentPath": "general/knots/content.md"
+    },
+    {
+      "id": "general-packing",
+      "title": "Packing a Bug-Out Bag",
+      "excerpt": "How to properly distribute weight and organize gear in your survival backpack for maximum efficiency.",
+      "category": "general",
+      "tags": [
+        "backpack",
+        "packing",
+        "bug-out",
+        "bob",
+        "weight"
+      ],
+      "contentPath": "general/packing/content.md"
+    },
+    {
+      "id": "first-aid-blisters",
+      "title": "Treating Blisters",
+      "excerpt": "Prevention and proper treatment of foot blisters, a common but debilitating survival injury.",
+      "category": "first-aid",
+      "tags": [
+        "blister",
+        "feet",
+        "injury",
+        "friction",
+        "first-aid"
+      ],
+      "contentPath": "first-aid/blisters/content.md"
+    },
+    {
+      "id": "first-aid-sprains",
+      "title": "Treating Sprains (R.I.C.E. Method)",
+      "excerpt": "How to diagnose and treat sprains and strains using the classic RICE method in the field.",
+      "category": "first-aid",
+      "tags": [
+        "sprain",
+        "strain",
+        "ankle",
+        "rice",
+        "first-aid",
+        "injury"
+      ],
+      "contentPath": "first-aid/sprains/content.md"
+    },
+    {
+      "id": "water-solar-still",
+      "title": "Building a Solar Still",
+      "excerpt": "Use the suns energy and a plastic sheet to extract pure drinking water from the ground or vegetation.",
+      "category": "water",
+      "tags": [
+        "water",
+        "solar",
+        "still",
+        "condensation",
+        "plastic"
+      ],
+      "contentPath": "water/solar-still/content.md"
+    },
+    {
+      "id": "shelter-tarp",
+      "title": "Tarp Shelter Configurations",
+      "excerpt": "Versatile and rapid shelter configurations using a standard survival tarp and paracord.",
+      "category": "shelter",
+      "tags": [
+        "shelter",
+        "tarp",
+        "paracord",
+        "configuration",
+        "a-frame"
+      ],
+      "contentPath": "shelter/tarp/content.md"
+    },
+    {
+      "id": "food-rations",
+      "title": "Managing Food Rations",
+      "excerpt": "How to manage caloric expenditure and ration limited food supplies in long-term survival.",
+      "category": "food",
+      "tags": [
+        "food",
+        "rationing",
+        "calories",
+        "starvation",
+        "planning"
+      ],
+      "contentPath": "food/rations/content.md"
+    },
+    {
+      "id": "navigation-terrain",
+      "title": "Navigating by Terrain",
+      "excerpt": "Using topography, natural landmarks, and water flows to establish orientation and plot a course.",
+      "category": "navigation",
+      "tags": [
+        "navigation",
+        "terrain",
+        "mountains",
+        "topography",
+        "rivers"
+      ],
+      "contentPath": "navigation/terrain/content.md"
+    },
+    {
+      "id": "signaling-sos",
+      "title": "SOS and Morse Code",
+      "excerpt": "How to properly transmit the universal SOS distress signal using light, sound, or visual markers.",
+      "category": "signaling",
+      "tags": [
+        "signaling",
+        "sos",
+        "morse",
+        "distress",
+        "emergency"
+      ],
+      "contentPath": "signaling/sos/content.md"
+    },
+    {
+      "id": "general-mental-attitude",
+      "title": "Mental Survival (STOP)",
+      "excerpt": "The critical first minutes of an emergency: how to master panic using the S.T.O.P. methodology.",
+      "category": "general",
+      "tags": [
+        "mental",
+        "attitude",
+        "stop",
+        "panic",
+        "psychology"
+      ],
+      "contentPath": "general/mental-attitude/content.md"
     }
   ]
 }

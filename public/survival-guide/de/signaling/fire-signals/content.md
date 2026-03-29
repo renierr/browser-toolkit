@@ -36,7 +36,7 @@ Das universelle Notsignal ist **drei Feuer** im Dreieck oder Linie angeordnet:
 
 - Mache Feuer so groß wie möglich
 - Verwende trockenes Holz für maximale Helligkeit
-- Erschaffe Kontrast - leeren dunklen Boden um Feuer
+- Sorge für Kontrast - leeren dunklen Boden um Feuer
 - Baue in der Nähe von Wasser für Reflexion
 
 ## Boden-Luft-Signale

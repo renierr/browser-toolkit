@@ -17,7 +17,7 @@ Weichhölzer wie Zeder und Weide funktionieren am besten - sie sind leichter zu 
 1. **Bereite das Feuerbrett vor**
    - Wähle ein trockenes, weiches Holzstück ca. 2,5 cm dick
 
-2. **Erschaffe die Rille**
+2. **Schnitze die Rille**
    - Verwende das Ende deines Pflugs oder einen harten Stein
    - Schnitze eine gerade Rille von einer Kante zur Mitte
 
@@ -25,8 +25,8 @@ Weichhölzer wie Zeder und Weide funktionieren am besten - sie sind leichter zu 
    - Die Rille sollte ca. 0,5 cm breit sein
    - Tief genug, um die Pflugspitze aufzunehmen
 
-4. **Erschaffe eine Vertiefung**
-   - Am Ende der Rille, erschaffe eine kleine kreisförmige Vertiefung
+4. **Schnitze eine Vertiefung**
+   - Am Ende der Rille, schnitze eine kleine kreisförmige Vertiefung
    - Hier wird sich die Wärme aufbauen
 
 5. **Bereite den Pflug vor**
@@ -44,13 +44,13 @@ Weichhölzer wie Zeder und Weide funktionieren am besten - sie sind leichter zu 
 
 9. **Erzeuge Wärme**
    - Setze die Bewegung konsequent fort
-   - Rauch wird erscheinen, dann ein Glühspan
+   - Rauch wird erscheinen, dann ein Glut
 
 10. **Übertrage**
-    - Bewege vorsichtig den Glühspan zu deinem Zunderbündel
+    - Bewege vorsichtig den Glut zu deinem Zunderbündel
 
 11. **Blase zur Flamme**
-    - Blase vorsichtig auf den Glühspan, bis er sich entzündet
+    - Blase vorsichtig auf den Glut, bis er sich entzündet
 
 :::warning
 Die Bewegung sollte lang und rhythmisch sein - konstante Geschwindigkeit ist wichtiger als Geschwindigkeit. Lass die Reibung arbeiten, drücke nicht zu fest.
@@ -59,5 +59,5 @@ Die Bewegung sollte lang und rhythmisch sein - konstante Geschwindigkeit ist wic
 ## Fehlersuche
 
 - **Kein Rauch?** Du erzeugst nicht genug Reibung - erhöhe Geschwindigkeit und Druck
-- **Glühspan stirbt?** Das Holz ist zu nass oder du überträgst nicht schnell genug
+- **Glut stirbt?** Das Holz ist zu nass oder du überträgst nicht schnell genug
 - **Holz brennt?** Du drückst zu fest - entspanne dich und lass Reibung arbeiten

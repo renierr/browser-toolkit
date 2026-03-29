@@ -23,7 +23,7 @@ Der A-Rahmen ist eine einfache, robuste Unterkunft, die guten Schutz vor den Ele
 2. Lege Firstbalken ca. 90 cm über dem Boden
 3. Oder lehne an gegabelte Pfähle
 
-### 2. Erschaffe den Rahmen
+### 2. Baue den Rahmen
 
 1. Lehne Stöcke gegen beide Seiten des Firstbalkens
 2. Forme eine A-Form
@@ -43,7 +43,7 @@ Der A-Rahmen ist eine einfache, robuste Unterkunft, die guten Schutz vor den Ele
 2. Füge extra Abdeckungsmaterial hinzu
 3. Lasse ein Ende teilweise offen für Eingang
 
-### 5. Erschaffe Bett
+### 5. Richte dein Bett ein
 
 1. Fülle Boden mit Tannenzweigen oder Blättern
 2. Füge 15+ cm Material hinzu
@@ -56,6 +56,6 @@ Baue kleiner als du denkst - leichter zu heizen und zu erhalten.
 ## Verbesserungen
 
 - Füge Feuerreflektor auf offener Seite hinzu
-- Erschaffe Windschutz mit Scheiten
+- Baue einen Windschutz mit Scheiten
 - Füge Seitenwände für mehr Schutz hinzu
 - Verwende Plane, wenn verfügbar, für Abdeckung

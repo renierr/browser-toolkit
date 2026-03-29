@@ -36,13 +36,13 @@ Eine richtig gebaute Schneehöhle kann 28-33°C wärmer sein als außen. Schnee 
 3. Decke sollte kuppelförmig sein
 4. Forme wie eine Schüssel - gerundete Oberseite und Unterseite
 
-### 4. Erschaffe Schlafplattform
+### 4. Baue eine Schlafplattform
 
 1. Hebe Plattform 30-60 cm über dem Boden an
 2. Kalte Luft sinkt nach unten
 3. Plattform sollte auf Körperhöhe sein
 
-### 5. Erschaffe Belüftung
+### 5. Sorge für Belüftung
 
 1. Steche kleines Loch in die Decke mit einem Stock
 2. Ca. so groß wie dein Daumen

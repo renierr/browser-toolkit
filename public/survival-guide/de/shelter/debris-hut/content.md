@@ -22,7 +22,7 @@ Ein guter Standort ist die halbe Arbeit. Nimm dir Zeit, den richtigen Ort zu fin
 
 ## Bauschritte
 
-### 1. Erschaffe den First
+### 1. Baue den First
 
 1. Finde zwei gegabelte Stöcke für die Enden
 2. Platziere gegabelte Stöcke ca. 2 Meter auseinander
@@ -49,7 +49,7 @@ Ein guter Standort ist die halbe Arbeit. Nimm dir Zeit, den richtigen Ort zu fin
 3. Verwende: Blätter, Tannennadeln, Gras
 4. Mehr ist besser - du kannst nicht über-isolieren
 
-### 5. Erschaffe das Bett
+### 5. Mache das Bett
 
 1. Fülle innen mit 60+ cm trockenem Laub
 2. Füge Tannenzweige für Schlafoberfläche hinzu

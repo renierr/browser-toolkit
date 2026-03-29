@@ -36,7 +36,7 @@ Schwere Unterkühlung erfordert sofortige Notfallversorgung. Die Person kann tot
 
 ### 1. Stoppe Wärmeverlust
 
-- Finde oder erschaffe Schutz
+- Finde oder baue einen Schutz
 - Blockiere Wind
 - Entferne sofort nasse Kleidung
 

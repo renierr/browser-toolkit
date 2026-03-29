@@ -46,7 +46,7 @@ Eine gute Schiene sollte eng, aber nicht fest sein. Du solltest zwei Finger unte
 ### Armbruch
 
 - Schiene vom Ellenbogen bis zu den Fingern
-- Erschaffe eine Schlinge mit Tuch um den Hals
+- Mache eine Schlinge mit Tuch um den Hals
 - Halte Arm auf ca. 90 Grad
 
 ### Beinbruch

@@ -6,7 +6,7 @@ Ein Unterstand ist eine einfache, schnell zu bauende Unterkunft. Er bietet guten
 
 1. **Natürliche Unterstützung**: Suche nach zwei Bäumen ca. 2 Meter auseinander
 2. **Windschutz**: Baue mit der offenen Seite weg vom vorherrschenden Wind
-3. **Ebenerdiger Boden**: Finde oder erschaffe einen ebenen Schlafbereich
+3. **Ebenerdiger Boden**: Finde oder baue einen ebenen Schlafbereich
 4. **Ressourcen**: In der Nähe von Holz, Wasser und Materialien für Abdeckung
 
 ## Benötigte Materialien
@@ -46,7 +46,7 @@ Ein Unterstand ist eine einfache, schnell zu bauende Unterkunft. Er bietet guten
 4. Mache Schichten dick - 15+ cm ideal
 5. Bedecke alle Seiten außer Eingang
 
-### 5. Erschaffe Bodenbett
+### 5. Richte ein Bodenbett ein
 
 1. Fülle mit 15+ cm Tannenzweigen
 2. Füge Blätter oder Gras hinzu, wenn verfügbar
@@ -63,7 +63,7 @@ Ein Unterstand ist eine einfache, schnell zu bauende Unterkunft. Er bietet guten
 ### Regenschutz
 
 - Füge zweite Schicht in steilerem Winkel oben hinzu
-- Erschaffe ein "Dach" über der Hauptunterkunft
+- Baue ein "Dach" über der Hauptunterkunft
 - Verwende Rinde oder größere Äste als Dachziegel
 
 ### Seitenwände
@@ -83,4 +83,4 @@ Ein Unterstand ist eine einfache, schnell zu bauende Unterkunft. Er bietet guten
 - Funktioniert am besten mit einem guten Feuer
 - Füge mehr Abdeckung hinzu, als du denkst
 - Halte Feuer weit genug, um Feuer zu verhindern
-- Erschaffe eine "Tür", die nachts geschlossen werden kann
+- Baue eine "Tür", die nachts geschlossen werden kann

@@ -19,7 +19,7 @@ Fallen ist eine effektive Methode, um Kleintiere als Nahrung zu fangen. Stelle m
 ### Schritte
 
 1. Finde Tierpfad
-2. Erschaffe kleine Schlaufe mit Draht (klein genug, dass Tier nicht durchdrücken kann)
+2. Binde eine kleine Schlaufe mit Draht (klein genug, dass Tier nicht durchdrücken kann)
 3. Positioniere Schlaufe auf Tier-Kopfhöhe
 4. Verankere an starkem Stock oder Scheit
 5. Tarnen mit natürlichen Materialien

@@ -1,6 +1,6 @@
 # Boden-Luft-Signale
 
-Große, von Flugzeugen aus sichtbare Signale können dein Leben retten. Erschaffe diese Signale auf offenem Gelände.
+Große, von Flugzeugen aus sichtbare Signale können dein Leben retten. Errichte diese Signale auf offenem Gelände.
 
 ## Universelle Notsignale
 

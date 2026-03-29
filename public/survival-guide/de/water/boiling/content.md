@@ -8,7 +8,7 @@ Kochen ist die zuverlässigste Methode, um Wasser trinkbar zu machen. Es tötet 
 
 2. **Sammle Wasser**: Fülle deinen Behälter mit dem klarsten verfügbaren Wasser
 
-3. **Baue ein Feuer**: Erschaffe ein steady Feuer, das Hitze aufrechterhalten kann
+3. **Baue ein Feuer**: Erzeuge ein gleichmäßiges Feuer, das Hitze aufrechterhalten kann
 
 4. **Zum Kochen bringen**: Erhitze Wasser, bis es kräftig kocht
 

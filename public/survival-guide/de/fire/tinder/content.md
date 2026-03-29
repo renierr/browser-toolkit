@@ -5,7 +5,7 @@ Zunder ist das trockene, fein geteilte Material, das einen Funken einfängt und 
 ## Natürliche Zunder-Optionen
 
 - **Trockenes Gras**: Je feiner, desto besser
-- **Kattauschwanzwolle**: Ausgezeichneter Zunder, fängt Funken leicht
+- **Rohrkolbenwolle**: Ausgezeichneter Zunder, fängt Funken leicht
 - **Birkenrinde**: Innenrinde funktioniert auch leicht feucht
 - **Trockenes Moos**: Auseinanderziehen in feine Strähnen
 - **Pflanzendaunen**: Seidenkraut, Königskerze oder Löwenzahnsamen
@@ -19,12 +19,12 @@ Das Schlüsselwort ist TROCKEN. Nasser Zunder fängt keinen Funken, egal wie gut
 
 1. **Sammle** trockenes Material aus geschützten Bereichen
 2. **Ziehe auseinander** in feine, flaumige Strähnen
-3. **Erschaffe eine Vogelnest-Form** mit dem Zunder
+3. **Forme ein Vogelnest** mit dem Zunder
 4. **Bewahre an einem trockenen Ort** bis benötigt
 
 ## Federstäbe herstellen
 
-Für nasse Bedingungen, erschaffe Federstäbe:
+Für nasse Bedingungen, schnitze sogenannte Feathersticks:
 
 1. Finde einen trockenen Weichholzstab (Zeder, Kiefer)
 2. Mit einem Messer, schneide dünne Späne

@@ -16,7 +16,7 @@ Ein Kompass hilft dir, Richtung zu finden. So hergestellt mit minimalen Material
    - Reibe eine Richtung auf Magnet 50+ Mal
    - Oder reibe auf Seide/Wolle kräftig
 
-2. **Erschaffe Schwimmer**
+2. **Baue einen Schwimmer**
    - Lege Nadel auf Blatt, Kork oder Papier
 
 3. **Lege in Wasser**

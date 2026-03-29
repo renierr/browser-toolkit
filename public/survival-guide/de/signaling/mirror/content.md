@@ -36,7 +36,7 @@ Ein Spiegelsignal kannmeilenweit gesehen werden, sogar bei Tageslicht. Es ist ei
 - Schaue vorbei am Reflexion zu deinem Ziel
 - "Male" das Ziel mit der Reflexion
 
-### 4. Erschaffe den Blitz
+### 4. Sende den Lichtblitz
 
 - Die Reflexion sollte dein Ziel treffen
 - Ein Blitz wird aus großer Entfernung sichtbar

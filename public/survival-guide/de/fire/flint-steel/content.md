@@ -7,7 +7,7 @@ Feuerstein und Stahl erzeugen Funken, die Zunder entzünden. Diese zuverlässige
 - **Feuerstein**: Jeder harte Stein, der Funken erzeugen kann (Feuerstein, Quarz, Kiesel)
 - **Stahl**: Ein Kohlenstoffstahl-Schlagstein oder die Rückseite eines Messers
 - **Kohlenstofftuch**: Verkohltes Baumwoll- oder Leinenstoff (sehr empfohlen)
-- **Zunder**: Trockenes Gras, Rinde, Kattauschwanzwolle oder Flusenkot
+- **Zunder**: Trockenes Gras, Rinde, Rohrkolbenwolle oder Flusenkot
 
 :::tip
 Kohlenstofftuch ist der Schlüssel zum Erfolg - es fängt Funken leicht und überträgt sie auf dein Zunderbündel.

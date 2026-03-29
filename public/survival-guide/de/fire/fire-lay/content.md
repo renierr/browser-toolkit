@@ -20,7 +20,7 @@ Am besten für: Langanhaltende Feuer, Kochen
 1. Lege zwei parallele Scheite als Basis
 2. Füge zwei weitere quer hinzu (wie Lincoln-Logs)
 3. Baue weiter mit kleinerem Holz auf
-4. Erschaffe stabile Struktur mit Lufttaschen
+4. Baue eine stabile Struktur mit Lufttaschen
 
 ## Der Stern-Feueraufbau
 

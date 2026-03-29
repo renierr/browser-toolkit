@@ -6,8 +6,8 @@ Wasser zu finden und zu sammeln ist entscheidend für das Überleben. Hier sind 
 
 1. **Stelle Behälter auf**: Stelle alle verfügbaren Behälter auf, um Regen aufzufangen
 2. **Verwende große Flächen**: Planen, Ponchos oder Laken können Wasser in Behälter leiten
-3. **Erschaffe einen Trichter**: Forme Plastik oder Rinde zu einem Trichter für kleine Behälter
-4. **Grabe Kanäle**: Erschaffe kleine Kanäle, um Wasser zu leiten
+3. **Baue einen Trichter**: Forme Plastik oder Rinde zu einem Trichter für kleine Behälter
+4. **Grabe Kanäle**: Grabe kleine Kanäle, um Wasser zu leiten
 
 ## Tausammlung
 
