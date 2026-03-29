@@ -1,34 +1,17 @@
 <div class="flex flex-col h-full">
   <!-- Search Bar -->
   <div class="p-4 border-b border-base-300 bg-base-200/50">
-    <div class="relative">
-      <input
-        type="text"
-        id="sg-search"
-        placeholder="Search guides..."
-        class="input input-bordered w-full pl-10"
-      />
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-base-content/50"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke="currentColor"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          stroke-width="2"
-          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+    <div class="flex gap-2">
+      <div class="relative flex-1">
+        <input
+          type="text"
+          id="sg-search"
+          placeholder="Search guides..."
+          class="input input-bordered w-full pl-10"
         />
-      </svg>
-      <button
-        id="sg-clear-search"
-        class="absolute right-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle hidden"
-      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          class="w-4 h-4"
+          class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-base-content/50"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -37,10 +20,30 @@
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M6 18L18 6M6 6l12 12"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
           />
         </svg>
-      </button>
+        <button
+          id="sg-clear-search"
+          class="absolute right-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle hidden"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            class="w-4 h-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+      <select id="sg-language" class="select select-bordered select-sm"></select>
     </div>
   </div>
 

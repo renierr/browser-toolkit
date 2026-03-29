@@ -1,0 +1,343 @@
+{
+  "categories": [
+    { "id": "fire", "name": "Feuer machen", "icon": "flame" },
+    { "id": "water", "name": "Wasser & Aufbereitung", "icon": "droplet" },
+    { "id": "first-aid", "name": "Erste Hilfe", "icon": "heart-pulse" },
+    { "id": "shelter", "name": "Unterkunft", "icon": "home" },
+    { "id": "navigation", "name": "Navigation", "icon": "compass" },
+    { "id": "food", "name": "Nahrung & Sammeln", "icon": "utensils" },
+    { "id": "signaling", "name": "Signale & Rettung", "icon": "radio" },
+    { "id": "weather", "name": "Wetter", "icon": "cloud" },
+    { "id": "general", "name": "Allgemein", "icon": "backpack" }
+  ],
+  "guides": [
+    {
+      "id": "fire-bow-drill",
+      "title": "Bohrstock Feuer machen",
+      "excerpt": "Feuer durch Reibung mit einem Bohrstock-Stock und einem Feuerbrett entzünden. Eine primitive, aber effektive Methode, wenn keine modernen Werkzeuge verfügbar sind.",
+      "category": "fire",
+      "tags": ["feuer", "reibung", "primitiv", "holz", "bohrstock"],
+      "contentPath": "fire/bow-drill/content.md"
+    },
+    {
+      "id": "fire-flint-steel",
+      "title": "Feuerstein und Stahl",
+      "excerpt": "Funken mit Feuerstein und Stahl erzeugen, um Zunder zu entzünden. Zuverlässige Technik bei jeder Wetterlage.",
+      "category": "fire",
+      "tags": ["feuer", "funke", "feuerstein", "stahl", "feuerzeug"],
+      "contentPath": "fire/flint-steel/content.md"
+    },
+    {
+      "id": "fire-plow",
+      "title": "Feuerpflug",
+      "excerpt": "Feuer erzeugen, indem man einen Hartholzstab in einer Rille eines weicheren Holzbretts reibt. Eine der ältesten Feuerfangmethoden.",
+      "category": "fire",
+      "tags": ["feuer", "reibung", "primitiv", "feuerpflug"],
+      "contentPath": "fire/fire-plow/content.md"
+    },
+    {
+      "id": "fire-tinder",
+      "title": "Zunder",
+      "excerpt": "Lerne, welche Materialien den besten Zunder zum Feuerentfachen bilden. Das Fundament jedes erfolgreichen Feuers.",
+      "category": "fire",
+      "tags": ["feuer", "zunder", "trocken", "materialien"],
+      "contentPath": "fire/tinder/content.md"
+    },
+    {
+      "id": "fire-lay",
+      "title": "Feueraufbau",
+      "excerpt": "Bereite dein Brennholz für optimales Brennen vor. Verschiedene Feueraufbauten für verschiedene Zwecke - Kochen, Wärme, Signale.",
+      "category": "fire",
+      "tags": ["feuer", "aufbau", "holz", "anordnung", "tipi", "kamin"],
+      "contentPath": "fire/fire-lay/content.md"
+    },
+    {
+      "id": "fire-waterproof",
+      "title": "Wetterfestes Feuer",
+      "excerpt": "Feuer unter nassen Bedingungen entzünden und erhalten. Techniken für Regen, Schnee und feuchte Umgebungen.",
+      "category": "fire",
+      "tags": ["feuer", "regen", "nass", "wetter", "dakota"],
+      "contentPath": "fire/waterproof/content.md"
+    },
+    {
+      "id": "water-filtration",
+      "title": "Wasserfiltration",
+      "excerpt": "Schmutziges Wasser durch Schichten aus Sand, Holzkohle und Kies filtern, um Sedimente zu entfernen und die Klarheit zu verbessern.",
+      "category": "water",
+      "tags": ["wasser", "filtration", "filter", "sediment"],
+      "contentPath": "water/filtration/content.md"
+    },
+    {
+      "id": "water-boiling",
+      "title": "Wasser abkochen",
+      "excerpt": "Koche Wasser mindestens 1 Minute lang, um Krankheitserreger abzutöten. Die zuverlässigste Methode zur Wasseraufbereitung in der Wildnis.",
+      "category": "water",
+      "tags": ["wasser", "kochen", "aufbereitung", "sterilisieren"],
+      "contentPath": "water/boiling/content.md"
+    },
+    {
+      "id": "water-collection",
+      "title": "Wassersammlung",
+      "excerpt": "Sammle Wasser aus Regen, Tau, Flüssen und natürlichen Quellen. Lerne verschiedene Techniken, um Wasser in der Wildnis zu beschaffen.",
+      "category": "water",
+      "tags": ["wasser", "sammlung", "regen", "tau", "quellen"],
+      "contentPath": "water/collection/content.md"
+    },
+    {
+      "id": "water-sodis",
+      "title": "Sonnendesinfektion (SODIS)",
+      "excerpt": "Nutze Sonnenlicht zur Wasseraufbereitung. Einfache, effektive Methode, die keinen Brennstoff benötigt.",
+      "category": "water",
+      "tags": ["wasser", "sodis", "sonne", "sonnenlicht", "aufbereitung"],
+      "contentPath": "water/sodis/content.md"
+    },
+    {
+      "id": "water-improvised-filter",
+      "title": "Improvised Wasserfilter",
+      "excerpt": "Effektive Wasserfilter aus natürlichen oder verfügbaren Materialien herstellen, wenn du keinen handelsüblichen Filter hast.",
+      "category": "water",
+      "tags": ["wasser", "filter", "improvisiert", "flasche", "holzkohle"],
+      "contentPath": "water/improvised-filter/content.md"
+    },
+    {
+      "id": "first-aid-fracture",
+      "title": "Knochenbrüche behandeln",
+      "excerpt": "Improvised Schienen und Verbände herstellen, um Knochenbrüche zu stabilisieren, wenn professionelle medizinische Hilfe nicht verfügbar ist.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "bruch", "knochen", "schiene", "notfall"],
+      "contentPath": "first-aid/fracture/content.md"
+    },
+    {
+      "id": "first-aid-bleeding",
+      "title": "Blutung stoppen",
+      "excerpt": "Starke Blutungen mit direktem Druck, Hochlagerung und improvidierten Tourniquets stoppen. Kritische Notfallfähigkeiten.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "blutung", "blut", "tourniquet", "notfall"],
+      "contentPath": "first-aid/bleeding/content.md"
+    },
+    {
+      "id": "first-aid-shock",
+      "title": "Schock behandeln",
+      "excerpt": "Erkenne und behandle Schock. Halte das Opfer warm, lagere die Beine hoch und erhalte die Körpertemperatur, bis Hilfe eintrifft.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "schock", "notfall", "bewusstlos"],
+      "contentPath": "first-aid/shock/content.md"
+    },
+    {
+      "id": "first-aid-burns",
+      "title": "Verbrennungen behandeln",
+      "excerpt": "Thermische Verbrennungen richtig behandeln, einschließlich Kühlen, Abdecken und Erkennen, wann professionelle care benötigt wird.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "verbrennung", "feuer", "verletzung"],
+      "contentPath": "first-aid/burns/content.md"
+    },
+    {
+      "id": "first-aid-cpr",
+      "title": "HLW",
+      "excerpt": "Herz-Lungen-Wiederbelebung. Lebensrettende Technik, wenn jemand nicht mehr atmet oder keinen Herzschlag hat.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "hlw", "atmung", "herz", "notfall"],
+      "contentPath": "first-aid/cpr/content.md"
+    },
+    {
+      "id": "first-aid-choking",
+      "title": "Erstickung",
+      "excerpt": "Wie man jemandem hilft, der erstickt. Der Heimlich-Handgriff und andere Techniken, um die Atemwege zu befreien.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "erstickung", "heimlich", "atemwege", "notfall"],
+      "contentPath": "first-aid/choking/content.md"
+    },
+    {
+      "id": "first-aid-snake-bites",
+      "title": "Schlangenbisse",
+      "excerpt": "Reagiere auf Schlangenbisse. Was man TUN sollte - und was man NICHT TUN sollte - wenn man von einer Giftschlange gebissen wird.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "schlange", "biss", "gift", "notfall"],
+      "contentPath": "first-aid/snake-bites/content.md"
+    },
+    {
+      "id": "first-aid-hypothermia",
+      "title": "Unterkühlung",
+      "excerpt": "Erkenne und behandle Unterkühlung. Lebensbedrohlicher Kältenotfall, der sofortiges Handeln erfordert.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "unterkühlung", "kalt", "temperatur", "notfall"],
+      "contentPath": "first-aid/hypothermia/content.md"
+    },
+    {
+      "id": "first-aid-heat-stroke",
+      "title": "Hitzschlag",
+      "excerpt": "Erkenne und behandle Hitzschlag. Lebensbedrohlicher Notfall, der auftritt, wenn der Körper überhitzt.",
+      "category": "first-aid",
+      "tags": ["erste-hilfe", "hitze", "schlag", "heiss", "notfall"],
+      "contentPath": "first-aid/heat-stroke/content.md"
+    },
+    {
+      "id": "shelter-debris-hut",
+      "title": "Laubhütte",
+      "excerpt": "Baue eine isolierte Laubhütte nur aus natürlichen Materialien. Ausgezeichnet für Kälte-Überlebensunterkünfte.",
+      "category": "shelter",
+      "tags": ["unterkunft", "laubhütte", "laub", "isolation", "kalt"],
+      "contentPath": "shelter/debris-hut/content.md"
+    },
+    {
+      "id": "shelter-snow-cave",
+      "title": "Schneehöhle",
+      "excerpt": "Baue eine isolierte Unterkunft aus Schnee. Schnee ist ein ausgezeichneter Isolator und kann lebensrettende Wärme bieten.",
+      "category": "shelter",
+      "tags": ["unterkunft", "schnee", "höhle", "winter", "kalt"],
+      "contentPath": "shelter/snow-cave/content.md"
+    },
+    {
+      "id": "shelter-lean-to",
+      "title": "Unterstand",
+      "excerpt": "Baue einen einfachen Unterstand aus Stämmen und Ästen. Schnell gebaut und bietet guten Schutz.",
+      "category": "shelter",
+      "tags": ["unterkunft", "lean-to", "stämme", "schnell"],
+      "contentPath": "shelter/lean-to/content.md"
+    },
+    {
+      "id": "shelter-tropical",
+      "title": "Tropische Unterkunft",
+      "excerpt": "Baue Unterkunft in heißen, feuchten Umgebungen. Fokus auf Regen- und Insektenschutz statt Wärme.",
+      "category": "shelter",
+      "tags": ["unterkunft", "tropisch", "regen", "insekten", "heiss"],
+      "contentPath": "shelter/tropical/content.md"
+    },
+    {
+      "id": "shelter-a-frame",
+      "title": "A-Rahmen Unterkunft",
+      "excerpt": "Baue eine einfache A-Rahmen-Unterkunft. Schnell gebaut, robust und bietet guten Schutz vor den Elementen.",
+      "category": "shelter",
+      "tags": ["unterkunft", "a-rahmen", "einfach", "schnell"],
+      "contentPath": "shelter/a-frame/content.md"
+    },
+    {
+      "id": "navigation-sun",
+      "title": "Navigation nach der Sonne",
+      "excerpt": "Finde die Richtung mit der Sonne, Schattenstab-Methode und Uhr-Methode. Zuverlässige Navigation ohne Werkzeuge.",
+      "category": "navigation",
+      "tags": ["navigation", "sonne", "richtung", "schatten", "kompass"],
+      "contentPath": "navigation/sun/content.md"
+    },
+    {
+      "id": "navigation-stars",
+      "title": "Navigation nach den Sternen",
+      "excerpt": "Nutze den Polarstern und andere Sternbilder, um nachts die Richtung zu finden. Unentbehrliche Nachtnavigationsfähigkeit.",
+      "category": "navigation",
+      "tags": ["navigation", "sterne", "nacht", "polarstern", "polaris"],
+      "contentPath": "navigation/stars/content.md"
+    },
+    {
+      "id": "navigation-water",
+      "title": "Dem Wasser folgen",
+      "excerpt": "Nutze Flüsse und Bäche, um Zivilisation zu finden. Wasser fließt bergab und führt oft zu besiedelten Gebieten.",
+      "category": "navigation",
+      "tags": ["navigation", "wasser", "fluss", "bach", "richtung"],
+      "contentPath": "navigation/water/content.md"
+    },
+    {
+      "id": "navigation-compass",
+      "title": "Einen Kompass herstellen",
+      "excerpt": "Erschaffe einen improvidierten Kompass aus einer Nadel, einem Magneten und schwimmendem Material. Finde die Richtung ohne echten Kompass.",
+      "category": "navigation",
+      "tags": ["navigation", "kompass", "improvisiert", "nadel", "magnet"],
+      "contentPath": "navigation/compass/content.md"
+    },
+    {
+      "id": "navigation-clouds",
+      "title": "Wolken lesen",
+      "excerpt": "Nutze Wolken, um das Wetter vorherzusagen und die Richtung zu finden. Lerne, was verschiedene Wolkentypen über kommende Bedingungen aussagen.",
+      "category": "navigation",
+      "tags": ["navigation", "wolken", "wetter", "vorhersage"],
+      "contentPath": "navigation/clouds/content.md"
+    },
+    {
+      "id": "food-foraging",
+      "title": "Grundlegendes Sammeln",
+      "excerpt": "Identifiziere essbare Pflanzen, Beeren und Pilze. Lerne, welche Wildpflanzen sicher zu essen sind und wie man sie zubereitet.",
+      "category": "food",
+      "tags": ["nahrung", "sammeln", "pflanzen", "essbar", "beeren"],
+      "contentPath": "food/foraging/content.md"
+    },
+    {
+      "id": "food-trapping",
+      "title": "Einfache Fallen",
+      "excerpt": "Baue einfache Schlingen und Fallen, um Kleintiere zu fangen. Unentbehrliche Fähigkeiten für die Beschaffung von Fleisch in Überlebenssituationen.",
+      "category": "food",
+      "tags": ["nahrung", "fallen", "schlinge", "jagd", "falle"],
+      "contentPath": "food/trapping/content.md"
+    },
+    {
+      "id": "food-fishing",
+      "title": "Improvisiertes Angeln",
+      "excerpt": "Fische mit minimaler Ausrüstung fangen. Einfache Angelmethoden und Fallen, die in Überlebenssituationen funktionieren.",
+      "category": "food",
+      "tags": ["nahrung", "angeln", "fisch", "falle", "köder"],
+      "contentPath": "food/fishing/content.md"
+    },
+    {
+      "id": "food-cooking",
+      "title": "Kochen ohne Topf",
+      "excerpt": "Koche Essen ohne traditionelles Kochgeschirr. Improvisierte Methoden mit heißen Kohlen und Spießbraten.",
+      "category": "food",
+      "tags": ["nahrung", "kochen", "improvisiert", "feuer", "braten"],
+      "contentPath": "food/cooking/content.md"
+    },
+    {
+      "id": "signaling-fire",
+      "title": "Feuersignale",
+      "excerpt": "Erschaffe Signalfeuer, um Rettung anzuziehen. Nutze Rauch, Licht und bestimmte Muster, um die Sichtbarkeit zu maximieren.",
+      "category": "signaling",
+      "tags": ["signal", "feuer", "rettung", "signal", "rauch"],
+      "contentPath": "signaling/fire-signals/content.md"
+    },
+    {
+      "id": "signaling-mirror",
+      "title": "Spiegelsignal",
+      "excerpt": "Nutze einen Spiegel oder reflektierende Oberfläche, um Flugzeuge und entfernte Retter zu signalisieren. Kannmeilenweit gesehen werden.",
+      "category": "signaling",
+      "tags": ["signal", "spiegel", "reflektierend", "rettung", "signal"],
+      "contentPath": "signaling/mirror/content.md"
+    },
+    {
+      "id": "signaling-whistle",
+      "title": "Pfeifsignale",
+      "excerpt": "Nutze eine Pfeife für Kommunikation und Notsignale. Drei Signale sind das universelle Notsignal.",
+      "category": "signaling",
+      "tags": ["signal", "pfeife", "ton", "notfall", "kommunikation"],
+      "contentPath": "signaling/whistle/content.md"
+    },
+    {
+      "id": "signaling-alarm-signals",
+      "title": "Alarmsignal-Muster",
+      "excerpt": "Verstehe, was verschiedene Alarmsignal-Muster bedeuten. Internationale maritime, zivilverteidigung und länderspezifische Notsignale.",
+      "category": "signaling",
+      "tags": ["signal", "sirene", "alarm", "notfall", "international"],
+      "contentPath": "signaling/alarm-signals/content.md"
+    },
+    {
+      "id": "signaling-ground-signals",
+      "title": "Boden-Luft-Signale",
+      "excerpt": "Erschaffe große visuelle Signale, die von Flugzeugen aus sichtbar sind. Universelle Bodensignale für Rettung.",
+      "category": "signaling",
+      "tags": ["signal", "boden", "luft", "rettung", "visuell"],
+      "contentPath": "signaling/ground-signals/content.md"
+    },
+    {
+      "id": "weather-storms",
+      "title": "Sturmwarnzeichen",
+      "excerpt": "Erkenne Wetterwechsel bevor Stürme eintreffen. Wolkenzeichen, Druckänderungen und Tierverhalten.",
+      "category": "weather",
+      "tags": ["wetter", "stürme", "wolken", "zeichen", "blitz"],
+      "contentPath": "weather/storms/content.md"
+    },
+    {
+      "id": "general-emergency-kit",
+      "title": "Notfallkit-Checkliste",
+      "excerpt": "Essentielle Artikel für Überleben und Notfallvorbereitung. Was in deinem Kit und Bug-Out-Tasche sein sollte.",
+      "category": "general",
+      "tags": ["allgemein", "kit", "notfall", "vorbereitung", "bug-out"],
+      "contentPath": "general/emergency-kit/content.md"
+    }
+  ]
+}

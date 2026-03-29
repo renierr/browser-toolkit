@@ -1,0 +1,13 @@
+[
+  {
+    "code": "en",
+    "name": "English",
+    "nativeName": "English",
+    "default": true
+  },
+  {
+    "code": "de",
+    "name": "German",
+    "nativeName": "Deutsch"
+  }
+]

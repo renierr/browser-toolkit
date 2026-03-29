@@ -1,4 +1,12 @@
 import { createMarkdownRenderer } from '../../js/markdown-renderer';
+import { getSettings } from '../../js/settings';
+
+type Language = {
+  code: string;
+  name: string;
+  nativeName: string;
+  default?: boolean;
+};
 
 type Guide = {
   id: string;
@@ -23,6 +31,7 @@ type IndexData = {
 
 const BASE_PATH = new URL('./survival-guide/', document.baseURI).href;
 const renderer = createMarkdownRenderer();
+const settings = getSettings('survival-guide');
 
 function fuzzyScore(query: string, target: string): number {
   const q = query.toLowerCase();
@@ -44,6 +53,8 @@ export default function init(): () => void {
   let activeCategory = 'all';
   let activeGuideId: string | null = null;
   let loadedGuides: Map<string, string> = new Map();
+  let currentLanguage = settings.get<string>('language', 'en');
+  let availableLanguages: Language[] = [];
 
   const searchInput = document.getElementById('sg-search') as HTMLInputElement;
   const clearSearchBtn = document.getElementById('sg-clear-search');
@@ -57,10 +68,33 @@ export default function init(): () => void {
   const guideImages = document.getElementById('sg-guide-images');
   const guideBody = document.getElementById('sg-guide-body');
   const backBtn = document.getElementById('sg-back-btn');
+  const languageSelect = document.getElementById('sg-language') as HTMLSelectElement;
+
+  async function loadLanguages(): Promise<void> {
+    try {
+      const res = await fetch(BASE_PATH + 'languages.json');
+      if (!res.ok) throw new Error('Failed to load languages');
+      availableLanguages = await res.json();
+
+      const defaultLang = availableLanguages.find((l) => l.default);
+      if (!availableLanguages.find((l) => l.code === currentLanguage)) {
+        currentLanguage = defaultLang?.code || 'en';
+      }
+
+      if (languageSelect) {
+        languageSelect.innerHTML = availableLanguages
+          .map((lang) => `<option value="${lang.code}">${lang.nativeName}</option>`)
+          .join('');
+        languageSelect.value = currentLanguage;
+      }
+    } catch (e) {
+      console.error('[SurvivalGuide] Failed to load languages:', e);
+    }
+  }
 
   async function loadIndex(): Promise<void> {
     try {
-      const res = await fetch(BASE_PATH + 'index.json');
+      const res = await fetch(BASE_PATH + currentLanguage + '/index.json');
       if (!res.ok) throw new Error('Failed to load index');
       indexData = await res.json();
       renderCategories();
@@ -70,6 +104,19 @@ export default function init(): () => void {
       if (guideList)
         guideList.innerHTML = '<div class="text-center text-error p-4">Failed to load guides</div>';
     }
+  }
+
+  async function changeLanguage(lang: string): Promise<void> {
+    currentLanguage = lang;
+    settings.set('language', lang);
+    loadedGuides.clear();
+    activeGuideId = null;
+    if (guideDetail && detailEmpty && detailContent) {
+      detailEmpty.classList.remove('hidden');
+      detailContent.classList.add('hidden');
+      showListView();
+    }
+    await loadIndex();
   }
 
   function getCategoryCount(categoryId: string): number {
@@ -251,7 +298,7 @@ export default function init(): () => void {
     let content = loadedGuides.get(guideId);
     if (!content) {
       try {
-        const res = await fetch(BASE_PATH + guide.contentPath);
+        const res = await fetch(BASE_PATH + currentLanguage + '/' + guide.contentPath);
         if (res.ok) {
           content = await res.text();
           loadedGuides.set(guideId, content);
@@ -293,8 +340,13 @@ export default function init(): () => void {
     handleSearch();
   });
   backBtn?.addEventListener('click', showListView);
+  languageSelect?.addEventListener('change', () => {
+    if (languageSelect) {
+      changeLanguage(languageSelect.value);
+    }
+  });
 
-  loadIndex();
+  loadLanguages().then(() => loadIndex());
 
   return () => {
     searchInput?.removeEventListener('input', handleSearch);
@@ -303,5 +355,10 @@ export default function init(): () => void {
       handleSearch();
     });
     backBtn?.removeEventListener('click', showListView);
+    languageSelect?.removeEventListener('change', () => {
+      if (languageSelect) {
+        changeLanguage(languageSelect.value);
+      }
+    });
   };
 }
