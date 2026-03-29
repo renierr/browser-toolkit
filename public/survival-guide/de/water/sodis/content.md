@@ -4,9 +4,9 @@ SODIS nutzt Sonnenlicht, um Krankheitserreger in Wasser abzutöten. Einfach, eff
 
 ## Was du brauchst
 
-- Klare Plastikflasche (am besten) oder Glas
+- Klare PET-Plastikflasche (unter 3 Liter)
 - Wasser
-- Sonnenlicht
+- Direktes Sonnenlicht
 
 ## Schritte
 
@@ -31,7 +31,7 @@ SODIS nutzt Sonnenlicht, um Krankheitserreger in Wasser abzutöten. Einfach, eff
 - Zeit um 50% erhöhen (mehr UV)
 
 :::tip
-Die Hitze hilft - heißes Wasser desinfiziert schneller. Schwarze Behälter beschleunigen den Prozess.
+Hitze hilft - heißes Wasser desinfiziert schneller. Das Ablegen der Flaschen auf einem dunklen Untergrund (wie einem dunklen Felsen oder Metalldach) beschleunigt den Prozess. Verwende NIEMALS dunkle Flaschen, da sie die notwendigen UV-A-Strahlen blockieren.
 :::
 
 ## Wirksamkeit
@@ -50,8 +50,7 @@ Entfernt NICHT:
 
 ## Tipps
 
-- [ ] Verwende klares, unbeschädigtes Plastik
-- [ ] Flach auslegen für maximale Sonneneinstrahlung
-- [ ] Umdrehen nach der Hälfte der Zeit
-- [ ] Verwende dunkle Flasche für schnellere Ergebnisse
-- [ ] Vorfilter sehr trübes Wasser zuerst
+- [ ] Verwende klare, unbeschädigte PET-Plastikflaschen
+- [ ] Lege sie flach auf einen dunklen oder reflektierenden Untergrund
+- [ ] Fülle sie nicht ganz voll; lass etwas Luft und schüttle sie zur Sauerstoffanreicherung
+- [ ] Filtere stark trübes Wasser zuerst vor (Trübung blockiert UV-Strahlen)

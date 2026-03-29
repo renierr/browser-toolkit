@@ -48,7 +48,7 @@ Safe berries include:
 - **White berries**: Almost always poisonous
 - **Mushrooms**: Unless expert, don't eat any
 - **Plants with milky sap**: Usually poisonous
-- **Plants with umbrella-shaped flowers**: Many are poisonous
+- **Plants with umbrella-shaped flowers**: Many are deadly poisonous (e.g., Poison Hemlock, Water Hemlock - do not confuse with wild carrot)
 
 ## Preparation Tips
 

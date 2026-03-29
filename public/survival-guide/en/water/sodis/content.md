@@ -4,9 +4,9 @@ SODIS uses sunlight to kill pathogens in water. Simple, effective, and requires 
 
 ## What You Need
 
-- Clear plastic bottle (best) or glass jar
+- Clear PET plastic bottle (under 3 liters)
 - Water
-- Sunlight
+- Direct sunlight
 
 ## Steps
 
@@ -31,7 +31,7 @@ SODIS uses sunlight to kill pathogens in water. Simple, effective, and requires 
 - Increase time by 50% (more UV)
 
 :::tip
-The heat helps - hot water disinfects faster. Black containers speed the process.
+The heat helps - hot water disinfects faster. Placing bottles on a dark surface (like a dark rock or metal roof) speeds up the process significantly by increasing the water temperature. Do NOT use dark or painted bottles, as they block the necessary UV-A rays.
 :::
 
 ## Effectiveness
@@ -50,8 +50,7 @@ Does NOT remove:
 
 ## Tips
 
-- [ ] Use clear, undamaged plastic
-- [ ] Lay flat for maximum sun exposure
-- [ ] Flip halfway through
-- [ ] Use dark bottle for faster results
-- [ ] Pre-filter very cloudy water first
+- [ ] Use clear, undamaged PET plastic bottles
+- [ ] Lay flat on a dark or reflective surface for maximum exposure
+- [ ] Do not fill completely to the top; leave a little air and shake to oxygenate
+- [ ] Pre-filter very cloudy water first (turbidity blocks UV rays)

@@ -47,8 +47,8 @@ Sichere Beeren umfassen:
 
 - **Weiße Beeren**: Fast immer giftig
 - **Pilze**: Außer Experte, iss keine
-- **Pflanzen mit milchigem Saft**: Usually giftig
-- **Pflanzen mit schirmförmigen Blüten**: Viele sind giftig
+- **Pflanzen mit milchigem Saft**: Meistens giftig
+- **Pflanzen mit schirmförmigen Blüten (Doldenblütler)**: Viele sind tödlich giftig (z.B. Schierling, Wasserschierling - nicht mit wilder Karotte verwechseln!)
 
 ## Zubereitungstipps
 
