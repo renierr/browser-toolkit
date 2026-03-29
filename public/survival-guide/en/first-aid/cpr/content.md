@@ -12,7 +12,7 @@ CPR is used when someone has stopped breathing or has no heartbeat. It can save 
 Call for emergency help first if possible. Begin CPR immediately if person is not breathing.
 :::
 
-![CPR hand position](./survival-guide/first-aid/cpr/diagram.svg)
+![CPR hand position](./survival-guide/images/first-aid/cpr/diagram.svg)
 
 ## CPR Steps (Adult)
 

@@ -12,7 +12,7 @@ HLW wird verwendet, wenn jemand aufgehört hat zu atmen oder keinen Herzschlag h
 Rufe zuerst um Notfallhilfe, wenn möglich. Beginne sofort mit HLW, wenn die Person nicht atmet.
 :::
 
-![HLW Handposition](./survival-guide/first-aid/cpr/diagram.svg)
+![HLW Handposition](./survival-guide/images/first-aid/cpr/diagram.svg)
 
 ## HLW-Schritte (Erwachsener)
 

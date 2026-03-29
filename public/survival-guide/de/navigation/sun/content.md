@@ -2,7 +2,7 @@
 
 Die Sonne kann verwendet werden, um Richtung während des Tages zu finden. Diese Methoden funktionieren überall auf der Welt.
 
-![Kompassrichtungen](./survival-guide/navigation/sun/diagram.svg)
+![Kompassrichtungen](./survival-guide/images/navigation/sun/diagram.svg)
 
 ## Schattenstab-Methode
 

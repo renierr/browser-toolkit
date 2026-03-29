@@ -2,7 +2,7 @@
 
 The sun can be used to find direction during the day. These methods work anywhere in the world.
 
-![Compass directions](./survival-guide/navigation/sun/diagram.svg)
+![Compass directions](./survival-guide/images/navigation/sun/diagram.svg)
 
 ## Shadow Stick Method
 

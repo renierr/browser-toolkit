@@ -2,7 +2,7 @@
 
 Der Feueraufbau ist, wie du dein Brennholz anordnest. Ein guter Feueraufbau sorgt für richtige Luftzufuhr, gleichmäßiges Brennen und einfache Flammenausbreitung.
 
-![Feueraufbau-Diagramm](./survival-guide/fire/fire-lay/diagram.svg)
+![Feueraufbau-Diagramm](./survival-guide/images/fire/fire-lay/diagram.svg)
 
 ## Der Tipi-Feueraufbau
 
