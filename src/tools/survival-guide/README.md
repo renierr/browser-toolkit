@@ -2,7 +2,35 @@
 
 An offline-first survival guide that provides critical information for wilderness, emergency, and disaster situations. All content is stored locally and works without internet access.
 
-## For AI Agents: Adding New Guides
+## IMPORTANT: Multi-Language Support
+
+This survival guide supports **multiple languages**. English (`en`) is the default/base language. German (`de`) is also fully supported.
+
+### For AI Agents: Adding New Guides
+
+**ALWAYS provide BOTH translations when adding new content:**
+
+1. **Create content in English first** (`public/survival-guide/en/`)
+2. **Then translate to German** (`public/survival-guide/de/`)
+
+This applies to:
+
+- Guide content (`content.md`)
+- Categories in `index.json` (translate `name` field)
+- Guide entries in `index.json` (translate `title` and `excerpt`)
+
+### Folder Structure
+
+```
+public/survival-guide/
+├── languages.json           # Language definitions
+├── en/                     # English (default)
+│   ├── index.json
+│   └── [category]/[guide]/content.md
+└── de/                     # German (translated)
+    ├── index.json
+    └── [category]/[guide]/content.md
+```
 
 ### Overview
 
@@ -13,18 +41,24 @@ The survival guide consists of:
 
 ### Adding a New Guide
 
-#### Step 1: Create Guide Folder
+#### Step 1: Create Guide Folder (BOTH Languages)
 
-Create a new folder in the appropriate category:
+Create a new folder in BOTH language folders:
 
 ```
 public/survival-guide/
-├── index.json
-├── fire/
-│   ├── bow-drill/
-│   │   └── content.md
-│   └── new-guide/          <-- create this
-│       └── content.md      <-- create this
+├── en/
+│   ├── index.json
+│   ├── fire/
+│   │   ├── bow-drill/
+│   │   │   └── content.md
+│   │   └── new-guide/          <-- create this (English)
+│   │       └── content.md
+└── de/
+    ├── index.json
+    ├── fire/
+    │   └── new-guide/          <-- create this (German)
+    │       └── content.md
 ```
 
 #### Step 2: Write Content
@@ -73,9 +107,11 @@ Use error containers for critical warnings.
 - `:::success` - Success messages
 - `:::info` - Information
 
-#### Step 3: Update index.json
+#### Step 3: Update index.json (BOTH Languages)
 
-Add the guide entry to `public/survival-guide/index.json`:
+Add the guide entry to **BOTH** `public/survival-guide/en/index.json` AND `public/survival-guide/de/index.json`:
+
+**English (`en/index.json`):**
 
 ```json
 {
@@ -93,16 +129,34 @@ Add the guide entry to `public/survival-guide/index.json`:
 }
 ```
 
+**German (`de/index.json`) - TRANSLATED:**
+
+```json
+{
+  "categories": [{ "id": "fire", "name": "Feuer machen", "icon": "flame" }],
+  "guides": [
+    {
+      "id": "fire-new-guide",
+      "title": "Neuer Leitfaden Titel",
+      "excerpt": "Kurze Beschreibung (1-2 Sätze) für Suche und Anzeige.",
+      "category": "fire",
+      "tags": ["tag1", "tag2", "relevant-keywords"],
+      "contentPath": "fire/new-guide/content.md"
+    }
+  ]
+}
+```
+
 ### index.json Schema
 
 ```typescript
 type Guide = {
   id: string; // Unique ID (e.g., "fire-bow-drill")
-  title: string; // Display title
-  excerpt: string; // Brief description for search results
-  category: string; // Category ID from categories array
-  tags: string[]; // Search keywords
-  contentPath: string; // Path to content.md (from public/survival-guide/)
+  title: string; // Display title (TRANSLATED in de/index.json)
+  excerpt: string; // Brief description for search results (TRANSLATED in de/index.json)
+  category: string; // Category ID from categories array (same across languages)
+  tags: string[]; // Search keywords (can be same or translated)
+  contentPath: string; // Path to content.md (relative to language folder, e.g., "fire/bow-drill/content.md")
 };
 
 type Category = {
@@ -143,9 +197,11 @@ The path starts with `./survival-guide/` followed by the path to the image file.
 
 **Note:** Only use inline images in markdown. The `images` array in index.json is deprecated.
 
-### Adding a New Category
+### Adding a New Category (BOTH Languages)
 
-1. Add to `categories` array in index.json:
+1. Add to `categories` array in **BOTH** `en/index.json` AND `de/index.json`:
+
+**English (`en/index.json`):**
 
 ```json
 {
@@ -155,10 +211,24 @@ The path starts with `./survival-guide/` followed by the path to the image file.
 }
 ```
 
-2. Create folder structure:
+**German (`de/index.json`) - TRANSLATED:**
+
+```json
+{
+  "id": "new-category",
+  "name": "Neue Kategorie Name",
+  "icon": "icon-name"
+}
+```
+
+2. Create folder structure in BOTH languages:
 
 ```
-public/survival-guide/new-category/
+public/survival-guide/en/new-category/
+└── new-guide/
+    └── content.md
+
+public/survival-guide/de/new-category/
 └── new-guide/
     └── content.md
 ```
@@ -218,9 +288,10 @@ Important caution or warning.
 
 ### Verification
 
-After adding a guide:
+After adding a guide (in BOTH languages):
 
 1. Run `pnpm tsc` to check for TypeScript errors
-2. Verify the guide appears in the tool
-3. Test search functionality works
-4. Test category filtering works
+2. Verify the guide appears in English
+3. Switch to German and verify the translated guide appears
+4. Test search functionality works in both languages
+5. Test category filtering works in both languages
