@@ -3,12 +3,17 @@
 
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
+/* Assign a custom transition name to the app container */
+#app {
+  view-transition-name: app;
+}
+
 /* View transitions: fade old out, fade new in (short, smooth) */
-::view-transition-old(#app) {
+::view-transition-old(app) {
   animation: vt-fade-out 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
-::view-transition-new(#app) {
+::view-transition-new(app) {
   animation: vt-fade-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
