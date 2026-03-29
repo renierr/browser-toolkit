@@ -753,6 +753,292 @@
         "psychology"
       ],
       "contentPath": "general/mental-attitude/content.md"
+    },
+    {
+      "id": "weather-lightning",
+      "title": "Lightning Safety",
+      "excerpt": "How to minimize your risk of being struck by lightning when caught in a storm without shelter.",
+      "category": "weather",
+      "tags": [
+        "weather",
+        "lightning",
+        "storm",
+        "safety",
+        "electricity"
+      ],
+      "contentPath": "weather/lightning/content.md"
+    },
+    {
+      "id": "weather-avalanche",
+      "title": "Avalanche Survival",
+      "excerpt": "Recognizing avalanche terrain and what to do if you are caught in a slide.",
+      "category": "weather",
+      "tags": [
+        "weather",
+        "avalanche",
+        "snow",
+        "winter",
+        "mountains"
+      ],
+      "contentPath": "weather/avalanche/content.md"
+    },
+    {
+      "id": "first-aid-tourniquet",
+      "title": "Applying a Tourniquet",
+      "excerpt": "How to properly apply a commercial or improvised tourniquet to stop life-threatening arterial bleeding.",
+      "category": "first-aid",
+      "tags": [
+        "first-aid",
+        "bleeding",
+        "tourniquet",
+        "trauma",
+        "arterial"
+      ],
+      "contentPath": "first-aid/tourniquet/content.md"
+    },
+    {
+      "id": "food-cleaning-fish",
+      "title": "Cleaning and Filleting Fish",
+      "excerpt": "A step-by-step guide to processing a freshly caught fish for cooking in the wild.",
+      "category": "food",
+      "tags": [
+        "food",
+        "fish",
+        "cleaning",
+        "filleting",
+        "meat",
+        "preparation"
+      ],
+      "contentPath": "food/cleaning-fish/content.md"
+    },
+    {
+      "id": "general-hygiene",
+      "title": "Wilderness Hygiene",
+      "excerpt": "Keeping clean in survival situations is critical for preventing infections, chafing, and disease.",
+      "category": "general",
+      "tags": [
+        "general",
+        "hygiene",
+        "health",
+        "cleaning",
+        "sanitation",
+        "soap"
+      ],
+      "contentPath": "general/hygiene/content.md"
+    },
+    {
+      "id": "navigation-pacing",
+      "title": "Pacing and Distance",
+      "excerpt": "How to accurately track the distance you've traveled using pacing and ranger beads.",
+      "category": "navigation",
+      "tags": [
+        "navigation",
+        "pacing",
+        "distance",
+        "tracking",
+        "ranger-beads"
+      ],
+      "contentPath": "navigation/pacing/content.md"
+    },
+    {
+      "id": "fire-banking",
+      "title": "Banking a Fire",
+      "excerpt": "How to preserve your hot coals overnight so you can instantly restart your fire in the morning.",
+      "category": "fire",
+      "tags": [
+        "fire",
+        "coals",
+        "banking",
+        "overnight",
+        "heat"
+      ],
+      "contentPath": "fire/banking/content.md"
+    },
+    {
+      "id": "shelter-hammock",
+      "title": "Hammock Safety & Setup",
+      "excerpt": "How to set up a survival hammock correctly while avoiding deadly falling branches.",
+      "category": "shelter",
+      "tags": [
+        "shelter",
+        "hammock",
+        "trees",
+        "widowmakers",
+        "setup"
+      ],
+      "contentPath": "shelter/hammock/content.md"
+    },
+    {
+      "id": "first-aid-frostbite",
+      "title": "Treating Frostbite",
+      "excerpt": "How to properly thaw frozen tissue without causing severe permanent damage.",
+      "category": "first-aid",
+      "tags": [
+        "first-aid",
+        "frostbite",
+        "cold",
+        "winter",
+        "freezing"
+      ],
+      "contentPath": "first-aid/frostbite/content.md"
+    },
+    {
+      "id": "food-toxic-algae",
+      "title": "Toxic Algae & Red Tide",
+      "excerpt": "How to identify dangerous waters contaminated with cyanobacteria that filtering and boiling cannot fix.",
+      "category": "water",
+      "tags": [
+        "water",
+        "algae",
+        "toxic",
+        "cyanobacteria",
+        "poison",
+        "foraging"
+      ],
+      "contentPath": "water/toxic-algae/content.md"
+    },
+    {
+      "id": "weather-lightning",
+      "title": "Lightning Safety",
+      "excerpt": "How to minimize your risk of being struck by lightning when caught in a storm without shelter.",
+      "category": "weather",
+      "tags": [
+        "weather",
+        "lightning",
+        "storm",
+        "safety",
+        "electricity"
+      ],
+      "contentPath": "weather/lightning/content.md"
+    },
+    {
+      "id": "weather-avalanche",
+      "title": "Avalanche Survival",
+      "excerpt": "Recognizing avalanche terrain and what to do if you are caught in a slide.",
+      "category": "weather",
+      "tags": [
+        "weather",
+        "avalanche",
+        "snow",
+        "winter",
+        "mountains"
+      ],
+      "contentPath": "weather/avalanche/content.md"
+    },
+    {
+      "id": "first-aid-tourniquet",
+      "title": "Applying a Tourniquet",
+      "excerpt": "How to properly apply a commercial or improvised tourniquet to stop life-threatening arterial bleeding.",
+      "category": "first-aid",
+      "tags": [
+        "first-aid",
+        "bleeding",
+        "tourniquet",
+        "trauma",
+        "arterial"
+      ],
+      "contentPath": "first-aid/tourniquet/content.md"
+    },
+    {
+      "id": "food-cleaning-fish",
+      "title": "Cleaning and Filleting Fish",
+      "excerpt": "A step-by-step guide to processing a freshly caught fish for cooking in the wild.",
+      "category": "food",
+      "tags": [
+        "food",
+        "fish",
+        "cleaning",
+        "filleting",
+        "meat",
+        "preparation"
+      ],
+      "contentPath": "food/cleaning-fish/content.md"
+    },
+    {
+      "id": "general-hygiene",
+      "title": "Wilderness Hygiene",
+      "excerpt": "Keeping clean in survival situations is critical for preventing infections, chafing, and disease.",
+      "category": "general",
+      "tags": [
+        "general",
+        "hygiene",
+        "health",
+        "cleaning",
+        "sanitation",
+        "soap"
+      ],
+      "contentPath": "general/hygiene/content.md"
+    },
+    {
+      "id": "navigation-pacing",
+      "title": "Pacing and Distance",
+      "excerpt": "How to accurately track the distance you've traveled using pacing and ranger beads.",
+      "category": "navigation",
+      "tags": [
+        "navigation",
+        "pacing",
+        "distance",
+        "tracking",
+        "ranger-beads"
+      ],
+      "contentPath": "navigation/pacing/content.md"
+    },
+    {
+      "id": "fire-banking",
+      "title": "Banking a Fire",
+      "excerpt": "How to preserve your hot coals overnight so you can instantly restart your fire in the morning.",
+      "category": "fire",
+      "tags": [
+        "fire",
+        "coals",
+        "banking",
+        "overnight",
+        "heat"
+      ],
+      "contentPath": "fire/banking/content.md"
+    },
+    {
+      "id": "shelter-hammock",
+      "title": "Hammock Safety & Setup",
+      "excerpt": "How to set up a survival hammock correctly while avoiding deadly falling branches.",
+      "category": "shelter",
+      "tags": [
+        "shelter",
+        "hammock",
+        "trees",
+        "widowmakers",
+        "setup"
+      ],
+      "contentPath": "shelter/hammock/content.md"
+    },
+    {
+      "id": "first-aid-frostbite",
+      "title": "Treating Frostbite",
+      "excerpt": "How to properly thaw frozen tissue without causing severe permanent damage.",
+      "category": "first-aid",
+      "tags": [
+        "first-aid",
+        "frostbite",
+        "cold",
+        "winter",
+        "freezing"
+      ],
+      "contentPath": "first-aid/frostbite/content.md"
+    },
+    {
+      "id": "food-toxic-algae",
+      "title": "Toxic Algae & Red Tide",
+      "excerpt": "How to identify dangerous waters contaminated with cyanobacteria that filtering and boiling cannot fix.",
+      "category": "water",
+      "tags": [
+        "water",
+        "algae",
+        "toxic",
+        "cyanobacteria",
+        "poison",
+        "foraging"
+      ],
+      "contentPath": "water/toxic-algae/content.md"
     }
   ]
 }

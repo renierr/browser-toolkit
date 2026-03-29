@@ -753,6 +753,294 @@
         "verlaufen"
       ],
       "contentPath": "general/mental-attitude/content.md"
+    },
+    {
+      "id": "weather-lightning",
+      "title": "Blitzschlag-Sicherheit",
+      "excerpt": "Wie man das Risiko eines Blitzeinschlags minimiert, wenn man ohne Schutz in ein Gewitter gerät.",
+      "category": "weather",
+      "tags": [
+        "wetter",
+        "blitz",
+        "gewitter",
+        "sicherheit",
+        "elektrizität"
+      ],
+      "contentPath": "weather/lightning/content.md"
+    },
+    {
+      "id": "weather-avalanche",
+      "title": "Lawinen-Überleben",
+      "excerpt": "Lawinengelände erkennen und wissen, was zu tun ist, wenn man von einer Lawine erfasst wird.",
+      "category": "weather",
+      "tags": [
+        "wetter",
+        "lawine",
+        "schnee",
+        "winter",
+        "berge"
+      ],
+      "contentPath": "weather/avalanche/content.md"
+    },
+    {
+      "id": "first-aid-tourniquet",
+      "title": "Ein Tourniquet anlegen",
+      "excerpt": "Wie man ein kommerzielles oder improvisiertes Tourniquet richtig anlegt, um lebensbedrohliche arterielle Blutungen zu stoppen.",
+      "category": "first-aid",
+      "tags": [
+        "erste-hilfe",
+        "blutung",
+        "tourniquet",
+        "trauma",
+        "arteriell"
+      ],
+      "contentPath": "first-aid/tourniquet/content.md"
+    },
+    {
+      "id": "food-cleaning-fish",
+      "title": "Fisch ausnehmen und filetieren",
+      "excerpt": "Eine Schritt-für-Schritt-Anleitung zur Verarbeitung eines frisch gefangenen Fisches für die Zubereitung in der Wildnis.",
+      "category": "food",
+      "tags": [
+        "nahrung",
+        "fisch",
+        "ausnehmen",
+        "filetieren",
+        "fleisch",
+        "zubereitung"
+      ],
+      "contentPath": "food/cleaning-fish/content.md"
+    },
+    {
+      "id": "general-hygiene",
+      "title": "Wildnis-Hygiene",
+      "excerpt": "Sich in Überlebenssituationen sauber zu halten, ist entscheidend, um Infektionen, Wundreiben und Krankheiten zu verhindern.",
+      "category": "general",
+      "tags": [
+        "allgemein",
+        "hygiene",
+        "gesundheit",
+        "reinigung",
+        "sanitär",
+        "seife"
+      ],
+      "contentPath": "general/hygiene/content.md"
+    },
+    {
+      "id": "navigation-pacing",
+      "title": "Schrittzählen und Entfernungen",
+      "excerpt": "Wie du die zurückgelegte Entfernung durch Schrittzählen und Ranger-Beads präzise erfassen kannst.",
+      "category": "navigation",
+      "tags": [
+        "navigation",
+        "schrittzählen",
+        "entfernung",
+        "tracking",
+        "ranger-beads"
+      ],
+      "contentPath": "navigation/pacing/content.md"
+    },
+    {
+      "id": "fire-banking",
+      "title": "Ein Feuer abdecken (Banking)",
+      "excerpt": "Wie du deine heißen Kohlen über Nacht aufbewahrst, um dein Feuer am Morgen sofort wieder zu entfachen.",
+      "category": "fire",
+      "tags": [
+        "feuer",
+        "kohlen",
+        "abdecken",
+        "banking",
+        "über-nacht",
+        "hitze"
+      ],
+      "contentPath": "fire/banking/content.md"
+    },
+    {
+      "id": "shelter-hammock",
+      "title": "Hängematten-Sicherheit & Aufbau",
+      "excerpt": "Wie man eine Überlebens-Hängematte richtig aufbaut und dabei tödliche herabfallende Äste vermeidet.",
+      "category": "shelter",
+      "tags": [
+        "unterstand",
+        "hängematte",
+        "bäume",
+        "witwenmacher",
+        "aufbau"
+      ],
+      "contentPath": "shelter/hammock/content.md"
+    },
+    {
+      "id": "first-aid-frostbite",
+      "title": "Erfrierungen behandeln",
+      "excerpt": "Wie man gefrorenes Gewebe richtig auftaut, ohne schwere und dauerhafte Schäden zu verursachen.",
+      "category": "first-aid",
+      "tags": [
+        "erste-hilfe",
+        "erfrierungen",
+        "kälte",
+        "winter",
+        "gefrieren"
+      ],
+      "contentPath": "first-aid/frostbite/content.md"
+    },
+    {
+      "id": "food-toxic-algae",
+      "title": "Giftige Algen & Rote Flut",
+      "excerpt": "Wie man gefährliche, mit Cyanobakterien verseuchte Gewässer erkennt, bei denen weder Filtern noch Abkochen hilft.",
+      "category": "water",
+      "tags": [
+        "wasser",
+        "algen",
+        "giftig",
+        "cyanobakterien",
+        "gift",
+        "nahrungssuche"
+      ],
+      "contentPath": "water/toxic-algae/content.md"
+    },
+    {
+      "id": "weather-lightning",
+      "title": "Blitzschlag-Sicherheit",
+      "excerpt": "Wie man das Risiko eines Blitzeinschlags minimiert, wenn man ohne Schutz in ein Gewitter gerät.",
+      "category": "weather",
+      "tags": [
+        "wetter",
+        "blitz",
+        "gewitter",
+        "sicherheit",
+        "elektrizität"
+      ],
+      "contentPath": "weather/lightning/content.md"
+    },
+    {
+      "id": "weather-avalanche",
+      "title": "Lawinen-Überleben",
+      "excerpt": "Lawinengelände erkennen und wissen, was zu tun ist, wenn man von einer Lawine erfasst wird.",
+      "category": "weather",
+      "tags": [
+        "wetter",
+        "lawine",
+        "schnee",
+        "winter",
+        "berge"
+      ],
+      "contentPath": "weather/avalanche/content.md"
+    },
+    {
+      "id": "first-aid-tourniquet",
+      "title": "Ein Tourniquet anlegen",
+      "excerpt": "Wie man ein kommerzielles oder improvisiertes Tourniquet richtig anlegt, um lebensbedrohliche arterielle Blutungen zu stoppen.",
+      "category": "first-aid",
+      "tags": [
+        "erste-hilfe",
+        "blutung",
+        "tourniquet",
+        "trauma",
+        "arteriell"
+      ],
+      "contentPath": "first-aid/tourniquet/content.md"
+    },
+    {
+      "id": "food-cleaning-fish",
+      "title": "Fisch ausnehmen und filetieren",
+      "excerpt": "Eine Schritt-für-Schritt-Anleitung zur Verarbeitung eines frisch gefangenen Fisches für die Zubereitung in der Wildnis.",
+      "category": "food",
+      "tags": [
+        "nahrung",
+        "fisch",
+        "ausnehmen",
+        "filetieren",
+        "fleisch",
+        "zubereitung"
+      ],
+      "contentPath": "food/cleaning-fish/content.md"
+    },
+    {
+      "id": "general-hygiene",
+      "title": "Wildnis-Hygiene",
+      "excerpt": "Sich in Überlebenssituationen sauber zu halten, ist entscheidend, um Infektionen, Wundreiben und Krankheiten zu verhindern.",
+      "category": "general",
+      "tags": [
+        "allgemein",
+        "hygiene",
+        "gesundheit",
+        "reinigung",
+        "sanitär",
+        "seife"
+      ],
+      "contentPath": "general/hygiene/content.md"
+    },
+    {
+      "id": "navigation-pacing",
+      "title": "Schrittzählen und Entfernungen",
+      "excerpt": "Wie du die zurückgelegte Entfernung durch Schrittzählen und Ranger-Beads präzise erfassen kannst.",
+      "category": "navigation",
+      "tags": [
+        "navigation",
+        "schrittzählen",
+        "entfernung",
+        "tracking",
+        "ranger-beads"
+      ],
+      "contentPath": "navigation/pacing/content.md"
+    },
+    {
+      "id": "fire-banking",
+      "title": "Ein Feuer abdecken (Banking)",
+      "excerpt": "Wie du deine heißen Kohlen über Nacht aufbewahrst, um dein Feuer am Morgen sofort wieder zu entfachen.",
+      "category": "fire",
+      "tags": [
+        "feuer",
+        "kohlen",
+        "abdecken",
+        "banking",
+        "über-nacht",
+        "hitze"
+      ],
+      "contentPath": "fire/banking/content.md"
+    },
+    {
+      "id": "shelter-hammock",
+      "title": "Hängematten-Sicherheit & Aufbau",
+      "excerpt": "Wie man eine Überlebens-Hängematte richtig aufbaut und dabei tödliche herabfallende Äste vermeidet.",
+      "category": "shelter",
+      "tags": [
+        "unterstand",
+        "hängematte",
+        "bäume",
+        "witwenmacher",
+        "aufbau"
+      ],
+      "contentPath": "shelter/hammock/content.md"
+    },
+    {
+      "id": "first-aid-frostbite",
+      "title": "Erfrierungen behandeln",
+      "excerpt": "Wie man gefrorenes Gewebe richtig auftaut, ohne schwere und dauerhafte Schäden zu verursachen.",
+      "category": "first-aid",
+      "tags": [
+        "erste-hilfe",
+        "erfrierungen",
+        "kälte",
+        "winter",
+        "gefrieren"
+      ],
+      "contentPath": "first-aid/frostbite/content.md"
+    },
+    {
+      "id": "food-toxic-algae",
+      "title": "Giftige Algen & Rote Flut",
+      "excerpt": "Wie man gefährliche, mit Cyanobakterien verseuchte Gewässer erkennt, bei denen weder Filtern noch Abkochen hilft.",
+      "category": "water",
+      "tags": [
+        "wasser",
+        "algen",
+        "giftig",
+        "cyanobakterien",
+        "gift",
+        "nahrungssuche"
+      ],
+      "contentPath": "water/toxic-algae/content.md"
     }
   ]
 }
