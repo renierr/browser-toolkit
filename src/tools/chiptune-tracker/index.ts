@@ -5,9 +5,12 @@ import {
   deserializeState,
   type TrackerState,
   type Instrument,
+  type CellData,
+  type Pattern,
 } from './tracker-state';
 import { exportToWav } from './wav-exporter';
 import { downloadFile } from '../../js/file-utils';
+import { parseModFile } from './mod-parser';
 
 const CHANNELS = 4;
 const ROWS = 64;
@@ -56,6 +59,8 @@ export default function init(): () => void {
     const btnSaveProject = document.getElementById('btn-save-project') as HTMLButtonElement;
     const btnLoadProject = document.getElementById('btn-load-project') as HTMLButtonElement;
     const fileLoad = document.getElementById('file-load') as HTMLInputElement;
+    const btnLoadMod = document.getElementById('btn-load-mod') as HTMLButtonElement;
+    const fileLoadMod = document.getElementById('file-load-mod') as HTMLInputElement;
     const btnAddPattern = document.getElementById('btn-add-pattern') as HTMLButtonElement;
     const btnRemovePattern = document.getElementById('btn-remove-pattern') as HTMLButtonElement;
     const btnClearCell = document.getElementById('btn-clear-cell') as HTMLButtonElement;
@@ -73,6 +78,8 @@ export default function init(): () => void {
     btnSaveProject.addEventListener('click', handleSaveProject);
     btnLoadProject.addEventListener('click', () => fileLoad.click());
     fileLoad.addEventListener('change', handleLoadProject);
+    btnLoadMod.addEventListener('click', () => fileLoadMod.click());
+    fileLoadMod.addEventListener('change', handleLoadMod);
     btnAddPattern.addEventListener('click', handleAddPattern);
     btnRemovePattern.addEventListener('click', handleRemovePattern);
     btnClearCell.addEventListener('click', handleClearCell);
@@ -635,5 +642,114 @@ export default function init(): () => void {
     };
     reader.readAsText(file);
     input.value = '';
+  }
+
+  function handleLoadMod(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const buffer = reader.result as ArrayBuffer;
+      try {
+        const modFile = parseModFile(buffer);
+        const loadedState = convertModToState(modFile);
+        state = loadedState;
+        audio.setState(state);
+        renderAll();
+      } catch (err) {
+        console.error('[Tracker] Failed to parse MOD file:', err);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    input.value = '';
+  }
+
+  function convertModToState(modFile: ReturnType<typeof parseModFile>): TrackerState {
+    const channels = modFile.channels;
+    const rowsPerPattern = 64;
+
+    const instruments = modFile.samples
+      .filter((s) => s.length > 0)
+      .slice(0, 8)
+      .map((sample, idx) => ({
+        id: idx + 1,
+        name: sample.name || `Sample ${idx + 1}`,
+        waveform: 'square' as const,
+        attack: 0.01,
+        decay: 0.1,
+        sustain: 0.7,
+        release: 0.2,
+        duty: 50,
+      }));
+
+    while (instruments.length < 8) {
+      instruments.push({
+        id: instruments.length + 1,
+        name: `Instrument ${instruments.length + 1}`,
+        waveform: 'square',
+        attack: 0.01,
+        decay: 0.1,
+        sustain: 0.7,
+        release: 0.2,
+        duty: 50,
+      });
+    }
+
+    const patterns: Pattern[] = [];
+    for (const modPattern of modFile.patterns) {
+      const rows: CellData[][] = [];
+      for (let row = 0; row < 64; row++) {
+        const rowData: CellData[] = [];
+        for (let ch = 0; ch < channels; ch++) {
+          const modNote = modPattern.rows[row]?.[ch];
+          rowData.push({
+            note: modNote?.note ?? null,
+            octave: modNote?.octave ?? null,
+            instrument: modNote?.instrument ?? null,
+            volume: modNote?.volume ?? null,
+          });
+        }
+        while (rowData.length < 4) {
+          rowData.push({ note: null, octave: null, instrument: null, volume: null });
+        }
+        rows.push(rowData);
+      }
+      patterns.push({ id: patterns.length, rows });
+    }
+
+    while (patterns.length < 8) {
+      const rows: CellData[][] = [];
+      for (let row = 0; row < rowsPerPattern; row++) {
+        const rowData: CellData[] = [];
+        for (let ch = 0; ch < 4; ch++) {
+          rowData.push({ note: null, octave: null, instrument: null, volume: null });
+        }
+        rows.push(rowData);
+      }
+      patterns.push({ id: patterns.length, rows });
+    }
+
+    const modSamples = modFile.samples.map((s) => s.data);
+
+    const order = modFile.sequence.slice(0, 128);
+    while (order.length < 8) {
+      order.push(order.length);
+    }
+
+    return {
+      bpm: modFile.defaultBpm,
+      channels,
+      rowsPerPattern,
+      instruments,
+      patterns,
+      order,
+      currentPattern: 0,
+      currentRow: 0,
+      isPlaying: false,
+      isLooping: true,
+      modSamples,
+    };
   }
 }

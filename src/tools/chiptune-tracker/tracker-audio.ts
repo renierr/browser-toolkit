@@ -8,6 +8,7 @@ type Voice = {
   note: number;
   instrument: Instrument | null;
   releaseTime: number;
+  sourceNode?: AudioBufferSourceNode | null;
 };
 
 export class TrackerAudio {
@@ -181,6 +182,14 @@ export class TrackerAudio {
     const freq = noteToFrequency(cell.note, cell.octave);
     if (freq <= 0) return;
 
+    const modSampleIdx = instrumentId - 1;
+    const hasModSample = this.state.modSamples && this.state.modSamples[modSampleIdx]?.length > 0;
+
+    if (hasModSample) {
+      this.playSample(modSampleIdx, freq, time, cell.volume, instrument);
+      return;
+    }
+
     const voice = this.getFreeVoice();
     if (!voice) return;
 
@@ -193,6 +202,51 @@ export class TrackerAudio {
     } else {
       this.playTone(voice, freq, time, cell.volume, instrument);
     }
+  }
+
+  private playSample(
+    sampleIdx: number,
+    freq: number,
+    time: number,
+    volume: number | null,
+    _instrument: Instrument
+  ): void {
+    if (!this.audioContext || !this.state?.modSamples) return;
+
+    const sampleData = this.state.modSamples[sampleIdx];
+    if (!sampleData || sampleData.length === 0) return;
+
+    const voice = this.getFreeVoice();
+    if (!voice) return;
+
+    voice.active = true;
+    voice.note = freq;
+
+    const buffer = this.audioContext.createBuffer(
+      1,
+      sampleData.length,
+      this.audioContext.sampleRate
+    );
+    const channelData = buffer.getChannelData(0);
+    channelData.set(sampleData);
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+
+    const baseFreq = 8363;
+    const playbackRate = freq / baseFreq;
+    source.playbackRate.value = playbackRate;
+
+    const vol = volume !== null ? volume / 64 : 0.8;
+    voice.gain.gain.setValueAtTime(vol, time);
+    voice.gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+
+    source.connect(voice.gain);
+    source.start(time);
+    source.stop(time + 0.5);
+
+    voice.sourceNode = source;
+    voice.releaseTime = time + 0.5;
   }
 
   private playTone(
@@ -363,13 +417,21 @@ export class TrackerAudio {
   }
 
   previewNote(instrument: Instrument, note: string, octave: number): void {
-    if (!this.audioContext) return;
+    if (!this.audioContext || !this.state) return;
     if (this.audioContext.state === 'suspended') {
       this.audioContext.resume();
     }
 
     const freq = noteToFrequency(note, octave);
     if (freq <= 0) return;
+
+    const modSampleIdx = instrument.id - 1;
+    const hasModSample = this.state.modSamples && this.state.modSamples[modSampleIdx]?.length > 0;
+
+    if (hasModSample) {
+      this.previewSample(modSampleIdx, freq);
+      return;
+    }
 
     const osc = this.audioContext.createOscillator();
     const oscType =
@@ -400,6 +462,36 @@ export class TrackerAudio {
 
     osc.start(now);
     osc.stop(now + attack + decay + release + 0.1);
+  }
+
+  private previewSample(sampleIdx: number, freq: number): void {
+    if (!this.audioContext || !this.state?.modSamples) return;
+
+    const sampleData = this.state.modSamples[sampleIdx];
+    if (!sampleData || sampleData.length === 0) return;
+
+    const buffer = this.audioContext.createBuffer(
+      1,
+      sampleData.length,
+      this.audioContext.sampleRate
+    );
+    const channelData = buffer.getChannelData(0);
+    channelData.set(sampleData);
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = buffer;
+
+    const baseFreq = 8363;
+    source.playbackRate.value = freq / baseFreq;
+
+    const gain = this.audioContext.createGain();
+    gain.gain.value = 0.4;
+
+    source.connect(gain);
+    gain.connect(this.masterGain!);
+
+    source.start();
+    source.stop(0.5);
   }
 
   cleanup(): void {

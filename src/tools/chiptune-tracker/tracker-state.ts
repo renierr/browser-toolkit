@@ -9,6 +9,9 @@ export interface Instrument {
   sustain: number;
   release: number;
   duty: number;
+  sampleData?: Float32Array;
+  sampleLoopStart?: number;
+  sampleLoopLength?: number;
 }
 
 export interface CellData {
@@ -34,6 +37,7 @@ export interface TrackerState {
   currentRow: number;
   isPlaying: boolean;
   isLooping: boolean;
+  modSamples?: Float32Array[];
 }
 
 export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
