@@ -15,13 +15,26 @@ interface ChannelState {
   vibratoPhase: number;
   vibratoSpeed: number;
   vibratoDepth: number;
+  vibratoWaveform: number;
+
+  tremoloPhase: number;
+  tremoloSpeed: number;
+  tremoloDepth: number;
+  tremoloWaveform: number;
 
   slideSpeed: number;
   volSlideSpeed: number;
 
+  fineSlideSpeed: number;
+
   arpeggioNotes: number[];
   sampleOffset: number;
-  baseVolume: number; // mapped channel base vol
+  baseVolume: number;
+
+  retrigCounter: number;
+  noteDelayCounter: number;
+
+  envTick: number;
 
   sample: Sample | null;
 
@@ -95,11 +108,20 @@ export class ChiptunePlayer {
         vibratoPhase: 0,
         vibratoSpeed: 0,
         vibratoDepth: 0,
+        vibratoWaveform: 0,
+        tremoloPhase: 0,
+        tremoloSpeed: 0,
+        tremoloDepth: 0,
+        tremoloWaveform: 0,
         slideSpeed: 0,
         volSlideSpeed: 0,
+        fineSlideSpeed: 0,
         arpeggioNotes: [],
         sampleOffset: 0,
         baseVolume: 64,
+        retrigCounter: 0,
+        noteDelayCounter: 0,
+        envTick: 0,
         sample: null,
         source: null,
         gain: null,
@@ -281,6 +303,67 @@ export class ChiptunePlayer {
           chState.volume = Math.min(chState.effectParam, 64);
         }
 
+        // Volume column effects (XM)
+        if (cell.volumeColumn !== null) {
+          const vc = cell.volumeColumn;
+          // 0x60-0x6f: Volume slide down
+          if (vc >= 0x60 && vc <= 0x6f) {
+            chState.volume = Math.max(chState.volume - (vc & 0x0f), 0);
+          }
+          // 0x70-0x7f: Volume slide up
+          else if (vc >= 0x70 && vc <= 0x7f) {
+            chState.volume = Math.min(chState.volume + (vc & 0x0f), 64);
+          }
+          // 0x80-0x8f: Fine volume slide down
+          else if (vc >= 0x80 && vc <= 0x8f) {
+            if (this.currentTick === 0) chState.volume = Math.max(chState.volume - (vc & 0x0f), 0);
+          }
+          // 0x90-0x9f: Fine volume slide up
+          else if (vc >= 0x90 && vc <= 0x9f) {
+            if (this.currentTick === 0) chState.volume = Math.min(chState.volume + (vc & 0x0f), 64);
+          }
+          // 0xa0-0xaf: Set vibrato speed
+          else if (vc >= 0xa0 && vc <= 0xaf) {
+            chState.vibratoSpeed = (vc & 0x0f) * 2;
+          }
+          // 0xb0-0xbf: Vibrato
+          else if (vc >= 0xb0 && vc <= 0xbf) {
+            if (vc & 0x0f) chState.vibratoDepth = vc & 0x0f;
+          }
+          // 0xc0-0xcf: Set panning
+          else if (vc >= 0xc0 && vc <= 0xcf) {
+            chState.panning = (vc & 0x0f) * 16 + 8;
+          }
+          // 0xd0-0xdf: Panning slide left
+          else if (vc >= 0xd0 && vc <= 0xdf) {
+            chState.panning = Math.max(chState.panning - (vc & 0x0f) * 4, 0);
+          }
+          // 0xe0-0xef: Panning slide right
+          else if (vc >= 0xe0 && vc <= 0xef) {
+            chState.panning = Math.min(chState.panning + (vc & 0x0f) * 4, 255);
+          }
+          // 0xf0-0xff: Tone portamento
+          else if (vc >= 0xf0 && vc <= 0xff) {
+            // Already handled by effect 3/5
+          }
+        }
+
+        // Handle ED note delay (tick > 0 means delay)
+        if (chState.effect === 0x0e && ((chState.effectParam >> 4) & 0x0f) === 0xd) {
+          const delay = chState.effectParam & 0x0f;
+          if (delay > 0 && this.currentTick !== delay) {
+            shouldTrigger = false;
+          }
+        }
+
+        // Handle E9 retrig
+        if (chState.effect === 0x0e && ((chState.effectParam >> 4) & 0x0f) === 0x9) {
+          const retrigSpeed = chState.effectParam & 0x0f;
+          if (retrigSpeed > 0 && this.currentTick > 0 && this.currentTick % retrigSpeed === 0) {
+            shouldTrigger = true;
+          }
+        }
+
         // Parse global tick-based fx memory mapping
         this.parseEffectTick0(chState, chState.effect, chState.effectParam);
 
@@ -318,18 +401,44 @@ export class ChiptunePlayer {
         }
 
         if (chState.vibratoDepth > 0) {
-          const vibratoMod =
-            Math.sin(chState.vibratoPhase * Math.PI * 2) * (chState.vibratoDepth / 64) * 0.05;
+          let vibratoMod = 0;
+          const wf = chState.vibratoWaveform;
+          if (wf === 0 || wf === 3) {
+            vibratoMod = Math.sin(chState.vibratoPhase * Math.PI * 2);
+          } else if (wf === 1) {
+            vibratoMod = ((chState.vibratoPhase * 64) % 1) * 2 - 1;
+          } else if (wf === 2) {
+            vibratoMod = vibratoMod >= 0 ? 1 : -1;
+          }
+          vibratoMod *= (chState.vibratoDepth / 64) * 0.05;
           tickFreq *= 1 + vibratoMod;
           chState.vibratoPhase += chState.vibratoSpeed / 256;
         }
 
         let playbackRate = tickFreq / this.audioContext.sampleRate;
-        playbackRate = Math.max(0.01, Math.min(playbackRate, 10)); // Safety clamp
+        playbackRate = Math.max(0.01, Math.min(playbackRate, 10));
 
         chState.source.playbackRate.setValueAtTime(playbackRate, time);
 
         let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * this.volume;
+
+        // Tremolo
+        if (chState.tremoloDepth > 0) {
+          let tremoloMod = 0;
+          const wf = chState.tremoloWaveform;
+          if (wf === 0 || wf === 3) {
+            tremoloMod = Math.sin(chState.tremoloPhase * Math.PI * 2);
+          } else if (wf === 1) {
+            tremoloMod = ((chState.tremoloPhase * 64) % 1) * 2 - 1;
+          } else if (wf === 2) {
+            tremoloMod = tremoloMod >= 0 ? 1 : -1;
+          }
+          tremoloMod = 1 + tremoloMod * (chState.tremoloDepth / 64);
+          finalVol *= tremoloMod;
+          chState.tremoloPhase += chState.tremoloSpeed / 256;
+        }
+
+        finalVol = Math.max(0, Math.min(finalVol, 1));
         chState.gain.gain.setValueAtTime(finalVol, time);
 
         activeChannels[c] = finalVol > 0.01;
@@ -431,31 +540,119 @@ export class ChiptunePlayer {
 
   private parseEffectTick0(chState: ChannelState, effect: number, param: number): void {
     chState.arpeggioNotes = [];
-    if (effect === 0x09) chState.sampleOffset = param * 256;
+
+    // Effect 0: Arpeggio
+    if (effect === 0x00 && param > 0) {
+      chState.arpeggioNotes = [0, (param >> 4) & 0x0f, param & 0x0f];
+    }
+    // Effect 1: Porta Up
+    else if (effect === 0x01) {
+      if (param > 0) chState.slideSpeed = param;
+    }
+    // Effect 2: Porta Down
+    else if (effect === 0x02) {
+      if (param > 0) chState.slideSpeed = param;
+    }
+    // Effect 3: Porta to Note
+    else if (effect === 0x03) {
+      if (param > 0) chState.slideSpeed = param;
+    }
+    // Effect 4: Vibrato
     else if (effect === 0x04) {
       if (param & 0x0f) chState.vibratoDepth = param & 0x0f;
       if (param & 0xf0) chState.vibratoSpeed = (param >> 4) * 2;
-    } else if (effect === 0x00 && param > 0) {
-      chState.arpeggioNotes = [0, (param >> 4) & 0x0f, param & 0x0f];
-    } else if (effect === 0x01 || effect === 0x02) {
-      if (param > 0) chState.slideSpeed = param;
-    } else if (effect === 0x0a) {
-      // Volume slide
-      if (param > 0) chState.volSlideSpeed = param;
-    } else if (effect === 0x03) {
-      if (param > 0) chState.slideSpeed = param;
     }
+    // Effect 5: Porta + Volume Slide
+    else if (effect === 0x05) {
+      if (param > 0) chState.slideSpeed = param;
+      if (param > 0) chState.volSlideSpeed = param;
+    }
+    // Effect 6: Vibrato + Volume Slide
+    else if (effect === 0x06) {
+      if (param > 0) chState.volSlideSpeed = param;
+    }
+    // Effect 7: Tremolo
+    else if (effect === 0x07) {
+      if (param & 0x0f) chState.tremoloDepth = param & 0x0f;
+      if (param & 0xf0) chState.tremoloSpeed = (param >> 4) * 2;
+    }
+    // Effect 8: Set Panning
+    else if (effect === 0x08) {
+      chState.panning = param;
+    }
+    // Effect 9: Sample Offset
+    else if (effect === 0x09) {
+      chState.sampleOffset = param * 256;
+    }
+    // Effect A: Volume Slide
+    else if (effect === 0x0a) {
+      if (param > 0) chState.volSlideSpeed = param;
+    }
+    // Effect B: Position Jump
+    // Effect C: Set Volume
+    else if (effect === 0x0c) {
+      chState.volume = Math.min(param, 64);
+    }
+    // Effect D: Pattern Break
+    // Effect E: Extended effects
+    else if (effect === 0x0e) {
+      const eSub = (param >> 4) & 0x0f;
+      const eParam = param & 0x0f;
+      // E1: Fine Porta Up
+      if (eSub === 0x1) {
+        if (eParam > 0) chState.fineSlideSpeed = eParam;
+      }
+      // E2: Fine Porta Down
+      else if (eSub === 0x2) {
+        if (eParam > 0) chState.fineSlideSpeed = eParam;
+      }
+      // E4: Set Vibrato Waveform
+      else if (eSub === 0x4) {
+        chState.vibratoWaveform = eParam & 3;
+      }
+      // E7: Set Tremolo Waveform
+      else if (eSub === 0x7) {
+        chState.tremoloWaveform = eParam & 3;
+      }
+      // E9: Retrig Note
+      else if (eSub === 0x9) {
+        chState.retrigCounter = 0;
+      }
+      // EA: Fine Volume Slide Up
+      else if (eSub === 0xa) {
+        if (eParam > 0) chState.volume = Math.min(chState.volume + eParam, 64);
+      }
+      // EB: Fine Volume Slide Down
+      else if (eSub === 0xb) {
+        if (eParam > 0) chState.volume = Math.max(chState.volume - eParam, 0);
+      }
+      // EC: Note Cut
+      else if (eSub === 0xc) {
+        if (eParam === 0) chState.volume = 0;
+      }
+      // ED: Note Delay
+      else if (eSub === 0xd) {
+        chState.noteDelayCounter = eParam;
+      }
+      // EE: Pattern Delay
+      else if (eSub === 0xe) {
+        // Handled in scheduler
+      }
+    }
+    // Effect F: Set Speed
   }
 
   private parseEffectContinuous(chState: ChannelState, effect: number): void {
+    // Effect 1: Porta Up
     if (effect === 0x01) {
-      // Porta Up (Decrease Period = Increase Hz)
-      chState.period = Math.max(1, chState.period - chState.slideSpeed * 4); // x4 multiplier common in FT2
-    } else if (effect === 0x02) {
-      // Porta Down
+      chState.period = Math.max(1, chState.period - chState.slideSpeed * 4);
+    }
+    // Effect 2: Porta Down
+    else if (effect === 0x02) {
       chState.period += chState.slideSpeed * 4;
-    } else if (effect === 0x03 || effect === 0x05) {
-      // Tone Portamento
+    }
+    // Effect 3/5: Tone Portamento
+    else if (effect === 0x03 || effect === 0x05) {
       if (chState.period < chState.targetPeriod) {
         chState.period += chState.slideSpeed * 4;
         if (chState.period > chState.targetPeriod) chState.period = chState.targetPeriod;
@@ -464,13 +661,39 @@ export class ChiptunePlayer {
         if (chState.period < chState.targetPeriod) chState.period = chState.targetPeriod;
       }
     }
-
-    // Volume Slides
-    if (effect === 0x0a || effect === 0x05 || effect === 0x06) {
+    // Effect 4: Vibrato (handled in frequency calculation)
+    // Effect 6: Vibrato + Volume Slide
+    // Effect 7: Tremolo
+    else if (effect === 0x07) {
+      // Handled in volume calculation
+    }
+    // Effect A: Volume Slide
+    else if (effect === 0x0a || effect === 0x05 || effect === 0x06) {
       let spd = chState.volSlideSpeed;
       if (spd >> 4 > 0 && (spd & 0x0f) === 0) chState.volume += spd >> 4;
       else if (spd >> 4 === 0 && (spd & 0x0f) > 0) chState.volume -= spd & 0x0f;
       chState.volume = Math.max(0, Math.min(64, chState.volume));
+    }
+    // Effect E: Extended
+    else if (effect === 0x0e) {
+      const eSub = (chState.effectParam >> 4) & 0x0f;
+      const eParam = chState.effectParam & 0x0f;
+      // E1: Fine Porta Up
+      if (eSub === 0x1) {
+        chState.period = Math.max(1, chState.period - chState.fineSlideSpeed * 4);
+      }
+      // E2: Fine Porta Down
+      else if (eSub === 0x2) {
+        chState.period += chState.fineSlideSpeed * 4;
+      }
+      // EC: Note Cut
+      else if (eSub === 0xc) {
+        if (this.currentTick === eParam) chState.volume = 0;
+      }
+      // ED: Note Delay
+      else if (eSub === 0xd) {
+        // Handled in scheduler
+      }
     }
   }
 

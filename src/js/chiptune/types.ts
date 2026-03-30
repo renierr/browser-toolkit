@@ -18,6 +18,10 @@ export interface Sample {
   data: Float32Array;
   baseNote?: number; // Used for XM specific relative note mappings
   c5speed?: number; // Base frequency (IT)
+  vibratoType?: number;
+  vibratoSweep?: number;
+  vibratoDepth?: number;
+  vibratoRate?: number;
 }
 
 export interface Instrument {
@@ -34,6 +38,7 @@ export interface Note {
   period: number | null; // Raw exact tracker period, if standard.
   instrument: number; // 1-128, 0=Empty
   volume: number | null; // 0-64
+  volumeColumn: number | null; // Raw volume column byte for XM
   effect: number; // 0-255 (effect type)
   effectParam: number; // 0-255 (effect parameter)
 }

@@ -1,4 +1,4 @@
-import type { ModuleFile, Instrument, Note, Pattern, Sample } from './types';
+import type { ModuleFile, Instrument, Note, Pattern, Sample, Envelope } from './types';
 import { BaseParser } from './base-parser';
 
 export class XmParser extends BaseParser {
@@ -68,10 +68,9 @@ export class XmParser extends BaseParser {
         }
 
         // Map volume column
-        let mappedVol = null;
+        let mappedVol: number | null = null;
         if (volume !== null) {
           if (volume >= 0x10 && volume <= 0x50) mappedVol = volume - 0x10;
-          // Vol pan, effects omitted for simplicity, left mapped to volume
         }
 
         rowData.push({
@@ -79,6 +78,7 @@ export class XmParser extends BaseParser {
           period: null,
           instrument,
           volume: mappedVol,
+          volumeColumn: volume,
           effect,
           effectParam,
         });
@@ -105,10 +105,69 @@ export class XmParser extends BaseParser {
 
       let sampleMap = new Array(96).fill(0);
       let volFadeout = 0;
+      let volumeEnv: Envelope | undefined;
+      let panningEnv: Envelope | undefined;
+      let vibratoType = 0;
+      let vibratoSweep = 0;
+      let vibratoDepth = 0;
+      let vibratoRate = 0;
+
       if (numSamples > 0) {
-        this.readU32LE(); // sh size
+        this.readU32LE(); // sh size (should be 40)
         for (let z = 0; z < 96; z++) sampleMap[z] = this.readU8(); // sample map
-        // read envelopes here ideally, skip for now.
+
+        // Volume envelope (12 points, 2 bytes each: tick + value)
+        const volEnvPoints: { tick: number; value: number }[] = [];
+        for (let z = 0; z < 12; z++) {
+          const tick = this.readU16LE();
+          const value = this.readU16LE();
+          if (tick !== 0 || value !== 0) volEnvPoints.push({ tick, value });
+        }
+        // Panning envelope
+        const panEnvPoints: { tick: number; value: number }[] = [];
+        for (let z = 0; z < 12; z++) {
+          const tick = this.readU16LE();
+          const value = this.readU16LE();
+          if (tick !== 0 || value !== 0) panEnvPoints.push({ tick, value });
+        }
+
+        const volEnvNum = this.readU8();
+        const panEnvNum = this.readU8();
+        const volEnvSus = this.readU8();
+        const volEnvLoopStart = this.readU8();
+        const volEnvLoopEnd = this.readU8();
+        const panEnvSus = this.readU8();
+        const panEnvLoopStart = this.readU8();
+        const panEnvLoopEnd = this.readU8();
+        const volEnvType = this.readU8();
+        const panEnvType = this.readU8();
+        vibratoType = this.readU8();
+        vibratoSweep = this.readU8();
+        vibratoDepth = this.readU8();
+        vibratoRate = this.readU8();
+        volFadeout = this.readU16LE();
+        this.readU16LE(); // reserved
+
+        if (volEnvPoints.length > 0 && volEnvType & 1) {
+          volumeEnv = {
+            points: volEnvPoints.slice(0, volEnvNum || volEnvPoints.length),
+            sustainStart: volEnvSus,
+            sustainEnd: volEnvSus,
+            loopStart: volEnvLoopStart,
+            loopEnd: volEnvLoopEnd,
+            type: volEnvType,
+          };
+        }
+        if (panEnvPoints.length > 0 && panEnvType & 1) {
+          panningEnv = {
+            points: panEnvPoints.slice(0, panEnvNum || panEnvPoints.length),
+            sustainStart: panEnvSus,
+            sustainEnd: panEnvSus,
+            loopStart: panEnvLoopStart,
+            loopEnd: panEnvLoopEnd,
+            type: panEnvType,
+          };
+        }
       }
       // Accurately jump to the end of the Instrument Header using absolute starting position
       this.setPos(insStart + iSize);
@@ -194,7 +253,17 @@ export class XmParser extends BaseParser {
         samples,
         sampleMap,
         volumeFadeout: volFadeout,
+        volumeEnv,
+        panningEnv,
       });
+
+      // Store vibrato params on first sample for convenience
+      if (samples.length > 0) {
+        samples[0].vibratoType = vibratoType;
+        samples[0].vibratoSweep = vibratoSweep;
+        samples[0].vibratoDepth = vibratoDepth;
+        samples[0].vibratoRate = vibratoRate;
+      }
     }
 
     return {

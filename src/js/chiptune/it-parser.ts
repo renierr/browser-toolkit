@@ -234,6 +234,7 @@ export class ItParser extends BaseParser {
             period: null,
             instrument: 0,
             volume: null,
+            volumeColumn: null,
             effect: 0,
             effectParam: 0,
           });
@@ -286,12 +287,13 @@ export class ItParser extends BaseParser {
 
               row[ch] = {
                 note: logicalNote,
-                period: null, // Computed linearly dynamically
+                period: null,
                 instrument: hasInst ? chState[ch].inst || 0 : 0,
                 volume:
                   hasVol && chState[ch].vol !== null && chState[ch].vol <= 64
                     ? chState[ch].vol
                     : null,
+                volumeColumn: null,
                 effect: hasCmd ? chState[ch].cmd || 0 : 0,
                 effectParam: hasCmd ? chState[ch].param || 0 : 0,
               };

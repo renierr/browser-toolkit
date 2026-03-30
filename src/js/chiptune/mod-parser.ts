@@ -105,6 +105,7 @@ export class ModParser extends BaseParser {
             period: period === 0 ? null : period,
             instrument,
             volume,
+            volumeColumn: null,
             effect,
             effectParam,
           });
