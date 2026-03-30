@@ -27,6 +27,9 @@ interface ChannelState {
 
   fineSlideSpeed: number;
 
+  glissando: boolean;
+  glissandoNote: number;
+
   arpeggioNotes: number[];
   sampleOffset: number;
   baseVolume: number;
@@ -116,6 +119,8 @@ export class ChiptunePlayer {
         slideSpeed: 0,
         volSlideSpeed: 0,
         fineSlideSpeed: 0,
+        glissando: false,
+        glissandoNote: 0,
         arpeggioNotes: [],
         sampleOffset: 0,
         baseVolume: 64,
@@ -269,7 +274,9 @@ export class ChiptunePlayer {
         if (cell.instrument > 0 && cell.instrument <= this.module.instruments.length) {
           chState.instrument = cell.instrument;
           const inst = this.module.instruments[cell.instrument - 1];
-          if (inst) chState.baseVolume = inst.volumeFadeout !== undefined ? 64 : 64; // default
+          if (inst && inst.samples.length > 0) {
+            chState.baseVolume = inst.samples[0].volume;
+          }
         }
 
         // Note parsing
@@ -469,19 +476,20 @@ export class ChiptunePlayer {
   private assignSample(chState: ChannelState): void {
     if (!this.module || !chState.instrument) return;
     const inst = this.module.instruments[chState.instrument - 1];
-    if (!inst) return;
+    if (!inst || inst.samples.length === 0) return;
 
+    // For MOD: always use sample 0 (instruments don't have sample mapping)
+    // For XM/IT: use sampleMap if available
     let sampleIndex = 0;
-    if (chState.note && chState.note > 0 && chState.note <= 120) {
-      if (inst.sampleMap && inst.sampleMap.length >= chState.note) {
+    if (this.module.type !== 'MOD' && chState.note && chState.note > 0 && chState.note <= 96) {
+      if (inst.sampleMap && chState.note <= inst.sampleMap.length) {
         sampleIndex = inst.sampleMap[chState.note - 1];
       }
     }
-    if (sampleIndex < 0) {
-      chState.sample = null;
-      return;
+    if (sampleIndex < 0 || sampleIndex >= inst.samples.length) {
+      sampleIndex = 0;
     }
-    chState.sample = inst.samples[sampleIndex] || inst.samples[0] || null;
+    chState.sample = inst.samples[sampleIndex] || null;
     if (chState.sample) {
       chState.baseVolume = chState.sample.volume;
       chState.panning = chState.sample.panning;
@@ -606,6 +614,10 @@ export class ChiptunePlayer {
       else if (eSub === 0x2) {
         if (eParam > 0) chState.fineSlideSpeed = eParam;
       }
+      // E3: Set Glissando Control
+      else if (eSub === 0x3) {
+        chState.glissando = (eParam & 0x0f) !== 0;
+      }
       // E4: Set Vibrato Waveform
       else if (eSub === 0x4) {
         chState.vibratoWaveform = eParam & 3;
@@ -659,6 +671,24 @@ export class ChiptunePlayer {
       } else if (chState.period > chState.targetPeriod) {
         chState.period -= chState.slideSpeed * 4;
         if (chState.period < chState.targetPeriod) chState.period = chState.targetPeriod;
+      }
+      // Glissando: snap to nearest table note
+      if (
+        chState.glissando &&
+        this.module &&
+        this.module.type !== 'IT' &&
+        !this.module.linearFrequencies
+      ) {
+        let closestDist = Infinity;
+        let closestPeriod = chState.period;
+        for (const p of AMIGA_PERIOD_TABLE) {
+          const dist = Math.abs(p - chState.period);
+          if (dist < closestDist) {
+            closestDist = dist;
+            closestPeriod = p;
+          }
+        }
+        chState.period = closestPeriod;
       }
     }
     // Effect 4: Vibrato (handled in frequency calculation)
