@@ -168,7 +168,7 @@ export class TrackerAudio {
     }
 
     const speed = this.state.speed || 6;
-    const rowDuration = (speed * 2) / (this.state.bpm / 60);
+    const rowDuration = (speed * 5) / this.state.bpm;
     this.nextNoteTime += rowDuration;
 
     if (this.onPositionChange) {
@@ -291,7 +291,7 @@ export class TrackerAudio {
       this.state.modSamples && modSampleIdx >= 0 && this.state.modSamples[modSampleIdx]?.length > 0;
 
     const speed = this.state.speed || 6;
-    const rowDuration = (speed * 2) / (this.state.bpm / 60);
+    const rowDuration = (speed * 5) / this.state.bpm;
 
     if (chState.arpeggioNotes.length > 0) {
       const arpNote = chState.arpeggioNotes[chState.arpeggioIndex % 3];
@@ -426,7 +426,7 @@ export class TrackerAudio {
     const release = instrument.release;
 
     const speed = this.state.speed || 6;
-    const rowDuration = (speed * 2) / (this.state.bpm / 60);
+    const rowDuration = (speed * 5) / this.state.bpm;
     const noteDuration = rowDuration * 0.9;
 
     voice.gain.gain.setValueAtTime(0, now);

@@ -302,7 +302,7 @@ export default function init(): () => void {
     const container = document.getElementById('instrument-tabs') as HTMLElement;
     container.innerHTML = '';
 
-    const maxInstruments = Math.min(state.instruments.length, 20);
+    const maxInstruments = Math.min(state.instruments.length, 40);
     for (let i = 0; i < maxInstruments; i++) {
       const inst = state.instruments[i];
       const btn = document.createElement('button');
@@ -804,24 +804,23 @@ export default function init(): () => void {
     }
 
     const modSamples = modFile.samples.map((s) => s.data);
+    const modSampleCount = modFile.samples.length;
 
     for (let i = 0; i < BUILTIN_SAMPLES.length; i++) {
       const builtin = BUILTIN_SAMPLES[i];
-      if (instruments.length <= 31 + i) {
-        instruments.push({
-          id: 32 + i,
-          name: builtin.name,
-          waveform: 'square',
-          attack: 0.01,
-          decay: 0.1,
-          sustain: 0.7,
-          release: 0.2,
-          duty: 50,
-          sampleIndex: 31 + i,
-          sampleVolume: builtin.volume,
-          sampleData: builtin.data,
-        });
-      }
+      instruments.push({
+        id: modSampleCount + i + 1,
+        name: builtin.name,
+        waveform: 'square',
+        attack: 0.01,
+        decay: 0.1,
+        sustain: 0.7,
+        release: 0.2,
+        duty: 50,
+        sampleIndex: modSampleCount + i,
+        sampleVolume: builtin.volume,
+        sampleData: builtin.data,
+      });
       modSamples.push(builtin.data);
     }
 

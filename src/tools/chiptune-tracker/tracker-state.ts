@@ -1,3 +1,5 @@
+import { BUILTIN_SAMPLES } from './builtin-samples';
+
 export type WaveformType = 'square' | 'sawtooth' | 'triangle' | 'pulse' | 'noise';
 
 export interface Instrument {
@@ -167,9 +169,31 @@ export function createInitialState(): TrackerState {
   const rowsPerPattern = 64;
   const instruments = createDefaultInstruments();
 
+  for (let i = 0; i < BUILTIN_SAMPLES.length; i++) {
+    const builtin = BUILTIN_SAMPLES[i];
+    instruments.push({
+      id: 32 + i,
+      name: builtin.name,
+      waveform: 'square' as WaveformType,
+      attack: 0.01,
+      decay: 0.1,
+      sustain: 0.7,
+      release: 0.2,
+      duty: 50,
+      sampleIndex: i,
+      sampleVolume: builtin.volume,
+      sampleData: builtin.data,
+    });
+  }
+
   const patterns: Pattern[] = [];
   for (let i = 0; i < 8; i++) {
     patterns.push(createDefaultPattern(i, channels, rowsPerPattern));
+  }
+
+  const modSamples: Float32Array[] = [];
+  for (let i = 0; i < BUILTIN_SAMPLES.length; i++) {
+    modSamples.push(BUILTIN_SAMPLES[i].data);
   }
 
   return {
@@ -184,6 +208,7 @@ export function createInitialState(): TrackerState {
     currentRow: 0,
     isPlaying: false,
     isLooping: true,
+    modSamples,
   };
 }
 
