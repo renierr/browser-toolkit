@@ -174,7 +174,7 @@ export class TrackerAudio {
     }
 
     const speed = this.state.speed || 6;
-    const rowDuration = (speed * 5) / this.state.bpm;
+    const rowDuration = speed / 50;
     this.nextNoteTime += rowDuration;
 
     if (this.onPositionChange) {
@@ -336,8 +336,6 @@ export class TrackerAudio {
     if (freq <= 0) return;
 
     const finetune = instrument.sampleFinetune ?? 0;
-    const finetuneOffset = finetune * 0.5;
-    freq += finetuneOffset;
 
     const modSampleIdx = instrument.sampleIndex ?? instrumentId - 1;
     const hasModSample =
@@ -347,7 +345,7 @@ export class TrackerAudio {
       this.state.modSamples[modSampleIdx]?.length > 0;
 
     const speed = this.state.speed || 6;
-    const rowDuration = (speed * 5) / this.state.bpm;
+    const rowDuration = speed / 50;
 
     if (chState.arpeggioNotes.length > 0) {
       const arpNote = chState.arpeggioNotes[chState.arpeggioIndex % 3];
@@ -510,7 +508,7 @@ export class TrackerAudio {
     const release = instrument.release;
 
     const speed = this.state.speed || 6;
-    const rowDuration = (speed * 5) / this.state.bpm;
+    const rowDuration = speed / 50;
     const noteDuration = rowDuration * 0.9;
 
     voice.gain.gain.setValueAtTime(0, now);
@@ -555,12 +553,24 @@ export class TrackerAudio {
 
     for (const voice of this.voices) {
       if (!voice.active || (voice.releaseTime && now >= voice.releaseTime)) {
+        if (voice.osc) {
+          try {
+            voice.osc.stop();
+          } catch {}
+          voice.osc = null;
+        }
+        if (voice.sourceNode) {
+          try {
+            voice.sourceNode.stop();
+          } catch {}
+          voice.sourceNode = null;
+        }
         voice.active = true;
         return voice;
       }
     }
 
-    if (this.voices.length < 16) {
+    if (this.voices.length < 32) {
       if (!this.masterGain || !this.audioContext) return null;
       const gain = this.audioContext.createGain();
       gain.gain.value = 0;
@@ -577,7 +587,23 @@ export class TrackerAudio {
       return voice;
     }
 
-    return null;
+    const oldest = this.voices.reduce((oldest, v) =>
+      v.releaseTime < oldest.releaseTime ? v : oldest
+    );
+    if (oldest.osc) {
+      try {
+        oldest.osc.stop();
+      } catch {}
+      oldest.osc = null;
+    }
+    if (oldest.sourceNode) {
+      try {
+        oldest.sourceNode.stop();
+      } catch {}
+      oldest.sourceNode = null;
+    }
+    oldest.active = true;
+    return oldest;
   }
 
   private hasNotes(pattern: Pattern): boolean {
@@ -620,6 +646,12 @@ export class TrackerAudio {
         } catch {}
         voice.osc = null;
       }
+      if (voice.sourceNode) {
+        try {
+          voice.sourceNode.stop();
+        } catch {}
+        voice.sourceNode = null;
+      }
       voice.active = false;
     }
   }
@@ -640,6 +672,7 @@ export class TrackerAudio {
     if (freq <= 0) return;
 
     const modSampleIdx = instrument.sampleIndex ?? instrument.id - 1;
+
     const hasModSample =
       this.state.modSamples &&
       modSampleIdx >= 0 &&

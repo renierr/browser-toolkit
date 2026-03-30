@@ -313,6 +313,7 @@ export default function init(): () => void {
         selectedInstrument = inst.id;
         renderInstrumentTabs();
         updateInstrumentControls();
+        previewCurrentNote();
       });
       container.appendChild(btn);
     }
@@ -705,6 +706,12 @@ export default function init(): () => void {
         const loadedState = convertModToState(modFile);
         state = loadedState;
         audio.setState(state);
+
+        const bpmSlider = document.getElementById('bpm-slider') as HTMLInputElement;
+        const bpmDisplay = document.getElementById('bpm-display') as HTMLElement;
+        bpmSlider.value = state.bpm.toString();
+        bpmDisplay.textContent = state.bpm.toString();
+
         renderAll();
         updateModInfoDisplay();
       } catch (err) {
