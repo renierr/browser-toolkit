@@ -329,10 +329,14 @@ export class ChiptunePlayer {
       if (!inst) return;
       
       let sampleIndex = 0;
-      if (chState.note && chState.note > 0 && chState.note <= 96) {
+      if (chState.note && chState.note > 0 && chState.note <= 120) {
           if (inst.sampleMap && inst.sampleMap.length >= chState.note) {
               sampleIndex = inst.sampleMap[chState.note - 1];
           }
+      }
+      if (sampleIndex < 0) {
+          chState.sample = null;
+          return;
       }
       chState.sample = inst.samples[sampleIndex] || inst.samples[0] || null;
       if (chState.sample) {
