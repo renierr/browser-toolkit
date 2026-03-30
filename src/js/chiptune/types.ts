@@ -32,10 +32,10 @@ export interface Instrument {
 export interface Note {
   note: number | null; // 1-96 (C-1 to B-8), 97=KeyOff, null=Empty
   period: number | null; // Raw exact tracker period, if standard.
-  instrument: number;  // 1-128, 0=Empty
+  instrument: number; // 1-128, 0=Empty
   volume: number | null; // 0-64
-  effect: number;        // 0-255 (effect type)
-  effectParam: number;   // 0-255 (effect parameter)
+  effect: number; // 0-255 (effect type)
+  effectParam: number; // 0-255 (effect parameter)
 }
 
 export interface Pattern {
@@ -53,6 +53,7 @@ export interface ModuleFile {
   defaultSpeed: number;
   rowsPerPattern: number;
   linearFrequencies: boolean;
+  clock?: number; // Amiga clock frequency (PAL: 7093789.2, NTSC: 7159090.5)
 }
 
 // Helper for strings
@@ -71,21 +72,24 @@ export function readString(data: Uint8Array, offset: number, length: number): st
 
 // MOD Amiga periods table
 export const AMIGA_PERIOD_TABLE = [
-  1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907,
-  856,  808,  762,  720,  678,  640,  604,  570,  538,  508,  480,  453,
-  428,  404,  381,  360,  339,  320,  302,  285,  269,  254,  240,  226,
-  214,  202,  190,  180,  170,  160,  151,  143,  135,  127,  120,  113,
-  107,  101,  95,   90,   85,   80,   76,   71,   67,   64,   60,   57
+  1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907, 856, 808, 762, 720, 678,
+  640, 604, 570, 538, 508, 480, 453, 428, 404, 381, 360, 339, 320, 302, 285, 269, 254, 240, 226,
+  214, 202, 190, 180, 170, 160, 151, 143, 135, 127, 120, 113, 107, 101, 95, 90, 85, 80, 76, 71, 67,
+  64, 60, 57,
 ];
 
-export function periodToFrequencyAmiga(period: number, finetune: number = 0): number {
+export const PAL_CLOCK = 7093789.2;
+
+export function periodToFrequencyAmiga(
+  period: number,
+  finetune: number = 0,
+  clock: number = PAL_CLOCK
+): number {
   if (period <= 0) return 0;
-  // MOD finetune adjusts period slightly
   let adjustedPeriod = period;
   if (finetune !== 0) {
     adjustedPeriod = period * Math.pow(2, -finetune / (12 * 8));
   }
-  const clock = 7093789.2; // PAL clock
   return clock / (adjustedPeriod * 2);
 }
 

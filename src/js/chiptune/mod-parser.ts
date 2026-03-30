@@ -1,5 +1,5 @@
 import type { ModuleFile, Instrument, Note, Pattern } from './types';
-import { AMIGA_PERIOD_TABLE } from './types';
+import { AMIGA_PERIOD_TABLE, PAL_CLOCK } from './types';
 import { BaseParser } from './base-parser';
 
 export function getModNoteFromPeriod(period: number): number | null {
@@ -19,12 +19,12 @@ export function getModNoteFromPeriod(period: number): number | null {
 
 export class ModParser extends BaseParser {
   parse(): ModuleFile {
-    if (this.data.length < 1084) throw new Error("Invalid MOD file size");
-    
+    if (this.data.length < 1084) throw new Error('Invalid MOD file size');
+
     this.setPos(0);
     const title = this.readStr(20).trim();
     const instruments: Instrument[] = [];
-    
+
     // 31 samples
     for (let i = 0; i < 31; i++) {
       this.setPos(20 + i * 30);
@@ -39,21 +39,23 @@ export class ModParser extends BaseParser {
       const loopStart = loopStartWords * 2;
       const loopLenWords = this.readU16BE();
       const loopLength = loopLenWords > 1 ? loopLenWords * 2 : 0;
-      
+
       instruments.push({
         name: name || `Instrument ${i + 1}`,
-        samples: [{
-          name: name,
-          length,
-          finetune,
-          volume,
-          loopStart,
-          loopLength,
-          panning: 128,
-          data: new Float32Array(length)
-        }],
+        samples: [
+          {
+            name: name,
+            length,
+            finetune,
+            volume,
+            loopStart,
+            loopLength,
+            panning: 128,
+            data: new Float32Array(length),
+          },
+        ],
         sampleMap: new Array(120).fill(0),
-        volumeFadeout: 0
+        volumeFadeout: 0,
       });
     }
 
@@ -74,12 +76,13 @@ export class ModParser extends BaseParser {
     else if (markerUpper.includes('CH')) {
       const parsed = parseInt(marker.replace(/[^0-9]/g, ''));
       if (!isNaN(parsed) && parsed > 0) channels = parsed;
-    } else if (markerUpper === 'M.K.' || markerUpper === 'M!K!' || markerUpper === 'FLT4') channels = 4;
+    } else if (markerUpper === 'M.K.' || markerUpper === 'M!K!' || markerUpper === 'FLT4')
+      channels = 4;
 
     const numPatterns = Math.max(...sequence.slice(0, songLength)) + 1;
     const patterns: Pattern[] = [];
     this.setPos(1084);
-    
+
     for (let pat = 0; pat < numPatterns; pat++) {
       const rows: Note[][] = [];
       for (let r = 0; r < 64; r++) {
@@ -89,7 +92,7 @@ export class ModParser extends BaseParser {
           const b1 = this.readU8();
           const b2 = this.readU8();
           const b3 = this.readU8();
-          
+
           const instrument = (b0 & 0xf0) | ((b2 & 0xf0) >> 4);
           const period = ((b0 & 0x0f) << 8) | b1;
           const effect = b2 & 0x0f;
@@ -103,7 +106,7 @@ export class ModParser extends BaseParser {
             instrument,
             volume,
             effect,
-            effectParam
+            effectParam,
           });
         }
         rows.push(row);
@@ -111,16 +114,19 @@ export class ModParser extends BaseParser {
       patterns.push({ rows });
     }
 
-    // Load samples
+    // Load samples (signed 8-bit PCM)
     for (let i = 0; i < instruments.length; i++) {
       const smp = instruments[i].samples[0];
       if (smp.length > 0 && this.pos + smp.length <= this.data.length) {
         for (let j = 0; j < smp.length; j++) {
           const b = this.data[this.pos++];
-          smp.data[j] = b > 127 ? (b - 256) / 128 : b / 128;
+          const signed = b > 127 ? b - 256 : b;
+          smp.data[j] = signed / 128;
         }
       }
     }
+
+    const clock = PAL_CLOCK;
 
     return {
       type: 'MOD',
@@ -132,7 +138,8 @@ export class ModParser extends BaseParser {
       defaultBpm: 125,
       defaultSpeed: 6,
       rowsPerPattern: 64,
-      linearFrequencies: false
+      linearFrequencies: false,
+      clock,
     };
   }
 }
