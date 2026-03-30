@@ -132,4 +132,14 @@ export class SIDChip {
     }
     return (out / 3.0) * (this.vol / 15.0);
   }
+
+  public read(reg: number): number {
+    // Return voice registers or 0 for unhandled
+    if (reg < 7) {
+      const voice = this.voices[reg];
+      return voice.freq & 0xff;
+    }
+    if (reg === 24) return this.vol;
+    return 0;
+  }
 }

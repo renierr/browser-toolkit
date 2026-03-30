@@ -191,9 +191,17 @@ export default function init(payload?: SharedFilesPayload): () => void {
           if (actx.state === 'suspended') actx.resume();
 
           const sidPlayer = new SidPlayer();
+          console.log(
+            '[SID] Loading module:',
+            sidMod.title,
+            'playAddr:',
+            sidMod.playAddr.toString(16)
+          );
           sidPlayer.loadModule(sidMod, actx.sampleRate);
+          console.log('[SID] Module loaded, sampleRate:', actx.sampleRate);
 
           await actx.audioWorklet.addModule('/sid-worklet-processor.js');
+          console.log('[SID] Worklet loaded');
           const sidWorklet = new AudioWorkletNode(actx, 'sid-worklet-processor');
 
           const analyser = actx.createAnalyser();
@@ -209,6 +217,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
           const renderLoop = () => {
             try {
               sidPlayer.render(renderBuffer, renderBufferSize);
+              const max = Math.max(...renderBuffer);
+              if (max > 0.01) console.log('[SID] Audio output, max:', max.toFixed(4));
               sidWorklet.port.postMessage({ type: 'audio', data: renderBuffer });
             } catch (e) {
               console.error('SID render error', e);

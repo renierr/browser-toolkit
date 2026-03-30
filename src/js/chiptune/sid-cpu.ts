@@ -8,8 +8,20 @@ export class CPU6502 {
   public p = 0x24; // I and U flags set
 
   public cycles = 0;
+  public debugLog = false;
+
+  private sidWriteCallback: ((addr: number, val: number) => void) | null = null;
+  private sidReadCallback: ((addr: number) => number) | null = null;
 
   constructor() {}
+
+  public setSidWriteCallback(cb: (addr: number, val: number) => void): void {
+    this.sidWriteCallback = cb;
+  }
+
+  public setSidReadCallback(cb: (addr: number) => number): void {
+    this.sidReadCallback = cb;
+  }
 
   public reset(): void {
     this.a = 0;
@@ -22,11 +34,19 @@ export class CPU6502 {
   }
 
   public read(addr: number): number {
+    // Intercept SID reads
+    if (addr >= 0xd400 && addr <= 0xd418 && this.sidReadCallback) {
+      return this.sidReadCallback(addr);
+    }
     return this.mem[addr];
   }
 
   public write(addr: number, val: number): void {
     this.mem[addr] = val;
+    // Intercept SID writes (0xD400-0xD418)
+    if (addr >= 0xd400 && addr <= 0xd418 && this.sidWriteCallback) {
+      this.sidWriteCallback(addr, val);
+    }
   }
 
   public read16(addr: number): number {
@@ -135,9 +155,16 @@ export class CPU6502 {
   }
 
   public step(): void {
+    const startPc = this.pc;
     const op = this.read(this.pc++);
     let val = 0;
     let addr = 0;
+
+    if (this.debugLog && this.cycles < 50) {
+      console.log(
+        `[CPU] PC=${startPc.toString(16)} op=${op.toString(16)} A=${this.a.toString(16)} X=${this.x.toString(16)} Y=${this.y.toString(16)}`
+      );
+    }
 
     switch (op) {
       case 0x69: // ADC imm
@@ -193,16 +220,16 @@ export class CPU6502 {
         this.cycles += 4;
         break;
       case 0xa1: // LDA (zp,X)
-        addr =
-          this.read((this.read(this.pc++) + this.x) & 0xff) |
-          (this.read((this.read(this.pc) + this.x + 1) & 0xff) << 8);
+        const zpA1 = (this.read(this.pc++) + this.x) & 0xff;
+        addr = this.read(zpA1) | (this.read(zpA1 + 1) << 8);
         this.a = this.read(addr);
         this.setZN(this.a);
         this.cycles += 6;
         break;
       case 0xb1: // LDA (zp),Y
-        const base = this.read(this.read(this.pc++));
-        addr = (base + this.y) & 0xffff;
+        const zpB1 = this.read(this.pc++);
+        const ptr = this.read(zpB1) | (this.read(zpB1 + 1) << 8);
+        addr = (ptr + this.y) & 0xffff;
         this.a = this.read(addr);
         this.setZN(this.a);
         this.cycles += 5;
@@ -231,14 +258,14 @@ export class CPU6502 {
         this.cycles += 5;
         break;
       case 0x81: // STA (zp,X)
-        addr =
-          this.read((this.read(this.pc++) + this.x) & 0xff) |
-          (this.read((this.read(this.pc) + this.x + 1) & 0xff) << 8);
+        const zp81 = (this.read(this.pc++) + this.x) & 0xff;
+        addr = this.read(zp81) | (this.read(zp81 + 1) << 8);
         this.write(addr, this.a);
         this.cycles += 6;
         break;
       case 0x91: // STA (zp),Y
-        addr = this.read(this.read(this.pc++)) + this.y;
+        const zp91 = this.read(this.pc++);
+        addr = (this.read(zp91) | (this.read(zp91 + 1) << 8)) + this.y;
         this.write(addr & 0xffff, this.a);
         this.cycles += 6;
         break;
