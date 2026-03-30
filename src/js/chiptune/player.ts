@@ -1,4 +1,4 @@
-import type { ModuleFile, Sample, Note, Pattern } from './types';
+import type { ModuleFile, Sample } from './types';
 import { periodToFrequencyAmiga, periodToFrequencyLinear, AMIGA_PERIOD_TABLE } from './types';
 
 interface ChannelState {
@@ -267,12 +267,12 @@ export class ChiptunePlayer {
         }
 
         if (shouldTrigger && chState.sample && chState.period > 0) {
-            this.triggerNote(chState, time, tickDur * this.speed);
+            this.triggerNote(chState, time);
         }
 
       } else {
         // --- CONTINUOUS TICK EVALUATION (Tick 1+) ---
-        this.parseEffectContinuous(chState, chState.effect, chState.effectParam);
+        this.parseEffectContinuous(chState, chState.effect);
       }
       
       // Compute final exact frequency and automate Web Audio nodes for THIS tick timeframe
@@ -290,7 +290,6 @@ export class ChiptunePlayer {
              chState.vibratoPhase += chState.vibratoSpeed / 256;
           }
           
-          const maxClamp = chState.sample.c5speed || 8363;
           let playbackRate = tickFreq / this.audioContext.sampleRate;
           playbackRate = Math.max(0.01, Math.min(playbackRate, 10)); // Safety clamp
           
@@ -396,7 +395,7 @@ export class ChiptunePlayer {
       }
   }
 
-  private parseEffectContinuous(chState: ChannelState, effect: number, param: number): void {
+  private parseEffectContinuous(chState: ChannelState, effect: number): void {
       if (effect === 0x01) { // Porta Up (Decrease Period = Increase Hz)
           chState.period = Math.max(1, chState.period - chState.slideSpeed * 4); // x4 multiplier common in FT2
       } else if (effect === 0x02) { // Porta Down
@@ -420,7 +419,7 @@ export class ChiptunePlayer {
       }
   }
 
-  private triggerNote(chState: ChannelState, time: number, maxRowDur: number): void {
+  private triggerNote(chState: ChannelState, time: number): void {
       if (!this.audioContext || !this.masterGain || !chState.sample || chState.sample.data.length === 0) return;
       this.stopChannel(chState, time); // Pre-cleanup overlapping
       
