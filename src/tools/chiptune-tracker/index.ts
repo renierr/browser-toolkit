@@ -12,7 +12,6 @@ import { exportToWav } from './wav-exporter';
 import { downloadFile } from '../../js/file-utils';
 import { parseModFile } from './mod-parser';
 
-const CHANNELS = 4;
 const ROWS = 64;
 
 type ClipboardData = {
@@ -114,7 +113,7 @@ export default function init(): () => void {
       }
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        selectedChannel = Math.min(CHANNELS - 1, selectedChannel + 1);
+        selectedChannel = Math.min(state.channels - 1, selectedChannel + 1);
         highlightSelectedCell();
         return;
       }
@@ -434,9 +433,43 @@ export default function init(): () => void {
     });
   }
 
+  function renderChannelHeader() {
+    const thead = document.getElementById('tracker-header') as HTMLElement;
+    thead.innerHTML = '';
+
+    const tr = document.createElement('tr');
+    tr.className = 'text-xs';
+
+    const rowTh = document.createElement('th');
+    rowTh.className = 'w-8 text-center';
+    rowTh.textContent = 'Row';
+    tr.appendChild(rowTh);
+
+    for (let ch = 0; ch < state.channels; ch++) {
+      const chTh = document.createElement('th');
+      chTh.className = 'w-20 text-center';
+      chTh.textContent = `Ch${ch + 1}`;
+      tr.appendChild(chTh);
+
+      const insTh = document.createElement('th');
+      insTh.className = 'w-16 text-center';
+      insTh.textContent = `Ins${ch + 1}`;
+      tr.appendChild(insTh);
+
+      const volTh = document.createElement('th');
+      volTh.className = 'w-16 text-center';
+      volTh.textContent = `Vol${ch + 1}`;
+      tr.appendChild(volTh);
+    }
+
+    thead.appendChild(tr);
+  }
+
   function renderTrackerGrid() {
     const tbody = document.getElementById('tracker-grid') as HTMLElement;
     tbody.innerHTML = '';
+
+    renderChannelHeader();
 
     const pattern = state.patterns[state.currentPattern];
     if (!pattern) return;
@@ -450,7 +483,7 @@ export default function init(): () => void {
       rowNum.textContent = row.toString().padStart(2, '0');
       tr.appendChild(rowNum);
 
-      for (let ch = 0; ch < CHANNELS; ch++) {
+      for (let ch = 0; ch < state.channels; ch++) {
         const cell = pattern.rows[row][ch];
 
         const noteTd = document.createElement('td');
@@ -580,7 +613,7 @@ export default function init(): () => void {
 
   function handleAddPattern() {
     const newId = state.patterns.length;
-    const channels = CHANNELS;
+    const channels = state.channels;
     const rows = ROWS;
 
     const newPatternRows: (typeof state.patterns)[0]['rows'] = [];
@@ -638,6 +671,7 @@ export default function init(): () => void {
         state = loadedState;
         audio.setState(state);
         renderAll();
+        updateModInfoDisplay();
       }
     };
     reader.readAsText(file);
@@ -658,6 +692,7 @@ export default function init(): () => void {
         state = loadedState;
         audio.setState(state);
         renderAll();
+        updateModInfoDisplay();
       } catch (err) {
         console.error('[Tracker] Failed to parse MOD file:', err);
       }
@@ -666,34 +701,47 @@ export default function init(): () => void {
     input.value = '';
   }
 
+  function updateModInfoDisplay() {
+    const modInfo = document.getElementById('mod-info');
+    if (!modInfo) return;
+
+    if (state.modTitle) {
+      modInfo.classList.remove('hidden');
+      const titleEl = document.getElementById('mod-title');
+      const channelsEl = document.getElementById('mod-channels');
+      const samplesEl = document.getElementById('mod-samples');
+      const patternsEl = document.getElementById('mod-patterns');
+
+      if (titleEl) titleEl.textContent = state.modTitle;
+      if (channelsEl) channelsEl.textContent = state.modChannels?.toString() ?? '-';
+      if (samplesEl) samplesEl.textContent = state.modSampleCount?.toString() ?? '-';
+      if (patternsEl) patternsEl.textContent = state.modPatternCount?.toString() ?? '-';
+    } else {
+      modInfo.classList.add('hidden');
+    }
+  }
+
   function convertModToState(modFile: ReturnType<typeof parseModFile>): TrackerState {
     const channels = modFile.channels;
     const rowsPerPattern = 64;
+    const maxInstruments = 31;
 
-    const instruments = modFile.samples
-      .filter((s) => s.length > 0)
-      .slice(0, 8)
-      .map((sample, idx) => ({
-        id: idx + 1,
-        name: sample.name || `Sample ${idx + 1}`,
-        waveform: 'square' as const,
-        attack: 0.01,
-        decay: 0.1,
-        sustain: 0.7,
-        release: 0.2,
-        duty: 50,
-      }));
-
-    while (instruments.length < 8) {
+    const instruments: Instrument[] = [];
+    for (let i = 0; i < maxInstruments; i++) {
+      const sample = modFile.samples[i];
       instruments.push({
-        id: instruments.length + 1,
-        name: `Instrument ${instruments.length + 1}`,
+        id: i + 1,
+        name: sample?.name || `Sample ${i + 1}`,
         waveform: 'square',
         attack: 0.01,
         decay: 0.1,
         sustain: 0.7,
         release: 0.2,
         duty: 50,
+        sampleIndex: i,
+        sampleData: sample?.data,
+        sampleLoopStart: sample?.loopStart,
+        sampleLoopLength: sample?.loopLength,
       });
     }
 
@@ -704,10 +752,11 @@ export default function init(): () => void {
         const rowData: CellData[] = [];
         for (let ch = 0; ch < channels; ch++) {
           const modNote = modPattern.rows[row]?.[ch];
+          const modInstr = modNote?.instrument ?? 0;
           rowData.push({
             note: modNote?.note ?? null,
             octave: modNote?.octave ?? null,
-            instrument: modNote?.instrument ?? null,
+            instrument: modInstr > 0 && modInstr <= maxInstruments ? modInstr : null,
             volume: modNote?.volume ?? null,
           });
         }
@@ -738,6 +787,8 @@ export default function init(): () => void {
       order.push(order.length);
     }
 
+    const sampleCount = modFile.samples.filter((s) => s.length > 0).length;
+
     return {
       bpm: modFile.defaultBpm,
       channels,
@@ -750,6 +801,10 @@ export default function init(): () => void {
       isPlaying: false,
       isLooping: true,
       modSamples,
+      modTitle: modFile.title,
+      modChannels: modFile.channels,
+      modSampleCount: sampleCount,
+      modPatternCount: modFile.patterns.length,
     };
   }
 }

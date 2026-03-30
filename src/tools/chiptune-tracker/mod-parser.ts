@@ -124,7 +124,7 @@ export function parseModFile(data: ArrayBuffer): ModFile {
     const name = readString(bytes, offset, 22);
     const length = readUint16BE(bytes, offset + 22) * 2;
     const finetune = bytes[offset + 24] & 0x0f;
-    const volume = bytes[offset + 25];
+    const volume = Math.min(bytes[offset + 25], 64);
     const loopStart = readUint16BE(bytes, offset + 26) * 2;
     const loopLength = readUint16BE(bytes, offset + 28) * 2;
 
@@ -199,11 +199,11 @@ export function parseModFile(data: ArrayBuffer): ModFile {
 
         const noteInfo = noteFromPeriod(period);
 
-        let volume = 0;
+        let volume = 64;
         if (effect === 0x0c) {
-          volume = effectParam;
+          volume = Math.min(effectParam, 64);
         } else if (sampleNum > 0 && samples[sampleNum - 1]) {
-          volume = samples[sampleNum - 1].volume;
+          volume = samples[sampleNum - 1].volume || 64;
         }
 
         rowData.push({

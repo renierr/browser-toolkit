@@ -182,8 +182,9 @@ export class TrackerAudio {
     const freq = noteToFrequency(cell.note, cell.octave);
     if (freq <= 0) return;
 
-    const modSampleIdx = instrumentId - 1;
-    const hasModSample = this.state.modSamples && this.state.modSamples[modSampleIdx]?.length > 0;
+    const modSampleIdx = instrument.sampleIndex ?? instrumentId - 1;
+    const hasModSample =
+      this.state.modSamples && modSampleIdx >= 0 && this.state.modSamples[modSampleIdx]?.length > 0;
 
     if (hasModSample) {
       this.playSample(modSampleIdx, freq, time, cell.volume, instrument);
@@ -425,8 +426,9 @@ export class TrackerAudio {
     const freq = noteToFrequency(note, octave);
     if (freq <= 0) return;
 
-    const modSampleIdx = instrument.id - 1;
-    const hasModSample = this.state.modSamples && this.state.modSamples[modSampleIdx]?.length > 0;
+    const modSampleIdx = instrument.sampleIndex ?? instrument.id - 1;
+    const hasModSample =
+      this.state.modSamples && modSampleIdx >= 0 && this.state.modSamples[modSampleIdx]?.length > 0;
 
     if (hasModSample) {
       this.previewSample(modSampleIdx, freq);
