@@ -1,9 +1,8 @@
-import { ChiptunePlayer } from './player';
-import { parseModule } from './parser';
-import type { ModuleFile } from './parser';
+import { ChiptunePlayer } from '../../js/chiptune/player';
+import { parseModule } from '../../js/chiptune/parser';
+import type { ModuleFile } from '../../js/chiptune/types';
 
-let player: ChiptunePlayer | null = null;
-let animationId: number | null = null;
+
 
 function updateModuleInfo(mod: ModuleFile, elements: Record<string, HTMLElement | null>): void {
   const formatBadge = elements['format-badge'];
@@ -24,7 +23,7 @@ function updateModuleInfo(mod: ModuleFile, elements: Record<string, HTMLElement 
   if (patternCount) patternCount.textContent = String(mod.patterns.length);
   if (orderCount) orderCount.textContent = String(mod.sequence.length);
   if (instrumentCount)
-    instrumentCount.textContent = String(mod.samples.filter((s) => s.length > 0).length);
+    instrumentCount.textContent = String(mod.instruments.filter((i) => i.samples.length > 0).length);
   if (defaultBpm) defaultBpm.textContent = String(mod.defaultBpm);
   if (fileInfo) fileInfo.classList.remove('hidden');
   if (speedSlider) speedSlider.value = String(mod.defaultSpeed);
@@ -32,14 +31,14 @@ function updateModuleInfo(mod: ModuleFile, elements: Record<string, HTMLElement 
 
   if (samplesContainer) {
     samplesContainer.innerHTML =
-      mod.samples
-        .filter((s) => s.length > 0)
+      mod.instruments
+        .filter((i) => i.samples.length > 0)
         .map(
-          (s, i) => `
+          (ins, i) => `
       <div class="sample-row">
         <span class="font-semibold w-6">${i + 1}</span>
-        <span class="name">${s.name}</span>
-        <span class="info">${Math.round(s.length / 1024)}KB${s.loopLength > 0 ? ` L:${Math.round(s.loopStart / 1024)}K` : ''}</span>
+        <span class="name">${ins.name}</span>
+        <span class="info">${Math.round(ins.samples[0].length / 1024)}KB${ins.samples[0].loopLength > 0 ? ` L:${Math.round(ins.samples[0].loopStart / 1024)}K` : ''}</span>
       </div>
     `
         )
@@ -104,6 +103,9 @@ function getElements(): Record<string, HTMLElement | null> {
 }
 
 export default function init(): () => void {
+  let player: ChiptunePlayer | null = null;
+  let animationId: number | null = null;
+
   const container = document.getElementById('chiptune-player');
   if (!container) return () => {};
 
