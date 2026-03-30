@@ -527,18 +527,14 @@ export class ChiptunePlayer {
         this.currentPatternIdx = patternJump >= 0 ? patternJump : this.currentPatternIdx + 1;
         if (this.currentPatternIdx >= this.module.sequence.length) {
           if (this.isLooping) {
-            // Reset channels on loop start
             for (const ch of this.channelStates) {
-              this.stopChannel(ch);
               ch.period = 0;
               ch.targetPeriod = 0;
-              ch.volume = 0;
               ch.keyOn = false;
               ch.vibratoPhase = 0;
               ch.tremoloPhase = 0;
               ch.volumeEnvValue = 0;
             }
-            // Handle restart position (MOD/XM)
             const restartPos = this.module?.restartPosition || 0;
             this.currentRow = restartPos;
             this.currentPatternIdx = 0;
@@ -546,12 +542,9 @@ export class ChiptunePlayer {
             this.stop();
           }
         } else if (wasAtEnd && this.isLooping) {
-          // Reset channels when transitioning from end to restart
           for (const ch of this.channelStates) {
-            this.stopChannel(ch);
             ch.period = 0;
             ch.targetPeriod = 0;
-            ch.volume = 0;
             ch.keyOn = false;
           }
         }

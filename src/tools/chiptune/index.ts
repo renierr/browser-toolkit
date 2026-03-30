@@ -449,9 +449,35 @@ export default function init(payload?: SharedFilesPayload): () => void {
       const bx = i * barWidth;
       const by = specHeight - barHeight;
 
-      const hue = 180 + (i / 64) * 60;
-      specCtx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+      const intensity = value / 255;
+      let hue: number, sat: number, light: number;
+
+      if (i < 16) {
+        hue = 0 + (i / 16) * 30;
+        sat = 100;
+        light = 50 + intensity * 10;
+      } else if (i < 32) {
+        hue = 30 + ((i - 16) / 16) * 60;
+        sat = 100;
+        light = 50 + intensity * 10;
+      } else if (i < 48) {
+        hue = 90 + ((i - 32) / 16) * 60;
+        sat = 90 - intensity * 20;
+        light = 50 + intensity * 5;
+      } else {
+        hue = 180 + ((i - 48) / 16) * 120;
+        sat = 100;
+        light = 55 + intensity * 10;
+      }
+
+      specCtx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
+
+      specCtx.shadowBlur = intensity * 10;
+      specCtx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+
       specCtx.fillRect(bx, by, barWidth - barGap, barHeight);
+
+      specCtx.shadowBlur = 0;
     }
 
     animationId = requestAnimationFrame(drawVisualization);
