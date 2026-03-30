@@ -177,14 +177,23 @@ export class ChiptunePlayer {
   private scheduler(): void {
     if (!this.isPlaying || !this.audioContext || !this.module) return;
 
+    let iterations = 0;
     while (this.nextTickTime < this.audioContext.currentTime + this.lookAhead) {
       this.scheduleTick();
+      iterations++;
+      if (iterations > 100) {
+          console.warn('[ChiptunePlayer] Scheduler infinite loop prevented.');
+          this.nextTickTime = this.audioContext.currentTime + this.lookAhead + 0.1;
+          break;
+      }
     }
     this.schedulerTimer = window.setTimeout(() => this.scheduler(), this.scheduleInterval);
   }
 
   private getTickDuration(): number {
-    return 2.5 / this.bpm; // Each tick is exact fraction of a minute
+    if (!this.bpm || this.bpm <= 0) this.bpm = 125;
+    const dur = 2.5 / this.bpm; // Each tick is exact fraction of a minute
+    return isNaN(dur) || dur <= 0 ? 0.02 : dur; // Safeback
   }
 
   private scheduleTick(): void {

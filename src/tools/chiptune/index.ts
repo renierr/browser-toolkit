@@ -102,7 +102,9 @@ function getElements(): Record<string, HTMLElement | null> {
   };
 }
 
-export default function init(): () => void {
+import type { SharedFilesPayload } from '../../js/share-target';
+
+export default function init(payload?: SharedFilesPayload): () => void {
   let player: ChiptunePlayer | null = null;
   let animationId: number | null = null;
 
@@ -147,6 +149,14 @@ export default function init(): () => void {
       enableControls(elements);
       player!.setSpeed(mod.defaultSpeed);
     };
+
+    if (payload && payload.sharedFiles && payload.sharedFiles.length > 0) {
+      setTimeout(() => {
+        const fileList = new DataTransfer();
+        fileList.items.add(payload.sharedFiles[0]);
+        onFile(fileList.files);
+      }, 100);
+    }
 
     dropzone.addEventListener('click', () => fileInput?.click());
     dropzone.addEventListener('dragover', (e) => {
