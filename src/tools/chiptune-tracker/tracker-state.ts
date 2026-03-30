@@ -10,6 +10,7 @@ export interface Instrument {
   release: number;
   duty: number;
   sampleIndex?: number;
+  sampleVolume?: number;
   sampleData?: Float32Array;
   sampleLoopStart?: number;
   sampleLoopLength?: number;
@@ -29,6 +30,7 @@ export interface Pattern {
 
 export interface TrackerState {
   bpm: number;
+  speed: number;
   channels: number;
   rowsPerPattern: number;
   instruments: Instrument[];
@@ -169,6 +171,7 @@ export function createInitialState(): TrackerState {
 
   return {
     bpm: 120,
+    speed: 6,
     channels,
     rowsPerPattern,
     instruments,

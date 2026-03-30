@@ -11,6 +11,7 @@ import {
 import { exportToWav } from './wav-exporter';
 import { downloadFile } from '../../js/file-utils';
 import { parseModFile } from './mod-parser';
+import { BUILTIN_SAMPLES } from './builtin-samples';
 
 const ROWS = 64;
 
@@ -739,6 +740,7 @@ export default function init(): () => void {
         release: 0.2,
         duty: 50,
         sampleIndex: i,
+        sampleVolume: sample?.volume || 64,
         sampleData: sample?.data,
         sampleLoopStart: sample?.loopStart,
         sampleLoopLength: sample?.loopLength,
@@ -783,6 +785,26 @@ export default function init(): () => void {
 
     const modSamples = modFile.samples.map((s) => s.data);
 
+    for (let i = 0; i < BUILTIN_SAMPLES.length; i++) {
+      const builtin = BUILTIN_SAMPLES[i];
+      if (instruments.length <= 31 + i) {
+        instruments.push({
+          id: 32 + i,
+          name: builtin.name,
+          waveform: 'square',
+          attack: 0.01,
+          decay: 0.1,
+          sustain: 0.7,
+          release: 0.2,
+          duty: 50,
+          sampleIndex: 31 + i,
+          sampleVolume: builtin.volume,
+          sampleData: builtin.data,
+        });
+      }
+      modSamples.push(builtin.data);
+    }
+
     const order = modFile.sequence.slice(0, 128);
     while (order.length < 8) {
       order.push(order.length);
@@ -792,6 +814,7 @@ export default function init(): () => void {
 
     return {
       bpm: modFile.defaultBpm,
+      speed: modFile.defaultSpeed,
       channels,
       rowsPerPattern,
       instruments,

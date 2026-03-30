@@ -126,7 +126,8 @@ export class TrackerAudio {
       this.playCell(ch, cell, this.nextNoteTime);
     }
 
-    const rowDuration = 60 / this.state.bpm / 4;
+    const speed = this.state.speed || 6;
+    const rowDuration = (speed * 2) / (this.state.bpm / 60);
     this.nextNoteTime += rowDuration;
 
     if (this.onPositionChange) {
@@ -197,8 +198,11 @@ export class TrackerAudio {
     const hasModSample =
       this.state.modSamples && modSampleIdx >= 0 && this.state.modSamples[modSampleIdx]?.length > 0;
 
+    const speed = this.state.speed || 6;
+    const rowDuration = (speed * 2) / (this.state.bpm / 60);
+
     if (hasModSample) {
-      this.playSample(modSampleIdx, freq, time, cell.volume, instrument);
+      this.playSample(modSampleIdx, freq, time, cell.volume, instrument, rowDuration);
       return;
     }
 
@@ -220,8 +224,9 @@ export class TrackerAudio {
     sampleIdx: number,
     freq: number,
     time: number,
-    volume: number | null,
-    _instrument: Instrument
+    volume: number,
+    instrument: Instrument,
+    rowDuration: number
   ): void {
     if (!this.audioContext || !this.state?.modSamples) return;
 
@@ -249,16 +254,21 @@ export class TrackerAudio {
     const playbackRate = freq / baseFreq;
     source.playbackRate.value = playbackRate;
 
-    const vol = volume !== null ? volume / 64 : 0.8;
-    voice.gain.gain.setValueAtTime(vol, time);
-    voice.gain.gain.exponentialRampToValueAtTime(0.01, time + 0.5);
+    const sampleVol = instrument.sampleVolume ?? 64;
+    const vol = (volume / 64) * (sampleVol / 64);
+    const effectiveVol = Math.min(vol, 1);
+
+    const noteDuration = rowDuration * 0.9;
+    voice.gain.gain.setValueAtTime(effectiveVol, time);
+    voice.gain.gain.setValueAtTime(effectiveVol, time + noteDuration);
+    voice.gain.gain.exponentialRampToValueAtTime(0.01, time + noteDuration + 0.05);
 
     source.connect(voice.gain);
     source.start(time);
-    source.stop(time + 0.5);
+    source.stop(time + noteDuration + 0.1);
 
     voice.sourceNode = source;
-    voice.releaseTime = time + 0.5;
+    voice.releaseTime = time + noteDuration + 0.1;
   }
 
   private playTone(
@@ -308,7 +318,8 @@ export class TrackerAudio {
     const sustain = instrument.sustain * vol;
     const release = instrument.release;
 
-    const rowDuration = 60 / this.state.bpm / 4;
+    const speed = this.state.speed || 6;
+    const rowDuration = (speed * 2) / (this.state.bpm / 60);
     const noteDuration = rowDuration * 0.9;
 
     voice.gain.gain.setValueAtTime(0, now);
