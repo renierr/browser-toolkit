@@ -1,0 +1,10 @@
+{
+  "name": "Chiptune",
+  "description": "Play MOD, XM, and IT tracker files with visual waveform and spectrum analysis",
+  "icon": "headphones",
+  "sectionId": "media",
+  "order": 1,
+  "shareTarget": {
+    "accept": ["audio/mod", "audio/xm", "audio/it", "audio/*"]
+  }
+}

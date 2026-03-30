@@ -1,0 +1,182 @@
+<div id="chiptune-player" class="flex flex-col h-full gap-3">
+  <!-- File Drop Zone -->
+  <div
+    id="dropzone"
+    class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-4 min-h-32 group hover:bg-base-300"
+  >
+    <div
+      class="flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105"
+    >
+      <i data-lucide="upload" class="w-8 h-8 opacity-50"></i>
+      <p class="text-sm opacity-70">Drop MOD/XM/IT file here or click to browse</p>
+      <p class="text-xs opacity-50">Supports .mod, .xm, .it files</p>
+    </div>
+    <input type="file" id="file-input" class="hidden" accept=".mod,.xm,.it" />
+  </div>
+
+  <!-- File Info -->
+  <div id="file-info" class="hidden flex flex-wrap gap-3 p-3 bg-base-200 rounded-lg">
+    <div class="flex items-center gap-2">
+      <span id="format-badge" class="badge badge-primary badge-sm">MOD</span>
+      <span id="song-title" class="font-semibold text-sm">-</span>
+    </div>
+    <div class="flex items-center gap-1 text-xs opacity-70">
+      <span>Ch:</span>
+      <span id="channel-count">-</span>
+    </div>
+    <div class="flex items-center gap-1 text-xs opacity-70">
+      <span>Pat:</span>
+      <span id="pattern-count">-</span>
+    </div>
+    <div class="flex items-center gap-1 text-xs opacity-70">
+      <span>Ord:</span>
+      <span id="order-count">-</span>
+    </div>
+    <div class="flex items-center gap-1 text-xs opacity-70">
+      <span>Inst:</span>
+      <span id="instrument-count">-</span>
+    </div>
+    <div class="flex items-center gap-1 text-xs opacity-70">
+      <span>BPM:</span>
+      <span id="default-bpm">-</span>
+    </div>
+  </div>
+
+  <!-- Transport Controls -->
+  <div class="flex flex-wrap items-center gap-3 p-3 bg-base-200 rounded-lg">
+    <div class="flex items-center gap-1">
+      <button id="btn-play" class="btn btn-sm btn-primary" disabled>
+        <i data-lucide="play" class="w-4 h-4"></i>
+      </button>
+      <button id="btn-stop" class="btn btn-sm btn-ghost" disabled>
+        <i data-lucide="square" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div class="divider divider-horizontal mx-0 h-6"></div>
+
+    <label class="flex items-center gap-2 cursor-pointer">
+      <input type="checkbox" id="loop-toggle" class="toggle toggle-xs" checked />
+      <span class="text-xs">Loop</span>
+    </label>
+
+    <div class="divider divider-horizontal mx-0 h-6"></div>
+
+    <div class="flex items-center gap-2">
+      <i data-lucide="volume-2" class="w-4 h-4 opacity-70"></i>
+      <input
+        type="range"
+        id="volume-slider"
+        min="0"
+        max="100"
+        value="70"
+        class="range range-xs range-primary w-24"
+      />
+      <span id="volume-display" class="text-xs w-8">70%</span>
+    </div>
+
+    <div class="divider divider-horizontal mx-0 h-6"></div>
+
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-semibold">Speed:</span>
+      <input
+        type="range"
+        id="speed-slider"
+        min="1"
+        max="32"
+        value="6"
+        class="range range-xs w-20"
+      />
+      <span id="speed-display" class="text-xs w-6">6</span>
+    </div>
+  </div>
+
+  <!-- Position & Seek -->
+  <div class="flex items-center gap-3 p-2 bg-base-200 rounded-lg">
+    <span id="position-display" class="font-mono text-sm min-w-24">Pat: -- Row: --</span>
+    <input
+      type="range"
+      id="seek-slider"
+      min="0"
+      max="100"
+      value="0"
+      class="range range-xs range-secondary flex-1"
+    />
+    <span id="time-display" class="font-mono text-xs opacity-70 w-16">00:00 / --</span>
+  </div>
+
+  <!-- Visualizers -->
+  <div class="flex gap-3 h-32">
+    <div class="flex-1 flex flex-col gap-1">
+      <span class="text-xs font-semibold opacity-70">Waveform</span>
+      <canvas id="oscilloscope" class="flex-1 bg-base-300 rounded-lg w-full"></canvas>
+    </div>
+    <div class="flex-1 flex flex-col gap-1">
+      <span class="text-xs font-semibold opacity-70">Spectrum</span>
+      <canvas id="spectrum" class="flex-1 bg-base-300 rounded-lg w-full"></canvas>
+    </div>
+  </div>
+
+  <!-- Channel Activity -->
+  <div class="flex flex-col gap-1">
+    <span class="text-xs font-semibold opacity-70">Channels</span>
+    <div id="channel-activity" class="flex flex-wrap gap-1 p-2 bg-base-200 rounded-lg min-h-10">
+      <span class="text-xs opacity-50 italic">No file loaded</span>
+    </div>
+  </div>
+
+  <!-- Sample/Instrument List -->
+  <div class="flex-1 overflow-hidden flex flex-col">
+    <button
+      id="toggle-samples"
+      class="flex items-center justify-between w-full p-2 bg-base-200 rounded-t-lg cursor-pointer hover:bg-base-300 transition-colors"
+    >
+      <span class="text-xs font-semibold">Instruments / Samples</span>
+      <i data-lucide="chevron-down" class="w-4 h-4 transition-transform" id="samples-chevron"></i>
+    </button>
+    <div
+      id="sample-list"
+      class="flex-1 overflow-y-auto bg-base-200 rounded-b-lg p-2 hidden max-h-40"
+    >
+      <div id="samples-container" class="space-y-1">
+        <span class="text-xs opacity-50">No instruments</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  #oscilloscope,
+  #spectrum {
+    image-rendering: pixelated;
+  }
+  .channel-led {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    background-color: var(--color-base-300);
+    transition: background-color 0.05s;
+  }
+  .channel-led.active {
+    background-color: var(--color-primary);
+    box-shadow: 0 0 8px var(--color-primary);
+  }
+  .sample-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    background-color: var(--color-base-300);
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+  }
+  .sample-row .name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sample-row .info {
+    opacity: 0.7;
+  }
+</style>
