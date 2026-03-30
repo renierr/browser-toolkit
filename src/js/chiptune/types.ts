@@ -66,7 +66,7 @@ export function readString(data: Uint8Array, offset: number, length: number): st
       str += String.fromCharCode(charCode);
     }
   }
-  return str.trim();
+  return str;
 }
 
 // MOD Amiga periods table

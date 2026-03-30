@@ -371,8 +371,23 @@ export class ChiptunePlayer {
           const actualNote = (note - 1) + (sample.baseNote || 0);
           return 10 * 12 * 16 * 4 - (actualNote * 16 * 4) - (sample.finetune / 2);
       }
-      if (note <= 36) return AMIGA_PERIOD_TABLE[note - 1];
-      return 0;
+      
+      let tableNote = note - 1;
+      let octaves = 0;
+      while (tableNote >= AMIGA_PERIOD_TABLE.length) {
+          tableNote -= 12;
+          octaves++;
+      }
+      while (tableNote < 0) {
+          tableNote += 12;
+          octaves--;
+      }
+      
+      let p = AMIGA_PERIOD_TABLE[tableNote];
+      if (octaves > 0) p = p / Math.pow(2, octaves);
+      else if (octaves < 0) p = p * Math.pow(2, -octaves);
+      
+      return p;
   }
   
   private calculateFrequency(period: number, sample: Sample): number {

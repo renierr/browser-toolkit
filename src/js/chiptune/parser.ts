@@ -13,6 +13,6 @@ export function parseModule(data: Uint8Array): ModuleFile {
   const impm = readString(data, 0, 4);
   if (impm === 'IMPM') return new ItParser(data).parse();
   const extMod = readString(data, 0, 17);
-  if (extMod === 'Extended Module: ') return new XmParser(data).parse();
+  if (extMod.startsWith('Extended Module:')) return new XmParser(data).parse();
   return new ModParser(data).parse();
 }

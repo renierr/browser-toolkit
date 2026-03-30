@@ -6,8 +6,8 @@ export class XmParser extends BaseParser {
     if (this.data.length < 60) throw new Error("Invalid XM file size");
     this.setPos(0);
     const sig = this.readStr(17);
-    if (sig !== 'Extended Module: ') throw new Error("Not XM signature");
-    const title = this.readStr(20);
+    if (!sig.startsWith('Extended Module:')) throw new Error("Not XM signature");
+    const title = this.readStr(20).trim();
     this.readU8(); // 0x1A
     this.readStr(20); // tracker name
     this.readU16LE(); // version
@@ -99,7 +99,7 @@ export class XmParser extends BaseParser {
     for (let i = 0; i < numInstruments; i++) {
       const insStart = this.pos;
       const iSize = this.readU32LE();
-      const name = this.readStr(22);
+      const name = this.readStr(22).trim();
       this.readU8(); // type
       const numSamples = this.readU16LE();
       
@@ -126,7 +126,7 @@ export class XmParser extends BaseParser {
         const sPan = this.readU8();
         const relNote = this.readS8();
         this.readU8(); // res
-        this.readStr(22); // name
+        this.readStr(22).trim(); // name
         sampleHeaders.push({ slen, loopStart, loopLength, sVol, sFine, type, sPan, relNote });
       }
 

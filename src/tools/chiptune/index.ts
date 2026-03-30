@@ -1,5 +1,7 @@
 import { ChiptunePlayer } from '../../js/chiptune/player';
 import { parseModule } from '../../js/chiptune/parser';
+import { SidParser } from '../../js/chiptune/sid-parser';
+import { SidPlayer } from '../../js/chiptune/sid-player';
 import type { ModuleFile } from '../../js/chiptune/types';
 
 
@@ -105,7 +107,7 @@ function getElements(): Record<string, HTMLElement | null> {
 import type { SharedFilesPayload } from '../../js/share-target';
 
 export default function init(payload?: SharedFilesPayload): () => void {
-  let player: ChiptunePlayer | null = null;
+  let player: ChiptunePlayer | any = null;
   let animationId: number | null = null;
 
   const container = document.getElementById('chiptune-player');
@@ -113,6 +115,31 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   const elements = getElements();
   player = new ChiptunePlayer();
+  
+  function setupPlayerCallbacks(p: ChiptunePlayer, els: any) {
+    p.onPositionChange = (pattern: number, row: number) => {
+      const positionDisplay = els['position-display'];
+      const seekSlider = els['seek-slider'];
+      if (positionDisplay)
+        positionDisplay.textContent = `Pat: ${String(pattern).padStart(2, '0')} Row: ${String(row).padStart(2, '0')}`;
+      if (seekSlider) {
+        const totalRows = p.getTotalRows();
+        const currentRow = pattern * (p.getModule()?.rowsPerPattern || 64) + row;
+        seekSlider.value = String(Math.round((currentRow / totalRows) * 100));
+      }
+    };
+
+    p.onChannelActivity = (activeChannels: boolean[]) => {
+      const channelActivity = els['channel-activity'];
+      if (!channelActivity) return;
+      const leds = channelActivity.querySelectorAll('.channel-led');
+      leds.forEach((led: Element, i: number) => {
+        led.classList.toggle('active', activeChannels[i]);
+      });
+    };
+  }
+  
+  setupPlayerCallbacks(player, elements);
 
   const dropzone = elements['dropzone'];
   const fileInput = elements['file-input'] as HTMLInputElement | null;
@@ -142,8 +169,70 @@ export default function init(payload?: SharedFilesPayload): () => void {
       const file = fileList[0];
       const buffer = await file.arrayBuffer();
       const data = new Uint8Array(buffer);
+      const ext = file.name.split('.').pop()?.toLowerCase();
+      if (ext === 'sid') {
+          try {
+              if (player) {
+                 player.stop();
+                 player = null as any; 
+              }
+              const sidMod = new SidParser(data).parse();
+              
+              if (!(window as any).sidAudioCtx) {
+                  (window as any).sidAudioCtx = new AudioContext();
+              }
+              const actx = (window as any).sidAudioCtx as AudioContext;
+              if (actx.state === 'suspended') actx.resume();
+
+              const sidPlayer = new SidPlayer();
+              sidPlayer.loadModule(sidMod, actx.sampleRate);
+              
+              const scriptNode = actx.createScriptProcessor(4096, 0, 1);
+              scriptNode.onaudioprocess = (e) => {
+                  try {
+                      sidPlayer.renderStream(e.outputBuffer.getChannelData(0), 4096);
+                  } catch (e) { console.error('SID render error', e); }
+              };
+              const analyser = actx.createAnalyser();
+              analyser.fftSize = 2048;
+              
+              scriptNode.connect(analyser);
+              analyser.connect(actx.destination);
+              
+              let isPlaying = true;
+              
+              // Map cleanup and UI controls to SidPlayer
+              (player as any) = {
+                  stop: () => {
+                      scriptNode.disconnect();
+                      analyser.disconnect();
+                  },
+                  getIsPlaying: () => isPlaying,
+                  play: () => { actx.resume(); isPlaying = true; },
+                  pause: () => { actx.suspend(); isPlaying = false; },
+                  setSpeed: () => {},
+                  getTotalRows: () => 1,
+                  getModule: () => ({ rowsPerPattern: 64, defaultSpeed: 1 }),
+                  getAnalyser: () => analyser
+              };
+
+              const elements = getElements();
+              if (elements['format-badge']) elements['format-badge'].textContent = 'SID';
+              if (elements['song-title']) elements['song-title'].textContent = sidMod.title + ' by ' + sidMod.author;
+              if (elements['default-bpm']) elements['default-bpm'].textContent = 'N/A';
+              if (elements['file-info']) elements['file-info'].classList.remove('hidden');
+              enableControls(elements);
+          } catch(e) { console.error('SID parse error', e); }
+          return;
+      }
+      
       const mod = parseModule(data);
-      player!.loadModule(mod);
+      if (!player || !(player instanceof ChiptunePlayer)) {
+          if (player && (player as any).stop) (player as any).stop();
+          player = new ChiptunePlayer();
+          setupPlayerCallbacks(player, elements);
+      }
+      player.loadModule(mod);
       updateModuleInfo(mod, elements);
       updateChannelActivity(elements, mod.channels);
       enableControls(elements);
@@ -175,19 +264,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
       if (files) await onFile(files);
     });
   }
-
-  fileInput?.addEventListener('change', async (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-    const buffer = await file.arrayBuffer();
-    const data = new Uint8Array(buffer);
-    const mod = parseModule(data);
-    player!.loadModule(mod);
-    updateModuleInfo(mod, elements);
-    updateChannelActivity(elements, mod.channels);
-    enableControls(elements);
-    player!.setSpeed(mod.defaultSpeed);
-  });
 
   btnPlay?.addEventListener('click', () => {
     if (!player) return;

@@ -22,13 +22,13 @@ export class ModParser extends BaseParser {
     if (this.data.length < 1084) throw new Error("Invalid MOD file size");
     
     this.setPos(0);
-    const title = this.readStr(20);
+    const title = this.readStr(20).trim();
     const instruments: Instrument[] = [];
     
     // 31 samples
     for (let i = 0; i < 31; i++) {
       this.setPos(20 + i * 30);
-      const name = this.readStr(22);
+      const name = this.readStr(22).trim();
       const lenWords = this.readU16BE();
       const length = lenWords * 2;
       const fineNibble = this.readU8() & 0x0f;

@@ -1,5 +1,6 @@
 import type { ModuleFile, Instrument, Note, Pattern, Sample } from './types';
 import { BaseParser } from './base-parser';
+import { decompressIT8, decompressIT16 } from './it-decompress';
 
 // Minimal IT Parser stub. Full IT implementation involves deeply stateful packing. 
 // We parse the headers and basic fields to remain compatible with older toolkit requirements.
@@ -8,7 +9,7 @@ export class ItParser extends BaseParser {
     if (this.data.length < 192 || this.readStr(4) !== 'IMPM') throw new Error("Not an IT file");
     
     this.setPos(4);
-    const title = this.readStr(26);
+    const title = this.readStr(26).trim();
     this.setPos(32);
     const ordNum = this.readU16LE();
     const insNum = this.readU16LE();
@@ -61,7 +62,7 @@ export class ItParser extends BaseParser {
                 this.readU8(); // _gVol
                 const sFlags = this.readU8();
                 sVol = this.readU8();
-                name = this.readStr(26);
+                name = this.readStr(26).trim();
                 const cvt = this.readU8();
                 this.readU8(); // _dfp
                 smpLength = this.readU32LE();
@@ -78,23 +79,33 @@ export class ItParser extends BaseParser {
                 this.readU32LE(); // _susLoopEnd
                 const samplePointer = this.readU32LE();
                 
-                if (samplePointer > 0 && samplePointer < this.data.length && smpLength > 0 && (sFlags & 8) === 0) { // non-compressed
+                if (samplePointer > 0 && samplePointer < this.data.length && smpLength > 0) { 
                    this.setPos(samplePointer);
                    const is16 = (sFlags & 2) !== 0;
                    const isSigned = (cvt & 1) !== 0; // standard IT samples are signed if cvt & 1 = 1
-                   sampleData = new Float32Array(smpLength);
-                   for(let j=0; j<smpLength; j++) {
-                     if (is16) {
-                        let v = this.readU16LE();
-                        if (isSigned && v >= 32768) v -= 65536;
-                        else if (!isSigned) v -= 32768;
-                        sampleData[j] = v / 32768;
-                     } else {
-                        let v = this.readU8();
-                        if (isSigned) { if (v >= 128) v -= 256; }
-                        else { v -= 128; }
-                        sampleData[j] = v / 128;
-                     }
+                   const isCompressed = (sFlags & 8) !== 0;
+                   
+                   if (isCompressed) {
+                       if (is16) {
+                           sampleData = decompressIT16(this.data, this.pos, smpLength, isSigned) as Float32Array;
+                       } else {
+                           sampleData = decompressIT8(this.data, this.pos, smpLength, isSigned) as Float32Array;
+                       }
+                   } else {
+                       sampleData = new Float32Array(smpLength);
+                       for(let j=0; j<smpLength; j++) {
+                         if (is16) {
+                            let v = this.readU16LE();
+                            if (isSigned && v >= 32768) v -= 65536;
+                            else if (!isSigned) v -= 32768;
+                            sampleData[j] = v / 32768;
+                         } else {
+                            let v = this.readU8();
+                            if (isSigned) { if (v >= 128) v -= 256; }
+                            else { v -= 128; }
+                            sampleData[j] = v / 128;
+                         }
+                       }
                    }
                    
                    // Unroll pingpong loops
@@ -143,7 +154,7 @@ export class ItParser extends BaseParser {
                     this.readU16LE(); // trc
                     volFadeout = this.readU16LE();
                     this.setPos(dataOffsets.ins[i] + 32);
-                    name = this.readStr(26);
+                    name = this.readStr(26).trim();
                     this.setPos(dataOffsets.ins[i] + 64);
                     // 120 note pairs (note, sample index)
                     for (let n = 0; n < 120; n++) {
