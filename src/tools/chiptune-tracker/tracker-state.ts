@@ -11,6 +11,7 @@ export interface Instrument {
   duty: number;
   sampleIndex?: number;
   sampleVolume?: number;
+  sampleFinetune?: number;
   sampleData?: Float32Array;
   sampleLoopStart?: number;
   sampleLoopLength?: number;
@@ -21,6 +22,8 @@ export interface CellData {
   octave: number | null;
   instrument: number;
   volume: number;
+  effect: number;
+  effectParam: number;
 }
 
 export interface Pattern {
@@ -152,7 +155,7 @@ export function createDefaultPattern(id: number, channels: number, rows: number)
   for (let r = 0; r < rows; r++) {
     const row: CellData[] = [];
     for (let c = 0; c < channels; c++) {
-      row.push({ note: null, octave: null, instrument: 0, volume: 0 });
+      row.push({ note: null, octave: null, instrument: 0, volume: 0, effect: 0, effectParam: 0 });
     }
     patternRows.push(row);
   }

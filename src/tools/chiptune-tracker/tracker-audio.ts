@@ -11,6 +11,21 @@ type Voice = {
   sourceNode?: AudioBufferSourceNode | null;
 };
 
+interface ChannelState {
+  instrument: number;
+  note: string | null;
+  octave: number | null;
+  volume: number;
+  effect: number;
+  effectParam: number;
+  slidePitch: number;
+  vibratoPhase: number;
+  vibratoSpeed: number;
+  vibratoDepth: number;
+  arpeggioNotes: number[];
+  arpeggioIndex: number;
+}
+
 export class TrackerAudio {
   private audioContext: AudioContext | null = null;
   private masterGain: GainNode | null = null;
@@ -27,6 +42,7 @@ export class TrackerAudio {
   private onStop: (() => void) | null = null;
   private consecutiveEmptyRows = 0;
   private lastInstrument: number[] = [];
+  private channelStates: ChannelState[] = [];
 
   constructor() {
     this.initAudio();
@@ -46,6 +62,23 @@ export class TrackerAudio {
   setState(state: TrackerState): void {
     this.state = state;
     this.lastInstrument = new Array(state.channels).fill(0);
+    this.channelStates = [];
+    for (let i = 0; i < state.channels; i++) {
+      this.channelStates.push({
+        instrument: 0,
+        note: null,
+        octave: null,
+        volume: 64,
+        effect: 0,
+        effectParam: 0,
+        slidePitch: 0,
+        vibratoPhase: 0,
+        vibratoSpeed: 0,
+        vibratoDepth: 0,
+        arpeggioNotes: [],
+        arpeggioIndex: 0,
+      });
+    }
   }
 
   setOnPositionChange(cb: (pattern: number, row: number) => void): void {
@@ -66,6 +99,14 @@ export class TrackerAudio {
     this.currentRow = 0;
     this.consecutiveEmptyRows = 0;
     this.nextNoteTime = this.audioContext.currentTime;
+    for (const ch of this.channelStates) {
+      ch.slidePitch = 0;
+      ch.vibratoPhase = 0;
+      ch.vibratoSpeed = 0;
+      ch.vibratoDepth = 0;
+      ch.arpeggioNotes = [];
+      ch.arpeggioIndex = 0;
+    }
     this.scheduler();
   }
 
@@ -131,7 +172,8 @@ export class TrackerAudio {
     this.nextNoteTime += rowDuration;
 
     if (this.onPositionChange) {
-      this.onPositionChange(pattern.id, this.currentRow);
+      const actualPatternIdx = this.state.order[this.currentPatternIdx];
+      this.onPositionChange(actualPatternIdx, this.currentRow);
     }
 
     if (!rowHasNotes) {
@@ -176,11 +218,55 @@ export class TrackerAudio {
   private playCell(channel: number, cell: CellData, time: number): void {
     if (!this.audioContext || !this.state) return;
 
+    const chState = this.channelStates[channel];
+    if (!chState) return;
+
     if (cell.instrument > 0) {
       this.lastInstrument[channel] = cell.instrument;
+      chState.instrument = cell.instrument;
     }
 
-    if (cell.note === null || cell.octave === null) return;
+    if (cell.note !== null && cell.octave !== null) {
+      chState.note = cell.note;
+      chState.octave = cell.octave;
+      chState.slidePitch = 0;
+      chState.arpeggioNotes = [];
+      chState.arpeggioIndex = 0;
+    }
+
+    if (cell.effect === 0x0c) {
+      chState.volume = Math.min(cell.effectParam, 64);
+    } else if (cell.effect === 0x0a) {
+      const volSlide = cell.effectParam;
+      const hi = (volSlide >> 4) & 0x0f;
+      const lo = volSlide & 0x0f;
+      if (hi > 0) {
+        chState.volume = Math.min(chState.volume + hi, 64);
+      } else if (lo > 0) {
+        chState.volume = Math.max(chState.volume - lo, 0);
+      }
+    }
+
+    if (cell.effect === 0x01) {
+      chState.slidePitch = cell.effectParam * 1.5;
+    } else if (cell.effect === 0x02) {
+      chState.slidePitch = -cell.effectParam * 1.5;
+    } else if (cell.effect === 0x04) {
+      chState.vibratoDepth = cell.effectParam & 0x0f;
+      chState.vibratoSpeed = (cell.effectParam >> 4) * 2;
+    } else if (cell.effect === 0x00 && cell.effectParam > 0) {
+      const arp = cell.effectParam;
+      const note1 = (arp >> 4) & 0x0f;
+      const note2 = arp & 0x0f;
+      if (note1 > 0 || note2 > 0) {
+        chState.arpeggioNotes = [0, note1, note2];
+        chState.arpeggioIndex = 0;
+      }
+    }
+
+    const hasNoteInCell = cell.note !== null && cell.octave !== null;
+    const hasNoteInState = chState.note !== null && chState.octave !== null;
+    if (!hasNoteInCell && !hasNoteInState) return;
 
     let instrumentId = cell.instrument;
     if (instrumentId === 0) {
@@ -191,8 +277,14 @@ export class TrackerAudio {
       this.state.instruments.find((i) => i.id === instrumentId) ?? this.state.instruments[0];
     if (!instrument) return;
 
-    const freq = noteToFrequency(cell.note, cell.octave);
+    const note = cell.note ?? chState.note;
+    const octave = cell.octave ?? chState.octave;
+    let freq = noteToFrequency(note, octave);
     if (freq <= 0) return;
+
+    const finetune = instrument.sampleFinetune ?? 0;
+    const finetuneOffset = finetune * 0.5;
+    freq += finetuneOffset;
 
     const modSampleIdx = instrument.sampleIndex ?? instrumentId - 1;
     const hasModSample =
@@ -201,8 +293,23 @@ export class TrackerAudio {
     const speed = this.state.speed || 6;
     const rowDuration = (speed * 2) / (this.state.bpm / 60);
 
+    if (chState.arpeggioNotes.length > 0) {
+      const arpNote = chState.arpeggioNotes[chState.arpeggioIndex % 3];
+      if (arpNote > 0) {
+        freq *= Math.pow(2, arpNote / 12);
+      }
+    }
+
+    if (chState.slidePitch !== 0) {
+      freq += chState.slidePitch;
+    }
+
+    const vibratoFreq =
+      1 + Math.sin(chState.vibratoPhase * Math.PI * 2) * (chState.vibratoDepth / 64);
+    freq *= vibratoFreq;
+
     if (hasModSample) {
-      this.playSample(modSampleIdx, freq, time, cell.volume, instrument, rowDuration);
+      this.playSample(modSampleIdx, freq, time, chState.volume, instrument, rowDuration);
       return;
     }
 
@@ -214,9 +321,9 @@ export class TrackerAudio {
     voice.instrument = instrument;
 
     if (instrument.waveform === 'noise') {
-      this.playNoise(voice, time, cell.volume);
+      this.playNoise(voice, time, chState.volume);
     } else {
-      this.playTone(voice, freq, time, cell.volume, instrument);
+      this.playTone(voice, freq, time, chState.volume, instrument);
     }
   }
 

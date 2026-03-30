@@ -302,11 +302,13 @@ export default function init(): () => void {
     const container = document.getElementById('instrument-tabs') as HTMLElement;
     container.innerHTML = '';
 
-    for (const inst of state.instruments) {
+    const maxInstruments = Math.min(state.instruments.length, 20);
+    for (let i = 0; i < maxInstruments; i++) {
+      const inst = state.instruments[i];
       const btn = document.createElement('button');
       btn.className = `btn btn-xs ${inst.id === selectedInstrument ? 'btn-primary' : 'btn-outline'}`;
-      btn.textContent = inst.name;
-      btn.title = `Instrument ${inst.id}`;
+      btn.textContent = inst.name.substring(0, 8);
+      btn.title = `Instrument ${inst.id}: ${inst.name}`;
       btn.addEventListener('click', () => {
         selectedInstrument = inst.id;
         renderInstrumentTabs();
@@ -412,6 +414,7 @@ export default function init(): () => void {
   function renderAll() {
     renderPatternOrder();
     renderTrackerGrid();
+    renderInstrumentTabs();
     updatePositionDisplay();
     updateNoteSelection();
     updateOctaveSelection();
@@ -621,7 +624,7 @@ export default function init(): () => void {
     for (let r = 0; r < rows; r++) {
       const row: (typeof state.patterns)[0]['rows'][0] = [];
       for (let c = 0; c < channels; c++) {
-        row.push({ note: null, octave: null, instrument: 0, volume: 0 });
+        row.push({ note: null, octave: null, instrument: 0, volume: 0, effect: 0, effectParam: 0 });
       }
       newPatternRows.push(row);
     }
@@ -741,6 +744,7 @@ export default function init(): () => void {
         duty: 50,
         sampleIndex: i,
         sampleVolume: sample?.volume || 64,
+        sampleFinetune: sample?.finetune ?? 0,
         sampleData: sample?.data,
         sampleLoopStart: sample?.loopStart,
         sampleLoopLength: sample?.loopLength,
@@ -761,10 +765,19 @@ export default function init(): () => void {
             octave: modNote?.octave ?? null,
             instrument: modInstr,
             volume: modVol,
+            effect: modNote?.effect ?? 0,
+            effectParam: modNote?.effectParam ?? 0,
           });
         }
         while (rowData.length < 4) {
-          rowData.push({ note: null, octave: null, instrument: 0, volume: 0 });
+          rowData.push({
+            note: null,
+            octave: null,
+            instrument: 0,
+            volume: 0,
+            effect: 0,
+            effectParam: 0,
+          });
         }
         rows.push(rowData);
       }
@@ -776,7 +789,14 @@ export default function init(): () => void {
       for (let row = 0; row < rowsPerPattern; row++) {
         const rowData: CellData[] = [];
         for (let ch = 0; ch < 4; ch++) {
-          rowData.push({ note: null, octave: null, instrument: 0, volume: 0 });
+          rowData.push({
+            note: null,
+            octave: null,
+            instrument: 0,
+            volume: 0,
+            effect: 0,
+            effectParam: 0,
+          });
         }
         rows.push(rowData);
       }
