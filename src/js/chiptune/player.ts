@@ -1,4 +1,4 @@
-import type { ModuleFile, Sample } from './types';
+import type { ModuleFile, Sample, Envelope } from './types';
 import { periodToFrequencyAmiga, periodToFrequencyLinear, AMIGA_PERIOD_TABLE } from './types';
 
 interface ChannelState {
@@ -38,6 +38,12 @@ interface ChannelState {
   noteDelayCounter: number;
 
   envTick: number;
+  volumeEnvTick: number;
+  panningEnvTick: number;
+  volumeEnvValue: number;
+  panningEnvValue: number;
+  keyOn: boolean;
+  fadeoutSpeed: number;
 
   sample: Sample | null;
 
@@ -127,6 +133,12 @@ export class ChiptunePlayer {
         retrigCounter: 0,
         noteDelayCounter: 0,
         envTick: 0,
+        volumeEnvTick: 0,
+        panningEnvTick: 0,
+        volumeEnvValue: 64,
+        panningEnvValue: 128,
+        keyOn: false,
+        fadeoutSpeed: 0,
         sample: null,
         source: null,
         gain: null,
@@ -282,9 +294,13 @@ export class ChiptunePlayer {
         // Note parsing
         if (cell.note !== null) {
           if (cell.note === 97) {
-            // KeyOff
-            chState.volume = 0; // immediate silence
-            this.stopChannel(chState, time); // cut note
+            // KeyOff - for XM/IT, start fadeout instead of immediate cut
+            if (this.module && (this.module.type === 'XM' || this.module.type === 'IT')) {
+              chState.keyOn = false;
+            } else {
+              chState.volume = 0;
+              this.stopChannel(chState, time);
+            }
           } else {
             // We have a new valid note
             if (tonePorta) {
@@ -296,8 +312,17 @@ export class ChiptunePlayer {
                 cell.period || this.calculatePeriod(cell.note, cell.instrument, chState);
               chState.volume = chState.baseVolume;
               chState.vibratoPhase = 0;
-              // Set sample map accurately!
+              chState.volumeEnvTick = 0;
+              chState.volumeEnvValue = 0;
+              chState.keyOn = true;
               this.assignSample(chState);
+
+              // Apply instrument vibrato (XM)
+              if (this.module?.type === 'XM' && chState.sample) {
+                if (chState.sample.vibratoDepth) chState.vibratoDepth = chState.sample.vibratoDepth;
+                if (chState.sample.vibratoRate) chState.vibratoSpeed = chState.sample.vibratoRate;
+              }
+
               shouldTrigger = true;
             }
           }
@@ -367,6 +392,8 @@ export class ChiptunePlayer {
         if (chState.effect === 0x0e && ((chState.effectParam >> 4) & 0x0f) === 0x9) {
           const retrigSpeed = chState.effectParam & 0x0f;
           if (retrigSpeed > 0 && this.currentTick > 0 && this.currentTick % retrigSpeed === 0) {
+            chState.volumeEnvTick = 0;
+            chState.keyOn = true;
             shouldTrigger = true;
           }
         }
@@ -396,6 +423,16 @@ export class ChiptunePlayer {
       } else {
         // --- CONTINUOUS TICK EVALUATION (Tick 1+) ---
         this.parseEffectContinuous(chState, chState.effect);
+      }
+
+      // Update envelopes for XM/IT
+      if (
+        chState.instrument > 0 &&
+        this.module &&
+        this.module.instruments[chState.instrument - 1]
+      ) {
+        const inst = this.module.instruments[chState.instrument - 1];
+        this.updateEnvelope(chState, inst);
       }
 
       // Compute final exact frequency and automate Web Audio nodes for THIS tick timeframe
@@ -429,6 +466,11 @@ export class ChiptunePlayer {
 
         let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * this.volume;
 
+        // Apply volume envelope for XM/IT
+        if (this.module && (this.module.type === 'XM' || this.module.type === 'IT')) {
+          finalVol *= chState.volumeEnvValue / 64;
+        }
+
         // Tremolo
         if (chState.tremoloDepth > 0) {
           let tremoloMod = 0;
@@ -447,6 +489,16 @@ export class ChiptunePlayer {
 
         finalVol = Math.max(0, Math.min(finalVol, 1));
         chState.gain.gain.setValueAtTime(finalVol, time);
+
+        // Apply panning envelope for XM/IT
+        if (
+          chState.panNode &&
+          this.module &&
+          (this.module.type === 'XM' || this.module.type === 'IT')
+        ) {
+          const panValue = chState.panningEnvValue;
+          chState.panNode.pan.value = Math.max(-1, Math.min(1, (panValue - 128) / 128));
+        }
 
         activeChannels[c] = finalVol > 0.01;
       }
@@ -533,6 +585,72 @@ export class ChiptunePlayer {
     else if (octaves < 0) p = p * Math.pow(2, -octaves);
 
     return p;
+  }
+
+  private calculateEnvelopeValue(env: Envelope | undefined, tick: number): number {
+    if (!env || !env.points || env.points.length === 0) return 64;
+
+    const points = env.points;
+    const numPoints = points.length;
+
+    if (tick <= 0) return points[0].value;
+
+    let currentTick = 0;
+    for (let i = 0; i < numPoints - 1; i++) {
+      const nextTick = points[i + 1].tick;
+      if (tick <= nextTick) {
+        const t = (tick - currentTick) / (nextTick - currentTick);
+        return points[i].value + (points[i + 1].value - points[i].value) * t;
+      }
+      currentTick = nextTick;
+    }
+
+    const lastPoint = points[numPoints - 1];
+    return lastPoint.value;
+  }
+
+  private updateEnvelope(
+    chState: ChannelState,
+    inst: { volumeEnv?: Envelope; panningEnv?: Envelope; volumeFadeout: number }
+  ): void {
+    if (!this.module) return;
+    if (this.module.type !== 'XM' && this.module.type !== 'IT') return;
+
+    const volEnv = inst.volumeEnv;
+    const panEnv = inst.panningEnv;
+
+    if (chState.keyOn) {
+      if (volEnv) {
+        const envType = volEnv.type || 0;
+        const loopEnabled = (envType & 4) !== 0;
+        const loopStart = volEnv.loopStart || 0;
+        const loopEnd = volEnv.loopEnd || (volEnv.points?.length || 1) - 1;
+
+        chState.volumeEnvTick++;
+
+        if (loopEnabled && chState.volumeEnvTick >= volEnv.points[loopEnd].tick) {
+          chState.volumeEnvTick = volEnv.points[loopStart].tick;
+        }
+
+        chState.volumeEnvValue = this.calculateEnvelopeValue(volEnv, chState.volumeEnvTick);
+      } else {
+        chState.volumeEnvValue = 64;
+      }
+
+      if (panEnv) {
+        chState.panningEnvTick++;
+        chState.panningEnvValue = this.calculateEnvelopeValue(panEnv, chState.panningEnvTick);
+      } else {
+        chState.panningEnvValue = chState.sample?.panning || 128;
+      }
+    } else {
+      if (inst.volumeFadeout > 0) {
+        const fadeRate = inst.volumeFadeout / (8192 / 5);
+        chState.volumeEnvValue = Math.max(0, chState.volumeEnvValue - fadeRate);
+      } else {
+        chState.volumeEnvValue = 0;
+      }
+    }
   }
 
   private calculateFrequency(period: number, sample: Sample): number {
