@@ -639,6 +639,7 @@ export default function init(): () => void {
         row.push({
           note: null,
           octave: null,
+          period: 0,
           instrument: 0,
           volume: null,
           effect: 0,
@@ -787,6 +788,7 @@ export default function init(): () => void {
           rowData.push({
             note: modNote?.note ?? null,
             octave: modNote?.octave ?? null,
+            period: modNote?.period ?? 0,
             instrument: modInstr,
             volume: modNote?.volume ?? null,
             effect: modNote?.effect ?? 0,
@@ -797,6 +799,7 @@ export default function init(): () => void {
           rowData.push({
             note: null,
             octave: null,
+            period: 0,
             instrument: 0,
             volume: null,
             effect: 0,
@@ -816,6 +819,7 @@ export default function init(): () => void {
           rowData.push({
             note: null,
             octave: null,
+            period: 0,
             instrument: 0,
             volume: null,
             effect: 0,

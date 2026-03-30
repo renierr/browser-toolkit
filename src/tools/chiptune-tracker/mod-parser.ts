@@ -11,6 +11,7 @@ export interface ModSample {
 export interface ModNote {
   note: string | null;
   octave: number | null;
+  period: number;
   instrument: number;
   volume: number | null;
   effect: number;
@@ -135,8 +136,9 @@ function noteFromPeriod(period: number): { note: string; octave: number } | null
 
 export function periodToFrequency(period: number, finetune: number = 0): number {
   if (period === 0) return 0;
+  const AMIGA_CLOCK = 7093789;
   const adjustedPeriod = period + finetune;
-  return ((8363 * 709.3789) / adjustedPeriod / 44100) * 2;
+  return AMIGA_CLOCK / (2 * adjustedPeriod);
 }
 
 function getChannelsFromMarker(marker: string): number {
@@ -229,6 +231,7 @@ export function parseModFile(data: ArrayBuffer): ModFile {
           rowData.push({
             note: null,
             octave: null,
+            period: 0,
             instrument: 0,
             volume: null,
             effect: 0,
@@ -242,7 +245,7 @@ export function parseModFile(data: ArrayBuffer): ModFile {
         const byte2 = bytes[cellOffset + 2];
         const byte3 = bytes[cellOffset + 3];
 
-        const sampleNum = ((byte0 & 0x10) >> 4) | ((byte2 & 0xf0) >> 4);
+        const sampleNum = ((byte0 & 0xf0) >> 4) | (byte2 & 0xf0);
         const period = ((byte0 & 0x0f) << 8) | byte1;
         const effect = byte2 & 0x0f;
         const effectParam = byte3;
@@ -257,6 +260,7 @@ export function parseModFile(data: ArrayBuffer): ModFile {
         rowData.push({
           note: noteInfo?.note ?? null,
           octave: noteInfo?.octave ?? null,
+          period,
           instrument: sampleNum,
           volume,
           effect,

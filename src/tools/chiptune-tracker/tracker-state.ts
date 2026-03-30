@@ -23,6 +23,7 @@ export interface Instrument {
 export interface CellData {
   note: string | null;
   octave: number | null;
+  period: number;
   instrument: number;
   volume: number | null;
   effect: number;
@@ -76,6 +77,7 @@ export function createDefaultPattern(id: number, channels: number, rows: number)
       row.push({
         note: null,
         octave: null,
+        period: 0,
         instrument: 0,
         volume: null,
         effect: 0,

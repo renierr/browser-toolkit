@@ -1,5 +1,6 @@
 import type { TrackerState, Instrument, CellData, Pattern } from './tracker-state';
 import { noteToFrequency } from './tracker-state';
+import { periodToFrequency } from './mod-parser';
 
 type Voice = {
   osc: OscillatorNode | null;
@@ -15,6 +16,7 @@ interface ChannelState {
   instrument: number;
   note: string | null;
   octave: number | null;
+  period: number;
   volume: number;
   effect: number;
   effectParam: number;
@@ -70,6 +72,7 @@ export class TrackerAudio {
         instrument: 0,
         note: null,
         octave: null,
+        period: 0,
         volume: 64,
         effect: 0,
         effectParam: 0,
@@ -104,6 +107,7 @@ export class TrackerAudio {
     this.consecutiveEmptyRows = 0;
     this.nextNoteTime = this.audioContext.currentTime;
     for (const ch of this.channelStates) {
+      ch.period = 0;
       ch.slidePitch = 0;
       ch.vibratoPhase = 0;
       ch.vibratoSpeed = 0;
@@ -252,6 +256,10 @@ export class TrackerAudio {
       chState.sampleOffset = 0;
     }
 
+    if (cell.period > 0) {
+      chState.period = cell.period;
+    }
+
     if (cell.effect === 0x0c) {
       chState.volume = Math.min(cell.effectParam, 64);
     } else if (cell.effect === 0x0a) {
@@ -338,12 +346,17 @@ export class TrackerAudio {
     const instrument = this.state.instruments.find((i) => i.id === instrumentId);
     if (!instrument) return;
 
-    const note = cell.note ?? chState.note;
-    const octave = cell.octave ?? chState.octave;
-    let freq = noteToFrequency(note, octave);
-    if (freq <= 0) return;
-
     const finetune = instrument.sampleFinetune ?? 0;
+
+    let freq: number;
+    if (chState.period > 0) {
+      freq = periodToFrequency(chState.period, finetune);
+    } else {
+      const note = cell.note ?? chState.note;
+      const octave = cell.octave ?? chState.octave;
+      freq = noteToFrequency(note, octave);
+    }
+    if (freq <= 0) return;
 
     const hasSampleData = instrument.sampleData && instrument.sampleData.length > 0;
     const modSampleIdx = hasSampleData ? (instrument.sampleIndex ?? instrumentId - 1) : -1;
