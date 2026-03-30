@@ -24,6 +24,8 @@ interface ChannelState {
   vibratoDepth: number;
   arpeggioNotes: number[];
   arpeggioIndex: number;
+  sampleOffset: number;
+  portamentoTarget: number;
 }
 
 export class TrackerAudio {
@@ -77,6 +79,8 @@ export class TrackerAudio {
         vibratoDepth: 0,
         arpeggioNotes: [],
         arpeggioIndex: 0,
+        sampleOffset: 0,
+        portamentoTarget: 0,
       });
     }
   }
@@ -106,6 +110,8 @@ export class TrackerAudio {
       ch.vibratoDepth = 0;
       ch.arpeggioNotes = [];
       ch.arpeggioIndex = 0;
+      ch.sampleOffset = 0;
+      ch.portamentoTarget = 0;
     }
     this.scheduler();
   }
@@ -221,6 +227,10 @@ export class TrackerAudio {
     const chState = this.channelStates[channel];
     if (!chState) return;
 
+    if (cell.effect === 0x09) {
+      chState.sampleOffset = cell.effectParam * 256;
+    }
+
     if (cell.instrument > 0) {
       this.lastInstrument[channel] = cell.instrument;
       chState.instrument = cell.instrument;
@@ -232,6 +242,7 @@ export class TrackerAudio {
       chState.slidePitch = 0;
       chState.arpeggioNotes = [];
       chState.arpeggioIndex = 0;
+      chState.sampleOffset = 0;
     }
 
     if (cell.effect === 0x0c) {
@@ -251,6 +262,8 @@ export class TrackerAudio {
       chState.slidePitch = cell.effectParam * 1.5;
     } else if (cell.effect === 0x02) {
       chState.slidePitch = -cell.effectParam * 1.5;
+    } else if (cell.effect === 0x03) {
+      chState.portamentoTarget = cell.effectParam;
     } else if (cell.effect === 0x04) {
       chState.vibratoDepth = cell.effectParam & 0x0f;
       chState.vibratoSpeed = (cell.effectParam >> 4) * 2;
@@ -262,11 +275,51 @@ export class TrackerAudio {
         chState.arpeggioNotes = [0, note1, note2];
         chState.arpeggioIndex = 0;
       }
+    } else if (cell.effect === 0x0e) {
+      const eHigh = (cell.effectParam >> 8) & 0x0f;
+      const eLow = cell.effectParam & 0x0f;
+      if (eHigh === 0x0c) {
+        chState.volume = Math.min(eLow, 64);
+      } else if (eHigh === 0x0d) {
+        chState.note = null;
+        chState.octave = null;
+      } else if (eHigh === 0x01) {
+        chState.slidePitch = -eLow * 1.5;
+      } else if (eHigh === 0x02) {
+        chState.slidePitch = eLow * 1.5;
+      }
+    }
+
+    let patternJump = -1;
+    let rowJump = -1;
+
+    if (cell.effect === 0x0b) {
+      patternJump = cell.effectParam;
+    } else if (cell.effect === 0x0d) {
+      rowJump = (cell.effectParam >> 4) * 10 + (cell.effectParam & 0x0f);
+    } else if (cell.effect === 0x0f) {
+      if (cell.effectParam > 0 && cell.effectParam <= 32) {
+        this.state.speed = cell.effectParam;
+      } else if (cell.effectParam > 32) {
+        this.state.bpm = cell.effectParam;
+      }
     }
 
     const hasNoteInCell = cell.note !== null && cell.octave !== null;
     const hasNoteInState = chState.note !== null && chState.octave !== null;
-    if (!hasNoteInCell && !hasNoteInState) return;
+    if (!hasNoteInCell && !hasNoteInState) {
+      if (patternJump >= 0) {
+        this.currentPatternIdx = patternJump;
+        this.currentRow = 0;
+        this.consecutiveEmptyRows = 0;
+        return;
+      }
+      if (rowJump >= 0) {
+        this.currentRow = rowJump;
+        return;
+      }
+      return;
+    }
 
     let instrumentId = cell.instrument;
     if (instrumentId === 0) {
@@ -288,7 +341,10 @@ export class TrackerAudio {
 
     const modSampleIdx = instrument.sampleIndex ?? instrumentId - 1;
     const hasModSample =
-      this.state.modSamples && modSampleIdx >= 0 && this.state.modSamples[modSampleIdx]?.length > 0;
+      this.state.modSamples &&
+      modSampleIdx >= 0 &&
+      modSampleIdx < this.state.modSamples.length &&
+      this.state.modSamples[modSampleIdx]?.length > 0;
 
     const speed = this.state.speed || 6;
     const rowDuration = (speed * 5) / this.state.bpm;
@@ -308,8 +364,22 @@ export class TrackerAudio {
       1 + Math.sin(chState.vibratoPhase * Math.PI * 2) * (chState.vibratoDepth / 64);
     freq *= vibratoFreq;
 
+    if (chState.vibratoSpeed > 0 && chState.vibratoDepth > 0) {
+      chState.vibratoPhase += chState.vibratoSpeed / 256;
+      if (chState.vibratoPhase > 1) chState.vibratoPhase -= 1;
+    }
+
     if (hasModSample) {
-      this.playSample(modSampleIdx, freq, time, chState.volume, instrument, rowDuration);
+      this.playSample(
+        modSampleIdx,
+        freq,
+        time,
+        chState.volume,
+        instrument,
+        rowDuration,
+        finetune,
+        chState.sampleOffset
+      );
       return;
     }
 
@@ -333,7 +403,9 @@ export class TrackerAudio {
     time: number,
     volume: number,
     instrument: Instrument,
-    rowDuration: number
+    rowDuration: number,
+    finetune: number = 0,
+    sampleOffset: number = 0
   ): void {
     if (!this.audioContext || !this.state?.modSamples) return;
 
@@ -346,20 +418,33 @@ export class TrackerAudio {
     voice.active = true;
     voice.note = freq;
 
-    const buffer = this.audioContext.createBuffer(
-      1,
-      sampleData.length,
-      this.audioContext.sampleRate
-    );
+    const sampleRate = this.audioContext.sampleRate;
+    const buffer = this.audioContext.createBuffer(1, sampleData.length, sampleRate);
     const channelData = buffer.getChannelData(0);
     channelData.set(sampleData);
 
     const source = this.audioContext.createBufferSource();
     source.buffer = buffer;
 
+    const loopStart = instrument.sampleLoopStart ?? 0;
+    const loopLength = instrument.sampleLoopLength ?? 0;
+    if (loopLength > 2) {
+      source.loop = true;
+      source.loopStart = loopStart / sampleRate;
+      source.loopEnd = (loopStart + loopLength) / sampleRate;
+    }
+
     const baseFreq = 8363;
-    const playbackRate = freq / baseFreq;
+    let playbackRate = freq / baseFreq;
+    playbackRate *= Math.pow(2, finetune / 4096);
     source.playbackRate.value = playbackRate;
+
+    const startOffset = sampleOffset / 256;
+    if (startOffset > 0 && startOffset < sampleData.length / sampleRate) {
+      source.start(time, startOffset);
+    } else {
+      source.start(time);
+    }
 
     const sampleVol = instrument.sampleVolume ?? 64;
     const vol = (volume / 64) * (sampleVol / 64);
@@ -371,7 +456,6 @@ export class TrackerAudio {
     voice.gain.gain.exponentialRampToValueAtTime(0.01, time + noteDuration + 0.05);
 
     source.connect(voice.gain);
-    source.start(time);
     source.stop(time + noteDuration + 0.1);
 
     voice.sourceNode = source;
@@ -557,10 +641,13 @@ export class TrackerAudio {
 
     const modSampleIdx = instrument.sampleIndex ?? instrument.id - 1;
     const hasModSample =
-      this.state.modSamples && modSampleIdx >= 0 && this.state.modSamples[modSampleIdx]?.length > 0;
+      this.state.modSamples &&
+      modSampleIdx >= 0 &&
+      modSampleIdx < this.state.modSamples.length &&
+      this.state.modSamples[modSampleIdx]?.length > 0;
 
     if (hasModSample) {
-      this.previewSample(modSampleIdx, freq);
+      this.previewSample(modSampleIdx, freq, instrument.sampleFinetune ?? 0);
       return;
     }
 
@@ -595,7 +682,7 @@ export class TrackerAudio {
     osc.stop(now + attack + decay + release + 0.1);
   }
 
-  private previewSample(sampleIdx: number, freq: number): void {
+  private previewSample(sampleIdx: number, freq: number, finetune: number = 0): void {
     if (!this.audioContext || !this.state?.modSamples) return;
 
     const sampleData = this.state.modSamples[sampleIdx];
@@ -613,7 +700,9 @@ export class TrackerAudio {
     source.buffer = buffer;
 
     const baseFreq = 8363;
-    source.playbackRate.value = freq / baseFreq;
+    let playbackRate = freq / baseFreq;
+    playbackRate *= Math.pow(2, finetune / 4096);
+    source.playbackRate.value = playbackRate;
 
     const gain = this.audioContext.createGain();
     gain.gain.value = 0.4;

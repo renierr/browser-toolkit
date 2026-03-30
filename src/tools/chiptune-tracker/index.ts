@@ -553,10 +553,20 @@ export default function init(): () => void {
     if (type === 'volume') {
       cell.volume = selectedVolume;
     } else {
+      const wasEmpty = cell.note === null;
       cell.note = selectedNote;
       cell.octave = selectedOctave;
       cell.instrument = selectedInstrument;
-      previewCurrentNote();
+
+      if (wasEmpty) {
+        const instrumentId = selectedInstrument || 1;
+        const instrument = state.instruments.find((i) => i.id === instrumentId);
+        if (instrument) {
+          audio.previewNote(instrument, selectedNote, selectedOctave);
+        }
+      } else {
+        previewCurrentNote();
+      }
     }
 
     renderTrackerGrid();
@@ -769,7 +779,7 @@ export default function init(): () => void {
             effectParam: modNote?.effectParam ?? 0,
           });
         }
-        while (rowData.length < 4) {
+        while (rowData.length < channels) {
           rowData.push({
             note: null,
             octave: null,
@@ -788,7 +798,7 @@ export default function init(): () => void {
       const rows: CellData[][] = [];
       for (let row = 0; row < rowsPerPattern; row++) {
         const rowData: CellData[] = [];
-        for (let ch = 0; ch < 4; ch++) {
+        for (let ch = 0; ch < channels; ch++) {
           rowData.push({
             note: null,
             octave: null,

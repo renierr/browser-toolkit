@@ -33,6 +33,16 @@ export interface ModFile {
 
 const NOTE_TABLE: string[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
+const AMIGA_PERIOD_TABLE: { note: string; octave: number; period: number }[] = [];
+for (let oct = 0; oct <= 6; oct++) {
+  for (let i = 0; i < NOTE_TABLE.length; i++) {
+    const basePeriod = [1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 906][i];
+    const period = Math.round(basePeriod / Math.pow(2, oct));
+    AMIGA_PERIOD_TABLE.push({ note: NOTE_TABLE[i], octave: oct + 1, period });
+  }
+}
+AMIGA_PERIOD_TABLE.sort((a, b) => a.period - b.period);
+
 function readString(data: Uint8Array, offset: number, length: number): string {
   let result = '';
   for (let i = 0; i < length; i++) {
@@ -55,50 +65,38 @@ function readUint16BE(data: Uint8Array, offset: number): number {
 function noteFromPeriod(period: number): { note: string; octave: number } | null {
   if (period === 0) return null;
 
-  const periods = [
-    { note: 'C', octave: 0, period: 1712 },
-    { note: 'C#', octave: 0, period: 1616 },
-    { note: 'D', octave: 0, period: 1524 },
-    { note: 'D#', octave: 0, period: 1440 },
-    { note: 'E', octave: 0, period: 1356 },
-    { note: 'F', octave: 0, period: 1280 },
-    { note: 'F#', octave: 0, period: 1208 },
-    { note: 'G', octave: 0, period: 1140 },
-    { note: 'G#', octave: 0, period: 1076 },
-    { note: 'A', octave: 0, period: 1016 },
-    { note: 'A#', octave: 0, period: 960 },
-    { note: 'B', octave: 0, period: 906 },
-  ];
-
-  const basePeriod = periods.find((p) => p.period === period);
-  if (basePeriod) {
-    return { note: basePeriod.note, octave: basePeriod.octave };
-  }
-
-  for (let oct = 0; oct <= 7; oct++) {
-    for (let i = 0; i < NOTE_TABLE.length; i++) {
-      const baseP = periods[i].period >> oct;
-      if (Math.abs(baseP - period) < 10) {
-        return { note: NOTE_TABLE[i], octave: oct };
-      }
+  let closest = AMIGA_PERIOD_TABLE[0];
+  let minDiff = Math.abs(closest.period - period);
+  for (const entry of AMIGA_PERIOD_TABLE) {
+    const diff = Math.abs(entry.period - period);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closest = entry;
     }
   }
 
-  const midiNote = Math.round(12 * Math.log2(8363 / period));
-  const octave = Math.floor(midiNote / 12) - 1;
-  const noteIdx = ((midiNote % 12) + 12) % 12;
-  return { note: NOTE_TABLE[noteIdx], octave: Math.max(0, octave) };
+  if (minDiff <= 10) {
+    return { note: closest.note, octave: closest.octave };
+  }
+
+  return null;
+}
+
+export function periodToFrequency(period: number, finetune: number = 0): number {
+  if (period === 0) return 0;
+  const adjustedPeriod = period + finetune;
+  return ((8363 * 709.3789) / adjustedPeriod / 44100) * 2;
 }
 
 function getChannelsFromMarker(marker: string): number {
   const m = marker.toUpperCase();
-  if (m === 'M.K.' || m === 'M!K!' || m === 'FLT4' || m === 'FEST') {
+  if (m === 'M.K.' || m === 'M!K!' || m === 'FLT4' || m === 'FEST' || m === 'NSMS') {
     return 4;
   }
-  if (m === 'M.V.' || m === '6CHN') {
+  if (m === 'M.V.' || m === '6CHN' || m === 'FLT6') {
     return 6;
   }
-  if (m === '8CHN') {
+  if (m === '8CHN' || m === 'FLT8') {
     return 8;
   }
   if (m === '16CN') {
@@ -113,6 +111,7 @@ function getChannelsFromMarker(marker: string): number {
 
 export function parseModFile(data: ArrayBuffer): ModFile {
   const bytes = new Uint8Array(data);
+  const buffer = bytes.buffer as ArrayBuffer;
 
   const title = readString(bytes, 0, 20);
 
@@ -129,8 +128,8 @@ export function parseModFile(data: ArrayBuffer): ModFile {
     const loopLength = readUint16BE(bytes, offset + 28) * 2;
 
     let sampleData: Float32Array;
-    if (length > 0) {
-      const rawData = new Int8Array(bytes.buffer, sampleDataOffset, length);
+    if (length > 0 && sampleDataOffset + length <= bytes.length) {
+      const rawData = new Int8Array(buffer, sampleDataOffset, length);
       sampleData = new Float32Array(length);
       for (let j = 0; j < length; j++) {
         sampleData[j] = rawData[j] / 128;
