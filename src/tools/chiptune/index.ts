@@ -4,7 +4,7 @@ import { SidParser } from '../../js/chiptune/sid-parser';
 import { SidPlayer } from '../../js/chiptune/sid-player';
 import type { ModuleFile } from '../../js/chiptune/types';
 
-
+// good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
 
 function updateModuleInfo(mod: ModuleFile, elements: Record<string, HTMLElement | null>): void {
   const formatBadge = elements['format-badge'];
