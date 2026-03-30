@@ -104,6 +104,7 @@ function getElements(): Record<string, HTMLElement | null> {
     'sample-list': document.getElementById('sample-list'),
     'samples-container': document.getElementById('samples-container'),
     'samples-chevron': document.getElementById('samples-chevron'),
+    'btn-clear': document.getElementById('btn-clear'),
   };
 }
 
@@ -160,6 +161,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const toggleSamples = elements['toggle-samples'];
   const sampleList = elements['sample-list'];
   const samplesChevron = elements['samples-chevron'];
+  const btnClear = elements['btn-clear'] as HTMLButtonElement | null;
 
   const oscCanvas = document.getElementById('oscilloscope') as HTMLCanvasElement;
   const specCanvas = document.getElementById('spectrum') as HTMLCanvasElement;
@@ -235,6 +237,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
           if (elements['default-bpm']) elements['default-bpm'].textContent = 'N/A';
           if (elements['file-info']) elements['file-info'].classList.remove('hidden');
           enableControls(elements);
+          dropzone?.classList.add('hidden');
         } catch (e) {
           console.error('SID parse error', e);
         }
@@ -252,6 +255,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       updateChannelActivity(elements, mod.channels);
       enableControls(elements);
       player!.setSpeed(mod.defaultSpeed);
+      dropzone?.classList.add('hidden');
     };
 
     if (payload && payload.sharedFiles && payload.sharedFiles.length > 0) {
@@ -295,6 +299,23 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (!player) return;
     player.stop();
     if (btnPlay) btnPlay.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i>';
+  });
+
+  btnClear?.addEventListener('click', () => {
+    if (player) {
+      player.stop();
+    }
+    elements['file-info']?.classList.add('hidden');
+    dropzone?.classList.remove('hidden');
+    if (btnPlay) btnPlay.disabled = true;
+    if (btnStop) btnStop.disabled = true;
+    if (seekSlider) seekSlider.value = '0';
+    if (positionDisplay) positionDisplay.textContent = 'Pat: -- Row: --';
+    if (timeDisplay) timeDisplay.textContent = '00:00 / --';
+    if (elements['channel-activity']) {
+      elements['channel-activity'].innerHTML =
+        '<span class="text-xs opacity-50 italic">No file loaded</span>';
+    }
   });
 
   loopToggle?.addEventListener('change', () => {
