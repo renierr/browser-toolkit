@@ -58,7 +58,8 @@ export interface ModuleFile {
   defaultSpeed: number;
   rowsPerPattern: number;
   linearFrequencies: boolean;
-  clock?: number; // Amiga clock frequency (PAL: 7093789.2, NTSC: 7159090.5)
+  clock?: number;
+  restartPosition?: number;
 }
 
 // Helper for strings

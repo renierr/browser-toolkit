@@ -516,10 +516,37 @@ export class ChiptunePlayer {
 
       if (patternBreak || this.currentRow >= (pattern.rows.length || this.module.rowsPerPattern)) {
         this.currentRow = nextRow >= 0 ? nextRow : 0;
+        const wasAtEnd = this.currentPatternIdx >= this.module.sequence.length - 1 && !patternJump;
         this.currentPatternIdx = patternJump >= 0 ? patternJump : this.currentPatternIdx + 1;
         if (this.currentPatternIdx >= this.module.sequence.length) {
-          if (this.isLooping) this.currentPatternIdx = 0;
-          else this.stop();
+          if (this.isLooping) {
+            // Reset channels on loop start
+            for (const ch of this.channelStates) {
+              this.stopChannel(ch);
+              ch.period = 0;
+              ch.targetPeriod = 0;
+              ch.volume = 0;
+              ch.keyOn = false;
+              ch.vibratoPhase = 0;
+              ch.tremoloPhase = 0;
+              ch.volumeEnvValue = 0;
+            }
+            // Handle restart position (MOD/XM)
+            const restartPos = this.module?.restartPosition || 0;
+            this.currentRow = restartPos;
+            this.currentPatternIdx = 0;
+          } else {
+            this.stop();
+          }
+        } else if (wasAtEnd && this.isLooping) {
+          // Reset channels when transitioning from end to restart
+          for (const ch of this.channelStates) {
+            this.stopChannel(ch);
+            ch.period = 0;
+            ch.targetPeriod = 0;
+            ch.volume = 0;
+            ch.keyOn = false;
+          }
         }
       }
     }
@@ -912,8 +939,42 @@ export class ChiptunePlayer {
   getTotalRows(): number {
     return this.module ? this.module.sequence.length * this.module.rowsPerPattern : 0;
   }
+  getDuration(): number {
+    if (!this.module) return 0;
+    const totalRows = this.getTotalRows();
+    const bpm = this.module.defaultBpm || 125;
+    const speed = this.module.defaultSpeed || 6;
+    const tickDuration = 2.5 / bpm;
+    const rowDuration = tickDuration * speed;
+    return totalRows * rowDuration;
+  }
+  getCurrentTime(): number {
+    if (!this.module) return 0;
+    const totalRowsPerPattern = this.module.rowsPerPattern;
+    const rowsPlayed = this.currentPatternIdx * totalRowsPerPattern + this.currentRow;
+    const bpm = this.module.defaultBpm || 125;
+    const speed = this.speed || 6;
+    const tickDuration = 2.5 / bpm;
+    const rowDuration = tickDuration * speed;
+    return rowsPlayed * rowDuration + this.currentTick * tickDuration;
+  }
   getSpeed(): number {
     return this.speed;
+  }
+
+  seek(pattern: number, row: number): void {
+    if (!this.module) return;
+    this.currentPatternIdx = Math.max(0, Math.min(pattern, this.module.sequence.length - 1));
+    this.currentRow = Math.max(0, Math.min(row, this.module.rowsPerPattern - 1));
+    this.currentTick = 0;
+    for (const ch of this.channelStates) {
+      this.stopChannel(ch);
+      ch.period = 0;
+      ch.targetPeriod = 0;
+      ch.volume = 0;
+      ch.keyOn = false;
+    }
+    if (this.onPositionChange) this.onPositionChange(this.currentPatternIdx, this.currentRow);
   }
 
   cleanup(): void {

@@ -90,6 +90,7 @@ function getElements(): Record<string, HTMLElement | null> {
     'speed-display': document.getElementById('speed-display'),
     'position-display': document.getElementById('position-display'),
     'seek-slider': document.getElementById('seek-slider'),
+    'time-display': document.getElementById('time-display'),
     'format-badge': document.getElementById('format-badge'),
     'song-title': document.getElementById('song-title'),
     'channel-count': document.getElementById('channel-count'),
@@ -154,6 +155,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const speedDisplay = elements['speed-display'];
   const positionDisplay = elements['position-display'];
   const seekSlider = elements['seek-slider'] as HTMLInputElement | null;
+  const timeDisplay = elements['time-display'];
   const channelActivity = elements['channel-activity'];
   const toggleSamples = elements['toggle-samples'];
   const sampleList = elements['sample-list'];
@@ -322,6 +324,16 @@ export default function init(payload?: SharedFilesPayload): () => void {
       const currentRow = pattern * (player.getModule()?.rowsPerPattern || 64) + row;
       seekSlider.value = String(Math.round((currentRow / totalRows) * 100));
     }
+    if (player && timeDisplay) {
+      const currentTime = player.getCurrentTime();
+      const totalTime = player.getDuration();
+      const formatTime = (t: number) => {
+        const mins = Math.floor(t / 60);
+        const secs = Math.floor(t % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      };
+      timeDisplay.textContent = `${formatTime(currentTime)} / ${formatTime(totalTime)}`;
+    }
   };
 
   player.onChannelActivity = (activeChannels: boolean[]) => {
@@ -335,6 +347,16 @@ export default function init(payload?: SharedFilesPayload): () => void {
   toggleSamples?.addEventListener('click', () => {
     sampleList?.classList.toggle('hidden');
     samplesChevron?.classList.toggle('rotate-180');
+  });
+
+  seekSlider?.addEventListener('input', () => {
+    if (!player || !player.seek) return;
+    const totalRows = player.getTotalRows();
+    const targetRow = Math.floor((parseInt(seekSlider.value) / 100) * totalRows);
+    const rowsPerPattern = player.getModule()?.rowsPerPattern || 64;
+    const targetPattern = Math.floor(targetRow / rowsPerPattern);
+    const targetRowInPattern = targetRow % rowsPerPattern;
+    player.seek(targetPattern, targetRowInPattern);
   });
 
   function resizeCanvases(): void {

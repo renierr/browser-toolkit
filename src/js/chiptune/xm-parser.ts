@@ -13,7 +13,7 @@ export class XmParser extends BaseParser {
     this.readU16LE(); // version
     const headerSize = this.readU32LE();
     const songLength = this.readU16LE();
-    this.readU16LE(); // restart
+    const restartPosition = this.readU16LE();
     const channels = this.readU16LE();
     const numPatterns = this.readU16LE();
     const numInstruments = this.readU16LE();
@@ -277,6 +277,7 @@ export class XmParser extends BaseParser {
       defaultSpeed,
       rowsPerPattern: Math.max(...patterns.map((p) => p.rows.length), 64),
       linearFrequencies,
+      restartPosition: restartPosition < songLength ? restartPosition : 0,
     };
   }
 }

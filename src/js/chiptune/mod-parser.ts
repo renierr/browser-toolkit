@@ -61,7 +61,7 @@ export class ModParser extends BaseParser {
 
     this.setPos(950);
     const songLength = this.readU8();
-    this.readU8(); // skip
+    const restartPosition = this.readU8();
     const sequence: number[] = [];
     for (let i = 0; i < 128; i++) {
       sequence.push(this.readU8());
@@ -141,6 +141,7 @@ export class ModParser extends BaseParser {
       rowsPerPattern: 64,
       linearFrequencies: false,
       clock,
+      restartPosition: restartPosition < songLength ? restartPosition : 0,
     };
   }
 }
