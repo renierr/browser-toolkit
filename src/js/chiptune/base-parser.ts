@@ -35,7 +35,12 @@ export abstract class BaseParser {
 
   protected readU32LE(): number {
     if (this.pos + 3 >= this.data.length) return 0;
-    const v = (this.data[this.pos] | (this.data[this.pos + 1] << 8) | (this.data[this.pos + 2] << 16) | (this.data[this.pos + 3] << 24)) >>> 0;
+    const v =
+      (this.data[this.pos] |
+        (this.data[this.pos + 1] << 8) |
+        (this.data[this.pos + 2] << 16) |
+        (this.data[this.pos + 3] << 24)) >>>
+      0;
     this.pos += 4;
     return v;
   }

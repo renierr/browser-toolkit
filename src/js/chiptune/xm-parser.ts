@@ -3,10 +3,10 @@ import { BaseParser } from './base-parser';
 
 export class XmParser extends BaseParser {
   parse(): ModuleFile {
-    if (this.data.length < 60) throw new Error("Invalid XM file size");
+    if (this.data.length < 60) throw new Error('Invalid XM file size');
     this.setPos(0);
     const sig = this.readStr(17);
-    if (!sig.startsWith('Extended Module:')) throw new Error("Not XM signature");
+    if (!sig.startsWith('Extended Module:')) throw new Error('Not XM signature');
     const title = this.readStr(20).trim();
     this.readU8(); // 0x1A
     this.readStr(20); // tracker name
@@ -27,7 +27,7 @@ export class XmParser extends BaseParser {
       const order = this.readU8();
       if (i < songLength) sequence.push(order);
     }
-    
+
     // Jump past header
     this.setPos(60 + headerSize);
 
@@ -37,27 +37,27 @@ export class XmParser extends BaseParser {
       this.readU8(); // _packingType
       const numRows = this.readU16LE() || 64;
       const packedSize = this.readU16LE();
-      
+
       const patDataOffset = this.pos;
       const rows: Note[][] = [];
       let r = 0;
       let c = 0;
       let rowData: Note[] = [];
-      
+
       while (r < numRows) {
         let note: number | null = null;
         let instrument = 0;
         let volume: number | null = null;
         let effect = 0;
         let effectParam = 0;
-        
+
         if (packedSize > 0 && this.pos < patDataOffset + packedSize) {
           let mask = this.readU8();
           if ((mask & 0x80) === 0) {
             // Uncompressed, the byte read was actually the note
             // XM note: 1-96, 97 is Key off
             note = mask;
-            mask = 0x1E; // 2|4|8|16
+            mask = 0x1e; // 2|4|8|16
           } else {
             if (mask & 1) note = this.readU8();
           }
@@ -66,7 +66,7 @@ export class XmParser extends BaseParser {
           if (mask & 8) effect = this.readU8();
           if (mask & 16) effectParam = this.readU8();
         }
-        
+
         // Map volume column
         let mappedVol = null;
         if (volume !== null) {
@@ -75,14 +75,14 @@ export class XmParser extends BaseParser {
         }
 
         rowData.push({
-          note: note === 97 ? 97 : (note && note > 0 && note < 97 ? note : null),
+          note: note === 97 ? 97 : note && note > 0 && note < 97 ? note : null,
           period: null,
           instrument,
           volume: mappedVol,
           effect,
-          effectParam
+          effectParam,
         });
-        
+
         c++;
         if (c >= channels) {
           rows.push(rowData);
@@ -102,12 +102,12 @@ export class XmParser extends BaseParser {
       const name = this.readStr(22).trim();
       this.readU8(); // type
       const numSamples = this.readU16LE();
-      
+
       let sampleMap = new Array(96).fill(0);
       let volFadeout = 0;
       if (numSamples > 0) {
         this.readU32LE(); // sh size
-        for(let z=0; z<96; z++) sampleMap[z] = this.readU8(); // sample map
+        for (let z = 0; z < 96; z++) sampleMap[z] = this.readU8(); // sample map
         // read envelopes here ideally, skip for now.
       }
       // Accurately jump to the end of the Instrument Header using absolute starting position
@@ -135,10 +135,10 @@ export class XmParser extends BaseParser {
         const sh = sampleHeaders[s];
         const is16 = (sh.type & 16) !== 0;
         let lengthFrames = is16 ? sh.slen / 2 : sh.slen;
-        
+
         // Safety check to prevent browser memory freeze from corrupted slen
         if (lengthFrames > this.data.length * 2) lengthFrames = 0;
-        
+
         let floatData = new Float32Array(lengthFrames);
         let old = 0;
         for (let j = 0; j < lengthFrames; j++) {
@@ -157,7 +157,7 @@ export class XmParser extends BaseParser {
             floatData[j] = val / 128;
           }
         }
-        
+
         // Unroll ping-pong loops for Web Audio
         const ltype = sh.type & 3;
         let lstart = is16 ? sh.loopStart / 2 : sh.loopStart;
@@ -165,15 +165,15 @@ export class XmParser extends BaseParser {
         if (ltype === 0) llen = 0;
 
         if (ltype === 2 && llen > 0) {
-            let lend = lstart + llen;
-            if (lend > lengthFrames) lend = lengthFrames;
-            llen = lend - lstart;
-            const newData = new Float32Array(lend + llen);
-            for(let i=0; i<lend; i++) newData[i] = floatData[i];
-            for(let i=0; i<llen; i++) newData[lend + i] = floatData[lend - 1 - i];
-            floatData = newData;
-            llen *= 2;
-            lengthFrames = floatData.length;
+          let lend = lstart + llen;
+          if (lend > lengthFrames) lend = lengthFrames;
+          llen = lend - lstart;
+          const newData = new Float32Array(lend + llen);
+          for (let i = 0; i < lend; i++) newData[i] = floatData[i];
+          for (let i = 0; i < llen; i++) newData[lend + i] = floatData[lend - 1 - i];
+          floatData = newData;
+          llen *= 2;
+          lengthFrames = floatData.length;
         }
 
         samples.push({
@@ -185,7 +185,7 @@ export class XmParser extends BaseParser {
           loopLength: ltype !== 0 ? llen : 0,
           panning: sh.sPan,
           baseNote: sh.relNote,
-          data: floatData
+          data: floatData,
         });
       }
 
@@ -193,7 +193,7 @@ export class XmParser extends BaseParser {
         name: name || `Instrument ${i + 1}`,
         samples,
         sampleMap,
-        volumeFadeout: volFadeout
+        volumeFadeout: volFadeout,
       });
     }
 
@@ -206,8 +206,8 @@ export class XmParser extends BaseParser {
       channels,
       defaultBpm,
       defaultSpeed,
-      rowsPerPattern: Math.max(...patterns.map(p => p.rows.length), 64),
-      linearFrequencies
+      rowsPerPattern: Math.max(...patterns.map((p) => p.rows.length), 64),
+      linearFrequencies,
     };
   }
 }

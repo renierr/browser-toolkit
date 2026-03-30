@@ -25,7 +25,9 @@ function updateModuleInfo(mod: ModuleFile, elements: Record<string, HTMLElement 
   if (patternCount) patternCount.textContent = String(mod.patterns.length);
   if (orderCount) orderCount.textContent = String(mod.sequence.length);
   if (instrumentCount)
-    instrumentCount.textContent = String(mod.instruments.filter((i) => i.samples.length > 0).length);
+    instrumentCount.textContent = String(
+      mod.instruments.filter((i) => i.samples.length > 0).length
+    );
   if (defaultBpm) defaultBpm.textContent = String(mod.defaultBpm);
   if (fileInfo) fileInfo.classList.remove('hidden');
   if (speedSlider) speedSlider.value = String(mod.defaultSpeed);
@@ -115,7 +117,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   const elements = getElements();
   player = new ChiptunePlayer();
-  
+
   function setupPlayerCallbacks(p: ChiptunePlayer, els: any) {
     p.onPositionChange = (pattern: number, row: number) => {
       const positionDisplay = els['position-display'];
@@ -138,7 +140,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       });
     };
   }
-  
+
   setupPlayerCallbacks(player, elements);
 
   const dropzone = elements['dropzone'];
@@ -171,66 +173,77 @@ export default function init(payload?: SharedFilesPayload): () => void {
       const data = new Uint8Array(buffer);
       const ext = file.name.split('.').pop()?.toLowerCase();
       if (ext === 'sid') {
-          try {
-              if (player) {
-                 player.stop();
-                 player = null as any; 
-              }
-              const sidMod = new SidParser(data).parse();
-              
-              if (!(window as any).sidAudioCtx) {
-                  (window as any).sidAudioCtx = new AudioContext();
-              }
-              const actx = (window as any).sidAudioCtx as AudioContext;
-              if (actx.state === 'suspended') actx.resume();
+        try {
+          if (player) {
+            player.stop();
+            player = null as any;
+          }
+          const sidMod = new SidParser(data).parse();
 
-              const sidPlayer = new SidPlayer();
-              sidPlayer.loadModule(sidMod, actx.sampleRate);
-              
-              const scriptNode = actx.createScriptProcessor(4096, 0, 1);
-              scriptNode.onaudioprocess = (e) => {
-                  try {
-                      sidPlayer.renderStream(e.outputBuffer.getChannelData(0), 4096);
-                  } catch (e) { console.error('SID render error', e); }
-              };
-              const analyser = actx.createAnalyser();
-              analyser.fftSize = 2048;
-              
-              scriptNode.connect(analyser);
-              analyser.connect(actx.destination);
-              
-              let isPlaying = true;
-              
-              // Map cleanup and UI controls to SidPlayer
-              (player as any) = {
-                  stop: () => {
-                      scriptNode.disconnect();
-                      analyser.disconnect();
-                  },
-                  getIsPlaying: () => isPlaying,
-                  play: () => { actx.resume(); isPlaying = true; },
-                  pause: () => { actx.suspend(); isPlaying = false; },
-                  setSpeed: () => {},
-                  getTotalRows: () => 1,
-                  getModule: () => ({ rowsPerPattern: 64, defaultSpeed: 1 }),
-                  getAnalyser: () => analyser
-              };
+          if (!(window as any).sidAudioCtx) {
+            (window as any).sidAudioCtx = new AudioContext();
+          }
+          const actx = (window as any).sidAudioCtx as AudioContext;
+          if (actx.state === 'suspended') actx.resume();
 
-              const elements = getElements();
-              if (elements['format-badge']) elements['format-badge'].textContent = 'SID';
-              if (elements['song-title']) elements['song-title'].textContent = sidMod.title + ' by ' + sidMod.author;
-              if (elements['default-bpm']) elements['default-bpm'].textContent = 'N/A';
-              if (elements['file-info']) elements['file-info'].classList.remove('hidden');
-              enableControls(elements);
-          } catch(e) { console.error('SID parse error', e); }
-          return;
+          const sidPlayer = new SidPlayer();
+          sidPlayer.loadModule(sidMod, actx.sampleRate);
+
+          const scriptNode = actx.createScriptProcessor(4096, 0, 1);
+          scriptNode.onaudioprocess = (e) => {
+            try {
+              sidPlayer.renderStream(e.outputBuffer.getChannelData(0), 4096);
+            } catch (e) {
+              console.error('SID render error', e);
+            }
+          };
+          const analyser = actx.createAnalyser();
+          analyser.fftSize = 2048;
+
+          scriptNode.connect(analyser);
+          analyser.connect(actx.destination);
+
+          let isPlaying = true;
+
+          // Map cleanup and UI controls to SidPlayer
+          (player as any) = {
+            stop: () => {
+              scriptNode.disconnect();
+              analyser.disconnect();
+            },
+            getIsPlaying: () => isPlaying,
+            play: () => {
+              actx.resume();
+              isPlaying = true;
+            },
+            pause: () => {
+              actx.suspend();
+              isPlaying = false;
+            },
+            setSpeed: () => {},
+            getTotalRows: () => 1,
+            getModule: () => ({ rowsPerPattern: 64, defaultSpeed: 1 }),
+            getAnalyser: () => analyser,
+          };
+
+          const elements = getElements();
+          if (elements['format-badge']) elements['format-badge'].textContent = 'SID';
+          if (elements['song-title'])
+            elements['song-title'].textContent = sidMod.title + ' by ' + sidMod.author;
+          if (elements['default-bpm']) elements['default-bpm'].textContent = 'N/A';
+          if (elements['file-info']) elements['file-info'].classList.remove('hidden');
+          enableControls(elements);
+        } catch (e) {
+          console.error('SID parse error', e);
+        }
+        return;
       }
-      
+
       const mod = parseModule(data);
       if (!player || !(player instanceof ChiptunePlayer)) {
-          if (player && (player as any).stop) (player as any).stop();
-          player = new ChiptunePlayer();
-          setupPlayerCallbacks(player, elements);
+        if (player && (player as any).stop) (player as any).stop();
+        player = new ChiptunePlayer();
+        setupPlayerCallbacks(player, elements);
       }
       player.loadModule(mod);
       updateModuleInfo(mod, elements);

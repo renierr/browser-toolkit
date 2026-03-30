@@ -42,12 +42,12 @@ export function decompressIT8(
   let pos = offset;
   let outPos = 0;
   const out = new Float32Array(outLen);
-  
+
   while (outPos < outLen) {
     if (pos + 2 > inData.length) break;
-    const blockSize = inData[pos] | (inData[pos+1] << 8);
+    const blockSize = inData[pos] | (inData[pos + 1] << 8);
     pos += 2;
-    
+
     const br = new BitReader(inData, pos);
     pos += blockSize;
 
@@ -56,12 +56,12 @@ export function decompressIT8(
     let d2 = 0;
     let blockSamples = Math.min(0x8000, outLen - outPos);
     let blockEnd = outPos + blockSamples;
-    
+
     while (outPos < blockEnd) {
       let v = br.readBits(bitWidth);
-      
+
       if (bitWidth < 7) {
-        if (v === (1 << (bitWidth - 1))) {
+        if (v === 1 << (bitWidth - 1)) {
           let v2 = br.readBits(3) + 1;
           bitWidth = v2 < bitWidth ? v2 : v2 + 1;
           continue;
@@ -79,28 +79,28 @@ export function decompressIT8(
           continue;
         }
       }
-      
+
       if (bitWidth <= 8) {
         let shift = 8 - bitWidth;
-        v = (v << shift) << 24 >> (24 + shift);
+        v = ((v << shift) << 24) >> (24 + shift);
       } else {
         v = (v << 23) >> 23;
       }
 
       d1 += v;
       d2 += d1;
-      let finalVal = d2 & 0xFF;
-      
+      let finalVal = d2 & 0xff;
+
       if (isSigned) {
         if (finalVal >= 128) finalVal -= 256;
       } else {
         finalVal -= 128;
       }
-      
+
       out[outPos++] = finalVal / 128;
     }
   }
-  
+
   return out;
 }
 
@@ -113,12 +113,12 @@ export function decompressIT16(
   let pos = offset;
   let outPos = 0;
   const out = new Float32Array(outLen);
-  
+
   while (outPos < outLen) {
     if (pos + 2 > inData.length) break;
-    const blockSize = inData[pos] | (inData[pos+1] << 8);
+    const blockSize = inData[pos] | (inData[pos + 1] << 8);
     pos += 2;
-    
+
     const br = new BitReader(inData, pos);
     pos += blockSize;
 
@@ -127,12 +127,12 @@ export function decompressIT16(
     let d2 = 0;
     let blockSamples = Math.min(0x8000, outLen - outPos);
     let blockEnd = outPos + blockSamples;
-    
+
     while (outPos < blockEnd) {
       let v = br.readBits(bitWidth);
-      
+
       if (bitWidth < 7) {
-        if (v === (1 << (bitWidth - 1))) {
+        if (v === 1 << (bitWidth - 1)) {
           let v2 = br.readBits(4) + 1;
           bitWidth = v2 < bitWidth ? v2 : v2 + 1;
           continue;
@@ -152,27 +152,27 @@ export function decompressIT16(
           continue;
         }
       }
-      
+
       if (bitWidth <= 16) {
         let shift = 16 - bitWidth;
-        v = (v << shift) << 16 >> (16 + shift);
+        v = ((v << shift) << 16) >> (16 + shift);
       } else {
         v = (v << 15) >> 15;
       }
 
       d1 += v;
       d2 += d1;
-      let finalVal = d2 & 0xFFFF;
-      
+      let finalVal = d2 & 0xffff;
+
       if (isSigned) {
         if (finalVal >= 32768) finalVal -= 65536;
       } else {
         finalVal -= 32768;
       }
-      
+
       out[outPos++] = finalVal / 32768;
     }
   }
-  
+
   return out;
 }
