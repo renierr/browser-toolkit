@@ -58,6 +58,7 @@ export class ChiptunePlayer {
   private analyser: AnalyserNode | null = null;
   private module: ModuleFile | null = null;
   private isPlaying = false;
+  private wasStopped = true;
 
   private currentPatternIdx = 0;
   private currentRow = 0;
@@ -168,18 +169,23 @@ export class ChiptunePlayer {
     if (this.audioContext.state === 'suspended') this.audioContext.resume();
 
     this.isPlaying = true;
-    this.currentPatternIdx = 0;
-    this.currentRow = 0;
-    this.currentTick = 0;
-    this.nextTickTime = this.audioContext.currentTime + 0.05;
 
-    for (const ch of this.channelStates) {
-      this.stopChannel(ch);
-      ch.period = 0;
-      ch.targetPeriod = 0;
-      ch.vibratoPhase = 0;
-      ch.arpeggioNotes = [];
+    // Reset position only on first play or after stop (not when resuming from pause)
+    if (this.wasStopped) {
+      this.currentPatternIdx = 0;
+      this.currentRow = 0;
+      this.currentTick = 0;
+      for (const ch of this.channelStates) {
+        this.stopChannel(ch);
+        ch.period = 0;
+        ch.targetPeriod = 0;
+        ch.vibratoPhase = 0;
+        ch.arpeggioNotes = [];
+      }
+      this.wasStopped = false;
     }
+
+    this.nextTickTime = this.audioContext.currentTime + 0.05;
     this.scheduler();
   }
 
@@ -199,6 +205,7 @@ export class ChiptunePlayer {
     this.currentPatternIdx = 0;
     this.currentRow = 0;
     this.currentTick = 0;
+    this.wasStopped = true;
     if (this.onPositionChange) this.onPositionChange(0, 0);
     if (this.onChannelActivity)
       this.onChannelActivity(new Array(this.module?.channels || 4).fill(false));
