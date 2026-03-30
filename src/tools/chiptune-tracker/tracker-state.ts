@@ -17,6 +17,7 @@ export interface Instrument {
   sampleData?: Float32Array;
   sampleLoopStart?: number;
   sampleLoopLength?: number;
+  fixedPitch?: boolean;
 }
 
 export interface CellData {
@@ -67,91 +68,6 @@ export function noteToFrequency(note: string | null, octave: number | null): num
   return 440 * Math.pow(2, (midiNote - 69) / 12);
 }
 
-export function createDefaultInstruments(): Instrument[] {
-  return [
-    {
-      id: 1,
-      name: 'Lead',
-      waveform: 'square',
-      attack: 0.01,
-      decay: 0.1,
-      sustain: 0.7,
-      release: 0.2,
-      duty: 50,
-    },
-    {
-      id: 2,
-      name: 'Bass',
-      waveform: 'pulse',
-      attack: 0.01,
-      decay: 0.2,
-      sustain: 0.5,
-      release: 0.15,
-      duty: 25,
-    },
-    {
-      id: 3,
-      name: 'Pad',
-      waveform: 'triangle',
-      attack: 0.1,
-      decay: 0.3,
-      sustain: 0.8,
-      release: 0.5,
-      duty: 50,
-    },
-    {
-      id: 4,
-      name: 'Pluck',
-      waveform: 'pulse',
-      attack: 0.001,
-      decay: 0.3,
-      sustain: 0.1,
-      release: 0.1,
-      duty: 50,
-    },
-    {
-      id: 5,
-      name: 'Arp',
-      waveform: 'square',
-      attack: 0.001,
-      decay: 0.05,
-      sustain: 0.3,
-      release: 0.05,
-      duty: 50,
-    },
-    {
-      id: 6,
-      name: 'Organ',
-      waveform: 'square',
-      attack: 0.01,
-      decay: 0.01,
-      sustain: 0.9,
-      release: 0.1,
-      duty: 50,
-    },
-    {
-      id: 7,
-      name: 'Noise',
-      waveform: 'noise',
-      attack: 0.001,
-      decay: 0.1,
-      sustain: 0,
-      release: 0.1,
-      duty: 50,
-    },
-    {
-      id: 8,
-      name: 'Strings',
-      waveform: 'sawtooth',
-      attack: 0.2,
-      decay: 0.3,
-      sustain: 0.6,
-      release: 0.4,
-      duty: 50,
-    },
-  ];
-}
-
 export function createDefaultPattern(id: number, channels: number, rows: number): Pattern {
   const patternRows: CellData[][] = [];
   for (let r = 0; r < rows; r++) {
@@ -167,13 +83,100 @@ export function createDefaultPattern(id: number, channels: number, rows: number)
 export function createInitialState(): TrackerState {
   const channels = 4;
   const rowsPerPattern = 64;
-  const instruments = createDefaultInstruments();
+
+  const instruments: Instrument[] = [];
+
+  const synthInstruments = [
+    {
+      id: 1,
+      name: 'Lead',
+      waveform: 'square' as WaveformType,
+      attack: 0.01,
+      decay: 0.1,
+      sustain: 0.7,
+      release: 0.2,
+      duty: 50,
+    },
+    {
+      id: 2,
+      name: 'Bass',
+      waveform: 'pulse' as WaveformType,
+      attack: 0.01,
+      decay: 0.2,
+      sustain: 0.5,
+      release: 0.15,
+      duty: 25,
+    },
+    {
+      id: 3,
+      name: 'Pad',
+      waveform: 'triangle' as WaveformType,
+      attack: 0.1,
+      decay: 0.3,
+      sustain: 0.8,
+      release: 0.5,
+      duty: 50,
+    },
+    {
+      id: 4,
+      name: 'Pluck',
+      waveform: 'pulse' as WaveformType,
+      attack: 0.001,
+      decay: 0.3,
+      sustain: 0.1,
+      release: 0.1,
+      duty: 50,
+    },
+    {
+      id: 5,
+      name: 'Arp',
+      waveform: 'square' as WaveformType,
+      attack: 0.001,
+      decay: 0.05,
+      sustain: 0.3,
+      release: 0.05,
+      duty: 50,
+    },
+    {
+      id: 6,
+      name: 'Organ',
+      waveform: 'square' as WaveformType,
+      attack: 0.01,
+      decay: 0.01,
+      sustain: 0.9,
+      release: 0.1,
+      duty: 50,
+    },
+    {
+      id: 7,
+      name: 'Noise',
+      waveform: 'noise' as WaveformType,
+      attack: 0.001,
+      decay: 0.1,
+      sustain: 0,
+      release: 0.1,
+      duty: 50,
+    },
+    {
+      id: 8,
+      name: 'Strings',
+      waveform: 'sawtooth' as WaveformType,
+      attack: 0.2,
+      decay: 0.3,
+      sustain: 0.6,
+      release: 0.4,
+      duty: 50,
+    },
+  ];
+  for (const s of synthInstruments) {
+    instruments.push({ ...s, sampleIndex: undefined, sampleVolume: 64, sampleData: undefined });
+  }
 
   for (let i = 0; i < BUILTIN_SAMPLES.length; i++) {
-    const builtin = BUILTIN_SAMPLES[i];
+    const sample = BUILTIN_SAMPLES[i];
     instruments.push({
-      id: 32 + i,
-      name: builtin.name,
+      id: 10 + i,
+      name: sample.name,
       waveform: 'square' as WaveformType,
       attack: 0.01,
       decay: 0.1,
@@ -181,8 +184,9 @@ export function createInitialState(): TrackerState {
       release: 0.2,
       duty: 50,
       sampleIndex: i,
-      sampleVolume: builtin.volume,
-      sampleData: builtin.data,
+      sampleVolume: sample.volume,
+      sampleData: sample.data,
+      fixedPitch: sample.fixedPitch ?? false,
     });
   }
 

@@ -2,29 +2,26 @@ export interface BuiltinSample {
   name: string;
   data: Float32Array;
   volume: number;
+  fixedPitch?: boolean;
 }
 
-function generateKick(): Float32Array {
-  const sampleRate = 44100;
-  const duration = 0.15;
-  const samples = Math.floor(sampleRate * duration);
+function makeKick(): Float32Array {
+  const samples = 2205;
   const data = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
-    const t = i / sampleRate;
-    const freq = 150 * Math.exp(-t * 30);
+    const t = i / 44100;
+    const freq = 80 * Math.exp(-t * 30);
     const env = Math.exp(-t * 20);
-    data[i] = Math.sin(2 * Math.PI * freq * t) * env * 0.8;
+    data[i] = Math.sin(2 * Math.PI * freq * t) * env;
   }
   return data;
 }
 
-function generateSnare(): Float32Array {
-  const sampleRate = 44100;
-  const duration = 0.15;
-  const samples = Math.floor(sampleRate * duration);
+function makeSnare(): Float32Array {
+  const samples = 2205;
   const data = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
-    const t = i / sampleRate;
+    const t = i / 44100;
     const env = Math.exp(-t * 15);
     const tone = Math.sin(2 * Math.PI * 200 * t) * 0.3;
     const noise = (Math.random() * 2 - 1) * 0.7;
@@ -33,94 +30,81 @@ function generateSnare(): Float32Array {
   return data;
 }
 
-function generateHihat(): Float32Array {
-  const sampleRate = 44100;
-  const duration = 0.1;
-  const samples = Math.floor(sampleRate * duration);
+function makeHihat(): Float32Array {
+  const samples = 1102;
   const data = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
-    const t = i / sampleRate;
-    const env = Math.exp(-t * 40);
+    const t = i / 44100;
+    const env = Math.exp(-t * 60);
     data[i] = (Math.random() * 2 - 1) * env * 0.5;
   }
   return data;
 }
 
-function generateOpenHihat(): Float32Array {
-  const sampleRate = 44100;
-  const duration = 0.3;
-  const samples = Math.floor(sampleRate * duration);
+function makeOpenHat(): Float32Array {
+  const samples = 6610;
   const data = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
-    const t = i / sampleRate;
+    const t = i / 44100;
     const env = Math.exp(-t * 8);
     data[i] = (Math.random() * 2 - 1) * env * 0.5;
   }
   return data;
 }
 
-function generateTom(): Float32Array {
-  const sampleRate = 44100;
-  const duration = 0.2;
-  const samples = Math.floor(sampleRate * duration);
+function makeTom(): Float32Array {
+  const samples = 3305;
   const data = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
-    const t = i / sampleRate;
-    const freq = 120 * Math.exp(-t * 15);
+    const t = i / 44100;
+    const freq = 100 * Math.exp(-t * 15);
     const env = Math.exp(-t * 12);
-    data[i] = Math.sin(2 * Math.PI * freq * t) * env * 0.7;
+    data[i] = Math.sin(2 * Math.PI * freq * t) * env;
   }
   return data;
 }
 
-function generateClap(): Float32Array {
-  const sampleRate = 44100;
-  const duration = 0.15;
-  const samples = Math.floor(sampleRate * duration);
+function makeClap(): Float32Array {
+  const samples = 2205;
   const data = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
-    const t = i / sampleRate;
+    const t = i / 44100;
     const env = Math.exp(-t * 20);
     data[i] = (Math.random() * 2 - 1) * env * 0.6;
   }
   return data;
 }
 
-function generateCrash(): Float32Array {
-  const sampleRate = 44100;
-  const duration = 0.5;
-  const samples = Math.floor(sampleRate * duration);
+function makeCrash(): Float32Array {
+  const samples = 13230;
   const data = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
-    const t = i / sampleRate;
+    const t = i / 44100;
     const env = Math.exp(-t * 4);
     data[i] = (Math.random() * 2 - 1) * env * 0.5;
   }
   return data;
 }
 
-function generateRim(): Float32Array {
-  const sampleRate = 44100;
-  const duration = 0.05;
-  const samples = Math.floor(sampleRate * duration);
+function makeRim(): Float32Array {
+  const samples = 735;
   const data = new Float32Array(samples);
   for (let i = 0; i < samples; i++) {
-    const t = i / sampleRate;
-    const env = Math.exp(-t * 50);
-    const tone = Math.sin(2 * Math.PI * 800 * t);
-    const noise = Math.random() * 2 - 1;
-    data[i] = (tone * 0.7 + noise * 0.3) * env * 0.6;
+    const t = i / 44100;
+    const env = Math.exp(-t * 80);
+    const tone = Math.sin(2 * Math.PI * 600 * t);
+    data[i] = (tone * 0.7 + (Math.random() * 2 - 1) * 0.3) * env;
   }
   return data;
 }
 
 export const BUILTIN_SAMPLES: BuiltinSample[] = [
-  { name: 'Kick', data: generateKick(), volume: 64 },
-  { name: 'Snare', data: generateSnare(), volume: 48 },
-  { name: 'HiHat', data: generateHihat(), volume: 40 },
-  { name: 'OpenHat', data: generateOpenHihat(), volume: 40 },
-  { name: 'Tom', data: generateTom(), volume: 56 },
-  { name: 'Clap', data: generateClap(), volume: 48 },
-  { name: 'Crash', data: generateCrash(), volume: 48 },
-  { name: 'Rim', data: generateRim(), volume: 48 },
+  { name: 'Kick', data: makeKick(), volume: 64, fixedPitch: true },
+  { name: 'Snare', data: makeSnare(), volume: 56, fixedPitch: true },
+  { name: 'HiHat', data: makeHihat(), volume: 48, fixedPitch: true },
+  { name: 'OpenHat', data: makeOpenHat(), volume: 48, fixedPitch: true },
+  { name: 'Tom', data: makeTom(), volume: 56, fixedPitch: true },
+  { name: 'Clap', data: makeClap(), volume: 52, fixedPitch: true },
+  { name: 'Crash', data: makeCrash(), volume: 48, fixedPitch: true },
+  { name: 'Rim', data: makeRim(), volume: 48, fixedPitch: true },
 ];

@@ -303,14 +303,26 @@ export default function init(): () => void {
     container.innerHTML = '';
 
     const maxInstruments = Math.min(state.instruments.length, 40);
+    console.log('[Tracker] renderInstrumentTabs: showing', maxInstruments, 'instruments');
     for (let i = 0; i < maxInstruments; i++) {
       const inst = state.instruments[i];
+      const hasSample = inst.sampleData && inst.sampleData.length > 0;
       const btn = document.createElement('button');
       btn.className = `btn btn-xs ${inst.id === selectedInstrument ? 'btn-primary' : 'btn-outline'}`;
       btn.textContent = inst.name.substring(0, 8);
-      btn.title = `Instrument ${inst.id}: ${inst.name}`;
+      btn.title = `Instrument ${inst.id}: ${inst.name} (sample: ${hasSample ? 'yes' : 'no'})`;
       btn.addEventListener('click', () => {
         selectedInstrument = inst.id;
+        console.log(
+          '[Tracker] Clicked instrument:',
+          inst.name,
+          'id:',
+          inst.id,
+          'hasSample:',
+          hasSample,
+          'sampleData length:',
+          inst.sampleData?.length
+        );
         renderInstrumentTabs();
         updateInstrumentControls();
         previewCurrentNote();
@@ -743,6 +755,17 @@ export default function init(): () => void {
   }
 
   function convertModToState(modFile: ReturnType<typeof parseModFile>): TrackerState {
+    console.log(
+      '[Tracker] convertModToState: title=',
+      modFile.title,
+      'channels=',
+      modFile.channels,
+      'samples=',
+      modFile.samples.length,
+      'patterns=',
+      modFile.patterns.length
+    );
+
     const channels = modFile.channels;
     const rowsPerPattern = 64;
     const maxInstruments = 31;
@@ -821,13 +844,19 @@ export default function init(): () => void {
     }
 
     const modSamples = modFile.samples.map((s) => s.data);
+    console.log(
+      '[Tracker] modSamples created, length=',
+      modSamples.length,
+      'first sample length=',
+      modSamples[0]?.length
+    );
     const modSampleCount = modFile.samples.length;
 
     for (let i = 0; i < BUILTIN_SAMPLES.length; i++) {
-      const builtin = BUILTIN_SAMPLES[i];
+      const sample = BUILTIN_SAMPLES[i];
       instruments.push({
         id: modSampleCount + i + 1,
-        name: builtin.name,
+        name: sample.name,
         waveform: 'square',
         attack: 0.01,
         decay: 0.1,
@@ -835,10 +864,10 @@ export default function init(): () => void {
         release: 0.2,
         duty: 50,
         sampleIndex: modSampleCount + i,
-        sampleVolume: builtin.volume,
-        sampleData: builtin.data,
+        sampleVolume: sample.volume,
+        sampleData: sample.data,
       });
-      modSamples.push(builtin.data);
+      modSamples.push(sample.data);
     }
 
     const order = modFile.sequence.slice(0, 128);
