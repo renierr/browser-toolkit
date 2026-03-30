@@ -18,8 +18,8 @@ export interface Instrument {
 export interface CellData {
   note: string | null;
   octave: number | null;
-  instrument: number | null;
-  volume: number | null;
+  instrument: number;
+  volume: number;
 }
 
 export interface Pattern {
@@ -150,7 +150,7 @@ export function createDefaultPattern(id: number, channels: number, rows: number)
   for (let r = 0; r < rows; r++) {
     const row: CellData[] = [];
     for (let c = 0; c < channels; c++) {
-      row.push({ note: null, octave: null, instrument: null, volume: null });
+      row.push({ note: null, octave: null, instrument: 0, volume: 0 });
     }
     patternRows.push(row);
   }

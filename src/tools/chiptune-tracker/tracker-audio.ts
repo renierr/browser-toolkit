@@ -26,6 +26,7 @@ export class TrackerAudio {
   private onPositionChange: ((pattern: number, row: number) => void) | null = null;
   private onStop: (() => void) | null = null;
   private consecutiveEmptyRows = 0;
+  private lastInstrument: number[] = [];
 
   constructor() {
     this.initAudio();
@@ -44,6 +45,7 @@ export class TrackerAudio {
 
   setState(state: TrackerState): void {
     this.state = state;
+    this.lastInstrument = new Array(state.channels).fill(0);
   }
 
   setOnPositionChange(cb: (pattern: number, row: number) => void): void {
@@ -170,11 +172,20 @@ export class TrackerAudio {
     }
   }
 
-  private playCell(_channel: number, cell: CellData, time: number): void {
+  private playCell(channel: number, cell: CellData, time: number): void {
     if (!this.audioContext || !this.state) return;
+
+    if (cell.instrument > 0) {
+      this.lastInstrument[channel] = cell.instrument;
+    }
+
     if (cell.note === null || cell.octave === null) return;
 
-    const instrumentId = cell.instrument ?? 1;
+    let instrumentId = cell.instrument;
+    if (instrumentId === 0) {
+      instrumentId = this.lastInstrument[channel] || 1;
+    }
+
     const instrument =
       this.state.instruments.find((i) => i.id === instrumentId) ?? this.state.instruments[0];
     if (!instrument) return;

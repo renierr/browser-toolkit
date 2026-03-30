@@ -17,8 +17,8 @@ const ROWS = 64;
 type ClipboardData = {
   note: string | null;
   octave: number | null;
-  instrument: number | null;
-  volume: number | null;
+  instrument: number;
+  volume: number;
 };
 
 export default function init(): () => void {
@@ -584,8 +584,8 @@ export default function init(): () => void {
     const cell = pattern.rows[selectedRow][selectedChannel];
     cell.note = null;
     cell.octave = null;
-    cell.instrument = null;
-    cell.volume = null;
+    cell.instrument = 0;
+    cell.volume = 0;
     renderTrackerGrid();
   }
 
@@ -606,8 +606,8 @@ export default function init(): () => void {
     const cell = pattern.rows[selectedRow][selectedChannel];
     cell.note = clipboard.note;
     cell.octave = clipboard.octave;
-    cell.instrument = clipboard.instrument;
-    cell.volume = clipboard.volume;
+    cell.instrument = clipboard.instrument ?? 0;
+    cell.volume = clipboard.volume ?? 0;
     renderTrackerGrid();
   }
 
@@ -620,7 +620,7 @@ export default function init(): () => void {
     for (let r = 0; r < rows; r++) {
       const row: (typeof state.patterns)[0]['rows'][0] = [];
       for (let c = 0; c < channels; c++) {
-        row.push({ note: null, octave: null, instrument: null, volume: null });
+        row.push({ note: null, octave: null, instrument: 0, volume: 0 });
       }
       newPatternRows.push(row);
     }
@@ -753,15 +753,16 @@ export default function init(): () => void {
         for (let ch = 0; ch < channels; ch++) {
           const modNote = modPattern.rows[row]?.[ch];
           const modInstr = modNote?.instrument ?? 0;
+          const modVol = modNote?.volume ?? 64;
           rowData.push({
             note: modNote?.note ?? null,
             octave: modNote?.octave ?? null,
-            instrument: modInstr > 0 && modInstr <= maxInstruments ? modInstr : null,
-            volume: modNote?.volume ?? null,
+            instrument: modInstr,
+            volume: modVol,
           });
         }
         while (rowData.length < 4) {
-          rowData.push({ note: null, octave: null, instrument: null, volume: null });
+          rowData.push({ note: null, octave: null, instrument: 0, volume: 0 });
         }
         rows.push(rowData);
       }
@@ -773,7 +774,7 @@ export default function init(): () => void {
       for (let row = 0; row < rowsPerPattern; row++) {
         const rowData: CellData[] = [];
         for (let ch = 0; ch < 4; ch++) {
-          rowData.push({ note: null, octave: null, instrument: null, volume: null });
+          rowData.push({ note: null, octave: null, instrument: 0, volume: 0 });
         }
         rows.push(rowData);
       }
