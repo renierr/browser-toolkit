@@ -49,24 +49,32 @@ export class SidPlayer {
     // Setup for PLAY routine (called 50 times per sec on PAL)
   }
 
-  // Render continuous audio chunk
-  public renderStream(outputBuffer: Float32Array, length: number): void {
-    if (!this.module) return;
+  public isPlaying = false;
 
-    // The SID play routine needs to be called 50 times a second
-    // Samples per play routine = 44100 / 50 = 882
+  public start(): void {
+    this.isPlaying = true;
+  }
+
+  public stop(): void {
+    this.isPlaying = false;
+  }
+
+  public render(outputBuffer: Float32Array, length: number): void {
+    if (!this.module || !this.isPlaying) {
+      outputBuffer.fill(0);
+      return;
+    }
+
     const samplesPerFrame = Math.floor(this.sampleRate / 50);
 
     for (let i = 0; i < length; i++) {
       if (i % samplesPerFrame === 0) {
-        // Trigger play routine
         this.cpu.pc = this.module.playAddr;
         let watchdog = 0;
         while (this.cpu.pc !== 0 && watchdog++ < 50000) {
           this.cpu.step();
         }
 
-        // Poll SID registers manually because our CPU wrapper is very rudimentary
         for (let r = 0; r <= 0x18; r++) {
           this.sid.write(r, this.cpu.read(0xd400 + r));
         }

@@ -193,36 +193,51 @@ export default function init(payload?: SharedFilesPayload): () => void {
           const sidPlayer = new SidPlayer();
           sidPlayer.loadModule(sidMod, actx.sampleRate);
 
-          const scriptNode = actx.createScriptProcessor(4096, 0, 1);
-          scriptNode.onaudioprocess = (e) => {
-            try {
-              sidPlayer.renderStream(e.outputBuffer.getChannelData(0), 4096);
-            } catch (e) {
-              console.error('SID render error', e);
-            }
-          };
+          await actx.audioWorklet.addModule('/sid-worklet-processor.js');
+          const sidWorklet = new AudioWorkletNode(actx, 'sid-worklet-processor');
+
           const analyser = actx.createAnalyser();
           analyser.fftSize = 2048;
 
-          scriptNode.connect(analyser);
+          sidWorklet.connect(analyser);
           analyser.connect(actx.destination);
 
-          let isPlaying = true;
+          const renderBufferSize = 4096;
+          const renderBuffer = new Float32Array(renderBufferSize);
+          let renderAnimationId: number | null = null;
 
-          // Map cleanup and UI controls to SidPlayer
+          const renderLoop = () => {
+            try {
+              sidPlayer.render(renderBuffer, renderBufferSize);
+              sidWorklet.port.postMessage({ type: 'audio', data: renderBuffer });
+            } catch (e) {
+              console.error('SID render error', e);
+            }
+            if (sidPlayer.isPlaying) {
+              renderAnimationId = requestAnimationFrame(renderLoop);
+            }
+          };
+
+          sidPlayer.start();
+          renderLoop();
+
           (player as any) = {
             stop: () => {
-              scriptNode.disconnect();
+              sidPlayer.stop();
+              if (renderAnimationId) cancelAnimationFrame(renderAnimationId);
+              sidWorklet.port.postMessage({ type: 'stop' });
+              sidWorklet.disconnect();
               analyser.disconnect();
             },
-            getIsPlaying: () => isPlaying,
+            getIsPlaying: () => sidPlayer.isPlaying,
             play: () => {
               actx.resume();
-              isPlaying = true;
+              sidPlayer.start();
+              renderLoop();
             },
             pause: () => {
-              actx.suspend();
-              isPlaying = false;
+              sidPlayer.stop();
+              if (renderAnimationId) cancelAnimationFrame(renderAnimationId);
             },
             setSpeed: () => {},
             getTotalRows: () => 1,
