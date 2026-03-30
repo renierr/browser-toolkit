@@ -97,6 +97,7 @@ export class XmParser extends BaseParser {
 
     const instruments: Instrument[] = [];
     for (let i = 0; i < numInstruments; i++) {
+      const insStart = this.pos;
       const iSize = this.readU32LE();
       const name = this.readStr(22);
       this.readU8(); // type
@@ -108,10 +109,9 @@ export class XmParser extends BaseParser {
         this.readU32LE(); // sh size
         for(let z=0; z<96; z++) sampleMap[z] = this.readU8(); // sample map
         // read envelopes here ideally, skip for now.
-        // the remaining of the instrument header:
       }
-      const dataOffset = this.pos - 29 + iSize; // jump past instrument header
-      this.setPos(dataOffset);
+      // Accurately jump to the end of the Instrument Header using absolute starting position
+      this.setPos(insStart + iSize);
 
       const samples: Sample[] = [];
       const sampleHeaders: any[] = [];
@@ -135,6 +135,10 @@ export class XmParser extends BaseParser {
         const sh = sampleHeaders[s];
         const is16 = (sh.type & 16) !== 0;
         let lengthFrames = is16 ? sh.slen / 2 : sh.slen;
+        
+        // Safety check to prevent browser memory freeze from corrupted slen
+        if (lengthFrames > this.data.length * 2) lengthFrames = 0;
+        
         let floatData = new Float32Array(lengthFrames);
         let old = 0;
         for (let j = 0; j < lengthFrames; j++) {

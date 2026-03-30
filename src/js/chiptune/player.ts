@@ -421,7 +421,7 @@ export class ChiptunePlayer {
   }
 
   private triggerNote(chState: ChannelState, time: number, maxRowDur: number): void {
-      if (!this.audioContext || !this.masterGain || !chState.sample) return;
+      if (!this.audioContext || !this.masterGain || !chState.sample || chState.sample.data.length === 0) return;
       this.stopChannel(chState, time); // Pre-cleanup overlapping
       
       const buffer = this.audioContext.createBuffer(1, chState.sample.data.length, this.audioContext.sampleRate);
