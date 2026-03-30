@@ -62,16 +62,6 @@ export class TrackerAudio {
   }
 
   setState(state: TrackerState): void {
-    console.log(
-      '[Tracker] setState: channels=',
-      state.channels,
-      'patterns=',
-      state.patterns.length,
-      'order=',
-      state.order.length,
-      'modSamples=',
-      state.modSamples?.length
-    );
     this.state = state;
     this.lastInstrument = new Array(state.channels).fill(0);
     this.channelStates = [];
@@ -147,23 +137,8 @@ export class TrackerAudio {
 
   private scheduler(): void {
     if (!this.isPlaying || !this.audioContext || !this.state) {
-      console.log(
-        '[Tracker] Scheduler stopped: isPlaying=',
-        this.isPlaying,
-        'hasAudio=',
-        !!this.audioContext,
-        'hasState=',
-        !!this.state
-      );
       return;
     }
-
-    console.log(
-      '[Tracker] Scheduler running, nextNoteTime=',
-      this.nextNoteTime.toFixed(3),
-      'currentTime=',
-      this.audioContext.currentTime.toFixed(3)
-    );
 
     while (this.nextNoteTime < this.audioContext.currentTime + this.lookAhead) {
       this.scheduleNote();
@@ -176,27 +151,11 @@ export class TrackerAudio {
     if (!this.audioContext || !this.state) return;
 
     const patternIdx = this.state.order[this.currentPatternIdx];
-    console.log(
-      '[Tracker] scheduleNote: patternIdx=',
-      patternIdx,
-      'row=',
-      this.currentRow,
-      'order length=',
-      this.state.order.length
-    );
 
     const pattern = this.state.patterns[patternIdx];
     if (!pattern) {
-      console.log('[Tracker] No pattern found for idx', patternIdx);
       return;
     }
-
-    console.log(
-      '[Tracker] Pattern rows=',
-      pattern.rows.length,
-      'channels in row 0=',
-      pattern.rows[0]?.length
-    );
 
     if (this.currentRow === 0 && !this.hasNotes(pattern)) {
       if (this.state.isLooping) {
@@ -272,19 +231,8 @@ export class TrackerAudio {
 
     const chState = this.channelStates[channel];
     if (!chState) {
-      console.log('[Tracker] No channel state for channel', channel);
       return;
     }
-
-    console.log(
-      '[Tracker] playCell: ch=',
-      channel,
-      'note=',
-      cell.note,
-      cell.octave,
-      'inst=',
-      cell.instrument
-    );
 
     if (cell.effect === 0x09) {
       chState.sampleOffset = cell.effectParam * 256;
@@ -382,11 +330,12 @@ export class TrackerAudio {
 
     let instrumentId = cell.instrument;
     if (instrumentId === 0) {
-      instrumentId = this.lastInstrument[channel] || 1;
+      instrumentId = this.lastInstrument[channel];
     }
 
-    const instrument =
-      this.state.instruments.find((i) => i.id === instrumentId) ?? this.state.instruments[0];
+    if (!instrumentId) return;
+
+    const instrument = this.state.instruments.find((i) => i.id === instrumentId);
     if (!instrument) return;
 
     const note = cell.note ?? chState.note;
@@ -724,16 +673,7 @@ export class TrackerAudio {
   }
 
   previewNote(instrument: Instrument, note: string, octave: number): void {
-    console.log(
-      '[Tracker] previewNote called:',
-      instrument.name,
-      note,
-      octave,
-      'sampleIndex=',
-      instrument.sampleIndex
-    );
     if (!this.audioContext || !this.state) {
-      console.log('[Tracker] previewNote: no audio context or state');
       return;
     }
     if (this.audioContext.state === 'suspended') {
@@ -741,20 +681,10 @@ export class TrackerAudio {
     }
 
     const freq = noteToFrequency(note, octave);
-    console.log('[Tracker] previewNote: freq=', freq);
     if (freq <= 0) return;
 
     const hasSampleData = instrument.sampleData && instrument.sampleData.length > 0;
     const modSampleIdx = hasSampleData ? (instrument.sampleIndex ?? instrument.id - 1) : -1;
-
-    console.log(
-      '[Tracker] previewNote: modSampleIdx=',
-      modSampleIdx,
-      'modSamples length=',
-      this.state.modSamples?.length,
-      'hasSampleData=',
-      hasSampleData
-    );
 
     const hasModSample =
       hasSampleData &&
@@ -762,8 +692,6 @@ export class TrackerAudio {
       modSampleIdx >= 0 &&
       modSampleIdx < this.state.modSamples.length &&
       this.state.modSamples[modSampleIdx]?.length > 0;
-
-    console.log('[Tracker] previewNote: hasModSample=', hasModSample);
 
     if (hasModSample) {
       this.previewSample(
@@ -775,7 +703,6 @@ export class TrackerAudio {
       return;
     }
 
-    console.log('[Tracker] previewNote: playing oscillator');
     const osc = this.audioContext.createOscillator();
     const oscType =
       instrument.waveform === 'pulse'
@@ -813,23 +740,11 @@ export class TrackerAudio {
     finetune: number = 0,
     fixedPitch: boolean = false
   ): void {
-    console.log(
-      '[Tracker] previewSample: idx=',
-      sampleIdx,
-      'freq=',
-      freq,
-      'finetune=',
-      finetune,
-      'fixedPitch=',
-      fixedPitch
-    );
     if (!this.audioContext || !this.state?.modSamples) {
-      console.log('[Tracker] previewSample: no audio context or modSamples');
       return;
     }
 
     const sampleData = this.state.modSamples[sampleIdx];
-    console.log('[Tracker] previewSample: sampleData length=', sampleData?.length);
     if (!sampleData || sampleData.length === 0) return;
 
     const buffer = this.audioContext.createBuffer(

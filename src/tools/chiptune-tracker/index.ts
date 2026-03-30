@@ -19,7 +19,7 @@ type ClipboardData = {
   note: string | null;
   octave: number | null;
   instrument: number;
-  volume: number;
+  volume: number | null;
 };
 
 export default function init(): () => void {
@@ -28,7 +28,7 @@ export default function init(): () => void {
   let selectedNote = 'C';
   let selectedOctave = 4;
   let selectedInstrument = 1;
-  let selectedVolume = 32;
+  let selectedVolume = 64;
   let selectedChannel = 0;
   let selectedRow = 0;
   let clipboard: ClipboardData | null = null;
@@ -303,7 +303,6 @@ export default function init(): () => void {
     container.innerHTML = '';
 
     const maxInstruments = Math.min(state.instruments.length, 40);
-    console.log('[Tracker] renderInstrumentTabs: showing', maxInstruments, 'instruments');
     for (let i = 0; i < maxInstruments; i++) {
       const inst = state.instruments[i];
       const hasSample = inst.sampleData && inst.sampleData.length > 0;
@@ -313,16 +312,6 @@ export default function init(): () => void {
       btn.title = `Instrument ${inst.id}: ${inst.name} (sample: ${hasSample ? 'yes' : 'no'})`;
       btn.addEventListener('click', () => {
         selectedInstrument = inst.id;
-        console.log(
-          '[Tracker] Clicked instrument:',
-          inst.name,
-          'id:',
-          inst.id,
-          'hasSample:',
-          hasSample,
-          'sampleData length:',
-          inst.sampleData?.length
-        );
         renderInstrumentTabs();
         updateInstrumentControls();
         previewCurrentNote();
@@ -612,7 +601,7 @@ export default function init(): () => void {
     cell.note = null;
     cell.octave = null;
     cell.instrument = 0;
-    cell.volume = 0;
+    cell.volume = null;
     renderTrackerGrid();
   }
 
@@ -634,7 +623,7 @@ export default function init(): () => void {
     cell.note = clipboard.note;
     cell.octave = clipboard.octave;
     cell.instrument = clipboard.instrument ?? 0;
-    cell.volume = clipboard.volume ?? 0;
+    cell.volume = clipboard.volume ?? null;
     renderTrackerGrid();
   }
 
@@ -647,7 +636,14 @@ export default function init(): () => void {
     for (let r = 0; r < rows; r++) {
       const row: (typeof state.patterns)[0]['rows'][0] = [];
       for (let c = 0; c < channels; c++) {
-        row.push({ note: null, octave: null, instrument: 0, volume: 0, effect: 0, effectParam: 0 });
+        row.push({
+          note: null,
+          octave: null,
+          instrument: 0,
+          volume: null,
+          effect: 0,
+          effectParam: 0,
+        });
       }
       newPatternRows.push(row);
     }
@@ -755,17 +751,6 @@ export default function init(): () => void {
   }
 
   function convertModToState(modFile: ReturnType<typeof parseModFile>): TrackerState {
-    console.log(
-      '[Tracker] convertModToState: title=',
-      modFile.title,
-      'channels=',
-      modFile.channels,
-      'samples=',
-      modFile.samples.length,
-      'patterns=',
-      modFile.patterns.length
-    );
-
     const channels = modFile.channels;
     const rowsPerPattern = 64;
     const maxInstruments = 31;
@@ -799,12 +784,11 @@ export default function init(): () => void {
         for (let ch = 0; ch < channels; ch++) {
           const modNote = modPattern.rows[row]?.[ch];
           const modInstr = modNote?.instrument ?? 0;
-          const modVol = modNote?.volume ?? 64;
           rowData.push({
             note: modNote?.note ?? null,
             octave: modNote?.octave ?? null,
             instrument: modInstr,
-            volume: modVol,
+            volume: modNote?.volume ?? null,
             effect: modNote?.effect ?? 0,
             effectParam: modNote?.effectParam ?? 0,
           });
@@ -814,7 +798,7 @@ export default function init(): () => void {
             note: null,
             octave: null,
             instrument: 0,
-            volume: 0,
+            volume: null,
             effect: 0,
             effectParam: 0,
           });
@@ -833,7 +817,7 @@ export default function init(): () => void {
             note: null,
             octave: null,
             instrument: 0,
-            volume: 0,
+            volume: null,
             effect: 0,
             effectParam: 0,
           });
@@ -844,12 +828,6 @@ export default function init(): () => void {
     }
 
     const modSamples = modFile.samples.map((s) => s.data);
-    console.log(
-      '[Tracker] modSamples created, length=',
-      modSamples.length,
-      'first sample length=',
-      modSamples[0]?.length
-    );
     const modSampleCount = modFile.samples.length;
 
     for (let i = 0; i < BUILTIN_SAMPLES.length; i++) {

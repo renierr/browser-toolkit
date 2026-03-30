@@ -12,7 +12,7 @@ export interface ModNote {
   note: string | null;
   octave: number | null;
   instrument: number;
-  volume: number;
+  volume: number | null;
   effect: number;
   effectParam: number;
 }
@@ -31,17 +31,68 @@ export interface ModFile {
   defaultSpeed: number;
 }
 
-const NOTE_TABLE: string[] = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-
-const AMIGA_PERIOD_TABLE: { note: string; octave: number; period: number }[] = [];
-for (let oct = 0; oct <= 6; oct++) {
-  for (let i = 0; i < NOTE_TABLE.length; i++) {
-    const basePeriod = [1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016, 960, 906][i];
-    const period = Math.round(basePeriod / Math.pow(2, oct));
-    AMIGA_PERIOD_TABLE.push({ note: NOTE_TABLE[i], octave: oct + 1, period });
-  }
-}
-AMIGA_PERIOD_TABLE.sort((a, b) => a.period - b.period);
+const AMIGA_PERIOD_TABLE: { note: string; octave: number; period: number }[] = [
+  { note: 'C', octave: 0, period: 1712 },
+  { note: 'C#', octave: 0, period: 1616 },
+  { note: 'D', octave: 0, period: 1525 },
+  { note: 'D#', octave: 0, period: 1440 },
+  { note: 'E', octave: 0, period: 1357 },
+  { note: 'F', octave: 0, period: 1281 },
+  { note: 'F#', octave: 0, period: 1209 },
+  { note: 'G', octave: 0, period: 1141 },
+  { note: 'G#', octave: 0, period: 1077 },
+  { note: 'A', octave: 0, period: 1017 },
+  { note: 'A#', octave: 0, period: 961 },
+  { note: 'B', octave: 0, period: 907 },
+  { note: 'C', octave: 1, period: 856 },
+  { note: 'C#', octave: 1, period: 808 },
+  { note: 'D', octave: 1, period: 762 },
+  { note: 'D#', octave: 1, period: 720 },
+  { note: 'E', octave: 1, period: 678 },
+  { note: 'F', octave: 1, period: 640 },
+  { note: 'F#', octave: 1, period: 604 },
+  { note: 'G', octave: 1, period: 570 },
+  { note: 'G#', octave: 1, period: 538 },
+  { note: 'A', octave: 1, period: 508 },
+  { note: 'A#', octave: 1, period: 480 },
+  { note: 'B', octave: 1, period: 453 },
+  { note: 'C', octave: 2, period: 428 },
+  { note: 'C#', octave: 2, period: 404 },
+  { note: 'D', octave: 2, period: 381 },
+  { note: 'D#', octave: 2, period: 360 },
+  { note: 'E', octave: 2, period: 339 },
+  { note: 'F', octave: 2, period: 320 },
+  { note: 'F#', octave: 2, period: 302 },
+  { note: 'G', octave: 2, period: 285 },
+  { note: 'G#', octave: 2, period: 269 },
+  { note: 'A', octave: 2, period: 254 },
+  { note: 'A#', octave: 2, period: 240 },
+  { note: 'B', octave: 2, period: 226 },
+  { note: 'C', octave: 3, period: 214 },
+  { note: 'C#', octave: 3, period: 202 },
+  { note: 'D', octave: 3, period: 190 },
+  { note: 'D#', octave: 3, period: 180 },
+  { note: 'E', octave: 3, period: 170 },
+  { note: 'F', octave: 3, period: 160 },
+  { note: 'F#', octave: 3, period: 151 },
+  { note: 'G', octave: 3, period: 143 },
+  { note: 'G#', octave: 3, period: 135 },
+  { note: 'A', octave: 3, period: 127 },
+  { note: 'A#', octave: 3, period: 120 },
+  { note: 'B', octave: 3, period: 113 },
+  { note: 'C', octave: 4, period: 107 },
+  { note: 'C#', octave: 4, period: 101 },
+  { note: 'D', octave: 4, period: 95 },
+  { note: 'D#', octave: 4, period: 90 },
+  { note: 'E', octave: 4, period: 85 },
+  { note: 'F', octave: 4, period: 80 },
+  { note: 'F#', octave: 4, period: 76 },
+  { note: 'G', octave: 4, period: 71 },
+  { note: 'G#', octave: 4, period: 67 },
+  { note: 'A', octave: 4, period: 64 },
+  { note: 'A#', octave: 4, period: 60 },
+  { note: 'B', octave: 4, period: 57 },
+];
 
 function readString(data: Uint8Array, offset: number, length: number): string {
   let result = '';
@@ -75,7 +126,7 @@ function noteFromPeriod(period: number): { note: string; octave: number } | null
     }
   }
 
-  if (minDiff <= 10) {
+  if (minDiff <= 2) {
     return { note: closest.note, octave: closest.octave };
   }
 
@@ -179,7 +230,7 @@ export function parseModFile(data: ArrayBuffer): ModFile {
             note: null,
             octave: null,
             instrument: 0,
-            volume: 0,
+            volume: null,
             effect: 0,
             effectParam: 0,
           });
@@ -191,18 +242,16 @@ export function parseModFile(data: ArrayBuffer): ModFile {
         const byte2 = bytes[cellOffset + 2];
         const byte3 = bytes[cellOffset + 3];
 
-        const sampleNum = (byte0 & 0xf0) | ((byte2 & 0xf0) >> 4);
+        const sampleNum = ((byte0 & 0x10) >> 4) | ((byte2 & 0xf0) >> 4);
         const period = ((byte0 & 0x0f) << 8) | byte1;
         const effect = byte2 & 0x0f;
         const effectParam = byte3;
 
         const noteInfo = noteFromPeriod(period);
 
-        let volume = 64;
+        let volume: number | null = null;
         if (effect === 0x0c) {
           volume = Math.min(effectParam, 64);
-        } else if (sampleNum > 0 && samples[sampleNum - 1]) {
-          volume = samples[sampleNum - 1].volume || 64;
         }
 
         rowData.push({
