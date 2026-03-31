@@ -243,27 +243,36 @@ export class ChiptunePlayer {
     if (this.masterGain && this.audioContext) {
       this.masterGain.gain.setTargetAtTime(this.volume, this.audioContext.currentTime, 0.05);
     }
+    this.sendToWorklet('setVolume', { volume: this.volume });
+  }
+  private sendToWorklet(type: string, data: any = {}) {
     if (this.useWorklet && this.workletNode) {
-      this.workletNode.port.postMessage({ type: 'setVolume', volume: this.volume });
+      this.workletNode.port.postMessage({ type, ...data });
     }
   }
 
   async play(): Promise<void> {
     if (!this.audioContext || !this.module) return;
+    if (this.isPlaying) return;
+    
     if (this.audioContext.state === 'suspended') await this.audioContext.resume();
 
-    this.isPlaying = true;
-
     if (this.useWorklet && this.workletNode && this.module) {
-      const workletMod = serializeModuleForWorklet(this.module);
-      this.workletNode.port.postMessage({
-        type: 'play',
-        mod: workletMod,
-        sampleRate: this.audioContext.sampleRate,
-      });
+      if (!this.wasStopped && (this.currentPatternIdx > 0 || this.currentRow > 0)) {
+        this.sendToWorklet('resume');
+      } else {
+        const workletMod = serializeModuleForWorklet(this.module);
+        this.sendToWorklet('play', {
+          mod: workletMod,
+          sampleRate: this.audioContext.sampleRate,
+        });
+      }
+      this.isPlaying = true;
+      this.wasStopped = false;
       return;
     }
 
+    this.isPlaying = true;
     this.wasStopped = true;
     this.playBuffer();
   }
@@ -298,7 +307,7 @@ export class ChiptunePlayer {
   pause(): void {
     if (this.useWorklet && this.workletNode) {
       this.isPlaying = false;
-      this.workletNode.port.postMessage({ type: 'stop' });
+      this.sendToWorklet('stop');
       return;
     }
 
@@ -1136,6 +1145,10 @@ export class ChiptunePlayer {
       ch.volume = 0;
       ch.keyOn = false;
     }
+    this.sendToWorklet('seek', { 
+      position: this.currentPatternIdx, 
+      rowIndex: this.currentRow 
+    });
     if (this.onPositionChange) this.onPositionChange(this.currentPatternIdx, this.currentRow);
   }
 

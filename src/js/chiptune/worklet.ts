@@ -98,43 +98,16 @@ class WorkletChannel {
   }
 
   reset() {
-    this.instrument = null;
-    this.sample = null;
-    this.note = null;
     this.playing = false;
-    this.keyOn = false;
-    this.period = 0;
-    this.targetPeriod = 0;
-    this.currentPeriod = 0;
-    this.volume = 64;
-    this.panning = 128;
-    this.baseVolume = 64;
     this.sampleIndex = 0;
-    this.sampleSpeed = 0;
+    this.sampleFraction = 0;
+    // Preservation: We DO NOT reset this.instrument, this.volume, or this.panning
+    // because subsequent notes in a tracker row often omit instrument bytes.
+    // Clearing them causes silence after seeking or restarting.
     this.vibratoPhase = 0;
-    this.vibratoSpeed = 0;
-    this.vibratoDepth = 0;
-    this.vibratoWaveform = 0;
     this.tremoloPhase = 0;
-    this.tremoloSpeed = 0;
-    this.tremoloDepth = 0;
-    this.tremoloWaveform = 0;
-    this.slideSpeed = 0;
-    this.volSlideSpeed = 0;
-    this.fineSlideSpeed = 0;
-    this.arpeggioNotes = [];
     this.volumeEnvTick = 0;
     this.panningEnvTick = 0;
-    this.volumeEnvValue = 64;
-    this.panningEnvValue = 128;
-    this.fadeoutVolume = 32768;
-    this.retrig = 0;
-    this.globalVolSlide = 0;
-    this.panningSlide = 0;
-    this.tremorCounter = 0;
-    this.tremorOn = false;
-    this.pendingNote = null;
-    this.delayNoteTick = -1;
   }
 
   trigger(note: WorkletNote) {
@@ -678,11 +651,21 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
           this.channels.push(ch);
         }
         this.position = this.mod!.restartPosition || 0;
-        this.rowIndex = 0;
-        this.tick = this.ticksPerRow - 1; // Trigger first row Row 0 Tick 0 immediately
+        this.rowIndex = -1;
+        this.tick = this.ticksPerRow; // Force immediate Row 0 trigger on first process sample
         this.playing = true;
       } else if (data.type === 'stop') {
         this.playing = false;
+        // Optional: clear active channel output to avoid buzzing
+        this.channels.forEach(ch => ch.playing = false); 
+      } else if (data.type === 'resume') {
+        this.playing = true;
+        this.channels.forEach(ch => { if (ch.sample) ch.playing = true; });
+      } else if (data.type === 'seek') {
+        this.position = data.position;
+        this.rowIndex = data.rowIndex - 1;
+        this.tick = this.ticksPerRow;
+        this.channels.forEach(ch => ch.reset());
       } else if (data.type === 'setVolume') {
         this.masterVolume = data.volume;
       }
