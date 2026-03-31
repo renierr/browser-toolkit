@@ -1080,6 +1080,9 @@ export class ChiptunePlayer {
   getIsPlaying(): boolean {
     return this.isPlaying;
   }
+  getIsWorkletEnabled(): boolean {
+    return this.useWorklet;
+  }
   getCurrentPosition(): { pattern: number; row: number } {
     return { pattern: this.currentPatternIdx, row: this.currentRow };
   }

@@ -84,6 +84,7 @@ function getElements(): Record<string, HTMLElement | null> {
     'btn-play': document.getElementById('btn-play'),
     'btn-stop': document.getElementById('btn-stop'),
     'loop-toggle': document.getElementById('loop-toggle'),
+    'worklet-toggle': document.getElementById('worklet-toggle'),
     'volume-slider': document.getElementById('volume-slider'),
     'volume-display': document.getElementById('volume-display'),
     'speed-slider': document.getElementById('speed-slider'),
@@ -158,6 +159,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const btnPlay = elements['btn-play'] as HTMLButtonElement | null;
   const btnStop = elements['btn-stop'] as HTMLButtonElement | null;
   const loopToggle = elements['loop-toggle'] as HTMLInputElement | null;
+  const workletToggle = elements['worklet-toggle'] as HTMLInputElement | null;
   const volumeSlider = elements['volume-slider'] as HTMLInputElement | null;
   const volumeDisplay = elements['volume-display'];
   const speedSlider = elements['speed-slider'] as HTMLInputElement | null;
@@ -295,6 +297,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
     } else {
       await player.play();
       btnPlay.innerHTML = '<i data-lucide="pause" class="w-4 h-4"></i>';
+      // Sync toggle with current player state
+      if (workletToggle) workletToggle.checked = player.getIsPlaying() && player.getIsWorkletEnabled();
       shouldVisualize = true;
       drawVisualization();
     }
@@ -311,6 +315,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (player) {
       player.stop();
     }
+    if (workletToggle) workletToggle.checked = false;
     elements['file-info']?.classList.add('hidden');
     dropzone?.classList.remove('hidden');
     if (btnPlay) btnPlay.disabled = true;
@@ -327,6 +332,15 @@ export default function init(payload?: SharedFilesPayload): () => void {
   loopToggle?.addEventListener('change', () => {
     if (!player) return;
     player.setLooping(loopToggle.checked);
+  });
+  
+  workletToggle?.addEventListener('change', async () => {
+    if (!player) return;
+    const success = await player.setUseWorklet(workletToggle.checked);
+    if (!success && workletToggle.checked) {
+      workletToggle.checked = false;
+      showMessage('Failed to initialize AudioWorklet. Using standard playback.', { type: 'warning' });
+    }
   });
 
   volumeSlider?.addEventListener('input', () => {
