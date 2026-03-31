@@ -155,7 +155,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
   setupPlayerCallbacks(player, elements);
 
   const dropzone = elements['dropzone'] as HTMLElement;
-  const fileInput = elements['file-input'] as HTMLInputElement | null;
   const btnPlay = elements['btn-play'] as HTMLButtonElement | null;
   const btnStop = elements['btn-stop'] as HTMLButtonElement | null;
   const loopToggle = elements['loop-toggle'] as HTMLInputElement | null;
