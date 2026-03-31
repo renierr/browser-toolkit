@@ -118,8 +118,8 @@ class WorkletChannel {
     if (note.volumeColumn !== null && note.volumeColumn !== undefined) {
       const vc = note.volumeColumn;
       if (vc >= 0x10 && vc <= 0x50) this.volume = vc - 0x10; // Set volume
-      else if (vc >= 0x60 && vc <= 0x6f) {} // Vol slide down (continuous)
-      else if (vc >= 0x70 && vc <= 0x7f) {} // Vol slide up (continuous)
+      else if (vc >= 0x60 && vc <= 0x6f) this.volSlideSpeed = -(vc & 0x0f); // Vol slide down
+      else if (vc >= 0x70 && vc <= 0x7f) this.volSlideSpeed = (vc & 0x0f); // Vol slide up
       else if (vc >= 0x80 && vc <= 0x8f) { // Fine vol slide down
         if (this.worklet.tick === 0) this.volume = Math.max(0, this.volume - (vc & 0x0f));
       }
@@ -164,9 +164,10 @@ class WorkletChannel {
     
     // Amiga periods
     const AMIGA_TABLE = [1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907];
-    let n = noteValue - 1;
+    let n = noteValue - 1 + (sample.baseNote || 0);
     let octave = 0;
     while (n >= 12) { n -= 12; octave++; }
+    while (n < 0) { n += 12; octave--; }
     let p = AMIGA_TABLE[n] / Math.pow(2, octave);
     return p;
   }
@@ -228,7 +229,7 @@ class WorkletChannel {
         else if (param & 0x0f) this.volSlideSpeed = -(param & 0x0f);
         break;
       case EFFECT_SET_VOLUME:
-        this.setVolume = Math.min(64, param);
+        this.volume = Math.min(64, param);
         break;
       case EFFECT_PATTERN_BREAK:
         this.worklet.setPatternBreak(((param >> 4) & 0x0f) * 10 + (param & 0x0f));
@@ -370,7 +371,10 @@ class WorkletChannel {
     if (this.worklet.mod.linearFrequencies) {
       return 8363 * Math.pow(2, (4608 - period) / 768);
     }
-    return (this.worklet.mod.clock || 3546894.6) / (period * 2);
+    if (this.sample && this.sample.finetune !== 0) {
+      period *= Math.pow(2, -this.sample.finetune / (12 * 8));
+    }
+    return (this.worklet.mod.clock || 7093789.2) / (period * 2);
   }
 
   nextSample() {
@@ -462,7 +466,11 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
 
     this.channels = [];
     for (let i = 0; i < mod.channels; i++) {
-      this.channels.push(new WorkletChannel(this, i));
+      const ch = new WorkletChannel(this, i);
+      if (mod.type === 'MOD') {
+        ch.panning = (i % 4 === 1 || i % 4 === 2) ? 200 : 56;
+      }
+      this.channels.push(ch);
     }
 
     this.position = 0;
@@ -498,6 +506,9 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
       return;
     }
 
+    let currentPatternIndex = this.mod.patternTable[this.position];
+    let currentPattern = this.mod.patterns[currentPatternIndex];
+
     if (this.patternJump !== -1) {
       this.position = this.patternJump;
       this.rowIndex = this.patternBreak !== false ? this.patternBreak : 0;
@@ -509,23 +520,20 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
       this.patternBreak = false;
     } else {
       this.rowIndex++;
-    }
-
-    if (this.rowIndex >= this.mod.rowsPerPattern) {
-      this.rowIndex = 0;
-      this.position++;
+      if (currentPattern && this.rowIndex >= currentPattern.rows.length) {
+        this.rowIndex = 0;
+        this.position++;
+      }
     }
 
     if (this.position >= this.mod.length || this.position < 0) {
       this.position = this.mod.restartPosition || 0;
     }
 
-    const patternIndex = this.mod.patternTable[this.position];
-    if (patternIndex === undefined) return;
-    
-    const pattern = this.mod.patterns[patternIndex];
-    if (pattern) {
-      const row = pattern.rows[this.rowIndex];
+    const finalPatternIndex = this.mod.patternTable[this.position];
+    const finalPattern = this.mod.patterns[finalPatternIndex];
+    if (finalPattern) {
+      const row = finalPattern.rows[this.rowIndex];
       if (row) {
         this.currentRowNotes = row.notes;
         for (let i = 0; i < this.channels.length; i++) {

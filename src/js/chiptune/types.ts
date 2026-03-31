@@ -175,7 +175,7 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
       const sample = inst.samples[s];
       const int8Data = new Int8Array(sample.data.length);
       for (let j = 0; j < sample.data.length; j++) {
-        int8Data[j] = Math.round(sample.data[j] * 128);
+        int8Data[j] = Math.max(-128, Math.min(127, Math.round(sample.data[j] * 128)));
       }
 
       samples.push({
