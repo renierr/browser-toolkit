@@ -13,7 +13,6 @@ export function getModNoteFromPeriod(period: number): number | null {
       closestIdx = i;
     }
   }
-  // Base note C-1 starts at note=1
   return closestIdx >= 0 ? closestIdx + 1 : null;
 }
 

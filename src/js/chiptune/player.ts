@@ -37,6 +37,9 @@ interface ChannelState {
   retrigCounter: number;
   noteDelayCounter: number;
 
+  loopStartRow: number;
+  loopCount: number;
+
   envTick: number;
   volumeEnvTick: number;
   panningEnvTick: number;
@@ -75,6 +78,10 @@ export class ChiptunePlayer {
   private speed = 6;
   private bpm = 125;
   private volume = 0.7;
+
+  private patternLoopRow = -1;
+  private patternLoopCount = 0;
+  private patternLoopPosition = -1;
 
   public onPositionChange: ((pattern: number, row: number) => void) | null = null;
   public onChannelActivity: ((activeChannels: boolean[]) => void) | null = null;
@@ -133,6 +140,8 @@ export class ChiptunePlayer {
         baseVolume: 64,
         retrigCounter: 0,
         noteDelayCounter: 0,
+        loopStartRow: -1,
+        loopCount: 0,
         envTick: 0,
         volumeEnvTick: 0,
         panningEnvTick: 0,
@@ -175,6 +184,9 @@ export class ChiptunePlayer {
       this.currentPatternIdx = 0;
       this.currentRow = 0;
       this.currentTick = 0;
+      this.patternLoopRow = -1;
+      this.patternLoopCount = 0;
+      this.patternLoopPosition = -1;
       for (const ch of this.channelStates) {
         this.stopChannel(ch);
         ch.period = 0;
@@ -205,6 +217,9 @@ export class ChiptunePlayer {
     this.currentPatternIdx = 0;
     this.currentRow = 0;
     this.currentTick = 0;
+    this.patternLoopRow = -1;
+    this.patternLoopCount = 0;
+    this.patternLoopPosition = -1;
     this.wasStopped = true;
     if (this.onPositionChange) this.onPositionChange(0, 0);
     if (this.onChannelActivity)
@@ -525,6 +540,21 @@ export class ChiptunePlayer {
         this.currentRow = nextRow >= 0 ? nextRow : 0;
         const wasAtEnd = this.currentPatternIdx >= this.module.sequence.length - 1 && !patternJump;
         this.currentPatternIdx = patternJump >= 0 ? patternJump : this.currentPatternIdx + 1;
+
+        if (this.patternLoopRow >= 0 && this.patternLoopCount > 0) {
+          this.currentRow = this.patternLoopRow;
+          this.currentPatternIdx =
+            this.patternLoopPosition >= 0 ? this.patternLoopPosition : this.currentPatternIdx;
+          this.patternLoopCount--;
+        } else if (
+          this.patternLoopRow >= 0 &&
+          this.patternLoopCount === 0 &&
+          this.patternLoopPosition >= 0
+        ) {
+          this.currentRow = this.patternLoopRow;
+          this.currentPatternIdx = this.patternLoopPosition;
+        }
+
         if (this.currentPatternIdx >= this.module.sequence.length) {
           if (this.isLooping) {
             for (const ch of this.channelStates) {
@@ -795,6 +825,20 @@ export class ChiptunePlayer {
       else if (eSub === 0xe) {
         // Handled in scheduler
       }
+      // E5: Loop Note (set loop start)
+      else if (eSub === 0x5) {
+        chState.loopStartRow = this.currentRow;
+      }
+      // E6: Pattern Loop
+      else if (eSub === 0x6) {
+        if (eParam === 0) {
+          this.patternLoopRow = chState.loopStartRow >= 0 ? chState.loopStartRow : 0;
+          this.patternLoopCount = 0;
+          this.patternLoopPosition = this.currentPatternIdx;
+        } else if (this.patternLoopRow >= 0) {
+          this.patternLoopCount = eParam;
+        }
+      }
     }
     // Effect F: Set Speed
   }
@@ -967,6 +1011,9 @@ export class ChiptunePlayer {
     this.currentPatternIdx = Math.max(0, Math.min(pattern, this.module.sequence.length - 1));
     this.currentRow = Math.max(0, Math.min(row, this.module.rowsPerPattern - 1));
     this.currentTick = 0;
+    this.patternLoopRow = -1;
+    this.patternLoopCount = 0;
+    this.patternLoopPosition = -1;
     for (const ch of this.channelStates) {
       this.stopChannel(ch);
       ch.period = 0;
