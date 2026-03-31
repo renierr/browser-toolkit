@@ -3,6 +3,7 @@ import { parseModule } from '../../js/chiptune/parser';
 import type { ModuleFile } from '../../js/chiptune/types';
 import { getAllModules, saveModule, deleteModule } from '../../js/chiptune/archive';
 import { showMessage } from '../../js/ui';
+import { downloadFile } from '../../js/file-utils';
 
 // good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
 
@@ -221,9 +222,14 @@ export default function init(payload?: SharedFilesPayload): () => void {
         <span class="badge badge-xs badge-primary">${m.format}</span>
         <span class="flex-1 text-xs truncate">${m.title || m.fileName}</span>
         <span class="text-xs opacity-50">${new Date(m.archivedAt).toLocaleDateString()}</span>
-        <button class="btn btn-xs btn-ghost btn-square archive-delete" data-id="${m.id}">
-          <i data-lucide="trash-2" class="w-3 h-3"></i>
-        </button>
+        <div class="flex items-center gap-1">
+          <button class="btn btn-xs btn-ghost btn-square archive-download" data-id="${m.id}" title="Download module">
+            <i data-lucide="download" class="w-3 h-3"></i>
+          </button>
+          <button class="btn btn-xs btn-ghost btn-square archive-delete" data-id="${m.id}" title="Delete module">
+            <i data-lucide="trash-2" class="w-3 h-3"></i>
+          </button>
+        </div>
       </div>
     `
       )
@@ -255,6 +261,17 @@ export default function init(payload?: SharedFilesPayload): () => void {
       if (id && confirm('Delete this archived module?')) {
         await deleteModule(id);
         loadArchiveList();
+      }
+      return;
+    }
+    const downloadBtn = target.closest('.archive-download');
+    if (downloadBtn) {
+      const id = (downloadBtn as HTMLElement).dataset.id;
+      if (!id) return;
+      const modules = await getAllModules();
+      const module = modules.find((m) => m.id === id);
+      if (module) {
+        await downloadFile(module.fileData, module.fileName);
       }
       return;
     }
