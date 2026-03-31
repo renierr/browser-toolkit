@@ -117,7 +117,7 @@ export default defineConfig({
                 '.psd',
                 '.ai',
               ],
-              'audio/*': ['.wav', '.mp3', '.ogg', '.webm', '.flac', '.m4a', '.aac', '.opus', '.mod', '.xm', '.it', '.sid'],
+              'audio/*': ['.wav', '.mp3', '.ogg', '.webm', '.flac', '.m4a', '.aac', '.opus', '.mod', '.xm', '.it'],
               'video/*': [
                 '.mp4',
                 '.webm',
