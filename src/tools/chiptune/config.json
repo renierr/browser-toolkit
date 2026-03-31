@@ -5,6 +5,6 @@
   "sectionId": "media",
   "order": 1,
   "shareTarget": {
-    "accept": ["audio/mod", "audio/xm", "audio/it", "audio/sid", "audio/*"]
+    "accept": ["audio/x-mod", "audio/xm", "audio/it", "audio/x-s3m", "audio/*"]
   }
 }
