@@ -4,6 +4,9 @@ import type { ModuleFile } from '../../js/chiptune/types';
 import { getAllModules, saveModule, deleteModule } from '../../js/chiptune/archive';
 import { showMessage } from '../../js/ui';
 import { downloadFile } from '../../js/file-utils';
+import { ClassicVisualizer } from './visualizers/classic-visualizer';
+import { PulseGridVisualizer } from './visualizers/pulse-grid-visualizer';
+import type { Visualizer } from './visualizers/base';
 
 // good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
 
@@ -176,6 +179,11 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const archiveCount = elements['archive-count'];
   const archiveList = elements['archive-list'];
   const visSelector = elements['vis-selector'] as HTMLSelectElement | null;
+  const visualizers: Record<string, Visualizer> = {
+    'pulse-grid': new PulseGridVisualizer(),
+    'classic': new ClassicVisualizer(),
+  };
+
   let currentVis = localStorage.getItem('chiptune-vis') || 'pulse-grid';
   if (visSelector) {
     visSelector.value = currentVis;
@@ -431,134 +439,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
   resizeCanvases();
   visualizerCanvas.addEventListener('resize', resizeCanvases);
 
-  let gridScroll = 0;
-
-  function drawPulseGrid(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    freqData: Uint8Array,
-    timeData: Uint8Array,
-    bass: number
-  ): void {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(0, 0, width, height);
-
-    const horizonY = height * 0.45;
-    const vanishX = width / 2;
-
-    ctx.strokeStyle = `rgba(0, 255, 255, ${0.1 + bass * 0.3})`;
-    ctx.lineWidth = 1;
-
-    gridScroll = (gridScroll + 1 + bass * 5) % 40;
-    for (let y = 0; y < 15; y++) {
-      const fy = horizonY + Math.pow(y * 4 + gridScroll / 4, 2);
-      if (fy > height) continue;
-      ctx.beginPath();
-      ctx.moveTo(0, fy);
-      ctx.lineTo(width, fy);
-      ctx.stroke();
-    }
-
-    const lineCount = 12;
-    for (let i = 0; i <= lineCount; i++) {
-      const xOffset = (i / lineCount - 0.5) * width * 3;
-      ctx.beginPath();
-      ctx.moveTo(vanishX, horizonY);
-      ctx.lineTo(vanishX + xOffset, height);
-      ctx.stroke();
-    }
-
-    for (let i = 0; i < 32; i++) {
-      const val = freqData[i * 4];
-      if (val > 100) {
-        const percent = val / 255;
-        const size = percent * 4;
-        const angle = (i / 32) * Math.PI - Math.PI / 2;
-        const dist = 50 + percent * 150;
-        const px = vanishX + Math.sin(angle) * dist;
-        const py = horizonY - Math.cos(angle) * dist * 0.5;
-        ctx.fillStyle = `hsl(${180 + percent * 100}, 100%, 70%)`;
-        ctx.fillRect(px, py, size, size);
-      }
-    }
-
-    const amplitude = 2.0;
-    const waveSlice = width / timeData.length;
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = 'rgba(255, 0, 255, 0.5)';
-    ctx.strokeStyle = 'rgba(255, 0, 255, 0.8)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    let x = 0;
-    for (let i = 0; i < timeData.length; i++) {
-      const v = (timeData[i] - 128) / 128.0;
-      const y = horizonY + v * 40 * amplitude;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-      x += waveSlice;
-    }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    ctx.fillStyle = 'rgba(18, 16, 16, 0.1)';
-    for (let i = 0; i < height; i += 4) {
-      ctx.fillRect(0, i, width, 1);
-    }
-  }
-
-  function drawClassic(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    freqData: Uint8Array,
-    timeData: Uint8Array
-  ): void {
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-    ctx.fillRect(0, 0, width, height);
-
-    const barCount = 64;
-    const barWidth = width / barCount;
-    const barGap = 1;
-
-    for (let i = 0; i < barCount; i++) {
-      const val = freqData[i * 4] || 0;
-      const percent = val / 255;
-      const barHeight = percent * height;
-      let hue: number;
-      if (i < 16) hue = (i / 16) * 30;
-      else if (i < 32) hue = 30 + ((i - 16) / 16) * 60;
-      else if (i < 48) hue = 90 + ((i - 32) / 16) * 60;
-      else hue = 150 + ((i - 48) / 16) * 120;
-
-      const light = 50 + percent * 10;
-      ctx.fillStyle = `hsl(${hue}, 100%, ${light}%)`;
-      const bx = i * barWidth;
-      const by = height - barHeight;
-      ctx.fillRect(bx, by, barWidth - barGap, barHeight);
-      if (percent > 0.1) {
-        ctx.fillStyle = `hsl(${hue}, 100%, 75%)`;
-        ctx.fillRect(bx, by, barWidth - barGap, 2);
-      }
-    }
-
-    const amplitude = 1.8;
-    const waveSliceWidth = width / timeData.length;
-    ctx.strokeStyle = '#00ff88';
-    ctx.lineWidth = 2.5;
-    ctx.lineJoin = 'round';
-    ctx.beginPath();
-    let x = 0;
-    for (let i = 0; i < timeData.length; i++) {
-      const v = (timeData[i] - 128) / 128.0;
-      const y = height / 2 + v * (height / 2) * amplitude;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-      x += waveSliceWidth;
-    }
-    ctx.stroke();
-  }
-
   function drawVisualization(): void {
     const width = visualizerCanvas.width;
     const height = visualizerCanvas.height;
@@ -586,11 +466,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
     for (let i = 0; i < 8; i++) bass += freqData[i];
     bass /= 8 * 255;
 
-    if (currentVis === 'pulse-grid') {
-      drawPulseGrid(visualizerCtx, width, height, freqData, timeData, bass);
-    } else {
-      drawClassic(visualizerCtx, width, height, freqData, timeData);
-    }
+    const vis = visualizers[currentVis] || visualizers['pulse-grid'];
+    vis.draw(visualizerCtx, width, height, { freqData, timeData, bass });
 
     animationId = requestAnimationFrame(drawVisualization);
   }
