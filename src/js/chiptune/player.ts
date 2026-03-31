@@ -237,6 +237,9 @@ export class ChiptunePlayer {
     if (this.masterGain && this.audioContext) {
       this.masterGain.gain.setTargetAtTime(this.volume, this.audioContext.currentTime, 0.05);
     }
+    if (this.useWorklet && this.workletNode) {
+      this.workletNode.port.postMessage({ type: 'setVolume', volume: this.volume });
+    }
   }
 
   async play(): Promise<void> {

@@ -18,14 +18,32 @@ export function getModNoteFromPeriod(period: number): number | null {
 
 export class ModParser extends BaseParser {
   parse(): ModuleFile {
-    if (this.data.length < 1084) throw new Error('Invalid MOD file size');
+    this.setPos(1080);
+    const marker = this.readStr(4);
+    let channels = 4;
+    let is15Sample = false;
+
+    const markerUpper = marker.toUpperCase();
+    if (markerUpper.includes('6CHN')) channels = 6;
+    else if (markerUpper.includes('8CHN')) channels = 8;
+    else if (markerUpper.includes('CH')) {
+      const parsed = parseInt(marker.replace(/[^0-9]/g, ''));
+      if (!isNaN(parsed) && parsed > 0) channels = parsed;
+    } else if (markerUpper === 'M.K.' || markerUpper === 'M!K!' || markerUpper === 'FLT4') {
+      channels = 4;
+    } else {
+      // No standard 31-sample marker found, likely 15-sample MOD
+      is15Sample = true;
+      channels = 4;
+    }
 
     this.setPos(0);
     const title = this.readStr(20).trim();
     const instruments: Instrument[] = [];
 
-    // 31 samples
-    for (let i = 0; i < 31; i++) {
+    // Reading samples (15 or 31)
+    const numSamples = is15Sample ? 15 : 31;
+    for (let i = 0; i < numSamples; i++) {
       this.setPos(20 + i * 30);
       const name = this.readStr(22).trim();
       const lenWords = this.readU16BE();
@@ -58,7 +76,9 @@ export class ModParser extends BaseParser {
       });
     }
 
-    this.setPos(950);
+    // Positions differ between 15 and 31 sample MODs
+    const infoPos = is15Sample ? 470 : 950;
+    this.setPos(infoPos);
     const songLength = this.readU8();
     const restartPosition = this.readU8();
     const sequence: number[] = [];
@@ -66,21 +86,10 @@ export class ModParser extends BaseParser {
       sequence.push(this.readU8());
     }
 
-    this.setPos(1080);
-    const marker = this.readStr(4);
-    let channels = 4;
-    const markerUpper = marker.toUpperCase();
-    if (markerUpper.includes('6CHN')) channels = 6;
-    else if (markerUpper.includes('8CHN')) channels = 8;
-    else if (markerUpper.includes('CH')) {
-      const parsed = parseInt(marker.replace(/[^0-9]/g, ''));
-      if (!isNaN(parsed) && parsed > 0) channels = parsed;
-    } else if (markerUpper === 'M.K.' || markerUpper === 'M!K!' || markerUpper === 'FLT4')
-      channels = 4;
-
     const numPatterns = Math.max(...sequence.slice(0, songLength)) + 1;
     const patterns: Pattern[] = [];
-    this.setPos(1084);
+    const patternStart = is15Sample ? 600 : 1084;
+    this.setPos(patternStart);
 
     for (let pat = 0; pat < numPatterns; pat++) {
       const rows: Note[][] = [];

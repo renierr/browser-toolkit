@@ -14,6 +14,13 @@ const EFFECT_SET_VOLUME = 0x0c;
 const EFFECT_PATTERN_BREAK = 0x0d;
 const EFFECT_EXTENDED = 0x0e;
 const EFFECT_SET_SPEED = 0x0f;
+const EFFECT_GLOBAL_VOLUME = 0x10; // G
+const EFFECT_GLOBAL_VOL_SLIDE = 0x11; // H
+const EFFECT_KEY_OFF = 0x14; // K
+const EFFECT_ENVELOPE_POS = 0x15; // L
+const EFFECT_PANNING_SLIDE = 0x19; // P
+const EFFECT_MULTI_RETRIG = 0x1b; // R
+const EFFECT_TREMOR = 0x1d; // T
 
 class WorkletChannel {
   constructor(worklet, index) {
@@ -67,6 +74,12 @@ class WorkletChannel {
 
     this.retrig = 0;
     this.delayNote = -1;
+    this.globalVolSlide = 0;
+    this.panningSlide = 0;
+    this.tremorCounter = 0;
+    this.tremorOn = false;
+    this.pendingNote = null;
+    this.delayNoteTick = -1;
   }
 
   trigger(note) {
@@ -74,10 +87,33 @@ class WorkletChannel {
 
     let tonePorta = note.effect === EFFECT_TONE_PORTA || note.effect === EFFECT_TONE_PORTA_VOL;
 
+    // Handle EDx Note Delay
+    let noteDelay = 0;
+    if (note.effect === EFFECT_EXTENDED && ((note.effectParam >> 4) & 0x0f) === 0x0d) {
+      noteDelay = note.effectParam & 0x0f;
+    }
+
+    if (noteDelay > 0 && this.worklet.tick === 0) {
+      this.pendingNote = note;
+      this.delayNoteTick = noteDelay;
+      return;
+    }
+
+    this.processTrigger(note);
+  }
+
+  processTrigger(note) {
+    let tonePorta = note.effect === EFFECT_TONE_PORTA || note.effect === EFFECT_TONE_PORTA_VOL;
+
     if (note.instrument > 0) {
       this.instrument = this.worklet.mod.instruments[note.instrument - 1];
       if (this.instrument && this.instrument.samples.length > 0) {
         this.baseVolume = this.instrument.samples[0].volume;
+      }
+      this.assignSample(note.note || this.note || 1);
+      // Instrument only trigger resets volume
+      if (note.note === null) {
+        this.volume = this.baseVolume;
       }
     }
 
@@ -97,8 +133,7 @@ class WorkletChannel {
           this.period = note.period || this.calculatePeriod(note.note, note.instrument);
           this.currentPeriod = this.period;
           this.volume = this.baseVolume;
-          this.sampleIndex = this.sampleOffset;
-          this.sampleOffset = 0;
+          this.sampleIndex = 0;
           this.vibratoPhase = 0;
           this.volumeEnvTick = 0;
           this.panningEnvTick = 0;
@@ -141,7 +176,7 @@ class WorkletChannel {
       sIdx = this.instrument.sampleMap[noteValue - 1];
     }
     this.sample = this.instrument.samples[sIdx] || this.instrument.samples[0] || null;
-    if (this.sample) {
+    if (this.sample && this.worklet.mod.type !== 'MOD') {
       this.panning = this.sample.panning;
     }
   }
@@ -157,12 +192,22 @@ class WorkletChannel {
     
     if (this.worklet.mod.type === 'IT') return noteValue; 
     
-    if (this.worklet.mod.linearFrequencies) {
+    if (this.worklet.mod.type === 'XM' || this.worklet.mod.type === 'IT') {
       const actualNote = noteValue - 1 + (sample.baseNote || 0);
-      return 10 * 12 * 16 * 4 - actualNote * 16 * 4 - (sample.finetune || 0) / 2;
+      if (this.worklet.mod.linearFrequencies) {
+        return 10 * 12 * 16 * 4 - actualNote * 16 * 4 - (sample.finetune || 0) / 2;
+      } else {
+        const AMIGA_TABLE = [1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907];
+        let n = actualNote;
+        let octave = 0;
+        while (n >= 12) { n -= 12; octave++; }
+        while (n < 0) { n += 12; octave--; }
+        let p = AMIGA_TABLE[n] / Math.pow(2, octave);
+        return p * 16; // XM Amiga periods are scaled
+      }
     }
     
-    // Amiga periods
+    // ProTracker Amiga periods
     const AMIGA_TABLE = [1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907];
     let n = noteValue - 1 + (sample.baseNote || 0);
     let octave = 0;
@@ -173,11 +218,15 @@ class WorkletChannel {
   }
 
   handleEffect(note) {
-    this.slideSpeed = 0;
-    this.volSlideSpeed = 0;
-    this.fineSlideSpeed = 0;
-    this.arpeggioNotes = [];
-    this.retrig = 0;
+    if (this.worklet.tick === 0) {
+      this.slideSpeed = 0;
+      this.volSlideSpeed = 0;
+      this.fineSlideSpeed = 0;
+      this.arpeggioNotes = [];
+      this.retrig = 0;
+      this.globalVolSlide = 0;
+      this.panningSlide = 0;
+    }
 
     const effectId = note.effect;
     const param = note.effectParam;
@@ -235,8 +284,32 @@ class WorkletChannel {
         this.worklet.setPatternBreak(((param >> 4) & 0x0f) * 10 + (param & 0x0f));
         break;
       case EFFECT_SET_SPEED:
-        if (param >= 1 && param <= 31) this.worklet.setTicksPerRow(param);
-        else if (param > 31) this.worklet.setBpm(param);
+        if (param >= 1 && param < 32) this.worklet.setTicksPerRow(param);
+        else if (param >= 32) this.worklet.setBpm(param);
+        break;
+      case EFFECT_GLOBAL_VOLUME:
+        this.worklet.globalVolume = Math.min(64, param);
+        break;
+      case EFFECT_GLOBAL_VOL_SLIDE:
+        if (param > 0) {
+          if (param & 0xf0) this.globalVolSlide = (param >> 4);
+          else if (param & 0x0f) this.globalVolSlide = -(param & 0x0f);
+        }
+        break;
+      case EFFECT_PANNING_SLIDE:
+        if (param > 0) {
+          if (param & 0xf0) this.panningSlide = (param >> 4);
+          else if (param & 0x0f) this.panningSlide = -(param & 0x0f);
+        }
+        break;
+      case EFFECT_MULTI_RETRIG:
+        if (param & 0x0f) this.retrig = param & 0x0f;
+        break;
+      case EFFECT_TREMOR:
+        if (param > 0) {
+          this.tremorOn = true;
+          this.tremorCounter = 0;
+        }
         break;
       case EFFECT_EXTENDED:
         const sub = (param >> 4) & 0x0f;
@@ -263,6 +336,15 @@ class WorkletChannel {
   }
 
   performTick() {
+    // Process pending note delay
+    if (this.delayNoteTick !== -1) {
+       if (this.worklet.tick === this.delayNoteTick) {
+         this.processTrigger(this.pendingNote);
+         this.delayNoteTick = -1;
+         this.pendingNote = null;
+       }
+    }
+
     if (!this.playing) return;
 
     // Continuous effects
@@ -270,6 +352,16 @@ class WorkletChannel {
       // Volume Slide
       if (this.volSlideSpeed !== 0) {
         this.volume = Math.max(0, Math.min(64, this.volume + this.volSlideSpeed));
+      }
+      
+      // Global Volume Slide
+      if (this.globalVolSlide !== 0) {
+        this.worklet.globalVolume = Math.max(0, Math.min(64, this.worklet.globalVolume + this.globalVolSlide));
+      }
+
+      // Panning Slide
+      if (this.panningSlide !== 0) {
+        this.panning = Math.max(0, Math.min(255, this.panning + this.panningSlide));
       }
       
       // Portamento
@@ -289,6 +381,15 @@ class WorkletChannel {
       // Retrig
       if (this.retrig > 0 && (this.worklet.tick % this.retrig === 0)) {
         this.sampleIndex = 0;
+      }
+      
+      // Tremor
+      if (this.tremorOn) {
+        const rowNote = this.worklet.currentRowNotes[this.channelIndex];
+        const p1 = (rowNote.effectParam >> 4) & 0x0f;
+        const p2 = rowNote.effectParam & 0x0f;
+        this.tremorCounter++;
+        if (this.tremorCounter > (p1 + p2)) this.tremorCounter = 0;
       }
     }
 
@@ -313,10 +414,14 @@ class WorkletChannel {
 
     // Final Period (Arpeggio & Vibrato)
     let renderPeriod = this.currentPeriod;
+    const rowNote = this.worklet.currentRowNotes ? this.worklet.currentRowNotes[this.channelIndex] : null;
     
     if (this.arpeggioNotes.length > 0) {
       const arpNote = this.arpeggioNotes[this.worklet.tick % 3];
-      if (arpNote > 0) renderPeriod /= Math.pow(2, arpNote / 12);
+      if (arpNote > 0) {
+         if (this.worklet.mod.linearFrequencies) renderPeriod -= arpNote * 16 * 4;
+         else renderPeriod /= Math.pow(2, arpNote / 12);
+      }
     }
     
     if (this.vibratoDepth > 0) {
@@ -325,7 +430,8 @@ class WorkletChannel {
       else if (this.vibratoWaveform === 1) mod = (this.vibratoPhase < 0.5) ? (this.vibratoPhase * 4 - 1) : (3 - this.vibratoPhase * 4);
       else if (this.vibratoWaveform === 2) mod = (this.vibratoPhase < 0.5) ? 1 : -1;
       
-      renderPeriod += mod * this.vibratoDepth * 4;
+      if (this.worklet.mod.linearFrequencies) renderPeriod += mod * this.vibratoDepth * 2;
+      else renderPeriod += mod * this.vibratoDepth * 4;
       this.vibratoPhase += this.vibratoSpeed / 256;
     }
 
@@ -371,10 +477,16 @@ class WorkletChannel {
     if (this.worklet.mod.linearFrequencies) {
       return 8363 * Math.pow(2, (4608 - period) / 768);
     }
-    if (this.sample && this.sample.finetune !== 0) {
-      period *= Math.pow(2, -this.sample.finetune / (12 * 8));
+    const ft = this.sample ? this.sample.finetune : 0;
+    if (this.worklet.mod.type === 'XM' || this.worklet.mod.type === 'IT') {
+      // XM finetune is in 1/128 semitone units
+      period *= Math.pow(2, -ft / (128 * 12));
+      return (this.worklet.mod.clock || 7093789.2) / (period * 2 / 16); 
+    } else {
+      // ProTracker finetune is in 1/8 semitone units
+      period *= Math.pow(2, -ft / (8 * 12));
+      return (this.worklet.mod.clock || 7093789.2) / (period * 2);
     }
-    return (this.worklet.mod.clock || 7093789.2) / (period * 2);
   }
 
   nextSample() {
@@ -397,7 +509,12 @@ class WorkletChannel {
     this.sampleIndex += this.sampleSpeed;
 
     // Volume calculation
-    let vol = (this.volume / 64) * (this.sample.volume / 64);
+    let vol = (this.volume / 64) * (this.sample.volume / 64) * (this.worklet.globalVolume / 64);
+    if (this.tremorOn) {
+      const rowNote = this.worklet.currentRowNotes[this.channelIndex];
+      const p1 = (rowNote.effectParam >> 4) & 0x0f;
+      if (this.tremorCounter > p1) vol = 0;
+    }
     if (this.instrument) {
        vol *= (this.volumeEnvValue / 64) * (this.fadeoutVolume / 32768);
     }
@@ -432,9 +549,13 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
     this.outputsPerTick = 0;
     this.outputsUntilNextTick = 0;
     this.patternBreak = false;
+    this.globalVolume = 64;
+    this.masterVolume = 0.7;
     this.patternLoopRow = -1;
     this.patternLoopCount = 0;
     this.patternLoopPosition = -1;
+    this.nextPosition = -1;
+    this.jumpRowIndex = -1;
     this.patternDelay = 0;
     this.publishRow = true;
     this.currentRowNotes = [];
@@ -454,6 +575,9 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         break;
       case 'setSpeed':
         this.setTicksPerRow(data.speed);
+        break;
+      case 'setVolume':
+        this.masterVolume = data.volume;
         break;
     }
   }
@@ -494,8 +618,8 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
     this.outputsPerTick = (this.sampleRate * 2.5) / this.bpm;
     this.port.postMessage({ type: 'bpm', bpm: this.bpm });
   }
-  setPatternBreak(row) { this.patternBreak = row; }
-  setPatternJump(pos) { this.patternJump = pos; }
+  setPatternBreak(row) { this.jumpRowIndex = row; if (this.nextPosition === -1) this.nextPosition = this.position + 1; }
+  setPatternJump(pos) { this.nextPosition = pos; this.jumpRowIndex = 0; }
   setPatternLoop(row) { this.patternLoopRow = row; this.patternLoopPosition = this.position; }
   setPatternLoopCount(count) { this.patternLoopCount = count; }
   setPatternDelay(frames) { this.patternDelay = frames; }
@@ -509,15 +633,15 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
     let currentPatternIndex = this.mod.patternTable[this.position];
     let currentPattern = this.mod.patterns[currentPatternIndex];
 
-    if (this.patternJump !== -1) {
-      this.position = this.patternJump;
-      this.rowIndex = this.patternBreak !== false ? this.patternBreak : 0;
-      this.patternJump = -1;
-      this.patternBreak = false;
-    } else if (this.patternBreak !== false) {
-      this.rowIndex = this.patternBreak;
-      this.position++;
-      this.patternBreak = false;
+    if (this.nextPosition !== -1) {
+      this.position = this.nextPosition;
+      this.rowIndex = this.jumpRowIndex !== -1 ? this.jumpRowIndex : 0;
+      this.nextPosition = -1;
+      this.jumpRowIndex = -1;
+    } else if (this.patternLoopRow >= 0 && this.patternLoopCount > 0) {
+      this.rowIndex = this.patternLoopRow;
+      this.position = this.patternLoopPosition;
+      this.patternLoopCount--;
     } else {
       this.rowIndex++;
       if (currentPattern && this.rowIndex >= currentPattern.rows.length) {
@@ -586,9 +710,9 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         rightOutput += r;
       }
       
-      // Soft clipping and channel safety
-      const lOut = Math.tanh(leftOutput * 0.5);
-      const rOut = Math.tanh(rightOutput * 0.5);
+      // Mixing with Master Volume scaling
+      const lOut = Math.tanh(leftOutput * 0.4 * this.masterVolume);
+      const rOut = Math.tanh(rightOutput * 0.4 * this.masterVolume);
       
       if (leftChannel) leftChannel[i] = lOut;
       if (rightChannel) rightChannel[i] = rOut;
