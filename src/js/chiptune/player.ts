@@ -1,5 +1,6 @@
 import type { ModuleFile, Sample, Envelope } from './types';
 import { periodToFrequencyAmiga, periodToFrequencyLinear, AMIGA_PERIOD_TABLE } from './types';
+import { serializeModuleForWorklet } from './types';
 
 interface ChannelState {
   instrument: number;
@@ -83,6 +84,9 @@ export class ChiptunePlayer {
   private patternLoopCount = 0;
   private patternLoopPosition = -1;
 
+  private useWorklet = false;
+  private workletNode: AudioWorkletNode | null = null;
+
   public onPositionChange: ((pattern: number, row: number) => void) | null = null;
   public onChannelActivity: ((activeChannels: boolean[]) => void) | null = null;
 
@@ -112,7 +116,7 @@ export class ChiptunePlayer {
     this.channelStates = [];
 
     for (let i = 0; i < mod.channels; i++) {
-      const pan = i % 4 === 1 || i % 4 === 2 ? 200 : 56; // Standard LRRL Amiga panning
+      const pan = i % 4 === 1 || i % 4 === 2 ? 200 : 56;
       this.channelStates.push({
         instrument: 0,
         note: null,
@@ -157,6 +161,42 @@ export class ChiptunePlayer {
     }
   }
 
+  async initWorklet(): Promise<boolean> {
+    if (!this.audioContext) return false;
+
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
+
+    try {
+      const moduleUrl = '/js/chiptune-worklet.js';
+      await this.audioContext.audioWorklet.addModule(moduleUrl);
+      this.workletNode = new AudioWorkletNode(this.audioContext, 'chiptune-worklet');
+      this.workletNode.port.onmessage = (e) => {
+        if (e.data.type === 'row') {
+          this.currentPatternIdx = e.data.position;
+          this.currentRow = e.data.rowIndex;
+          if (this.onPositionChange) {
+            this.onPositionChange(e.data.position, e.data.rowIndex);
+          }
+        } else if (e.data.type === 'stop') {
+          this.isPlaying = false;
+        }
+      };
+      this.workletNode.connect(this.masterGain!);
+      this.useWorklet = true;
+      return true;
+    } catch (e) {
+      console.error('[ChiptunePlayer] Failed to init worklet:', e);
+      if (e instanceof Error && e.name === 'AbortError') {
+        console.error(
+          '[ChiptunePlayer] This is a network error - check the worklet file is accessible at /js/chiptune-worklet.js'
+        );
+      }
+      return false;
+    }
+  }
+
   setLooping(loop: boolean): void {
     this.isLooping = loop;
   }
@@ -173,13 +213,32 @@ export class ChiptunePlayer {
     }
   }
 
-  play(): void {
+  async play(): Promise<void> {
+    if (!this.audioContext || !this.module) return;
+    if (this.audioContext.state === 'suspended') await this.audioContext.resume();
+
+    this.isPlaying = true;
+
+    if (this.useWorklet && this.workletNode && this.module) {
+      const workletMod = serializeModuleForWorklet(this.module);
+      this.workletNode.port.postMessage({
+        type: 'play',
+        mod: workletMod,
+        sampleRate: this.audioContext.sampleRate,
+      });
+      return;
+    }
+
+    this.wasStopped = true;
+    this.playBuffer();
+  }
+
+  playBuffer(): void {
     if (!this.audioContext || !this.module) return;
     if (this.audioContext.state === 'suspended') this.audioContext.resume();
 
     this.isPlaying = true;
 
-    // Reset position only on first play or after stop (not when resuming from pause)
     if (this.wasStopped) {
       this.currentPatternIdx = 0;
       this.currentRow = 0;
@@ -202,17 +261,35 @@ export class ChiptunePlayer {
   }
 
   pause(): void {
+    if (this.useWorklet && this.workletNode) {
+      this.isPlaying = false;
+      this.workletNode.port.postMessage({ type: 'stop' });
+      return;
+    }
+
     this.isPlaying = false;
     if (this.schedulerTimer !== null) {
       clearTimeout(this.schedulerTimer);
       this.schedulerTimer = null;
     }
     if (this.audioContext) {
-      for (const ch of this.channelStates) this.stopChannel(ch); // hard stop buffers so they don't ring
+      for (const ch of this.channelStates) this.stopChannel(ch);
     }
   }
 
   stop(): void {
+    if (this.useWorklet && this.workletNode) {
+      this.pause();
+      this.currentPatternIdx = 0;
+      this.currentRow = 0;
+      this.currentTick = 0;
+      this.wasStopped = true;
+      if (this.onPositionChange) this.onPositionChange(0, 0);
+      if (this.onChannelActivity)
+        this.onChannelActivity(new Array(this.module?.channels || 4).fill(false));
+      return;
+    }
+
     this.pause();
     this.currentPatternIdx = 0;
     this.currentRow = 0;

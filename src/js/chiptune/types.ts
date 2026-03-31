@@ -102,3 +102,126 @@ export function periodToFrequencyAmiga(
 export function periodToFrequencyLinear(period: number): number {
   return 8363 * Math.pow(2, (4608 - period) / 768);
 }
+
+export interface WorkletInstrumentSample {
+  length: number;
+  finetune: number;
+  volume: number;
+  loopStart: number;
+  loopLength: number;
+  panning: number;
+  data: Int8Array;
+}
+
+export interface WorkletInstrument {
+  index: number;
+  name: string;
+  samples: WorkletInstrumentSample[];
+}
+
+export interface WorkletNote {
+  instrument: number;
+  period: number;
+  effect: number;
+  effectParam: number;
+}
+
+export interface WorkletRow {
+  notes: WorkletNote[];
+}
+
+export interface WorkletPattern {
+  rows: WorkletRow[];
+}
+
+export interface WorkletModule {
+  type: 'MOD' | 'XM' | 'IT';
+  name: string;
+  length: number;
+  sequence: number[];
+  patternTable: number[];
+  instruments: WorkletInstrument[];
+  patterns: WorkletPattern[];
+  channels: number;
+  defaultBpm: number;
+  defaultSpeed: number;
+  rowsPerPattern: number;
+  linearFrequencies: boolean;
+  restartPosition: number;
+  clock: number;
+}
+
+export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
+  const instruments: WorkletInstrument[] = [];
+
+  for (let i = 0; i < mod.instruments.length; i++) {
+    const inst = mod.instruments[i];
+    const samples: WorkletInstrumentSample[] = [];
+
+    for (let s = 0; s < inst.samples.length; s++) {
+      const sample = inst.samples[s];
+      const int8Data = new Int8Array(sample.data.length);
+      for (let j = 0; j < sample.data.length; j++) {
+        int8Data[j] = Math.round(sample.data[j] * 128);
+      }
+
+      samples.push({
+        length: sample.length,
+        finetune: sample.finetune,
+        volume: sample.volume,
+        loopStart: sample.loopStart,
+        loopLength: sample.loopLength,
+        panning: sample.panning,
+        data: int8Data,
+      });
+    }
+
+    instruments.push({
+      index: i + 1,
+      name: inst.name,
+      samples,
+    });
+  }
+
+  const patterns: WorkletPattern[] = [];
+  for (let p = 0; p < mod.patterns.length; p++) {
+    const pattern = mod.patterns[p];
+    const rows: WorkletRow[] = [];
+
+    for (let r = 0; r < pattern.rows.length; r++) {
+      const row = pattern.rows[r];
+      const notes: WorkletNote[] = [];
+
+      for (let c = 0; c < row.length; c++) {
+        const note = row[c];
+        notes.push({
+          instrument: note.instrument,
+          period: note.period || 0,
+          effect: note.effect,
+          effectParam: note.effectParam,
+        });
+      }
+
+      rows.push({ notes });
+    }
+
+    patterns.push({ rows });
+  }
+
+  return {
+    type: mod.type,
+    name: mod.title,
+    length: mod.sequence.length,
+    sequence: mod.sequence,
+    patternTable: mod.sequence,
+    instruments,
+    patterns,
+    channels: mod.channels,
+    defaultBpm: mod.defaultBpm,
+    defaultSpeed: mod.defaultSpeed,
+    rowsPerPattern: mod.rowsPerPattern,
+    linearFrequencies: mod.linearFrequencies,
+    restartPosition: mod.restartPosition || 0,
+    clock: mod.clock || 7093789.2,
+  };
+}

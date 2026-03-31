@@ -127,6 +127,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const elements = getElements();
   player = new ChiptunePlayer();
 
+  let workletInitialized = false;
+
   function setupPlayerCallbacks(p: ChiptunePlayer, els: any) {
     p.onPositionChange = (pattern: number, row: number) => {
       const positionDisplay = els['position-display'];
@@ -174,7 +176,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   const visualizerCanvas = document.getElementById('visualizer') as HTMLCanvasElement;
   const visualizerCtx = visualizerCanvas.getContext('2d');
-  
+
   const onFile = async (fileList: FileList): Promise<void> => {
     if (fileList.length === 0) return;
     const file = fileList[0];
@@ -199,7 +201,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       onFile(fileList.files);
     }, 100);
   }
-  
+
   setupFileDropzone('dropzone', 'file-input', onFile);
 
   async function loadArchiveList(): Promise<void> {
@@ -274,14 +276,24 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   loadArchiveList();
 
-  btnPlay?.addEventListener('click', () => {
+  btnPlay?.addEventListener('click', async () => {
     if (!player) return;
+
+    if (!workletInitialized) {
+      const success = await player.initWorklet();
+      if (success) {
+        workletInitialized = true;
+      } else {
+        console.log('[Chiptune] Using buffer-based playback');
+      }
+    }
+
     if (player.getIsPlaying()) {
       player.pause();
       btnPlay.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i>';
       shouldVisualize = false;
     } else {
-      player.play();
+      await player.play();
       btnPlay.innerHTML = '<i data-lucide="pause" class="w-4 h-4"></i>';
       shouldVisualize = true;
       drawVisualization();
