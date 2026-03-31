@@ -6,6 +6,7 @@ import { showMessage } from '../../js/ui';
 import { downloadFile } from '../../js/file-utils';
 import { ClassicVisualizer } from './visualizers/classic-visualizer';
 import { PulseGridVisualizer } from './visualizers/pulse-grid-visualizer';
+import { NeonNexusVisualizer } from './visualizers/neon-nexus-visualizer';
 import type { Visualizer } from './visualizers/base';
 
 // good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
@@ -180,11 +181,12 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const archiveList = elements['archive-list'];
   const visSelector = elements['vis-selector'] as HTMLSelectElement | null;
   const visualizers: Record<string, Visualizer> = {
+    'neon-nexus': new NeonNexusVisualizer(),
     'pulse-grid': new PulseGridVisualizer(),
     'classic': new ClassicVisualizer(),
   };
 
-  let currentVis = localStorage.getItem('chiptune-vis') || 'pulse-grid';
+  let currentVis = localStorage.getItem('chiptune-vis') || 'neon-nexus';
   if (visSelector) {
     visSelector.value = currentVis;
     visSelector.addEventListener('change', () => {
