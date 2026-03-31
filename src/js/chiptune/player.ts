@@ -1,13 +1,21 @@
 import type { ModuleFile, Sample, Envelope } from './types';
-import { periodToFrequencyAmiga, periodToFrequencyLinear, AMIGA_PERIOD_TABLE } from './types';
+import { AMIGA_PERIOD_TABLE } from './types';
 import { serializeModuleForWorklet } from './types';
 import workletUrl from './worklet?worker&url';
+
+// Extend Sample type for buffer caching
+interface CachedSample extends Sample {
+  audioBuffer?: AudioBuffer;
+}
+
+const SINE_TABLE = new Int8Array([
+  0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253, 255, 253, 250, 244, 235,
+  224, 212, 197, 180, 161, 141, 120, 97, 74, 49, 24,
+]);
 
 interface ChannelState {
   instrument: number;
   note: number | null;
-  period: number;
-  targetPeriod: number;
   volume: number;
   panning: number;
 
@@ -48,7 +56,15 @@ interface ChannelState {
   volumeEnvValue: number;
   panningEnvValue: number;
   keyOn: boolean;
-  fadeoutSpeed: number;
+  fadeoutVolume: number;
+  
+  currentPeriod: number;
+  targetPeriod: number;
+  globalVolSlide: number;
+  panningSlide: number;
+  retrig: number;
+  tremorCounter: number;
+  tremorOn: boolean;
 
   sample: Sample | null;
 
@@ -115,13 +131,12 @@ export class ChiptunePlayer {
     this.speed = mod.defaultSpeed || 6;
     this.bpm = mod.defaultBpm || 125;
     this.channelStates = [];
-
     for (let i = 0; i < mod.channels; i++) {
       const pan = i % 4 === 1 || i % 4 === 2 ? 200 : 56;
       this.channelStates.push({
         instrument: 0,
         note: null,
-        period: 0,
+        currentPeriod: 0,
         targetPeriod: 0,
         volume: 64,
         panning: pan,
@@ -153,12 +168,39 @@ export class ChiptunePlayer {
         volumeEnvValue: 64,
         panningEnvValue: 128,
         keyOn: false,
-        fadeoutSpeed: 0,
+        fadeoutVolume: 32768,
+        globalVolSlide: 0,
+        panningSlide: 0,
+        retrig: 0,
+        tremorCounter: 0,
+        tremorOn: false,
         sample: null,
         source: null,
         gain: null,
         panNode: null,
       });
+    }
+
+    // Pre-create AudioBuffers for all samples to avoid playback gaps (Performance Fix)
+    if (this.audioContext) {
+      for (const inst of mod.instruments) {
+        for (const s of inst.samples) {
+          const sample = s as CachedSample;
+          if (sample.data && sample.data.length > 0 && !sample.audioBuffer) {
+            try {
+              const buffer = this.audioContext.createBuffer(
+                1,
+                sample.data.length,
+                this.audioContext.sampleRate
+              );
+              buffer.getChannelData(0).set(sample.data);
+              sample.audioBuffer = buffer;
+            } catch (e) {
+              console.error('[ChiptunePlayer] Failed to pre-allocate buffer:', e);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -303,7 +345,7 @@ export class ChiptunePlayer {
       this.patternLoopPosition = -1;
       for (const ch of this.channelStates) {
         this.stopChannel(ch);
-        ch.period = 0;
+        ch.currentPeriod = 0;
         ch.targetPeriod = 0;
         ch.vibratoPhase = 0;
         ch.arpeggioNotes = [];
@@ -312,6 +354,7 @@ export class ChiptunePlayer {
     }
 
     this.nextTickTime = this.audioContext.currentTime + 0.05;
+    this.wasStopped = false; // Add this to ensure seek-and-play works
     this.scheduler();
   }
 
@@ -462,8 +505,7 @@ export class ChiptunePlayer {
               chState.targetPeriod = this.calculatePeriod(cell.note, cell.instrument, chState);
             } else {
               chState.note = cell.note;
-              chState.period =
-                cell.period || this.calculatePeriod(cell.note, cell.instrument, chState);
+              chState.currentPeriod = cell.period || this.calculatePeriod(cell.note, cell.instrument, chState);
               chState.volume = chState.baseVolume;
               chState.vibratoPhase = 0;
               chState.volumeEnvTick = 0;
@@ -571,7 +613,7 @@ export class ChiptunePlayer {
           else if (chState.effectParam > 32) this.bpm = chState.effectParam;
         }
 
-        if (shouldTrigger && chState.sample && chState.period > 0) {
+        if (shouldTrigger && chState.sample && chState.currentPeriod > 0) {
           this.triggerNote(chState, time);
         }
       } else {
@@ -590,8 +632,8 @@ export class ChiptunePlayer {
       }
 
       // Compute final exact frequency and automate Web Audio nodes for THIS tick timeframe
-      if (chState.source && chState.gain && chState.sample) {
-        let tickFreq = this.calculateFrequency(chState.period, chState.sample);
+      if (chState.source && chState.gain && chState.sample && chState.currentPeriod > 0) {
+        let tickFreq = this.calculateFrequency(chState.currentPeriod, chState.sample);
 
         if (chState.arpeggioNotes.length > 0) {
           let arpNote = chState.arpeggioNotes[this.currentTick % 3];
@@ -599,24 +641,25 @@ export class ChiptunePlayer {
         }
 
         if (chState.vibratoDepth > 0) {
-          let vibratoMod = 0;
-          const wf = chState.vibratoWaveform;
-          if (wf === 0 || wf === 3) {
-            vibratoMod = Math.sin(chState.vibratoPhase * Math.PI * 2);
-          } else if (wf === 1) {
-            vibratoMod = ((chState.vibratoPhase * 64) % 1) * 2 - 1;
-          } else if (wf === 2) {
-            vibratoMod = vibratoMod >= 0 ? 1 : -1;
-          }
-          vibratoMod *= (chState.vibratoDepth / 64) * 0.05;
-          tickFreq *= 1 + vibratoMod;
+          let phase = Math.floor(chState.vibratoPhase * 64) & 63;
+          let mod = 0;
+          if (phase < 32) mod = SINE_TABLE[phase];
+          else mod = -SINE_TABLE[phase - 32];
+          
+          let depthScale = (this.module && this.module.linearFrequencies) ? 4 : 1;
+          let delta = (mod * chState.vibratoDepth * depthScale) / 128;
+          
+          if (this.module && this.module.linearFrequencies) tickFreq = this.calculateFrequency(chState.currentPeriod + delta, chState.sample!);
+          else tickFreq = this.calculateFrequency(chState.currentPeriod + delta * 4, chState.sample!);
+
           chState.vibratoPhase += chState.vibratoSpeed / 256;
         }
 
         let playbackRate = tickFreq / this.audioContext.sampleRate;
         playbackRate = Math.max(0.01, Math.min(playbackRate, 10));
 
-        chState.source.playbackRate.setValueAtTime(playbackRate, time);
+        // SMOOTH RAMPS for frequency
+        chState.source.playbackRate.linearRampToValueAtTime(playbackRate, time + tickDur);
 
         let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * this.volume;
 
@@ -627,22 +670,18 @@ export class ChiptunePlayer {
 
         // Tremolo
         if (chState.tremoloDepth > 0) {
-          let tremoloMod = 0;
-          const wf = chState.tremoloWaveform;
-          if (wf === 0 || wf === 3) {
-            tremoloMod = Math.sin(chState.tremoloPhase * Math.PI * 2);
-          } else if (wf === 1) {
-            tremoloMod = ((chState.tremoloPhase * 64) % 1) * 2 - 1;
-          } else if (wf === 2) {
-            tremoloMod = tremoloMod >= 0 ? 1 : -1;
-          }
-          tremoloMod = 1 + tremoloMod * (chState.tremoloDepth / 64);
-          finalVol *= tremoloMod;
+          let phase = Math.floor(chState.tremoloPhase * 64) & 63;
+          let mod = 0;
+          if (phase < 32) mod = SINE_TABLE[phase];
+          else mod = -SINE_TABLE[phase - 32];
+          
+          finalVol *= 1 + (mod * chState.tremoloDepth) / (128 * 64);
           chState.tremoloPhase += chState.tremoloSpeed / 256;
         }
 
-        finalVol = Math.max(0, Math.min(finalVol, 1));
-        chState.gain.gain.setValueAtTime(finalVol, time);
+        finalVol = Math.max(0, Math.min(finalVol * 0.8, 1)); // Worklet parity headroom
+        // SMOOTH RAMPS for volume
+        chState.gain.gain.linearRampToValueAtTime(finalVol, time + tickDur);
 
         // Apply panning envelope for XM/IT
         if (
@@ -651,7 +690,7 @@ export class ChiptunePlayer {
           (this.module.type === 'XM' || this.module.type === 'IT')
         ) {
           const panValue = chState.panningEnvValue;
-          chState.panNode.pan.value = Math.max(-1, Math.min(1, (panValue - 128) / 128));
+          chState.panNode.pan.linearRampToValueAtTime(Math.max(-1, Math.min(1, (panValue - 128) / 128)), time + tickDur);
         }
 
         activeChannels[c] = finalVol > 0.01;
@@ -690,7 +729,7 @@ export class ChiptunePlayer {
         if (this.currentPatternIdx >= this.module.sequence.length) {
           if (this.isLooping) {
             for (const ch of this.channelStates) {
-              ch.period = 0;
+              ch.currentPeriod = 0;
               ch.targetPeriod = 0;
               ch.keyOn = false;
               ch.vibratoPhase = 0;
@@ -705,7 +744,7 @@ export class ChiptunePlayer {
           }
         } else if (wasAtEnd && this.isLooping) {
           for (const ch of this.channelStates) {
-            ch.period = 0;
+            ch.currentPeriod = 0;
             ch.targetPeriod = 0;
             ch.keyOn = false;
           }
@@ -845,12 +884,28 @@ export class ChiptunePlayer {
   private calculateFrequency(period: number, sample: Sample): number {
     if (!this.module) return 0;
     if (period <= 0) return 0;
+    
     if (this.module.type === 'IT') {
       const actualNote = period - 1;
       return (sample.c5speed || 8363) * Math.pow(2, (actualNote - 60) / 12);
     }
-    if (this.module.linearFrequencies) return periodToFrequencyLinear(period);
-    return periodToFrequencyAmiga(period, sample.finetune, this.module.clock);
+    
+    if (this.module.linearFrequencies) {
+      return 8363 * Math.pow(2, (4608 - period) / 768);
+    }
+
+    const ft = sample.finetune;
+    const isXmOrIt = this.module.type === 'XM' || (this.module.type as string) === 'IT';
+    
+    if (isXmOrIt) {
+      // XM Amiga periods use a specific scaling with finetune
+      const scaledPeriod = period * Math.pow(2, -ft / (128 * 12));
+      return (this.module.clock || 7093789.2) / (scaledPeriod * 2 / 16);
+    } else {
+      // Standard ProTracker periods
+      const scaledPeriod = period * Math.pow(2, -ft / (8 * 12));
+      return (this.module.clock || 7093789.2) / (scaledPeriod * 2);
+    }
   }
 
   private parseEffectTick0(chState: ChannelState, effect: number, param: number): void {
@@ -879,12 +934,11 @@ export class ChiptunePlayer {
     }
     // Effect 5: Porta + Volume Slide
     else if (effect === 0x05) {
-      if (param > 0) chState.slideSpeed = param;
-      if (param > 0) chState.volSlideSpeed = param;
+      if (param > 0) chState.volSlideSpeed = (param & 0xf0) ? (param >> 4) : -(param & 0x0f);
     }
     // Effect 6: Vibrato + Volume Slide
     else if (effect === 0x06) {
-      if (param > 0) chState.volSlideSpeed = param;
+      if (param > 0) chState.volSlideSpeed = (param & 0xf0) ? (param >> 4) : -(param & 0x0f);
     }
     // Effect 7: Tremolo
     else if (effect === 0x07) {
@@ -895,156 +949,60 @@ export class ChiptunePlayer {
     else if (effect === 0x08) {
       chState.panning = param;
     }
-    // Effect 9: Sample Offset
-    else if (effect === 0x09) {
-      chState.sampleOffset = param * 256;
-    }
     // Effect A: Volume Slide
     else if (effect === 0x0a) {
-      if (param > 0) chState.volSlideSpeed = param;
+      if (param & 0xf0) chState.volSlideSpeed = (param >> 4);
+      else if (param & 0x0f) chState.volSlideSpeed = -(param & 0x0f);
     }
-    // Effect B: Position Jump
     // Effect C: Set Volume
     else if (effect === 0x0c) {
       chState.volume = Math.min(param, 64);
     }
-    // Effect D: Pattern Break
     // Effect E: Extended effects
     else if (effect === 0x0e) {
       const eSub = (param >> 4) & 0x0f;
       const eParam = param & 0x0f;
-      // E1: Fine Porta Up
       if (eSub === 0x1) {
-        if (eParam > 0) chState.fineSlideSpeed = eParam;
+        if (this.module?.type === 'XM' || this.module?.type === 'IT') chState.currentPeriod -= eParam * 4;
+        else chState.currentPeriod -= eParam;
       }
-      // E2: Fine Porta Down
       else if (eSub === 0x2) {
-        if (eParam > 0) chState.fineSlideSpeed = eParam;
+        if (this.module?.type === 'XM' || this.module?.type === 'IT') chState.currentPeriod += eParam * 4;
+        else chState.currentPeriod += eParam;
       }
-      // E3: Set Glissando Control
-      else if (eSub === 0x3) {
-        chState.glissando = (eParam & 0x0f) !== 0;
-      }
-      // E4: Set Vibrato Waveform
-      else if (eSub === 0x4) {
-        chState.vibratoWaveform = eParam & 3;
-      }
-      // E7: Set Tremolo Waveform
-      else if (eSub === 0x7) {
-        chState.tremoloWaveform = eParam & 3;
-      }
-      // E9: Retrig Note
-      else if (eSub === 0x9) {
-        chState.retrigCounter = 0;
-      }
-      // EA: Fine Volume Slide Up
-      else if (eSub === 0xa) {
-        if (eParam > 0) chState.volume = Math.min(chState.volume + eParam, 64);
-      }
-      // EB: Fine Volume Slide Down
-      else if (eSub === 0xb) {
-        if (eParam > 0) chState.volume = Math.max(chState.volume - eParam, 0);
-      }
-      // EC: Note Cut
-      else if (eSub === 0xc) {
-        if (eParam === 0) chState.volume = 0;
-      }
-      // ED: Note Delay
-      else if (eSub === 0xd) {
-        chState.noteDelayCounter = eParam;
-      }
-      // EE: Pattern Delay
-      else if (eSub === 0xe) {
-        // Handled in scheduler
-      }
-      // E5: Loop Note (set loop start)
-      else if (eSub === 0x5) {
-        chState.loopStartRow = this.currentRow;
-      }
-      // E6: Pattern Loop
-      else if (eSub === 0x6) {
-        if (eParam === 0) {
-          this.patternLoopRow = chState.loopStartRow >= 0 ? chState.loopStartRow : 0;
-          this.patternLoopCount = 0;
-          this.patternLoopPosition = this.currentPatternIdx;
-        } else if (this.patternLoopRow >= 0) {
-          this.patternLoopCount = eParam;
-        }
-      }
+      else if (eSub === 0x4) chState.vibratoWaveform = eParam & 3;
+      else if (eSub === 0x7) chState.tremoloWaveform = eParam & 3;
+      else if (eSub === 0x9) chState.retrig = eParam;
+      else if (eSub === 0xa) chState.volume = Math.min(chState.volume + eParam, 64);
+      else if (eSub === 0xb) chState.volume = Math.max(chState.volume - eParam, 0);
     }
     // Effect F: Set Speed
   }
 
   private parseEffectContinuous(chState: ChannelState, effect: number): void {
-    // Effect 1: Porta Up
-    if (effect === 0x01) {
-      chState.period = Math.max(1, chState.period - chState.slideSpeed * 4);
+    if (chState.volSlideSpeed !== 0) {
+      chState.volume = Math.max(0, Math.min(64, chState.volume + chState.volSlideSpeed));
     }
-    // Effect 2: Porta Down
-    else if (effect === 0x02) {
-      chState.period += chState.slideSpeed * 4;
+
+    if (effect === 0x03 || effect === 0x05) {
+      const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
+      const scale = isXmOrIt ? 4 : 1;
+      
+      if (chState.currentPeriod < chState.targetPeriod) {
+        chState.currentPeriod = Math.min(chState.currentPeriod + chState.slideSpeed * scale, chState.targetPeriod);
+      } else if (chState.currentPeriod > chState.targetPeriod) {
+        chState.currentPeriod = Math.max(chState.currentPeriod - chState.slideSpeed * scale, chState.targetPeriod);
+      }
+    } else if (effect === 0x01) {
+       const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
+       chState.currentPeriod -= chState.slideSpeed * (isXmOrIt ? 4 : 1);
+    } else if (effect === 0x02) {
+       const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
+       chState.currentPeriod += chState.slideSpeed * (isXmOrIt ? 4 : 1);
     }
-    // Effect 3/5: Tone Portamento
-    else if (effect === 0x03 || effect === 0x05) {
-      if (chState.period < chState.targetPeriod) {
-        chState.period += chState.slideSpeed * 4;
-        if (chState.period > chState.targetPeriod) chState.period = chState.targetPeriod;
-      } else if (chState.period > chState.targetPeriod) {
-        chState.period -= chState.slideSpeed * 4;
-        if (chState.period < chState.targetPeriod) chState.period = chState.targetPeriod;
-      }
-      // Glissando: snap to nearest table note
-      if (
-        chState.glissando &&
-        this.module &&
-        this.module.type !== 'IT' &&
-        !this.module.linearFrequencies
-      ) {
-        let closestDist = Infinity;
-        let closestPeriod = chState.period;
-        for (const p of AMIGA_PERIOD_TABLE) {
-          const dist = Math.abs(p - chState.period);
-          if (dist < closestDist) {
-            closestDist = dist;
-            closestPeriod = p;
-          }
-        }
-        chState.period = closestPeriod;
-      }
-    }
-    // Effect 4: Vibrato (handled in frequency calculation)
-    // Effect 6: Vibrato + Volume Slide
-    // Effect 7: Tremolo
-    else if (effect === 0x07) {
-      // Handled in volume calculation
-    }
-    // Effect A: Volume Slide
-    else if (effect === 0x0a || effect === 0x05 || effect === 0x06) {
-      let spd = chState.volSlideSpeed;
-      if (spd >> 4 > 0 && (spd & 0x0f) === 0) chState.volume += spd >> 4;
-      else if (spd >> 4 === 0 && (spd & 0x0f) > 0) chState.volume -= spd & 0x0f;
-      chState.volume = Math.max(0, Math.min(64, chState.volume));
-    }
-    // Effect E: Extended
-    else if (effect === 0x0e) {
-      const eSub = (chState.effectParam >> 4) & 0x0f;
-      const eParam = chState.effectParam & 0x0f;
-      // E1: Fine Porta Up
-      if (eSub === 0x1) {
-        chState.period = Math.max(1, chState.period - chState.fineSlideSpeed * 4);
-      }
-      // E2: Fine Porta Down
-      else if (eSub === 0x2) {
-        chState.period += chState.fineSlideSpeed * 4;
-      }
-      // EC: Note Cut
-      else if (eSub === 0xc) {
-        if (this.currentTick === eParam) chState.volume = 0;
-      }
-      // ED: Note Delay
-      else if (eSub === 0xd) {
-        // Handled in scheduler
-      }
+
+    if (chState.retrig > 0 && (this.currentTick % chState.retrig === 0)) {
+      this.triggerNote(chState, this.audioContext!.currentTime);
     }
   }
 
@@ -1053,20 +1011,13 @@ export class ChiptunePlayer {
       !this.audioContext ||
       !this.masterGain ||
       !chState.sample ||
-      chState.sample.data.length === 0
+      !(chState.sample as CachedSample).audioBuffer
     )
       return;
     this.stopChannel(chState, time); // Pre-cleanup overlapping
 
-    const buffer = this.audioContext.createBuffer(
-      1,
-      chState.sample.data.length,
-      this.audioContext.sampleRate
-    );
-    buffer.getChannelData(0).set(chState.sample.data);
-
     chState.source = this.audioContext.createBufferSource();
-    chState.source.buffer = buffer;
+    chState.source.buffer = (chState.sample as CachedSample).audioBuffer!;
 
     if (chState.sample.loopLength > 2) {
       chState.source.loop = true;
@@ -1075,12 +1026,14 @@ export class ChiptunePlayer {
         (chState.sample.loopStart + chState.sample.loopLength) / this.audioContext.sampleRate;
     }
 
-    let tickFreq = this.calculateFrequency(chState.period, chState.sample);
+    let tickFreq = this.calculateFrequency(chState.currentPeriod, chState.sample);
     let playbackRate = tickFreq / this.audioContext.sampleRate;
+    
+    // Initial value
     chState.source.playbackRate.setValueAtTime(Math.max(0.01, Math.min(playbackRate, 10)), time);
 
     const startOffset = chState.sampleOffset / this.audioContext.sampleRate;
-    if (startOffset > 0 && startOffset < buffer.duration) chState.source.start(time, startOffset);
+    if (startOffset > 0 && startOffset < chState.source.buffer.duration) chState.source.start(time, startOffset);
     else chState.source.start(time);
 
     chState.panNode = this.audioContext.createStereoPanner();
@@ -1088,9 +1041,9 @@ export class ChiptunePlayer {
 
     chState.gain = this.audioContext.createGain();
 
-    // Set initial volume exactly
-    let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * this.volume;
-    chState.gain.gain.setValueAtTime(finalVol, time);
+    // Set initial volume exactly, including global volume parity
+    let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * (this.volume) * 0.8;
+    chState.gain.gain.setValueAtTime(Math.max(0, Math.min(finalVol, 1)), time);
 
     chState.source.connect(chState.panNode);
     chState.panNode.connect(chState.gain);
@@ -1151,11 +1104,17 @@ export class ChiptunePlayer {
     this.patternLoopPosition = -1;
     for (const ch of this.channelStates) {
       this.stopChannel(ch);
-      ch.period = 0;
+      ch.currentPeriod = 0;
       ch.targetPeriod = 0;
       ch.volume = 0;
       ch.keyOn = false;
     }
+    
+    // Fallback: reset rhythm timeline for instant jump
+    if (this.audioContext) {
+      this.nextTickTime = this.audioContext.currentTime + 0.05;
+    }
+
     this.sendToWorklet('seek', {
       position: this.currentPatternIdx,
       rowIndex: this.currentRow
