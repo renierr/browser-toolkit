@@ -621,14 +621,18 @@ class WorkletChannel {
     this.sampleIndex += this.sampleSpeed;
     let vol = (this.volume / 64) * (this.sample.volume / 64) * (this.worklet.globalVolume / 64);
     if (this.tremorOn) {
-      const p = this.worklet.currentRowNotes[this.channelIndex]?.effectParam || 0;
+      const p = this.worklet.currentRowNotes[this.channelIndex]?.effectParam ?? 0;
       if (this.tremorCounter > ((p >> 4) & 0x0f)) vol = 0;
     }
     if (this.instrument) vol *= (this.volumeEnvValue / 64) * (this.fadeoutVolume / 32768);
-    let pan = this.panning;
-    const lVol = vol * (1 - pan / 255);
-    const rVol = vol * (pan / 255);
-    return [raw * lVol, raw * rVol];
+    
+    // Equal Power Panning Law: L = Vol * cos(theta), R = Vol * sin(theta)
+    // theta = (panning/255) * (PI/2)
+    const panTheta = (this.panning / 255) * (Math.PI / 2);
+    const l = raw * vol * Math.cos(panTheta);
+    const r = raw * vol * Math.sin(panTheta);
+    
+    return [l, r];
   }
 }
 
@@ -663,11 +667,15 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         this.sampleRate = data.sampleRate;
         this.setBpm(this.mod!.defaultBpm || 125);
         this.setTicksPerRow(this.mod!.defaultSpeed || 6);
-        this.channels = Array.from({ length: this.mod!.channels }, (_, i) => {
-           const ch = new WorkletChannel(this, i);
-           if (this.mod!.type === 'MOD') ch.panning = (i % 4 === 1 || i % 4 === 2) ? 200 : 56;
-           return ch;
-        });
+        this.channels = [];
+        for (let i = 0; i < this.mod!.channels; i++) {
+          const ch = new WorkletChannel(this, i);
+          // Standard Amiga panning: LRRL (Channels 0, 3 Left-ish; 1, 2 Right-ish)
+          if (this.mod!.type === 'MOD') {
+             ch.panning = (i % 4 === 1 || i % 4 === 2) ? 200 : 56;
+          }
+          this.channels.push(ch);
+        }
         this.position = 0;
         this.rowIndex = 0;
         this.tick = this.ticksPerRow - 1;
@@ -721,7 +729,15 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
       this.currentRowNotes = pat.rows[this.rowIndex].notes;
       this.channels.forEach((ch, i) => { if (this.currentRowNotes[i]) ch.trigger(this.currentRowNotes[i]); });
     }
-    this.port.postMessage({ type: 'row', position: this.position, rowIndex: this.rowIndex });
+    const activeChannels = this.channels.map(ch => ch.playing && ch.volume > 0);
+    const channelInstruments = this.channels.map(ch => ch.instrument?.index ?? 0);
+    this.port.postMessage({ 
+      type: 'row', 
+      position: this.position, 
+      rowIndex: this.rowIndex,
+      activeChannels,
+      channelInstruments
+    });
   }
 
   process(_inputs: any, outputs: any) {
@@ -749,8 +765,8 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         rOut += r; 
       });
       
-      if (leftChannel) leftChannel[i] = Math.tanh(lOut * 0.4 * this.masterVolume);
-      if (rightChannel) rightChannel[i] = Math.tanh(rOut * 0.4 * this.masterVolume);
+      if (leftChannel) leftChannel[i] = Math.tanh(lOut * 0.45 * this.masterVolume);
+      if (rightChannel) rightChannel[i] = Math.tanh(rOut * 0.45 * this.masterVolume);
     }
     return true;
   }

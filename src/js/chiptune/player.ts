@@ -180,6 +180,9 @@ export class ChiptunePlayer {
           if (this.onPositionChange) {
             this.onPositionChange(e.data.position, e.data.rowIndex);
           }
+          if (this.onChannelActivity) {
+            this.onChannelActivity(e.data.activeChannels);
+          }
         } else if (e.data.type === 'bpm') {
           this.bpm = e.data.bpm;
         } else if (e.data.type === 'speed') {
