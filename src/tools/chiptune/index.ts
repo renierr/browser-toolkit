@@ -406,7 +406,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     const rect = visualizerCanvas.parentElement?.getBoundingClientRect();
     if (rect) {
       visualizerCanvas.width = rect.width;
-      visualizerCanvas.height = Math.max(rect.height - 20, 100);
+      visualizerCanvas.height = Math.max(rect.height, 100);
     }
   }
 
@@ -427,37 +427,17 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
     const width = visualizerCanvas.width;
     const height = visualizerCanvas.height;
-    const waveHeight = Math.floor(height * 0.45);
-    const specTop = Math.floor(height * 0.48);
+    const waveHeight = Math.floor(height * 0.8);
+    const specTop = 0;
     const specHeight = height - specTop;
 
     visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     visualizerCtx.fillRect(0, 0, width, height);
 
-    const timeData = new Uint8Array(analyser.fftSize);
-    analyser.getByteTimeDomainData(timeData);
-
-    visualizerCtx.lineWidth = 2;
-    visualizerCtx.strokeStyle = '#00ff88';
-    visualizerCtx.beginPath();
-
-    const sliceWidth = width / timeData.length;
-    let x = 0;
-
-    for (let i = 0; i < timeData.length; i++) {
-      const v = timeData[i] / 128.0;
-      const y = (v * waveHeight) / 2;
-      if (i === 0) visualizerCtx.moveTo(x, y);
-      else visualizerCtx.lineTo(x, y);
-      x += sliceWidth;
-    }
-
-    visualizerCtx.lineTo(width, waveHeight / 2);
-    visualizerCtx.stroke();
-
     visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
     visualizerCtx.fillRect(0, specTop - 2, width, 4);
 
+    // spectrum
     const freqData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(freqData);
 
@@ -500,6 +480,29 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
       visualizerCtx.shadowBlur = 0;
     }
+    
+    // waveform
+    const timeData = new Uint8Array(analyser.fftSize);
+    analyser.getByteTimeDomainData(timeData);
+
+    visualizerCtx.lineWidth = 2;
+    visualizerCtx.strokeStyle = '#00ff88';
+    visualizerCtx.beginPath();
+
+    const sliceWidth = width / timeData.length;
+    let x = 0;
+
+    for (let i = 0; i < timeData.length; i++) {
+      const v = timeData[i] / 128.0;
+      const y = (v * waveHeight) / 2;
+      if (i === 0) visualizerCtx.moveTo(x, y);
+      else visualizerCtx.lineTo(x, y);
+      x += sliceWidth;
+    }
+
+    visualizerCtx.lineTo(width, waveHeight / 2);
+    visualizerCtx.stroke();
+
 
     animationId = requestAnimationFrame(drawVisualization);
   }
