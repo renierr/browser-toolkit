@@ -113,6 +113,7 @@ import type { SharedFilesPayload } from '../../js/share-target';
 export default function init(payload?: SharedFilesPayload): () => void {
   let player: ChiptunePlayer | any = null;
   let animationId: number | null = null;
+  let shouldVisualize = false;
 
   const container = document.getElementById('chiptune-player');
   if (!container) return () => {};
@@ -311,9 +312,12 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (player.getIsPlaying()) {
       player.pause();
       btnPlay.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i>';
+      shouldVisualize = false;
     } else {
       player.play();
       btnPlay.innerHTML = '<i data-lucide="pause" class="w-4 h-4"></i>';
+      shouldVisualize = true;
+      drawVisualization();
     }
   });
 
@@ -321,6 +325,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (!player) return;
     player.stop();
     if (btnPlay) btnPlay.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i>';
+    shouldVisualize = false;
   });
 
   btnClear?.addEventListener('click', () => {
@@ -414,19 +419,26 @@ export default function init(payload?: SharedFilesPayload): () => void {
   window.addEventListener('resize', resizeCanvases);
 
   function drawVisualization(): void {
+    const width = visualizerCanvas.width;
+    const height = visualizerCanvas.height;
+
+    if (!shouldVisualize) {
+      if (visualizerCtx) {
+        visualizerCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+        visualizerCtx.fillRect(0, 0, width, height);
+      }
+      if (animationId) cancelAnimationFrame(animationId);
+      return;
+    }
     if (!visualizerCtx || !player) {
-      animationId = requestAnimationFrame(drawVisualization);
       return;
     }
 
     const analyser = player.getAnalyser();
     if (!analyser) {
-      animationId = requestAnimationFrame(drawVisualization);
       return;
     }
 
-    const width = visualizerCanvas.width;
-    const height = visualizerCanvas.height;
     const waveHeight = Math.floor(height * 0.8);
     const specTop = 0;
     const specHeight = height - specTop;
@@ -503,8 +515,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
     animationId = requestAnimationFrame(drawVisualization);
   }
-
-  drawVisualization();
 
   return () => {
     if (animationId) cancelAnimationFrame(animationId);
