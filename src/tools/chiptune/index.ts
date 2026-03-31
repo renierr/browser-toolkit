@@ -1,7 +1,5 @@
 import { ChiptunePlayer } from '../../js/chiptune/player';
 import { parseModule } from '../../js/chiptune/parser';
-import { SidParser } from '../../js/chiptune/sid-parser';
-import { SidPlayer } from '../../js/chiptune/sid-player';
 import type { ModuleFile } from '../../js/chiptune/types';
 import { getAllModules, saveModule, deleteModule } from '../../js/chiptune/archive';
 import { showMessage } from '../../js/ui';
