@@ -87,14 +87,14 @@
     <div class="divider divider-horizontal mx-0 h-6"></div>
 
     <label class="flex items-center gap-2 cursor-pointer">
-      <input type="checkbox" id="loop-toggle" class="toggle toggle-xs" checked />
+      <input type="checkbox" id="loop-toggle" class="toggle toggle-xs" checked data-setting="loop"/>
       <span class="text-xs">Loop</span>
     </label>
 
     <div class="divider divider-horizontal mx-0 h-6"></div>
 
-    <label class="flex items-center gap-2 cursor-pointer" title="Enable experimental AudioWorklet playback">
-      <input type="checkbox" id="worklet-toggle" class="toggle toggle-xs toggle-secondary" />
+    <label class="flex items-center gap-2 cursor-pointer" title="Enable AudioWorklet playback">
+      <input type="checkbox" id="worklet-toggle" class="toggle toggle-xs toggle-secondary" data-setting="worklet"/>
       <span class="text-xs">Worklet</span>
     </label>
 
@@ -107,10 +107,11 @@
         id="volume-slider"
         min="0"
         max="100"
-        value="70"
+        value="100"
         class="range range-xs range-primary w-24"
+        data-setting="volume"
       />
-      <span id="volume-display" class="text-xs w-8">70%</span>
+      <span id="volume-display" class="text-xs w-8">100%</span>
     </div>
 
     <div class="divider divider-horizontal mx-0 h-6"></div>
