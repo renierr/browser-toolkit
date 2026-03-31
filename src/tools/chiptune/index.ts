@@ -110,6 +110,7 @@ function getElements(): Record<string, HTMLElement | null> {
     'btn-archive': document.getElementById('btn-archive'),
     'archive-count': document.getElementById('archive-count'),
     'archive-list': document.getElementById('archive-list'),
+    'vis-selector': document.getElementById('vis-selector'),
   };
 }
 
@@ -174,6 +175,15 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const btnArchive = elements['btn-archive'] as HTMLButtonElement | null;
   const archiveCount = elements['archive-count'];
   const archiveList = elements['archive-list'];
+  const visSelector = elements['vis-selector'] as HTMLSelectElement | null;
+  let currentVis = localStorage.getItem('chiptune-vis') || 'pulse-grid';
+  if (visSelector) {
+    visSelector.value = currentVis;
+    visSelector.addEventListener('change', () => {
+      currentVis = visSelector.value;
+      localStorage.setItem('chiptune-vis', currentVis);
+    });
+  }
 
   const visualizerCanvas = document.getElementById('visualizer') as HTMLCanvasElement;
   const visualizerCtx = visualizerCanvas.getContext('2d');
@@ -253,7 +263,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     }
   });
 
-  archiveList?.addEventListener('click', async (e) => {
+  archiveList?.addEventListener('click', async (e: MouseEvent) => {
     const target = e.target as HTMLElement;
     const deleteBtn = target.closest('.archive-delete');
     if (deleteBtn) {
@@ -410,15 +420,144 @@ export default function init(payload?: SharedFilesPayload): () => void {
   });
 
   function resizeCanvases(): void {
-    const rect = visualizerCanvas.parentElement?.getBoundingClientRect();
-    if (rect) {
+    const parent = visualizerCanvas.parentElement;
+    if (parent) {
+      const rect = parent.getBoundingClientRect();
       visualizerCanvas.width = rect.width;
-      visualizerCanvas.height = Math.max(rect.height, 100);
+      visualizerCanvas.height = rect.height || 160;
     }
   }
 
   resizeCanvases();
   visualizerCanvas.addEventListener('resize', resizeCanvases);
+
+  let gridScroll = 0;
+
+  function drawPulseGrid(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    freqData: Uint8Array,
+    timeData: Uint8Array,
+    bass: number
+  ): void {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(0, 0, width, height);
+
+    const horizonY = height * 0.45;
+    const vanishX = width / 2;
+
+    ctx.strokeStyle = `rgba(0, 255, 255, ${0.1 + bass * 0.3})`;
+    ctx.lineWidth = 1;
+
+    gridScroll = (gridScroll + 1 + bass * 5) % 40;
+    for (let y = 0; y < 15; y++) {
+      const fy = horizonY + Math.pow(y * 4 + gridScroll / 4, 2);
+      if (fy > height) continue;
+      ctx.beginPath();
+      ctx.moveTo(0, fy);
+      ctx.lineTo(width, fy);
+      ctx.stroke();
+    }
+
+    const lineCount = 12;
+    for (let i = 0; i <= lineCount; i++) {
+      const xOffset = (i / lineCount - 0.5) * width * 3;
+      ctx.beginPath();
+      ctx.moveTo(vanishX, horizonY);
+      ctx.lineTo(vanishX + xOffset, height);
+      ctx.stroke();
+    }
+
+    for (let i = 0; i < 32; i++) {
+      const val = freqData[i * 4];
+      if (val > 100) {
+        const percent = val / 255;
+        const size = percent * 4;
+        const angle = (i / 32) * Math.PI - Math.PI / 2;
+        const dist = 50 + percent * 150;
+        const px = vanishX + Math.sin(angle) * dist;
+        const py = horizonY - Math.cos(angle) * dist * 0.5;
+        ctx.fillStyle = `hsl(${180 + percent * 100}, 100%, 70%)`;
+        ctx.fillRect(px, py, size, size);
+      }
+    }
+
+    const amplitude = 2.0;
+    const waveSlice = width / timeData.length;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = 'rgba(255, 0, 255, 0.5)';
+    ctx.strokeStyle = 'rgba(255, 0, 255, 0.8)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    let x = 0;
+    for (let i = 0; i < timeData.length; i++) {
+      const v = (timeData[i] - 128) / 128.0;
+      const y = horizonY + v * 40 * amplitude;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      x += waveSlice;
+    }
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    ctx.fillStyle = 'rgba(18, 16, 16, 0.1)';
+    for (let i = 0; i < height; i += 4) {
+      ctx.fillRect(0, i, width, 1);
+    }
+  }
+
+  function drawClassic(
+    ctx: CanvasRenderingContext2D,
+    width: number,
+    height: number,
+    freqData: Uint8Array,
+    timeData: Uint8Array
+  ): void {
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+    ctx.fillRect(0, 0, width, height);
+
+    const barCount = 64;
+    const barWidth = width / barCount;
+    const barGap = 1;
+
+    for (let i = 0; i < barCount; i++) {
+      const val = freqData[i * 4] || 0;
+      const percent = val / 255;
+      const barHeight = percent * height;
+      let hue: number;
+      if (i < 16) hue = (i / 16) * 30;
+      else if (i < 32) hue = 30 + ((i - 16) / 16) * 60;
+      else if (i < 48) hue = 90 + ((i - 32) / 16) * 60;
+      else hue = 150 + ((i - 48) / 16) * 120;
+
+      const light = 50 + percent * 10;
+      ctx.fillStyle = `hsl(${hue}, 100%, ${light}%)`;
+      const bx = i * barWidth;
+      const by = height - barHeight;
+      ctx.fillRect(bx, by, barWidth - barGap, barHeight);
+      if (percent > 0.1) {
+        ctx.fillStyle = `hsl(${hue}, 100%, 75%)`;
+        ctx.fillRect(bx, by, barWidth - barGap, 2);
+      }
+    }
+
+    const amplitude = 1.8;
+    const waveSliceWidth = width / timeData.length;
+    ctx.strokeStyle = '#00ff88';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    let x = 0;
+    for (let i = 0; i < timeData.length; i++) {
+      const v = (timeData[i] - 128) / 128.0;
+      const y = height / 2 + v * (height / 2) * amplitude;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+      x += waveSliceWidth;
+    }
+    ctx.stroke();
+  }
 
   function drawVisualization(): void {
     const width = visualizerCanvas.width;
@@ -426,96 +565,36 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
     if (!shouldVisualize) {
       if (visualizerCtx) {
-        visualizerCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+        visualizerCtx.fillStyle = '#000000';
         visualizerCtx.fillRect(0, 0, width, height);
       }
       if (animationId) cancelAnimationFrame(animationId);
       return;
     }
-    if (!visualizerCtx || !player) {
-      return;
-    }
+    if (!visualizerCtx || !player) return;
 
     const analyser = player.getAnalyser();
-    if (!analyser) {
-      return;
-    }
+    if (!analyser) return;
 
-    const waveHeight = Math.floor(height * 0.8);
-    const specTop = 0;
-    const specHeight = height - specTop;
-
-    visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    visualizerCtx.fillRect(0, 0, width, height);
-
-    // spectrum
     const freqData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(freqData);
 
-    const barWidth = width / 64;
-    const barGap = 1;
-
-    for (let i = 0; i < 64; i++) {
-      const value = freqData[i * 4];
-      const barHeight = (value / 255) * specHeight;
-      const bx = i * barWidth;
-      const by = specTop + specHeight - barHeight;
-
-      const intensity = value / 255;
-      let hue: number, sat: number, light: number;
-
-      if (i < 16) {
-        hue = 0 + (i / 16) * 30;
-        sat = 100;
-        light = 50 + intensity * 10;
-      } else if (i < 32) {
-        hue = 30 + ((i - 16) / 16) * 60;
-        sat = 100;
-        light = 50 + intensity * 10;
-      } else if (i < 48) {
-        hue = 90 + ((i - 32) / 16) * 60;
-        sat = 90 - intensity * 20;
-        light = 50 + intensity * 5;
-      } else {
-        hue = 180 + ((i - 48) / 16) * 120;
-        sat = 100;
-        light = 55 + intensity * 10;
-      }
-
-      visualizerCtx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
-
-      visualizerCtx.shadowBlur = intensity * 10;
-      visualizerCtx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-
-      visualizerCtx.fillRect(bx, by, barWidth - barGap, barHeight);
-
-      visualizerCtx.shadowBlur = 0;
-    }
-
-    // waveform
     const timeData = new Uint8Array(analyser.fftSize);
     analyser.getByteTimeDomainData(timeData);
 
-    visualizerCtx.lineWidth = 2;
-    visualizerCtx.strokeStyle = '#00ff88';
-    visualizerCtx.beginPath();
+    let bass = 0;
+    for (let i = 0; i < 8; i++) bass += freqData[i];
+    bass /= 8 * 255;
 
-    const sliceWidth = width / timeData.length;
-    let x = 0;
-
-    for (let i = 0; i < timeData.length; i++) {
-      const v = timeData[i] / 128.0;
-      const y = (v * waveHeight) / 2;
-      if (i === 0) visualizerCtx.moveTo(x, y);
-      else visualizerCtx.lineTo(x, y);
-      x += sliceWidth;
+    if (currentVis === 'pulse-grid') {
+      drawPulseGrid(visualizerCtx, width, height, freqData, timeData, bass);
+    } else {
+      drawClassic(visualizerCtx, width, height, freqData, timeData);
     }
-
-    visualizerCtx.lineTo(width, waveHeight / 2);
-    visualizerCtx.stroke();
 
     animationId = requestAnimationFrame(drawVisualization);
   }
+
 
   return () => {
     if (animationId) cancelAnimationFrame(animationId);
