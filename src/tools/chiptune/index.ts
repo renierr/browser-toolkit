@@ -8,6 +8,7 @@ import { ClassicVisualizer } from './visualizers/classic-visualizer';
 import { PulseGridVisualizer } from './visualizers/pulse-grid-visualizer';
 import { NeonNexusVisualizer } from './visualizers/neon-nexus-visualizer';
 import { Grid3DVisualizer } from './visualizers/grid3d-visualizer';
+import { ScrollerVisualizer } from './visualizers/scroller-visualizer';
 import type { Visualizer } from './visualizers/base';
 
 // good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
@@ -186,6 +187,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     'neon-nexus': new NeonNexusVisualizer(),
     'pulse-grid': new PulseGridVisualizer(),
     'classic': new ClassicVisualizer(),
+    'scroller': new ScrollerVisualizer(),
   };
 
   let currentVis = localStorage.getItem('chiptune-vis') || 'grid-3d';
