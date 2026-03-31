@@ -179,6 +179,10 @@ export class ChiptunePlayer {
           if (this.onPositionChange) {
             this.onPositionChange(e.data.position, e.data.rowIndex);
           }
+        } else if (e.data.type === 'bpm') {
+          this.bpm = e.data.bpm;
+        } else if (e.data.type === 'speed') {
+          this.speed = e.data.speed;
         } else if (e.data.type === 'stop') {
           this.isPlaying = false;
         }
@@ -195,6 +199,28 @@ export class ChiptunePlayer {
       }
       return false;
     }
+  }
+
+  async setUseWorklet(enabled: boolean): Promise<boolean> {
+    const wasPlaying = this.isPlaying;
+    if (wasPlaying) this.pause();
+
+    if (enabled) {
+      if (!this.workletNode) {
+        const success = await this.initWorklet();
+        if (!success) {
+          this.useWorklet = false;
+          if (wasPlaying) await this.play();
+          return false;
+        }
+      }
+      this.useWorklet = true;
+    } else {
+      this.useWorklet = false;
+    }
+
+    if (wasPlaying) await this.play();
+    return true;
   }
 
   setLooping(loop: boolean): void {

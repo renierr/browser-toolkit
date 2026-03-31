@@ -111,12 +111,22 @@ export interface WorkletInstrumentSample {
   loopLength: number;
   panning: number;
   data: Int8Array;
+  baseNote?: number;
+  c5speed?: number;
+  vibratoType?: number;
+  vibratoSweep?: number;
+  vibratoDepth?: number;
+  vibratoRate?: number;
 }
 
 export interface WorkletInstrument {
   index: number;
   name: string;
   samples: WorkletInstrumentSample[];
+  sampleMap?: number[];
+  volumeEnv?: Envelope;
+  panningEnv?: Envelope;
+  volumeFadeout?: number;
 }
 
 export interface WorkletNote {
@@ -124,6 +134,9 @@ export interface WorkletNote {
   period: number;
   effect: number;
   effectParam: number;
+  volume?: number | null;
+  volumeColumn?: number | null;
+  note?: number | null;
 }
 
 export interface WorkletRow {
@@ -173,6 +186,12 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
         loopLength: sample.loopLength,
         panning: sample.panning,
         data: int8Data,
+        baseNote: sample.baseNote,
+        c5speed: sample.c5speed,
+        vibratoType: sample.vibratoType,
+        vibratoSweep: sample.vibratoSweep,
+        vibratoDepth: sample.vibratoDepth,
+        vibratoRate: sample.vibratoRate,
       });
     }
 
@@ -180,6 +199,10 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
       index: i + 1,
       name: inst.name,
       samples,
+      sampleMap: inst.sampleMap,
+      volumeEnv: inst.volumeEnv,
+      panningEnv: inst.panningEnv,
+      volumeFadeout: inst.volumeFadeout,
     });
   }
 
@@ -199,6 +222,9 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
           period: note.period || 0,
           effect: note.effect,
           effectParam: note.effectParam,
+          volume: note.volume,
+          volumeColumn: note.volumeColumn,
+          note: note.note,
         });
       }
 
@@ -220,7 +246,7 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
     defaultBpm: mod.defaultBpm,
     defaultSpeed: mod.defaultSpeed,
     rowsPerPattern: mod.rowsPerPattern,
-    linearFrequencies: mod.linearFrequencies,
+    linearFrequencies: !!mod.linearFrequencies,
     restartPosition: mod.restartPosition || 0,
     clock: mod.clock || 7093789.2,
   };
