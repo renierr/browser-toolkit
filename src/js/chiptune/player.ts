@@ -1,6 +1,8 @@
 import type { ModuleFile, Sample, Envelope } from './types';
 import { periodToFrequencyAmiga, periodToFrequencyLinear, AMIGA_PERIOD_TABLE } from './types';
 import { serializeModuleForWorklet } from './types';
+// @ts-ignore
+import workletUrl from './worklet?url';
 
 interface ChannelState {
   instrument: number;
@@ -169,8 +171,7 @@ export class ChiptunePlayer {
     }
 
     try {
-      const moduleUrl = '/js/chiptune-worklet.js';
-      await this.audioContext.audioWorklet.addModule(moduleUrl);
+      await this.audioContext.audioWorklet.addModule(workletUrl);
       this.workletNode = new AudioWorkletNode(this.audioContext, 'chiptune-worklet');
       this.workletNode.port.onmessage = (e) => {
         if (e.data.type === 'row') {
