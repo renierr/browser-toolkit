@@ -434,9 +434,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
     visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
     visualizerCtx.fillRect(0, 0, width, height);
 
-    visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-    visualizerCtx.fillRect(0, specTop - 2, width, 4);
-
     // spectrum
     const freqData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(freqData);
