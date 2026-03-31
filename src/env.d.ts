@@ -9,3 +9,8 @@ declare module '*?worker' {
   }
   export default WebWorker;
 }
+
+declare module '*?worker&url' {
+  const src: string;
+  export default src;
+}

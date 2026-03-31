@@ -1,8 +1,7 @@
 import type { ModuleFile, Sample, Envelope } from './types';
 import { periodToFrequencyAmiga, periodToFrequencyLinear, AMIGA_PERIOD_TABLE } from './types';
 import { serializeModuleForWorklet } from './types';
-// @ts-ignore
-import workletUrl from './worklet?url';
+import workletUrl from './worklet?worker&url';
 
 interface ChannelState {
   instrument: number;
@@ -171,10 +170,21 @@ export class ChiptunePlayer {
     }
 
     try {
+      if (!this.audioContext.audioWorklet) {
+        throw new Error('AudioWorklet API not supported in this browser context (HTTPS required)');
+      }
+
       await this.audioContext.audioWorklet.addModule(workletUrl);
-      this.workletNode = new AudioWorkletNode(this.audioContext, 'chiptune-worklet', {
-        outputChannelCount: [2]
-      });
+
+      try {
+        this.workletNode = new AudioWorkletNode(this.audioContext, 'chiptune-worklet', {
+          outputChannelCount: [2],
+        });
+      } catch (nodeError) {
+        console.warn('[ChiptunePlayer] Stereo worklet node failed, retrying in mono:', nodeError);
+        this.workletNode = new AudioWorkletNode(this.audioContext, 'chiptune-worklet');
+      }
+
       this.workletNode.port.onmessage = (e) => {
         if (e.data.type === 'row') {
           this.currentPatternIdx = e.data.position;
@@ -198,9 +208,10 @@ export class ChiptunePlayer {
       return true;
     } catch (e) {
       console.error('[ChiptunePlayer] Failed to init worklet:', e);
+      console.error(`[ChiptunePlayer] Worklet URL attempted: ${workletUrl}`);
       if (e instanceof Error && e.name === 'AbortError') {
         console.error(
-          '[ChiptunePlayer] This is a network error - check the worklet file is accessible at /js/chiptune-worklet.js'
+          '[ChiptunePlayer] Network or MIME type error. Ensure the worklet script is being served correctly by Vite.'
         );
       }
       return false;
@@ -254,7 +265,7 @@ export class ChiptunePlayer {
   async play(): Promise<void> {
     if (!this.audioContext || !this.module) return;
     if (this.isPlaying) return;
-    
+
     if (this.audioContext.state === 'suspended') await this.audioContext.resume();
 
     if (this.useWorklet && this.workletNode && this.module) {
@@ -351,7 +362,7 @@ export class ChiptunePlayer {
     if (ch.source) {
       try {
         ch.source.stop(time || 0);
-      } catch (e) {}
+      } catch (e) { }
       ch.source.disconnect();
       ch.source = null;
     }
@@ -1145,9 +1156,9 @@ export class ChiptunePlayer {
       ch.volume = 0;
       ch.keyOn = false;
     }
-    this.sendToWorklet('seek', { 
-      position: this.currentPatternIdx, 
-      rowIndex: this.currentRow 
+    this.sendToWorklet('seek', {
+      position: this.currentPatternIdx,
+      rowIndex: this.currentRow
     });
     if (this.onPositionChange) this.onPositionChange(this.currentPatternIdx, this.currentRow);
   }
