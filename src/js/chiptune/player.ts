@@ -494,6 +494,11 @@ export class ChiptunePlayer {
           const inst = this.module.instruments[cell.instrument - 1];
           if (inst && inst.samples.length > 0) {
             chState.baseVolume = inst.samples[0].volume;
+            // XM quirk: choosing instrument without note resets volume
+            if (cell.note === null) {
+              chState.volume = chState.baseVolume;
+              this.assignSample(chState); // Refresh sample mapping
+            }
           }
         }
 
@@ -509,26 +514,25 @@ export class ChiptunePlayer {
             }
           } else {
             // We have a new valid note
-            if (tonePorta) {
-              // Set Target Period ONLY
-              chState.targetPeriod = this.calculatePeriod(cell.note, cell.instrument, chState);
-            } else {
+            if (!tonePorta) {
               chState.note = cell.note;
               chState.currentPeriod = cell.period || this.calculatePeriod(cell.note, cell.instrument, chState);
+              this.assignSample(chState, cell.note);
               chState.volume = chState.baseVolume;
               chState.vibratoPhase = 0;
-              chState.volumeEnvTick = 0;
-              chState.volumeEnvValue = 0;
+              chState.tremoloPhase = 0;
+              chState.volumeEnvValue = 64;
+              chState.panningEnvValue = 128;
+              chState.sampleOffset = 0;
               chState.keyOn = true;
-              this.assignSample(chState);
-
-              // Apply instrument vibrato (XM)
-              if (this.module?.type === 'XM' && chState.sample) {
-                if (chState.sample.vibratoDepth) chState.vibratoDepth = chState.sample.vibratoDepth;
-                if (chState.sample.vibratoRate) chState.vibratoSpeed = chState.sample.vibratoRate;
-              }
-
+              chState.volumeEnvTick = 0;
+              chState.panningEnvTick = 0;
+              chState.fadeoutVolume = 32768;
               shouldTrigger = true;
+            } else {
+              chState.targetPeriod = this.calculatePeriod(cell.note, cell.instrument, chState);
+              // For tone porta in XM/IT: we also need to map the sample if instrument is provided
+              if (cell.instrument > 0) this.assignSample(chState, cell.note);
             }
           }
         }
@@ -762,7 +766,7 @@ export class ChiptunePlayer {
     }
   }
 
-  private assignSample(chState: ChannelState): void {
+  private assignSample(chState: ChannelState, noteValue?: number): void {
     if (!this.module || !chState.instrument) return;
     const inst = this.module.instruments[chState.instrument - 1];
     if (!inst || inst.samples.length === 0) return;
@@ -770,9 +774,10 @@ export class ChiptunePlayer {
     // For MOD: always use sample 0 (instruments don't have sample mapping)
     // For XM/IT: use sampleMap if available
     let sampleIndex = 0;
-    if (this.module.type !== 'MOD' && chState.note && chState.note > 0 && chState.note <= 96) {
-      if (inst.sampleMap && chState.note <= inst.sampleMap.length) {
-        sampleIndex = inst.sampleMap[chState.note - 1];
+    const note = noteValue ?? chState.note ?? 1;
+    if (this.module.type !== 'MOD' && note >= 1 && note <= 96) {
+      if (inst.sampleMap && note <= inst.sampleMap.length) {
+        sampleIndex = inst.sampleMap[note - 1];
       }
     }
     if (sampleIndex < 0 || sampleIndex >= inst.samples.length) {
@@ -781,47 +786,49 @@ export class ChiptunePlayer {
     chState.sample = inst.samples[sampleIndex] || null;
     if (chState.sample) {
       chState.baseVolume = chState.sample.volume;
-      chState.panning = chState.sample.panning;
+      // Note: MOD files use fixed channel panning; only XM/IT use sample-based panning.
+      if (this.module.type !== 'MOD') {
+        chState.panning = chState.sample.panning;
+      }
     }
   }
 
   private calculatePeriod(note: number, instrument: number, chState: ChannelState): number {
     if (!this.module) return 0;
 
-    // We must pick the correct sample internally first to know its finetune/basenote
-    const inst =
-      this.module.instruments[instrument - 1] || this.module.instruments[chState.instrument - 1];
+    const inst = instrument > 0 ? this.module.instruments[instrument - 1] : (chState.instrument > 0 ? this.module.instruments[chState.instrument - 1] : null);
     if (!inst || inst.samples.length === 0) return 0;
+    
     let sIdx = 0;
-    if (note > 0 && note <= 96 && inst.sampleMap && inst.sampleMap.length >= note)
+    if (note >= 1 && note <= 96 && inst.sampleMap && inst.sampleMap.length >= note)
       sIdx = inst.sampleMap[note - 1];
     const sample = inst.samples[sIdx] || inst.samples[0];
 
-    if (this.module.type === 'IT') {
-      // IT handles raw periods based on notes for calculation purposes, or just linear dummy if we want
-      return note; // Store exactly note 1-120 as "period" equivalent to simplify IT sliding math
-    }
-    if (this.module.linearFrequencies) {
-      const actualNote = note - 1 + (sample.baseNote || 0);
-      return 10 * 12 * 16 * 4 - actualNote * 16 * 4 - sample.finetune / 2;
+    if (this.module.type === 'IT') return note;
+
+    const actualNote = note - 1 + (sample.baseNote || 0);
+    const isXmOrIt = this.module.type === 'XM' || (this.module.type as string) === 'IT';
+
+    if (isXmOrIt) {
+      if (this.module.linearFrequencies) {
+        return 10 * 12 * 16 * 4 - actualNote * 16 * 4 - (sample.finetune || 0) / 2;
+      } else {
+        const AMIGA_TABLE = [1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907];
+        let n = actualNote;
+        let octave = 0;
+        while (n >= 12) { n -= 12; octave++; }
+        while (n < 0) { n += 12; octave--; }
+        let p = AMIGA_TABLE[n] / Math.pow(2, octave);
+        return p * 16;
+      }
     }
 
-    let tableNote = note - 1;
-    let octaves = 0;
-    while (tableNote >= AMIGA_PERIOD_TABLE.length) {
-      tableNote -= 12;
-      octaves++;
-    }
-    while (tableNote < 0) {
-      tableNote += 12;
-      octaves--;
-    }
-
-    let p = AMIGA_PERIOD_TABLE[tableNote];
-    if (octaves > 0) p = p / Math.pow(2, octaves);
-    else if (octaves < 0) p = p * Math.pow(2, -octaves);
-
-    return p;
+    // Standard MOD Amiga periods
+    let n = note - 1 + (sample.baseNote || 0);
+    let octave = 0;
+    while (n >= 12) { n -= 12; octave++; }
+    while (n < 0) { n += 12; octave--; }
+    return (AMIGA_PERIOD_TABLE[n] || 0) / Math.pow(2, octave);
   }
 
   private calculateEnvelopeValue(env: Envelope | undefined, tick: number): number {
@@ -891,8 +898,7 @@ export class ChiptunePlayer {
   }
 
   private calculateFrequency(period: number, sample: Sample): number {
-    if (!this.module) return 0;
-    if (period <= 0) return 0;
+    if (!this.module || period <= 0) return 0;
     
     if (this.module.type === 'IT') {
       const actualNote = period - 1;
@@ -903,17 +909,15 @@ export class ChiptunePlayer {
       return 8363 * Math.pow(2, (4608 - period) / 768);
     }
 
-    const ft = sample.finetune;
     const isXmOrIt = this.module.type === 'XM' || (this.module.type as string) === 'IT';
+    const ft = sample.finetune || 0;
     
     if (isXmOrIt) {
-      // XM Amiga periods use a specific scaling with finetune
-      const scaledPeriod = period * Math.pow(2, -ft / (128 * 12));
-      return (this.module.clock || 7093789.2) / (scaledPeriod * 2 / 16);
+      const ftPeriod = period * Math.pow(2, -ft / (128 * 12));
+      return (this.module.clock || 7093789.2) / (ftPeriod * 2 / 16);
     } else {
-      // Standard ProTracker periods
-      const scaledPeriod = period * Math.pow(2, -ft / (8 * 12));
-      return (this.module.clock || 7093789.2) / (scaledPeriod * 2);
+      const ftPeriod = period * Math.pow(2, -ft / (8 * 12));
+      return (this.module.clock || 7093789.2) / (ftPeriod * 2);
     }
   }
 
@@ -995,7 +999,7 @@ export class ChiptunePlayer {
 
     if (effect === 0x03 || effect === 0x05) {
       const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
-      const scale = isXmOrIt ? 4 : 1;
+      const scale = isXmOrIt ? 4 : 1; // 16x period precision (4 ticks per unit shift in standard speed)
       
       if (chState.currentPeriod < chState.targetPeriod) {
         chState.currentPeriod = Math.min(chState.currentPeriod + chState.slideSpeed * scale, chState.targetPeriod);
