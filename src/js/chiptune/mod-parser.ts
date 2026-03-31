@@ -24,15 +24,22 @@ export class ModParser extends BaseParser {
     let is15Sample = false;
 
     const markerUpper = marker.toUpperCase();
-    if (markerUpper.includes('6CHN')) channels = 6;
-    else if (markerUpper.includes('8CHN')) channels = 8;
-    else if (markerUpper.includes('CH')) {
-      const parsed = parseInt(marker.replace(/[^0-9]/g, ''));
-      if (!isNaN(parsed) && parsed > 0) channels = parsed;
-    } else if (markerUpper === 'M.K.' || markerUpper === 'M!K!' || markerUpper === 'FLT4') {
+    // Standard 31-sample markers: M.K., M!K!, FLT4, FLT8, 4CHN, 6CHN, 8CHN, XXCH, XXCN, etc.
+    if (markerUpper === 'M.K.' || markerUpper === 'M!K!' || markerUpper === 'FLT4') {
       channels = 4;
+    } else if (markerUpper === 'FLT8') {
+      channels = 8;
+    } else if (markerUpper.endsWith('CHN') || markerUpper.endsWith('CH')) {
+      const numStr = markerUpper.replace(/[^0-9]/g, '');
+      channels = parseInt(numStr) || 4;
+    } else if (markerUpper.endsWith('CN')) {
+       // StarTrekker 4CN, 8CN
+       const numStr = markerUpper.replace(/[^0-9]/g, '');
+       channels = parseInt(numStr) || 4;
+    } else if (['OKTA', 'OCTA', 'CD81'].includes(markerUpper)) {
+      channels = 8;
     } else {
-      // No standard 31-sample marker found, likely 15-sample MOD
+      // No standard 31-sample marker found at 1080, assume 15-sample legacy MOD
       is15Sample = true;
       channels = 4;
     }

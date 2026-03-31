@@ -30,7 +30,12 @@ const EFFECT_GLOBAL_VOL_SLIDE = 0x11; // H
 const EFFECT_ENVELOPE_POS = 0x15; // L
 const EFFECT_PANNING_SLIDE = 0x19; // P
 const EFFECT_MULTI_RETRIG = 0x1b; // R
-const EFFECT_TREMOR = 0x1d; // T
+const SINE_TABLE = [
+  0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253,
+  255, 253, 250, 244, 235, 224, 212, 197, 180, 161, 141, 120, 97, 74, 49, 24
+];
+
+const EFFECT_TREMOR = 0x1d;
 
 class WorkletChannel {
   worklet: ModPlayerWorklet;
@@ -52,6 +57,7 @@ class WorkletChannel {
   baseVolume = 64;
   
   sampleIndex = 0;
+  sampleFraction = 0;
   sampleSpeed = 0;
   
   vibratoPhase = 0;
@@ -162,11 +168,17 @@ class WorkletChannel {
         if (inst.samples.length > 0) {
           this.baseVolume = inst.samples[0].volume;
         }
-        this.assignSample(note.note ?? this.note ?? 1);
-        // Instrument-only trigger resets volume in MOD/XM
+        
+        // MOD quirk: choosing instrument without note restarts volume but NOT sample position (Sample Swapping)
+        // XM quirk: choosing instrument without note resets volume/panning but NOT envelopes/position
         if (note.note === null) {
           this.volume = this.baseVolume;
+          if (inst.samples.length > 0) {
+            this.panning = inst.samples[0].panning;
+          }
         }
+        
+        this.assignSample(note.note ?? this.note ?? 1);
       }
     }
 
@@ -179,11 +191,11 @@ class WorkletChannel {
         }
       } else {
         if (tonePorta) {
-          this.targetPeriod = this.calculatePeriod(note.note, note.instrument ?? 0);
+          this.targetPeriod = this.calculatePeriod(note.note ?? 0, note.instrument ?? 0);
         } else {
-          this.note = note.note;
-          this.assignSample(note.note);
-          this.period = note.period ?? this.calculatePeriod(note.note, note.instrument ?? 0);
+          this.note = note.note ?? 0;
+          this.assignSample(note.note ?? 0);
+          this.period = note.period || this.calculatePeriod(note.note ?? 0, note.instrument ?? 0);
           this.currentPeriod = this.period;
           
           // FT2 quirk: only reset volume if instrument is provided
@@ -192,11 +204,11 @@ class WorkletChannel {
           }
           
           this.sampleIndex = 0;
-          this.vibratoPhase = 0;
+          this.sampleFraction = 0;
+          this.keyOn = true;
           this.volumeEnvTick = 0;
           this.panningEnvTick = 0;
           this.fadeoutVolume = 32768;
-          this.keyOn = true;
           this.playing = !!this.sample && this.period > 0;
         }
       }
@@ -386,8 +398,14 @@ class WorkletChannel {
         const sub = (param >> 4) & 0x0f;
         const subParam = param & 0x0f;
         switch (sub) {
-          case 0x1: this.currentPeriod -= subParam * 4; break;
-          case 0x2: this.currentPeriod += subParam * 4; break;
+          case 0x1: 
+            if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') this.currentPeriod -= subParam * 4;
+            else this.currentPeriod -= subParam; 
+            break;
+          case 0x2: 
+            if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') this.currentPeriod += subParam * 4;
+            else this.currentPeriod += subParam; 
+            break;
           case 0x4: this.vibratoWaveform = subParam & 3; break;
           case 0x5: this.worklet.setPatternLoopStart(); break;
           case 0x6:
@@ -429,13 +447,34 @@ class WorkletChannel {
       
       const effect = this.worklet.currentRowNotes[this.channelIndex]?.effect;
       if (effect === EFFECT_TONE_PORTA || effect === EFFECT_TONE_PORTA_VOL) {
-         if (this.currentPeriod < this.targetPeriod) {
-           this.currentPeriod = Math.min(this.targetPeriod, this.currentPeriod + Math.abs(this.slideSpeed) * 4);
-         } else if (this.currentPeriod > this.targetPeriod) {
-           this.currentPeriod = Math.max(this.targetPeriod, this.currentPeriod - Math.abs(this.slideSpeed) * 4);
-         }
+        if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') {
+          if (this.targetPeriod !== 0) {
+            if (this.currentPeriod < this.targetPeriod) {
+              this.currentPeriod = Math.min(this.currentPeriod + this.slideSpeed * 4, this.targetPeriod);
+            } else {
+              this.currentPeriod = Math.max(this.currentPeriod - this.slideSpeed * 4, this.targetPeriod);
+            }
+          } else if (this.slideSpeed !== 0) {
+            this.currentPeriod += this.slideSpeed * 4;
+          }
+        } else {
+          // MOD standard periods
+          if (this.targetPeriod !== 0) {
+            if (this.currentPeriod < this.targetPeriod) {
+              this.currentPeriod = Math.min(this.currentPeriod + this.slideSpeed, this.targetPeriod);
+            } else {
+              this.currentPeriod = Math.max(this.currentPeriod - this.slideSpeed, this.targetPeriod);
+            }
+          } else if (this.slideSpeed !== 0) {
+            this.currentPeriod += this.slideSpeed;
+          }
+        }
       } else if (this.slideSpeed !== 0) {
-         this.currentPeriod += this.slideSpeed * 4;
+        if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') {
+          this.currentPeriod += this.slideSpeed * 4;
+        } else {
+          this.currentPeriod += this.slideSpeed;
+        }
       }
 
       if (this.retrig > 0 && (this.worklet.tick % this.retrig === 0)) {
@@ -470,27 +509,49 @@ class WorkletChannel {
     }
 
     let renderPeriod = this.currentPeriod;
+    
+    // Arpeggio logic
     if (this.arpeggioNotes.length > 0) {
-      const arpNote = this.arpeggioNotes[this.worklet.tick % 3];
-      if (arpNote > 0) {
-          if ((this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT') {
+      const isXmOrIt = (this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT';
+      
+      // ProTracker Arpeggio Quirk: Does not play on Tick 0
+      if (!isXmOrIt && (this.worklet.tick % this.worklet.ticksPerRow) === 0) {
+        // Stay on base note
+      } else {
+        const cycle = this.worklet.tick % 3;
+        let arpNote = 0;
+        if (isXmOrIt) {
+          // FT2 Arpeggio cycle: 0, y, x
+          if (cycle === 0) arpNote = 0;
+          else if (cycle === 1) arpNote = this.arpeggioNotes[1]; // low nibble
+          else arpNote = this.arpeggioNotes[2]; // high nibble
+        } else {
+          arpNote = this.arpeggioNotes[cycle];
+        }
+        
+        if (arpNote > 0) {
+          if (isXmOrIt) {
              if (this.worklet.mod!.linearFrequencies) renderPeriod -= arpNote * 16 * 4;
              else renderPeriod /= Math.pow(2, arpNote / 12);
           } else {
-             // MOD Arpeggio
              renderPeriod /= Math.pow(2, arpNote / 12);
           }
+        }
       }
     }
     
     if (this.vibratoDepth > 0) {
+      let phase = Math.floor(this.vibratoPhase * 64) & 63;
       let mod = 0;
-      if (this.vibratoWaveform === 0 || this.vibratoWaveform === 3) mod = Math.sin(this.vibratoPhase * Math.PI * 2);
-      else if (this.vibratoWaveform === 1) mod = (this.vibratoPhase < 0.5) ? (this.vibratoPhase * 4 - 1) : (3 - this.vibratoPhase * 4);
-      else if (this.vibratoWaveform === 2) mod = (this.vibratoPhase < 0.5) ? 1 : -1;
+      if (phase < 32) mod = SINE_TABLE[phase];
+      else mod = -SINE_TABLE[phase - 32];
       
-      if (this.worklet.mod!.linearFrequencies) renderPeriod += mod * this.vibratoDepth * 2;
-      else renderPeriod += mod * this.vibratoDepth * 4;
+      const isXmOrIt = (this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT';
+      let depthScale = isXmOrIt && this.worklet.mod!.linearFrequencies ? 4 : 1;
+      
+      if (this.worklet.mod!.linearFrequencies) renderPeriod += (mod * this.vibratoDepth * depthScale) / 128;
+      else renderPeriod += (mod * this.vibratoDepth * depthScale * 4) / 128; // Amiga periods use *4 in FT2 scale
+      
       this.vibratoPhase += this.vibratoSpeed / 256;
     }
 
