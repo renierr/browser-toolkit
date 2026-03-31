@@ -163,11 +163,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const samplesChevron = elements['samples-chevron'];
   const btnClear = elements['btn-clear'] as HTMLButtonElement | null;
 
-  const oscCanvas = document.getElementById('oscilloscope') as HTMLCanvasElement;
-  const specCanvas = document.getElementById('spectrum') as HTMLCanvasElement;
-
-  const oscCtx = oscCanvas.getContext('2d');
-  const specCtx = specCanvas.getContext('2d');
+  const visualizerCanvas = document.getElementById('visualizer') as HTMLCanvasElement;
+  const visualizerCtx = visualizerCanvas.getContext('2d');
 
   if (dropzone && fileInput) {
     const onFile = async (fileList: FileList): Promise<void> => {
@@ -406,12 +403,10 @@ export default function init(payload?: SharedFilesPayload): () => void {
   });
 
   function resizeCanvases(): void {
-    const rect = oscCanvas.parentElement?.getBoundingClientRect();
+    const rect = visualizerCanvas.parentElement?.getBoundingClientRect();
     if (rect) {
-      oscCanvas.width = rect.width;
-      oscCanvas.height = Math.max(rect.height - 20, 100);
-      specCanvas.width = rect.width;
-      specCanvas.height = Math.max(rect.height - 20, 100);
+      visualizerCanvas.width = rect.width;
+      visualizerCanvas.height = Math.max(rect.height - 20, 100);
     }
   }
 
@@ -419,7 +414,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   window.addEventListener('resize', resizeCanvases);
 
   function drawVisualization(): void {
-    if (!oscCtx || !specCtx || !player) {
+    if (!visualizerCtx || !player) {
       animationId = requestAnimationFrame(drawVisualization);
       return;
     }
@@ -430,49 +425,50 @@ export default function init(payload?: SharedFilesPayload): () => void {
       return;
     }
 
-    const width = oscCanvas.width;
-    const height = oscCanvas.height;
-    const specWidth = specCanvas.width;
-    const specHeight = specCanvas.height;
+    const width = visualizerCanvas.width;
+    const height = visualizerCanvas.height;
+    const waveHeight = Math.floor(height * 0.45);
+    const specTop = Math.floor(height * 0.48);
+    const specHeight = height - specTop;
 
-    oscCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    oscCtx.fillRect(0, 0, width, height);
+    visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    visualizerCtx.fillRect(0, 0, width, height);
 
     const timeData = new Uint8Array(analyser.fftSize);
     analyser.getByteTimeDomainData(timeData);
 
-    oscCtx.lineWidth = 2;
-    oscCtx.strokeStyle = '#00ff88';
-    oscCtx.beginPath();
+    visualizerCtx.lineWidth = 2;
+    visualizerCtx.strokeStyle = '#00ff88';
+    visualizerCtx.beginPath();
 
     const sliceWidth = width / timeData.length;
     let x = 0;
 
     for (let i = 0; i < timeData.length; i++) {
       const v = timeData[i] / 128.0;
-      const y = (v * height) / 2;
-      if (i === 0) oscCtx.moveTo(x, y);
-      else oscCtx.lineTo(x, y);
+      const y = (v * waveHeight) / 2;
+      if (i === 0) visualizerCtx.moveTo(x, y);
+      else visualizerCtx.lineTo(x, y);
       x += sliceWidth;
     }
 
-    oscCtx.lineTo(width, height / 2);
-    oscCtx.stroke();
+    visualizerCtx.lineTo(width, waveHeight / 2);
+    visualizerCtx.stroke();
 
-    specCtx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-    specCtx.fillRect(0, 0, specWidth, specHeight);
+    visualizerCtx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    visualizerCtx.fillRect(0, specTop - 2, width, 4);
 
     const freqData = new Uint8Array(analyser.frequencyBinCount);
     analyser.getByteFrequencyData(freqData);
 
-    const barWidth = specWidth / 64;
+    const barWidth = width / 64;
     const barGap = 1;
 
     for (let i = 0; i < 64; i++) {
       const value = freqData[i * 4];
       const barHeight = (value / 255) * specHeight;
       const bx = i * barWidth;
-      const by = specHeight - barHeight;
+      const by = specTop + specHeight - barHeight;
 
       const intensity = value / 255;
       let hue: number, sat: number, light: number;
@@ -495,14 +491,14 @@ export default function init(payload?: SharedFilesPayload): () => void {
         light = 55 + intensity * 10;
       }
 
-      specCtx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
+      visualizerCtx.fillStyle = `hsl(${hue}, ${sat}%, ${light}%)`;
 
-      specCtx.shadowBlur = intensity * 10;
-      specCtx.shadowColor = `hsl(${hue}, 100%, 50%)`;
+      visualizerCtx.shadowBlur = intensity * 10;
+      visualizerCtx.shadowColor = `hsl(${hue}, 100%, 50%)`;
 
-      specCtx.fillRect(bx, by, barWidth - barGap, barHeight);
+      visualizerCtx.fillRect(bx, by, barWidth - barGap, barHeight);
 
-      specCtx.shadowBlur = 0;
+      visualizerCtx.shadowBlur = 0;
     }
 
     animationId = requestAnimationFrame(drawVisualization);
