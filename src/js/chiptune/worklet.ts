@@ -173,7 +173,8 @@ class WorkletChannel {
         // XM quirk: choosing instrument without note resets volume/panning but NOT envelopes/position
         if (note.note === null) {
           this.volume = this.baseVolume;
-          if (inst.samples.length > 0) {
+          // MOD files use fixed channel panning; only XM/IT use sample-based panning overrides.
+          if (this.worklet.mod!.type !== 'MOD' && inst.samples.length > 0) {
             this.panning = inst.samples[0].panning;
           }
         }
@@ -725,9 +726,16 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
     if (this.position >= this.mod!.length || this.position < 0) this.position = this.mod!.restartPosition || 0;
     const patIdx = this.mod!.patternTable[this.position];
     const pat = this.mod!.patterns[patIdx];
-    if (pat && pat.rows[this.rowIndex]) {
+    if (pat) {
       this.currentRowNotes = pat.rows[this.rowIndex].notes;
-      this.channels.forEach((ch, i) => { if (this.currentRowNotes[i]) ch.trigger(this.currentRowNotes[i]); });
+      this.channels.forEach((ch, i) => { 
+        // Reset row-specific slide memory before processing new row/note
+        ch.volSlideSpeed = 0;
+        ch.panningSlide = 0;
+        ch.vibratoDepth = 0; // Standard trackers reset these unless re-triggered
+        
+        if (this.currentRowNotes[i]) ch.trigger(this.currentRowNotes[i]); 
+      });
     }
     const activeChannels = this.channels.map(ch => ch.playing && ch.volume > 0);
     const channelInstruments = this.channels.map(ch => ch.instrument?.index ?? 0);
@@ -765,8 +773,8 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         rOut += r; 
       });
       
-      if (leftChannel) leftChannel[i] = Math.tanh(lOut * 0.45 * this.masterVolume);
-      if (rightChannel) rightChannel[i] = Math.tanh(rOut * 0.45 * this.masterVolume);
+      if (leftChannel) leftChannel[i] = Math.tanh(lOut * 0.42 * this.masterVolume);
+      if (rightChannel) rightChannel[i] = Math.tanh(rOut * 0.42 * this.masterVolume);
     }
     return true;
   }
