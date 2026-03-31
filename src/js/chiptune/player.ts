@@ -172,7 +172,9 @@ export class ChiptunePlayer {
 
     try {
       await this.audioContext.audioWorklet.addModule(workletUrl);
-      this.workletNode = new AudioWorkletNode(this.audioContext, 'chiptune-worklet');
+      this.workletNode = new AudioWorkletNode(this.audioContext, 'chiptune-worklet', {
+        outputChannelCount: [2]
+      });
       this.workletNode.port.onmessage = (e) => {
         if (e.data.type === 'row') {
           this.currentPatternIdx = e.data.position;

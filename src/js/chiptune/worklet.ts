@@ -618,7 +618,7 @@ class WorkletChannel {
       return [0, 0];
     }
     let sIdx = Math.floor(this.sampleIndex);
-    const raw = this.sample.data[sIdx] / 128;
+    let raw = this.sample.data[sIdx] / 128.0;
     this.sampleIndex += this.sampleSpeed;
     let vol = (this.volume / 64) * (this.sample.volume / 64) * (this.worklet.globalVolume / 64);
     if (this.tremorOn) {
@@ -677,9 +677,9 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
           }
           this.channels.push(ch);
         }
-        this.position = 0;
+        this.position = this.mod!.restartPosition || 0;
         this.rowIndex = 0;
-        this.tick = this.ticksPerRow - 1;
+        this.tick = this.ticksPerRow - 1; // Trigger first row Row 0 Tick 0 immediately
         this.playing = true;
       } else if (data.type === 'stop') {
         this.playing = false;
