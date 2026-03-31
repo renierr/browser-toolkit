@@ -3,6 +3,8 @@ import { parseModule } from '../../js/chiptune/parser';
 import { SidParser } from '../../js/chiptune/sid-parser';
 import { SidPlayer } from '../../js/chiptune/sid-player';
 import type { ModuleFile } from '../../js/chiptune/types';
+import { getAllModules, saveModule, deleteModule } from '../../js/chiptune/archive';
+import { showMessage } from '../../js/ui';
 
 // good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
 
@@ -105,15 +107,21 @@ function getElements(): Record<string, HTMLElement | null> {
     'samples-container': document.getElementById('samples-container'),
     'samples-chevron': document.getElementById('samples-chevron'),
     'btn-clear': document.getElementById('btn-clear'),
+    'btn-archive': document.getElementById('btn-archive'),
+    'archive-count': document.getElementById('archive-count'),
+    'archive-list': document.getElementById('archive-list'),
   };
 }
 
 import type { SharedFilesPayload } from '../../js/share-target';
+import { setupFileDropzone } from '../../js/file-utils';
 
 export default function init(payload?: SharedFilesPayload): () => void {
-  let player: ChiptunePlayer | any = null;
+  let player: ChiptunePlayer | null = null;
   let animationId: number | null = null;
   let shouldVisualize = false;
+  let currentFile: File | null = null;
+  let currentFormat: string = '';
 
   const container = document.getElementById('chiptune-player');
   if (!container) return () => {};
@@ -146,7 +154,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   setupPlayerCallbacks(player, elements);
 
-  const dropzone = elements['dropzone'];
+  const dropzone = elements['dropzone'] as HTMLElement;
   const fileInput = elements['file-input'] as HTMLInputElement | null;
   const btnPlay = elements['btn-play'] as HTMLButtonElement | null;
   const btnStop = elements['btn-stop'] as HTMLButtonElement | null;
@@ -163,149 +171,111 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const sampleList = elements['sample-list'];
   const samplesChevron = elements['samples-chevron'];
   const btnClear = elements['btn-clear'] as HTMLButtonElement | null;
+  const btnArchive = elements['btn-archive'] as HTMLButtonElement | null;
+  const archiveCount = elements['archive-count'];
+  const archiveList = elements['archive-list'];
 
   const visualizerCanvas = document.getElementById('visualizer') as HTMLCanvasElement;
   const visualizerCtx = visualizerCanvas.getContext('2d');
+  
+  const onFile = async (fileList: FileList): Promise<void> => {
+    if (fileList.length === 0) return;
+    const file = fileList[0];
+    const buffer = await file.arrayBuffer();
+    const data = new Uint8Array(buffer);
+    const mod = parseModule(data);
+    player!.stop();
+    player!.loadModule(mod);
+    currentFile = file;
+    currentFormat = mod.type;
+    updateModuleInfo(mod, elements);
+    updateChannelActivity(elements, mod.channels);
+    enableControls(elements);
+    player!.setSpeed(mod.defaultSpeed);
+    dropzone?.classList.add('hidden');
+  };
 
-  if (dropzone && fileInput) {
-    const onFile = async (fileList: FileList): Promise<void> => {
-      if (fileList.length === 0) return;
-      const file = fileList[0];
-      const buffer = await file.arrayBuffer();
-      const data = new Uint8Array(buffer);
-      const ext = file.name.split('.').pop()?.toLowerCase();
-      if (ext === 'sid') {
-        try {
-          if (player) {
-            player.stop();
-            player = null as any;
-          }
-          const sidMod = new SidParser(data).parse();
-
-          if (!(window as any).sidAudioCtx) {
-            (window as any).sidAudioCtx = new AudioContext();
-          }
-          const actx = (window as any).sidAudioCtx as AudioContext;
-          if (actx.state === 'suspended') actx.resume();
-
-          const sidPlayer = new SidPlayer();
-          console.log(
-            '[SID] Loading module:',
-            sidMod.title,
-            'playAddr:',
-            sidMod.playAddr.toString(16)
-          );
-          sidPlayer.loadModule(sidMod, actx.sampleRate);
-          console.log('[SID] Module loaded, sampleRate:', actx.sampleRate);
-
-          await actx.audioWorklet.addModule('/sid-worklet-processor.js');
-          console.log('[SID] Worklet loaded');
-          const sidWorklet = new AudioWorkletNode(actx, 'sid-worklet-processor');
-
-          const analyser = actx.createAnalyser();
-          analyser.fftSize = 2048;
-
-          sidWorklet.connect(analyser);
-          analyser.connect(actx.destination);
-
-          const renderBufferSize = 4096;
-          const renderBuffer = new Float32Array(renderBufferSize);
-          let renderAnimationId: number | null = null;
-
-          const renderLoop = () => {
-            try {
-              sidPlayer.render(renderBuffer, renderBufferSize);
-              const max = Math.max(...renderBuffer);
-              if (max > 0.01) console.log('[SID] Audio output, max:', max.toFixed(4));
-              sidWorklet.port.postMessage({ type: 'audio', data: renderBuffer });
-            } catch (e) {
-              console.error('SID render error', e);
-            }
-            if (sidPlayer.isPlaying) {
-              renderAnimationId = requestAnimationFrame(renderLoop);
-            }
-          };
-
-          sidPlayer.start();
-          renderLoop();
-
-          (player as any) = {
-            stop: () => {
-              sidPlayer.stop();
-              if (renderAnimationId) cancelAnimationFrame(renderAnimationId);
-              sidWorklet.port.postMessage({ type: 'stop' });
-              sidWorklet.disconnect();
-              analyser.disconnect();
-            },
-            getIsPlaying: () => sidPlayer.isPlaying,
-            play: () => {
-              actx.resume();
-              sidPlayer.start();
-              renderLoop();
-            },
-            pause: () => {
-              sidPlayer.stop();
-              if (renderAnimationId) cancelAnimationFrame(renderAnimationId);
-            },
-            setSpeed: () => {},
-            getTotalRows: () => 1,
-            getModule: () => ({ rowsPerPattern: 64, defaultSpeed: 1 }),
-            getAnalyser: () => analyser,
-          };
-
-          const elements = getElements();
-          if (elements['format-badge']) elements['format-badge'].textContent = 'SID';
-          if (elements['song-title'])
-            elements['song-title'].textContent = sidMod.title + ' by ' + sidMod.author;
-          if (elements['default-bpm']) elements['default-bpm'].textContent = 'N/A';
-          if (elements['file-info']) elements['file-info'].classList.remove('hidden');
-          enableControls(elements);
-          dropzone?.classList.add('hidden');
-        } catch (e) {
-          console.error('SID parse error', e);
-        }
-        return;
-      }
-
-      const mod = parseModule(data);
-      if (!player || !(player instanceof ChiptunePlayer)) {
-        if (player && (player as any).stop) (player as any).stop();
-        player = new ChiptunePlayer();
-        setupPlayerCallbacks(player, elements);
-      }
-      player.loadModule(mod);
-      updateModuleInfo(mod, elements);
-      updateChannelActivity(elements, mod.channels);
-      enableControls(elements);
-      player!.setSpeed(mod.defaultSpeed);
-      dropzone?.classList.add('hidden');
-    };
-
-    if (payload && payload.sharedFiles && payload.sharedFiles.length > 0) {
-      setTimeout(() => {
-        const fileList = new DataTransfer();
-        fileList.items.add(payload.sharedFiles[0]);
-        onFile(fileList.files);
-      }, 100);
-    }
-
-    dropzone.addEventListener('click', () => fileInput?.click());
-    dropzone.addEventListener('dragover', (e) => {
-      e.preventDefault();
-      dropzone.classList.add('hover');
-    });
-    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('hover'));
-    dropzone.addEventListener('drop', async (e) => {
-      e.preventDefault();
-      dropzone.classList.remove('hover');
-      const files = e.dataTransfer?.files;
-      if (files) await onFile(files);
-    });
-    fileInput.addEventListener('change', async (e) => {
-      const files = (e.target as HTMLInputElement).files;
-      if (files) await onFile(files);
-    });
+  if (payload && payload.sharedFiles && payload.sharedFiles.length > 0) {
+    setTimeout(() => {
+      const fileList = new DataTransfer();
+      fileList.items.add(payload.sharedFiles[0]);
+      onFile(fileList.files);
+    }, 100);
   }
+  
+  setupFileDropzone('dropzone', 'file-input', onFile);
+
+  async function loadArchiveList(): Promise<void> {
+    if (!archiveCount || !archiveList) return;
+    const modules = await getAllModules();
+    archiveCount.textContent = String(modules.length);
+    if (modules.length === 0) {
+      archiveList.innerHTML = '<span class="text-xs opacity-50">No archived modules</span>';
+      return;
+    }
+    archiveList.innerHTML = modules
+      .map(
+        (m) => `
+      <div class="flex items-center gap-2 p-2 bg-base-300 rounded-lg cursor-pointer hover:bg-base-100 transition-colors archive-item" data-id="${m.id}">
+        <span class="badge badge-xs badge-primary">${m.format}</span>
+        <span class="flex-1 text-xs truncate">${m.title || m.fileName}</span>
+        <span class="text-xs opacity-50">${new Date(m.archivedAt).toLocaleDateString()}</span>
+        <button class="btn btn-xs btn-ghost btn-square archive-delete" data-id="${m.id}">
+          <i data-lucide="trash-2" class="w-3 h-3"></i>
+        </button>
+      </div>
+    `
+      )
+      .join('');
+  }
+
+  btnArchive?.addEventListener('click', async () => {
+    if (!currentFile || !currentFormat) return;
+    const titleEl = elements['song-title'];
+    const title = titleEl?.textContent || currentFile.name;
+    const channelsEl = elements['channel-count'];
+    const channels = channelsEl ? parseInt(channelsEl.textContent || '4') : 4;
+    const result = await saveModule(currentFile, currentFormat, title, channels);
+    if (result.success) {
+      showMessage('Module archived!', { type: 'info', timeoutMs: 3000 });
+      loadArchiveList();
+    } else if (result.exists) {
+      showMessage('Already in archive', { type: 'warning', timeoutMs: 3000 });
+    } else {
+      showMessage('Failed to archive', { type: 'alert', timeoutMs: 5000 });
+    }
+  });
+
+  archiveList?.addEventListener('click', async (e) => {
+    const target = e.target as HTMLElement;
+    const deleteBtn = target.closest('.archive-delete');
+    if (deleteBtn) {
+      const id = (deleteBtn as HTMLElement).dataset.id;
+      if (id && confirm('Delete this archived module?')) {
+        await deleteModule(id);
+        loadArchiveList();
+      }
+      return;
+    }
+    const item = target.closest('.archive-item');
+    if (item) {
+      const id = (item as HTMLElement).dataset.id;
+      if (!id) return;
+      const modules = await getAllModules();
+      const module = modules.find((m) => m.id === id);
+      if (module) {
+        const file = new File([module.fileData], module.fileName);
+        setTimeout(() => {
+          const fileList = new DataTransfer();
+          fileList.items.add(file);
+          onFile(fileList.files);
+          setTimeout(() => btnPlay?.click(), 500);
+        }, 100);
+      }
+    }
+  });
+
+  loadArchiveList();
 
   btnPlay?.addEventListener('click', () => {
     if (!player) return;
@@ -416,7 +386,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   }
 
   resizeCanvases();
-  window.addEventListener('resize', resizeCanvases);
+  visualizerCanvas.addEventListener('resize', resizeCanvases);
 
   function drawVisualization(): void {
     const width = visualizerCanvas.width;
@@ -489,7 +459,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
       visualizerCtx.shadowBlur = 0;
     }
-    
+
     // waveform
     const timeData = new Uint8Array(analyser.fftSize);
     analyser.getByteTimeDomainData(timeData);
@@ -511,7 +481,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
     visualizerCtx.lineTo(width, waveHeight / 2);
     visualizerCtx.stroke();
-
 
     animationId = requestAnimationFrame(drawVisualization);
   }

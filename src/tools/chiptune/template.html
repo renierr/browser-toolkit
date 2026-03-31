@@ -24,11 +24,29 @@
     <input type="file" id="file-input" class="hidden" accept=".mod,.xm,.it,.sid" />
   </div>
 
+  <!-- Archive Section -->
+  <div class="collapse collapse-arrow bg-base-200 rounded-lg">
+    <input type="checkbox" id="archive-toggle" />
+    <div class="collapse-title flex items-center gap-2 py-2 min-h-0 cursor-pointer">
+      <i data-lucide="archive" class="w-4 h-4"></i>
+      <span class="text-xs font-semibold">Archive</span>
+      <span id="archive-count" class="badge badge-sm badge-ghost">0</span>
+    </div>
+    <div class="collapse-content">
+      <div id="archive-list" class="space-y-2 max-h-48 overflow-y-auto py-2">
+        <span class="text-xs opacity-50">No archived modules</span>
+      </div>
+    </div>
+  </div>
+
   <!-- File Info -->
   <div id="file-info" class="hidden flex flex-wrap gap-3 p-3 bg-base-200 rounded-lg items-center">
     <div class="flex items-center gap-2">
       <span id="format-badge" class="badge badge-primary badge-sm">MOD</span>
       <span id="song-title" class="font-semibold text-sm">-</span>
+      <button id="btn-archive" class="btn btn-sm btn-ghost btn-square" title="Archive this module">
+        <i data-lucide="bookmark-plus" class="w-4 h-4"></i>
+      </button>
     </div>
     <div class="flex items-center gap-1 text-xs opacity-70">
       <span>Ch:</span>
