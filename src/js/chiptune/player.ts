@@ -101,7 +101,8 @@ export class ChiptunePlayer {
   private patternLoopCount = 0;
   private patternLoopPosition = -1;
 
-  private useWorklet = false;
+  private useWorklet = true;
+  private workletAttempted = false;
   private workletNode: AudioWorkletNode | null = null;
 
   public onPositionChange: ((pattern: number, row: number) => void) | null = null;
@@ -205,6 +206,7 @@ export class ChiptunePlayer {
   }
 
   async initWorklet(): Promise<boolean> {
+    this.workletAttempted = true;
     if (!this.audioContext) return false;
 
     if (this.audioContext.state === 'suspended') {
@@ -250,6 +252,7 @@ export class ChiptunePlayer {
       return true;
     } catch (e) {
       console.error('[ChiptunePlayer] Failed to init worklet:', e);
+      this.useWorklet = false;
       console.error(`[ChiptunePlayer] Worklet URL attempted: ${workletUrl}`);
       if (e instanceof Error && e.name === 'AbortError') {
         console.error(
@@ -307,6 +310,10 @@ export class ChiptunePlayer {
   async play(): Promise<void> {
     if (!this.audioContext || !this.module) return;
     if (this.isPlaying) return;
+
+    if (this.useWorklet && !this.workletAttempted) {
+      await this.initWorklet();
+    }
 
     if (this.audioContext.state === 'suspended') await this.audioContext.resume();
 

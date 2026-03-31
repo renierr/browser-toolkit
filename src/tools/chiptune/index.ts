@@ -128,8 +128,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const elements = getElements();
   player = new ChiptunePlayer();
 
-  let workletInitialized = false;
-
   function setupPlayerCallbacks(p: ChiptunePlayer, els: any) {
     p.onPositionChange = (pattern: number, row: number) => {
       const positionDisplay = els['position-display'];
@@ -281,15 +279,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
   btnPlay?.addEventListener('click', async () => {
     if (!player) return;
 
-    if (!workletInitialized) {
-      const success = await player.initWorklet();
-      if (success) {
-        workletInitialized = true;
-      } else {
-        console.log('[Chiptune] Using buffer-based playback');
-      }
-    }
-
     if (player.getIsPlaying()) {
       player.pause();
       btnPlay.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i>';
@@ -298,7 +287,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       await player.play();
       btnPlay.innerHTML = '<i data-lucide="pause" class="w-4 h-4"></i>';
       // Sync toggle with current player state
-      if (workletToggle) workletToggle.checked = player.getIsPlaying() && player.getIsWorkletEnabled();
+      if (workletToggle) workletToggle.checked = player.getIsWorkletEnabled();
       shouldVisualize = true;
       drawVisualization();
     }
