@@ -668,6 +668,10 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         this.channels.forEach(ch => ch.reset());
       } else if (data.type === 'setVolume') {
         this.masterVolume = data.volume;
+      } else if (data.type === 'setSpeed') {
+        this.setTicksPerRow(data.speed);
+      } else if (data.type === 'setBpm') {
+        this.setBpm(data.bpm);
       }
     };
   }

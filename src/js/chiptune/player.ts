@@ -290,9 +290,11 @@ export class ChiptunePlayer {
   }
   setSpeed(spd: number): void {
     this.speed = Math.max(1, Math.min(32, spd));
+    this.sendToWorklet('setSpeed', { speed: this.speed });
   }
   setBpm(bpm: number): void {
     this.bpm = Math.max(32, Math.min(255, bpm));
+    this.sendToWorklet('setBpm', { bpm: this.bpm });
   }
   setVolume(vol: number): void {
     this.volume = Math.max(0, Math.min(1, vol));

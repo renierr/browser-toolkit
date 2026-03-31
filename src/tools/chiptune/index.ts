@@ -30,8 +30,8 @@ function updateModuleInfo(mod: ModuleFile, elements: Record<string, HTMLElement 
     );
   if (defaultBpm) defaultBpm.textContent = String(mod.defaultBpm);
   if (fileInfo) fileInfo.classList.remove('hidden');
-  if (speedSlider) speedSlider.value = String(mod.defaultSpeed);
-  if (speedDisplay) speedDisplay.textContent = String(mod.defaultSpeed);
+  if (speedSlider) speedSlider.value = String(33 - mod.defaultSpeed);
+  if (speedDisplay) speedDisplay.textContent = String(33 - mod.defaultSpeed);
 
   if (samplesContainer) {
     samplesContainer.innerHTML =
@@ -191,6 +191,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
     updateChannelActivity(elements, mod.channels);
     enableControls(elements);
     player!.setSpeed(mod.defaultSpeed);
+    if (speedSlider) speedSlider.value = String(33 - mod.defaultSpeed);
+    if (speedDisplay) speedDisplay.textContent = String(33 - mod.defaultSpeed);
     dropzone?.classList.add('hidden');
   };
 
@@ -341,9 +343,10 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   speedSlider?.addEventListener('input', () => {
     if (!player) return;
-    const spd = parseInt(speedSlider.value);
-    player.setSpeed(spd);
-    if (speedDisplay) speedDisplay.textContent = String(spd);
+    const uiVal = parseInt(speedSlider.value);
+    const actualSpd = 33 - uiVal;
+    player.setSpeed(actualSpd);
+    if (speedDisplay) speedDisplay.textContent = String(uiVal);
   });
 
   player.onPositionChange = (pattern: number, row: number) => {
