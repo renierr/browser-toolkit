@@ -12,6 +12,7 @@ import { ScrollerVisualizer } from './visualizers/scroller-visualizer';
 import { SpectrogramVisualizer } from './visualizers/spectrogram-visualizer';
 import { TerrainVisualizer } from './visualizers/terrain-visualizer';
 import { ParticleConstellationVisualizer } from './visualizers/particle-constellation-visualizer';
+import { VUMeterVisualizer } from './visualizers/vu-meter-visualizer';
 import type { Visualizer } from './visualizers/base';
 
 // good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
@@ -196,6 +197,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     spectrogram: new SpectrogramVisualizer(),
     terrain: new TerrainVisualizer(),
     'particle-constellation': new ParticleConstellationVisualizer(),
+    'vu-meter': new VUMeterVisualizer(),
   };
 
   // Apply restored volume from settings
