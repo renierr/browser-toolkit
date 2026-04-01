@@ -181,15 +181,21 @@ export default function init(payload?: SharedFilesPayload): () => void {
         display.textContent = `Pat: ${String(patternId).padStart(2, '0')} Row: ${String(row).padStart(2, '0')}`;
       if (!mod) return;
       const seq = mod.sequence;
+      let newIdx = currentOrderIndex;
       for (let i = 0; i < seq.length; i++) {
         const idx = (currentOrderIndex + i) % seq.length;
         if (seq[idx] === patternId) {
-          currentOrderIndex = idx;
+          newIdx = idx;
           break;
         }
       }
-      renderPatternOrder();
+      if (newIdx !== currentOrderIndex) {
+        currentOrderIndex = newIdx;
+        renderTrackerGrid();
+        renderPatternOrder();
+      }
       highlightActiveRow(row);
+      scrollToActiveRow(row);
     };
     player.onChannelActivity = () => {};
   }
@@ -390,6 +396,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
     updatePlayButton();
     const display = document.getElementById('position-display');
     if (display) display.textContent = 'Pat: 00 Row: 00';
+    currentOrderIndex = 0;
+    renderTrackerGrid();
+    renderPatternOrder();
     highlightActiveRow(0);
   }
 
@@ -754,6 +763,11 @@ export default function init(payload?: SharedFilesPayload): () => void {
   function scrollSelectedRowIntoView() {
     const row = document.querySelector(`#tracker-grid tr[data-row="${selectedRow}"]`);
     row?.scrollIntoView({ block: 'start' });
+  }
+
+  function scrollToActiveRow(row: number) {
+    const rowEl = document.querySelector(`#tracker-grid tr[data-row="${row}"]`);
+    rowEl?.scrollIntoView({ block: 'nearest' });
   }
 
   function highlightSelectedCell() {
