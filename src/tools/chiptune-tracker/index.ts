@@ -25,6 +25,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   let clipboard: ClipboardCell | null = null;
   let isPlaying = false;
   let isLooping = true;
+  let currentOrderIndex = 0;
   let previewCtx: AudioContext | null = null;
 
   document.getElementById('chiptune-tracker');
@@ -62,6 +63,13 @@ export default function init(payload?: SharedFilesPayload): () => void {
     const info = noteNumberToName(noteNum);
     if (!info) return '---';
     return `${info.note}${info.octave}`;
+  }
+
+  function noteToFrequency(note: string, octave: number): number {
+    const semitones = NOTE_NAMES.indexOf(note);
+    if (semitones < 0) return 0;
+    const midiNote = (octave + 1) * 12 + semitones;
+    return 440 * Math.pow(2, (midiNote - 69) / 12);
   }
 
   // ─── Module creation ───
@@ -130,6 +138,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   function handleNewModule() {
     mod = createEmptyModule();
+    currentOrderIndex = 0;
     initPlayer();
     selectedInstrument = 1;
     selectedChannel = 0;
@@ -144,6 +153,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     try {
       const buffer = await file.arrayBuffer();
       mod = parseModule(new Uint8Array(buffer));
+      currentOrderIndex = 0;
       initPlayer();
       selectedInstrument = 1;
       selectedChannel = 0;
@@ -165,10 +175,20 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   function setupPlayerCallbacks() {
     if (!player) return;
-    player.onPositionChange = (pattern: number, row: number) => {
+    player.onPositionChange = (patternId: number, row: number) => {
       const display = document.getElementById('position-display');
       if (display)
-        display.textContent = `Pat: ${String(pattern).padStart(2, '0')} Row: ${String(row).padStart(2, '0')}`;
+        display.textContent = `Pat: ${String(patternId).padStart(2, '0')} Row: ${String(row).padStart(2, '0')}`;
+      if (!mod) return;
+      const seq = mod.sequence;
+      for (let i = 0; i < seq.length; i++) {
+        const idx = (currentOrderIndex + i) % seq.length;
+        if (seq[idx] === patternId) {
+          currentOrderIndex = idx;
+          break;
+        }
+      }
+      renderPatternOrder();
       highlightActiveRow(row);
     };
     player.onChannelActivity = () => {};
@@ -334,8 +354,13 @@ export default function init(payload?: SharedFilesPayload): () => void {
       source.loopEnd = (sample.loopStart + sample.loopLength) / previewCtx.sampleRate;
     }
 
+    const targetFreq = noteToFrequency(selectedNote, selectedOctave);
+    const baseFreq = noteToFrequency('C', 4);
+    source.playbackRate.value = targetFreq / baseFreq;
+
     const gain = previewCtx.createGain();
-    gain.gain.value = 0.4;
+    gain.gain.setValueAtTime(0.4, previewCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, previewCtx.currentTime + 0.8);
 
     source.connect(gain);
     gain.connect(previewCtx.destination);
@@ -406,9 +431,11 @@ export default function init(payload?: SharedFilesPayload): () => void {
     renderTrackerGrid();
     highlightSelectedCell();
 
-    // Advance row
+    previewInstrument(selectedInstrument - 1);
+
     selectedRow = Math.min(ROWS_PER_PATTERN - 1, selectedRow + 1);
     highlightSelectedCell();
+    scrollSelectedRowIntoView();
   }
 
   function clearCell() {
@@ -472,8 +499,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   function getCurrentPatternIdx(): number {
     if (!mod) return 0;
-    const patId = mod.sequence[0] || 0;
-    return patId;
+    return mod.sequence[currentOrderIndex] ?? 0;
   }
 
   function addPattern() {
@@ -586,12 +612,10 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
     mod.sequence.forEach((patternId, idx) => {
       const btn = document.createElement('button');
-      btn.className = `btn btn-xs w-auto mb-1 sm:mb-0 sm:mr-1`;
+      btn.className = `btn btn-xs w-auto mb-1 sm:mb-0 sm:mr-1 ${idx === currentOrderIndex ? 'btn-primary' : 'btn-ghost'}`;
       btn.textContent = String(patternId).padStart(2, '0');
       btn.addEventListener('click', () => {
-        // Remove current first entry and insert at front
-        mod!.sequence.splice(idx, 1);
-        mod!.sequence.unshift(patternId);
+        currentOrderIndex = idx;
         renderPatternOrder();
         renderTrackerGrid();
       });
@@ -724,6 +748,12 @@ export default function init(payload?: SharedFilesPayload): () => void {
     selectedChannel = channel;
     selectedRow = row;
     highlightSelectedCell();
+    scrollSelectedRowIntoView();
+  }
+
+  function scrollSelectedRowIntoView() {
+    const row = document.querySelector(`#tracker-grid tr[data-row="${selectedRow}"]`);
+    row?.scrollIntoView({ block: 'start' });
   }
 
   function highlightSelectedCell() {
@@ -881,6 +911,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
         if (note) {
           selectedNote = note;
           updateNoteSelection();
+          placeNoteInCell();
         }
       });
     });
@@ -904,12 +935,14 @@ export default function init(payload?: SharedFilesPayload): () => void {
         e.preventDefault();
         selectedRow = Math.max(0, selectedRow - 1);
         highlightSelectedCell();
+        scrollSelectedRowIntoView();
         return;
       }
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         selectedRow = Math.min(ROWS_PER_PATTERN - 1, selectedRow + 1);
         highlightSelectedCell();
+        scrollSelectedRowIntoView();
         return;
       }
       if (e.key === 'ArrowLeft') {
