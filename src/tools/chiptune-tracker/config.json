@@ -1,7 +1,10 @@
 {
   "name": "Chiptune Tracker",
-  "description": "Classic 8-bit tracker interface to compose retro music with Web Audio API. Export as WAV.",
+  "description": "MOD tracker editor — load, edit, and export Amiga module files with sample-accurate playback.",
   "icon": "music",
   "sectionId": "media",
-  "order": 2
+  "order": 2,
+  "shareTarget": {
+    "accept": ["audio/x-mod", "audio/mod", "application/octet-stream"]
+  }
 }
