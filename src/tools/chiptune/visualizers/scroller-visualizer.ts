@@ -3,73 +3,92 @@ import type { Visualizer, VisualizerState } from './base';
 export class ScrollerVisualizer implements Visualizer {
   private scrollX = 0;
   private message =
-    'Hi This is a MOD player - running offline. You can add files and store them in Browser Database for later use..... search the bookmark button.    All this was possible because of AI :-) ----- happy coding';
+    'Hi, This is a MOD player - ´running offline`.      ´´You can add files and store them in Browser Database for later use.....`` search the bookmark button.    `All this was possible because of AI 😁´   -----   happy coding';
   private charWidths: number[] = [];
   private totalWidth = 0;
   private font = 'bold 80px Outfit, sans-serif';
+  private baseSpeed = 100;
+  private currentSpeedMult = 1;
 
-  draw(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    state: VisualizerState
-  ): void {
-    const { timeData, bass } = state;
-    
-    // 1. Initial Measurement (once)
+  draw(ctx: CanvasRenderingContext2D, width: number, height: number, state: VisualizerState): void {
+    const { timeData, bass, deltaTime } = state;
+
     if (this.charWidths.length === 0) {
       ctx.font = this.font;
       for (let i = 0; i < this.message.length; i++) {
-        const w = ctx.measureText(this.message[i]).width;
+        const char = this.message[i];
+        let w = ctx.measureText(char).width;
+        if (char === ' ' || w === 0) w = 25;
         this.charWidths.push(w);
         this.totalWidth += w;
       }
-      this.scrollX = width; // Start from right
-    }
-
-    // 2. Clear & Background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(0, 0, width, height);
-
-    // 3. Scroll Update
-    this.scrollX -= 3 + bass * 8; // Speed up with bass
-    if (this.scrollX < -this.totalWidth) {
       this.scrollX = width;
     }
 
-    // 4. Draw Scrolltext (Sine Bouncing)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(0, 0, width, height);
+
+    const centerX = width / 2;
+    let testX = this.scrollX;
+    let charIndex = 0;
+    for (let i = 0; i < this.charWidths.length; i++) {
+      const charW = this.charWidths[i];
+      const charCenter = testX + charW / 2;
+      if (charCenter >= centerX) {
+        charIndex = i;
+        break;
+      }
+      testX += charW;
+    }
+
+    const centerChar = this.message[charIndex];
+    if (centerChar === '`') {
+      this.currentSpeedMult = 0.5;
+    } else if (centerChar === '´') {
+      this.currentSpeedMult = 2;
+    }
+
+    const effectiveSpeed = this.baseSpeed * this.currentSpeedMult * (1 + bass * 2);
+    this.scrollX -= effectiveSpeed * deltaTime;
+
+    if (this.scrollX < -this.totalWidth) {
+      this.scrollX = width;
+      this.currentSpeedMult = 1;
+    }
+
     ctx.font = this.font;
     ctx.textBaseline = 'middle';
-    
-    let currentX = this.scrollX;
+
+    let drawX = this.scrollX;
     const time = Date.now() * 0.005;
 
     for (let i = 0; i < this.message.length; i++) {
       const char = this.message[i];
       const charW = this.charWidths[i];
-      
-      // Only draw if on screen
-      if (currentX + charW > 0 && currentX < width) {
+      if (char === '`' || char === '´') {
+        drawX += charW;
+        continue;
+      }
+
+      if (drawX + charW > 0 && drawX < width) {
         const yOffset = Math.sin(time + i * 0.2) * (height * 0.35);
         const y = height / 2 + yOffset;
-        
-        // Fancy Color (Hue Shift)
+
         const hue = (i * 10 + time * 50) % 360;
         ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
         ctx.shadowBlur = 15;
         ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
-        
-        ctx.fillText(char, currentX, y);
-        ctx.shadowBlur = 0; // Reset shadow for next perf
+
+        ctx.fillText(char, drawX, y);
+        ctx.shadowBlur = 0;
       }
-      currentX += charW;
+      drawX += charW;
     }
 
-    // 5. Waveform Overlay (On top)
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
     ctx.beginPath();
-    
+
     const sliceWidth = width / timeData.length;
     let x = 0;
 
@@ -84,7 +103,7 @@ export class ScrollerVisualizer implements Visualizer {
       }
       x += sliceWidth;
     }
-    
+
     ctx.stroke();
   }
 }
