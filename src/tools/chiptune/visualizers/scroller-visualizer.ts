@@ -3,12 +3,14 @@ import type { Visualizer, VisualizerState } from './base';
 export class ScrollerVisualizer implements Visualizer {
   private scrollX = 0;
   private message =
-    'Hi, This is a MOD player - running offline.      ´You can add files and store them in Browser Database for later use..... search the bookmark button.`    ``All this was possible because of AI :-)´´   -----   ```happy coding';
+    '👉 Hi, This is a MOD player - running offline.      ´You can add files and store them in Browser Database for later use..... search the bookmark button. 🏷️`    ``All this was possible because of AI 😁´´   -----   happy coding';
   private charWidths: number[] = [];
   private totalWidth = 0;
-  private font = 'bold 80px Outfit, sans-serif';
+  private font =
+    'bold 80px Outfit, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
   private baseSpeed = 100;
   private currentSpeedMult = 1;
+  private segmenter: Intl.Segmenter | null = null;
 
   reset(): void {
     this.scrollX = 0;
@@ -22,8 +24,12 @@ export class ScrollerVisualizer implements Visualizer {
 
     if (this.charWidths.length === 0) {
       ctx.font = this.font;
-      for (let i = 0; i < this.message.length; i++) {
-        const char = this.message[i];
+
+      // Use Intl.Segmenter for proper emoji/Unicode handling
+      this.segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
+      const segments = this.segmenter.segment(this.message);
+      for (const seg of segments) {
+        const char = seg.segment;
         let w = ctx.measureText(char).width;
         if (char === ' ' || w === 0) w = 45;
         this.charWidths.push(w);
@@ -34,26 +40,6 @@ export class ScrollerVisualizer implements Visualizer {
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.fillRect(0, 0, width, height);
-
-    const centerX = width / 2;
-    let testX = this.scrollX;
-    let charIndex = 0;
-    for (let i = 0; i < this.charWidths.length; i++) {
-      const charW = this.charWidths[i];
-      const charCenter = testX + charW / 2;
-      if (charCenter >= centerX) {
-        charIndex = i;
-        break;
-      }
-      testX += charW;
-    }
-
-    const centerChar = this.message[charIndex];
-    if (centerChar === '`') {
-      this.currentSpeedMult = 0.5;
-    } else if (centerChar === '´') {
-      this.currentSpeedMult = 2;
-    }
 
     const effectiveSpeed = this.baseSpeed * this.currentSpeedMult * (1 + bass * 2);
     this.scrollX -= effectiveSpeed * deltaTime;
@@ -69,19 +55,18 @@ export class ScrollerVisualizer implements Visualizer {
     let drawX = this.scrollX;
     const time = Date.now() * 0.005;
 
-    for (let i = 0; i < this.message.length; i++) {
-      const char = this.message[i];
-      const charW = this.charWidths[i];
-      if (char === '`' || char === '´') {
-        drawX += charW;
-        continue;
-      }
+    // Use segmenter to iterate through grapheme clusters
+    const segments = this.segmenter?.segment(this.message) ?? [];
+    let idx = 0;
+    for (const seg of segments) {
+      const char = seg.segment;
+      const charW = this.charWidths[idx];
 
       if (drawX + charW > 0 && drawX < width) {
-        const yOffset = Math.sin(time + i * 0.2) * (height * 0.35);
+        const yOffset = Math.sin(time + idx * 0.2) * (height * 0.35);
         const y = height / 2 + yOffset;
 
-        const hue = (i * 10 + time * 50) % 360;
+        const hue = (idx * 10 + time * 50) % 360;
         ctx.fillStyle = `hsl(${hue}, 100%, 70%)`;
         ctx.shadowBlur = 15;
         ctx.shadowColor = `hsl(${hue}, 100%, 50%)`;
@@ -90,6 +75,7 @@ export class ScrollerVisualizer implements Visualizer {
         ctx.shadowBlur = 0;
       }
       drawX += charW;
+      idx++;
     }
 
     ctx.lineWidth = 3;
