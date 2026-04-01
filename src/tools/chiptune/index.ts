@@ -129,6 +129,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
   let shouldVisualize = false;
   let currentFile: File | null = null;
   let currentFormat: string = '';
+  let lastFrameTime = 0;
+  const frameInterval = 1000 / 30;
 
   const container = document.getElementById('chiptune-player');
   if (!container) return () => {};
@@ -186,8 +188,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
     'grid-3d': new Grid3DVisualizer(),
     'neon-nexus': new NeonNexusVisualizer(),
     'pulse-grid': new PulseGridVisualizer(),
-    'classic': new ClassicVisualizer(),
-    'scroller': new ScrollerVisualizer(),
+    classic: new ClassicVisualizer(),
+    scroller: new ScrollerVisualizer(),
   };
 
   let currentVis = localStorage.getItem('chiptune-vis') || 'grid-3d';
@@ -365,13 +367,15 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (!player) return;
     player.setLooping(loopToggle.checked);
   });
-  
+
   workletToggle?.addEventListener('change', async () => {
     if (!player) return;
     const success = await player.setUseWorklet(workletToggle.checked);
     if (!success && workletToggle.checked) {
       workletToggle.checked = false;
-      showMessage('Failed to initialize AudioWorklet. Using standard playback.', { type: 'warning' });
+      showMessage('Failed to initialize AudioWorklet. Using standard playback.', {
+        type: 'warning',
+      });
     }
   });
 
@@ -446,6 +450,16 @@ export default function init(payload?: SharedFilesPayload): () => void {
   visualizerCanvas.addEventListener('resize', resizeCanvases);
 
   function drawVisualization(): void {
+    const now = performance.now();
+    const elapsed = now - lastFrameTime;
+
+    if (elapsed < frameInterval) {
+      animationId = requestAnimationFrame(drawVisualization);
+      return;
+    }
+
+    lastFrameTime = now - (elapsed % frameInterval);
+
     const width = visualizerCanvas.width;
     const height = visualizerCanvas.height;
 
@@ -477,7 +491,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
     animationId = requestAnimationFrame(drawVisualization);
   }
-
 
   return () => {
     if (animationId) cancelAnimationFrame(animationId);
