@@ -9,6 +9,9 @@ import { PulseGridVisualizer } from './visualizers/pulse-grid-visualizer';
 import { NeonNexusVisualizer } from './visualizers/neon-nexus-visualizer';
 import { Grid3DVisualizer } from './visualizers/grid3d-visualizer';
 import { ScrollerVisualizer } from './visualizers/scroller-visualizer';
+import { SpectrogramVisualizer } from './visualizers/spectrogram-visualizer';
+import { TerrainVisualizer } from './visualizers/terrain-visualizer';
+import { ParticleConstellationVisualizer } from './visualizers/particle-constellation-visualizer';
 import type { Visualizer } from './visualizers/base';
 
 // good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
@@ -190,6 +193,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
     'pulse-grid': new PulseGridVisualizer(),
     classic: new ClassicVisualizer(),
     scroller: new ScrollerVisualizer(),
+    spectrogram: new SpectrogramVisualizer(),
+    terrain: new TerrainVisualizer(),
+    'particle-constellation': new ParticleConstellationVisualizer(),
   };
 
   // Apply restored volume from settings
