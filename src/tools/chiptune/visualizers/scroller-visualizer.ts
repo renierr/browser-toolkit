@@ -3,12 +3,19 @@ import type { Visualizer, VisualizerState } from './base';
 export class ScrollerVisualizer implements Visualizer {
   private scrollX = 0;
   private message =
-    'Hi, This is a MOD player - ´´running offline``.      ´You can add files and store them in Browser Database for later use.....` search the bookmark button.    ``All this was possible because of AI :-)´´   -----   ```happy coding';
+    'Hi, This is a MOD player - running offline.      ´You can add files and store them in Browser Database for later use..... search the bookmark button.`    ``All this was possible because of AI :-)´´   -----   ```happy coding';
   private charWidths: number[] = [];
   private totalWidth = 0;
   private font = 'bold 80px Outfit, sans-serif';
   private baseSpeed = 100;
   private currentSpeedMult = 1;
+
+  reset(): void {
+    this.scrollX = 0;
+    this.charWidths = [];
+    this.totalWidth = 0;
+    this.currentSpeedMult = 1;
+  }
 
   draw(ctx: CanvasRenderingContext2D, width: number, height: number, state: VisualizerState): void {
     const { timeData, bass, deltaTime } = state;
@@ -18,7 +25,7 @@ export class ScrollerVisualizer implements Visualizer {
       for (let i = 0; i < this.message.length; i++) {
         const char = this.message[i];
         let w = ctx.measureText(char).width;
-        if (char === ' ' || w === 0) w = 25;
+        if (char === ' ' || w === 0) w = 45;
         this.charWidths.push(w);
         this.totalWidth += w;
       }

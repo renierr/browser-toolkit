@@ -57,7 +57,7 @@ interface ChannelState {
   panningEnvValue: number;
   keyOn: boolean;
   fadeoutVolume: number;
-  
+
   currentPeriod: number;
   targetPeriod: number;
   globalVolSlide: number;
@@ -414,7 +414,7 @@ export class ChiptunePlayer {
     if (ch.source) {
       try {
         ch.source.stop(time || 0);
-      } catch (e) { }
+      } catch (e) {}
       ch.source.disconnect();
       ch.source = null;
     }
@@ -516,7 +516,8 @@ export class ChiptunePlayer {
             // We have a new valid note
             if (!tonePorta) {
               chState.note = cell.note;
-              chState.currentPeriod = cell.period || this.calculatePeriod(cell.note, cell.instrument, chState);
+              chState.currentPeriod =
+                cell.period || this.calculatePeriod(cell.note, cell.instrument, chState);
               this.assignSample(chState, cell.note);
               chState.volume = chState.baseVolume;
               chState.vibratoPhase = 0;
@@ -658,12 +659,14 @@ export class ChiptunePlayer {
           let mod = 0;
           if (phase < 32) mod = SINE_TABLE[phase];
           else mod = -SINE_TABLE[phase - 32];
-          
-          let depthScale = (this.module && this.module.linearFrequencies) ? 4 : 1;
+
+          let depthScale = this.module && this.module.linearFrequencies ? 4 : 1;
           let delta = (mod * chState.vibratoDepth * depthScale) / 128;
-          
-          if (this.module && this.module.linearFrequencies) tickFreq = this.calculateFrequency(chState.currentPeriod + delta, chState.sample!);
-          else tickFreq = this.calculateFrequency(chState.currentPeriod + delta * 4, chState.sample!);
+
+          if (this.module && this.module.linearFrequencies)
+            tickFreq = this.calculateFrequency(chState.currentPeriod + delta, chState.sample!);
+          else
+            tickFreq = this.calculateFrequency(chState.currentPeriod + delta * 4, chState.sample!);
 
           chState.vibratoPhase += chState.vibratoSpeed / 256;
         }
@@ -687,7 +690,7 @@ export class ChiptunePlayer {
           let mod = 0;
           if (phase < 32) mod = SINE_TABLE[phase];
           else mod = -SINE_TABLE[phase - 32];
-          
+
           finalVol *= 1 + (mod * chState.tremoloDepth) / (128 * 64);
           chState.tremoloPhase += chState.tremoloSpeed / 256;
         }
@@ -703,7 +706,10 @@ export class ChiptunePlayer {
           (this.module.type === 'XM' || this.module.type === 'IT')
         ) {
           const panValue = chState.panningEnvValue;
-          chState.panNode.pan.linearRampToValueAtTime(Math.max(-1, Math.min(1, (panValue - 128) / 128)), time + tickDur);
+          chState.panNode.pan.linearRampToValueAtTime(
+            Math.max(-1, Math.min(1, (panValue - 128) / 128)),
+            time + tickDur
+          );
         }
 
         activeChannels[c] = finalVol > 0.01;
@@ -796,9 +802,14 @@ export class ChiptunePlayer {
   private calculatePeriod(note: number, instrument: number, chState: ChannelState): number {
     if (!this.module) return 0;
 
-    const inst = instrument > 0 ? this.module.instruments[instrument - 1] : (chState.instrument > 0 ? this.module.instruments[chState.instrument - 1] : null);
+    const inst =
+      instrument > 0
+        ? this.module.instruments[instrument - 1]
+        : chState.instrument > 0
+          ? this.module.instruments[chState.instrument - 1]
+          : null;
     if (!inst || inst.samples.length === 0) return 0;
-    
+
     let sIdx = 0;
     if (note >= 1 && note <= 96 && inst.sampleMap && inst.sampleMap.length >= note)
       sIdx = inst.sampleMap[note - 1];
@@ -816,8 +827,14 @@ export class ChiptunePlayer {
         const AMIGA_TABLE = [1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907];
         let n = actualNote;
         let octave = 0;
-        while (n >= 12) { n -= 12; octave++; }
-        while (n < 0) { n += 12; octave--; }
+        while (n >= 12) {
+          n -= 12;
+          octave++;
+        }
+        while (n < 0) {
+          n += 12;
+          octave--;
+        }
         let p = AMIGA_TABLE[n] / Math.pow(2, octave);
         return p * 16;
       }
@@ -826,8 +843,14 @@ export class ChiptunePlayer {
     // Standard MOD Amiga periods
     let n = note - 1 + (sample.baseNote || 0);
     let octave = 0;
-    while (n >= 12) { n -= 12; octave++; }
-    while (n < 0) { n += 12; octave--; }
+    while (n >= 12) {
+      n -= 12;
+      octave++;
+    }
+    while (n < 0) {
+      n += 12;
+      octave--;
+    }
     return (AMIGA_PERIOD_TABLE[n] || 0) / Math.pow(2, octave);
   }
 
@@ -899,22 +922,22 @@ export class ChiptunePlayer {
 
   private calculateFrequency(period: number, sample: Sample): number {
     if (!this.module || period <= 0) return 0;
-    
+
     if (this.module.type === 'IT') {
       const actualNote = period - 1;
       return (sample.c5speed || 8363) * Math.pow(2, (actualNote - 60) / 12);
     }
-    
+
     if (this.module.linearFrequencies) {
       return 8363 * Math.pow(2, (4608 - period) / 768);
     }
 
     const isXmOrIt = this.module.type === 'XM' || (this.module.type as string) === 'IT';
     const ft = sample.finetune || 0;
-    
+
     if (isXmOrIt) {
       const ftPeriod = period * Math.pow(2, -ft / (128 * 12));
-      return (this.module.clock || 7093789.2) / (ftPeriod * 2 / 16);
+      return (this.module.clock || 7093789.2) / ((ftPeriod * 2) / 16);
     } else {
       const ftPeriod = period * Math.pow(2, -ft / (8 * 12));
       return (this.module.clock || 7093789.2) / (ftPeriod * 2);
@@ -947,11 +970,11 @@ export class ChiptunePlayer {
     }
     // Effect 5: Porta + Volume Slide
     else if (effect === 0x05) {
-      if (param > 0) chState.volSlideSpeed = (param & 0xf0) ? (param >> 4) : -(param & 0x0f);
+      if (param > 0) chState.volSlideSpeed = param & 0xf0 ? param >> 4 : -(param & 0x0f);
     }
     // Effect 6: Vibrato + Volume Slide
     else if (effect === 0x06) {
-      if (param > 0) chState.volSlideSpeed = (param & 0xf0) ? (param >> 4) : -(param & 0x0f);
+      if (param > 0) chState.volSlideSpeed = param & 0xf0 ? param >> 4 : -(param & 0x0f);
     }
     // Effect 7: Tremolo
     else if (effect === 0x07) {
@@ -964,7 +987,7 @@ export class ChiptunePlayer {
     }
     // Effect A: Volume Slide
     else if (effect === 0x0a) {
-      if (param & 0xf0) chState.volSlideSpeed = (param >> 4);
+      if (param & 0xf0) chState.volSlideSpeed = param >> 4;
       else if (param & 0x0f) chState.volSlideSpeed = -(param & 0x0f);
     }
     // Effect C: Set Volume
@@ -976,14 +999,14 @@ export class ChiptunePlayer {
       const eSub = (param >> 4) & 0x0f;
       const eParam = param & 0x0f;
       if (eSub === 0x1) {
-        if (this.module?.type === 'XM' || this.module?.type === 'IT') chState.currentPeriod -= eParam * 4;
+        if (this.module?.type === 'XM' || this.module?.type === 'IT')
+          chState.currentPeriod -= eParam * 4;
         else chState.currentPeriod -= eParam;
-      }
-      else if (eSub === 0x2) {
-        if (this.module?.type === 'XM' || this.module?.type === 'IT') chState.currentPeriod += eParam * 4;
+      } else if (eSub === 0x2) {
+        if (this.module?.type === 'XM' || this.module?.type === 'IT')
+          chState.currentPeriod += eParam * 4;
         else chState.currentPeriod += eParam;
-      }
-      else if (eSub === 0x4) chState.vibratoWaveform = eParam & 3;
+      } else if (eSub === 0x4) chState.vibratoWaveform = eParam & 3;
       else if (eSub === 0x7) chState.tremoloWaveform = eParam & 3;
       else if (eSub === 0x9) chState.retrig = eParam;
       else if (eSub === 0xa) chState.volume = Math.min(chState.volume + eParam, 64);
@@ -1000,21 +1023,27 @@ export class ChiptunePlayer {
     if (effect === 0x03 || effect === 0x05) {
       const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
       const scale = isXmOrIt ? 4 : 1; // 16x period precision (4 ticks per unit shift in standard speed)
-      
+
       if (chState.currentPeriod < chState.targetPeriod) {
-        chState.currentPeriod = Math.min(chState.currentPeriod + chState.slideSpeed * scale, chState.targetPeriod);
+        chState.currentPeriod = Math.min(
+          chState.currentPeriod + chState.slideSpeed * scale,
+          chState.targetPeriod
+        );
       } else if (chState.currentPeriod > chState.targetPeriod) {
-        chState.currentPeriod = Math.max(chState.currentPeriod - chState.slideSpeed * scale, chState.targetPeriod);
+        chState.currentPeriod = Math.max(
+          chState.currentPeriod - chState.slideSpeed * scale,
+          chState.targetPeriod
+        );
       }
     } else if (effect === 0x01) {
-       const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
-       chState.currentPeriod -= chState.slideSpeed * (isXmOrIt ? 4 : 1);
+      const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
+      chState.currentPeriod -= chState.slideSpeed * (isXmOrIt ? 4 : 1);
     } else if (effect === 0x02) {
-       const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
-       chState.currentPeriod += chState.slideSpeed * (isXmOrIt ? 4 : 1);
+      const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
+      chState.currentPeriod += chState.slideSpeed * (isXmOrIt ? 4 : 1);
     }
 
-    if (chState.retrig > 0 && (this.currentTick % chState.retrig === 0)) {
+    if (chState.retrig > 0 && this.currentTick % chState.retrig === 0) {
       this.triggerNote(chState, this.audioContext!.currentTime);
     }
   }
@@ -1041,12 +1070,13 @@ export class ChiptunePlayer {
 
     let tickFreq = this.calculateFrequency(chState.currentPeriod, chState.sample);
     let playbackRate = tickFreq / this.audioContext.sampleRate;
-    
+
     // Initial value
     chState.source.playbackRate.setValueAtTime(Math.max(0.01, Math.min(playbackRate, 10)), time);
 
     const startOffset = chState.sampleOffset / this.audioContext.sampleRate;
-    if (startOffset > 0 && startOffset < chState.source.buffer.duration) chState.source.start(time, startOffset);
+    if (startOffset > 0 && startOffset < chState.source.buffer.duration)
+      chState.source.start(time, startOffset);
     else chState.source.start(time);
 
     chState.panNode = this.audioContext.createStereoPanner();
@@ -1055,7 +1085,7 @@ export class ChiptunePlayer {
     chState.gain = this.audioContext.createGain();
 
     // Set initial volume exactly, including global volume parity
-    let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * (this.volume) * 0.8;
+    let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * this.volume * 0.8;
     chState.gain.gain.setValueAtTime(Math.max(0, Math.min(finalVol, 1)), time);
 
     chState.source.connect(chState.panNode);
@@ -1122,7 +1152,7 @@ export class ChiptunePlayer {
       ch.volume = 0;
       ch.keyOn = false;
     }
-    
+
     // Fallback: reset rhythm timeline for instant jump
     if (this.audioContext) {
       this.nextTickTime = this.audioContext.currentTime + 0.05;
@@ -1130,17 +1160,24 @@ export class ChiptunePlayer {
 
     this.sendToWorklet('seek', {
       position: this.currentPatternIdx,
-      rowIndex: this.currentRow
+      rowIndex: this.currentRow,
     });
     if (this.onPositionChange) this.onPositionChange(this.currentPatternIdx, this.currentRow);
   }
 
   cleanup(): void {
     this.stop();
+    if (this.workletNode) {
+      this.workletNode.disconnect();
+      this.workletNode = null;
+    }
     if (this.masterGain) this.masterGain.disconnect();
+    if (this.analyser) this.analyser.disconnect();
     if (this.audioContext) {
       this.audioContext.close();
       this.audioContext = null;
     }
+    this.module = null;
+    this.channelStates = [];
   }
 }

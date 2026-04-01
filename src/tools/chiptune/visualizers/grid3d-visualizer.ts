@@ -2,17 +2,18 @@ import type { Visualizer, VisualizerState } from './base';
 
 export class Grid3DVisualizer implements Visualizer {
   private rotationY = 0;
-  private rotationX = 0.7; // Bird's-eye tilt (positive)
+  private rotationX = 0.7;
   private panning = 0;
 
-  draw(
-    ctx: CanvasRenderingContext2D,
-    width: number,
-    height: number,
-    state: VisualizerState
-  ): void {
+  reset(): void {
+    this.rotationY = 0;
+    this.rotationX = 0.7;
+    this.panning = 0;
+  }
+
+  draw(ctx: CanvasRenderingContext2D, width: number, height: number, state: VisualizerState): void {
     const { freqData, bass } = state;
-    
+
     // Config
     const focalLength = 400;
     const cameraDist = 600; // Slightly further for better framing
@@ -40,14 +41,14 @@ export class Grid3DVisualizer implements Visualizer {
       // 2. Rotate X (Tilt towards viewer)
       let ty = y * cosX - tz * sinX;
       let tz2 = y * sinX + tz * cosX;
-      
+
       // 3. Project
       const scale = focalLength / (tz2 + cameraDist);
       return {
         px: centerX + tx * scale,
         py: centerY + ty * scale,
         z: tz2,
-        scale
+        scale,
       };
     };
 
@@ -58,13 +59,13 @@ export class Grid3DVisualizer implements Visualizer {
       { x: gridSize, y: 0, z: -gridSize },
       { x: gridSize, y: 0, z: gridSize },
       { x: -gridSize, y: 0, z: gridSize },
-    ].map(p => transform(p.x, p.y, p.z));
+    ].map((p) => transform(p.x, p.y, p.z));
 
     ctx.fillStyle = 'rgba(60, 0, 0, 0.9)'; // Solid foundation
     ctx.strokeStyle = 'rgba(255, 0, 0, 0.6)';
     ctx.beginPath();
     ctx.moveTo(plateCorners[0].px, plateCorners[0].py);
-    plateCorners.forEach(c => ctx.lineTo(c.px, c.py));
+    plateCorners.forEach((c) => ctx.lineTo(c.px, c.py));
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
@@ -77,7 +78,7 @@ export class Grid3DVisualizer implements Visualizer {
         const val = freqData[binIdx] || 0;
         const bx = (c - 1.5) * 85;
         const bz = (r - 1.5) * 85;
-        
+
         // Calculate center for sorting
         const center = transform(bx, 0, bz);
         bars.push({ bx, bz, val: val / 255, id: r * 4 + c, tz: center.z });
@@ -94,7 +95,7 @@ export class Grid3DVisualizer implements Visualizer {
 
       const s = 30; // Half-width
       const { bx, bz } = bar;
-      
+
       const v = [
         transform(bx - s, 0, bz - s), // 0: bottom-back-left
         transform(bx + s, 0, bz - s), // 1: bottom-back-right
@@ -113,7 +114,7 @@ export class Grid3DVisualizer implements Visualizer {
         ctx.fillStyle = color;
         ctx.beginPath();
         ctx.moveTo(v[indices[0]].px, v[indices[0]].py);
-        indices.forEach(idx => ctx.lineTo(v[idx].px, v[idx].py));
+        indices.forEach((idx) => ctx.lineTo(v[idx].px, v[idx].py));
         ctx.closePath();
         ctx.fill();
         if (border) {

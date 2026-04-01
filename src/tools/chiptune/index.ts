@@ -447,7 +447,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
   }
 
   resizeCanvases();
-  visualizerCanvas.addEventListener('resize', resizeCanvases);
+  const resizeListener = () => resizeCanvases();
+  visualizerCanvas.addEventListener('resize', resizeListener);
 
   function drawVisualization(): void {
     const now = performance.now();
@@ -495,6 +496,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   return () => {
     if (animationId) cancelAnimationFrame(animationId);
+    visualizerCanvas.removeEventListener('resize', resizeListener);
+    const vis = visualizers[currentVis];
+    vis?.reset?.();
     player?.cleanup();
   };
 }
