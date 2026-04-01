@@ -33,9 +33,9 @@ export class ModParser extends BaseParser {
       const numStr = markerUpper.replace(/[^0-9]/g, '');
       channels = parseInt(numStr) || 4;
     } else if (markerUpper.endsWith('CN')) {
-       // StarTrekker 4CN, 8CN
-       const numStr = markerUpper.replace(/[^0-9]/g, '');
-       channels = parseInt(numStr) || 4;
+      // StarTrekker 4CN, 8CN
+      const numStr = markerUpper.replace(/[^0-9]/g, '');
+      channels = parseInt(numStr) || 4;
     } else if (['OKTA', 'OCTA', 'CD81'].includes(markerUpper)) {
       channels = 8;
     } else {

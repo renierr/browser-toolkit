@@ -1,12 +1,12 @@
 declare const AudioWorkletProcessor: any;
 declare const registerProcessor: any;
 
-import type { 
-  WorkletModule, 
-  WorkletInstrument, 
-  WorkletInstrumentSample, 
-  WorkletNote, 
-  Envelope 
+import type {
+  WorkletModule,
+  WorkletInstrument,
+  WorkletInstrumentSample,
+  WorkletNote,
+  Envelope,
 } from './types';
 
 const EFFECT_ARPEGGIO = 0x00;
@@ -31,8 +31,8 @@ const EFFECT_ENVELOPE_POS = 0x15; // L
 const EFFECT_PANNING_SLIDE = 0x19; // P
 const EFFECT_MULTI_RETRIG = 0x1b; // R
 const SINE_TABLE = [
-  0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253,
-  255, 253, 250, 244, 235, 224, 212, 197, 180, 161, 141, 120, 97, 74, 49, 24
+  0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253, 255, 253, 250, 244, 235,
+  224, 212, 197, 180, 161, 141, 120, 97, 74, 49, 24,
 ];
 
 const EFFECT_TREMOR = 0x1d;
@@ -40,26 +40,26 @@ const EFFECT_TREMOR = 0x1d;
 class WorkletChannel {
   worklet: ModPlayerWorklet;
   channelIndex: number;
-  
+
   instrument: WorkletInstrument | null = null;
   sample: WorkletInstrumentSample | null = null;
   note: number | null = null;
-  
+
   playing = false;
   keyOn = false;
-  
+
   period = 0;
   targetPeriod = 0;
   currentPeriod = 0;
-  
+
   volume = 64;
   panning = 128;
   baseVolume = 64;
-  
+
   sampleIndex = 0;
   sampleFraction = 0;
   sampleSpeed = 0;
-  
+
   vibratoPhase = 0;
   vibratoSpeed = 0;
   vibratoDepth = 0;
@@ -73,9 +73,9 @@ class WorkletChannel {
   slideSpeed = 0;
   volSlideSpeed = 0;
   fineSlideSpeed = 0;
-  
+
   arpeggioNotes: number[] = [];
-  
+
   volumeEnvTick = 0;
   panningEnvTick = 0;
   volumeEnvValue = 64;
@@ -87,7 +87,7 @@ class WorkletChannel {
   panningSlide = 0;
   tremorCounter = 0;
   tremorOn = false;
-  
+
   pendingNote: WorkletNote | null = null;
   delayNoteTick = -1;
 
@@ -141,7 +141,7 @@ class WorkletChannel {
         if (inst.samples.length > 0) {
           this.baseVolume = inst.samples[0].volume;
         }
-        
+
         // MOD quirk: choosing instrument without note restarts volume but NOT sample position (Sample Swapping)
         // XM quirk: choosing instrument without note resets volume/panning but NOT envelopes/position
         if (note.note === null) {
@@ -151,13 +151,14 @@ class WorkletChannel {
             this.panning = inst.samples[0].panning;
           }
         }
-        
+
         this.assignSample(note.note ?? this.note ?? 1);
       }
     }
 
     if (note.note !== null) {
-      if (note.note === 97) { // KeyOff
+      if (note.note === 97) {
+        // KeyOff
         this.keyOn = false;
         if (this.worklet.mod!.type === 'MOD') {
           this.playing = false;
@@ -171,12 +172,12 @@ class WorkletChannel {
           this.assignSample(note.note ?? 0);
           this.period = note.period || this.calculatePeriod(note.note ?? 0, note.instrument ?? 0);
           this.currentPeriod = this.period;
-          
+
           // FT2 quirk: only reset volume if instrument is provided
           if (note.instrument !== undefined && note.instrument > 0) {
             this.volume = this.baseVolume;
           }
-          
+
           this.sampleIndex = 0;
           this.sampleFraction = 0;
           this.keyOn = true;
@@ -196,23 +197,28 @@ class WorkletChannel {
     // Handle Volume Column (XM)
     if (note.volumeColumn !== null && note.volumeColumn !== undefined) {
       const vc = note.volumeColumn;
-      if (vc >= 0x10 && vc <= 0x50) this.volume = vc - 0x10; // Set volume
-      else if (vc >= 0x60 && vc <= 0x6f) this.volSlideSpeed = -(vc & 0x0f); // Vol slide down
-      else if (vc >= 0x70 && vc <= 0x7f) this.volSlideSpeed = (vc & 0x0f); // Vol slide up
-      else if (vc >= 0x80 && vc <= 0x8f) { // Fine vol slide down
+      if (vc >= 0x10 && vc <= 0x50)
+        this.volume = vc - 0x10; // Set volume
+      else if (vc >= 0x60 && vc <= 0x6f)
+        this.volSlideSpeed = -(vc & 0x0f); // Vol slide down
+      else if (vc >= 0x70 && vc <= 0x7f)
+        this.volSlideSpeed = vc & 0x0f; // Vol slide up
+      else if (vc >= 0x80 && vc <= 0x8f) {
+        // Fine vol slide down
         if (this.worklet.tick === 0) this.volume = Math.max(0, this.volume - (vc & 0x0f));
-      }
-      else if (vc >= 0x90 && vc <= 0x9f) { // Fine vol slide up
+      } else if (vc >= 0x90 && vc <= 0x9f) {
+        // Fine vol slide up
         if (this.worklet.tick === 0) this.volume = Math.min(64, this.volume + (vc & 0x0f));
-      }
-      else if (vc >= 0xa0 && vc <= 0xaf) this.vibratoSpeed = (vc & 0x0f) * 2;
+      } else if (vc >= 0xa0 && vc <= 0xaf) this.vibratoSpeed = (vc & 0x0f) * 2;
       else if (vc >= 0xb0 && vc <= 0xbf) {
         if (vc & 0x0f) this.vibratoDepth = vc & 0x0f;
-      }
-      else if (vc >= 0xc0 && vc <= 0xcf) this.panning = (vc & 0x0f) * 16 + 8;
-      else if (vc >= 0xd0 && vc <= 0xdf) this.panningSlide = -(vc & 0x0f); // Pan slide left
-      else if (vc >= 0xe0 && vc <= 0xef) this.panningSlide = (vc & 0x0f); // Pan slide right
-      else if (vc >= 0xf0 && vc <= 0xff) { // Tone porta
+      } else if (vc >= 0xc0 && vc <= 0xcf) this.panning = (vc & 0x0f) * 16 + 8;
+      else if (vc >= 0xd0 && vc <= 0xdf)
+        this.panningSlide = -(vc & 0x0f); // Pan slide left
+      else if (vc >= 0xe0 && vc <= 0xef)
+        this.panningSlide = vc & 0x0f; // Pan slide right
+      else if (vc >= 0xf0 && vc <= 0xff) {
+        // Tone porta
         if (vc & 0x0f) this.slideSpeed = (vc & 0x0f) * 16;
         tonePorta = true;
       }
@@ -236,15 +242,16 @@ class WorkletChannel {
 
   calculatePeriod(noteValue: number, instrumentIdx: number) {
     if (!this.worklet.mod) return 0;
-    const inst = (instrumentIdx > 0 ? this.worklet.mod.instruments[instrumentIdx - 1] : this.instrument);
+    const inst =
+      instrumentIdx > 0 ? this.worklet.mod.instruments[instrumentIdx - 1] : this.instrument;
     if (!inst || inst.samples.length === 0) return 0;
-    
+
     let sIdx = 0;
     if (inst.sampleMap && noteValue >= 1 && noteValue <= 96) sIdx = inst.sampleMap[noteValue - 1];
     const sample = inst.samples[sIdx] || inst.samples[0];
-    
-    if (this.worklet.mod.type === 'IT') return noteValue; 
-    
+
+    if (this.worklet.mod.type === 'IT') return noteValue;
+
     const actualNote = noteValue - 1 + (sample.baseNote || 0);
     const isXmOrIt = this.worklet.mod.type === 'XM' || (this.worklet.mod.type as string) === 'IT';
     if (isXmOrIt) {
@@ -254,18 +261,30 @@ class WorkletChannel {
         const AMIGA_TABLE = [1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907];
         let n = actualNote;
         let octave = 0;
-        while (n >= 12) { n -= 12; octave++; }
-        while (n < 0) { n += 12; octave--; }
+        while (n >= 12) {
+          n -= 12;
+          octave++;
+        }
+        while (n < 0) {
+          n += 12;
+          octave--;
+        }
         let p = AMIGA_TABLE[n] / Math.pow(2, octave);
         return p * 16;
       }
     }
-    
+
     const AMIGA_TABLE = [1712, 1616, 1525, 1440, 1357, 1281, 1209, 1141, 1077, 1017, 961, 907];
     let n = noteValue - 1 + (sample.baseNote || 0);
     let octave = 0;
-    while (n >= 12) { n -= 12; octave++; }
-    while (n < 0) { n += 12; octave--; }
+    while (n >= 12) {
+      n -= 12;
+      octave++;
+    }
+    while (n < 0) {
+      n += 12;
+      octave--;
+    }
     let p = AMIGA_TABLE[n] / Math.pow(2, octave);
     return p;
   }
@@ -345,13 +364,13 @@ class WorkletChannel {
         break;
       case EFFECT_GLOBAL_VOL_SLIDE:
         if (param > 0) {
-          if (param & 0xf0) this.globalVolSlide = (param >> 4);
+          if (param & 0xf0) this.globalVolSlide = param >> 4;
           else if (param & 0x0f) this.globalVolSlide = -(param & 0x0f);
         }
         break;
       case EFFECT_PANNING_SLIDE:
         if (param > 0) {
-          if (param & 0xf0) this.panningSlide = (param >> 4);
+          if (param & 0xf0) this.panningSlide = param >> 4;
           else if (param & 0x0f) this.panningSlide = -(param & 0x0f);
         }
         break;
@@ -372,26 +391,44 @@ class WorkletChannel {
         const sub = (param >> 4) & 0x0f;
         const subParam = param & 0x0f;
         switch (sub) {
-          case 0x1: 
-            if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') this.currentPeriod -= subParam * 4;
-            else this.currentPeriod -= subParam; 
+          case 0x1:
+            if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT')
+              this.currentPeriod -= subParam * 4;
+            else this.currentPeriod -= subParam;
             break;
-          case 0x2: 
-            if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') this.currentPeriod += subParam * 4;
-            else this.currentPeriod += subParam; 
+          case 0x2:
+            if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT')
+              this.currentPeriod += subParam * 4;
+            else this.currentPeriod += subParam;
             break;
-          case 0x4: this.vibratoWaveform = subParam & 3; break;
-          case 0x5: this.worklet.setPatternLoopStart(); break;
+          case 0x4:
+            this.vibratoWaveform = subParam & 3;
+            break;
+          case 0x5:
+            this.worklet.setPatternLoopStart();
+            break;
           case 0x6:
             if (subParam === 0) this.worklet.setPatternLoopStart();
             else this.worklet.setPatternLoop(subParam);
             break;
-          case 0x7: this.tremoloWaveform = subParam & 3; break;
-          case 0x9: this.retrig = subParam; break;
-          case 0xa: this.volume = Math.min(64, this.volume + subParam); break;
-          case 0xb: this.volume = Math.max(0, this.volume - subParam); break;
-          case 0xc: if (this.worklet.tick === subParam) this.volume = 0; break;
-          case 0xe: this.worklet.setPatternDelay(subParam); break;
+          case 0x7:
+            this.tremoloWaveform = subParam & 3;
+            break;
+          case 0x9:
+            this.retrig = subParam;
+            break;
+          case 0xa:
+            this.volume = Math.min(64, this.volume + subParam);
+            break;
+          case 0xb:
+            this.volume = Math.max(0, this.volume - subParam);
+            break;
+          case 0xc:
+            if (this.worklet.tick === subParam) this.volume = 0;
+            break;
+          case 0xe:
+            this.worklet.setPatternDelay(subParam);
+            break;
         }
         break;
     }
@@ -399,11 +436,11 @@ class WorkletChannel {
 
   performTick() {
     if (this.delayNoteTick !== -1) {
-       if (this.worklet.tick === this.delayNoteTick) {
-         if (this.pendingNote) this.processTrigger(this.pendingNote);
-         this.delayNoteTick = -1;
-         this.pendingNote = null;
-       }
+      if (this.worklet.tick === this.delayNoteTick) {
+        if (this.pendingNote) this.processTrigger(this.pendingNote);
+        this.delayNoteTick = -1;
+        this.pendingNote = null;
+      }
     }
 
     if (!this.playing) return;
@@ -413,20 +450,29 @@ class WorkletChannel {
         this.volume = Math.max(0, Math.min(64, this.volume + this.volSlideSpeed));
       }
       if (this.globalVolSlide !== 0) {
-        this.worklet.globalVolume = Math.max(0, Math.min(64, this.worklet.globalVolume + this.globalVolSlide));
+        this.worklet.globalVolume = Math.max(
+          0,
+          Math.min(64, this.worklet.globalVolume + this.globalVolSlide)
+        );
       }
       if (this.panningSlide !== 0) {
         this.panning = Math.max(0, Math.min(255, this.panning + this.panningSlide));
       }
-      
+
       const effect = this.worklet.currentRowNotes[this.channelIndex]?.effect;
       if (effect === EFFECT_TONE_PORTA || effect === EFFECT_TONE_PORTA_VOL) {
         if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') {
           if (this.targetPeriod !== 0) {
             if (this.currentPeriod < this.targetPeriod) {
-              this.currentPeriod = Math.min(this.currentPeriod + this.slideSpeed * 4, this.targetPeriod);
+              this.currentPeriod = Math.min(
+                this.currentPeriod + this.slideSpeed * 4,
+                this.targetPeriod
+              );
             } else {
-              this.currentPeriod = Math.max(this.currentPeriod - this.slideSpeed * 4, this.targetPeriod);
+              this.currentPeriod = Math.max(
+                this.currentPeriod - this.slideSpeed * 4,
+                this.targetPeriod
+              );
             }
           } else if (this.slideSpeed !== 0) {
             this.currentPeriod += this.slideSpeed * 4;
@@ -435,9 +481,15 @@ class WorkletChannel {
           // MOD standard periods
           if (this.targetPeriod !== 0) {
             if (this.currentPeriod < this.targetPeriod) {
-              this.currentPeriod = Math.min(this.currentPeriod + this.slideSpeed, this.targetPeriod);
+              this.currentPeriod = Math.min(
+                this.currentPeriod + this.slideSpeed,
+                this.targetPeriod
+              );
             } else {
-              this.currentPeriod = Math.max(this.currentPeriod - this.slideSpeed, this.targetPeriod);
+              this.currentPeriod = Math.max(
+                this.currentPeriod - this.slideSpeed,
+                this.targetPeriod
+              );
             }
           } else if (this.slideSpeed !== 0) {
             this.currentPeriod += this.slideSpeed;
@@ -451,45 +503,52 @@ class WorkletChannel {
         }
       }
 
-      if (this.retrig > 0 && (this.worklet.tick % this.retrig === 0)) {
+      if (this.retrig > 0 && this.worklet.tick % this.retrig === 0) {
         this.sampleIndex = 0;
       }
-      
+
       if (this.tremorOn) {
         const p = this.worklet.currentRowNotes[this.channelIndex]?.effectParam || 0;
         const p1 = (p >> 4) & 0x0f;
         const p2 = p & 0x0f;
         this.tremorCounter++;
-        if (this.tremorCounter > (p1 + p2)) this.tremorCounter = 0;
+        if (this.tremorCounter > p1 + p2) this.tremorCounter = 0;
       }
     }
 
     if (this.instrument) {
       if (this.keyOn) {
         if (this.instrument.volumeEnv) {
-          this.volumeEnvValue = this.calculateEnvelope(this.instrument.volumeEnv, this.volumeEnvTick++);
+          this.volumeEnvValue = this.calculateEnvelope(
+            this.instrument.volumeEnv,
+            this.volumeEnvTick++
+          );
         }
         if (this.instrument.panningEnv) {
-          this.panningEnvValue = this.calculateEnvelope(this.instrument.panningEnv, this.panningEnvTick++);
+          this.panningEnvValue = this.calculateEnvelope(
+            this.instrument.panningEnv,
+            this.panningEnvTick++
+          );
         }
       } else {
         if (this.instrument.volumeFadeout !== undefined && this.instrument.volumeFadeout > 0) {
-           this.fadeoutVolume = Math.max(0, this.fadeoutVolume - this.instrument.volumeFadeout);
-           if (this.fadeoutVolume <= 0) this.playing = false;
+          this.fadeoutVolume = Math.max(0, this.fadeoutVolume - this.instrument.volumeFadeout);
+          if (this.fadeoutVolume <= 0) this.playing = false;
         } else {
-           this.playing = false;
+          this.playing = false;
         }
       }
     }
 
     let renderPeriod = this.currentPeriod;
-    
+
     // Arpeggio logic
     if (this.arpeggioNotes.length > 0) {
-      const isXmOrIt = (this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT';
-      
+      const isXmOrIt =
+        (this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT';
+
       // ProTracker Arpeggio Quirk: Does not play on Tick 0
-      if (!isXmOrIt && (this.worklet.tick % this.worklet.ticksPerRow) === 0) {
+      if (!isXmOrIt && this.worklet.tick % this.worklet.ticksPerRow === 0) {
         // Stay on base note
       } else {
         const cycle = this.worklet.tick % 3;
@@ -497,35 +556,38 @@ class WorkletChannel {
         if (isXmOrIt) {
           // FT2 Arpeggio cycle: 0, y, x
           if (cycle === 0) arpNote = 0;
-          else if (cycle === 1) arpNote = this.arpeggioNotes[1]; // low nibble
+          else if (cycle === 1)
+            arpNote = this.arpeggioNotes[1]; // low nibble
           else arpNote = this.arpeggioNotes[2]; // high nibble
         } else {
           arpNote = this.arpeggioNotes[cycle];
         }
-        
+
         if (arpNote > 0) {
           if (isXmOrIt) {
-             if (this.worklet.mod!.linearFrequencies) renderPeriod -= arpNote * 16 * 4;
-             else renderPeriod /= Math.pow(2, arpNote / 12);
+            if (this.worklet.mod!.linearFrequencies) renderPeriod -= arpNote * 16 * 4;
+            else renderPeriod /= Math.pow(2, arpNote / 12);
           } else {
-             renderPeriod /= Math.pow(2, arpNote / 12);
+            renderPeriod /= Math.pow(2, arpNote / 12);
           }
         }
       }
     }
-    
+
     if (this.vibratoDepth > 0) {
       let phase = Math.floor(this.vibratoPhase * 64) & 63;
       let mod = 0;
       if (phase < 32) mod = SINE_TABLE[phase];
       else mod = -SINE_TABLE[phase - 32];
-      
-      const isXmOrIt = (this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT';
+
+      const isXmOrIt =
+        (this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT';
       let depthScale = isXmOrIt && this.worklet.mod!.linearFrequencies ? 4 : 1;
-      
-      if (this.worklet.mod!.linearFrequencies) renderPeriod += (mod * this.vibratoDepth * depthScale) / 128;
+
+      if (this.worklet.mod!.linearFrequencies)
+        renderPeriod += (mod * this.vibratoDepth * depthScale) / 128;
       else renderPeriod += (mod * this.vibratoDepth * depthScale * 4) / 128; // Amiga periods use *4 in FT2 scale
-      
+
       this.vibratoPhase += this.vibratoSpeed / 256;
     }
 
@@ -537,18 +599,23 @@ class WorkletChannel {
     if (this.instrument?.volumeEnv) {
       const volEnv = this.instrument.volumeEnv;
       const points = volEnv.points;
-      if ((volEnv.type & 4) && volEnv.loopEnd !== undefined && volEnv.loopEnd < points.length) {
+      if (volEnv.type & 4 && volEnv.loopEnd !== undefined && volEnv.loopEnd < points.length) {
         const loopEndTick = points[volEnv.loopEnd].tick;
         const loopStartTick = points[volEnv.loopStart ?? 0]?.tick ?? 0;
         if (tick >= loopEndTick) {
-          tick = loopStartTick + (tick - loopStartTick) % (loopEndTick - loopStartTick + 1);
+          tick = loopStartTick + ((tick - loopStartTick) % (loopEndTick - loopStartTick + 1));
         }
       }
-      if (this.keyOn && (volEnv.type & 2) && volEnv.sustainStart !== undefined && volEnv.sustainStart < points.length) {
+      if (
+        this.keyOn &&
+        volEnv.type & 2 &&
+        volEnv.sustainStart !== undefined &&
+        volEnv.sustainStart < points.length
+      ) {
         const susTick = points[volEnv.sustainStart].tick;
         if (tick >= susTick) tick = susTick;
       }
-      
+
       if (tick <= points[0].tick) return points[0].value;
       for (let i = 0; i < points.length - 1; i++) {
         if (tick <= points[i + 1].tick) {
@@ -574,7 +641,7 @@ class WorkletChannel {
     const isXmOrIt = this.worklet.mod!.type === 'XM' || (this.worklet.mod!.type as string) === 'IT';
     if (isXmOrIt) {
       period *= Math.pow(2, -ft / (128 * 12));
-      return (this.worklet.mod!.clock || 7093789.2) / (period * 2 / 16); 
+      return (this.worklet.mod!.clock || 7093789.2) / ((period * 2) / 16);
     } else {
       period *= Math.pow(2, -ft / (8 * 12));
       return (this.worklet.mod!.clock || 7093789.2) / (period * 2);
@@ -582,10 +649,13 @@ class WorkletChannel {
   }
 
   nextSample(): [number, number] {
-    if (!this.playing || !this.sample || !this.sample.data || this.sample.data.length === 0) return [0, 0];
+    if (!this.playing || !this.sample || !this.sample.data || this.sample.data.length === 0)
+      return [0, 0];
     if (this.sample.loopLength > 2) {
       const loopEnd = this.sample.loopStart + this.sample.loopLength;
-      if (this.sampleIndex >= loopEnd) this.sampleIndex = this.sample.loopStart + (this.sampleIndex - loopEnd) % this.sample.loopLength;
+      if (this.sampleIndex >= loopEnd)
+        this.sampleIndex =
+          this.sample.loopStart + ((this.sampleIndex - loopEnd) % this.sample.loopLength);
     } else if (this.sampleIndex >= this.sample.length) {
       this.playing = false;
       return [0, 0];
@@ -599,13 +669,13 @@ class WorkletChannel {
       if (this.tremorCounter > ((p >> 4) & 0x0f)) vol = 0;
     }
     if (this.instrument) vol *= (this.volumeEnvValue / 64) * (this.fadeoutVolume / 32768);
-    
+
     // Equal Power Panning Law: L = Vol * cos(theta), R = Vol * sin(theta)
     // theta = (panning/255) * (PI/2)
     const panTheta = (this.panning / 255) * (Math.PI / 2);
     const l = raw * vol * Math.cos(panTheta);
     const r = raw * vol * Math.sin(panTheta);
-    
+
     return [l, r];
   }
 }
@@ -646,7 +716,7 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
           const ch = new WorkletChannel(this, i);
           // Standard Amiga panning: LRRL (Channels 0, 3 Left-ish; 1, 2 Right-ish)
           if (this.mod!.type === 'MOD') {
-             ch.panning = (i % 4 === 1 || i % 4 === 2) ? 200 : 56;
+            ch.panning = i % 4 === 1 || i % 4 === 2 ? 200 : 56;
           }
           this.channels.push(ch);
         }
@@ -657,15 +727,17 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
       } else if (data.type === 'stop') {
         this.playing = false;
         // Optional: clear active channel output to avoid buzzing
-        this.channels.forEach(ch => ch.playing = false); 
+        this.channels.forEach((ch) => (ch.playing = false));
       } else if (data.type === 'resume') {
         this.playing = true;
-        this.channels.forEach(ch => { if (ch.sample) ch.playing = true; });
+        this.channels.forEach((ch) => {
+          if (ch.sample) ch.playing = true;
+        });
       } else if (data.type === 'seek') {
         this.position = data.position;
         this.rowIndex = data.rowIndex - 1;
         this.tick = this.ticksPerRow;
-        this.channels.forEach(ch => ch.reset());
+        this.channels.forEach((ch) => ch.reset());
       } else if (data.type === 'setVolume') {
         this.masterVolume = data.volume;
       } else if (data.type === 'setSpeed') {
@@ -676,23 +748,39 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
     };
   }
 
-  setTicksPerRow(tpr: number) { 
+  setTicksPerRow(tpr: number) {
     this.ticksPerRow = tpr || 6;
     this.port.postMessage({ type: 'speed', speed: this.ticksPerRow });
   }
-  setBpm(bpm: number) { 
-    this.bpm = bpm || 125; 
+  setBpm(bpm: number) {
+    this.bpm = bpm || 125;
     this.outputsPerTick = (this.sampleRate * 2.5) / this.bpm;
     this.port.postMessage({ type: 'bpm', bpm: this.bpm });
   }
-  setPatternBreak(row: number) { this.jumpRowIndex = row; if (this.jumpPosition === -1) this.jumpPosition = this.position + 1; }
-  setPatternJump(pos: number) { this.jumpPosition = pos; this.jumpRowIndex = 0; }
-  setPatternLoopStart() { this.patternLoopRow = this.rowIndex; this.patternLoopPosition = this.position; }
-  setPatternLoop(count: number) { this.patternLoopCount = count; }
-  setPatternDelay(frames: number) { this.patternDelay = frames; }
+  setPatternBreak(row: number) {
+    this.jumpRowIndex = row;
+    if (this.jumpPosition === -1) this.jumpPosition = this.position + 1;
+  }
+  setPatternJump(pos: number) {
+    this.jumpPosition = pos;
+    this.jumpRowIndex = 0;
+  }
+  setPatternLoopStart() {
+    this.patternLoopRow = this.rowIndex;
+    this.patternLoopPosition = this.position;
+  }
+  setPatternLoop(count: number) {
+    this.patternLoopCount = count;
+  }
+  setPatternDelay(frames: number) {
+    this.patternDelay = frames;
+  }
 
   nextRow() {
-    if (this.patternDelay > 0) { this.patternDelay--; return; }
+    if (this.patternDelay > 0) {
+      this.patternDelay--;
+      return;
+    }
     if (this.jumpPosition !== -1) {
       this.position = this.jumpPosition;
       this.rowIndex = this.jumpRowIndex !== -1 ? this.jumpRowIndex : 0;
@@ -710,28 +798,29 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         this.position++;
       }
     }
-    if (this.position >= this.mod!.length || this.position < 0) this.position = this.mod!.restartPosition || 0;
+    if (this.position >= this.mod!.length || this.position < 0)
+      this.position = this.mod!.restartPosition || 0;
     const patIdx = this.mod!.patternTable[this.position];
     const pat = this.mod!.patterns[patIdx];
     if (pat) {
       this.currentRowNotes = pat.rows[this.rowIndex].notes;
-      this.channels.forEach((ch, i) => { 
+      this.channels.forEach((ch, i) => {
         // Reset row-specific slide memory before processing new row/note
         ch.volSlideSpeed = 0;
         ch.panningSlide = 0;
         ch.vibratoDepth = 0; // Standard trackers reset these unless re-triggered
-        
-        if (this.currentRowNotes[i]) ch.trigger(this.currentRowNotes[i]); 
+
+        if (this.currentRowNotes[i]) ch.trigger(this.currentRowNotes[i]);
       });
     }
-    const activeChannels = this.channels.map(ch => ch.playing && ch.volume > 0);
-    const channelInstruments = this.channels.map(ch => ch.instrument?.index ?? 0);
-    this.port.postMessage({ 
-      type: 'row', 
-      position: this.position, 
+    const activeChannels = this.channels.map((ch) => ch.playing && ch.volume > 0);
+    const channelInstruments = this.channels.map((ch) => ch.instrument?.index ?? 0);
+    this.port.postMessage({
+      type: 'row',
+      position: this.position,
       rowIndex: this.rowIndex,
       activeChannels,
-      channelInstruments
+      channelInstruments,
     });
   }
 
@@ -739,27 +828,31 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
     if (!this.playing || !this.mod) return true;
     const output = outputs[0];
     if (!output || output.length === 0) return true;
-    
+
     const leftChannel = output[0];
     const rightChannel = output[1];
     const numSamples = leftChannel.length;
-    
+
     for (let i = 0; i < numSamples; i++) {
       if (this.outputsUntilNextTick <= 0) {
         this.tick++;
-        if (this.tick >= this.ticksPerRow) { this.tick = 0; this.nextRow(); }
-        this.channels.forEach(ch => ch.performTick());
+        if (this.tick >= this.ticksPerRow) {
+          this.tick = 0;
+          this.nextRow();
+        }
+        this.channels.forEach((ch) => ch.performTick());
         this.outputsUntilNextTick += this.outputsPerTick;
       }
       this.outputsUntilNextTick--;
-      
-      let lOut = 0, rOut = 0;
-      this.channels.forEach(ch => { 
-        const [l, r] = ch.nextSample(); 
-        lOut += l; 
-        rOut += r; 
+
+      let lOut = 0,
+        rOut = 0;
+      this.channels.forEach((ch) => {
+        const [l, r] = ch.nextSample();
+        lOut += l;
+        rOut += r;
       });
-      
+
       if (leftChannel) leftChannel[i] = Math.tanh(lOut * 0.42 * this.masterVolume);
       if (rightChannel) rightChannel[i] = Math.tanh(rOut * 0.42 * this.masterVolume);
     }

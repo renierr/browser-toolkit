@@ -87,14 +87,26 @@
     <div class="divider divider-horizontal mx-0 h-6"></div>
 
     <label class="flex items-center gap-2 cursor-pointer">
-      <input type="checkbox" id="loop-toggle" class="toggle toggle-xs" checked data-setting="loop"/>
+      <input
+        type="checkbox"
+        id="loop-toggle"
+        class="toggle toggle-xs"
+        checked
+        data-setting="loop"
+      />
       <span class="text-xs">Loop</span>
     </label>
 
     <div class="divider divider-horizontal mx-0 h-6"></div>
 
     <label class="flex items-center gap-2 cursor-pointer" title="Enable AudioWorklet playback">
-      <input type="checkbox" id="worklet-toggle" class="toggle toggle-xs toggle-secondary" data-setting="worklet" checked/>
+      <input
+        type="checkbox"
+        id="worklet-toggle"
+        class="toggle toggle-xs toggle-secondary"
+        data-setting="worklet"
+        checked
+      />
       <span class="text-xs">Worklet</span>
     </label>
 
@@ -148,7 +160,11 @@
   <div class="flex flex-col gap-1 px-1 h-40">
     <div class="flex items-center justify-between">
       <span class="text-xs font-semibold opacity-70">Visualization</span>
-      <select id="vis-selector" data-setting="visualizer" class="select select-ghost select-xs text-xs h-6 min-h-0 bg-base-300">
+      <select
+        id="vis-selector"
+        data-setting="visualizer"
+        class="select select-ghost select-xs text-xs h-6 min-h-0 bg-base-300"
+      >
         <option value="grid-3d">3D Grid (Rotating)</option>
         <option value="neon-nexus">Neon Nexus (Radial)</option>
         <option value="scroller">Sine Scroller</option>
