@@ -1,6 +1,6 @@
 import { ChiptunePlayer } from '../../js/chiptune/player';
 import { parseModule } from '../../js/chiptune/parser';
-import type { ModuleFile, Instrument as ModInstrument } from '../../js/chiptune/types';
+import type { ModuleFile, Instrument as ModInstrument, Note } from '../../js/chiptune/types';
 import { downloadFile } from '../../js/file-utils';
 import type { SharedFilesPayload } from '../../js/share-target';
 
@@ -11,6 +11,8 @@ type ClipboardCell = {
   note: number | null;
   instrument: number;
   volume: number | null;
+  effect: number;
+  effectParam: number;
 };
 
 export default function init(payload?: SharedFilesPayload): () => void {
@@ -22,17 +24,22 @@ export default function init(payload?: SharedFilesPayload): () => void {
   let selectedVolume = 64;
   let selectedChannel = 0;
   let selectedRow = 0;
+  let selectedCol: 'note' | 'ins' | 'vol' | 'effect' | 'param' = 'note';
   let clipboard: ClipboardCell | null = null;
   let isPlaying = false;
   let isLooping = true;
   let currentOrderIndex = 0;
   let previewCtx: AudioContext | null = null;
+  let activeRow = -1;
+  let orderDragIndex: number | null = null;
+  let orderDragOverIndex: number | null = null;
 
-  document.getElementById('chiptune-tracker');
+  const viewport = document.getElementById('tracker-viewport');
 
   setupEventListeners();
   updateNoteSelection();
   updateOctaveSelection();
+  renderPianoKeys();
 
   if (payload?.sharedFiles?.length) {
     setTimeout(() => handleLoadMod(payload.sharedFiles![0]), 100);
@@ -58,11 +65,11 @@ export default function init(payload?: SharedFilesPayload): () => void {
     return octave * 12 + idx + 1;
   }
 
-  function formatNote(noteNum: number | null): string {
+  function formatNoteCompact(noteNum: number | null): string {
     if (!noteNum || noteNum === 97) return noteNum === 97 ? '^^^' : '---';
     const info = noteNumberToName(noteNum);
     if (!info) return '---';
-    return `${info.note}${info.octave}`;
+    return `${info.note.padEnd(2, '-')}${info.octave}`;
   }
 
   function noteToFrequency(note: string, octave: number): number {
@@ -87,25 +94,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
     const patterns: ModuleFile['patterns'] = [];
     for (let p = 0; p < 4; p++) {
-      const rows: {
-        note: number | null;
-        period: number | null;
-        instrument: number;
-        volume: number | null;
-        volumeColumn: number | null;
-        effect: number;
-        effectParam: number;
-      }[][] = [];
+      const rows: Note[][] = [];
       for (let r = 0; r < ROWS_PER_PATTERN; r++) {
-        const row: {
-          note: number | null;
-          period: number | null;
-          instrument: number;
-          volume: number | null;
-          volumeColumn: number | null;
-          effect: number;
-          effectParam: number;
-        }[] = [];
+        const row: Note[] = [];
         for (let c = 0; c < 4; c++) {
           row.push({
             note: null,
@@ -178,7 +169,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     player.onPositionChange = (patternId: number, row: number) => {
       const display = document.getElementById('position-display');
       if (display)
-        display.textContent = `Pat: ${String(patternId).padStart(2, '0')} Row: ${String(row).padStart(2, '0')}`;
+        display.textContent = `${String(patternId).padStart(2, '0')}:${String(row).padStart(2, '0')}`;
       if (!mod) return;
       const seq = mod.sequence;
       let newIdx = currentOrderIndex;
@@ -194,13 +185,14 @@ export default function init(payload?: SharedFilesPayload): () => void {
         renderTrackerGrid();
         renderPatternOrder();
       }
+      activeRow = row;
       highlightActiveRow(row);
       scrollToActiveRow(row);
     };
     player.onChannelActivity = () => {};
   }
 
-  // ─── MOD Export ───
+  // ─── MOD Export (Fixed) ───
 
   function handleExportMod() {
     if (!mod) return;
@@ -234,17 +226,19 @@ export default function init(payload?: SharedFilesPayload): () => void {
       }
 
       if (sampleData) {
-        const len = Math.min(sampleData.length, 0xffff);
-        sample[22] = (len >> 8) & 0xff;
-        sample[23] = len & 0xff;
+        // MOD stores lengths in WORDS (2-byte units), big-endian
+        const lenWords = Math.min(Math.floor(sampleData.length / 2), 0xffff);
+        sample[22] = (lenWords >> 8) & 0xff;
+        sample[23] = lenWords & 0xff;
         sample[24] = sampleData.finetune & 0x0f;
         sample[25] = Math.min(sampleData.volume, 64);
-        const loopStart = Math.min(sampleData.loopStart, 0xffff);
-        sample[26] = (loopStart >> 8) & 0xff;
-        sample[27] = loopStart & 0xff;
-        const loopLen = Math.min(sampleData.loopLength, 0xffff);
-        sample[28] = (loopLen >> 8) & 0xff;
-        sample[29] = loopLen & 0xff;
+        // Loop start/length also in words
+        const loopStartWords = Math.min(Math.floor(sampleData.loopStart / 2), 0xffff);
+        sample[26] = (loopStartWords >> 8) & 0xff;
+        sample[27] = loopStartWords & 0xff;
+        const loopLenWords = Math.min(Math.floor(sampleData.loopLength / 2), 0xffff);
+        sample[28] = (loopLenWords >> 8) & 0xff;
+        sample[29] = loopLenWords & 0xff;
       }
 
       parts.push(sample);
@@ -300,7 +294,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       }
     }
 
-    // Sample data
+    // Sample data (must be word-aligned)
     for (let i = 0; i < 31; i++) {
       const inst = m.instruments[i];
       const sampleData = inst?.samples[0];
@@ -311,6 +305,10 @@ export default function init(payload?: SharedFilesPayload): () => void {
           int8[j] = Math.max(-128, Math.min(127, Math.round(sampleData.data[j] * 127)));
         }
         parts.push(new Uint8Array(int8.buffer));
+        // Word-align: pad to even length
+        if (len % 2 !== 0) {
+          parts.push(new Uint8Array([0]));
+        }
       }
     }
 
@@ -393,13 +391,14 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (!player) return;
     player.stop();
     isPlaying = false;
+    activeRow = -1;
     updatePlayButton();
     const display = document.getElementById('position-display');
-    if (display) display.textContent = 'Pat: 00 Row: 00';
+    if (display) display.textContent = '00:00';
     currentOrderIndex = 0;
     renderTrackerGrid();
     renderPatternOrder();
-    highlightActiveRow(0);
+    highlightActiveRow(-1);
   }
 
   function toggleLoop() {
@@ -413,8 +412,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
     const btn = document.getElementById('btn-play');
     if (btn) {
       btn.innerHTML = isPlaying
-        ? '<i data-lucide="pause" class="w-4 h-4"></i>'
-        : '<i data-lucide="play" class="w-4 h-4"></i>';
+        ? '<i data-lucide="pause" class="w-3.5 h-3.5"></i>'
+        : '<i data-lucide="play" class="w-3.5 h-3.5"></i>';
     }
   }
 
@@ -480,6 +479,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
       note: cell.note,
       instrument: cell.instrument,
       volume: cell.volume,
+      effect: cell.effect,
+      effectParam: cell.effectParam,
     };
   }
 
@@ -495,10 +496,36 @@ export default function init(payload?: SharedFilesPayload): () => void {
     cell.note = clipboard.note;
     cell.instrument = clipboard.instrument;
     cell.volume = clipboard.volume;
+    cell.effect = clipboard.effect;
+    cell.effectParam = clipboard.effectParam;
 
     if (clipboard.note && clipboard.note > 0) {
       cell.period = calculatePeriod(clipboard.note);
     }
+
+    renderTrackerGrid();
+    highlightSelectedCell();
+  }
+
+  function applyEffect() {
+    if (!mod) return;
+    const effectInput = document.getElementById('effect-input') as HTMLInputElement;
+    const paramInput = document.getElementById('effect-param-input') as HTMLInputElement;
+
+    const effectHex = parseInt(effectInput.value || '0', 16);
+    const paramHex = parseInt(paramInput.value || '0', 16);
+
+    if (isNaN(effectHex) || isNaN(paramHex)) return;
+
+    const patternIdx = getCurrentPatternIdx();
+    const pattern = mod.patterns[patternIdx];
+    if (!pattern || !pattern.rows[selectedRow]) return;
+
+    const cell = pattern.rows[selectedRow][selectedChannel];
+    if (!cell) return;
+
+    cell.effect = effectHex & 0x0f;
+    cell.effectParam = paramHex & 0xff;
 
     renderTrackerGrid();
     highlightSelectedCell();
@@ -511,28 +538,23 @@ export default function init(payload?: SharedFilesPayload): () => void {
     return mod.sequence[currentOrderIndex] ?? 0;
   }
 
-  function addPattern() {
+  function removePattern() {
+    if (!mod || mod.sequence.length <= 1) return;
+    mod.sequence.splice(currentOrderIndex, 1);
+    if (currentOrderIndex >= mod.sequence.length) {
+      currentOrderIndex = mod.sequence.length - 1;
+    }
+    renderPatternOrder();
+    renderModuleInfo();
+    renderTrackerGrid();
+  }
+
+  function insertPatternAt(index: number) {
     if (!mod) return;
     const newId = mod.patterns.length;
-    const rows: {
-      note: number | null;
-      period: number | null;
-      instrument: number;
-      volume: number | null;
-      volumeColumn: number | null;
-      effect: number;
-      effectParam: number;
-    }[][] = [];
+    const rows: Note[][] = [];
     for (let r = 0; r < ROWS_PER_PATTERN; r++) {
-      const row: {
-        note: number | null;
-        period: number | null;
-        instrument: number;
-        volume: number | null;
-        volumeColumn: number | null;
-        effect: number;
-        effectParam: number;
-      }[] = [];
+      const row: Note[] = [];
       for (let c = 0; c < mod.channels; c++) {
         row.push({
           note: null,
@@ -547,16 +569,27 @@ export default function init(payload?: SharedFilesPayload): () => void {
       rows.push(row);
     }
     mod.patterns.push({ rows });
-    mod.sequence.push(newId);
+    mod.sequence.splice(index, 0, newId);
+    currentOrderIndex = index;
     renderPatternOrder();
     renderModuleInfo();
+    renderTrackerGrid();
   }
 
-  function removePattern() {
-    if (!mod || mod.sequence.length <= 1) return;
-    mod.sequence.pop();
+  function duplicatePatternAt(index: number) {
+    if (!mod) return;
+    const srcPatternId = mod.sequence[index];
+    const srcPattern = mod.patterns[srcPatternId];
+    if (!srcPattern) return;
+
+    const newId = mod.patterns.length;
+    const rows: Note[][] = srcPattern.rows.map((row) => row.map((cell) => ({ ...cell })));
+    mod.patterns.push({ rows });
+    mod.sequence.splice(index + 1, 0, newId);
+    currentOrderIndex = index + 1;
     renderPatternOrder();
     renderModuleInfo();
+    renderTrackerGrid();
   }
 
   // ─── Rendering ───
@@ -613,6 +646,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (speedSlider) speedSlider.value = String(mod.defaultSpeed);
   }
 
+  // ─── Pattern Order with Drag-Drop ───
+
   function renderPatternOrder() {
     if (!mod) return;
     const container = document.getElementById('pattern-order');
@@ -620,17 +655,105 @@ export default function init(payload?: SharedFilesPayload): () => void {
     container.innerHTML = '';
 
     mod.sequence.forEach((patternId, idx) => {
-      const btn = document.createElement('button');
-      btn.className = `btn btn-xs w-auto mb-1 sm:mb-0 sm:mr-1 ${idx === currentOrderIndex ? 'btn-primary' : 'btn-ghost'}`;
-      btn.textContent = String(patternId).padStart(2, '0');
-      btn.addEventListener('click', () => {
+      const item = document.createElement('div');
+      const isActive = idx === currentOrderIndex;
+      const hasContent = patternHasContent(patternId);
+
+      item.className = `order-item flex items-center justify-between px-1 py-0.5 rounded text-[10px] font-mono ${isActive ? 'active' : 'bg-base-300'} ${orderDragOverIndex === idx ? 'drag-over' : ''}`;
+      item.setAttribute('data-order-idx', String(idx));
+      item.setAttribute('draggable', 'true');
+
+      item.innerHTML = `
+        <span class="font-bold">${String(patternId).padStart(2, '0')}</span>
+        <span class="opacity-40 text-[8px]">${hasContent ? '*' : ''}</span>
+      `;
+
+      item.addEventListener('click', () => {
         currentOrderIndex = idx;
         renderPatternOrder();
         renderTrackerGrid();
       });
-      container.appendChild(btn);
+
+      item.addEventListener('dblclick', () => {
+        duplicatePatternAt(idx);
+      });
+
+      // Drag events
+      item.addEventListener('dragstart', (e) => {
+        orderDragIndex = idx;
+        item.classList.add('dragging');
+        (e as DragEvent).dataTransfer?.setData('text/plain', String(idx));
+        (e as DragEvent).dataTransfer!.effectAllowed = 'move';
+      });
+
+      item.addEventListener('dragend', () => {
+        orderDragIndex = null;
+        orderDragOverIndex = null;
+        item.classList.remove('dragging');
+        renderPatternOrder();
+      });
+
+      item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        (e as DragEvent).dataTransfer!.dropEffect = 'move';
+        if (orderDragIndex !== null && orderDragIndex !== idx) {
+          orderDragOverIndex = idx;
+          renderPatternOrder();
+        }
+      });
+
+      item.addEventListener('dragleave', () => {
+        if (orderDragOverIndex === idx) {
+          orderDragOverIndex = null;
+          renderPatternOrder();
+        }
+      });
+
+      item.addEventListener('drop', (e) => {
+        e.preventDefault();
+        if (orderDragIndex === null || orderDragIndex === idx) return;
+        if (!mod) return;
+
+        const fromIdx = orderDragIndex;
+        const toIdx = idx;
+        const [moved] = mod.sequence.splice(fromIdx, 1);
+        mod.sequence.splice(toIdx, 0, moved);
+
+        if (currentOrderIndex === fromIdx) {
+          currentOrderIndex = toIdx;
+        } else if (fromIdx < currentOrderIndex && toIdx >= currentOrderIndex) {
+          currentOrderIndex--;
+        } else if (fromIdx > currentOrderIndex && toIdx <= currentOrderIndex) {
+          currentOrderIndex++;
+        }
+
+        orderDragIndex = null;
+        orderDragOverIndex = null;
+        renderPatternOrder();
+        renderTrackerGrid();
+      });
+
+      container.appendChild(item);
     });
+
+    // Scroll active item into view
+    const activeItem = container.querySelector('.order-item.active');
+    activeItem?.scrollIntoView({ block: 'nearest' });
   }
+
+  function patternHasContent(patternId: number): boolean {
+    if (!mod) return false;
+    const pattern = mod.patterns[patternId];
+    if (!pattern) return false;
+    for (const row of pattern.rows) {
+      for (const cell of row) {
+        if (cell.note || cell.instrument || cell.effect) return true;
+      }
+    }
+    return false;
+  }
+
+  // ─── Tracker Grid Header ───
 
   function renderChannelHeader() {
     const thead = document.getElementById('tracker-header');
@@ -639,17 +762,23 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (!mod) return;
 
     const tr = document.createElement('tr');
-    tr.className = 'text-xs';
+    tr.className = 'text-[9px] bg-base-300';
 
     const rowTh = document.createElement('th');
-    rowTh.className = 'w-8 text-center sticky left-0 bg-base-200 z-10';
+    rowTh.className = 'row-num sticky left-0 bg-base-300 z-10';
     rowTh.textContent = '#';
     tr.appendChild(rowTh);
 
     for (let ch = 0; ch < mod.channels; ch++) {
+      if (ch > 0) {
+        const sep = document.createElement('th');
+        sep.className = 'ch-sep';
+        tr.appendChild(sep);
+      }
+
       const noteTh = document.createElement('th');
       noteTh.className = 'text-center';
-      noteTh.textContent = `Ch${ch + 1}`;
+      noteTh.textContent = 'Note';
       tr.appendChild(noteTh);
 
       const insTh = document.createElement('th');
@@ -661,10 +790,22 @@ export default function init(payload?: SharedFilesPayload): () => void {
       volTh.className = 'text-center';
       volTh.textContent = 'Vol';
       tr.appendChild(volTh);
+
+      const effTh = document.createElement('th');
+      effTh.className = 'text-center';
+      effTh.textContent = 'Eff';
+      tr.appendChild(effTh);
+
+      const paramTh = document.createElement('th');
+      paramTh.className = 'text-center';
+      paramTh.textContent = 'Prm';
+      tr.appendChild(paramTh);
     }
 
     thead.appendChild(tr);
   }
+
+  // ─── Tracker Grid (Virtual Scrolling) ───
 
   function renderTrackerGrid() {
     if (!mod) return;
@@ -678,16 +819,39 @@ export default function init(payload?: SharedFilesPayload): () => void {
     const pattern = mod.patterns[patternIdx];
     if (!pattern) return;
 
+    // Render all rows (64 is small enough for full render)
     for (let row = 0; row < ROWS_PER_PATTERN; row++) {
       const tr = document.createElement('tr');
       tr.setAttribute('data-row', String(row));
 
+      // Beat row highlighting
+      if (row % 4 === 0) {
+        tr.classList.add('beat-row');
+      }
+
+      // Active row (playback cursor)
+      if (row === activeRow && isPlaying) {
+        tr.classList.add('current-row');
+      }
+
+      // Selected row
+      if (row === selectedRow) {
+        tr.classList.add('active-row');
+      }
+
+      // Row number
       const rowNum = document.createElement('td');
-      rowNum.className = 'tracker-cell row-num text-base-content/50 sticky left-0 bg-base-200 z-10';
+      rowNum.className = 'row-num sticky left-0 bg-base-200 z-10';
       rowNum.textContent = String(row).padStart(2, '0');
       tr.appendChild(rowNum);
 
       for (let ch = 0; ch < mod.channels; ch++) {
+        if (ch > 0) {
+          const sep = document.createElement('td');
+          sep.className = 'ch-sep';
+          tr.appendChild(sep);
+        }
+
         const cell = pattern.rows[row]?.[ch];
 
         // Note cell
@@ -695,22 +859,18 @@ export default function init(payload?: SharedFilesPayload): () => void {
         noteTd.className = 'tracker-cell note-cell';
         noteTd.setAttribute('data-channel', String(ch));
         noteTd.setAttribute('data-row', String(row));
-        noteTd.setAttribute('data-type', 'note');
-        noteTd.addEventListener('click', () => selectCell(ch, row));
+        noteTd.setAttribute('data-col', 'note');
+        noteTd.addEventListener('click', () => selectCell(ch, row, 'note'));
 
-        if (cell?.note && cell.note > 0 && cell.note <= 96) {
-          const noteStr = formatNote(cell.note);
-          noteTd.textContent = noteStr;
-          noteTd.classList.remove('empty');
-          if (cell.instrument > 0) {
-            noteTd.classList.add('text-primary');
-          }
-        } else if (cell?.note === 97) {
+        if (cell?.note === 97) {
           noteTd.textContent = '^^^';
-          noteTd.classList.remove('empty');
+          noteTd.classList.add('has-off');
+        } else if (cell?.note && cell.note > 0 && cell.note <= 96) {
+          noteTd.textContent = formatNoteCompact(cell.note);
+          noteTd.classList.add('has-note');
         } else {
           noteTd.textContent = '---';
-          noteTd.classList.add('empty');
+          noteTd.classList.add('empty-cell');
         }
         tr.appendChild(noteTd);
 
@@ -719,14 +879,13 @@ export default function init(payload?: SharedFilesPayload): () => void {
         insTd.className = 'tracker-cell';
         insTd.setAttribute('data-channel', String(ch));
         insTd.setAttribute('data-row', String(row));
-        insTd.setAttribute('data-type', 'ins');
-        insTd.addEventListener('click', () => selectCell(ch, row));
+        insTd.setAttribute('data-col', 'ins');
+        insTd.addEventListener('click', () => selectCell(ch, row, 'ins'));
         if (cell?.instrument && cell.instrument > 0) {
           insTd.textContent = String(cell.instrument).padStart(2, ' ');
-          insTd.classList.remove('empty');
         } else {
           insTd.textContent = '--';
-          insTd.classList.add('empty');
+          insTd.classList.add('empty-cell');
         }
         tr.appendChild(insTd);
 
@@ -735,16 +894,45 @@ export default function init(payload?: SharedFilesPayload): () => void {
         volTd.className = 'tracker-cell';
         volTd.setAttribute('data-channel', String(ch));
         volTd.setAttribute('data-row', String(row));
-        volTd.setAttribute('data-type', 'volume');
-        volTd.addEventListener('click', () => selectCell(ch, row));
+        volTd.setAttribute('data-col', 'vol');
+        volTd.addEventListener('click', () => selectCell(ch, row, 'vol'));
         if (cell?.volume != null && cell.volume > 0) {
           volTd.textContent = String(cell.volume).padStart(2, ' ');
-          volTd.classList.remove('empty');
         } else {
           volTd.textContent = '--';
-          volTd.classList.add('empty');
+          volTd.classList.add('empty-cell');
         }
         tr.appendChild(volTd);
+
+        // Effect cell
+        const effTd = document.createElement('td');
+        effTd.className = 'tracker-cell effect-cell';
+        effTd.setAttribute('data-channel', String(ch));
+        effTd.setAttribute('data-row', String(row));
+        effTd.setAttribute('data-col', 'effect');
+        effTd.addEventListener('click', () => selectCell(ch, row, 'effect'));
+        if (cell?.effect) {
+          effTd.textContent = cell.effect.toString(16).toUpperCase();
+        } else {
+          effTd.textContent = '.';
+          effTd.classList.add('empty-cell');
+        }
+        tr.appendChild(effTd);
+
+        // Effect param cell
+        const paramTd = document.createElement('td');
+        paramTd.className = 'tracker-cell effect-cell';
+        paramTd.setAttribute('data-channel', String(ch));
+        paramTd.setAttribute('data-row', String(row));
+        paramTd.setAttribute('data-col', 'param');
+        paramTd.addEventListener('click', () => selectCell(ch, row, 'param'));
+        if (cell?.effectParam) {
+          paramTd.textContent = cell.effectParam.toString(16).toUpperCase().padStart(2, '0');
+        } else {
+          paramTd.textContent = '..';
+          paramTd.classList.add('empty-cell');
+        }
+        tr.appendChild(paramTd);
       }
 
       tbody.appendChild(tr);
@@ -753,41 +941,161 @@ export default function init(payload?: SharedFilesPayload): () => void {
     highlightSelectedCell();
   }
 
-  function selectCell(channel: number, row: number) {
+  function selectCell(
+    channel: number,
+    row: number,
+    col: 'note' | 'ins' | 'vol' | 'effect' | 'param'
+  ) {
     selectedChannel = channel;
     selectedRow = row;
+    selectedCol = col;
     highlightSelectedCell();
     scrollSelectedRowIntoView();
+
+    // Update effect input if clicking effect column
+    if (col === 'effect' || col === 'param') {
+      const patternIdx = getCurrentPatternIdx();
+      const pattern = mod?.patterns[patternIdx];
+      const cell = pattern?.rows[row]?.[channel];
+      if (cell) {
+        const effectInput = document.getElementById('effect-input') as HTMLInputElement;
+        const paramInput = document.getElementById('effect-param-input') as HTMLInputElement;
+        if (effectInput)
+          effectInput.value = cell.effect ? cell.effect.toString(16).toUpperCase() : '';
+        if (paramInput)
+          paramInput.value = cell.effectParam
+            ? cell.effectParam.toString(16).toUpperCase().padStart(2, '0')
+            : '';
+      }
+    }
   }
 
   function scrollSelectedRowIntoView() {
-    const row = document.querySelector(`#tracker-grid tr[data-row="${selectedRow}"]`);
-    row?.scrollIntoView({ block: 'start' });
+    if (!viewport) return;
+    const viewportRect = viewport.getBoundingClientRect();
+    const rowEl = document.querySelector(
+      `#tracker-grid tr[data-row="${selectedRow}"]`
+    ) as HTMLElement;
+    if (!rowEl) return;
+
+    const rowRect = rowEl.getBoundingClientRect();
+    const containerTop = viewportRect.top + viewport.scrollTop;
+    const rowTop = rowRect.top + viewport.scrollTop;
+    const centerOffset = viewportRect.height / 2;
+
+    const targetScroll = rowTop - containerTop - centerOffset + rowRect.height / 2;
+    viewport.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
   }
 
   function scrollToActiveRow(row: number) {
-    const rowEl = document.querySelector(`#tracker-grid tr[data-row="${row}"]`);
-    rowEl?.scrollIntoView({ block: 'nearest' });
+    if (!viewport) return;
+    const viewportRect = viewport.getBoundingClientRect();
+    const rowEl = document.querySelector(`#tracker-grid tr[data-row="${row}"]`) as HTMLElement;
+    if (!rowEl) return;
+
+    const rowRect = rowEl.getBoundingClientRect();
+    const containerTop = viewportRect.top + viewport.scrollTop;
+    const rowTop = rowRect.top + viewport.scrollTop;
+    const centerOffset = viewportRect.height / 2;
+
+    const targetScroll = rowTop - containerTop - centerOffset + rowRect.height / 2;
+
+    // Only scroll if row is near edges
+    const currentScroll = viewport.scrollTop;
+    const diff = Math.abs(targetScroll - currentScroll);
+    if (diff > viewportRect.height * 0.3) {
+      viewport.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
+    }
   }
 
   function highlightSelectedCell() {
     document
       .querySelectorAll('.tracker-cell.selected')
       .forEach((c) => c.classList.remove('selected'));
+
     document
       .querySelectorAll(
-        `.tracker-cell[data-channel="${selectedChannel}"][data-row="${selectedRow}"]`
+        `.tracker-cell[data-channel="${selectedChannel}"][data-row="${selectedRow}"][data-col="${selectedCol}"]`
       )
       .forEach((c) => c.classList.add('selected'));
   }
 
   function highlightActiveRow(row: number) {
     document
-      .querySelectorAll('#tracker-grid tr.active-row')
-      .forEach((r) => r.classList.remove('active-row'));
-    const currentRow = document.querySelector(`#tracker-grid tr[data-row="${row}"]`);
-    if (currentRow) currentRow.classList.add('active-row');
+      .querySelectorAll('#tracker-grid tr.current-row')
+      .forEach((r) => r.classList.remove('current-row'));
+    if (row >= 0) {
+      const currentRow = document.querySelector(`#tracker-grid tr[data-row="${row}"]`);
+      if (currentRow) currentRow.classList.add('current-row');
+    }
   }
+
+  // ─── Piano Keys ───
+
+  function renderPianoKeys() {
+    const container = document.getElementById('piano-keys');
+    if (!container) return;
+    container.innerHTML = '';
+
+    const whiteNotes = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+    const blackNotes: { note: string; after: string }[] = [
+      { note: 'C#', after: 'C' },
+      { note: 'D#', after: 'D' },
+      { note: 'F#', after: 'F' },
+      { note: 'G#', after: 'G' },
+      { note: 'A#', after: 'A' },
+    ];
+
+    let whiteIdx = 0;
+    for (const note of whiteNotes) {
+      const key = document.createElement('div');
+      key.className = `piano-key white ${note === selectedNote ? 'active' : ''}`;
+      key.setAttribute('data-note', note);
+      key.textContent = note;
+      key.style.display = 'flex';
+      key.style.alignItems = 'flex-end';
+      key.style.justifyContent = 'center';
+      key.style.fontSize = '8px';
+      key.style.paddingBottom = '2px';
+
+      key.addEventListener('click', () => {
+        selectedNote = note;
+        updateNoteSelection();
+        renderPianoKeys();
+        previewInstrument(selectedInstrument - 1);
+      });
+
+      container.appendChild(key);
+      whiteIdx++;
+
+      // Add black key after this white key if applicable
+      const blackKey = blackNotes.find((b) => b.after === note);
+      if (blackKey) {
+        const bKey = document.createElement('div');
+        bKey.className = `piano-key black ${blackKey.note === selectedNote ? 'active' : ''}`;
+        bKey.setAttribute('data-note', blackKey.note);
+        bKey.textContent = blackKey.note.replace('#', '');
+        bKey.style.display = 'flex';
+        bKey.style.alignItems = 'flex-end';
+        bKey.style.justifyContent = 'center';
+        bKey.style.fontSize = '7px';
+        bKey.style.paddingBottom = '1px';
+        bKey.style.color = 'var(--color-base-100)';
+
+        bKey.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectedNote = blackKey.note;
+          updateNoteSelection();
+          renderPianoKeys();
+          previewInstrument(selectedInstrument - 1);
+        });
+
+        container.appendChild(bKey);
+      }
+    }
+  }
+
+  // ─── Instrument List ───
 
   function renderInstrumentList() {
     if (!mod) return;
@@ -874,6 +1182,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
     const btnPasteCell = document.getElementById('btn-paste-cell') as HTMLButtonElement;
     const btnPreviewInst = document.getElementById('btn-preview-inst') as HTMLButtonElement;
     const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
+    const btnApplyEffect = document.getElementById('btn-apply-effect') as HTMLButtonElement;
+    const effectInput = document.getElementById('effect-input') as HTMLInputElement;
+    const effectParamInput = document.getElementById('effect-param-input') as HTMLInputElement;
 
     btnNew.addEventListener('click', handleNewModule);
     btnLoadMod.addEventListener('click', () => fileLoadMod.click());
@@ -903,7 +1214,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       player?.setSpeed(mod.defaultSpeed);
     });
 
-    btnAddPattern.addEventListener('click', addPattern);
+    btnAddPattern.addEventListener('click', () => insertPatternAt(currentOrderIndex + 1));
     btnRemovePattern.addEventListener('click', removePattern);
     btnClearCell.addEventListener('click', clearCell);
     btnCopyCell.addEventListener('click', copyCell);
@@ -911,11 +1222,33 @@ export default function init(payload?: SharedFilesPayload): () => void {
     btnPreviewInst.addEventListener('click', () => {
       previewInstrument(selectedInstrument - 1);
     });
+    btnApplyEffect.addEventListener('click', applyEffect);
 
     volumeSlider.addEventListener('input', () => {
       selectedVolume = parseInt(volumeSlider.value);
       const display = document.getElementById('volume-display');
       if (display) display.textContent = String(selectedVolume);
+    });
+
+    // Effect input: auto-apply on Enter
+    effectInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        applyEffect();
+        selectedRow = Math.min(ROWS_PER_PATTERN - 1, selectedRow + 1);
+        renderTrackerGrid();
+        highlightSelectedCell();
+        scrollSelectedRowIntoView();
+      }
+    });
+
+    effectParamInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        applyEffect();
+        selectedRow = Math.min(ROWS_PER_PATTERN - 1, selectedRow + 1);
+        renderTrackerGrid();
+        highlightSelectedCell();
+        scrollSelectedRowIntoView();
+      }
     });
 
     // Note buttons
@@ -925,6 +1258,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
         if (note) {
           selectedNote = note;
           updateNoteSelection();
+          renderPianoKeys();
           previewInstrument(selectedInstrument - 1);
         }
       });
@@ -945,6 +1279,10 @@ export default function init(payload?: SharedFilesPayload): () => void {
     const onKeyDown = (e: KeyboardEvent) => {
       if (!mod) return;
 
+      // Don't intercept if typing in effect inputs
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' && target.id !== 'volume-slider') return;
+
       if (e.key === 'ArrowUp') {
         e.preventDefault();
         selectedRow = Math.max(0, selectedRow - 1);
@@ -961,13 +1299,42 @@ export default function init(payload?: SharedFilesPayload): () => void {
       }
       if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        selectedChannel = Math.max(0, selectedChannel - 1);
+        if (selectedCol === 'param') selectedCol = 'effect';
+        else if (selectedCol === 'effect') selectedCol = 'vol';
+        else if (selectedCol === 'vol') selectedCol = 'ins';
+        else if (selectedCol === 'ins') selectedCol = 'note';
+        else if (selectedCol === 'note') selectedChannel = Math.max(0, selectedChannel - 1);
         highlightSelectedCell();
         return;
       }
       if (e.key === 'ArrowRight') {
         e.preventDefault();
-        selectedChannel = Math.min(mod.channels - 1, selectedChannel + 1);
+        if (selectedCol === 'note') selectedCol = 'ins';
+        else if (selectedCol === 'ins') selectedCol = 'vol';
+        else if (selectedCol === 'vol') selectedCol = 'effect';
+        else if (selectedCol === 'effect') selectedCol = 'param';
+        else if (selectedCol === 'param')
+          selectedChannel = Math.min(mod.channels - 1, selectedChannel + 1);
+        highlightSelectedCell();
+        return;
+      }
+
+      // Tab to move between columns
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        const cols: ('note' | 'ins' | 'vol' | 'effect' | 'param')[] = [
+          'note',
+          'ins',
+          'vol',
+          'effect',
+          'param',
+        ];
+        const currentIdx = cols.indexOf(selectedCol);
+        if (e.shiftKey) {
+          selectedCol = cols[(currentIdx - 1 + cols.length) % cols.length];
+        } else {
+          selectedCol = cols[(currentIdx + 1) % cols.length];
+        }
         highlightSelectedCell();
         return;
       }
@@ -992,6 +1359,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
         e.preventDefault();
         selectedNote = noteMap[key];
         updateNoteSelection();
+        renderPianoKeys();
         placeNoteInCell();
         return;
       }
@@ -1012,6 +1380,53 @@ export default function init(payload?: SharedFilesPayload): () => void {
       if (e.key === ' ') {
         e.preventDefault();
         togglePlay();
+        return;
+      }
+
+      // Q/W for octave up/down
+      if (e.key === 'q' || e.key === 'Q') {
+        e.preventDefault();
+        selectedOctave = Math.min(6, selectedOctave + 1);
+        updateOctaveSelection();
+        return;
+      }
+      if (e.key === 'a' && !noteMap['a']) {
+        // 'a' is not in noteMap, use for octave down
+        e.preventDefault();
+        selectedOctave = Math.max(1, selectedOctave - 1);
+        updateOctaveSelection();
+        return;
+      }
+
+      // Home/End for first/last row
+      if (e.key === 'Home') {
+        e.preventDefault();
+        selectedRow = 0;
+        highlightSelectedCell();
+        scrollSelectedRowIntoView();
+        return;
+      }
+      if (e.key === 'End') {
+        e.preventDefault();
+        selectedRow = ROWS_PER_PATTERN - 1;
+        highlightSelectedCell();
+        scrollSelectedRowIntoView();
+        return;
+      }
+
+      // Page Up/Down
+      if (e.key === 'PageUp') {
+        e.preventDefault();
+        selectedRow = Math.max(0, selectedRow - 8);
+        highlightSelectedCell();
+        scrollSelectedRowIntoView();
+        return;
+      }
+      if (e.key === 'PageDown') {
+        e.preventDefault();
+        selectedRow = Math.min(ROWS_PER_PATTERN - 1, selectedRow + 8);
+        highlightSelectedCell();
+        scrollSelectedRowIntoView();
         return;
       }
     };
