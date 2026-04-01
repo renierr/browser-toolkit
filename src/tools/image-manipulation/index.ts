@@ -4,12 +4,12 @@ import {
   downloadFile,
   downloadAsZip,
   type DownloadBuffer,
-} from '../../js/file-utils';
-import { showMessage, showProgress, hideProgress } from '../../js/ui';
-import type { SharedFilesPayload } from '../../js/share-target';
+} from '@js/file-utils';
+import { showMessage, showProgress, hideProgress } from '@js/ui';
+import type { SharedFilesPayload } from '@js/share-target';
 import ImageWorker from './worker?worker';
 import { getProcessingOptions, type ImageQueueItem } from './utils.ts';
-import { openInTool } from '../../js/tool-chooser';
+import { openInTool } from '@js/tool-chooser';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

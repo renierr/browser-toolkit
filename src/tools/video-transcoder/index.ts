@@ -1,8 +1,8 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile } from '@ffmpeg/util';
-import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui.ts';
-import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { showMessage, showProgress, hideProgress, yieldToUI } from '@js/ui.ts';
+import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getFFmpegArgs, FFmpegLogCollector, getVideoMetadata } from './video-utils.ts';
 
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';

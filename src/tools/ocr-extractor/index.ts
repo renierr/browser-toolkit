@@ -1,8 +1,8 @@
-import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
-import { showMessage, showProgress, hideProgress } from '../../js/ui';
-import { blobToImageData } from '../../js/image-utils';
+import { retrieveImageBlobFromClipboard, setupFileDropzone } from '@js/file-utils';
+import { showMessage, showProgress, hideProgress } from '@js/ui';
+import { blobToImageData } from '@js/image-utils';
 import OcrWorker from './worker?worker';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
 
 const DET_MODEL_URL = new URL('./lib/models/ocr/det.onnx', document.baseURI).href;
 const REC_MODEL_URL = new URL('./lib/models/ocr/rec.onnx', document.baseURI).href;

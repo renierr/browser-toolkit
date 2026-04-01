@@ -1,6 +1,6 @@
-import { showMessage } from '../../js/ui.ts';
-import { downloadFile } from '../../js/file-utils.ts';
-import { CanvasExporter } from '../../js/canvas-utils.ts';
+import { showMessage } from '@js/ui.ts';
+import { downloadFile } from '@js/file-utils.ts';
+import { CanvasExporter } from '@js/canvas-utils.ts';
 
 // Lazy-loaded RegExper and an `eve` shim if needed
 let RegExper: any = null;

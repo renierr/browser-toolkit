@@ -1,5 +1,5 @@
-import { showMessage, showProgress } from '../../../js/ui.ts';
-import router from '../../../js/router.ts';
+import { showMessage, showProgress } from '@js/ui.ts';
+import router from '@js/router.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {

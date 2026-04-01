@@ -1,9 +1,9 @@
-import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
-import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
+import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
+import { showProgress, hideProgress, showMessage, yieldToUI } from '@js/ui.ts';
 import mupdf, { type PDFDocument, type Document } from 'mupdf';
 import Sortable from 'sortablejs';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
-import { openInTool } from '../../js/tool-chooser.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
+import { openInTool } from '@js/tool-chooser.ts';
 
 interface PageItem {
   id: string;

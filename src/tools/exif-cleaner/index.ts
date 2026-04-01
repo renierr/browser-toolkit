@@ -4,14 +4,14 @@ import {
   downloadFile,
   downloadAsZip,
   type DownloadBuffer,
-} from '../../js/file-utils';
-import { showMessage } from '../../js/ui';
+} from '@js/file-utils';
+import { showMessage } from '@js/ui';
 import {
   gpsParseCoordinateFromExifTags,
   gpsGenerateGoogleMapsLink,
   isImageFile,
-} from '../../js/utils.ts';
-import type { SharedFilesPayload } from '../../js/share-target';
+} from '@js/utils.ts';
+import type { SharedFilesPayload } from '@js/share-target';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

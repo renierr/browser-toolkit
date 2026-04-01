@@ -1,8 +1,8 @@
-import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
-import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
+import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
+import { hideProgress, showMessage, showProgress, yieldToUI } from '@js/ui.ts';
 import mupdf, { Pixmap } from 'mupdf';
-import { addImageToPDFDocument } from '../../js/mupdf-utils.ts';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { addImageToPDFDocument } from '@js/mupdf-utils.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

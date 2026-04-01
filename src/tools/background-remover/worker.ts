@@ -1,4 +1,4 @@
-import { loadSession, runInference, createTensor } from '../../js/onnx-utils.ts';
+import { loadSession, runInference, createTensor } from '@js/onnx-utils.ts';
 import {
   decodeImage,
   imageToTensor,

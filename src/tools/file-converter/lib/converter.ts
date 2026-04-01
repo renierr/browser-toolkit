@@ -1,5 +1,5 @@
 import { convertInput } from './pandoc-wasm';
-import { htmlToPdfBuffer } from '../../../js/mupdf-utils.ts';
+import { htmlToPdfBuffer } from '@js/mupdf-utils.ts';
 
 type ConvertResult = { data: Uint8Array; name: string; mime?: string };
 

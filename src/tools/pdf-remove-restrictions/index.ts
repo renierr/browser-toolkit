@@ -1,7 +1,7 @@
-import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
-import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui.ts';
+import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
+import { showProgress, hideProgress, showMessage, yieldToUI } from '@js/ui.ts';
 import mupdf from 'mupdf';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

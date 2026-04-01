@@ -1,6 +1,6 @@
 import { AudioRecorder } from './audio-utils';
-import { openInTool } from '../../js/tool-chooser.ts';
-import { showMessage } from '../../js/ui.ts';
+import { openInTool } from '@js/tool-chooser.ts';
+import { showMessage } from '@js/ui.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {

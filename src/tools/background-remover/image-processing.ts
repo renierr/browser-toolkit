@@ -1,7 +1,7 @@
 import {
   decodeImageToRgba as decodeImageShared,
   type DecodeImageResult,
-} from '../../js/image-utils';
+} from '@js/image-utils';
 
 const MODEL_INPUT_SIZE = 320;
 const GUIDED_FILTER_MAX_DIM = 1024;

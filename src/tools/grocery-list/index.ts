@@ -9,8 +9,8 @@ import {
   importItems,
 } from './db.ts';
 import type { GroceryItem } from './types.ts';
-import { showMessage } from '../../js/ui.ts';
-import { downloadFile } from '../../js/file-utils.ts';
+import { showMessage } from '@js/ui.ts';
+import { downloadFile } from '@js/file-utils.ts';
 
 export default async function init() {
   const db = await openDB();

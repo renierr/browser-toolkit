@@ -1,9 +1,9 @@
-import { downloadAsZip, downloadFile, setupFileDropzone } from '../../js/file-utils';
-import { hideProgress, showMessage, showProgress } from '../../js/ui';
-import { loadSharedFiles } from '../../js/share-target';
-import type { SharedFilesPayload } from '../../js/share-target';
-import { identifyFileType, isPandocSupportedInput, getFileTypeLabel } from '../../js/magic-bytes';
-import { openInTool } from '../../js/tool-chooser';
+import { downloadAsZip, downloadFile, setupFileDropzone } from '@js/file-utils';
+import { hideProgress, showMessage, showProgress } from '@js/ui';
+import { loadSharedFiles } from '@js/share-target';
+import type { SharedFilesPayload } from '@js/share-target';
+import { identifyFileType, isPandocSupportedInput, getFileTypeLabel } from '@js/magic-bytes';
+import { openInTool } from '@js/tool-chooser';
 
 import { convertBuffer, detectInputFormat } from './lib/converter';
 

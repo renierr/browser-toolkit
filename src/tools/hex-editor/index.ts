@@ -1,6 +1,6 @@
-import { downloadFile, setupFileDropzone } from '../../js/file-utils';
-import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui';
-import { identifyFileType } from '../../js/magic-bytes';
+import { downloadFile, setupFileDropzone } from '@js/file-utils';
+import { hideProgress, showMessage, showProgress, yieldToUI } from '@js/ui';
+import { identifyFileType } from '@js/magic-bytes';
 import {
   BYTES_PER_LINE,
   formatAscii,
@@ -8,7 +8,7 @@ import {
   HexBufferManager,
   scanForStrings,
 } from './hex-utils';
-import type { SharedFilesPayload } from '../../js/share-target';
+import type { SharedFilesPayload } from '@js/share-target';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

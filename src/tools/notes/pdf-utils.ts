@@ -1,6 +1,6 @@
-import { downloadFile } from '../../js/file-utils.ts';
-import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
-import { showMessage } from '../../js/ui.ts';
+import { downloadFile } from '@js/file-utils.ts';
+import { htmlToPdfBuffer } from '@js/mupdf-utils.ts';
+import { showMessage } from '@js/ui.ts';
 import { MarkdownParser } from 'overtype/parser';
 import type { Note } from './types.ts';
 

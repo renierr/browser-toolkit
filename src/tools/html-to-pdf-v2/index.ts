@@ -1,6 +1,6 @@
-import { downloadFile } from '../../js/file-utils.ts';
-import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
-import { htmlToPdfBuffer } from '../../js/mupdf-utils.ts';
+import { downloadFile } from '@js/file-utils.ts';
+import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
+import { htmlToPdfBuffer } from '@js/mupdf-utils.ts';
 import { wrapHtmlForPdf, getPageSettings } from './pdf-generator.ts';
 import { insertImageToEditor, setupAllImages, handleEditorClick } from './editor-utils.ts';
 import {

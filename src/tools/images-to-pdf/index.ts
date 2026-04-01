@@ -1,11 +1,11 @@
-import { showProgress, hideProgress, showMessage, yieldToUI } from '../../js/ui';
-import { downloadFile, setupFileDropzone } from '../../js/file-utils.ts';
-import { blobToImage, imageElToBlob } from '../../js/image-utils.ts';
+import { showProgress, hideProgress, showMessage, yieldToUI } from '@js/ui';
+import { downloadFile, setupFileDropzone } from '@js/file-utils.ts';
+import { blobToImage, imageElToBlob } from '@js/image-utils.ts';
 import Sortable from 'sortablejs';
-import { addImageToPDFDocument } from '../../js/mupdf-utils.ts';
+import { addImageToPDFDocument } from '@js/mupdf-utils.ts';
 import mupdf from 'mupdf';
-import type { SharedFilesPayload } from '../../js/share-target';
-import { isImageFile } from '../../js/utils.ts';
+import type { SharedFilesPayload } from '@js/share-target';
+import { isImageFile } from '@js/utils.ts';
 
 interface ImageItem {
   id: string;

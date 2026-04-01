@@ -1,7 +1,7 @@
 import type { SiteConfig, SiteContext } from './types';
 
 import { siteConfig as defaultConfig } from './site.config.template';
-import { isDev } from '../js/utils.ts';
+import { isDev } from '@js/utils.ts';
 
 let userConfig: Partial<SiteConfig> = {};
 

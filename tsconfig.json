@@ -17,6 +17,13 @@
     "moduleDetection": "force",
     "noEmit": true,
 
+    "ignoreDeprecations": "6.0",
+    "baseUrl": ".",
+    "paths": {
+      "@js/*": ["src/js/*"],
+      "@tools/*": ["src/tools/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": true,

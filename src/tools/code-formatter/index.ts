@@ -1,4 +1,4 @@
-import { showMessage } from '../../js/ui.ts';
+import { showMessage } from '@js/ui.ts';
 import {
   formatCode,
   minifyCode,
@@ -12,9 +12,9 @@ import {
   type ExportTheme,
   type ExportOptions,
 } from './export.ts';
-import { setupFileDropzone } from '../../js/file-utils.ts';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
-import { CanvasExporter } from '../../js/canvas-utils.ts';
+import { setupFileDropzone } from '@js/file-utils.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
+import { CanvasExporter } from '@js/canvas-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

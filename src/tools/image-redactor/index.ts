@@ -2,12 +2,12 @@ import { HistoryManager } from './history';
 import { getHitHandle, normalizeRect, resizeRect } from './crop';
 import { applyEffect, cleanupWorkCanvases, drawCropOverlay, drawRedactPreview } from './graphics';
 import type { AppState, Operation, ToolType } from './types';
-import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils.ts';
-import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui.ts';
-import { blobToImage } from '../../js/image-utils.ts';
-import { debounce } from '../../js/utils.ts';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
-import { CanvasExporter } from '../../js/canvas-utils.ts';
+import { retrieveImageBlobFromClipboard, setupFileDropzone } from '@js/file-utils.ts';
+import { showMessage, showProgress, hideProgress, yieldToUI } from '@js/ui.ts';
+import { blobToImage } from '@js/image-utils.ts';
+import { debounce } from '@js/utils.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
+import { CanvasExporter } from '@js/canvas-utils.ts';
 
 const EXPORT_QUALITY = 0.92;
 

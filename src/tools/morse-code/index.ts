@@ -1,5 +1,5 @@
-import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
-import { downloadFile } from '../../js/file-utils.ts';
+import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
+import { downloadFile } from '@js/file-utils.ts';
 import { ensureAudioContextReady, exportAudio, playTone } from './audio.ts';
 import { textToMorse, textToMorseHtml } from './morsecode.ts';
 import { decodeArrayBufferToMonoPCM } from './decoder.ts';

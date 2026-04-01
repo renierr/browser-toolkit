@@ -1,8 +1,8 @@
 import { optimize, type Config } from 'svgo/browser';
-import { downloadAsZip, downloadFile, setupFileDropzone } from '../../js/file-utils';
-import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
-import { getSettings } from '../../js/settings.ts';
+import { downloadAsZip, downloadFile, setupFileDropzone } from '@js/file-utils';
+import { showMessage, showProgress, hideProgress, yieldToUI } from '@js/ui';
+import type { SharedFilesPayload } from '@js/share-target.ts';
+import { getSettings } from '@js/settings.ts';
 
 interface OptimizedFile {
   name: string;

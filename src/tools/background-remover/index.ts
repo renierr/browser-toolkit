@@ -4,10 +4,10 @@ import {
   downloadFile,
   retrieveImageBlobFromClipboard,
   setupFileDropzone,
-} from '../../js/file-utils';
-import { hideProgress, showMessage, showProgress } from '../../js/ui';
-import { debounce } from '../../js/utils';
-import type { SharedFilesPayload } from '../../js/share-target';
+} from '@js/file-utils';
+import { hideProgress, showMessage, showProgress } from '@js/ui';
+import { debounce } from '@js/utils';
+import type { SharedFilesPayload } from '@js/share-target';
 import BackgroundRemovalWorker from './worker?worker';
 import {
   type ProcessingOptions,
@@ -20,7 +20,7 @@ import {
   getOutputFilename,
   MODELS,
 } from './utils';
-import { openInTool } from '../../js/tool-chooser';
+import { openInTool } from '@js/tool-chooser';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

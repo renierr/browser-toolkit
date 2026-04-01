@@ -1,7 +1,7 @@
 import { connectHeartRate, type HeartRateUpdate } from './bluetooth';
 import { deleteSession, getAllSessions, type HeartRateSession, saveSession } from './db';
-import { showMessage } from '../../js/ui';
-import { acquireWakeLock } from '../../js/utils';
+import { showMessage } from '@js/ui';
+import { acquireWakeLock } from '@js/utils';
 import { formatDuration, generateShortId } from './utils';
 import { EKGGraph } from './graph';
 import { initDetails, showSessionDetails } from './details';

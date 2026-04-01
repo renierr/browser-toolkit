@@ -1,9 +1,9 @@
 import mupdf from 'mupdf';
-import { addImageToPDFDocument } from '../../../js/mupdf-utils.ts';
-import { downloadFile } from '../../../js/file-utils.ts';
-import { showProgress, showMessage, hideProgress, yieldToUI } from '../../../js/ui.ts';
+import { addImageToPDFDocument } from '@js/mupdf-utils.ts';
+import { downloadFile } from '@js/file-utils.ts';
+import { showProgress, showMessage, hideProgress, yieldToUI } from '@js/ui.ts';
 import type { ScannedPage } from '../types';
-import { openInTool } from '../../../js/tool-chooser.ts';
+import { openInTool } from '@js/tool-chooser.ts';
 
 export async function generateAndDownloadOrSharePDF(
   pages: ScannedPage[],

@@ -1,4 +1,4 @@
-import type { ModuleFile, Note } from '../../js/chiptune/types';
+import type { ModuleFile, Note } from '@js/chiptune/types';
 import { ROWS_PER_PATTERN } from './note-utils';
 
 export function createEmptyModule(channels = 4, patternCount = 4): ModuleFile {

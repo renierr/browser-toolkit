@@ -1,4 +1,4 @@
-import type { ModuleFile } from '../../js/chiptune/types';
+import type { ModuleFile } from '@js/chiptune/types';
 import { formatNoteCompact, type TrackerCol } from './note-utils';
 
 type CellClickHandler = (channel: number, row: number, col: TrackerCol) => void;

@@ -1,5 +1,5 @@
-import { retrieveImageBlobFromClipboard, setupFileDropzone } from '../../js/file-utils';
-import { showMessage } from '../../js/ui';
+import { retrieveImageBlobFromClipboard, setupFileDropzone } from '@js/file-utils';
+import { showMessage } from '@js/ui';
 import {
   extractColorsFromImage,
   suggestBetterColors,

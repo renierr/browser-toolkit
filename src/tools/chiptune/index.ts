@@ -1,9 +1,9 @@
-import { ChiptunePlayer } from '../../js/chiptune/player';
-import { parseModule } from '../../js/chiptune/parser';
-import type { ModuleFile } from '../../js/chiptune/types';
-import { getAllModules, saveModule, deleteModule } from '../../js/chiptune/archive';
-import { showMessage } from '../../js/ui';
-import { downloadFile } from '../../js/file-utils';
+import { ChiptunePlayer } from '@js/chiptune/player';
+import { parseModule } from '@js/chiptune/parser';
+import type { ModuleFile } from '@js/chiptune/types';
+import { getAllModules, saveModule, deleteModule } from '@js/chiptune/archive';
+import { showMessage } from '@js/ui';
+import { downloadFile } from '@js/file-utils';
 import { ClassicVisualizer } from './visualizers/classic-visualizer';
 import { PulseGridVisualizer } from './visualizers/pulse-grid-visualizer';
 import { NeonNexusVisualizer } from './visualizers/neon-nexus-visualizer';
@@ -120,8 +120,8 @@ function getElements(): Record<string, HTMLElement | null> {
   };
 }
 
-import type { SharedFilesPayload } from '../../js/share-target';
-import { setupFileDropzone } from '../../js/file-utils';
+import type { SharedFilesPayload } from '@js/share-target';
+import { setupFileDropzone } from '@js/file-utils';
 
 export default function init(payload?: SharedFilesPayload): () => void {
   let player: ChiptunePlayer | null = null;

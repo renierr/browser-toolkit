@@ -1,8 +1,8 @@
-import { ChiptunePlayer } from '../../js/chiptune/player';
-import { parseModule } from '../../js/chiptune/parser';
-import type { ModuleFile } from '../../js/chiptune/types';
-import { downloadFile } from '../../js/file-utils';
-import type { SharedFilesPayload } from '../../js/share-target';
+import { ChiptunePlayer } from '@js/chiptune/player';
+import { parseModule } from '@js/chiptune/parser';
+import type { ModuleFile } from '@js/chiptune/types';
+import { downloadFile } from '@js/file-utils';
+import type { SharedFilesPayload } from '@js/share-target';
 import {
   ROWS_PER_PATTERN,
   noteNameToNumber,

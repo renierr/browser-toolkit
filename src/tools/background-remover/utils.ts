@@ -1,6 +1,6 @@
-import { convertBlobFormat, copyImageBlobToClipboard } from '../../js/image-utils';
-import { hideProgress, showMessage, showProgress } from '../../js/ui';
-import { getSettings } from '../../js/settings.ts';
+import { convertBlobFormat, copyImageBlobToClipboard } from '@js/image-utils';
+import { hideProgress, showMessage, showProgress } from '@js/ui';
+import { getSettings } from '@js/settings.ts';
 
 export interface ModelConfig {
   id: string;

@@ -1,4 +1,4 @@
-import { yieldToUI } from '../../js/ui';
+import { yieldToUI } from '@js/ui';
 
 /**
  * Utility functions for hex formatting and processing

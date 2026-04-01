@@ -1,8 +1,8 @@
-import { setupFileDropzone } from '../../js/file-utils.ts';
-import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
+import { setupFileDropzone } from '@js/file-utils.ts';
+import { hideProgress, showMessage, showProgress, yieldToUI } from '@js/ui.ts';
 import mupdf, { type Document } from 'mupdf';
-import { formatPdfDate, parseXmpMetadata, flattenXmpMetadata } from '../../js/pdf-utils.ts';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { formatPdfDate, parseXmpMetadata, flattenXmpMetadata } from '@js/pdf-utils.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
 
 // standard metadata info
 const standardKeys = [

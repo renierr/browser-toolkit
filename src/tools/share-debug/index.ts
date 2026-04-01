@@ -1,11 +1,11 @@
-import type { SharedFilesPayload } from '../../js/share-target';
-import { getMimeTypeFromFileName } from '../../js/mime-types';
-import { setupFileDropzone } from '../../js/file-utils';
-import { showToolChooser } from '../../js/tool-chooser';
-import { findAllToolsForMimeTypes } from '../../js/share-target';
-import { tools } from '../../js/tools';
-import router from '../../js/router';
-import { showMessage } from '../../js/ui';
+import type { SharedFilesPayload } from '@js/share-target';
+import { getMimeTypeFromFileName } from '@js/mime-types';
+import { setupFileDropzone } from '@js/file-utils';
+import { showToolChooser } from '@js/tool-chooser';
+import { findAllToolsForMimeTypes } from '@js/share-target';
+import { tools } from '@js/tools';
+import router from '@js/router';
+import { showMessage } from '@js/ui';
 
 export default function init(payload?: SharedFilesPayload): (() => void) | undefined {
   let currentFiles: File[] = [];

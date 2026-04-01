@@ -1,7 +1,7 @@
 import { BLEScanner, isBluetoothSupported } from './scanner';
 import { renderDeviceGroups } from './ui';
 import type { ParsedDevice } from './parser';
-import { showMessage } from '../../js/ui';
+import { showMessage } from '@js/ui';
 
 interface ScannerState {
   scanner: BLEScanner | null;

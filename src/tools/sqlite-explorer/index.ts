@@ -1,6 +1,6 @@
-import type { SharedFilesPayload } from '../../js/share-target';
-import { setupFileDropzone } from '../../js/file-utils';
-import { getSettings } from '../../js/settings';
+import type { SharedFilesPayload } from '@js/share-target';
+import { setupFileDropzone } from '@js/file-utils';
+import { getSettings } from '@js/settings';
 
 import type { WorkerRequest } from './worker';
 // @ts-ignore
@@ -10,7 +10,7 @@ import SqlWorker from './worker?worker';
 
 import { initDOM, UI } from './dom';
 import { renderTableList, renderSchemaTable, renderDataTable, renderCustomQueryResult } from './ui';
-import { showMessage } from '../../js/ui.ts';
+import { showMessage } from '@js/ui.ts';
 
 let worker: Worker | null = null;
 let currentTable = '';

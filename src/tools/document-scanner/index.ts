@@ -1,4 +1,4 @@
-import type { SharedFilesPayload } from '../../js/share-target';
+import type { SharedFilesPayload } from '@js/share-target';
 import { applyFilters as applyFiltersUtil } from './utils/filters';
 import type { Point } from './utils/perspective';
 import {
@@ -12,7 +12,7 @@ import {
   getVideoDeviceCount,
 } from './utils/camera';
 import { detectCornersOnImage, releaseBuffers } from './utils/detection';
-import { setupFileDropzone } from '../../js/file-utils.ts';
+import { setupFileDropzone } from '@js/file-utils.ts';
 import {
   drawPerspectiveOverlay,
   updateCornerHandles,
@@ -25,13 +25,13 @@ import { sourceToCanvas, imageToBlob, imageFromBlob, rotateCanvas } from './util
 import type { FilterType, ScannedPage } from './types';
 import { createScannerState } from './utils/state';
 import Sortable from 'sortablejs';
-import { debounce } from '../../js/utils.ts';
-import { showProgress, showMessage, hideProgress, yieldToUI } from '../../js/ui.ts';
+import { debounce } from '@js/utils.ts';
+import { showProgress, showMessage, hideProgress, yieldToUI } from '@js/ui.ts';
 import { createLiveDetectionLoop } from './utils/live-detection-loop';
 import { createHandleDrag } from './utils/handle-drag';
 import { createCameraGestures } from './utils/camera-gestures';
-import { CanvasExporter } from '../../js/canvas-utils.ts';
-import { getSettings } from '../../js/settings.ts';
+import { CanvasExporter } from '@js/canvas-utils.ts';
+import { getSettings } from '@js/settings.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload) {

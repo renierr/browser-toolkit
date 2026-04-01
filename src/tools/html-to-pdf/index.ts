@@ -1,8 +1,8 @@
-import { downloadFile } from '../../js/file-utils.ts';
+import { downloadFile } from '@js/file-utils.ts';
 import Quill from 'quill';
 import 'quill/dist/quill.snow.css';
-import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
-import { getSettings } from '../../js/settings.ts';
+import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
+import { getSettings } from '@js/settings.ts';
 
 const PageSizes: { [key: string]: [number, number] } = {
   A0: [2383.94, 3370.39],

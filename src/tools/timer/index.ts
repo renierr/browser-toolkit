@@ -1,4 +1,4 @@
-import { acquireWakeLock } from '../../js/utils';
+import { acquireWakeLock } from '@js/utils';
 
 // noinspection JSUnusedGlobalSymbols
 /**

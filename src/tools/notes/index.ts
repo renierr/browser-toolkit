@@ -1,10 +1,10 @@
 import OverType from 'overtype';
 import { MarkdownParser } from 'overtype/parser';
-import { isDarkMode } from '../../js/theme.ts';
-import { showMessage } from '../../js/ui.ts';
+import { isDarkMode } from '@js/theme.ts';
+import { showMessage } from '@js/ui.ts';
 import { openDB, getAllNotes, saveNote, deleteNote, getNoteById, importNotes } from './db.ts';
 import { removeMarkdownSyntax, exportNoteToPdf } from './pdf-utils.ts';
-import { downloadFile } from '../../js/file-utils.ts';
+import { downloadFile } from '@js/file-utils.ts';
 import type { Note } from './types.ts';
 
 // noinspection JSUnusedGlobalSymbols

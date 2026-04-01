@@ -4,8 +4,8 @@ import {
   runInference,
   createTensor,
   releaseSession,
-} from '../../js/onnx-utils';
-import { blobToImageData } from '../../js/image-utils';
+} from '@js/onnx-utils';
+import { blobToImageData } from '@js/image-utils';
 import type { ProcessingOptions } from './utils.ts';
 
 // Send updates to the main thread

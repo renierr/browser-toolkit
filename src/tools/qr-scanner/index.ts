@@ -1,5 +1,5 @@
-import { showMessage } from '../../js/ui.ts';
-import { retrieveImageBlobFromClipboard } from '../../js/file-utils.ts';
+import { showMessage } from '@js/ui.ts';
+import { retrieveImageBlobFromClipboard } from '@js/file-utils.ts';
 import {
   startCamera,
   stopCamera,
@@ -8,7 +8,7 @@ import {
   toggleTorch,
   resetCameraState,
   getVideoDeviceCount,
-} from '../../js/camera-utils';
+} from '@js/camera-utils';
 import ScanWorker from './scan.worker?worker';
 import type { WorkerOutMessage, ScanImageMessage } from './worker-protocol';
 

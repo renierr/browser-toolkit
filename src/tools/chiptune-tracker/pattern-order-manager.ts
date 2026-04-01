@@ -1,4 +1,4 @@
-import type { ModuleFile } from '../../js/chiptune/types';
+import type { ModuleFile } from '@js/chiptune/types';
 import {
   patternHasContent,
   insertPattern,

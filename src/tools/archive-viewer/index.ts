@@ -1,6 +1,6 @@
-import { showMessage, showProgress, hideProgress } from '../../js/ui';
-import { downloadFile } from '../../js/file-utils';
-import type { SharedFilesPayload } from '../../js/share-target';
+import { showMessage, showProgress, hideProgress } from '@js/ui';
+import { downloadFile } from '@js/file-utils';
+import type { SharedFilesPayload } from '@js/share-target';
 import {
   loadArchive,
   type ArchiveLoader,

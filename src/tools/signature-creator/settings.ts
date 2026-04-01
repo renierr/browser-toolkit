@@ -1,6 +1,6 @@
 import { getDomElements } from './dom.ts';
 import type { SignatureSettings } from './signature-types.ts';
-import { getSettings } from '../../js/settings.ts';
+import { getSettings } from '@js/settings.ts';
 
 const settings = getSettings('signature-creator');
 

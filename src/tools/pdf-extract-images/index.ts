@@ -1,8 +1,8 @@
-import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '../../js/file-utils.ts';
-import { hideProgress, showMessage, showProgress, yieldToUI } from '../../js/ui.ts';
+import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '@js/file-utils.ts';
+import { hideProgress, showMessage, showProgress, yieldToUI } from '@js/ui.ts';
 import mupdf, { Image, type Matrix, PDFPage, type Rect, type Document, type Pixmap } from 'mupdf';
-import { hashUint8Array } from '../../js/utils.ts';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
+import { hashUint8Array } from '@js/utils.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
 
 let extractedImages: Array<{
   name: string;

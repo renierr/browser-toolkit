@@ -1,4 +1,4 @@
-import { ort, loadSession, runInference } from '../../js/onnx-utils';
+import { ort, loadSession, runInference } from '@js/onnx-utils';
 import { LATIN_DICT } from './dict';
 
 /** Configuration options for the OCR pipeline */

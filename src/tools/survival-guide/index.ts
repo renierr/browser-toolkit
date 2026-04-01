@@ -1,5 +1,5 @@
-import { createMarkdownRenderer } from '../../js/markdown-renderer';
-import { getSettings } from '../../js/settings';
+import { createMarkdownRenderer } from '@js/markdown-renderer';
+import { getSettings } from '@js/settings';
 
 type Language = {
   code: string;

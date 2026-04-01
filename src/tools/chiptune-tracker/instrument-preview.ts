@@ -1,4 +1,4 @@
-import type { ModuleFile } from '../../js/chiptune/types';
+import type { ModuleFile } from '@js/chiptune/types';
 
 export function createPreview(ctxRef: { current: AudioContext | null }): AudioContext {
   if (!ctxRef.current) {

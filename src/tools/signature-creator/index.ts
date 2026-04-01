@@ -1,5 +1,5 @@
-import { downloadFile } from '../../js/file-utils.ts';
-import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
+import { downloadFile } from '@js/file-utils.ts';
+import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
 import {
   applySettings,
   DEFAULT_SIGNATURE_SETTINGS,
@@ -20,7 +20,7 @@ import { buildNormalizedFromPaths, computeSegmentWidth, simplifyRDP } from './ca
 import { deleteSignature, getAllSignatures, putSignature } from './signature-store.ts';
 import { drawSignaturePath } from './drawing.ts';
 import { generatePng, generateSvg, generateWebMAnimation } from './export.ts';
-import { debounce } from '../../js/utils.ts';
+import { debounce } from '@js/utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {

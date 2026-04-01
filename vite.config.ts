@@ -117,7 +117,19 @@ export default defineConfig({
                 '.psd',
                 '.ai',
               ],
-              'audio/*': ['.wav', '.mp3', '.ogg', '.webm', '.flac', '.m4a', '.aac', '.opus', '.mod', '.xm', '.it'],
+              'audio/*': [
+                '.wav',
+                '.mp3',
+                '.ogg',
+                '.webm',
+                '.flac',
+                '.m4a',
+                '.aac',
+                '.opus',
+                '.mod',
+                '.xm',
+                '.it',
+              ],
               'video/*': [
                 '.mp4',
                 '.webm',
@@ -215,6 +227,10 @@ export default defineConfig({
       {
         find: '@tools',
         replacement: path.resolve(__dirname, 'src/tools'),
+      },
+      {
+        find: '@js',
+        replacement: path.resolve(__dirname, 'src/js'),
       },
     ],
   },

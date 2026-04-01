@@ -1,6 +1,6 @@
 import QRCode from 'qrcode';
-import { showMessage } from '../../js/ui.ts';
-import { CanvasExporter } from '../../js/canvas-utils.ts';
+import { showMessage } from '@js/ui.ts';
+import { CanvasExporter } from '@js/canvas-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {

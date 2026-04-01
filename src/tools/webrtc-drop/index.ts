@@ -1,6 +1,6 @@
-import { setupFileDropzone } from '../../js/file-utils.ts';
-import { showMessage, showProgress, hideProgress } from '../../js/ui.ts';
-import { startCamera, stopCamera } from '../../js/camera-utils.ts';
+import { setupFileDropzone } from '@js/file-utils.ts';
+import { showMessage, showProgress, hideProgress } from '@js/ui.ts';
+import { startCamera, stopCamera } from '@js/camera-utils.ts';
 import * as Utils from './utils.ts';
 import { type PeerConnectionConfig, WebRTCManager } from './webrtc-manager.ts';
 import { DiscoveryManager } from './discovery-manager.ts';

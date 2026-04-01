@@ -1,4 +1,4 @@
-import { showMessage } from '../../js/ui.ts';
+import { showMessage } from '@js/ui.ts';
 import { textToBraille, getBrailleUnicode, brailleToText } from './braille.ts';
 import { textToASL } from './asl.ts';
 

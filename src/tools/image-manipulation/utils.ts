@@ -1,4 +1,4 @@
-import { getSettings } from '../../js/settings.ts';
+import { getSettings } from '@js/settings.ts';
 
 export interface ModelConfig {
   id: string;

@@ -1,4 +1,4 @@
-import type { ModuleFile } from '../../js/chiptune/types';
+import type { ModuleFile } from '@js/chiptune/types';
 import { calculatePeriod, ROWS_PER_PATTERN } from './note-utils';
 
 export function serializeMod(m: ModuleFile): Blob {

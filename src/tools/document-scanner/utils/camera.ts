@@ -18,4 +18,4 @@ export {
   type StartCameraOptions,
   type ZoomCapabilities,
   type FocusCapabilities,
-} from '../../../js/camera-utils';
+} from '@js/camera-utils';

@@ -1,4 +1,4 @@
-import { html } from '../../js/utils';
+import { html } from '@js/utils';
 import { UI } from './dom';
 
 export function renderTableList(tables: string[], onSelect: (table: string) => void) {

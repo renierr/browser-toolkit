@@ -1,7 +1,7 @@
 import ImageTracer from 'imagetracerjs';
-import { showMessage, showProgress, hideProgress, yieldToUI } from '../../js/ui.ts';
-import { setupFileDropzone, downloadFile } from '../../js/file-utils.ts';
-import { blobToImageData } from '../../js/image-utils.ts';
+import { showMessage, showProgress, hideProgress, yieldToUI } from '@js/ui.ts';
+import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
+import { blobToImageData } from '@js/image-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {

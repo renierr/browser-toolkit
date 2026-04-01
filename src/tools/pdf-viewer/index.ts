@@ -1,7 +1,7 @@
-import { setupFileDropzone } from '../../js/file-utils.ts';
-import { hideProgress, showMessage, showProgress } from '../../js/ui.ts';
+import { setupFileDropzone } from '@js/file-utils.ts';
+import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
 import pdfiumWasmUrl from '@embedpdf/snippet/dist/pdfium.wasm?url';
-import { isDarkMode } from '../../js/theme.ts';
+import { isDarkMode } from '@js/theme.ts';
 import { default as EmbedPDF, ZoomMode, EmbedPdfContainer } from '@embedpdf/snippet';
 import {
   addFlattenAsImageCommand,
@@ -9,8 +9,8 @@ import {
   addSignatureCommand,
   getDocManager,
   injectStyles,
-} from '../../js/embedpdf-utils.ts';
-import type { SharedFilesPayload } from '../../js/share-target.ts';
+} from '@js/embedpdf-utils.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
 
 const toggleToolCard = (show: boolean) => {
   const toolCardElement = document.getElementById('pdf-edit-tool-card');
