@@ -1,3 +1,6 @@
+// IT (Impulse Tracker) sample decompression
+// Based on the official IT 2.04 format documentation
+
 export class BitReader {
   private data: Uint8Array;
   private pos: number;
@@ -14,7 +17,7 @@ export class BitReader {
     let bitsRead = 0;
 
     while (bitsRead < numBits) {
-      if (this.pos >= this.data.length) return 0; // EOF protection
+      if (this.pos >= this.data.length) return 0;
       let bitsAvailable = 8 - this.bitBit;
       let bitsToRead = Math.min(numBits - bitsRead, bitsAvailable);
 
@@ -143,7 +146,7 @@ export function decompressIT16(
           bitWidth = v2 < bitWidth ? v2 : v2 + 1;
           continue;
         } else if (v === (1 << bitWidth) - 1) {
-          break; // safety EOF
+          break;
         }
       } else {
         if (v === 128) {

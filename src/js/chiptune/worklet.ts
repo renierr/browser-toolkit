@@ -631,8 +631,9 @@ class WorkletChannel {
   getFrequency(period: number) {
     if (period <= 0) return 0;
     if (this.worklet.mod!.type === 'IT') {
-      const actualNote = period - 1;
-      return (this.sample?.c5speed || 8363) * Math.pow(2, (actualNote - 60) / 12);
+      // IT period IS the note number (1-96), convert to semitones from C-5
+      const semitoneFromC5 = period - 60;
+      return (this.sample?.c5speed || 8363) * Math.pow(2, semitoneFromC5 / 12);
     }
     if (this.worklet.mod!.linearFrequencies) {
       return 8363 * Math.pow(2, (4608 - period) / 768);

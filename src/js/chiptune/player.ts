@@ -774,28 +774,45 @@ export class ChiptunePlayer {
 
   private assignSample(chState: ChannelState, noteValue?: number): void {
     if (!this.module || !chState.instrument) return;
+
+    // IT instruments are 1-indexed, but check bounds
+    if (chState.instrument < 1 || chState.instrument > this.module.instruments.length) {
+      console.warn('[ChiptunePlayer] Invalid instrument index:', chState.instrument);
+      return;
+    }
+
     const inst = this.module.instruments[chState.instrument - 1];
-    if (!inst || inst.samples.length === 0) return;
+    if (!inst || inst.samples.length === 0) {
+      console.warn('[ChiptunePlayer] No instrument or samples:', chState.instrument);
+      return;
+    }
 
     // For MOD: always use sample 0 (instruments don't have sample mapping)
     // For XM/IT: use sampleMap if available
     let sampleIndex = 0;
     const note = noteValue ?? chState.note ?? 1;
-    if (this.module.type !== 'MOD' && note >= 1 && note <= 96) {
+    if (this.module.type !== 'MOD' && note >= 1 && note <= 120) {
       if (inst.sampleMap && note <= inst.sampleMap.length) {
         sampleIndex = inst.sampleMap[note - 1];
       }
     }
+
+    // Validate sampleIndex - must be >= 0 and within bounds
     if (sampleIndex < 0 || sampleIndex >= inst.samples.length) {
       sampleIndex = 0;
     }
-    chState.sample = inst.samples[sampleIndex] || null;
-    if (chState.sample) {
-      chState.baseVolume = chState.sample.volume;
-      // Note: MOD files use fixed channel panning; only XM/IT use sample-based panning.
-      if (this.module.type !== 'MOD') {
-        chState.panning = chState.sample.panning;
-      }
+
+    const sample = inst.samples[sampleIndex];
+    if (!sample || !sample.data || sample.data.length === 0) {
+      console.warn('[ChiptunePlayer] Sample has no data:', sampleIndex);
+      return;
+    }
+
+    chState.sample = sample;
+    chState.baseVolume = sample.volume;
+    // Note: MOD files use fixed channel panning; only XM/IT use sample-based panning.
+    if (this.module.type !== 'MOD') {
+      chState.panning = sample.panning;
     }
   }
 
@@ -811,8 +828,11 @@ export class ChiptunePlayer {
     if (!inst || inst.samples.length === 0) return 0;
 
     let sIdx = 0;
-    if (note >= 1 && note <= 96 && inst.sampleMap && inst.sampleMap.length >= note)
+    if (note >= 1 && note <= 120 && inst.sampleMap && inst.sampleMap.length >= note) {
       sIdx = inst.sampleMap[note - 1];
+      // Validate - if sampleMap returns -1 (no sample for this note), use first sample
+      if (sIdx < 0 || sIdx >= inst.samples.length) sIdx = 0;
+    }
     const sample = inst.samples[sIdx] || inst.samples[0];
 
     if (this.module.type === 'IT') return note;
@@ -924,8 +944,10 @@ export class ChiptunePlayer {
     if (!this.module || period <= 0) return 0;
 
     if (this.module.type === 'IT') {
-      const actualNote = period - 1;
-      return (sample.c5speed || 8363) * Math.pow(2, (actualNote - 60) / 12);
+      // IT period IS the note number (1-96), convert to semitones from C-5
+      // Note 1 (C-0) = -60 semitones from C-5
+      const semitoneFromC5 = period - 60;
+      return (sample.c5speed || 8363) * Math.pow(2, semitoneFromC5 / 12);
     }
 
     if (this.module.linearFrequencies) {

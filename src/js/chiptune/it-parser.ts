@@ -15,13 +15,18 @@ export class ItParser extends BaseParser {
     const insNum = this.readU16LE();
     const smpNum = this.readU16LE();
     const patNum = this.readU16LE();
-    this.setPos(48);
+    this.setPos(40);
+    this.readU16LE(); // cwtv
+    this.readU16LE(); // cmwt
     const flags = this.readU16LE();
-    this.setPos(52);
+    this.readU16LE(); // special
+    this.setPos(48);
+    this.readU8(); // GV
+    this.readU8(); // MV
     const initSpeed = this.readU8();
     const initTempo = this.readU8();
-    this.readU8(); // sepx
-    this.readU8(); // _initVol
+    this.readU8(); // sep
+    this.readU8(); // pwd
 
     // Jump to channel pan
     this.setPos(64);
@@ -158,8 +163,9 @@ export class ItParser extends BaseParser {
             this.readStr(12); // dos
             this.readU8(); // zero
             this.readU8(); // nna
-            this.readU16LE(); // trc
-            volFadeout = this.readU16LE();
+            this.readU8(); // dct
+            this.readU8(); // dca
+            volFadeout = this.readU16LE(); // fadeout at offset 15
             this.setPos(dataOffsets.ins[i] + 32);
             name = this.readStr(26).trim();
             this.setPos(dataOffsets.ins[i] + 64);
@@ -281,8 +287,14 @@ export class ItParser extends BaseParser {
               let logicalNote = null;
               if (hasNote) {
                 let note = chState[ch].note;
-                if (note !== null && note < 120) logicalNote = note + 1;
-                else if (note === 255 || note === 254) logicalNote = 97; // KeyOff
+                // IT note range is 0-119 (C-0 to B-9), 0 = no note, 255=keyoff, 254=notecut
+                // Note value 1 in IT = C-0 = -60 semitones from C-5
+                // We keep note value as-is for period calculation (IT period = note value)
+                if (note !== null && note >= 1 && note < 120) {
+                  logicalNote = note + 1;
+                } else if (note === 255 || note === 254) {
+                  logicalNote = 97; // KeyOff
+                }
               }
 
               row[ch] = {
