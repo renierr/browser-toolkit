@@ -117,6 +117,14 @@ export function renderTrackerGrid(
     frag.appendChild(tr);
   }
 
+  // Spacer row to allow scrolling last rows into center view
+  const spacerTr = document.createElement('tr');
+  spacerTr.style.height = '300px';
+  const spacerTd = document.createElement('td');
+  spacerTd.colSpan = 1 + mod.channels * 6 + (mod.channels - 1);
+  spacerTr.appendChild(spacerTd);
+  frag.appendChild(spacerTr);
+
   tbody.appendChild(frag);
 }
 

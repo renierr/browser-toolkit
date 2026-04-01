@@ -13,7 +13,7 @@ import {
 } from './note-utils';
 import { createEmptyModule, insertPattern } from './module-factory';
 import { serializeMod } from './mod-serializer';
-import { cleanupPreview } from './instrument-preview';
+import { playPreview, cleanupPreview } from './instrument-preview';
 import {
   renderTrackerGrid,
   highlightSelectedCell,
@@ -22,7 +22,7 @@ import {
   scrollActiveRowIntoView,
   updateEffectInputs,
 } from './tracker-renderer';
-import { renderPatternOrder, handleRemovePattern, resetDragState } from './pattern-order-manager';
+import { renderPatternOrder, handleRemovePattern, type DragState } from './pattern-order-manager';
 
 export default function init(payload?: SharedFilesPayload): () => void {
   let mod: ModuleFile | null = null;
@@ -38,8 +38,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
   let isPlaying = false;
   let isLooping = true;
   let currentOrderIndex = 0;
-  let previewCtx: AudioContext | null = null;
   let activeRow = -1;
+  const previewCtx = { current: null as AudioContext | null };
+  const dragState: DragState = { from: null, over: null };
 
   const viewport = document.getElementById('tracker-viewport') as HTMLElement | null;
   const trackerGrid = document.getElementById('tracker-grid') as HTMLElement;
@@ -59,8 +60,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   return () => {
     player?.cleanup();
-    previewCtx?.close();
-    cleanupPreview();
+    cleanupPreview(previewCtx);
   };
 
   // ─── Module lifecycle ───
@@ -129,7 +129,14 @@ export default function init(payload?: SharedFilesPayload): () => void {
           isPlaying,
           handleCellClick
         );
-        renderPatternOrder(patternOrder, mod, currentOrderIndex, onOrderChange, onPatternSelect);
+        renderPatternOrder(
+          patternOrder,
+          mod,
+          currentOrderIndex,
+          dragState,
+          onOrderChange,
+          onPatternSelect
+        );
       }
       activeRow = row;
       highlightActiveRow(row);
@@ -161,17 +168,25 @@ export default function init(payload?: SharedFilesPayload): () => void {
     const display = document.getElementById('position-display');
     if (display) display.textContent = '00:00';
     currentOrderIndex = 0;
+    if (!mod) return;
     renderTrackerGrid(
       trackerGrid,
       trackerHeader,
-      mod!,
+      mod,
       getCurrentPatternIdx(),
       selectedRow,
       activeRow,
       isPlaying,
       handleCellClick
     );
-    renderPatternOrder(patternOrder, mod!, currentOrderIndex, onOrderChange, onPatternSelect);
+    renderPatternOrder(
+      patternOrder,
+      mod,
+      currentOrderIndex,
+      dragState,
+      onOrderChange,
+      onPatternSelect
+    );
     highlightActiveRow(-1);
   }
 
@@ -221,7 +236,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     );
     highlightSelectedCell(selectedChannel, selectedRow, selectedCol);
 
-    doPreviewInstrument(selectedInstrument - 1);
+    playPreview(mod, selectedInstrument - 1, selectedNote, selectedOctave, previewCtx);
 
     selectedRow = Math.min(ROWS_PER_PATTERN - 1, selectedRow + 1);
     highlightSelectedCell(selectedChannel, selectedRow, selectedCol);
@@ -324,11 +339,13 @@ export default function init(payload?: SharedFilesPayload): () => void {
   }
 
   function handleCellClick(channel: number, row: number, col: TrackerCol): void {
+    if (!mod) return;
     selectedChannel = channel;
     selectedRow = row;
     selectedCol = col;
-    highlightSelectedCell(selectedChannel, selectedRow, selectedCol);
-    scrollRowIntoView(viewport, selectedRow);
+
+    // Place the currently selected note into the clicked cell
+    placeNoteInCell();
 
     if ((col === 'effect' || col === 'param') && mod) {
       updateEffectInputs(mod, getCurrentPatternIdx(), row, channel);
@@ -344,11 +361,19 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
   function onPatternSelect(index: number): void {
     currentOrderIndex = index;
-    renderPatternOrder(patternOrder, mod!, currentOrderIndex, onOrderChange, onPatternSelect);
+    if (!mod) return;
+    renderPatternOrder(
+      patternOrder,
+      mod,
+      currentOrderIndex,
+      dragState,
+      onOrderChange,
+      onPatternSelect
+    );
     renderTrackerGrid(
       trackerGrid,
       trackerHeader,
-      mod!,
+      mod,
       getCurrentPatternIdx(),
       selectedRow,
       activeRow,
@@ -358,12 +383,20 @@ export default function init(payload?: SharedFilesPayload): () => void {
   }
 
   function onOrderChange(): void {
-    renderPatternOrder(patternOrder, mod!, currentOrderIndex, onOrderChange, onPatternSelect);
+    if (!mod) return;
+    renderPatternOrder(
+      patternOrder,
+      mod,
+      currentOrderIndex,
+      dragState,
+      onOrderChange,
+      onPatternSelect
+    );
     renderModuleInfo();
     renderTrackerGrid(
       trackerGrid,
       trackerHeader,
-      mod!,
+      mod,
       getCurrentPatternIdx(),
       selectedRow,
       activeRow,
@@ -379,68 +412,23 @@ export default function init(payload?: SharedFilesPayload): () => void {
     downloadFile(blob, `${mod.title || 'untitled'}.${ext}`);
   }
 
-  function doPreviewInstrument(instIndex: number): void {
-    if (!mod) return;
-    if (instIndex < 0 || instIndex >= mod.instruments.length) return;
-    const inst = mod.instruments[instIndex];
-    if (!inst || inst.samples.length === 0) return;
-    const sample = inst.samples[0];
-    if (!sample.data || sample.data.length === 0) return;
-
-    if (!previewCtx) previewCtx = new AudioContext();
-    if (previewCtx.state === 'suspended') previewCtx.resume();
-
-    const buffer = previewCtx.createBuffer(1, sample.data.length, previewCtx.sampleRate);
-    buffer.getChannelData(0).set(sample.data);
-
-    const source = previewCtx.createBufferSource();
-    source.buffer = buffer;
-
-    if (sample.loopLength > 2) {
-      source.loop = true;
-      source.loopStart = sample.loopStart / previewCtx.sampleRate;
-      source.loopEnd = (sample.loopStart + sample.loopLength) / previewCtx.sampleRate;
-    }
-
-    const baseFreq =
-      440 *
-      Math.pow(
-        2,
-        ((4 + 1) * 12 +
-          ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(selectedNote) -
-          69) /
-          12
-      );
-    const targetFreq =
-      440 *
-      Math.pow(
-        2,
-        ((selectedOctave + 1) * 12 +
-          ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'].indexOf(selectedNote) -
-          69) /
-          12
-      );
-    source.playbackRate.value = targetFreq / baseFreq;
-
-    const gain = previewCtx.createGain();
-    gain.gain.setValueAtTime(0.4, previewCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, previewCtx.currentTime + 0.8);
-
-    source.connect(gain);
-    gain.connect(previewCtx.destination);
-    source.start();
-    source.stop(previewCtx.currentTime + 0.8);
-  }
-
   // ─── Rendering ───
 
   function renderAll(): void {
+    if (!mod) return;
     renderModuleInfo();
-    renderPatternOrder(patternOrder, mod!, currentOrderIndex, onOrderChange, onPatternSelect);
+    renderPatternOrder(
+      patternOrder,
+      mod,
+      currentOrderIndex,
+      dragState,
+      onOrderChange,
+      onPatternSelect
+    );
     renderTrackerGrid(
       trackerGrid,
       trackerHeader,
-      mod!,
+      mod,
       getCurrentPatternIdx(),
       selectedRow,
       activeRow,
@@ -525,7 +513,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
         selectedNote = note;
         updateNoteSelection();
         renderPianoKeys();
-        doPreviewInstrument(selectedInstrument - 1);
+        if (mod) playPreview(mod, selectedInstrument - 1, selectedNote, selectedOctave, previewCtx);
       });
 
       pianoKeys.appendChild(key);
@@ -550,7 +538,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
           selectedNote = blackKey.note;
           updateNoteSelection();
           renderPianoKeys();
-          doPreviewInstrument(selectedInstrument - 1);
+          if (mod)
+            playPreview(mod, selectedInstrument - 1, selectedNote, selectedOctave, previewCtx);
         });
 
         pianoKeys.appendChild(bKey);
@@ -590,7 +579,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
         selectedInstrument = num;
         renderInstrumentList();
       });
-      row.addEventListener('dblclick', () => doPreviewInstrument(idx));
+      row.addEventListener('dblclick', () => {
+        if (mod) playPreview(mod, idx, selectedNote, selectedOctave, previewCtx);
+      });
       instrumentList.appendChild(row);
     });
   }
@@ -688,7 +679,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
     btnClearCell.addEventListener('click', clearCell);
     btnCopyCell.addEventListener('click', copyCell);
     btnPasteCell.addEventListener('click', pasteCell);
-    btnPreviewInst.addEventListener('click', () => doPreviewInstrument(selectedInstrument - 1));
+    btnPreviewInst.addEventListener('click', () => {
+      if (mod) playPreview(mod, selectedInstrument - 1, selectedNote, selectedOctave, previewCtx);
+    });
     btnApplyEffect.addEventListener('click', applyEffect);
 
     volumeSlider.addEventListener('input', () => {
@@ -701,10 +694,11 @@ export default function init(payload?: SharedFilesPayload): () => void {
       if (e.key === 'Enter') {
         applyEffect();
         selectedRow = Math.min(ROWS_PER_PATTERN - 1, selectedRow + 1);
+        if (!mod) return;
         renderTrackerGrid(
           trackerGrid,
           trackerHeader,
-          mod!,
+          mod,
           getCurrentPatternIdx(),
           selectedRow,
           activeRow,
@@ -720,10 +714,11 @@ export default function init(payload?: SharedFilesPayload): () => void {
       if (e.key === 'Enter') {
         applyEffect();
         selectedRow = Math.min(ROWS_PER_PATTERN - 1, selectedRow + 1);
+        if (!mod) return;
         renderTrackerGrid(
           trackerGrid,
           trackerHeader,
-          mod!,
+          mod,
           getCurrentPatternIdx(),
           selectedRow,
           activeRow,
@@ -742,7 +737,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
           selectedNote = note;
           updateNoteSelection();
           renderPianoKeys();
-          doPreviewInstrument(selectedInstrument - 1);
+          if (mod)
+            playPreview(mod, selectedInstrument - 1, selectedNote, selectedOctave, previewCtx);
         }
       });
     });
@@ -880,7 +876,6 @@ export default function init(payload?: SharedFilesPayload): () => void {
 
     return () => {
       document.removeEventListener('keydown', onKeyDown);
-      resetDragState();
     };
   }
 }

@@ -7,14 +7,13 @@ import {
 } from './module-factory';
 
 type RenderCallback = () => void;
-
-let dragFrom: number | null = null;
-let dragOver: number | null = null;
+export type DragState = { from: number | null; over: number | null };
 
 export function renderPatternOrder(
   container: HTMLElement,
   mod: ModuleFile,
   currentOrderIndex: number,
+  dragState: DragState,
   onOrderChange: RenderCallback,
   onPatternSelect: (index: number) => void
 ): void {
@@ -25,7 +24,7 @@ export function renderPatternOrder(
     const isActive = idx === currentOrderIndex;
     const hasContent = patternHasContent(mod, patternId);
 
-    item.className = `order-item flex items-center justify-between px-1 py-0.5 rounded text-[10px] font-mono ${isActive ? 'active' : 'bg-base-300'} ${dragOver === idx ? 'drag-over' : ''}`;
+    item.className = `order-item flex items-center justify-between px-1 py-0.5 rounded text-[10px] font-mono ${isActive ? 'active' : 'bg-base-300'} ${dragState.over === idx ? 'drag-over' : ''}`;
     item.setAttribute('data-order-idx', String(idx));
     item.setAttribute('draggable', 'true');
 
@@ -41,46 +40,67 @@ export function renderPatternOrder(
     });
 
     item.addEventListener('dragstart', (e) => {
-      dragFrom = idx;
+      dragState.from = idx;
       item.classList.add('dragging');
       (e as DragEvent).dataTransfer?.setData('text/plain', String(idx));
       (e as DragEvent).dataTransfer!.effectAllowed = 'move';
     });
 
     item.addEventListener('dragend', () => {
-      dragFrom = null;
-      dragOver = null;
+      dragState.from = null;
+      dragState.over = null;
       item.classList.remove('dragging');
-      renderPatternOrder(container, mod, currentOrderIndex, onOrderChange, onPatternSelect);
+      renderPatternOrder(
+        container,
+        mod,
+        currentOrderIndex,
+        dragState,
+        onOrderChange,
+        onPatternSelect
+      );
     });
 
     item.addEventListener('dragover', (e) => {
       e.preventDefault();
       (e as DragEvent).dataTransfer!.dropEffect = 'move';
-      if (dragFrom !== null && dragFrom !== idx) {
-        dragOver = idx;
-        renderPatternOrder(container, mod, currentOrderIndex, onOrderChange, onPatternSelect);
+      if (dragState.from !== null && dragState.from !== idx) {
+        dragState.over = idx;
+        renderPatternOrder(
+          container,
+          mod,
+          currentOrderIndex,
+          dragState,
+          onOrderChange,
+          onPatternSelect
+        );
       }
     });
 
     item.addEventListener('dragleave', () => {
-      if (dragOver === idx) {
-        dragOver = null;
-        renderPatternOrder(container, mod, currentOrderIndex, onOrderChange, onPatternSelect);
+      if (dragState.over === idx) {
+        dragState.over = null;
+        renderPatternOrder(
+          container,
+          mod,
+          currentOrderIndex,
+          dragState,
+          onOrderChange,
+          onPatternSelect
+        );
       }
     });
 
     item.addEventListener('drop', (e) => {
       e.preventDefault();
-      if (dragFrom === null || dragFrom === idx) return;
+      if (dragState.from === null || dragState.from === idx) return;
 
-      const fromIdx = dragFrom;
+      const fromIdx = dragState.from;
       const toIdx = idx;
       const [moved] = mod.sequence.splice(fromIdx, 1);
       mod.sequence.splice(toIdx, 0, moved);
 
-      dragFrom = null;
-      dragOver = null;
+      dragState.from = null;
+      dragState.over = null;
       onOrderChange();
     });
 
@@ -101,9 +121,4 @@ export function handleRemovePattern(mod: ModuleFile, index: number): boolean {
 
 export function handleDuplicatePattern(mod: ModuleFile, index: number): number {
   return duplicatePattern(mod, index);
-}
-
-export function resetDragState(): void {
-  dragFrom = null;
-  dragOver = null;
 }
