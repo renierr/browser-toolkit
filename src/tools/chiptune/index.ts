@@ -192,6 +192,13 @@ export default function init(payload?: SharedFilesPayload): () => void {
     scroller: new ScrollerVisualizer(),
   };
 
+  // Apply restored volume from settings
+  if (volumeSlider && player) {
+    const vol = parseInt(volumeSlider.value) / 100;
+    player.setVolume(vol);
+    if (volumeDisplay) volumeDisplay.textContent = `${volumeSlider.value}%`;
+  }
+
   let currentVis = localStorage.getItem('chiptune-vis') || 'grid-3d';
   if (visSelector) {
     visSelector.value = currentVis;
