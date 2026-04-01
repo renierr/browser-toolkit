@@ -130,7 +130,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   let currentFile: File | null = null;
   let currentFormat: string = '';
   let lastFrameTime = 0;
-  const frameInterval = 1000 / 30;
+  const frameInterval = 1000 / 60;
 
   const container = document.getElementById('chiptune-player');
   if (!container) return () => {};
@@ -459,6 +459,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     }
 
     lastFrameTime = now - (elapsed % frameInterval);
+    const deltaTime = elapsed / 1000;
 
     const width = visualizerCanvas.width;
     const height = visualizerCanvas.height;
@@ -487,7 +488,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     bass /= 8 * 255;
 
     const vis = visualizers[currentVis] || visualizers['pulse-grid'];
-    vis.draw(visualizerCtx, width, height, { freqData, timeData, bass });
+    vis.draw(visualizerCtx, width, height, { freqData, timeData, bass, deltaTime });
 
     animationId = requestAnimationFrame(drawVisualization);
   }
