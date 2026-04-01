@@ -925,7 +925,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
         if (note) {
           selectedNote = note;
           updateNoteSelection();
-          placeNoteInCell();
+          previewInstrument(selectedInstrument - 1);
         }
       });
     });
