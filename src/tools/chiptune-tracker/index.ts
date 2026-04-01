@@ -42,6 +42,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const previewCtx = { current: null as AudioContext | null };
   const dragState: DragState = { from: null, over: null };
 
+  const topBar = document.getElementById('top-bar') as HTMLElement;
   const viewport = document.getElementById('tracker-viewport') as HTMLElement | null;
   const trackerGrid = document.getElementById('tracker-grid') as HTMLElement;
   const trackerHeader = document.getElementById('tracker-header') as HTMLElement;
@@ -53,6 +54,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
   updateNoteSelection();
   updateOctaveSelection();
   renderPianoKeys();
+
+  topBar.scrollIntoView({ behavior: 'auto', block: 'start' });
 
   if (payload?.sharedFiles?.length) {
     setTimeout(() => handleLoadMod(payload.sharedFiles![0]), 100);
@@ -74,6 +77,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     selectedRow = 0;
     renderAll();
     enableControls();
+    topBar.scrollIntoView({ behavior: 'auto', block: 'start' });
   }
 
   async function handleLoadMod(file: File): Promise<void> {
@@ -87,6 +91,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       selectedRow = 0;
       renderAll();
       enableControls();
+      topBar.scrollIntoView({ behavior: 'auto', block: 'start' });
     } catch (err) {
       console.error('[ChiptuneTracker] Failed to parse module:', err);
     }
@@ -155,6 +160,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     } else {
       player.play();
       isPlaying = true;
+      topBar.scrollIntoView({ behavior: 'auto', block: 'start' });
     }
     updatePlayButton();
   }

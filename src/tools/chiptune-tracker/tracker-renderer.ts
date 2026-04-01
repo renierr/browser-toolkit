@@ -117,14 +117,6 @@ export function renderTrackerGrid(
     frag.appendChild(tr);
   }
 
-  // Spacer row to allow scrolling last rows into center view
-  const spacerTr = document.createElement('tr');
-  spacerTr.style.height = '300px';
-  const spacerTd = document.createElement('td');
-  spacerTd.colSpan = 1 + mod.channels * 6 + (mod.channels - 1);
-  spacerTr.appendChild(spacerTd);
-  frag.appendChild(spacerTr);
-
   tbody.appendChild(frag);
 }
 
@@ -170,21 +162,14 @@ export function scrollRowIntoView(viewport: HTMLElement | null, row: number, smo
 
 export function scrollActiveRowIntoView(viewport: HTMLElement | null, row: number): void {
   if (!viewport) return;
-  const viewportRect = viewport.getBoundingClientRect();
   const rowEl = document.querySelector(`#tracker-grid tr[data-row="${row}"]`) as HTMLElement;
   if (!rowEl) return;
 
-  const rowRect = rowEl.getBoundingClientRect();
-  const containerTop = viewportRect.top + viewport.scrollTop;
-  const rowTop = rowRect.top + viewport.scrollTop;
-  const centerOffset = viewportRect.height / 2;
-  const targetScroll = rowTop - containerTop - centerOffset + rowRect.height / 2;
+  const viewportHeight = viewport.clientHeight;
+  const rowHeight = rowEl.offsetHeight;
+  const targetScroll = rowEl.offsetTop - viewportHeight / 2 + rowHeight / 2;
 
-  const currentScroll = viewport.scrollTop;
-  const diff = Math.abs(targetScroll - currentScroll);
-  if (diff > viewportRect.height * 0.3) {
-    viewport.scrollTo({ top: Math.max(0, targetScroll), behavior: 'smooth' });
-  }
+  viewport.scrollTo({ top: Math.max(0, targetScroll), behavior: 'instant' });
 }
 
 export function updateEffectInputs(
