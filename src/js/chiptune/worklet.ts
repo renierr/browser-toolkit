@@ -193,6 +193,29 @@ class BackgroundVoice {
     return points[points.length - 1].value;
   }
 
+  private readRawSampleValue(): number {
+    const i0 = Math.floor(this.sampleIndex);
+
+    // Keep legacy nearest-neighbor for non-IT formats.
+    if (this.globalVolumeRef.mod?.type !== 'IT') {
+      return this.sample.data[i0] ?? 0;
+    }
+
+    const frac = this.sampleIndex - i0;
+    let i1 = i0 + 1;
+
+    if (this.sample.loopLength > 2) {
+      const loopEnd = this.sample.loopStart + this.sample.loopLength;
+      if (i1 >= loopEnd) i1 = this.sample.loopStart;
+    } else if (i1 >= this.sample.length) {
+      i1 = this.sample.length - 1;
+    }
+
+    const s0 = this.sample.data[i0] ?? 0;
+    const s1 = this.sample.data[i1] ?? s0;
+    return s0 + (s1 - s0) * frac;
+  }
+
   nextSample(): [number, number] {
     if (!this.playing || !this.sample || !this.sample.data || this.sample.data.length === 0)
       return [0, 0];
@@ -207,8 +230,8 @@ class BackgroundVoice {
       return [0, 0];
     }
 
-    const sIdx = Math.floor(this.sampleIndex);
-    const raw = this.sample.data[sIdx];
+    // IT interpolation softens high-rate retrigs and looped tails.
+    const raw = this.readRawSampleValue();
     this.sampleIndex += this.sampleSpeed;
 
     let vol =
@@ -1272,8 +1295,22 @@ class WorkletChannel {
       this.playing = false;
       return [0, 0];
     }
-    let sIdx = Math.floor(this.sampleIndex);
-    let raw = this.sample.data[sIdx];
+    const i0 = Math.floor(this.sampleIndex);
+    let raw = this.sample.data[i0] ?? 0;
+
+    if (this.worklet.mod!.type === 'IT') {
+      const frac = this.sampleIndex - i0;
+      let i1 = i0 + 1;
+      if (this.sample.loopLength > 2) {
+        const loopEnd = this.sample.loopStart + this.sample.loopLength;
+        if (i1 >= loopEnd) i1 = this.sample.loopStart;
+      } else if (i1 >= this.sample.length) {
+        i1 = this.sample.length - 1;
+      }
+      const s1 = this.sample.data[i1] ?? raw;
+      // IT-only linear interpolation to improve sample character accuracy.
+      raw = raw + (s1 - raw) * frac;
+    }
 
     if (this.worklet.mod!.type === 'IT' && this.filterCutoff < 127) {
       const normalized = this.filterCutoff / 127;
