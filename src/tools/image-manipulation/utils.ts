@@ -20,7 +20,7 @@ export const MODELS: Record<string, ModelConfig> = {
   line_drawings: {
     id: 'line_drawings',
     name: 'Line Drawing',
-    url: new URL('/lib/models/line-drawings.onnx', document.baseURI).href,
+    url: new URL('./lib/models/line-drawings.onnx', document.baseURI).href,
     input: 'input',
     output: 'output',
     padToMultipleOf: 2,
@@ -28,7 +28,7 @@ export const MODELS: Record<string, ModelConfig> = {
   RealESRGAN_x2plus: {
     id: 'RealESRGAN_x2plus',
     name: 'RealESRGAN_x2plus',
-    url: new URL('/lib/models/RealESRGAN_x2plus.onnx', document.baseURI).href,
+    url: new URL('./lib/models/RealESRGAN_x2plus.onnx', document.baseURI).href,
     input: 'input',
     output: 'output',
     padToMultipleOf: 4,
@@ -36,7 +36,7 @@ export const MODELS: Record<string, ModelConfig> = {
   RealESRGAN_x4plus: {
     id: 'RealESRGAN_x4plus',
     name: 'RealESRGAN_x4plus',
-    url: new URL('/lib/models/RealESRGAN_x4plus.onnx', document.baseURI).href,
+    url: new URL('./lib/models/RealESRGAN_x4plus.onnx', document.baseURI).href,
     input: 'input',
     output: 'output',
     padToMultipleOf: 4,
@@ -44,7 +44,7 @@ export const MODELS: Record<string, ModelConfig> = {
   rrdbx2: {
     id: 'rrdbx2',
     name: 'rrdbx2',
-    url: new URL('/lib/models/rrdbx2.onnx', document.baseURI).href,
+    url: new URL('./lib/models/rrdbx2.onnx', document.baseURI).href,
     input: 'pixel_values',
     output: 'reconstruction',
     padToMultipleOf: 8,
@@ -52,7 +52,7 @@ export const MODELS: Record<string, ModelConfig> = {
   rrdbx4: {
     id: 'rrdbx4',
     name: 'rrdbx4',
-    url: new URL('/lib/models/rrdbx4.onnx', document.baseURI).href,
+    url: new URL('./lib/models/rrdbx4.onnx', document.baseURI).href,
     input: 'pixel_values',
     output: 'reconstruction',
     padToMultipleOf: 8,
@@ -60,7 +60,7 @@ export const MODELS: Record<string, ModelConfig> = {
   swin2sr: {
     id: 'swin2sr',
     name: 'Swin2SR Upscale (x2)',
-    url: new URL('/lib/models/swin2sr.onnx', document.baseURI).href,
+    url: new URL('./lib/models/swin2sr.onnx', document.baseURI).href,
     input: 'pixel_values',
     output: 'reconstruction',
     padToMultipleOf: 8,
@@ -68,7 +68,7 @@ export const MODELS: Record<string, ModelConfig> = {
   iat_lol_v2: {
     id: 'iat_lol_v2',
     name: 'Low-light Enhancement (IAT)',
-    url: new URL('/lib/models/iat_lol_v2.onnx', document.baseURI).href,
+    url: new URL('./lib/models/iat_lol_v2.onnx', document.baseURI).href,
     input: 'input',
     output: 'enhanced',
     padToMultipleOf: 8,
@@ -80,7 +80,7 @@ export const MODELS: Record<string, ModelConfig> = {
   iat_exposure: {
     id: 'iat_exposure',
     name: 'Exposure Correction (IAT)',
-    url: new URL('/lib/models/iat_exposure.emb.onnx', document.baseURI).href,
+    url: new URL('./lib/models/iat_exposure.emb.onnx', document.baseURI).href,
     input: 'input',
     output: 'enhanced',
     padToMultipleOf: 8,
