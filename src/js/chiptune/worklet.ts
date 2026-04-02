@@ -45,6 +45,7 @@ const IT_EFFECT_SET_CHANNEL_VOLUME = 0x28;
 const IT_EFFECT_CHANNEL_VOL_SLIDE = 0x29;
 const IT_EFFECT_FINE_VIBRATO = 0x2a;
 const IT_EFFECT_TEMPO_SLIDE = 0x2b;
+const IT_EFFECT_SET_FILTER_CUTOFF = 0x2c;
 
 const SINE_TABLE = [
   0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253, 255, 253, 250, 244, 235,
@@ -57,6 +58,8 @@ const SINE_TABLE = [
  * state is moved here so it continues rendering (with fadeout/envelope).
  */
 class BackgroundVoice {
+  sourceChannelIndex: number;
+  note: number | null;
   sample: WorkletInstrumentSample;
   instrument: WorkletInstrument | null;
   sampleIndex: number;
@@ -74,6 +77,8 @@ class BackgroundVoice {
   globalVolumeRef: ModPlayerWorklet;
 
   constructor(ch: WorkletChannel) {
+    this.sourceChannelIndex = ch.channelIndex;
+    this.note = ch.note;
     this.sample = ch.sample!;
     this.instrument = ch.instrument;
     this.sampleIndex = ch.sampleIndex;
@@ -102,6 +107,25 @@ class BackgroundVoice {
       case 3: // Note Fade: immediate fadeout
         this.keyOn = false;
         this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384); // accelerate fade
+        break;
+    }
+  }
+
+  applyDCA(dca: number): void {
+    switch (dca) {
+      case 0: // cut
+        this.keyOn = false;
+        this.playing = false;
+        this.volume = 0;
+        break;
+      case 1: // off
+        this.keyOn = false;
+        break;
+      case 2: // fade
+        this.keyOn = false;
+        this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        break;
+      default:
         break;
     }
   }
@@ -223,6 +247,8 @@ class WorkletChannel {
   fineVibratoDepth = 0;
   autoVibratoPhase = 0;
   autoVibratoTick = 0;
+  filterCutoff = 127;
+  filterState = 0;
 
   tremoloPhase = 0;
   tremoloSpeed = 0;
@@ -293,8 +319,110 @@ class WorkletChannel {
     this.processTrigger(note);
   }
 
+  private resolveMappedSample(
+    inst: WorkletInstrument | null,
+    noteValue: number
+  ): WorkletInstrumentSample | null {
+    if (!inst || inst.samples.length === 0) return null;
+    let sIdx = 0;
+    if (inst.sampleMap && noteValue >= 1 && noteValue <= 120) {
+      sIdx = inst.sampleMap[noteValue - 1];
+    }
+    if (sIdx < 0 || sIdx >= inst.samples.length) return null;
+    return inst.samples[sIdx] || null;
+  }
+
+  private matchesDuplicate(
+    dct: number,
+    noteValue: number,
+    sample: WorkletInstrumentSample | null,
+    instrument: WorkletInstrument | null,
+    curNote: number | null,
+    curSample: WorkletInstrumentSample | null,
+    curInstrument: WorkletInstrument | null
+  ): boolean {
+    if (dct === 1) return curNote === noteValue;
+    if (dct === 2) return !!sample && !!curSample && sample === curSample;
+    if (dct === 3) return !!instrument && !!curInstrument && instrument === curInstrument;
+    return false;
+  }
+
+  private applyDuplicateAction(dca: number): void {
+    switch (dca) {
+      case 0: // cut
+        this.keyOn = false;
+        this.playing = false;
+        this.volume = 0;
+        break;
+      case 1: // off
+        this.keyOn = false;
+        break;
+      case 2: // fade
+        this.keyOn = false;
+        this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private applyDuplicateChecks(
+    dct: number,
+    dca: number,
+    noteValue: number,
+    sample: WorkletInstrumentSample | null,
+    instrument: WorkletInstrument | null
+  ): boolean {
+    let matchedCurrent = false;
+
+    if (
+      this.playing &&
+      this.matchesDuplicate(dct, noteValue, sample, instrument, this.note, this.sample, this.instrument)
+    ) {
+      matchedCurrent = true;
+      this.applyDuplicateAction(dca);
+    }
+
+    for (let i = 0; i < this.worklet.backgroundVoices.length; i++) {
+      const bg = this.worklet.backgroundVoices[i];
+      if (!bg.playing || bg.sourceChannelIndex !== this.channelIndex) continue;
+      if (this.matchesDuplicate(dct, noteValue, sample, instrument, bg.note, bg.sample, bg.instrument)) {
+        bg.applyDCA(dca);
+      }
+    }
+
+    return matchedCurrent;
+  }
+
   processTrigger(note: WorkletNote) {
     let tonePorta = note.effect === EFFECT_TONE_PORTA || note.effect === EFFECT_TONE_PORTA_VOL;
+    let matchedCurrentDuplicate = false;
+
+    if (
+      this.worklet.mod!.type === 'IT' &&
+      note.note !== null &&
+      note.note !== undefined &&
+      note.note >= 1 &&
+      note.note <= 120
+    ) {
+      const incomingNote = note.note;
+      const incomingInstrument =
+        note.instrument !== undefined && note.instrument > 0
+          ? this.worklet.mod!.instruments[note.instrument - 1] || this.instrument
+          : this.instrument;
+      const dct = incomingInstrument?.dct || 0;
+      const dca = incomingInstrument?.dca || 0;
+      if (dct > 0) {
+        const mappedSample = this.resolveMappedSample(incomingInstrument || null, incomingNote);
+        matchedCurrentDuplicate = this.applyDuplicateChecks(
+          dct,
+          dca,
+          incomingNote,
+          mappedSample,
+          incomingInstrument || null
+        );
+      }
+    }
 
     if (note.instrument !== undefined && note.instrument > 0) {
       const inst = this.worklet.mod!.instruments[note.instrument - 1];
@@ -343,6 +471,7 @@ class WorkletChannel {
           if (
             this.playing &&
             this.sample &&
+            !matchedCurrentDuplicate &&
             this.worklet.mod!.type === 'IT' &&
             this.instrument &&
             this.instrument.nna !== undefined &&
@@ -369,6 +498,7 @@ class WorkletChannel {
           this.fadeoutVolume = 32768;
           this.autoVibratoPhase = 0;
           this.autoVibratoTick = 0;
+          this.filterState = 0;
           this.playing = !!this.sample && this.period > 0;
         }
       }
@@ -457,6 +587,12 @@ class WorkletChannel {
     const maxNote = this.worklet.mod!.type === 'IT' ? 120 : 96;
     if (this.instrument.sampleMap && noteValue >= 1 && noteValue <= maxNote) {
       sIdx = this.instrument.sampleMap[noteValue - 1];
+    }
+    if (this.worklet.mod!.type === 'IT' && sIdx < 0) {
+      // IT instruments may map notes to "no sample". Do not reuse old sample.
+      this.sample = null;
+      this.playing = false;
+      return;
     }
     if (sIdx < 0 || sIdx >= this.instrument.samples.length) sIdx = 0;
     this.sample = this.instrument.samples[sIdx] || this.instrument.samples[0] || null;
@@ -661,6 +797,9 @@ class WorkletChannel {
           if (param & 0xf0) this.channelVolSlide = (param >> 4) & 0x0f;
           else if (param & 0x0f) this.channelVolSlide = -(param & 0x0f);
         }
+        break;
+      case IT_EFFECT_SET_FILTER_CUTOFF:
+        if (this.worklet.mod!.type === 'IT') this.filterCutoff = Math.max(0, Math.min(127, param));
         break;
       case EFFECT_GLOBAL_VOLUME:
         this.worklet.globalVolume = Math.min(64, param);
@@ -1037,6 +1176,14 @@ class WorkletChannel {
     }
     let sIdx = Math.floor(this.sampleIndex);
     let raw = this.sample.data[sIdx];
+
+    if (this.worklet.mod!.type === 'IT' && this.filterCutoff < 127) {
+      const normalized = this.filterCutoff / 127;
+      const alpha = Math.max(0.01, normalized * normalized * 0.6);
+      this.filterState += alpha * (raw - this.filterState);
+      raw = this.filterState;
+    }
+
     this.sampleIndex += this.sampleSpeed;
     let vol =
       (this.volume / 64) *

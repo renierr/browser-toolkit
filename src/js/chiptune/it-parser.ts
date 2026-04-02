@@ -18,6 +18,7 @@ export const IT_EFFECT_SET_CHANNEL_VOLUME = 0x28; // Mxx set channel volume
 export const IT_EFFECT_CHANNEL_VOL_SLIDE = 0x29; // Nxx channel volume slide
 export const IT_EFFECT_FINE_VIBRATO = 0x2a; // Uxx fine vibrato
 export const IT_EFFECT_TEMPO_SLIDE = 0x2b; // T0x / Tx0 tempo slide
+export const IT_EFFECT_SET_FILTER_CUTOFF = 0x2c; // Zxx default macro cutoff
 
 /**
  * IT effect letter → effect number translation.
@@ -84,8 +85,8 @@ function translateItEffect(itCmd: number, itParam: number): [number, number] {
       return [0x08, itParam];
     case 25: // Y: Panbrello (ignore)
       return [0, 0];
-    case 26: // Z: MIDI Macro (ignore)
-      return [0, 0];
+    case 26: // Z: MIDI Macro (default IT macro commonly maps to filter cutoff)
+      return [IT_EFFECT_SET_FILTER_CUTOFF, itParam & 0x7f];
     default:
       return [0, 0];
   }
@@ -475,6 +476,8 @@ export class ItParser extends BaseParser {
         let name = `Instrument ${i + 1}`;
         let volFadeout = 0;
         let nna = 0; // New Note Action: 0=cut, 1=continue, 2=noteOff, 3=fade
+        let dct = 0;
+        let dca = 0;
         const sampleMap = new Array(120).fill(-1);
         const noteMap = new Array(120).fill(0); // translated note for each slot
         let volumeEnv: Envelope | undefined;
@@ -486,8 +489,8 @@ export class ItParser extends BaseParser {
             this.readStr(12); // dos filename
             this.readU8(); // zero
             nna = this.readU8(); // nna (0=cut, 1=continue, 2=noteOff, 3=fade)
-            this.readU8(); // dct
-            this.readU8(); // dca
+            dct = this.readU8(); // dct
+            dca = this.readU8(); // dca
             volFadeout = this.readU16LE(); // fadeout
             this.readU8(); // pps
             this.readU8(); // ppc
@@ -525,6 +528,8 @@ export class ItParser extends BaseParser {
           volumeEnv,
           panningEnv,
           nna,
+          dct,
+          dca,
         });
       }
     } else {

@@ -514,6 +514,8 @@ export class ChiptunePlayer {
 
       if (this.currentTick === 0) {
         // --- ROW START ---
+        // Retrig must be row-local unless explicitly commanded on this row.
+        chState.retrig = 0;
         chState.effect = cell.effect;
         chState.effectParam = cell.effectParam;
 
@@ -885,6 +887,12 @@ export class ChiptunePlayer {
       if (inst.sampleMap && note <= inst.sampleMap.length) {
         sampleIndex = inst.sampleMap[note - 1];
       }
+    }
+
+    if (this.module.type === 'IT' && sampleIndex < 0) {
+      // IT instruments may intentionally map notes to no sample.
+      chState.sample = null;
+      return;
     }
 
     // Validate sampleIndex - must be >= 0 and within bounds

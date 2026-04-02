@@ -33,6 +33,8 @@ export interface Instrument {
   panningEnv?: Envelope;
   volumeFadeout: number; // 0-32768
   nna?: number; // IT: New Note Action (0=cut, 1=continue, 2=noteOff, 3=fade)
+  dct?: number; // IT: Duplicate Check Type (0=off, 1=note, 2=sample, 3=instrument)
+  dca?: number; // IT: Duplicate Check Action (0=cut, 1=off, 2=fade)
 }
 
 export interface Note {
@@ -136,6 +138,8 @@ export interface WorkletInstrument {
   panningEnv?: Envelope;
   volumeFadeout?: number;
   nna?: number; // IT: New Note Action (0=cut, 1=continue, 2=noteOff, 3=fade)
+  dct?: number;
+  dca?: number;
 }
 
 export interface WorkletNote {
@@ -229,6 +233,8 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
       panningEnv: inst.panningEnv,
       volumeFadeout: inst.volumeFadeout,
       nna: inst.nna,
+      dct: inst.dct,
+      dca: inst.dca,
     });
   }
 
