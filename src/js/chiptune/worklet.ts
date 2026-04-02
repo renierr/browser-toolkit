@@ -293,10 +293,14 @@ class WorkletChannel {
 
   retrig = 0;
   retrigVolOp = 0;
+  lastItRetrig = 0;
+  lastItRetrigVolOp = 0;
   globalVolSlide = 0;
   panningSlide = 0;
   tremorCounter = 0;
   tremorOn = false;
+  tremorOnTicks = 0;
+  tremorOffTicks = 0;
 
   pendingNote: WorkletNote | null = null;
   delayNoteTick = -1;
@@ -860,13 +864,22 @@ class WorkletChannel {
         }
         break;
       case EFFECT_MULTI_RETRIG:
-        if (param & 0x0f) this.retrig = param & 0x0f;
-        if (param & 0xf0) this.retrigVolOp = (param >> 4) & 0x0f;
+        if (isIT) {
+          if (param & 0x0f) this.lastItRetrig = param & 0x0f;
+          if (param & 0xf0) this.lastItRetrigVolOp = (param >> 4) & 0x0f;
+          this.retrig = this.lastItRetrig;
+          this.retrigVolOp = this.lastItRetrigVolOp;
+        } else {
+          if (param & 0x0f) this.retrig = param & 0x0f;
+          if (param & 0xf0) this.retrigVolOp = (param >> 4) & 0x0f;
+        }
         break;
       case EFFECT_TREMOR:
         if (param > 0) {
           this.tremorOn = true;
           this.tremorCounter = 0;
+          this.tremorOnTicks = ((param >> 4) & 0x0f) + 1;
+          this.tremorOffTicks = (param & 0x0f) + 1;
         }
         break;
       case EFFECT_ENVELOPE_POS:
@@ -1024,6 +1037,7 @@ class WorkletChannel {
       if (this.retrig > 0 && this.worklet.tick % this.retrig === 0) {
         this.applyRetrigVolumeOp();
         this.sampleIndex = 0;
+        this.sampleFraction = 0;
       }
 
       const volEffect = this.worklet.currentRowNotes[this.channelIndex]?.itVolumeEffect || 0;
@@ -1033,11 +1047,15 @@ class WorkletChannel {
       }
 
       if (this.tremorOn) {
-        const p = this.worklet.currentRowNotes[this.channelIndex]?.effectParam || 0;
-        const p1 = (p >> 4) & 0x0f;
-        const p2 = p & 0x0f;
+        const onTicks = Math.max(1, this.tremorOnTicks);
+        const offTicks = Math.max(1, this.tremorOffTicks);
+        const cycleLen = onTicks + offTicks;
         this.tremorCounter++;
-        if (this.tremorCounter > p1 + p2) this.tremorCounter = 0;
+        if (this.tremorCounter >= cycleLen) this.tremorCounter = 0;
+      }
+
+      if (this.worklet.mod!.type === 'IT' && this.tremoloDepth > 0) {
+        this.tremoloPhase += this.tremoloSpeed / 256;
       }
     }
 
@@ -1245,9 +1263,16 @@ class WorkletChannel {
       (this.worklet.globalVolume / 64);
     vol *= this.worklet.mixingVolume / 128;
     if (this.tremorOn) {
-      const p = this.worklet.currentRowNotes[this.channelIndex]?.effectParam ?? 0;
-      if (this.tremorCounter > ((p >> 4) & 0x0f)) vol = 0;
+      const onTicks = Math.max(1, this.tremorOnTicks);
+      if (this.tremorCounter >= onTicks) vol = 0;
     }
+
+    if (this.worklet.mod!.type === 'IT' && this.tremoloDepth > 0) {
+      const phase = Math.floor(this.tremoloPhase * 64) & 63;
+      const tremoloMod = phase < 32 ? SINE_TABLE[phase] : -SINE_TABLE[phase - 32];
+      vol *= 1 + (tremoloMod * this.tremoloDepth) / (128 * 64);
+    }
+
     if (this.instrument) vol *= (this.volumeEnvValue / 64) * (this.fadeoutVolume / 32768);
 
     // Equal Power Panning Law: L = Vol * cos(theta), R = Vol * sin(theta)
