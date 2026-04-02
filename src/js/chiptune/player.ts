@@ -81,6 +81,7 @@ interface ChannelState {
   tempoSlide: number;
   panningSlide: number;
   retrig: number;
+  retrigVolOp: number;
   tremorCounter: number;
   tremorOn: boolean;
 
@@ -197,6 +198,7 @@ export class ChiptunePlayer {
         tempoSlide: 0,
         panningSlide: 0,
         retrig: 0,
+        retrigVolOp: 0,
         tremorCounter: 0,
         tremorOn: false,
         sample: null,
@@ -1090,6 +1092,11 @@ export class ChiptunePlayer {
       else if (eSub === 0xa) chState.volume = Math.min(chState.volume + eParam, 64);
       else if (eSub === 0xb) chState.volume = Math.max(chState.volume - eParam, 0);
     }
+    // Effect R: Multi Retrig + Volume Change
+    else if (effect === 0x1b) {
+      if (param & 0x0f) chState.retrig = param & 0x0f;
+      if (param & 0xf0) chState.retrigVolOp = (param >> 4) & 0x0f;
+    }
     // IT-specific: Axx always sets speed, Txx always sets tempo
     else if (effect === IT_EFFECT_SET_SPEED) {
       if (param >= 1) this.speed = param;
@@ -1178,8 +1185,59 @@ export class ChiptunePlayer {
     }
 
     if (chState.retrig > 0 && this.currentTick % chState.retrig === 0) {
+      this.applyRetrigVolumeOp(chState);
       this.triggerNote(chState, this.audioContext!.currentTime);
     }
+  }
+
+  private applyRetrigVolumeOp(chState: ChannelState): void {
+    switch (chState.retrigVolOp) {
+      case 0x1:
+        chState.volume -= 1;
+        break;
+      case 0x2:
+        chState.volume -= 2;
+        break;
+      case 0x3:
+        chState.volume -= 4;
+        break;
+      case 0x4:
+        chState.volume -= 8;
+        break;
+      case 0x5:
+        chState.volume -= 16;
+        break;
+      case 0x6:
+        chState.volume = Math.floor((chState.volume * 2) / 3);
+        break;
+      case 0x7:
+        chState.volume = Math.floor(chState.volume / 2);
+        break;
+      case 0x9:
+        chState.volume += 1;
+        break;
+      case 0xa:
+        chState.volume += 2;
+        break;
+      case 0xb:
+        chState.volume += 4;
+        break;
+      case 0xc:
+        chState.volume += 8;
+        break;
+      case 0xd:
+        chState.volume += 16;
+        break;
+      case 0xe:
+        chState.volume = Math.floor((chState.volume * 3) / 2);
+        break;
+      case 0xf:
+        chState.volume *= 2;
+        break;
+      default:
+        break;
+    }
+    chState.volume = Math.max(0, Math.min(64, chState.volume));
   }
 
   private triggerNote(chState: ChannelState, time: number): void {

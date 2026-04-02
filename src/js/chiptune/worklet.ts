@@ -242,6 +242,7 @@ class WorkletChannel {
   fadeoutVolume = 32768;
 
   retrig = 0;
+  retrigVolOp = 0;
   globalVolSlide = 0;
   panningSlide = 0;
   tremorCounter = 0;
@@ -622,6 +623,7 @@ class WorkletChannel {
         break;
       case EFFECT_MULTI_RETRIG:
         if (param & 0x0f) this.retrig = param & 0x0f;
+        if (param & 0xf0) this.retrigVolOp = (param >> 4) & 0x0f;
         break;
       case EFFECT_TREMOR:
         if (param > 0) {
@@ -774,6 +776,7 @@ class WorkletChannel {
       }
 
       if (this.retrig > 0 && this.worklet.tick % this.retrig === 0) {
+        this.applyRetrigVolumeOp();
         this.sampleIndex = 0;
       }
 
@@ -969,6 +972,56 @@ class WorkletChannel {
     const r = raw * vol * Math.sin(panTheta);
 
     return [l, r];
+  }
+
+  private applyRetrigVolumeOp(): void {
+    switch (this.retrigVolOp) {
+      case 0x1:
+        this.volume -= 1;
+        break;
+      case 0x2:
+        this.volume -= 2;
+        break;
+      case 0x3:
+        this.volume -= 4;
+        break;
+      case 0x4:
+        this.volume -= 8;
+        break;
+      case 0x5:
+        this.volume -= 16;
+        break;
+      case 0x6:
+        this.volume = Math.floor((this.volume * 2) / 3);
+        break;
+      case 0x7:
+        this.volume = Math.floor(this.volume / 2);
+        break;
+      case 0x9:
+        this.volume += 1;
+        break;
+      case 0xa:
+        this.volume += 2;
+        break;
+      case 0xb:
+        this.volume += 4;
+        break;
+      case 0xc:
+        this.volume += 8;
+        break;
+      case 0xd:
+        this.volume += 16;
+        break;
+      case 0xe:
+        this.volume = Math.floor((this.volume * 3) / 2);
+        break;
+      case 0xf:
+        this.volume *= 2;
+        break;
+      default:
+        break;
+    }
+    this.volume = Math.max(0, Math.min(64, this.volume));
   }
 }
 
