@@ -214,6 +214,59 @@ function parseItVolumeColumn(vol: number): {
   return { volume: null, volumeColumn: null, effect: 0, effectParam: 0 };
 }
 
+function scoreDecodedSampleQuality(data: Float32Array): number {
+  if (data.length === 0) return Number.POSITIVE_INFINITY;
+
+  let clipCount = 0;
+  let jumpSum = 0;
+  let zeroCrossings = 0;
+  let prev = data[0];
+
+  if (!Number.isFinite(prev)) return Number.POSITIVE_INFINITY;
+
+  for (let i = 1; i < data.length; i++) {
+    const v = data[i];
+    if (!Number.isFinite(v)) return Number.POSITIVE_INFINITY;
+
+    if (Math.abs(v) >= 0.99) clipCount++;
+    jumpSum += Math.abs(v - prev);
+    if ((v >= 0 && prev < 0) || (v < 0 && prev >= 0)) zeroCrossings++;
+    prev = v;
+  }
+
+  const denom = Math.max(1, data.length - 1);
+  const clipRatio = clipCount / denom;
+  const avgJump = jumpSum / denom;
+  const crossingRatio = zeroCrossings / denom;
+
+  return clipRatio * 6 + avgJump * 1.5 + crossingRatio * 1.5;
+}
+
+function decodeCompressedItSample(
+  data: Uint8Array,
+  samplePointer: number,
+  sampleLength: number,
+  is16Bit: boolean,
+  preferIT215: boolean
+): Float32Array {
+  const preferred = is16Bit
+    ? decompressIT16(data, samplePointer, sampleLength, preferIT215)
+    : decompressIT8(data, samplePointer, sampleLength, preferIT215);
+
+  const fallback = is16Bit
+    ? decompressIT16(data, samplePointer, sampleLength, !preferIT215)
+    : decompressIT8(data, samplePointer, sampleLength, !preferIT215);
+
+  const preferredScore = scoreDecodedSampleQuality(preferred);
+  const fallbackScore = scoreDecodedSampleQuality(fallback);
+
+  if (fallbackScore + 0.35 < preferredScore) {
+    return new Float32Array(fallback);
+  }
+
+  return new Float32Array(preferred);
+}
+
 export class ItParser extends BaseParser {
   parse(): ModuleFile {
     if (this.data.length < 192 || this.readStr(4) !== 'IMPM') throw new Error('Not an IT file');
@@ -312,22 +365,20 @@ export class ItParser extends BaseParser {
             const isCompressed = (sFlags & 0x08) !== 0;
             // cvt bit 0: 0=unsigned, 1=signed (IT standard is signed)
             const isSigned = (cvt & 1) !== 0;
-            // IT 2.15 compression uses double integration.
-            // For original Impulse Tracker (cwtv 0x0200-0x02FF): IT215 if cwtv > 0x0214
-            // For other trackers (OpenMPT, SchismTracker, etc.): always IT215 compression
-            const isOriginalIT = (cwtv & 0xff00) === 0x0200;
-            const isIT215 = isOriginalIT ? cwtv > 0x0214 : true;
+            // IT 2.15+ uses double integration. Some files are mislabeled, so we keep
+            // a decode fallback in case the declared mode sounds clearly corrupted.
+            const preferIT215 = cwtv >= 0x0215;
 
             if (isCompressed) {
-              if (is16) {
-                const decoded = decompressIT16(this.data, this.pos, smpLength, isIT215);
-                sampleData = new Float32Array(smpLength);
-                sampleData.set(decoded);
-              } else {
-                const decoded = decompressIT8(this.data, this.pos, smpLength, isIT215);
-                sampleData = new Float32Array(smpLength);
-                sampleData.set(decoded);
-              }
+              const decoded = decodeCompressedItSample(
+                this.data,
+                this.pos,
+                smpLength,
+                is16,
+                preferIT215
+              );
+              sampleData = new Float32Array(smpLength);
+              sampleData.set(decoded);
             } else {
               sampleData = new Float32Array(smpLength);
               for (let j = 0; j < smpLength; j++) {

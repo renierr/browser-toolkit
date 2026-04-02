@@ -41,6 +41,52 @@ export class BitReader {
   }
 }
 
+function signExtend(value: number, bits: number): number {
+  const signBit = 1 << (bits - 1);
+  const fullRange = 1 << bits;
+  return value & signBit ? value - fullRange : value;
+}
+
+function decodeMethod2WidthChange8(value: number, bitWidth: number): number | null {
+  if (bitWidth < 7) {
+    if (value === 1 << (bitWidth - 1)) {
+      return 0; // marker: caller must read 3 extra bits
+    }
+    return null;
+  }
+
+  if (bitWidth < 9) {
+    // IT method-2 width change for widths 7-8 uses a reserved value range.
+    const border = (0xff >> (9 - bitWidth)) - 4;
+    if (value > border && value <= border + 8) {
+      const packedWidth = value - (border + 1);
+      return packedWidth < bitWidth ? packedWidth : packedWidth + 1;
+    }
+  }
+
+  return null;
+}
+
+function decodeMethod2WidthChange16(value: number, bitWidth: number): number | null {
+  if (bitWidth < 7) {
+    if (value === 1 << (bitWidth - 1)) {
+      return 0; // marker: caller must read 4 extra bits
+    }
+    return null;
+  }
+
+  if (bitWidth < 17) {
+    // IT method-2 width change for widths 7-16 uses a reserved value range.
+    const border = (0xffff >> (17 - bitWidth)) - 8;
+    if (value > border && value <= border + 16) {
+      const packedWidth = value - (border + 1);
+      return packedWidth < bitWidth ? packedWidth : packedWidth + 1;
+    }
+  }
+
+  return null;
+}
+
 /**
  * Decompress 8-bit IT compressed samples.
  * @param isIT215 - true = IT 2.15 double-integration mode, false = IT 2.14 single-integration
@@ -74,23 +120,20 @@ export function decompressIT8(
     while (outPos < blockEnd) {
       const v = br.readBits(bitWidth);
 
-      // Sentinel / width-change detection
-      if (bitWidth < 7) {
-        if (v === 1 << (bitWidth - 1)) {
+      const method2Width = decodeMethod2WidthChange8(v, bitWidth);
+      if (method2Width !== null) {
+        if (method2Width === 0) {
           const nw = br.readBits(3) + 1;
           bitWidth = nw < bitWidth ? nw : nw + 1;
-          if (bitWidth > 9) bitWidth = 9;
-          continue;
+        } else {
+          bitWidth = method2Width;
         }
-      } else if (bitWidth < 9) {
-        // widths 7-8
-        if (v === 1 << (bitWidth - 1)) {
-          const nw = br.readBits(3) + 1;
-          bitWidth = nw < bitWidth ? nw : nw + 1;
-          if (bitWidth > 9) bitWidth = 9;
-          continue;
-        }
-      } else {
+        if (bitWidth > 9) bitWidth = 9;
+        if (bitWidth < 1) bitWidth = 1;
+        continue;
+      }
+
+      if (bitWidth === 9) {
         // bitWidth == 9
         if (v & 0x100) {
           if (isIT215) {
@@ -112,12 +155,7 @@ export function decompressIT8(
       }
 
       // Sign-extend value from bitWidth bits
-      let signedVal: number;
-      if (bitWidth < 9) {
-        signedVal = v & (1 << (bitWidth - 1)) ? v - (1 << bitWidth) : v;
-      } else {
-        signedVal = v & 0x100 ? v - 0x200 : v;
-      }
+      const signedVal = signExtend(v, bitWidth);
 
       // IT 2.14: single integration; IT 2.15: double integration
       d1 += signedVal;
@@ -170,21 +208,20 @@ export function decompressIT16(
     while (outPos < blockEnd) {
       const v = br.readBits(bitWidth);
 
-      if (bitWidth < 7) {
-        if (v === 1 << (bitWidth - 1)) {
+      const method2Width = decodeMethod2WidthChange16(v, bitWidth);
+      if (method2Width !== null) {
+        if (method2Width === 0) {
           const nw = br.readBits(4) + 1;
           bitWidth = nw < bitWidth ? nw : nw + 1;
-          if (bitWidth > 17) bitWidth = 17;
-          continue;
+        } else {
+          bitWidth = method2Width;
         }
-      } else if (bitWidth < 17) {
-        if (v === 1 << (bitWidth - 1)) {
-          const nw = br.readBits(4) + 1;
-          bitWidth = nw < bitWidth ? nw : nw + 1;
-          if (bitWidth > 17) bitWidth = 17;
-          continue;
-        }
-      } else {
+        if (bitWidth > 17) bitWidth = 17;
+        if (bitWidth < 1) bitWidth = 1;
+        continue;
+      }
+
+      if (bitWidth === 17) {
         // bitWidth == 17
         if (v & 0x10000) {
           if (isIT215) {
@@ -206,12 +243,7 @@ export function decompressIT16(
       }
 
       // Sign-extend value from bitWidth bits
-      let signedVal: number;
-      if (bitWidth < 17) {
-        signedVal = v & (1 << (bitWidth - 1)) ? v - (1 << bitWidth) : v;
-      } else {
-        signedVal = v & 0x10000 ? v - 0x20000 : v;
-      }
+      const signedVal = signExtend(v, bitWidth);
 
       // IT 2.14: single integration; IT 2.15: double integration
       d1 += signedVal;
