@@ -401,6 +401,7 @@ export class ItParser extends BaseParser {
       for (let i = 0; i < insNum; i++) {
         let name = `Instrument ${i + 1}`;
         let volFadeout = 0;
+        let nna = 0; // New Note Action: 0=cut, 1=continue, 2=noteOff, 3=fade
         const sampleMap = new Array(120).fill(-1);
         const noteMap = new Array(120).fill(0); // translated note for each slot
         let volumeEnv: Envelope | undefined;
@@ -411,7 +412,7 @@ export class ItParser extends BaseParser {
           if (this.readStr(4) === 'IMPI') {
             this.readStr(12); // dos filename
             this.readU8(); // zero
-            this.readU8(); // nna
+            nna = this.readU8(); // nna (0=cut, 1=continue, 2=noteOff, 3=fade)
             this.readU8(); // dct
             this.readU8(); // dca
             volFadeout = this.readU16LE(); // fadeout
@@ -450,6 +451,7 @@ export class ItParser extends BaseParser {
           samples: rawSamples,
           volumeEnv,
           panningEnv,
+          nna,
         });
       }
     } else {

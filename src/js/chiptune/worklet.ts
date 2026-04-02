@@ -47,6 +47,142 @@ const SINE_TABLE = [
   224, 212, 197, 180, 161, 141, 120, 97, 74, 49, 24,
 ];
 
+/**
+ * BackgroundVoice: lightweight voice for IT NNA (New Note Action).
+ * When a new note triggers on a channel with NNA != cut, the old playing
+ * state is moved here so it continues rendering (with fadeout/envelope).
+ */
+class BackgroundVoice {
+  sample: WorkletInstrumentSample;
+  instrument: WorkletInstrument | null;
+  sampleIndex: number;
+  sampleSpeed: number;
+  volume: number;
+  panning: number;
+  keyOn: boolean;
+  fadeoutVolume: number;
+  volumeEnvTick: number;
+  panningEnvTick: number;
+  volumeEnvValue: number;
+  panningEnvValue: number;
+  playing: boolean;
+  globalVolumeRef: ModPlayerWorklet;
+
+  constructor(ch: WorkletChannel) {
+    this.sample = ch.sample!;
+    this.instrument = ch.instrument;
+    this.sampleIndex = ch.sampleIndex;
+    this.sampleSpeed = ch.sampleSpeed;
+    this.volume = ch.volume;
+    this.panning = ch.panning;
+    this.keyOn = ch.keyOn;
+    this.fadeoutVolume = ch.fadeoutVolume;
+    this.volumeEnvTick = ch.volumeEnvTick;
+    this.panningEnvTick = ch.panningEnvTick;
+    this.volumeEnvValue = ch.volumeEnvValue;
+    this.panningEnvValue = ch.panningEnvValue;
+    this.playing = true;
+    this.globalVolumeRef = ch.worklet;
+  }
+
+  /** Apply NNA action: 1=continue, 2=noteOff (start release), 3=fade */
+  applyNNA(nna: number): void {
+    switch (nna) {
+      case 1: // Continue: keep playing as-is
+        break;
+      case 2: // Note Off: start envelope release/fadeout
+        this.keyOn = false;
+        break;
+      case 3: // Note Fade: immediate fadeout
+        this.keyOn = false;
+        this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384); // accelerate fade
+        break;
+    }
+  }
+
+  performTick(): void {
+    if (!this.playing) return;
+
+    // Process envelope/fadeout
+    if (this.instrument) {
+      if (this.keyOn) {
+        if (this.instrument.volumeEnv) {
+          this.volumeEnvValue = this.calcEnv(this.instrument.volumeEnv, this.volumeEnvTick++);
+        }
+      } else {
+        if (this.instrument.volumeFadeout !== undefined && this.instrument.volumeFadeout > 0) {
+          this.fadeoutVolume = Math.max(0, this.fadeoutVolume - this.instrument.volumeFadeout);
+          if (this.fadeoutVolume <= 0) {
+            this.playing = false;
+            return;
+          }
+        } else {
+          // No fadeout defined + key off = stop immediately
+          this.playing = false;
+          return;
+        }
+      }
+    }
+  }
+
+  calcEnv(env: Envelope, tick: number): number {
+    const points = env.points;
+    if (!points || points.length === 0) return 64;
+    if (env.type & 4 && env.loopEnd !== undefined && env.loopEnd < points.length) {
+      const loopEndTick = points[env.loopEnd].tick;
+      const loopStartTick = points[env.loopStart ?? 0]?.tick ?? 0;
+      if (tick >= loopEndTick && loopEndTick > loopStartTick) {
+        tick = loopStartTick + ((tick - loopStartTick) % (loopEndTick - loopStartTick + 1));
+      }
+    }
+    if (
+      this.keyOn &&
+      env.type & 2 &&
+      env.sustainStart !== undefined &&
+      env.sustainStart < points.length
+    ) {
+      const susTick = points[env.sustainStart].tick;
+      if (tick >= susTick) tick = susTick;
+    }
+    if (tick <= points[0].tick) return points[0].value;
+    for (let i = 0; i < points.length - 1; i++) {
+      if (tick <= points[i + 1].tick) {
+        const t = (tick - points[i].tick) / (points[i + 1].tick - points[i].tick);
+        return points[i].value + (points[i + 1].value - points[i].value) * t;
+      }
+    }
+    return points[points.length - 1].value;
+  }
+
+  nextSample(): [number, number] {
+    if (!this.playing || !this.sample || !this.sample.data || this.sample.data.length === 0)
+      return [0, 0];
+
+    if (this.sample.loopLength > 2) {
+      const loopEnd = this.sample.loopStart + this.sample.loopLength;
+      if (this.sampleIndex >= loopEnd)
+        this.sampleIndex =
+          this.sample.loopStart + ((this.sampleIndex - loopEnd) % this.sample.loopLength);
+    } else if (this.sampleIndex >= this.sample.length) {
+      this.playing = false;
+      return [0, 0];
+    }
+
+    const sIdx = Math.floor(this.sampleIndex);
+    const raw = this.sample.data[sIdx] / 128.0;
+    this.sampleIndex += this.sampleSpeed;
+
+    let vol =
+      (this.volume / 64) * (this.sample.volume / 64) * (this.globalVolumeRef.globalVolume / 64);
+    if (this.instrument) vol *= (this.volumeEnvValue / 64) * (this.fadeoutVolume / 32768);
+
+    const panTheta = (this.panning / 255) * (Math.PI / 2);
+    const l = raw * vol * Math.cos(panTheta);
+    const r = raw * vol * Math.sin(panTheta);
+    return [l, r];
+  }
+}
+
 class WorkletChannel {
   worklet: ModPlayerWorklet;
   channelIndex: number;
@@ -178,6 +314,18 @@ class WorkletChannel {
         if (tonePorta) {
           this.targetPeriod = this.calculatePeriod(note.note ?? 0, note.instrument ?? 0);
         } else {
+          // IT NNA: before killing old note, check if it should continue in background
+          if (
+            this.playing &&
+            this.sample &&
+            this.worklet.mod!.type === 'IT' &&
+            this.instrument &&
+            this.instrument.nna !== undefined &&
+            this.instrument.nna > 0
+          ) {
+            this.worklet.spawnBackgroundVoice(this, this.instrument.nna);
+          }
+
           this.note = note.note ?? 0;
           this.assignSample(note.note ?? 0);
           this.period = note.period || this.calculatePeriod(note.note ?? 0, note.instrument ?? 0);
@@ -772,6 +920,8 @@ class WorkletChannel {
 class ModPlayerWorklet extends AudioWorkletProcessor {
   mod: WorkletModule | null = null;
   channels: WorkletChannel[] = [];
+  backgroundVoices: BackgroundVoice[] = [];
+  static readonly MAX_BACKGROUND_VOICES = 64;
   playing = false;
   sampleRate = 44100;
   tick = 0;
@@ -813,11 +963,13 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         this.position = this.mod!.restartPosition || 0;
         this.rowIndex = -1;
         this.tick = this.ticksPerRow; // Force immediate Row 0 trigger on first process sample
+        this.backgroundVoices = [];
         this.playing = true;
       } else if (data.type === 'stop') {
         this.playing = false;
         // Optional: clear active channel output to avoid buzzing
         this.channels.forEach((ch) => (ch.playing = false));
+        this.backgroundVoices = [];
       } else if (data.type === 'resume') {
         this.playing = true;
         this.channels.forEach((ch) => {
@@ -828,6 +980,7 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         this.rowIndex = data.rowIndex - 1;
         this.tick = this.ticksPerRow;
         this.channels.forEach((ch) => ch.reset());
+        this.backgroundVoices = [];
       } else if (data.type === 'setVolume') {
         this.masterVolume = data.volume;
       } else if (data.type === 'setSpeed') {
@@ -864,6 +1017,28 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
   }
   setPatternDelay(frames: number) {
     this.patternDelay = frames;
+  }
+
+  /** Spawn a background voice from a channel's current playing state (IT NNA) */
+  spawnBackgroundVoice(ch: WorkletChannel, nna: number): void {
+    if (!ch.sample || !ch.playing) return;
+    // Limit background voices to prevent CPU overload
+    if (this.backgroundVoices.length >= ModPlayerWorklet.MAX_BACKGROUND_VOICES) {
+      // Remove the oldest/quietest voice
+      let minIdx = 0;
+      let minVol = Infinity;
+      for (let i = 0; i < this.backgroundVoices.length; i++) {
+        const v = this.backgroundVoices[i].volume * this.backgroundVoices[i].fadeoutVolume;
+        if (v < minVol) {
+          minVol = v;
+          minIdx = i;
+        }
+      }
+      this.backgroundVoices.splice(minIdx, 1);
+    }
+    const bg = new BackgroundVoice(ch);
+    bg.applyNNA(nna);
+    this.backgroundVoices.push(bg);
   }
 
   nextRow() {
@@ -934,6 +1109,13 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
           this.nextRow();
         }
         this.channels.forEach((ch) => ch.performTick());
+        // Tick background voices (IT NNA)
+        for (let bg = this.backgroundVoices.length - 1; bg >= 0; bg--) {
+          this.backgroundVoices[bg].performTick();
+          if (!this.backgroundVoices[bg].playing) {
+            this.backgroundVoices.splice(bg, 1);
+          }
+        }
         this.outputsUntilNextTick += this.outputsPerTick;
       }
       this.outputsUntilNextTick--;
@@ -945,6 +1127,17 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         lOut += l;
         rOut += r;
       });
+      // Mix background voices (IT NNA)
+      for (let bg = this.backgroundVoices.length - 1; bg >= 0; bg--) {
+        const bgv = this.backgroundVoices[bg];
+        if (!bgv.playing) {
+          this.backgroundVoices.splice(bg, 1);
+          continue;
+        }
+        const [bl, br] = bgv.nextSample();
+        lOut += bl;
+        rOut += br;
+      }
 
       if (leftChannel) leftChannel[i] = Math.tanh(lOut * 0.42 * this.masterVolume);
       if (rightChannel) rightChannel[i] = Math.tanh(rOut * 0.42 * this.masterVolume);

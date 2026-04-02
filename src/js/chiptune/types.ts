@@ -32,6 +32,7 @@ export interface Instrument {
   volumeEnv?: Envelope;
   panningEnv?: Envelope;
   volumeFadeout: number; // 0-32768
+  nna?: number; // IT: New Note Action (0=cut, 1=continue, 2=noteOff, 3=fade)
 }
 
 export interface Note {
@@ -130,6 +131,7 @@ export interface WorkletInstrument {
   volumeEnv?: Envelope;
   panningEnv?: Envelope;
   volumeFadeout?: number;
+  nna?: number; // IT: New Note Action (0=cut, 1=continue, 2=noteOff, 3=fade)
 }
 
 export interface WorkletNote {
@@ -220,6 +222,7 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
       volumeEnv: inst.volumeEnv,
       panningEnv: inst.panningEnv,
       volumeFadeout: inst.volumeFadeout,
+      nna: inst.nna,
     });
   }
 
