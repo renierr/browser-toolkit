@@ -113,7 +113,7 @@ export interface WorkletInstrumentSample {
   loopStart: number;
   loopLength: number;
   panning: number;
-  data: Int8Array;
+  data: Float32Array;
   baseNote?: number;
   c5speed?: number;
   vibratoType?: number;
@@ -181,10 +181,8 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
     const cached = sampleCache.get(sample);
     if (cached) return cached;
 
-    const int8Data = new Int8Array(sample.data.length);
-    for (let j = 0; j < sample.data.length; j++) {
-      int8Data[j] = Math.max(-128, Math.min(127, Math.round(sample.data[j] * 128)));
-    }
+    const floatData = new Float32Array(sample.data.length);
+    floatData.set(sample.data);
 
     const converted: WorkletInstrumentSample = {
       length: sample.length,
@@ -193,7 +191,7 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
       loopStart: sample.loopStart,
       loopLength: sample.loopLength,
       panning: sample.panning,
-      data: int8Data,
+      data: floatData,
       baseNote: sample.baseNote,
       c5speed: sample.c5speed,
       vibratoType: sample.vibratoType,

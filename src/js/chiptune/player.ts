@@ -1193,7 +1193,12 @@ export class ChiptunePlayer {
     chState.gain = this.audioContext.createGain();
 
     // Set initial volume exactly, including global volume parity
-    let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * this.volume * 0.8;
+    let finalVol =
+      (chState.volume / 64) *
+      (chState.channelVolume / 64) *
+      (chState.sample.volume / 64) *
+      this.volume *
+      0.8;
     chState.gain.gain.setValueAtTime(Math.max(0, Math.min(finalVol, 1)), time);
 
     chState.source.connect(chState.panNode);

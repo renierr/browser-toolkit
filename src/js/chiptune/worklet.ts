@@ -173,7 +173,7 @@ class BackgroundVoice {
     }
 
     const sIdx = Math.floor(this.sampleIndex);
-    const raw = this.sample.data[sIdx] / 128.0;
+    const raw = this.sample.data[sIdx];
     this.sampleIndex += this.sampleSpeed;
 
     let vol =
@@ -920,7 +920,7 @@ class WorkletChannel {
       return [0, 0];
     }
     let sIdx = Math.floor(this.sampleIndex);
-    let raw = this.sample.data[sIdx] / 128.0;
+    let raw = this.sample.data[sIdx];
     this.sampleIndex += this.sampleSpeed;
     let vol =
       (this.volume / 64) *
