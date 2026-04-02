@@ -416,6 +416,7 @@ class WorkletChannel {
   processTrigger(note: WorkletNote) {
     let tonePorta = note.effect === EFFECT_TONE_PORTA || note.effect === EFFECT_TONE_PORTA_VOL;
     let matchedCurrentDuplicate = false;
+    const previousInstrument = this.instrument;
 
     if (
       this.worklet.mod!.type === 'IT' &&
@@ -492,11 +493,11 @@ class WorkletChannel {
             this.sample &&
             !matchedCurrentDuplicate &&
             this.worklet.mod!.type === 'IT' &&
-            this.instrument &&
-            this.instrument.nna !== undefined &&
-            this.instrument.nna > 0
+            previousInstrument &&
+            previousInstrument.nna !== undefined &&
+            previousInstrument.nna > 0
           ) {
-            this.worklet.spawnBackgroundVoice(this, this.instrument.nna);
+            this.worklet.spawnBackgroundVoice(this, previousInstrument.nna);
           }
 
           this.note = note.note ?? 0;
