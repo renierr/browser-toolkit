@@ -36,7 +36,7 @@ export interface Instrument {
 }
 
 export interface Note {
-  note: number | null; // 1-96 (C-1 to B-8), 97=KeyOff, null=Empty
+  note: number | null; // 1-120 notes, 97=KeyOff, 98=NoteCut, 99=NoteFade, null=Empty
   period: number | null; // Raw exact tracker period, if standard.
   instrument: number; // 1-128, 0=Empty
   volume: number | null; // 0-64

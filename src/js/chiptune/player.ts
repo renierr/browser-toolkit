@@ -538,6 +538,15 @@ export class ChiptunePlayer {
               chState.volume = 0;
               this.stopChannel(chState, time);
             }
+          } else if (cell.note === 98) {
+            // Note Cut - immediate stop
+            chState.keyOn = false;
+            chState.volume = 0;
+            this.stopChannel(chState, time);
+          } else if (cell.note === 99) {
+            // Note Fade - trigger fadeout path
+            chState.keyOn = false;
+            chState.fadeoutVolume = Math.min(chState.fadeoutVolume, 16384);
           } else {
             // We have a new valid note
             if (!tonePorta) {

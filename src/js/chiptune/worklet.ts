@@ -324,6 +324,15 @@ class WorkletChannel {
           this.playing = false;
           this.volume = 0;
         }
+      } else if (note.note === 98) {
+        // Note Cut: immediate stop
+        this.keyOn = false;
+        this.playing = false;
+        this.volume = 0;
+      } else if (note.note === 99) {
+        // Note Fade: start fadeout without hard cut
+        this.keyOn = false;
+        this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
       } else {
         if (tonePorta) {
           this.targetPeriod = this.calculatePeriod(note.note ?? 0, note.instrument ?? 0);

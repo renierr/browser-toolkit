@@ -625,8 +625,12 @@ export class ItParser extends BaseParser {
               if (rawNote >= 1 && rawNote <= 120) {
                 // IT note 1=C-0, 61=C-5. Our internal: just store as-is (1-120)
                 logicalNote = rawNote;
-              } else if (rawNote === 253 || rawNote === 254 || rawNote === 255) {
-                logicalNote = 97; // KeyOff/NoteCut/NoteFade → generic key off
+              } else if (rawNote === 253) {
+                logicalNote = 98; // Note Cut
+              } else if (rawNote === 254) {
+                logicalNote = 97; // Note Off
+              } else if (rawNote === 255) {
+                logicalNote = 99; // Note Fade
               }
             }
 
