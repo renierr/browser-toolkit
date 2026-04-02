@@ -20,21 +20,21 @@ export abstract class BaseParser {
   }
 
   protected readU16LE(): number {
-    if (this.pos + 1 >= this.data.length) return 0;
+    if (this.pos + 2 > this.data.length) return 0;
     const v = this.data[this.pos] | (this.data[this.pos + 1] << 8);
     this.pos += 2;
     return v;
   }
 
   protected readU16BE(): number {
-    if (this.pos + 1 >= this.data.length) return 0;
+    if (this.pos + 2 > this.data.length) return 0;
     const v = (this.data[this.pos] << 8) | this.data[this.pos + 1];
     this.pos += 2;
     return v;
   }
 
   protected readU32LE(): number {
-    if (this.pos + 3 >= this.data.length) return 0;
+    if (this.pos + 4 > this.data.length) return 0;
     const v =
       (this.data[this.pos] |
         (this.data[this.pos + 1] << 8) |

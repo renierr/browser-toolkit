@@ -158,7 +158,7 @@ export class ItParser extends BaseParser {
     const patNum = this.readU16LE();
     this.setPos(40);
     this.readU16LE(); // cwtv
-    this.readU16LE(); // cmwt
+    const cmwt = this.readU16LE(); // compatible minimum tracker version
     const flags = this.readU16LE();
     this.readU16LE(); // special
     this.setPos(48);
@@ -233,14 +233,20 @@ export class ItParser extends BaseParser {
             pan = Math.round(((dfp & 0x7f) / 64) * 255);
           }
 
-          if (samplePointer > 0 && samplePointer < this.data.length && smpLength > 0) {
+          if (
+            samplePointer > 0 &&
+            samplePointer < this.data.length &&
+            smpLength > 0 &&
+            sFlags & 1
+          ) {
             this.setPos(samplePointer);
             const is16 = (sFlags & 0x02) !== 0;
             const isCompressed = (sFlags & 0x08) !== 0;
             // cvt bit 0: 0=unsigned, 1=signed (IT standard is signed)
             const isSigned = (cvt & 1) !== 0;
-            // cvt bit 2: IT 2.15 compression (affects decompression algorithm)
-            const isIT215 = (cvt & 4) !== 0;
+            // IT 2.15 compression: detected via cmwt (compatible minimum version) >= 0x0215
+            // The cvt field bit 2 is NOT a reliable indicator - only cmwt matters
+            const isIT215 = cmwt >= 0x0215;
 
             if (isCompressed) {
               if (is16) {
@@ -407,9 +413,11 @@ export class ItParser extends BaseParser {
         continue;
       }
       this.setPos(dataOffsets.pat[i]);
-      this.readU16LE(); // packed pattern data length
+      const packedLen = this.readU16LE(); // packed pattern data length
       const pRows = this.readU16LE();
       this.readU32LE(); // reserved
+      const patDataStart = this.pos;
+      const patDataEnd = patDataStart + packedLen;
 
       const rows: Note[][] = [];
       const chState = Array.from({ length: 64 }, () => ({
@@ -422,6 +430,25 @@ export class ItParser extends BaseParser {
       }));
 
       for (let r = 0; r < pRows; r++) {
+        // Safety: don't read past the packed data boundary
+        if (this.pos >= patDataEnd) {
+          // Fill remaining rows with empty data
+          for (let remaining = r; remaining < pRows; remaining++) {
+            rows.push(
+              Array.from({ length: channels }, () => ({
+                note: null,
+                period: null,
+                instrument: 0,
+                volume: null,
+                volumeColumn: null,
+                effect: 0,
+                effectParam: 0,
+              }))
+            );
+          }
+          break;
+        }
+
         const row: Note[] = Array.from({ length: channels }, () => ({
           note: null,
           period: null,
@@ -432,8 +459,8 @@ export class ItParser extends BaseParser {
           effectParam: 0,
         }));
 
-        // Read packed row data until end-of-row marker (byte 0)
-        while (true) {
+        // Read packed row data until end-of-row marker (byte 0) or end of packed data
+        while (this.pos < patDataEnd) {
           const b = this.readU8();
           if (b === 0) break;
           const ch = (b - 1) & 63;

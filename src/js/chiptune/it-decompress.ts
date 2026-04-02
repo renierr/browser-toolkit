@@ -56,6 +56,9 @@ export function decompressIT8(
     const blockSize = inData[pos] | (inData[pos + 1] << 8);
     pos += 2;
 
+    // Safety: skip invalid blocks
+    if (blockSize === 0 || pos + blockSize > inData.length) break;
+
     const br = new BitReader(inData, pos);
     pos += blockSize;
 
@@ -74,6 +77,7 @@ export function decompressIT8(
         if (v === 1 << (bitWidth - 1)) {
           const newWidth = br.readBits(3) + 1;
           bitWidth = newWidth < bitWidth ? newWidth : newWidth + 1;
+          if (bitWidth > 9) bitWidth = 9;
           continue;
         }
       } else if (bitWidth < 9) {
@@ -81,6 +85,7 @@ export function decompressIT8(
         if (v === 1 << (bitWidth - 1)) {
           const newWidth = br.readBits(3) + 1;
           bitWidth = newWidth < bitWidth ? newWidth : newWidth + 1;
+          if (bitWidth > 9) bitWidth = 9;
           continue;
         }
       } else {
@@ -147,6 +152,9 @@ export function decompressIT16(
     const blockSize = inData[pos] | (inData[pos + 1] << 8);
     pos += 2;
 
+    // Safety: skip invalid blocks
+    if (blockSize === 0 || pos + blockSize > inData.length) break;
+
     const br = new BitReader(inData, pos);
     pos += blockSize;
 
@@ -163,12 +171,14 @@ export function decompressIT16(
         if (v === 1 << (bitWidth - 1)) {
           const newWidth = br.readBits(4) + 1;
           bitWidth = newWidth < bitWidth ? newWidth : newWidth + 1;
+          if (bitWidth > 17) bitWidth = 17;
           continue;
         }
       } else if (bitWidth < 17) {
         if (v === 1 << (bitWidth - 1)) {
           const newWidth = br.readBits(4) + 1;
           bitWidth = newWidth < bitWidth ? newWidth : newWidth + 1;
+          if (bitWidth > 17) bitWidth = 17;
           continue;
         }
       } else {

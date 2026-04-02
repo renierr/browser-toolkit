@@ -167,32 +167,44 @@ export interface WorkletModule {
 export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
   const instruments: WorkletInstrument[] = [];
 
+  // Cache converted samples to avoid re-converting shared sample pools (critical for IT format
+  // where all instruments reference the same sample array)
+  const sampleCache = new Map<Sample, WorkletInstrumentSample>();
+
+  function convertSample(sample: Sample): WorkletInstrumentSample {
+    const cached = sampleCache.get(sample);
+    if (cached) return cached;
+
+    const int8Data = new Int8Array(sample.data.length);
+    for (let j = 0; j < sample.data.length; j++) {
+      int8Data[j] = Math.max(-128, Math.min(127, Math.round(sample.data[j] * 128)));
+    }
+
+    const converted: WorkletInstrumentSample = {
+      length: sample.length,
+      finetune: sample.finetune,
+      volume: sample.volume,
+      loopStart: sample.loopStart,
+      loopLength: sample.loopLength,
+      panning: sample.panning,
+      data: int8Data,
+      baseNote: sample.baseNote,
+      c5speed: sample.c5speed,
+      vibratoType: sample.vibratoType,
+      vibratoSweep: sample.vibratoSweep,
+      vibratoDepth: sample.vibratoDepth,
+      vibratoRate: sample.vibratoRate,
+    };
+    sampleCache.set(sample, converted);
+    return converted;
+  }
+
   for (let i = 0; i < mod.instruments.length; i++) {
     const inst = mod.instruments[i];
     const samples: WorkletInstrumentSample[] = [];
 
     for (let s = 0; s < inst.samples.length; s++) {
-      const sample = inst.samples[s];
-      const int8Data = new Int8Array(sample.data.length);
-      for (let j = 0; j < sample.data.length; j++) {
-        int8Data[j] = Math.max(-128, Math.min(127, Math.round(sample.data[j] * 128)));
-      }
-
-      samples.push({
-        length: sample.length,
-        finetune: sample.finetune,
-        volume: sample.volume,
-        loopStart: sample.loopStart,
-        loopLength: sample.loopLength,
-        panning: sample.panning,
-        data: int8Data,
-        baseNote: sample.baseNote,
-        c5speed: sample.c5speed,
-        vibratoType: sample.vibratoType,
-        vibratoSweep: sample.vibratoSweep,
-        vibratoDepth: sample.vibratoDepth,
-        vibratoRate: sample.vibratoRate,
-      });
+      samples.push(convertSample(inst.samples[s]));
     }
 
     instruments.push({
