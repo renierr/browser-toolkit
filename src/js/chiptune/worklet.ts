@@ -410,6 +410,45 @@ class WorkletChannel {
     }
 
     this.handleEffect(note);
+    if (this.worklet.mod!.type === 'IT' && (note.itVolumeEffect || 0) > 0) {
+      this.applyItSecondaryEffect(note.itVolumeEffect || 0, note.itVolumeEffectParam || 0, true);
+    }
+  }
+
+  private applyItSecondaryEffect(effectId: number, param: number, tick0: boolean): void {
+    switch (effectId) {
+      case EFFECT_PANNING:
+        if (tick0) this.panning = param;
+        break;
+      case EFFECT_VOLUME_SLIDE:
+        if (tick0) {
+          if (param & 0xf0) this.volSlideSpeed = (param >> 4) & 0x0f;
+          else if (param & 0x0f) this.volSlideSpeed = -(param & 0x0f);
+        }
+        break;
+      case EFFECT_PORTA_UP:
+        if (tick0 && param > 0) this.slideSpeed = -param;
+        break;
+      case EFFECT_PORTA_DOWN:
+        if (tick0 && param > 0) this.slideSpeed = param;
+        break;
+      case EFFECT_TONE_PORTA:
+        if (tick0 && param > 0) this.slideSpeed = param;
+        break;
+      case EFFECT_VIBRATO:
+        if (tick0 && param > 0) this.vibratoDepth = param & 0x0f;
+        break;
+      case EFFECT_EXTENDED:
+        if (tick0) {
+          const sub = (param >> 4) & 0x0f;
+          const subParam = param & 0x0f;
+          if (sub === 0x0a) this.volume = Math.min(64, this.volume + subParam);
+          else if (sub === 0x0b) this.volume = Math.max(0, this.volume - subParam);
+        }
+        break;
+      default:
+        break;
+    }
   }
 
   assignSample(noteValue: number) {
@@ -795,6 +834,12 @@ class WorkletChannel {
       if (this.retrig > 0 && this.worklet.tick % this.retrig === 0) {
         this.applyRetrigVolumeOp();
         this.sampleIndex = 0;
+      }
+
+      const volEffect = this.worklet.currentRowNotes[this.channelIndex]?.itVolumeEffect || 0;
+      const volParam = this.worklet.currentRowNotes[this.channelIndex]?.itVolumeEffectParam || 0;
+      if (this.worklet.mod!.type === 'IT' && volEffect > 0) {
+        this.applyItSecondaryEffect(volEffect, volParam, false);
       }
 
       if (this.tremorOn) {

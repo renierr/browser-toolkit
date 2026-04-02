@@ -43,6 +43,8 @@ export interface Note {
   volumeColumn: number | null; // Raw volume column byte for XM
   effect: number; // 0-255 (effect type)
   effectParam: number; // 0-255 (effect parameter)
+  itVolumeEffect?: number; // IT-only secondary effect from volume column
+  itVolumeEffectParam?: number; // IT-only secondary effect parameter
 }
 
 export interface Pattern {
@@ -141,6 +143,8 @@ export interface WorkletNote {
   period: number;
   effect: number;
   effectParam: number;
+  itVolumeEffect?: number;
+  itVolumeEffectParam?: number;
   volume?: number | null;
   volumeColumn?: number | null;
   note?: number | null;
@@ -244,6 +248,8 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
           period: note.period || 0,
           effect: note.effect,
           effectParam: note.effectParam,
+          itVolumeEffect: note.itVolumeEffect,
+          itVolumeEffectParam: note.itVolumeEffectParam,
           volume: note.volume,
           volumeColumn: note.volumeColumn,
           note: note.note,

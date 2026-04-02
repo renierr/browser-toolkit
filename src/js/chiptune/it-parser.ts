@@ -660,13 +660,14 @@ export class ItParser extends BaseParser {
 
             // Handle IT volume column
             let volume: number | null = null;
+            let itVolumeEffect = 0;
+            let itVolumeEffectParam = 0;
             if (hasVol && chState[ch].vol !== 255) {
               const parsed = parseItVolumeColumn(chState[ch].vol);
               volume = parsed.volume;
-              // If volume column has an effect and there's no main effect, use it
-              if (parsed.effect && effect === 0) {
-                effect = parsed.effect;
-                effectParam = parsed.effectParam;
+              if (parsed.effect) {
+                itVolumeEffect = parsed.effect;
+                itVolumeEffectParam = parsed.effectParam;
               }
             }
 
@@ -678,6 +679,8 @@ export class ItParser extends BaseParser {
               volumeColumn: null,
               effect,
               effectParam,
+              itVolumeEffect,
+              itVolumeEffectParam,
             };
           }
         }

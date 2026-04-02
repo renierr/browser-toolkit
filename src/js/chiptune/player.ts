@@ -506,6 +506,8 @@ export class ChiptunePlayer {
         period: null,
         instrument: 0,
         volume: null,
+        itVolumeEffect: 0,
+        itVolumeEffectParam: 0,
         effect: 0,
         effectParam: 0,
       };
@@ -649,6 +651,14 @@ export class ChiptunePlayer {
 
         // Parse global tick-based fx memory mapping
         this.parseEffectTick0(chState, chState.effect, chState.effectParam);
+        if (this.module.type === 'IT' && (cell.itVolumeEffect || 0) > 0) {
+          this.parseEffectTick0(
+            chState,
+            cell.itVolumeEffect || 0,
+            cell.itVolumeEffectParam || 0,
+            false
+          );
+        }
 
         // Handle pattern navigation
         if (chState.effect === 0x0b) {
@@ -678,6 +688,9 @@ export class ChiptunePlayer {
       } else {
         // --- CONTINUOUS TICK EVALUATION (Tick 1+) ---
         this.parseEffectContinuous(chState, chState.effect);
+        if (this.module.type === 'IT' && (cell.itVolumeEffect || 0) > 0) {
+          this.parseEffectContinuous(chState, cell.itVolumeEffect || 0);
+        }
       }
 
       // Update envelopes for XM/IT
@@ -1050,9 +1063,14 @@ export class ChiptunePlayer {
     }
   }
 
-  private parseEffectTick0(chState: ChannelState, effect: number, param: number): void {
+  private parseEffectTick0(
+    chState: ChannelState,
+    effect: number,
+    param: number,
+    resetArpeggio: boolean = true
+  ): void {
     const isIT = this.module?.type === 'IT';
-    chState.arpeggioNotes = [];
+    if (resetArpeggio) chState.arpeggioNotes = [];
 
     // Effect 0: Arpeggio
     if (effect === 0x00 && param > 0) {
