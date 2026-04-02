@@ -135,11 +135,14 @@ class BackgroundVoice {
 
     // Process envelope/fadeout
     if (this.instrument) {
-      if (this.keyOn) {
-        if (this.instrument.volumeEnv) {
-          this.volumeEnvValue = this.calcEnv(this.instrument.volumeEnv, this.volumeEnvTick++);
-        }
-      } else {
+      const isIt = this.globalVolumeRef.mod?.type === 'IT';
+
+      // IT keeps envelope progression running after key-off (release phase).
+      if (this.instrument.volumeEnv && (this.keyOn || isIt)) {
+        this.volumeEnvValue = this.calcEnv(this.instrument.volumeEnv, this.volumeEnvTick++);
+      }
+
+      if (!this.keyOn) {
         if (this.instrument.volumeFadeout !== undefined && this.instrument.volumeFadeout > 0) {
           this.fadeoutVolume = Math.max(0, this.fadeoutVolume - this.instrument.volumeFadeout);
           if (this.fadeoutVolume <= 0) {
@@ -887,7 +890,15 @@ class WorkletChannel {
             this.volume = Math.max(0, this.volume - subParam);
             break;
           case 0xc:
-            if (this.worklet.tick === subParam) this.volume = 0;
+            if (this.worklet.tick === subParam) {
+              if (isIT) {
+                this.keyOn = false;
+                this.playing = false;
+                this.volume = 0;
+              } else {
+                this.volume = 0;
+              }
+            }
             break;
           case 0xe:
             this.worklet.setPatternDelay(subParam);
@@ -1011,20 +1022,20 @@ class WorkletChannel {
     }
 
     if (this.instrument) {
-      if (this.keyOn) {
-        if (this.instrument.volumeEnv) {
-          this.volumeEnvValue = this.calculateEnvelope(
-            this.instrument.volumeEnv,
-            this.volumeEnvTick++
-          );
-        }
-        if (this.instrument.panningEnv) {
-          this.panningEnvValue = this.calculateEnvelope(
-            this.instrument.panningEnv,
-            this.panningEnvTick++
-          );
-        }
-      } else {
+      const isIt = this.worklet.mod!.type === 'IT';
+
+      // IT continues envelope progression during release; MOD/XM keep existing behavior.
+      if (this.instrument.volumeEnv && (this.keyOn || isIt)) {
+        this.volumeEnvValue = this.calculateEnvelope(this.instrument.volumeEnv, this.volumeEnvTick++);
+      }
+      if (this.instrument.panningEnv && (this.keyOn || isIt)) {
+        this.panningEnvValue = this.calculateEnvelope(
+          this.instrument.panningEnv,
+          this.panningEnvTick++
+        );
+      }
+
+      if (!this.keyOn) {
         if (this.instrument.volumeFadeout !== undefined && this.instrument.volumeFadeout > 0) {
           this.fadeoutVolume = Math.max(0, this.fadeoutVolume - this.instrument.volumeFadeout);
           if (this.fadeoutVolume <= 0) this.playing = false;
