@@ -141,6 +141,9 @@ class BackgroundVoice {
       if (this.instrument.volumeEnv && (this.keyOn || isIt)) {
         this.volumeEnvValue = this.calcEnv(this.instrument.volumeEnv, this.volumeEnvTick++);
       }
+      if (this.instrument.panningEnv && (this.keyOn || isIt)) {
+        this.panningEnvValue = this.calcEnv(this.instrument.panningEnv, this.panningEnvTick++);
+      }
 
       if (!this.keyOn) {
         if (this.instrument.volumeFadeout !== undefined && this.instrument.volumeFadeout > 0) {
@@ -168,14 +171,17 @@ class BackgroundVoice {
         tick = loopStartTick + ((tick - loopStartTick) % (loopEndTick - loopStartTick + 1));
       }
     }
-    if (
-      this.keyOn &&
-      env.type & 2 &&
-      env.sustainStart !== undefined &&
-      env.sustainStart < points.length
-    ) {
-      const susTick = points[env.sustainStart].tick;
-      if (tick >= susTick) tick = susTick;
+    if (this.keyOn && env.type & 2 && env.sustainStart !== undefined && env.sustainStart < points.length) {
+      const susStartTick = points[env.sustainStart].tick;
+      const susEndIdx = env.sustainEnd ?? env.sustainStart;
+      const susEndTick = points[Math.min(susEndIdx, points.length - 1)].tick;
+      if (tick >= susStartTick) {
+        if (susEndTick > susStartTick) {
+          tick = susStartTick + ((tick - susStartTick) % (susEndTick - susStartTick + 1));
+        } else {
+          tick = susStartTick;
+        }
+      }
     }
     if (tick <= points[0].tick) return points[0].value;
     for (let i = 0; i < points.length - 1; i++) {
@@ -213,7 +219,19 @@ class BackgroundVoice {
     vol *= this.globalVolumeRef.mixingVolume / 128;
     if (this.instrument) vol *= (this.volumeEnvValue / 64) * (this.fadeoutVolume / 32768);
 
-    const panTheta = (this.panning / 255) * (Math.PI / 2);
+    let effectivePanning = this.panning;
+    if (this.globalVolumeRef.mod?.type === 'IT' && this.instrument?.panningEnv) {
+      const envPan = Math.max(0, Math.min(64, this.panningEnvValue));
+      if (envPan < 32) {
+        effectivePanning = Math.round((effectivePanning * envPan) / 32);
+      } else if (envPan > 32) {
+        effectivePanning = Math.round(
+          effectivePanning + ((255 - effectivePanning) * (envPan - 32)) / 32
+        );
+      }
+    }
+
+    const panTheta = (effectivePanning / 255) * (Math.PI / 2);
     const l = raw * vol * Math.cos(panTheta);
     const r = raw * vol * Math.sin(panTheta);
     return [l, r];
@@ -270,7 +288,7 @@ class WorkletChannel {
   volumeEnvTick = 0;
   panningEnvTick = 0;
   volumeEnvValue = 64;
-  panningEnvValue = 128;
+  panningEnvValue = 32;
   fadeoutVolume = 32768;
 
   retrig = 0;
@@ -518,6 +536,8 @@ class WorkletChannel {
           this.keyOn = true;
           this.volumeEnvTick = 0;
           this.panningEnvTick = 0;
+          this.volumeEnvValue = 64;
+          this.panningEnvValue = 32;
           this.fadeoutVolume = 32768;
           this.autoVibratoPhase = 0;
           this.autoVibratoTick = 0;
@@ -1138,25 +1158,27 @@ class WorkletChannel {
     this.sampleSpeed = freq / this.worklet.sampleRate;
   }
 
-  calculateEnvelope(_env: Envelope, tick: number) {
-    if (this.instrument?.volumeEnv) {
-      const volEnv = this.instrument.volumeEnv;
-      const points = volEnv.points;
-      if (volEnv.type & 4 && volEnv.loopEnd !== undefined && volEnv.loopEnd < points.length) {
-        const loopEndTick = points[volEnv.loopEnd].tick;
-        const loopStartTick = points[volEnv.loopStart ?? 0]?.tick ?? 0;
+  calculateEnvelope(env: Envelope, tick: number) {
+    const points = env.points;
+    if (points && points.length > 0) {
+      if (env.type & 4 && env.loopEnd !== undefined && env.loopEnd < points.length) {
+        const loopEndTick = points[env.loopEnd].tick;
+        const loopStartTick = points[env.loopStart ?? 0]?.tick ?? 0;
         if (tick >= loopEndTick) {
           tick = loopStartTick + ((tick - loopStartTick) % (loopEndTick - loopStartTick + 1));
         }
       }
-      if (
-        this.keyOn &&
-        volEnv.type & 2 &&
-        volEnv.sustainStart !== undefined &&
-        volEnv.sustainStart < points.length
-      ) {
-        const susTick = points[volEnv.sustainStart].tick;
-        if (tick >= susTick) tick = susTick;
+      if (this.keyOn && env.type & 2 && env.sustainStart !== undefined && env.sustainStart < points.length) {
+        const susStartTick = points[env.sustainStart].tick;
+        const susEndIdx = env.sustainEnd ?? env.sustainStart;
+        const susEndTick = points[Math.min(susEndIdx, points.length - 1)].tick;
+        if (tick >= susStartTick) {
+          if (susEndTick > susStartTick) {
+            tick = susStartTick + ((tick - susStartTick) % (susEndTick - susStartTick + 1));
+          } else {
+            tick = susStartTick;
+          }
+        }
       }
 
       if (tick <= points[0].tick) return points[0].value;
@@ -1230,7 +1252,19 @@ class WorkletChannel {
 
     // Equal Power Panning Law: L = Vol * cos(theta), R = Vol * sin(theta)
     // theta = (panning/255) * (PI/2)
-    const panTheta = (this.panning / 255) * (Math.PI / 2);
+    let effectivePanning = this.panning;
+    if (this.worklet.mod!.type === 'IT' && this.instrument?.panningEnv) {
+      const envPan = Math.max(0, Math.min(64, this.panningEnvValue));
+      if (envPan < 32) {
+        effectivePanning = Math.round((effectivePanning * envPan) / 32);
+      } else if (envPan > 32) {
+        effectivePanning = Math.round(
+          effectivePanning + ((255 - effectivePanning) * (envPan - 32)) / 32
+        );
+      }
+    }
+
+    const panTheta = (effectivePanning / 255) * (Math.PI / 2);
     const l = raw * vol * Math.cos(panTheta);
     const r = raw * vol * Math.sin(panTheta);
 
