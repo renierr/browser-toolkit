@@ -10,6 +10,8 @@ import {
   IT_EFFECT_FINE_PORTA_UP,
   IT_EFFECT_EXTRA_FINE_PORTA_DOWN,
   IT_EFFECT_EXTRA_FINE_PORTA_UP,
+  IT_EFFECT_SET_CHANNEL_VOLUME,
+  IT_EFFECT_CHANNEL_VOL_SLIDE,
 } from './it-parser';
 import workletUrl from './worklet?worker&url';
 
@@ -27,6 +29,7 @@ interface ChannelState {
   instrument: number;
   note: number | null;
   volume: number;
+  channelVolume: number;
   panning: number;
 
   effect: number;
@@ -44,6 +47,7 @@ interface ChannelState {
 
   slideSpeed: number;
   volSlideSpeed: number;
+  channelVolSlide: number;
 
   fineSlideSpeed: number;
 
@@ -150,6 +154,7 @@ export class ChiptunePlayer {
         currentPeriod: 0,
         targetPeriod: 0,
         volume: 64,
+        channelVolume: 64,
         panning: pan,
         effect: 0,
         effectParam: 0,
@@ -163,6 +168,7 @@ export class ChiptunePlayer {
         tremoloWaveform: 0,
         slideSpeed: 0,
         volSlideSpeed: 0,
+        channelVolSlide: 0,
         fineSlideSpeed: 0,
         glissando: false,
         glissandoNote: 0,
@@ -693,7 +699,11 @@ export class ChiptunePlayer {
         // SMOOTH RAMPS for frequency
         chState.source.playbackRate.linearRampToValueAtTime(playbackRate, time + tickDur);
 
-        let finalVol = (chState.volume / 64) * (chState.sample.volume / 64) * this.volume;
+        let finalVol =
+          (chState.volume / 64) *
+          (chState.channelVolume / 64) *
+          (chState.sample.volume / 64) *
+          this.volume;
 
         // Apply volume envelope for XM/IT
         if (this.module && (this.module.type === 'XM' || this.module.type === 'IT')) {
@@ -1068,6 +1078,15 @@ export class ChiptunePlayer {
     } else if (effect === IT_EFFECT_SET_TEMPO) {
       if (param >= 32) this.bpm = param;
     }
+    // IT channel volume commands
+    else if (effect === IT_EFFECT_SET_CHANNEL_VOLUME) {
+      chState.channelVolume = Math.max(0, Math.min(64, param));
+    } else if (effect === IT_EFFECT_CHANNEL_VOL_SLIDE) {
+      if (param > 0 || !isIT) {
+        if (param & 0xf0) chState.channelVolSlide = (param >> 4) & 0x0f;
+        else if (param & 0x0f) chState.channelVolSlide = -(param & 0x0f);
+      }
+    }
     // IT fine volume slides (tick 0 only)
     else if (effect === IT_EFFECT_FINE_VOLSLIDE_UP) {
       chState.volume = Math.min(64, chState.volume + param);
@@ -1090,6 +1109,9 @@ export class ChiptunePlayer {
   private parseEffectContinuous(chState: ChannelState, effect: number): void {
     if (chState.volSlideSpeed !== 0) {
       chState.volume = Math.max(0, Math.min(64, chState.volume + chState.volSlideSpeed));
+    }
+    if (chState.channelVolSlide !== 0) {
+      chState.channelVolume = Math.max(0, Math.min(64, chState.channelVolume + chState.channelVolSlide));
     }
 
     if (effect === 0x03 || effect === 0x05) {

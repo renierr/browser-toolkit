@@ -41,6 +41,8 @@ const IT_EFFECT_FINE_PORTA_DOWN = 0x24;
 const IT_EFFECT_FINE_PORTA_UP = 0x25;
 const IT_EFFECT_EXTRA_FINE_PORTA_DOWN = 0x26;
 const IT_EFFECT_EXTRA_FINE_PORTA_UP = 0x27;
+const IT_EFFECT_SET_CHANNEL_VOLUME = 0x28;
+const IT_EFFECT_CHANNEL_VOL_SLIDE = 0x29;
 
 const SINE_TABLE = [
   0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253, 255, 253, 250, 244, 235,
@@ -58,6 +60,7 @@ class BackgroundVoice {
   sampleIndex: number;
   sampleSpeed: number;
   volume: number;
+  channelVolume: number;
   panning: number;
   keyOn: boolean;
   fadeoutVolume: number;
@@ -74,6 +77,7 @@ class BackgroundVoice {
     this.sampleIndex = ch.sampleIndex;
     this.sampleSpeed = ch.sampleSpeed;
     this.volume = ch.volume;
+    this.channelVolume = ch.channelVolume;
     this.panning = ch.panning;
     this.keyOn = ch.keyOn;
     this.fadeoutVolume = ch.fadeoutVolume;
@@ -173,7 +177,10 @@ class BackgroundVoice {
     this.sampleIndex += this.sampleSpeed;
 
     let vol =
-      (this.volume / 64) * (this.sample.volume / 64) * (this.globalVolumeRef.globalVolume / 64);
+      (this.volume / 64) *
+      (this.channelVolume / 64) *
+      (this.sample.volume / 64) *
+      (this.globalVolumeRef.globalVolume / 64);
     if (this.instrument) vol *= (this.volumeEnvValue / 64) * (this.fadeoutVolume / 32768);
 
     const panTheta = (this.panning / 255) * (Math.PI / 2);
@@ -199,6 +206,7 @@ class WorkletChannel {
   currentPeriod = 0;
 
   volume = 64;
+  channelVolume = 64;
   panning = 128;
   baseVolume = 64;
 
@@ -218,6 +226,7 @@ class WorkletChannel {
 
   slideSpeed = 0;
   volSlideSpeed = 0;
+  channelVolSlide = 0;
   fineSlideSpeed = 0;
 
   arpeggioNotes: number[] = [];
@@ -468,6 +477,7 @@ class WorkletChannel {
       if (!isIT) {
         this.slideSpeed = 0;
         this.volSlideSpeed = 0;
+        this.channelVolSlide = 0;
         this.fineSlideSpeed = 0;
       }
       this.arpeggioNotes = [];
@@ -571,6 +581,15 @@ class WorkletChannel {
       case IT_EFFECT_EXTRA_FINE_PORTA_UP:
         if (this.worklet.tick === 0) this.currentPeriod -= param / 256;
         break;
+      case IT_EFFECT_SET_CHANNEL_VOLUME:
+        this.channelVolume = Math.max(0, Math.min(64, param));
+        break;
+      case IT_EFFECT_CHANNEL_VOL_SLIDE:
+        if (param > 0 || !isIT) {
+          if (param & 0xf0) this.channelVolSlide = (param >> 4) & 0x0f;
+          else if (param & 0x0f) this.channelVolSlide = -(param & 0x0f);
+        }
+        break;
       case EFFECT_GLOBAL_VOLUME:
         this.worklet.globalVolume = Math.min(64, param);
         break;
@@ -660,6 +679,9 @@ class WorkletChannel {
     if (this.worklet.tick > 0) {
       if (this.volSlideSpeed !== 0) {
         this.volume = Math.max(0, Math.min(64, this.volume + this.volSlideSpeed));
+      }
+      if (this.channelVolSlide !== 0) {
+        this.channelVolume = Math.max(0, Math.min(64, this.channelVolume + this.channelVolSlide));
       }
       if (this.globalVolSlide !== 0) {
         this.worklet.globalVolume = Math.max(
@@ -900,7 +922,11 @@ class WorkletChannel {
     let sIdx = Math.floor(this.sampleIndex);
     let raw = this.sample.data[sIdx] / 128.0;
     this.sampleIndex += this.sampleSpeed;
-    let vol = (this.volume / 64) * (this.sample.volume / 64) * (this.worklet.globalVolume / 64);
+    let vol =
+      (this.volume / 64) *
+      (this.channelVolume / 64) *
+      (this.sample.volume / 64) *
+      (this.worklet.globalVolume / 64);
     if (this.tremorOn) {
       const p = this.worklet.currentRowNotes[this.channelIndex]?.effectParam ?? 0;
       if (this.tremorCounter > ((p >> 4) & 0x0f)) vol = 0;

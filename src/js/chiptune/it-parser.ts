@@ -14,6 +14,8 @@ export const IT_EFFECT_FINE_PORTA_DOWN = 0x24; // EFx fine portamento down
 export const IT_EFFECT_FINE_PORTA_UP = 0x25; // FFx fine portamento up
 export const IT_EFFECT_EXTRA_FINE_PORTA_DOWN = 0x26; // EEx extra-fine porta down
 export const IT_EFFECT_EXTRA_FINE_PORTA_UP = 0x27; // FEx extra-fine porta up
+export const IT_EFFECT_SET_CHANNEL_VOLUME = 0x28; // Mxx set channel volume
+export const IT_EFFECT_CHANNEL_VOL_SLIDE = 0x29; // Nxx channel volume slide
 
 /**
  * IT effect letter → effect number translation.
@@ -50,10 +52,10 @@ function translateItEffect(itCmd: number, itParam: number): [number, number] {
       return [0x06, itParam];
     case 12: // L: Tone Porta + Volume Slide → MOD 0x05
       return [0x05, itParam];
-    case 13: // M: Set Channel Volume (IT-specific, approximate as Set Volume)
-      return [0x0c, Math.min(itParam, 64)];
-    case 14: // N: Channel Volume Slide (IT-specific, approximate as Volume Slide)
-      return [0x0a, itParam];
+    case 13: // M: Set Channel Volume (IT-specific)
+      return [IT_EFFECT_SET_CHANNEL_VOLUME, Math.min(itParam, 64)];
+    case 14: // N: Channel Volume Slide (IT-specific)
+      return [IT_EFFECT_CHANNEL_VOL_SLIDE, itParam];
     case 15: // O: Sample Offset → MOD 0x09
       return [0x09, itParam];
     case 16: // P: Panning Slide → 0x19
@@ -72,7 +74,7 @@ function translateItEffect(itCmd: number, itParam: number): [number, number] {
       // IT Vxx is 0-128, internal engine uses 0-64.
       return [0x10, Math.min(64, Math.round(itParam / 2))];
     case 23: // W: Global Volume Slide → 0x11
-      return [0x11, itParam];
+      return translateItGlobalVolSlide(itParam);
     case 24: // X: Set Panning → MOD 0x08
       // IT X panning: 0x00=left, 0x80=center, 0xFF=right
       return [0x08, itParam];
@@ -127,6 +129,25 @@ function translateItPortaUp(param: number): [number, number] {
   }
   // Regular portamento up
   return [0x01, param];
+}
+
+/** Translate IT Wxy (Global Volume Slide) from 0-128 domain to internal 0-64 domain */
+function translateItGlobalVolSlide(param: number): [number, number] {
+  const up = (param >> 4) & 0x0f;
+  const down = param & 0x0f;
+
+  if (up > 0 && down === 0) {
+    const scaledUp = Math.max(1, Math.round(up / 2));
+    return [0x11, scaledUp << 4];
+  }
+
+  if (down > 0 && up === 0) {
+    const scaledDown = Math.max(1, Math.round(down / 2));
+    return [0x11, scaledDown];
+  }
+
+  // Mixed nibbles are uncommon; keep original encoding.
+  return [0x11, param];
 }
 
 /** Translate IT S (Special) sub-commands to MOD E sub-commands */
@@ -215,97 +236,17 @@ function parseItVolumeColumn(vol: number): {
   return { volume: null, volumeColumn: null, effect: 0, effectParam: 0 };
 }
 
-function scoreDecodedSampleQuality(data: Float32Array): number {
-  if (data.length === 0) return Number.POSITIVE_INFINITY;
-
-  let clipCount = 0;
-  let jumpSum = 0;
-  let zeroCrossings = 0;
-  let prev = data[0];
-
-  if (!Number.isFinite(prev)) return Number.POSITIVE_INFINITY;
-
-  for (let i = 1; i < data.length; i++) {
-    const v = data[i];
-    if (!Number.isFinite(v)) return Number.POSITIVE_INFINITY;
-
-    if (Math.abs(v) >= 0.99) clipCount++;
-    jumpSum += Math.abs(v - prev);
-    if ((v >= 0 && prev < 0) || (v < 0 && prev >= 0)) zeroCrossings++;
-    prev = v;
-  }
-
-  const denom = Math.max(1, data.length - 1);
-  const clipRatio = clipCount / denom;
-  const avgJump = jumpSum / denom;
-  const crossingRatio = zeroCrossings / denom;
-
-  return clipRatio * 6 + avgJump * 1.5 + crossingRatio * 1.5;
-}
-
 function decodeCompressedItSample(
   data: Uint8Array,
   samplePointer: number,
   sampleLength: number,
   is16Bit: boolean,
   preferIT215: boolean,
-  isSigned: boolean,
-  sampleName: string,
-  allowFallback: boolean
-): {
-  data: Float32Array;
-  usedFallback: boolean;
-  preferredScore: number;
-  fallbackScore: number;
-  chosenIT215: boolean;
-} {
-  // Avoid flip-flopping between IT214/IT215 on tiny score differences.
-  // Mixed mode selection inside one module can sound like random noise.
-  const MIN_ABSOLUTE_GAIN = 0.45;
-  const MIN_RELATIVE_GAIN = 0.2;
-
-  const preferred = is16Bit
+  isSigned: boolean
+): Float32Array {
+  return is16Bit
     ? decompressIT16(data, samplePointer, sampleLength, preferIT215, isSigned)
     : decompressIT8(data, samplePointer, sampleLength, preferIT215, isSigned);
-
-  const fallback = is16Bit
-    ? decompressIT16(data, samplePointer, sampleLength, !preferIT215, isSigned)
-    : decompressIT8(data, samplePointer, sampleLength, !preferIT215, isSigned);
-
-  const preferredScore = scoreDecodedSampleQuality(preferred);
-  const fallbackScore = scoreDecodedSampleQuality(fallback);
-
-  if (preferredScore > 2.2 && fallbackScore > 2.2) {
-    console.warn(
-      `[Chiptune] IT sample decode still suspicious for "${sampleName}" (preferred=${preferredScore.toFixed(2)}, fallback=${fallbackScore.toFixed(2)})`
-    );
-  }
-
-  const absoluteGain = preferredScore - fallbackScore;
-  const relativeGain = absoluteGain / Math.max(preferredScore, 0.0001);
-  const useFallback =
-    allowFallback &&
-    fallbackScore < preferredScore &&
-    absoluteGain >= MIN_ABSOLUTE_GAIN &&
-    relativeGain >= MIN_RELATIVE_GAIN;
-
-  if (useFallback) {
-    return {
-      data: new Float32Array(fallback),
-      usedFallback: true,
-      preferredScore,
-      fallbackScore,
-      chosenIT215: !preferIT215,
-    };
-  }
-
-  return {
-    data: new Float32Array(preferred),
-    usedFallback: false,
-    preferredScore,
-    fallbackScore,
-    chosenIT215: preferIT215,
-  };
 }
 
 export class ItParser extends BaseParser {
@@ -320,7 +261,7 @@ export class ItParser extends BaseParser {
     const smpNum = this.readU16LE();
     const patNum = this.readU16LE();
     this.setPos(40);
-    const cwtv = this.readU16LE(); // created with tracker version
+    this.readU16LE(); // created with tracker version
     const cmwt = this.readU16LE(); // compatible minimum tracker version
     const flags = this.readU16LE();
     this.readU16LE(); // special
@@ -354,14 +295,6 @@ export class ItParser extends BaseParser {
     const rawSamples: Sample[] = [];
     // IT compression mode must be consistent module-wide. Use compatibility target.
     const preferIT215ByCompat = cmwt >= 0x0215;
-    const allowPerSampleModeFallback = false;
-
-    let compressedSamples = 0;
-    let fallbackDecodeCount = 0;
-    let suspiciousDecodeCount = 0;
-    let stereoSampleCount = 0;
-    let chosenIT214Count = 0;
-    let chosenIT215Count = 0;
     for (let i = 0; i < smpNum; i++) {
       let name = `Sample ${i + 1}`;
       let sampleData = new Float32Array(0);
@@ -414,42 +347,23 @@ export class ItParser extends BaseParser {
             this.setPos(samplePointer);
             const is16 = (sFlags & 0x02) !== 0;
             const isCompressed = (sFlags & 0x08) !== 0;
-            const isStereo = (sFlags & 0x04) !== 0;
             // cvt bit 0: 0=unsigned, 1=signed (IT standard is signed)
             const isSigned = (cvt & 1) !== 0;
 
-            // Diagnostics for still-unhandled edge cases seen in wild IT files.
-            if (isStereo || (cvt & 0xfe) !== 0) {
-              console.warn(
-                `[Chiptune] IT sample has advanced flags (name="${name}", stereo=${isStereo}, cvt=0x${cvt.toString(16).padStart(2, '0')}, compressed=${isCompressed})`
-              );
-            }
             const preferIT215 = preferIT215ByCompat;
 
-            if (isStereo) stereoSampleCount++;
-
             if (isCompressed) {
-              compressedSamples++;
               const decoded = decodeCompressedItSample(
                 this.data,
                 this.pos,
                 smpLength,
                 is16,
                 preferIT215,
-                isSigned,
-                name,
-                allowPerSampleModeFallback
+                isSigned
               );
 
-              if (decoded.usedFallback) fallbackDecodeCount++;
-              if (decoded.preferredScore > 2.2 && decoded.fallbackScore > 2.2) {
-                suspiciousDecodeCount++;
-              }
-              if (decoded.chosenIT215) chosenIT215Count++;
-              else chosenIT214Count++;
-
               sampleData = new Float32Array(smpLength);
-              sampleData.set(decoded.data);
+              sampleData.set(decoded);
             } else {
               sampleData = new Float32Array(smpLength);
               for (let j = 0; j < smpLength; j++) {
@@ -517,11 +431,6 @@ export class ItParser extends BaseParser {
       });
     }
 
-    if (compressedSamples > 0 || stereoSampleCount > 0) {
-      console.error(
-        `[Chiptune] IT decode summary: cwtv=0x${cwtv.toString(16)}, cmwt=0x${cmwt.toString(16)}, compatPrefer=${preferIT215ByCompat ? '2.15' : '2.14'}, perSampleFallback=${allowPerSampleModeFallback}, compressed=${compressedSamples}, chosen214=${chosenIT214Count}, chosen215=${chosenIT215Count}, fallback=${fallbackDecodeCount}, suspicious=${suspiciousDecodeCount}, stereo=${stereoSampleCount}`
-      );
-    }
 
     const instruments: Instrument[] = [];
     if ((flags & 4) !== 0 && insNum > 0) {
