@@ -311,6 +311,27 @@ class WorkletChannel {
     this.reset();
   }
 
+  private getWaveValue(phase: number, waveform: number): number {
+    const shape = waveform & 0x03;
+    const p = phase & 63;
+
+    if (shape === 1) {
+      // Ramp: +255 .. -255 over one cycle
+      return 255 - p * 8;
+    }
+    if (shape === 2) {
+      return p < 32 ? 255 : -255;
+    }
+    if (shape === 3) {
+      // Deterministic pseudo-random shape for IT random waveform.
+      const x = Math.sin((p + 1) * 12.9898 + this.channelIndex * 78.233) * 43758.5453;
+      return (x - Math.floor(x)) * 510 - 255;
+    }
+
+    if (p < 32) return SINE_TABLE[p];
+    return -SINE_TABLE[p - 32];
+  }
+
   reset() {
     this.playing = false;
     this.sampleIndex = 0;
@@ -318,8 +339,13 @@ class WorkletChannel {
     // Preservation: We DO NOT reset this.instrument, this.volume, or this.panning
     // because subsequent notes in a tracker row often omit instrument bytes.
     // Clearing them causes silence after seeking or restarting.
-    this.vibratoPhase = 0;
-    this.tremoloPhase = 0;
+          if (this.worklet.mod!.type === 'IT') {
+            if ((this.vibratoWaveform & 0x04) === 0) this.vibratoPhase = 0;
+            if ((this.tremoloWaveform & 0x04) === 0) this.tremoloPhase = 0;
+          } else {
+            this.vibratoPhase = 0;
+            this.tremoloPhase = 0;
+          }
     this.volumeEnvTick = 0;
     this.panningEnvTick = 0;
   }
@@ -901,7 +927,7 @@ class WorkletChannel {
             else this.currentPeriod += subParam;
             break;
           case 0x4:
-            this.vibratoWaveform = subParam & 3;
+            this.vibratoWaveform = isIT ? subParam : subParam & 3;
             break;
           case 0x5:
             this.worklet.setPatternLoopStart();
@@ -911,7 +937,7 @@ class WorkletChannel {
             else this.worklet.setPatternLoop(subParam);
             break;
           case 0x7:
-            this.tremoloWaveform = subParam & 3;
+            this.tremoloWaveform = isIT ? subParam : subParam & 3;
             break;
           case 0x9:
             this.retrig = subParam;
@@ -1128,10 +1154,8 @@ class WorkletChannel {
       : this.vibratoDepth;
 
     if (activeVibratoDepth > 0) {
-      let phase = Math.floor(this.vibratoPhase * 64) & 63;
-      let mod = 0;
-      if (phase < 32) mod = SINE_TABLE[phase];
-      else mod = -SINE_TABLE[phase - 32];
+      const phase = Math.floor(this.vibratoPhase * 64) & 63;
+      const mod = this.getWaveValue(phase, this.vibratoWaveform);
 
       const isIT = (this.worklet.mod!.type as string) === 'IT';
 
@@ -1269,7 +1293,7 @@ class WorkletChannel {
 
     if (this.worklet.mod!.type === 'IT' && this.tremoloDepth > 0) {
       const phase = Math.floor(this.tremoloPhase * 64) & 63;
-      const tremoloMod = phase < 32 ? SINE_TABLE[phase] : -SINE_TABLE[phase - 32];
+      const tremoloMod = this.getWaveValue(phase, this.tremoloWaveform);
       vol *= 1 + (tremoloMod * this.tremoloDepth) / (128 * 64);
     }
 
