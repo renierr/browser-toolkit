@@ -221,6 +221,8 @@ class WorkletChannel {
   vibratoDepth = 0;
   vibratoWaveform = 0;
   fineVibratoDepth = 0;
+  autoVibratoPhase = 0;
+  autoVibratoTick = 0;
 
   tremoloPhase = 0;
   tremoloSpeed = 0;
@@ -365,6 +367,8 @@ class WorkletChannel {
           this.volumeEnvTick = 0;
           this.panningEnvTick = 0;
           this.fadeoutVolume = 32768;
+          this.autoVibratoPhase = 0;
+          this.autoVibratoTick = 0;
           this.playing = !!this.sample && this.period > 0;
         }
       }
@@ -887,6 +891,28 @@ class WorkletChannel {
       }
 
       this.vibratoPhase += this.vibratoSpeed / 256;
+    }
+
+    // IT sample auto-vibrato (from IMPS header), IT-only.
+    if (this.worklet.mod!.type === 'IT' && this.sample && (this.sample.vibratoDepth || 0) > 0) {
+      const rawDepth = (this.sample.vibratoDepth || 0) / 64;
+      let depth = rawDepth;
+      const sweep = this.sample.vibratoSweep || 0;
+      if (sweep > 0) {
+        depth *= Math.min(1, this.autoVibratoTick / sweep);
+      }
+
+      const waveform = (this.sample.vibratoType || 0) & 0x03;
+      const phase = this.autoVibratoPhase - Math.floor(this.autoVibratoPhase);
+      let wave = 0;
+      if (waveform === 1) wave = 1 - phase * 2;
+      else if (waveform === 2) wave = phase < 0.5 ? 1 : -1;
+      else if (waveform === 3) wave = Math.sin(this.autoVibratoTick * 12.9898) * 0.5;
+      else wave = Math.sin(phase * Math.PI * 2);
+
+      renderPeriod += wave * depth;
+      this.autoVibratoPhase += (this.sample.vibratoRate || 0) / 256;
+      this.autoVibratoTick++;
     }
 
     const freq = this.getFrequency(renderPeriod);

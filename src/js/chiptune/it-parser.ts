@@ -325,6 +325,10 @@ export class ItParser extends BaseParser {
       let isPingPong = false;
       let hasLoop = false;
       let dfp = 128; // default panning
+      let vibratoType = 0;
+      let vibratoSweep = 0;
+      let vibratoDepth = 0;
+      let vibratoRate = 0;
 
       if (dataOffsets.smp[i] > 0) {
         this.setPos(dataOffsets.smp[i]);
@@ -350,9 +354,13 @@ export class ItParser extends BaseParser {
           this.readU32LE(); // susLoopStart
           this.readU32LE(); // susLoopEnd
           const samplePointer = this.readU32LE();
+          // IT sample vibrato bytes: speed, depth, rate, waveform
+          vibratoSweep = this.readU8();
+          vibratoDepth = this.readU8();
+          vibratoRate = this.readU8();
+          vibratoType = this.readU8();
 
-          // Determine panning: if bit 7 of dfp is set, use bits 0-6 as panning 0-64
-          let pan = 128; // center default
+          let pan = 128;
           if (dfp & 0x80) {
             pan = Math.round(((dfp & 0x7f) / 64) * 255);
           }
@@ -431,6 +439,10 @@ export class ItParser extends BaseParser {
             baseNote: 0,
             data: sampleData,
             c5speed,
+            vibratoType,
+            vibratoSweep,
+            vibratoDepth,
+            vibratoRate,
           });
           continue;
         }
@@ -447,6 +459,10 @@ export class ItParser extends BaseParser {
         baseNote: 0,
         data: sampleData,
         c5speed,
+        vibratoType,
+        vibratoSweep,
+        vibratoDepth,
+        vibratoRate,
       });
     }
 

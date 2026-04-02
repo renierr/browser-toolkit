@@ -41,6 +41,8 @@ interface ChannelState {
   vibratoSpeed: number;
   vibratoDepth: number;
   fineVibratoDepth: number;
+  autoVibratoPhase: number;
+  autoVibratoTick: number;
   vibratoWaveform: number;
 
   tremoloPhase: number;
@@ -169,6 +171,8 @@ export class ChiptunePlayer {
         vibratoSpeed: 0,
         vibratoDepth: 0,
         fineVibratoDepth: 0,
+        autoVibratoPhase: 0,
+        autoVibratoTick: 0,
         vibratoWaveform: 0,
         tremoloPhase: 0,
         tremoloSpeed: 0,
@@ -715,6 +719,28 @@ export class ChiptunePlayer {
             tickFreq = this.calculateFrequency(chState.currentPeriod + delta * 4, chState.sample!);
 
           chState.vibratoPhase += chState.vibratoSpeed / 256;
+        }
+
+        // IT sample auto-vibrato (IMPS header), IT-only.
+        if (this.module.type === 'IT' && chState.sample && (chState.sample.vibratoDepth || 0) > 0) {
+          const rawDepth = (chState.sample.vibratoDepth || 0) / 64;
+          let depth = rawDepth;
+          const sweep = chState.sample.vibratoSweep || 0;
+          if (sweep > 0) {
+            depth *= Math.min(1, chState.autoVibratoTick / sweep);
+          }
+
+          const waveform = (chState.sample.vibratoType || 0) & 0x03;
+          const phase = chState.autoVibratoPhase - Math.floor(chState.autoVibratoPhase);
+          let wave = 0;
+          if (waveform === 1) wave = 1 - phase * 2;
+          else if (waveform === 2) wave = phase < 0.5 ? 1 : -1;
+          else if (waveform === 3) wave = Math.sin(chState.autoVibratoTick * 12.9898) * 0.5;
+          else wave = Math.sin(phase * Math.PI * 2);
+
+          tickFreq = this.calculateFrequency(chState.currentPeriod + wave * depth, chState.sample);
+          chState.autoVibratoPhase += (chState.sample.vibratoRate || 0) / 256;
+          chState.autoVibratoTick++;
         }
 
         let playbackRate = tickFreq / this.audioContext.sampleRate;
