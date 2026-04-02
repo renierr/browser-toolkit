@@ -16,6 +16,8 @@ export const IT_EFFECT_EXTRA_FINE_PORTA_DOWN = 0x26; // EEx extra-fine porta dow
 export const IT_EFFECT_EXTRA_FINE_PORTA_UP = 0x27; // FEx extra-fine porta up
 export const IT_EFFECT_SET_CHANNEL_VOLUME = 0x28; // Mxx set channel volume
 export const IT_EFFECT_CHANNEL_VOL_SLIDE = 0x29; // Nxx channel volume slide
+export const IT_EFFECT_FINE_VIBRATO = 0x2a; // Uxx fine vibrato
+export const IT_EFFECT_TEMPO_SLIDE = 0x2b; // T0x / Tx0 tempo slide
 
 /**
  * IT effect letter → effect number translation.
@@ -66,10 +68,12 @@ function translateItEffect(itCmd: number, itParam: number): [number, number] {
       return [0x07, itParam];
     case 19: // S: Special/Extended → MOD 0x0E (sub-commands map mostly 1:1)
       return translateItSCommand(itParam);
-    case 20: // T: Set Tempo (BPM) — IT T is ALWAYS tempo, never speed
-      return [IT_EFFECT_SET_TEMPO, Math.max(itParam, 0x20)];
-    case 21: // U: Fine Vibrato (IT-specific, treat as vibrato with 4x finer depth)
-      return [0x04, itParam]; // Approximate as regular vibrato
+    case 20: // T: Tempo command
+      // IT: T20..FF set tempo, T0x/Tx0 slide tempo.
+      if (itParam >= 0x20) return [IT_EFFECT_SET_TEMPO, itParam];
+      return [IT_EFFECT_TEMPO_SLIDE, itParam];
+    case 21: // U: Fine Vibrato (IT-specific)
+      return [IT_EFFECT_FINE_VIBRATO, itParam];
     case 22: // V: Set Global Volume → 0x10
       // IT Vxx is 0-128, internal engine uses 0-64.
       return [0x10, Math.min(64, Math.round(itParam / 2))];

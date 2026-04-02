@@ -12,6 +12,8 @@ import {
   IT_EFFECT_EXTRA_FINE_PORTA_UP,
   IT_EFFECT_SET_CHANNEL_VOLUME,
   IT_EFFECT_CHANNEL_VOL_SLIDE,
+  IT_EFFECT_FINE_VIBRATO,
+  IT_EFFECT_TEMPO_SLIDE,
 } from './it-parser';
 import workletUrl from './worklet?worker&url';
 
@@ -38,6 +40,7 @@ interface ChannelState {
   vibratoPhase: number;
   vibratoSpeed: number;
   vibratoDepth: number;
+  fineVibratoDepth: number;
   vibratoWaveform: number;
 
   tremoloPhase: number;
@@ -75,6 +78,7 @@ interface ChannelState {
   currentPeriod: number;
   targetPeriod: number;
   globalVolSlide: number;
+  tempoSlide: number;
   panningSlide: number;
   retrig: number;
   tremorCounter: number;
@@ -161,6 +165,7 @@ export class ChiptunePlayer {
         vibratoPhase: 0,
         vibratoSpeed: 0,
         vibratoDepth: 0,
+        fineVibratoDepth: 0,
         vibratoWaveform: 0,
         tremoloPhase: 0,
         tremoloSpeed: 0,
@@ -187,6 +192,7 @@ export class ChiptunePlayer {
         keyOn: false,
         fadeoutVolume: 32768,
         globalVolSlide: 0,
+        tempoSlide: 0,
         panningSlide: 0,
         retrig: 0,
         tremorCounter: 0,
@@ -676,14 +682,19 @@ export class ChiptunePlayer {
           if (arpNote > 0) tickFreq *= Math.pow(2, arpNote / 12);
         }
 
-        if (chState.vibratoDepth > 0) {
+        const activeVibratoDepth =
+          chState.effect === IT_EFFECT_FINE_VIBRATO
+            ? chState.fineVibratoDepth / 4
+            : chState.vibratoDepth;
+
+        if (activeVibratoDepth > 0) {
           let phase = Math.floor(chState.vibratoPhase * 64) & 63;
           let mod = 0;
           if (phase < 32) mod = SINE_TABLE[phase];
           else mod = -SINE_TABLE[phase - 32];
 
           let depthScale = this.module && this.module.linearFrequencies ? 4 : 1;
-          let delta = (mod * chState.vibratoDepth * depthScale) / 128;
+          let delta = (mod * activeVibratoDepth * depthScale) / 128;
 
           if (this.module && this.module.linearFrequencies)
             tickFreq = this.calculateFrequency(chState.currentPeriod + delta, chState.sample!);
@@ -1026,6 +1037,11 @@ export class ChiptunePlayer {
       if (param & 0x0f) chState.vibratoDepth = param & 0x0f;
       if (param & 0xf0) chState.vibratoSpeed = (param >> 4) * 2;
     }
+    // IT Uxx: Fine Vibrato
+    else if (effect === IT_EFFECT_FINE_VIBRATO) {
+      if (param & 0x0f) chState.fineVibratoDepth = param & 0x0f;
+      if (param & 0xf0) chState.vibratoSpeed = (param >> 4) * 2;
+    }
     // Effect 5: Porta + Volume Slide
     else if (effect === 0x05) {
       if (param > 0 || !isIT) chState.volSlideSpeed = param & 0xf0 ? param >> 4 : -(param & 0x0f);
@@ -1077,6 +1093,11 @@ export class ChiptunePlayer {
       if (param >= 1) this.speed = param;
     } else if (effect === IT_EFFECT_SET_TEMPO) {
       if (param >= 32) this.bpm = param;
+    } else if (effect === IT_EFFECT_TEMPO_SLIDE) {
+      const hi = (param >> 4) & 0x0f;
+      const lo = param & 0x0f;
+      if (hi > 0 && lo === 0) chState.tempoSlide = hi;
+      else if (lo > 0 && hi === 0) chState.tempoSlide = -lo;
     }
     // IT channel volume commands
     else if (effect === IT_EFFECT_SET_CHANNEL_VOLUME) {
@@ -1112,6 +1133,9 @@ export class ChiptunePlayer {
     }
     if (chState.channelVolSlide !== 0) {
       chState.channelVolume = Math.max(0, Math.min(64, chState.channelVolume + chState.channelVolSlide));
+    }
+    if (this.module?.type === 'IT' && effect === IT_EFFECT_TEMPO_SLIDE && chState.tempoSlide !== 0) {
+      this.bpm = Math.max(32, Math.min(255, this.bpm + chState.tempoSlide));
     }
 
     if (effect === 0x03 || effect === 0x05) {

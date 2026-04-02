@@ -43,6 +43,8 @@ const IT_EFFECT_EXTRA_FINE_PORTA_DOWN = 0x26;
 const IT_EFFECT_EXTRA_FINE_PORTA_UP = 0x27;
 const IT_EFFECT_SET_CHANNEL_VOLUME = 0x28;
 const IT_EFFECT_CHANNEL_VOL_SLIDE = 0x29;
+const IT_EFFECT_FINE_VIBRATO = 0x2a;
+const IT_EFFECT_TEMPO_SLIDE = 0x2b;
 
 const SINE_TABLE = [
   0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253, 255, 253, 250, 244, 235,
@@ -218,6 +220,7 @@ class WorkletChannel {
   vibratoSpeed = 0;
   vibratoDepth = 0;
   vibratoWaveform = 0;
+  fineVibratoDepth = 0;
 
   tremoloPhase = 0;
   tremoloSpeed = 0;
@@ -227,6 +230,7 @@ class WorkletChannel {
   slideSpeed = 0;
   volSlideSpeed = 0;
   channelVolSlide = 0;
+  tempoSlide = 0;
   fineSlideSpeed = 0;
 
   arpeggioNotes: number[] = [];
@@ -507,6 +511,10 @@ class WorkletChannel {
         if (param & 0x0f) this.vibratoDepth = param & 0x0f;
         if (param & 0xf0) this.vibratoSpeed = ((param >> 4) & 0x0f) * 2;
         break;
+      case IT_EFFECT_FINE_VIBRATO:
+        if (param & 0x0f) this.fineVibratoDepth = param & 0x0f;
+        if (param & 0xf0) this.vibratoSpeed = ((param >> 4) & 0x0f) * 2;
+        break;
       case EFFECT_TONE_PORTA_VOL:
         if (param > 0) {
           if (param & 0xf0) this.volSlideSpeed = (param >> 4) & 0x0f;
@@ -561,6 +569,13 @@ class WorkletChannel {
       case IT_EFFECT_SET_TEMPO:
         if (param >= 32) this.worklet.setBpm(param);
         break;
+      case IT_EFFECT_TEMPO_SLIDE: {
+        const hi = (param >> 4) & 0x0f;
+        const lo = param & 0x0f;
+        if (hi > 0 && lo === 0) this.tempoSlide = hi;
+        else if (lo > 0 && hi === 0) this.tempoSlide = -lo;
+        break;
+      }
       // IT-specific fine volume slides (tick 0 only)
       case IT_EFFECT_FINE_VOLSLIDE_UP:
         if (this.worklet.tick === 0) this.volume = Math.min(64, this.volume + param);
@@ -682,6 +697,14 @@ class WorkletChannel {
       }
       if (this.channelVolSlide !== 0) {
         this.channelVolume = Math.max(0, Math.min(64, this.channelVolume + this.channelVolSlide));
+      }
+      const rowEffect = this.worklet.currentRowNotes[this.channelIndex]?.effect;
+      if (
+        this.tempoSlide !== 0 &&
+        this.worklet.mod!.type === 'IT' &&
+        rowEffect === IT_EFFECT_TEMPO_SLIDE
+      ) {
+        this.worklet.setBpm(Math.max(32, Math.min(255, this.worklet.bpm + this.tempoSlide)));
       }
       if (this.globalVolSlide !== 0) {
         this.worklet.globalVolume = Math.max(
@@ -825,7 +848,13 @@ class WorkletChannel {
       }
     }
 
-    if (this.vibratoDepth > 0) {
+    const isFineVibratoRow =
+      this.worklet.currentRowNotes[this.channelIndex]?.effect === IT_EFFECT_FINE_VIBRATO;
+    const activeVibratoDepth = isFineVibratoRow
+      ? this.fineVibratoDepth / 4
+      : this.vibratoDepth;
+
+    if (activeVibratoDepth > 0) {
       let phase = Math.floor(this.vibratoPhase * 64) & 63;
       let mod = 0;
       if (phase < 32) mod = SINE_TABLE[phase];
@@ -835,14 +864,14 @@ class WorkletChannel {
 
       if (isIT) {
         // IT: period is note number, vibrato adds fractional semitones
-        renderPeriod += (mod * this.vibratoDepth) / (128 * 16);
+        renderPeriod += (mod * activeVibratoDepth) / (128 * 16);
       } else {
         const isXm = (this.worklet.mod!.type as string) === 'XM';
         let depthScale = isXm && this.worklet.mod!.linearFrequencies ? 4 : 1;
 
         if (this.worklet.mod!.linearFrequencies)
-          renderPeriod += (mod * this.vibratoDepth * depthScale) / 128;
-        else renderPeriod += (mod * this.vibratoDepth * depthScale * 4) / 128;
+          renderPeriod += (mod * activeVibratoDepth * depthScale) / 128;
+        else renderPeriod += (mod * activeVibratoDepth * depthScale * 4) / 128;
       }
 
       this.vibratoPhase += this.vibratoSpeed / 256;
