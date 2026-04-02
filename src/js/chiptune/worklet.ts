@@ -339,13 +339,8 @@ class WorkletChannel {
     // Preservation: We DO NOT reset this.instrument, this.volume, or this.panning
     // because subsequent notes in a tracker row often omit instrument bytes.
     // Clearing them causes silence after seeking or restarting.
-          if (this.worklet.mod!.type === 'IT') {
-            if ((this.vibratoWaveform & 0x04) === 0) this.vibratoPhase = 0;
-            if ((this.tremoloWaveform & 0x04) === 0) this.tremoloPhase = 0;
-          } else {
-            this.vibratoPhase = 0;
-            this.tremoloPhase = 0;
-          }
+    this.vibratoPhase = 0;
+    this.tremoloPhase = 0;
     this.volumeEnvTick = 0;
     this.panningEnvTick = 0;
   }
@@ -559,6 +554,14 @@ class WorkletChannel {
           // FT2 quirk: only reset volume if instrument is provided
           if (note.instrument !== undefined && note.instrument > 0) {
             this.volume = this.baseVolume;
+          }
+
+          if (this.worklet.mod!.type === 'IT') {
+            if ((this.vibratoWaveform & 0x04) === 0) this.vibratoPhase = 0;
+            if ((this.tremoloWaveform & 0x04) === 0) this.tremoloPhase = 0;
+          } else {
+            this.vibratoPhase = 0;
+            this.tremoloPhase = 0;
           }
 
           this.sampleIndex = 0;
