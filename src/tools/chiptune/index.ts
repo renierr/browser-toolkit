@@ -128,6 +128,7 @@ function getElements(): Record<string, HTMLElement | null> {
 
 import type { SharedFilesPayload } from '@js/share-target';
 import { setupFileDropzone } from '@js/file-utils';
+import { debounce } from '@js/utils.ts';
 
 export default function init(payload?: SharedFilesPayload): () => void {
   let player: ChiptunePlayer | null = null;
@@ -551,12 +552,11 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (parent) {
       const rect = parent.getBoundingClientRect();
       visualizerCanvas.width = rect.width;
-      visualizerCanvas.height = rect.height || 160;
     }
   }
 
   resizeCanvases();
-  const resizeListener = () => resizeCanvases();
+  const resizeListener = debounce(() => resizeCanvases(), 500);
   visualizerCanvas.addEventListener('resize', resizeListener);
 
   function drawVisualization(): void {
