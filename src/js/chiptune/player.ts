@@ -151,14 +151,16 @@ export class ChiptunePlayer {
     this.bpm = mod.defaultBpm || 125;
     this.channelStates = [];
     for (let i = 0; i < mod.channels; i++) {
-      const pan = i % 4 === 1 || i % 4 === 2 ? 200 : 56;
+      const defaultPan = i % 4 === 1 || i % 4 === 2 ? 200 : 56;
+      const pan = mod.channelPanning?.[i] ?? defaultPan;
+      const channelVolume = mod.channelVolumes?.[i] ?? 64;
       this.channelStates.push({
         instrument: 0,
         note: null,
         currentPeriod: 0,
         targetPeriod: 0,
         volume: 64,
-        channelVolume: 64,
+        channelVolume,
         panning: pan,
         effect: 0,
         effectParam: 0,

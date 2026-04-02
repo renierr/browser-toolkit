@@ -1012,6 +1012,12 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
           // Standard Amiga panning: LRRL (Channels 0, 3 Left-ish; 1, 2 Right-ish)
           if (this.mod!.type === 'MOD') {
             ch.panning = i % 4 === 1 || i % 4 === 2 ? 200 : 56;
+          } else if (this.mod!.channelPanning && i < this.mod!.channelPanning.length) {
+            ch.panning = this.mod!.channelPanning[i];
+          }
+
+          if (this.mod!.channelVolumes && i < this.mod!.channelVolumes.length) {
+            ch.channelVolume = this.mod!.channelVolumes[i];
           }
           this.channels.push(ch);
         }

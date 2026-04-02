@@ -288,8 +288,23 @@ export class ItParser extends BaseParser {
     const sequence: number[] = [];
     for (let i = 0; i < ordNum; i++) sequence.push(this.readU8());
 
-    const maxChannels = chanPan.filter((p) => !(p & 128)).length;
-    const channels = Math.max(maxChannels, 1);
+    const activeChannels: number[] = [];
+    for (let i = 0; i < 64; i++) {
+      if ((chanPan[i] & 128) === 0) activeChannels.push(i);
+    }
+    const channels = activeChannels.length > 0 ? Math.max(...activeChannels) + 1 : 1;
+
+    const channelVolumes = new Array(channels).fill(64);
+    const channelPanning = new Array(channels).fill(128);
+    for (let i = 0; i < channels; i++) {
+      if ((chanPan[i] & 128) !== 0) {
+        channelVolumes[i] = 0; // disabled channel
+        channelPanning[i] = 128;
+      } else {
+        channelVolumes[i] = Math.max(0, Math.min(64, chanVol[i] & 0x7f));
+        channelPanning[i] = Math.max(0, Math.min(255, Math.round(((chanPan[i] & 0x7f) / 64) * 255)));
+      }
+    }
 
     const dataOffsets = { ins: [] as number[], smp: [] as number[], pat: [] as number[] };
     for (let i = 0; i < insNum; i++) dataOffsets.ins.push(this.readU32LE());
@@ -663,6 +678,8 @@ export class ItParser extends BaseParser {
       linearFrequencies: (flags & 8) !== 0,
       // IT stores global volume in 0-128; normalize to engine range 0-64.
       globalVolume: Math.min(64, Math.round(Math.min(globalVol, 128) / 2)),
+      channelVolumes,
+      channelPanning,
     };
   }
 
