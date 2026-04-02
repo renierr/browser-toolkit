@@ -28,6 +28,7 @@ export interface Instrument {
   name: string;
   samples: Sample[];
   sampleMap: number[]; // 0-95 array mapping note index to sample index
+  noteMap?: number[]; // IT: note-to-note translation (maps input note → output note)
   volumeEnv?: Envelope;
   panningEnv?: Envelope;
   volumeFadeout: number; // 0-32768
@@ -60,6 +61,7 @@ export interface ModuleFile {
   linearFrequencies: boolean;
   clock?: number;
   restartPosition?: number;
+  globalVolume?: number; // IT: initial global volume (0-128)
 }
 
 // Helper for strings
@@ -124,6 +126,7 @@ export interface WorkletInstrument {
   name: string;
   samples: WorkletInstrumentSample[];
   sampleMap?: number[];
+  noteMap?: number[];
   volumeEnv?: Envelope;
   panningEnv?: Envelope;
   volumeFadeout?: number;
@@ -162,6 +165,7 @@ export interface WorkletModule {
   linearFrequencies: boolean;
   restartPosition: number;
   clock: number;
+  globalVolume: number;
 }
 
 export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
@@ -212,6 +216,7 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
       name: inst.name,
       samples,
       sampleMap: inst.sampleMap,
+      noteMap: inst.noteMap,
       volumeEnv: inst.volumeEnv,
       panningEnv: inst.panningEnv,
       volumeFadeout: inst.volumeFadeout,
@@ -261,5 +266,6 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
     linearFrequencies: !!mod.linearFrequencies,
     restartPosition: mod.restartPosition || 0,
     clock: mod.clock || 7093789.2,
+    globalVolume: mod.globalVolume ?? 64,
   };
 }

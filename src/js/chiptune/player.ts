@@ -1,6 +1,16 @@
 import type { ModuleFile, Sample, Envelope } from './types';
 import { AMIGA_PERIOD_TABLE } from './types';
 import { serializeModuleForWorklet } from './types';
+import {
+  IT_EFFECT_SET_SPEED,
+  IT_EFFECT_SET_TEMPO,
+  IT_EFFECT_FINE_VOLSLIDE_UP,
+  IT_EFFECT_FINE_VOLSLIDE_DOWN,
+  IT_EFFECT_FINE_PORTA_DOWN,
+  IT_EFFECT_FINE_PORTA_UP,
+  IT_EFFECT_EXTRA_FINE_PORTA_DOWN,
+  IT_EFFECT_EXTRA_FINE_PORTA_UP,
+} from './it-parser';
 import workletUrl from './worklet?worker&url';
 
 // Extend Sample type for buffer caching
@@ -619,11 +629,11 @@ export class ChiptunePlayer {
         }
         if (chState.effect === 0x0d) {
           patternBreak = true;
-          // IT uses hex param directly; MOD/XM use BCD
-          if (this.module.type === 'IT') {
-            nextRow = chState.effectParam;
-          } else {
+          // Only MOD uses BCD for pattern break; IT and XM use hex directly
+          if (this.module.type === 'MOD') {
             nextRow = (chState.effectParam >> 4) * 10 + (chState.effectParam & 0x0f);
+          } else {
+            nextRow = chState.effectParam;
           }
         }
         if (chState.effect === 0x0f) {
@@ -631,6 +641,7 @@ export class ChiptunePlayer {
             this.speed = chState.effectParam;
           else if (chState.effectParam > 32) this.bpm = chState.effectParam;
         }
+        // IT-specific speed/tempo already handled in parseEffectTick0
 
         if (shouldTrigger && chState.sample && chState.currentPeriod > 0) {
           this.triggerNote(chState, time);
@@ -841,7 +852,14 @@ export class ChiptunePlayer {
     }
     const sample = inst.samples[sIdx] || inst.samples[0];
 
-    if (this.module.type === 'IT') return note;
+    if (this.module.type === 'IT') {
+      // Apply IT noteMap translation: the instrument maps input notes to output notes
+      if (inst.noteMap && note >= 1 && note <= 120) {
+        const mappedNote = inst.noteMap[note - 1];
+        if (mappedNote >= 0 && mappedNote <= 119) return mappedNote + 1; // convert 0-based to 1-based
+      }
+      return note;
+    }
 
     const actualNote = note - 1 + (sample.baseNote || 0);
     const isXmOrIt = this.module.type === 'XM';
@@ -973,6 +991,7 @@ export class ChiptunePlayer {
   }
 
   private parseEffectTick0(chState: ChannelState, effect: number, param: number): void {
+    const isIT = this.module?.type === 'IT';
     chState.arpeggioNotes = [];
 
     // Effect 0: Arpeggio
@@ -981,15 +1000,16 @@ export class ChiptunePlayer {
     }
     // Effect 1: Porta Up
     else if (effect === 0x01) {
-      if (param > 0) chState.slideSpeed = param;
+      if (param > 0 || !isIT) chState.slideSpeed = param;
     }
     // Effect 2: Porta Down
     else if (effect === 0x02) {
-      if (param > 0) chState.slideSpeed = param;
+      if (param > 0 || !isIT) chState.slideSpeed = param;
     }
     // Effect 3: Porta to Note
     else if (effect === 0x03) {
       if (param > 0) chState.slideSpeed = param;
+      // IT: param 0 means use last non-zero slide speed (already preserved)
     }
     // Effect 4: Vibrato
     else if (effect === 0x04) {
@@ -998,11 +1018,11 @@ export class ChiptunePlayer {
     }
     // Effect 5: Porta + Volume Slide
     else if (effect === 0x05) {
-      if (param > 0) chState.volSlideSpeed = param & 0xf0 ? param >> 4 : -(param & 0x0f);
+      if (param > 0 || !isIT) chState.volSlideSpeed = param & 0xf0 ? param >> 4 : -(param & 0x0f);
     }
     // Effect 6: Vibrato + Volume Slide
     else if (effect === 0x06) {
-      if (param > 0) chState.volSlideSpeed = param & 0xf0 ? param >> 4 : -(param & 0x0f);
+      if (param > 0 || !isIT) chState.volSlideSpeed = param & 0xf0 ? param >> 4 : -(param & 0x0f);
     }
     // Effect 7: Tremolo
     else if (effect === 0x07) {
@@ -1015,8 +1035,10 @@ export class ChiptunePlayer {
     }
     // Effect A: Volume Slide
     else if (effect === 0x0a) {
-      if (param & 0xf0) chState.volSlideSpeed = param >> 4;
-      else if (param & 0x0f) chState.volSlideSpeed = -(param & 0x0f);
+      if (param > 0 || !isIT) {
+        if (param & 0xf0) chState.volSlideSpeed = param >> 4;
+        else if (param & 0x0f) chState.volSlideSpeed = -(param & 0x0f);
+      }
     }
     // Effect C: Set Volume
     else if (effect === 0x0c) {
@@ -1027,11 +1049,11 @@ export class ChiptunePlayer {
       const eSub = (param >> 4) & 0x0f;
       const eParam = param & 0x0f;
       if (eSub === 0x1) {
-        if (this.module?.type === 'IT') chState.currentPeriod -= eParam / 64;
+        if (isIT) chState.currentPeriod -= eParam / 64;
         else if (this.module?.type === 'XM') chState.currentPeriod -= eParam * 4;
         else chState.currentPeriod -= eParam;
       } else if (eSub === 0x2) {
-        if (this.module?.type === 'IT') chState.currentPeriod += eParam / 64;
+        if (isIT) chState.currentPeriod += eParam / 64;
         else if (this.module?.type === 'XM') chState.currentPeriod += eParam * 4;
         else chState.currentPeriod += eParam;
       } else if (eSub === 0x4) chState.vibratoWaveform = eParam & 3;
@@ -1040,7 +1062,29 @@ export class ChiptunePlayer {
       else if (eSub === 0xa) chState.volume = Math.min(chState.volume + eParam, 64);
       else if (eSub === 0xb) chState.volume = Math.max(chState.volume - eParam, 0);
     }
-    // Effect F: Set Speed
+    // IT-specific: Axx always sets speed, Txx always sets tempo
+    else if (effect === IT_EFFECT_SET_SPEED) {
+      if (param >= 1) this.speed = param;
+    } else if (effect === IT_EFFECT_SET_TEMPO) {
+      if (param >= 32) this.bpm = param;
+    }
+    // IT fine volume slides (tick 0 only)
+    else if (effect === IT_EFFECT_FINE_VOLSLIDE_UP) {
+      chState.volume = Math.min(64, chState.volume + param);
+    } else if (effect === IT_EFFECT_FINE_VOLSLIDE_DOWN) {
+      chState.volume = Math.max(0, chState.volume - param);
+    }
+    // IT fine/extra-fine portamento (tick 0 only)
+    else if (effect === IT_EFFECT_FINE_PORTA_DOWN) {
+      chState.currentPeriod += param / 64;
+    } else if (effect === IT_EFFECT_FINE_PORTA_UP) {
+      chState.currentPeriod -= param / 64;
+    } else if (effect === IT_EFFECT_EXTRA_FINE_PORTA_DOWN) {
+      chState.currentPeriod += param / 256;
+    } else if (effect === IT_EFFECT_EXTRA_FINE_PORTA_UP) {
+      chState.currentPeriod -= param / 256;
+    }
+    // Effect F: Set Speed (MOD/XM unified speed/tempo command)
   }
 
   private parseEffectContinuous(chState: ChannelState, effect: number): void {

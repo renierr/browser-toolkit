@@ -3,28 +3,41 @@ import { BaseParser } from './base-parser';
 import { decompressIT8, decompressIT16 } from './it-decompress';
 
 /**
- * IT effect letter → MOD-compatible effect number translation.
+ * IT-specific effect constants (0x20+) to avoid collisions with MOD/XM effects.
+ * These are handled specially by the worklet and player for IT format.
+ */
+export const IT_EFFECT_SET_SPEED = 0x20; // Axx: always speed (ticks/row)
+export const IT_EFFECT_SET_TEMPO = 0x21; // Txx: always tempo (BPM)
+export const IT_EFFECT_FINE_VOLSLIDE_UP = 0x22; // DxF fine volume slide up
+export const IT_EFFECT_FINE_VOLSLIDE_DOWN = 0x23; // DFy fine volume slide down
+export const IT_EFFECT_FINE_PORTA_DOWN = 0x24; // EFx fine portamento down
+export const IT_EFFECT_FINE_PORTA_UP = 0x25; // FFx fine portamento up
+export const IT_EFFECT_EXTRA_FINE_PORTA_DOWN = 0x26; // EEx extra-fine porta down
+export const IT_EFFECT_EXTRA_FINE_PORTA_UP = 0x27; // FEx extra-fine porta up
+
+/**
+ * IT effect letter → effect number translation.
  * IT stores effects as 1-based letter indices (A=1, B=2, ...).
- * We translate to the MOD/XM effect numbering the worklet/player already handles.
+ * We translate to MOD/XM-compatible numbering where possible, and use
+ * IT-specific constants (0x20+) for effects that differ from MOD/XM semantics.
  */
 function translateItEffect(itCmd: number, itParam: number): [number, number] {
   // itCmd: 0=none, 1=A, 2=B, 3=C, ...
   switch (itCmd) {
     case 0:
       return [0, 0]; // No effect
-    case 1: // A: Set Speed (ticks/row) → MOD 0x0F with param < 0x20
-      return [0x0f, itParam];
+    case 1: // A: Set Speed (ticks/row) — IT A is ALWAYS speed, never tempo
+      return [IT_EFFECT_SET_SPEED, itParam];
     case 2: // B: Position Jump → MOD 0x0B
       return [0x0b, itParam];
     case 3: // C: Pattern Break → MOD 0x0D (IT uses hex param, NOT BCD)
       return [0x0d, itParam];
-    case 4: // D: Volume Slide → MOD 0x0A
-      return [0x0a, itParam];
-    case 5: // E: Portamento Down → MOD 0x02
-      // IT E: fine (param 0xFx) and extra-fine (param 0xEx) handled by player
-      return [0x02, itParam];
-    case 6: // F: Portamento Up → MOD 0x01
-      return [0x01, itParam];
+    case 4: // D: Volume Slide — detect fine variants
+      return translateItVolSlide(itParam);
+    case 5: // E: Portamento Down — detect fine/extra-fine variants
+      return translateItPortaDown(itParam);
+    case 6: // F: Portamento Up — detect fine/extra-fine variants
+      return translateItPortaUp(itParam);
     case 7: // G: Tone Portamento → MOD 0x03
       return [0x03, itParam];
     case 8: // H: Vibrato → MOD 0x04
@@ -51,8 +64,8 @@ function translateItEffect(itCmd: number, itParam: number): [number, number] {
       return [0x07, itParam];
     case 19: // S: Special/Extended → MOD 0x0E (sub-commands map mostly 1:1)
       return translateItSCommand(itParam);
-    case 20: // T: Set Tempo (BPM) → MOD 0x0F with param >= 0x20
-      return [0x0f, Math.max(itParam, 0x20)];
+    case 20: // T: Set Tempo (BPM) — IT T is ALWAYS tempo, never speed
+      return [IT_EFFECT_SET_TEMPO, Math.max(itParam, 0x20)];
     case 21: // U: Fine Vibrato (IT-specific, treat as vibrato with 4x finer depth)
       return [0x04, itParam]; // Approximate as regular vibrato
     case 22: // V: Set Global Volume → 0x10
@@ -69,6 +82,50 @@ function translateItEffect(itCmd: number, itParam: number): [number, number] {
     default:
       return [0, 0];
   }
+}
+
+/** Translate IT Dxy (Volume Slide) with fine variant detection */
+function translateItVolSlide(param: number): [number, number] {
+  const hi = (param >> 4) & 0x0f;
+  const lo = param & 0x0f;
+  if (hi === 0x0f && lo > 0) {
+    // DFy: Fine volume slide down by y (tick 0 only)
+    return [IT_EFFECT_FINE_VOLSLIDE_DOWN, lo];
+  }
+  if (lo === 0x0f && hi > 0) {
+    // DxF: Fine volume slide up by x (tick 0 only)
+    return [IT_EFFECT_FINE_VOLSLIDE_UP, hi];
+  }
+  // Regular volume slide
+  return [0x0a, param];
+}
+
+/** Translate IT Exx (Portamento Down) with fine/extra-fine detection */
+function translateItPortaDown(param: number): [number, number] {
+  if (param >= 0xf0) {
+    // EFx: Fine portamento down (tick 0 only)
+    return [IT_EFFECT_FINE_PORTA_DOWN, param & 0x0f];
+  }
+  if (param >= 0xe0) {
+    // EEx: Extra-fine portamento down (tick 0 only, 4x smaller)
+    return [IT_EFFECT_EXTRA_FINE_PORTA_DOWN, param & 0x0f];
+  }
+  // Regular portamento down
+  return [0x02, param];
+}
+
+/** Translate IT Fxx (Portamento Up) with fine/extra-fine detection */
+function translateItPortaUp(param: number): [number, number] {
+  if (param >= 0xf0) {
+    // FFx: Fine portamento up (tick 0 only)
+    return [IT_EFFECT_FINE_PORTA_UP, param & 0x0f];
+  }
+  if (param >= 0xe0) {
+    // FEx: Extra-fine portamento up (tick 0 only, 4x smaller)
+    return [IT_EFFECT_EXTRA_FINE_PORTA_UP, param & 0x0f];
+  }
+  // Regular portamento up
+  return [0x01, param];
 }
 
 /** Translate IT S (Special) sub-commands to MOD E sub-commands */
@@ -110,12 +167,14 @@ function parseItVolumeColumn(vol: number): {
     return { volume: vol, volumeColumn: null, effect: 0, effectParam: 0 };
   }
   if (vol >= 65 && vol <= 74) {
-    // Fine Volume Up (tick 0 only)
-    return { volume: null, volumeColumn: null, effect: 0, effectParam: 0 };
+    // Fine Volume Up (tick 0 only) → E sub-command 0xA
+    const amt = vol - 65;
+    return { volume: null, volumeColumn: null, effect: 0x0e, effectParam: 0xa0 | amt };
   }
   if (vol >= 75 && vol <= 84) {
-    // Fine Volume Down (tick 0 only)
-    return { volume: null, volumeColumn: null, effect: 0, effectParam: 0 };
+    // Fine Volume Down (tick 0 only) → E sub-command 0xB
+    const amt = vol - 75;
+    return { volume: null, volumeColumn: null, effect: 0x0e, effectParam: 0xb0 | amt };
   }
   if (vol >= 85 && vol <= 94) {
     // Volume Slide Up
@@ -131,6 +190,16 @@ function parseItVolumeColumn(vol: number): {
     // Set Panning (0-64 → 0-255)
     const pan = Math.round(((vol - 128) / 64) * 255);
     return { volume: null, volumeColumn: null, effect: 0x08, effectParam: pan };
+  }
+  if (vol >= 105 && vol <= 114) {
+    // Portamento Down
+    const spd = vol - 105;
+    return { volume: null, volumeColumn: null, effect: 0x02, effectParam: spd * 4 };
+  }
+  if (vol >= 115 && vol <= 124) {
+    // Portamento Up
+    const spd = vol - 115;
+    return { volume: null, volumeColumn: null, effect: 0x01, effectParam: spd * 4 };
   }
   if (vol >= 193 && vol <= 202) {
     // Tone Portamento
@@ -157,13 +226,12 @@ export class ItParser extends BaseParser {
     const smpNum = this.readU16LE();
     const patNum = this.readU16LE();
     this.setPos(40);
-    this.readU16LE(); // cwtv
-    const cmwt = this.readU16LE(); // compatible minimum tracker version
+    const cwtv = this.readU16LE(); // created with tracker version
+    this.readU16LE(); // cmwt - compatible minimum tracker version
     const flags = this.readU16LE();
     this.readU16LE(); // special
     this.setPos(48);
-    const globalVol = this.readU8(); // GV (used for future global volume support)
-    void globalVol;
+    const globalVol = this.readU8(); // GV (0-128)
     this.readU8(); // MV
     const initSpeed = this.readU8();
     const initTempo = this.readU8();
@@ -244,9 +312,11 @@ export class ItParser extends BaseParser {
             const isCompressed = (sFlags & 0x08) !== 0;
             // cvt bit 0: 0=unsigned, 1=signed (IT standard is signed)
             const isSigned = (cvt & 1) !== 0;
-            // IT 2.15 compression: detected via cmwt (compatible minimum version) >= 0x0215
-            // The cvt field bit 2 is NOT a reliable indicator - only cmwt matters
-            const isIT215 = cmwt >= 0x0215;
+            // IT 2.15 compression uses double integration.
+            // For original Impulse Tracker (cwtv 0x0200-0x02FF): IT215 if cwtv > 0x0214
+            // For other trackers (OpenMPT, SchismTracker, etc.): always IT215 compression
+            const isOriginalIT = (cwtv & 0xff00) === 0x0200;
+            const isIT215 = isOriginalIT ? cwtv > 0x0214 : true;
 
             if (isCompressed) {
               if (is16) {
@@ -376,6 +446,7 @@ export class ItParser extends BaseParser {
           name,
           volumeFadeout: volFadeout,
           sampleMap,
+          noteMap,
           samples: rawSamples,
           volumeEnv,
           panningEnv,
@@ -547,6 +618,7 @@ export class ItParser extends BaseParser {
       defaultSpeed: initSpeed,
       rowsPerPattern: Math.max(...patterns.map((p) => p.rows.length), 64),
       linearFrequencies: (flags & 8) !== 0,
+      globalVolume: Math.min(globalVol, 128),
     };
   }
 

@@ -30,12 +30,22 @@ const EFFECT_GLOBAL_VOL_SLIDE = 0x11; // H
 const EFFECT_ENVELOPE_POS = 0x15; // L
 const EFFECT_PANNING_SLIDE = 0x19; // P
 const EFFECT_MULTI_RETRIG = 0x1b; // R
+const EFFECT_TREMOR = 0x1d;
+
+// IT-specific effect constants (must match it-parser.ts exports)
+const IT_EFFECT_SET_SPEED = 0x20;
+const IT_EFFECT_SET_TEMPO = 0x21;
+const IT_EFFECT_FINE_VOLSLIDE_UP = 0x22;
+const IT_EFFECT_FINE_VOLSLIDE_DOWN = 0x23;
+const IT_EFFECT_FINE_PORTA_DOWN = 0x24;
+const IT_EFFECT_FINE_PORTA_UP = 0x25;
+const IT_EFFECT_EXTRA_FINE_PORTA_DOWN = 0x26;
+const IT_EFFECT_EXTRA_FINE_PORTA_UP = 0x27;
+
 const SINE_TABLE = [
   0, 24, 49, 74, 97, 120, 141, 161, 180, 197, 212, 224, 235, 244, 250, 253, 255, 253, 250, 244, 235,
   224, 212, 197, 180, 161, 141, 120, 97, 74, 49, 24,
 ];
-
-const EFFECT_TREMOR = 0x1d;
 
 class WorkletChannel {
   worklet: ModPlayerWorklet;
@@ -255,7 +265,14 @@ class WorkletChannel {
     if (sIdx < 0 || sIdx >= inst.samples.length) sIdx = 0;
     const sample = inst.samples[sIdx] || inst.samples[0];
 
-    if (this.worklet.mod.type === 'IT') return noteValue;
+    if (this.worklet.mod.type === 'IT') {
+      // Apply IT noteMap translation: the instrument maps input notes to output notes
+      if (inst.noteMap && noteValue >= 1 && noteValue <= 120) {
+        const mappedNote = inst.noteMap[noteValue - 1];
+        if (mappedNote >= 0 && mappedNote <= 119) return mappedNote + 1; // convert 0-based to 1-based
+      }
+      return noteValue;
+    }
 
     const actualNote = noteValue - 1 + (sample.baseNote || 0);
     const isXmOrIt = this.worklet.mod.type === 'XM' || (this.worklet.mod.type as string) === 'IT';
@@ -295,10 +312,16 @@ class WorkletChannel {
   }
 
   handleEffect(note: WorkletNote) {
+    const isIT = this.worklet.mod!.type === 'IT';
+
     if (this.worklet.tick === 0) {
-      this.slideSpeed = 0;
-      this.volSlideSpeed = 0;
-      this.fineSlideSpeed = 0;
+      // For IT: preserve effect memory — only reset values that get explicitly set.
+      // For MOD/XM: reset as before (no effect memory).
+      if (!isIT) {
+        this.slideSpeed = 0;
+        this.volSlideSpeed = 0;
+        this.fineSlideSpeed = 0;
+      }
       this.arpeggioNotes = [];
       this.retrig = 0;
       this.globalVolSlide = 0;
@@ -313,13 +336,14 @@ class WorkletChannel {
         if (param > 0) this.arpeggioNotes = [0, (param >> 4) & 0x0f, param & 0x0f];
         break;
       case EFFECT_PORTA_UP:
-        this.slideSpeed = -param;
+        if (param > 0 || !isIT) this.slideSpeed = -param;
         break;
       case EFFECT_PORTA_DOWN:
-        this.slideSpeed = param;
+        if (param > 0 || !isIT) this.slideSpeed = param;
         break;
       case EFFECT_TONE_PORTA:
         if (param > 0) this.slideSpeed = param;
+        // IT: param 0 means use last non-zero slide speed (already preserved)
         break;
       case EFFECT_VIBRATO:
         if (param & 0x0f) this.vibratoDepth = param & 0x0f;
@@ -351,23 +375,53 @@ class WorkletChannel {
         this.worklet.setPatternJump(param);
         break;
       case EFFECT_VOLUME_SLIDE:
-        if (param & 0xf0) this.volSlideSpeed = (param >> 4) & 0x0f;
-        else if (param & 0x0f) this.volSlideSpeed = -(param & 0x0f);
+        if (param > 0 || !isIT) {
+          if (param & 0xf0) this.volSlideSpeed = (param >> 4) & 0x0f;
+          else if (param & 0x0f) this.volSlideSpeed = -(param & 0x0f);
+        }
+        // IT: param 0 means use last non-zero volSlideSpeed (already preserved)
         break;
       case EFFECT_SET_VOLUME:
         this.volume = Math.min(64, param);
         break;
       case EFFECT_PATTERN_BREAK:
-        // MOD uses BCD param, IT uses hex param (already translated by parser)
-        if (this.worklet.mod!.type === 'IT') {
-          this.worklet.setPatternBreak(param);
-        } else {
+        // IT uses hex param (already translated); XM uses hex too; only MOD uses BCD
+        if (this.worklet.mod!.type === 'MOD') {
           this.worklet.setPatternBreak(((param >> 4) & 0x0f) * 10 + (param & 0x0f));
+        } else {
+          this.worklet.setPatternBreak(param);
         }
         break;
       case EFFECT_SET_SPEED:
         if (param >= 1 && param < 32) this.worklet.setTicksPerRow(param);
         else if (param >= 32) this.worklet.setBpm(param);
+        break;
+      // IT-specific: Axx always sets speed, Txx always sets tempo
+      case IT_EFFECT_SET_SPEED:
+        if (param >= 1) this.worklet.setTicksPerRow(param);
+        break;
+      case IT_EFFECT_SET_TEMPO:
+        if (param >= 32) this.worklet.setBpm(param);
+        break;
+      // IT-specific fine volume slides (tick 0 only)
+      case IT_EFFECT_FINE_VOLSLIDE_UP:
+        if (this.worklet.tick === 0) this.volume = Math.min(64, this.volume + param);
+        break;
+      case IT_EFFECT_FINE_VOLSLIDE_DOWN:
+        if (this.worklet.tick === 0) this.volume = Math.max(0, this.volume - param);
+        break;
+      // IT-specific fine/extra-fine portamento (tick 0 only)
+      case IT_EFFECT_FINE_PORTA_DOWN:
+        if (this.worklet.tick === 0) this.currentPeriod += param / 64;
+        break;
+      case IT_EFFECT_FINE_PORTA_UP:
+        if (this.worklet.tick === 0) this.currentPeriod -= param / 64;
+        break;
+      case IT_EFFECT_EXTRA_FINE_PORTA_DOWN:
+        if (this.worklet.tick === 0) this.currentPeriod += param / 256;
+        break;
+      case IT_EFFECT_EXTRA_FINE_PORTA_UP:
+        if (this.worklet.tick === 0) this.currentPeriod -= param / 256;
         break;
       case EFFECT_GLOBAL_VOLUME:
         this.worklet.globalVolume = Math.min(64, param);
@@ -402,12 +456,12 @@ class WorkletChannel {
         const subParam = param & 0x0f;
         switch (sub) {
           case 0x1:
-            if (this.worklet.mod!.type === 'IT') this.currentPeriod -= subParam / 64;
+            if (isIT) this.currentPeriod -= subParam / 64;
             else if (this.worklet.mod!.type === 'XM') this.currentPeriod -= subParam * 4;
             else this.currentPeriod -= subParam;
             break;
           case 0x2:
-            if (this.worklet.mod!.type === 'IT') this.currentPeriod += subParam / 64;
+            if (isIT) this.currentPeriod += subParam / 64;
             else if (this.worklet.mod!.type === 'XM') this.currentPeriod += subParam * 4;
             else this.currentPeriod += subParam;
             break;
@@ -744,6 +798,7 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
       if (data.type === 'play') {
         this.mod = data.mod;
         this.sampleRate = data.sampleRate;
+        this.globalVolume = this.mod!.globalVolume ?? 64;
         this.setBpm(this.mod!.defaultBpm || 125);
         this.setTicksPerRow(this.mod!.defaultSpeed || 6);
         this.channels = [];
@@ -840,10 +895,13 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
     if (pat) {
       this.currentRowNotes = pat.rows[this.rowIndex].notes;
       this.channels.forEach((ch, i) => {
-        // Reset row-specific slide memory before processing new row/note
-        ch.volSlideSpeed = 0;
-        ch.panningSlide = 0;
-        ch.vibratoDepth = 0; // Standard trackers reset these unless re-triggered
+        // For MOD/XM: reset row-specific slide memory before processing new row/note
+        // For IT: preserve effect memory (reset is handled in handleEffect)
+        if (this.mod!.type !== 'IT') {
+          ch.volSlideSpeed = 0;
+          ch.panningSlide = 0;
+          ch.vibratoDepth = 0; // Standard trackers reset these unless re-triggered
+        }
 
         if (this.currentRowNotes[i]) ch.trigger(this.currentRowNotes[i]);
       });
