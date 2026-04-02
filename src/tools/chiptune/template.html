@@ -86,15 +86,13 @@
 
     <div class="divider divider-horizontal mx-0 h-6"></div>
 
-    <label class="flex items-center gap-2 cursor-pointer">
-      <input
-        type="checkbox"
-        id="loop-toggle"
-        class="toggle toggle-xs"
-        checked
-        data-setting="loop"
-      />
-      <span class="text-xs">Loop</span>
+    <label class="flex items-center gap-2">
+      <span class="text-xs">Mode</span>
+      <select id="playback-mode" class="select select-xs h-7 min-h-0" data-setting="playback-mode">
+        <option value="normal">Normal</option>
+        <option value="loop">Loop</option>
+        <option value="next">Next</option>
+      </select>
     </label>
 
     <div class="divider divider-horizontal mx-0 h-6"></div>
@@ -165,11 +163,12 @@
         data-setting="visualizer"
         class="select select-ghost select-xs text-xs h-6 min-h-0 bg-base-300"
       >
+        <option value="none">Disabled</option>
         <option value="grid-3d">3D Grid (Rotating)</option>
         <option value="neon-nexus">Neon Nexus (Radial)</option>
         <option value="scroller">Sine Scroller</option>
         <option value="pulse-grid">Pulse Grid (Neon)</option>
-        <option value="classic">Classic (Bars & Wave)</option>
+        <option value="classic" selected>Classic (Bars & Wave)</option>
         <option value="spectrogram">Spectrogram (Waterfall)</option>
         <option value="terrain">Terrain (Mountains)</option>
         <option value="particle-constellation">Particle Constellation</option>

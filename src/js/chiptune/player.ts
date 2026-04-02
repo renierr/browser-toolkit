@@ -128,6 +128,7 @@ export class ChiptunePlayer {
 
   public onPositionChange: ((pattern: number, row: number) => void) | null = null;
   public onChannelActivity: ((activeChannels: boolean[]) => void) | null = null;
+  public onPlaybackEnded: (() => void) | null = null;
 
   constructor() {
     this.initAudio();
@@ -275,6 +276,9 @@ export class ChiptunePlayer {
           this.speed = e.data.speed;
         } else if (e.data.type === 'stop') {
           this.isPlaying = false;
+          if (e.data.ended && this.onPlaybackEnded) {
+            this.onPlaybackEnded();
+          }
         }
       };
       this.workletNode.connect(this.masterGain!);
@@ -317,6 +321,7 @@ export class ChiptunePlayer {
 
   setLooping(loop: boolean): void {
     this.isLooping = loop;
+    this.sendToWorklet('setLooping', { looping: this.isLooping });
   }
   setSpeed(spd: number): void {
     this.speed = Math.max(1, Math.min(32, spd));
@@ -357,6 +362,7 @@ export class ChiptunePlayer {
         this.sendToWorklet('play', {
           mod: workletMod,
           sampleRate: this.audioContext.sampleRate,
+          looping: this.isLooping,
         });
       }
       this.isPlaying = true;
@@ -820,22 +826,28 @@ export class ChiptunePlayer {
       this.currentRow++;
 
       if (patternBreak || this.currentRow >= (pattern.rows.length || this.module.rowsPerPattern)) {
+        const previousPatternIdx = this.currentPatternIdx;
         this.currentRow = nextRow >= 0 ? nextRow : 0;
         const wasAtEnd = this.currentPatternIdx >= this.module.sequence.length - 1 && !patternJump;
         this.currentPatternIdx = patternJump >= 0 ? patternJump : this.currentPatternIdx + 1;
+
+        if (!this.isLooping && patternJump >= 0 && patternJump <= previousPatternIdx) {
+          this.stop();
+          if (this.onPlaybackEnded) {
+            this.onPlaybackEnded();
+          }
+          return;
+        }
 
         if (this.patternLoopRow >= 0 && this.patternLoopCount > 0) {
           this.currentRow = this.patternLoopRow;
           this.currentPatternIdx =
             this.patternLoopPosition >= 0 ? this.patternLoopPosition : this.currentPatternIdx;
           this.patternLoopCount--;
-        } else if (
-          this.patternLoopRow >= 0 &&
-          this.patternLoopCount === 0 &&
-          this.patternLoopPosition >= 0
-        ) {
-          this.currentRow = this.patternLoopRow;
-          this.currentPatternIdx = this.patternLoopPosition;
+          if (this.patternLoopCount === 0) {
+            this.patternLoopRow = -1;
+            this.patternLoopPosition = -1;
+          }
         }
 
         if (this.currentPatternIdx >= this.module.sequence.length) {
@@ -853,6 +865,9 @@ export class ChiptunePlayer {
             this.currentPatternIdx = 0;
           } else {
             this.stop();
+            if (this.onPlaybackEnded) {
+              this.onPlaybackEnded();
+            }
           }
         } else if (wasAtEnd && this.isLooping) {
           for (const ch of this.channelStates) {

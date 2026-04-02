@@ -1425,6 +1425,7 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
   jumpPosition = -1;
   jumpRowIndex = -1;
   patternDelay = 0;
+  isLooping = true;
   currentRowNotes: WorkletNote[] = [];
 
   constructor() {
@@ -1434,6 +1435,7 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
       if (data.type === 'play') {
         this.mod = data.mod;
         this.sampleRate = data.sampleRate;
+        this.isLooping = data.looping !== false;
         this.globalVolume = this.mod!.globalVolume ?? 64;
         this.mixingVolume = this.mod!.mixingVolume ?? 128;
         this.setBpm(this.mod!.defaultBpm || 125);
@@ -1480,6 +1482,8 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         this.setTicksPerRow(data.speed);
       } else if (data.type === 'setBpm') {
         this.setBpm(data.bpm);
+      } else if (data.type === 'setLooping') {
+        this.isLooping = data.looping !== false;
       }
     };
   }
@@ -1539,7 +1543,15 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
       this.patternDelay--;
       return;
     }
+    const previousPosition = this.position;
     if (this.jumpPosition !== -1) {
+      if (!this.isLooping && this.jumpPosition <= previousPosition) {
+        this.playing = false;
+        this.port.postMessage({ type: 'stop', ended: true });
+        this.jumpPosition = -1;
+        this.jumpRowIndex = -1;
+        return;
+      }
       this.position = this.jumpPosition;
       this.rowIndex = this.jumpRowIndex !== -1 ? this.jumpRowIndex : 0;
       this.jumpPosition = -1;
@@ -1556,8 +1568,14 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         this.position++;
       }
     }
-    if (this.position >= this.mod!.length || this.position < 0)
+    if (this.position >= this.mod!.length || this.position < 0) {
+      if (!this.isLooping) {
+        this.playing = false;
+        this.port.postMessage({ type: 'stop', ended: true });
+        return;
+      }
       this.position = this.mod!.restartPosition || 0;
+    }
     const patIdx = this.mod!.patternTable[this.position];
     const pat = this.mod!.patterns[patIdx];
     if (pat) {

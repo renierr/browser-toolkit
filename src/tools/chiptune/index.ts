@@ -15,6 +15,8 @@ import { ParticleConstellationVisualizer } from './visualizers/particle-constell
 import { VUMeterVisualizer } from './visualizers/vu-meter-visualizer';
 import type { Visualizer } from './visualizers/base';
 
+type PlaybackMode = 'normal' | 'loop' | 'next';
+
 // good mod file for testing: https://api.modarchive.org/downloads.php?moduleid=86357#ba1.mod
 
 function updateModuleInfo(mod: ModuleFile, elements: Record<string, HTMLElement | null>): void {
@@ -94,7 +96,7 @@ function getElements(): Record<string, HTMLElement | null> {
     'file-input': document.getElementById('file-input'),
     'btn-play': document.getElementById('btn-play'),
     'btn-stop': document.getElementById('btn-stop'),
-    'loop-toggle': document.getElementById('loop-toggle'),
+    'playback-mode': document.getElementById('playback-mode'),
     'worklet-toggle': document.getElementById('worklet-toggle'),
     'volume-slider': document.getElementById('volume-slider'),
     'volume-display': document.getElementById('volume-display'),
@@ -133,6 +135,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   let shouldVisualize = false;
   let currentFile: File | null = null;
   let currentFormat: string = '';
+  let currentArchiveModuleId: string | null = null;
   let lastFrameTime = 0;
   const frameInterval = 1000 / 60;
 
@@ -170,7 +173,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const dropzone = elements['dropzone'] as HTMLElement;
   const btnPlay = elements['btn-play'] as HTMLButtonElement | null;
   const btnStop = elements['btn-stop'] as HTMLButtonElement | null;
-  const loopToggle = elements['loop-toggle'] as HTMLInputElement | null;
+  const playbackModeSelect = elements['playback-mode'] as HTMLSelectElement | null;
   const workletToggle = elements['worklet-toggle'] as HTMLInputElement | null;
   const volumeSlider = elements['volume-slider'] as HTMLInputElement | null;
   const volumeDisplay = elements['volume-display'];
@@ -207,17 +210,46 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (volumeDisplay) volumeDisplay.textContent = `${volumeSlider.value}%`;
   }
 
+  const applyPlaybackMode = (mode: PlaybackMode): void => {
+    player?.setLooping(mode === 'loop');
+  };
+
+  let playbackMode: PlaybackMode =
+    playbackModeSelect?.value === 'loop' || playbackModeSelect?.value === 'next'
+      ? (playbackModeSelect.value as PlaybackMode)
+      : 'normal';
+  if (playbackModeSelect) {
+    playbackModeSelect.value = playbackMode;
+    applyPlaybackMode(playbackMode);
+  }
+
   let currentVis = localStorage.getItem('chiptune-vis') || 'grid-3d';
+  if (currentVis !== 'none' && !visualizers[currentVis]) {
+    currentVis = 'grid-3d';
+  }
   if (visSelector) {
     visSelector.value = currentVis;
     visSelector.addEventListener('change', () => {
+      const previousVis = currentVis;
       currentVis = visSelector.value;
       localStorage.setItem('chiptune-vis', currentVis);
+      visualizerCanvas.classList.toggle('hidden', currentVis === 'none');
+      if (previousVis !== 'none') {
+        visualizers[previousVis]?.reset?.();
+      }
+      if (currentVis === 'none' && animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      if (currentVis !== 'none' && shouldVisualize && !animationId) {
+        drawVisualization();
+      }
     });
   }
 
   const visualizerCanvas = document.getElementById('visualizer') as HTMLCanvasElement;
   const visualizerCtx = visualizerCanvas.getContext('2d');
+  visualizerCanvas.classList.toggle('hidden', currentVis === 'none');
 
   const onFile = async (fileList: FileList): Promise<void> => {
     if (fileList.length === 0) return;
@@ -229,6 +261,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
     player!.loadModule(mod);
     currentFile = file;
     currentFormat = mod.type;
+    currentArchiveModuleId = null;
     updateModuleInfo(mod, elements);
     updateChannelActivity(elements, mod.channels);
     enableControls(elements);
@@ -277,6 +310,57 @@ export default function init(payload?: SharedFilesPayload): () => void {
       .join('');
   }
 
+  async function loadArchivedModuleById(id: string, autoplay: boolean): Promise<void> {
+    const modules = await getAllModules();
+    const module = modules.find((m) => m.id === id);
+    if (!module) {
+      showMessage('Archived module not found', { type: 'warning', timeoutMs: 3000 });
+      return;
+    }
+
+    const file = new File([module.fileData], module.fileName);
+    const fileList = new DataTransfer();
+    fileList.items.add(file);
+    await onFile(fileList.files);
+    currentArchiveModuleId = module.id;
+
+    if (autoplay) {
+      await player?.play();
+      if (btnPlay) btnPlay.innerHTML = '<i data-lucide="pause" class="w-4 h-4"></i>';
+      if (workletToggle && player) workletToggle.checked = player.getIsWorkletEnabled();
+      shouldVisualize = true;
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      if (currentVis !== 'none') {
+        drawVisualization();
+      }
+    }
+  }
+
+  async function playNextArchivedModule(): Promise<void> {
+    const modules = await getAllModules();
+    if (modules.length === 0) {
+      showMessage('Archive is empty', { type: 'warning', timeoutMs: 3000 });
+      return;
+    }
+
+    const currentIndex = modules.findIndex((m) => m.id === currentArchiveModuleId);
+    if (currentIndex === -1) {
+      await loadArchivedModuleById(modules[0].id, true);
+      return;
+    }
+
+    const nextModule = modules[currentIndex + 1];
+    if (!nextModule) {
+      showMessage('No next archived module', { type: 'info', timeoutMs: 3000 });
+      return;
+    }
+
+    await loadArchivedModuleById(nextModule.id, true);
+  }
+
   btnArchive?.addEventListener('click', async () => {
     if (!currentFile || !currentFormat) return;
     const titleEl = elements['song-title'];
@@ -320,21 +404,19 @@ export default function init(payload?: SharedFilesPayload): () => void {
     if (item) {
       const id = (item as HTMLElement).dataset.id;
       if (!id) return;
-      const modules = await getAllModules();
-      const module = modules.find((m) => m.id === id);
-      if (module) {
-        const file = new File([module.fileData], module.fileName);
-        setTimeout(() => {
-          const fileList = new DataTransfer();
-          fileList.items.add(file);
-          onFile(fileList.files);
-          setTimeout(() => btnPlay?.click(), 500);
-        }, 100);
-      }
+      await loadArchivedModuleById(id, true);
     }
   });
 
   loadArchiveList();
+
+  player.onPlaybackEnded = async () => {
+    if (btnPlay) btnPlay.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i>';
+    shouldVisualize = false;
+    if (playbackMode === 'next') {
+      await playNextArchivedModule();
+    }
+  };
 
   btnPlay?.addEventListener('click', async () => {
     if (!player) return;
@@ -349,7 +431,13 @@ export default function init(payload?: SharedFilesPayload): () => void {
       // Sync toggle with current player state
       if (workletToggle) workletToggle.checked = player.getIsWorkletEnabled();
       shouldVisualize = true;
-      drawVisualization();
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      if (currentVis !== 'none') {
+        drawVisualization();
+      }
     }
   });
 
@@ -365,6 +453,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       player.stop();
     }
     if (workletToggle) workletToggle.checked = false;
+    currentArchiveModuleId = null;
     elements['file-info']?.classList.add('hidden');
     dropzone?.classList.remove('hidden');
     if (btnPlay) btnPlay.disabled = true;
@@ -378,9 +467,14 @@ export default function init(payload?: SharedFilesPayload): () => void {
     }
   });
 
-  loopToggle?.addEventListener('change', () => {
-    if (!player) return;
-    player.setLooping(loopToggle.checked);
+  playbackModeSelect?.addEventListener('change', () => {
+    const selected = playbackModeSelect.value;
+    if (selected === 'loop' || selected === 'next') {
+      playbackMode = selected;
+    } else {
+      playbackMode = 'normal';
+    }
+    applyPlaybackMode(playbackMode);
   });
 
   workletToggle?.addEventListener('change', async () => {
@@ -485,7 +579,21 @@ export default function init(payload?: SharedFilesPayload): () => void {
         visualizerCtx.fillStyle = '#000000';
         visualizerCtx.fillRect(0, 0, width, height);
       }
-      if (animationId) cancelAnimationFrame(animationId);
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+      return;
+    }
+
+    if (currentVis === 'none') {
+      if (visualizerCtx) {
+        visualizerCtx.clearRect(0, 0, width, height);
+      }
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
       return;
     }
     if (!visualizerCtx || !player) return;
