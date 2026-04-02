@@ -1,15 +1,15 @@
 // IT (Impulse Tracker) sample decompression
-// Based on the official IT 2.04 format documentation
+// Based on ITTECH.TXT and reference implementations (SchismTracker, libxmp, OpenMPT)
 
 export class BitReader {
   private data: Uint8Array;
   private pos: number;
-  private bitBit: number;
+  private bitPos: number;
 
   constructor(data: Uint8Array, offset: number) {
     this.data = data;
     this.pos = offset;
-    this.bitBit = 0;
+    this.bitPos = 0;
   }
 
   readBits(numBits: number): number {
@@ -17,18 +17,17 @@ export class BitReader {
     let bitsRead = 0;
 
     while (bitsRead < numBits) {
-      if (this.pos >= this.data.length) return 0;
-      let bitsAvailable = 8 - this.bitBit;
-      let bitsToRead = Math.min(numBits - bitsRead, bitsAvailable);
+      if (this.pos >= this.data.length) return value;
+      const bitsAvailable = 8 - this.bitPos;
+      const bitsToRead = Math.min(numBits - bitsRead, bitsAvailable);
+      const mask = (1 << bitsToRead) - 1;
+      value |= ((this.data[this.pos] >> this.bitPos) & mask) << bitsRead;
 
-      let mask = (1 << bitsToRead) - 1;
-      value |= ((this.data[this.pos] >> this.bitBit) & mask) << bitsRead;
-
-      this.bitBit += bitsToRead;
+      this.bitPos += bitsToRead;
       bitsRead += bitsToRead;
 
-      if (this.bitBit === 8) {
-        this.bitBit = 0;
+      if (this.bitPos >= 8) {
+        this.bitPos = 0;
         this.pos++;
       }
     }
@@ -36,11 +35,16 @@ export class BitReader {
   }
 }
 
+/**
+ * Decompress 8-bit IT compressed samples.
+ * IT uses a variable-width delta encoding with in-stream width change commands.
+ * The `isIT215` flag controls whether IT 2.15 compression is used (raw value mode).
+ */
 export function decompressIT8(
   inData: Uint8Array,
   offset: number,
   outLen: number,
-  isSigned: boolean
+  isIT215: boolean
 ): Float32Array {
   let pos = offset;
   let outPos = 0;
@@ -48,6 +52,7 @@ export function decompressIT8(
 
   while (outPos < outLen) {
     if (pos + 2 > inData.length) break;
+    // Read compressed block size (number of bytes of compressed data)
     const blockSize = inData[pos] | (inData[pos + 1] << 8);
     pos += 2;
 
@@ -55,51 +60,67 @@ export function decompressIT8(
     pos += blockSize;
 
     let bitWidth = 9;
-    let d1 = 0;
-    let d2 = 0;
-    let blockSamples = Math.min(0x8000, outLen - outPos);
-    let blockEnd = outPos + blockSamples;
+    let d1 = 0; // delta accumulator 1 (IT 2.15 uses two integrators)
+    let d2 = 0; // delta accumulator 2
+    const blockSamples = Math.min(0x8000, outLen - outPos);
+    const blockEnd = outPos + blockSamples;
 
     while (outPos < blockEnd) {
-      let v = br.readBits(bitWidth);
+      const v = br.readBits(bitWidth);
 
-      if (bitWidth < 7) {
+      // Check for width change sentinel values
+      if (bitWidth <= 6) {
+        // For widths 1-6: sentinel is the value with only the sign bit set
         if (v === 1 << (bitWidth - 1)) {
-          let v2 = br.readBits(3) + 1;
-          bitWidth = v2 < bitWidth ? v2 : v2 + 1;
+          const newWidth = br.readBits(3) + 1;
+          bitWidth = newWidth < bitWidth ? newWidth : newWidth + 1;
           continue;
         }
-      } else if (bitWidth > 7) {
-        if (v === (1 << (bitWidth - 1)) + (1 << (bitWidth - 2)) || v === (1 << bitWidth) - 1) {
-          let v2 = br.readBits(3) + 1;
-          bitWidth = v2 < bitWidth ? v2 : v2 + 1;
+      } else if (bitWidth < 9) {
+        // For widths 7-8: sentinel is sign bit only
+        if (v === 1 << (bitWidth - 1)) {
+          const newWidth = br.readBits(3) + 1;
+          bitWidth = newWidth < bitWidth ? newWidth : newWidth + 1;
           continue;
         }
       } else {
-        if (v === 128) {
-          let v2 = br.readBits(3) + 1;
-          bitWidth = v2 < bitWidth ? v2 : v2 + 1;
-          continue;
+        // bitWidth == 9: the 9th bit indicates special mode
+        if (v & 0x100) {
+          if (isIT215) {
+            // IT 2.15: lower 8 bits are a raw sample value (not a delta)
+            d1 = v & 0xff;
+            d2 += d1;
+            let finalVal = d2 & 0xff;
+            if (finalVal >= 128) finalVal -= 256;
+            out[outPos++] = finalVal / 128;
+            continue;
+          } else {
+            // IT 2.14: change width
+            const newWidth = (v & 0xff) + 1;
+            if (newWidth < 1 || newWidth > 9) continue;
+            bitWidth = newWidth;
+            continue;
+          }
         }
       }
 
-      if (bitWidth <= 8) {
-        let shift = 8 - bitWidth;
-        v = ((v << shift) << 24) >> (24 + shift);
+      // Sign-extend the value from bitWidth bits to a signed integer
+      let signedVal: number;
+      if (bitWidth < 9) {
+        if (v & (1 << (bitWidth - 1))) {
+          signedVal = v - (1 << bitWidth);
+        } else {
+          signedVal = v;
+        }
       } else {
-        v = (v << 23) >> 23;
+        signedVal = v & (1 << 8) ? v - (1 << 9) : v;
       }
 
-      d1 += v;
+      // Accumulate deltas
+      d1 += signedVal;
       d2 += d1;
       let finalVal = d2 & 0xff;
-
-      if (isSigned) {
-        if (finalVal >= 128) finalVal -= 256;
-      } else {
-        finalVal -= 128;
-      }
-
+      if (finalVal >= 128) finalVal -= 256;
       out[outPos++] = finalVal / 128;
     }
   }
@@ -107,11 +128,15 @@ export function decompressIT8(
   return out;
 }
 
+/**
+ * Decompress 16-bit IT compressed samples.
+ * Same algorithm as 8-bit but with wider values and different block size.
+ */
 export function decompressIT16(
   inData: Uint8Array,
   offset: number,
   outLen: number,
-  isSigned: boolean
+  isIT215: boolean
 ): Float32Array {
   let pos = offset;
   let outPos = 0;
@@ -128,51 +153,60 @@ export function decompressIT16(
     let bitWidth = 17;
     let d1 = 0;
     let d2 = 0;
-    let blockSamples = Math.min(0x8000, outLen - outPos);
-    let blockEnd = outPos + blockSamples;
+    const blockSamples = Math.min(0x4000, outLen - outPos);
+    const blockEnd = outPos + blockSamples;
 
     while (outPos < blockEnd) {
-      let v = br.readBits(bitWidth);
+      const v = br.readBits(bitWidth);
 
-      if (bitWidth < 7) {
+      if (bitWidth <= 6) {
         if (v === 1 << (bitWidth - 1)) {
-          let v2 = br.readBits(4) + 1;
-          bitWidth = v2 < bitWidth ? v2 : v2 + 1;
+          const newWidth = br.readBits(4) + 1;
+          bitWidth = newWidth < bitWidth ? newWidth : newWidth + 1;
           continue;
         }
-      } else if (bitWidth > 7) {
-        if (v === (1 << (bitWidth - 1)) + (1 << (bitWidth - 2))) {
-          let v2 = br.readBits(4) + 1;
-          bitWidth = v2 < bitWidth ? v2 : v2 + 1;
+      } else if (bitWidth < 17) {
+        if (v === 1 << (bitWidth - 1)) {
+          const newWidth = br.readBits(4) + 1;
+          bitWidth = newWidth < bitWidth ? newWidth : newWidth + 1;
           continue;
-        } else if (v === (1 << bitWidth) - 1) {
-          break;
         }
       } else {
-        if (v === 128) {
-          let v2 = br.readBits(4) + 1;
-          bitWidth = v2 < bitWidth ? v2 : v2 + 1;
-          continue;
+        // bitWidth == 17: the 17th bit indicates special mode
+        if (v & 0x10000) {
+          if (isIT215) {
+            // IT 2.15: lower 16 bits are a raw sample value
+            d1 = v & 0xffff;
+            d2 += d1;
+            let finalVal = d2 & 0xffff;
+            if (finalVal >= 32768) finalVal -= 65536;
+            out[outPos++] = finalVal / 32768;
+            continue;
+          } else {
+            const newWidth = (v & 0xffff) + 1;
+            if (newWidth < 1 || newWidth > 17) continue;
+            bitWidth = newWidth;
+            continue;
+          }
         }
       }
 
-      if (bitWidth <= 16) {
-        let shift = 16 - bitWidth;
-        v = ((v << shift) << 16) >> (16 + shift);
+      // Sign-extend value
+      let signedVal: number;
+      if (bitWidth < 17) {
+        if (v & (1 << (bitWidth - 1))) {
+          signedVal = v - (1 << bitWidth);
+        } else {
+          signedVal = v;
+        }
       } else {
-        v = (v << 15) >> 15;
+        signedVal = v & (1 << 16) ? v - (1 << 17) : v;
       }
 
-      d1 += v;
+      d1 += signedVal;
       d2 += d1;
       let finalVal = d2 & 0xffff;
-
-      if (isSigned) {
-        if (finalVal >= 32768) finalVal -= 65536;
-      } else {
-        finalVal -= 32768;
-      }
-
+      if (finalVal >= 32768) finalVal -= 65536;
       out[outPos++] = finalVal / 32768;
     }
   }

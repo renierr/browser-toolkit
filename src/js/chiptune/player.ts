@@ -619,7 +619,12 @@ export class ChiptunePlayer {
         }
         if (chState.effect === 0x0d) {
           patternBreak = true;
-          nextRow = (chState.effectParam >> 4) * 10 + (chState.effectParam & 0x0f);
+          // IT uses hex param directly; MOD/XM use BCD
+          if (this.module.type === 'IT') {
+            nextRow = chState.effectParam;
+          } else {
+            nextRow = (chState.effectParam >> 4) * 10 + (chState.effectParam & 0x0f);
+          }
         }
         if (chState.effect === 0x0f) {
           if (chState.effectParam > 0 && chState.effectParam <= 32)
@@ -791,7 +796,8 @@ export class ChiptunePlayer {
     // For XM/IT: use sampleMap if available
     let sampleIndex = 0;
     const note = noteValue ?? chState.note ?? 1;
-    if (this.module.type !== 'MOD' && note >= 1 && note <= 120) {
+    const maxNote = this.module.type === 'IT' ? 120 : 96;
+    if (this.module.type !== 'MOD' && note >= 1 && note <= maxNote) {
       if (inst.sampleMap && note <= inst.sampleMap.length) {
         sampleIndex = inst.sampleMap[note - 1];
       }
@@ -838,7 +844,7 @@ export class ChiptunePlayer {
     if (this.module.type === 'IT') return note;
 
     const actualNote = note - 1 + (sample.baseNote || 0);
-    const isXmOrIt = this.module.type === 'XM' || (this.module.type as string) === 'IT';
+    const isXmOrIt = this.module.type === 'XM';
 
     if (isXmOrIt) {
       if (this.module.linearFrequencies) {
@@ -944,9 +950,9 @@ export class ChiptunePlayer {
     if (!this.module || period <= 0) return 0;
 
     if (this.module.type === 'IT') {
-      // IT period IS the note number (1-96), convert to semitones from C-5
-      // Note 1 (C-0) = -60 semitones from C-5
-      const semitoneFromC5 = period - 60;
+      // IT: period IS the note number (1-120). C-5 = note 61.
+      // Frequency = C5Speed * 2^((note - 61) / 12)
+      const semitoneFromC5 = period - 61;
       return (sample.c5speed || 8363) * Math.pow(2, semitoneFromC5 / 12);
     }
 
@@ -1021,12 +1027,12 @@ export class ChiptunePlayer {
       const eSub = (param >> 4) & 0x0f;
       const eParam = param & 0x0f;
       if (eSub === 0x1) {
-        if (this.module?.type === 'XM' || this.module?.type === 'IT')
-          chState.currentPeriod -= eParam * 4;
+        if (this.module?.type === 'IT') chState.currentPeriod -= eParam / 64;
+        else if (this.module?.type === 'XM') chState.currentPeriod -= eParam * 4;
         else chState.currentPeriod -= eParam;
       } else if (eSub === 0x2) {
-        if (this.module?.type === 'XM' || this.module?.type === 'IT')
-          chState.currentPeriod += eParam * 4;
+        if (this.module?.type === 'IT') chState.currentPeriod += eParam / 64;
+        else if (this.module?.type === 'XM') chState.currentPeriod += eParam * 4;
         else chState.currentPeriod += eParam;
       } else if (eSub === 0x4) chState.vibratoWaveform = eParam & 3;
       else if (eSub === 0x7) chState.tremoloWaveform = eParam & 3;
@@ -1043,26 +1049,40 @@ export class ChiptunePlayer {
     }
 
     if (effect === 0x03 || effect === 0x05) {
-      const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
-      const scale = isXmOrIt ? 4 : 1; // 16x period precision (4 ticks per unit shift in standard speed)
-
-      if (chState.currentPeriod < chState.targetPeriod) {
-        chState.currentPeriod = Math.min(
-          chState.currentPeriod + chState.slideSpeed * scale,
-          chState.targetPeriod
-        );
-      } else if (chState.currentPeriod > chState.targetPeriod) {
-        chState.currentPeriod = Math.max(
-          chState.currentPeriod - chState.slideSpeed * scale,
-          chState.targetPeriod
-        );
+      if (this.module?.type === 'IT') {
+        // IT: period is note number; slide in fractional note units (param/64 semitones per tick)
+        const slideAmt = chState.slideSpeed / 64;
+        if (chState.currentPeriod < chState.targetPeriod) {
+          chState.currentPeriod = Math.min(chState.currentPeriod + slideAmt, chState.targetPeriod);
+        } else if (chState.currentPeriod > chState.targetPeriod) {
+          chState.currentPeriod = Math.max(chState.currentPeriod - slideAmt, chState.targetPeriod);
+        }
+      } else {
+        const scale = this.module?.type === 'XM' ? 4 : 1;
+        if (chState.currentPeriod < chState.targetPeriod) {
+          chState.currentPeriod = Math.min(
+            chState.currentPeriod + chState.slideSpeed * scale,
+            chState.targetPeriod
+          );
+        } else if (chState.currentPeriod > chState.targetPeriod) {
+          chState.currentPeriod = Math.max(
+            chState.currentPeriod - chState.slideSpeed * scale,
+            chState.targetPeriod
+          );
+        }
       }
     } else if (effect === 0x01) {
-      const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
-      chState.currentPeriod -= chState.slideSpeed * (isXmOrIt ? 4 : 1);
+      if (this.module?.type === 'IT') {
+        chState.currentPeriod -= chState.slideSpeed / 64;
+      } else {
+        chState.currentPeriod -= chState.slideSpeed * (this.module?.type === 'XM' ? 4 : 1);
+      }
     } else if (effect === 0x02) {
-      const isXmOrIt = this.module?.type === 'XM' || this.module?.type === 'IT';
-      chState.currentPeriod += chState.slideSpeed * (isXmOrIt ? 4 : 1);
+      if (this.module?.type === 'IT') {
+        chState.currentPeriod += chState.slideSpeed / 64;
+      } else {
+        chState.currentPeriod += chState.slideSpeed * (this.module?.type === 'XM' ? 4 : 1);
+      }
     }
 
     if (chState.retrig > 0 && this.currentTick % chState.retrig === 0) {

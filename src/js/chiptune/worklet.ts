@@ -230,9 +230,11 @@ class WorkletChannel {
   assignSample(noteValue: number) {
     if (!this.instrument) return;
     let sIdx = 0;
-    if (this.instrument.sampleMap && noteValue >= 1 && noteValue <= 96) {
+    const maxNote = this.worklet.mod!.type === 'IT' ? 120 : 96;
+    if (this.instrument.sampleMap && noteValue >= 1 && noteValue <= maxNote) {
       sIdx = this.instrument.sampleMap[noteValue - 1];
     }
+    if (sIdx < 0 || sIdx >= this.instrument.samples.length) sIdx = 0;
     this.sample = this.instrument.samples[sIdx] || this.instrument.samples[0] || null;
     // Don't overwrite MOD hardcoded panning
     if (this.sample && this.worklet.mod!.type !== 'MOD') {
@@ -247,7 +249,10 @@ class WorkletChannel {
     if (!inst || inst.samples.length === 0) return 0;
 
     let sIdx = 0;
-    if (inst.sampleMap && noteValue >= 1 && noteValue <= 96) sIdx = inst.sampleMap[noteValue - 1];
+    const maxNote = this.worklet.mod.type === 'IT' ? 120 : 96;
+    if (inst.sampleMap && noteValue >= 1 && noteValue <= maxNote)
+      sIdx = inst.sampleMap[noteValue - 1];
+    if (sIdx < 0 || sIdx >= inst.samples.length) sIdx = 0;
     const sample = inst.samples[sIdx] || inst.samples[0];
 
     if (this.worklet.mod.type === 'IT') return noteValue;
@@ -353,7 +358,12 @@ class WorkletChannel {
         this.volume = Math.min(64, param);
         break;
       case EFFECT_PATTERN_BREAK:
-        this.worklet.setPatternBreak(((param >> 4) & 0x0f) * 10 + (param & 0x0f));
+        // MOD uses BCD param, IT uses hex param (already translated by parser)
+        if (this.worklet.mod!.type === 'IT') {
+          this.worklet.setPatternBreak(param);
+        } else {
+          this.worklet.setPatternBreak(((param >> 4) & 0x0f) * 10 + (param & 0x0f));
+        }
         break;
       case EFFECT_SET_SPEED:
         if (param >= 1 && param < 32) this.worklet.setTicksPerRow(param);
@@ -392,13 +402,13 @@ class WorkletChannel {
         const subParam = param & 0x0f;
         switch (sub) {
           case 0x1:
-            if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT')
-              this.currentPeriod -= subParam * 4;
+            if (this.worklet.mod!.type === 'IT') this.currentPeriod -= subParam / 64;
+            else if (this.worklet.mod!.type === 'XM') this.currentPeriod -= subParam * 4;
             else this.currentPeriod -= subParam;
             break;
           case 0x2:
-            if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT')
-              this.currentPeriod += subParam * 4;
+            if (this.worklet.mod!.type === 'IT') this.currentPeriod += subParam / 64;
+            else if (this.worklet.mod!.type === 'XM') this.currentPeriod += subParam * 4;
             else this.currentPeriod += subParam;
             break;
           case 0x4:
@@ -461,7 +471,17 @@ class WorkletChannel {
 
       const effect = this.worklet.currentRowNotes[this.channelIndex]?.effect;
       if (effect === EFFECT_TONE_PORTA || effect === EFFECT_TONE_PORTA_VOL) {
-        if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') {
+        if (this.worklet.mod!.type === 'IT') {
+          // IT: period is note number; slide in fractional note units (param/64 semitones per tick)
+          const slideAmt = this.slideSpeed / 64;
+          if (this.targetPeriod !== 0) {
+            if (this.currentPeriod < this.targetPeriod) {
+              this.currentPeriod = Math.min(this.currentPeriod + slideAmt, this.targetPeriod);
+            } else {
+              this.currentPeriod = Math.max(this.currentPeriod - slideAmt, this.targetPeriod);
+            }
+          }
+        } else if (this.worklet.mod!.type === 'XM') {
           if (this.targetPeriod !== 0) {
             if (this.currentPeriod < this.targetPeriod) {
               this.currentPeriod = Math.min(
@@ -496,7 +516,10 @@ class WorkletChannel {
           }
         }
       } else if (this.slideSpeed !== 0) {
-        if (this.worklet.mod!.type === 'XM' || this.worklet.mod!.type === 'IT') {
+        if (this.worklet.mod!.type === 'IT') {
+          // IT: slide in fractional note units (param/64 semitones per tick)
+          this.currentPeriod += this.slideSpeed / 64;
+        } else if (this.worklet.mod!.type === 'XM') {
           this.currentPeriod += this.slideSpeed * 4;
         } else {
           this.currentPeriod += this.slideSpeed;
@@ -546,6 +569,7 @@ class WorkletChannel {
     if (this.arpeggioNotes.length > 0) {
       const isXmOrIt =
         (this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT';
+      const isIT = (this.worklet.mod!.type as string) === 'IT';
 
       // ProTracker Arpeggio Quirk: Does not play on Tick 0
       if (!isXmOrIt && this.worklet.tick % this.worklet.ticksPerRow === 0) {
@@ -554,7 +578,7 @@ class WorkletChannel {
         const cycle = this.worklet.tick % 3;
         let arpNote = 0;
         if (isXmOrIt) {
-          // FT2 Arpeggio cycle: 0, y, x
+          // FT2/IT Arpeggio cycle: 0, y, x
           if (cycle === 0) arpNote = 0;
           else if (cycle === 1)
             arpNote = this.arpeggioNotes[1]; // low nibble
@@ -564,7 +588,10 @@ class WorkletChannel {
         }
 
         if (arpNote > 0) {
-          if (isXmOrIt) {
+          if (isIT) {
+            // IT: period is note number, just add semitones directly
+            renderPeriod += arpNote;
+          } else if (this.worklet.mod!.type === 'XM') {
             if (this.worklet.mod!.linearFrequencies) renderPeriod -= arpNote * 16 * 4;
             else renderPeriod /= Math.pow(2, arpNote / 12);
           } else {
@@ -580,13 +607,19 @@ class WorkletChannel {
       if (phase < 32) mod = SINE_TABLE[phase];
       else mod = -SINE_TABLE[phase - 32];
 
-      const isXmOrIt =
-        (this.worklet.mod!.type as string) === 'XM' || (this.worklet.mod!.type as string) === 'IT';
-      let depthScale = isXmOrIt && this.worklet.mod!.linearFrequencies ? 4 : 1;
+      const isIT = (this.worklet.mod!.type as string) === 'IT';
 
-      if (this.worklet.mod!.linearFrequencies)
-        renderPeriod += (mod * this.vibratoDepth * depthScale) / 128;
-      else renderPeriod += (mod * this.vibratoDepth * depthScale * 4) / 128; // Amiga periods use *4 in FT2 scale
+      if (isIT) {
+        // IT: period is note number, vibrato adds fractional semitones
+        renderPeriod += (mod * this.vibratoDepth) / (128 * 16);
+      } else {
+        const isXm = (this.worklet.mod!.type as string) === 'XM';
+        let depthScale = isXm && this.worklet.mod!.linearFrequencies ? 4 : 1;
+
+        if (this.worklet.mod!.linearFrequencies)
+          renderPeriod += (mod * this.vibratoDepth * depthScale) / 128;
+        else renderPeriod += (mod * this.vibratoDepth * depthScale * 4) / 128;
+      }
 
       this.vibratoPhase += this.vibratoSpeed / 256;
     }
@@ -631,8 +664,9 @@ class WorkletChannel {
   getFrequency(period: number) {
     if (period <= 0) return 0;
     if (this.worklet.mod!.type === 'IT') {
-      // IT period IS the note number (1-96), convert to semitones from C-5
-      const semitoneFromC5 = period - 60;
+      // IT: period IS the note number (1-120). C-5 = note 61.
+      // Frequency = C5Speed * 2^((note - 61) / 12)
+      const semitoneFromC5 = period - 61;
       return (this.sample?.c5speed || 8363) * Math.pow(2, semitoneFromC5 / 12);
     }
     if (this.worklet.mod!.linearFrequencies) {
