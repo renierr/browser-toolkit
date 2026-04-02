@@ -67,6 +67,7 @@ export interface ModuleFile {
   clock?: number;
   restartPosition?: number;
   globalVolume?: number; // IT: initial global volume (0-128)
+  mixingVolume?: number; // IT: mix volume (0-128)
   channelVolumes?: number[]; // Optional per-channel defaults (0-64)
   channelPanning?: number[]; // Optional per-channel defaults (0-255)
 }
@@ -178,6 +179,7 @@ export interface WorkletModule {
   restartPosition: number;
   clock: number;
   globalVolume: number;
+  mixingVolume: number;
   channelVolumes?: number[];
   channelPanning?: number[];
 }
@@ -284,6 +286,7 @@ export function serializeModuleForWorklet(mod: ModuleFile): WorkletModule {
     restartPosition: mod.restartPosition || 0,
     clock: mod.clock || 7093789.2,
     globalVolume: mod.globalVolume ?? 64,
+    mixingVolume: mod.mixingVolume ?? 128,
     channelVolumes: mod.channelVolumes,
     channelPanning: mod.channelPanning,
   };

@@ -770,6 +770,8 @@ export class ChiptunePlayer {
           (chState.sample.volume / 64) *
           this.volume;
 
+        finalVol *= (this.module.mixingVolume ?? 128) / 128;
+
         // Apply volume envelope for XM/IT
         if (this.module && (this.module.type === 'XM' || this.module.type === 'IT')) {
           finalVol *= chState.volumeEnvValue / 64;
@@ -1344,6 +1346,7 @@ export class ChiptunePlayer {
       (chState.sample.volume / 64) *
       this.volume *
       0.8;
+    finalVol *= (this.module?.mixingVolume ?? 128) / 128;
     chState.gain.gain.setValueAtTime(Math.max(0, Math.min(finalVol, 1)), time);
 
     chState.source.connect(chState.panNode);

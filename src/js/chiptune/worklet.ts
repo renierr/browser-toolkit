@@ -207,6 +207,7 @@ class BackgroundVoice {
       (this.channelVolume / 64) *
       (this.sample.volume / 64) *
       (this.globalVolumeRef.globalVolume / 64);
+    vol *= this.globalVolumeRef.mixingVolume / 128;
     if (this.instrument) vol *= (this.volumeEnvValue / 64) * (this.fadeoutVolume / 32768);
 
     const panTheta = (this.panning / 255) * (Math.PI / 2);
@@ -383,9 +384,27 @@ class WorkletChannel {
       this.applyDuplicateAction(dca);
     }
 
+    for (let i = 0; i < this.worklet.channels.length; i++) {
+      const other = this.worklet.channels[i];
+      if (other === this || !other.playing) continue;
+      if (
+        this.matchesDuplicate(
+          dct,
+          noteValue,
+          sample,
+          instrument,
+          other.note,
+          other.sample,
+          other.instrument
+        )
+      ) {
+        other.applyDuplicateAction(dca);
+      }
+    }
+
     for (let i = 0; i < this.worklet.backgroundVoices.length; i++) {
       const bg = this.worklet.backgroundVoices[i];
-      if (!bg.playing || bg.sourceChannelIndex !== this.channelIndex) continue;
+      if (!bg.playing) continue;
       if (this.matchesDuplicate(dct, noteValue, sample, instrument, bg.note, bg.sample, bg.instrument)) {
         bg.applyDCA(dca);
       }
@@ -1190,6 +1209,7 @@ class WorkletChannel {
       (this.channelVolume / 64) *
       (this.sample.volume / 64) *
       (this.worklet.globalVolume / 64);
+    vol *= this.worklet.mixingVolume / 128;
     if (this.tremorOn) {
       const p = this.worklet.currentRowNotes[this.channelIndex]?.effectParam ?? 0;
       if (this.tremorCounter > ((p >> 4) & 0x0f)) vol = 0;
@@ -1271,6 +1291,7 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
   outputsPerTick = 0;
   outputsUntilNextTick = 0;
   globalVolume = 64;
+  mixingVolume = 128;
   masterVolume = 0.7;
   patternLoopRow = -1;
   patternLoopCount = 0;
@@ -1288,6 +1309,7 @@ class ModPlayerWorklet extends AudioWorkletProcessor {
         this.mod = data.mod;
         this.sampleRate = data.sampleRate;
         this.globalVolume = this.mod!.globalVolume ?? 64;
+        this.mixingVolume = this.mod!.mixingVolume ?? 128;
         this.setBpm(this.mod!.defaultBpm || 125);
         this.setTicksPerRow(this.mod!.defaultSpeed || 6);
         this.channels = [];

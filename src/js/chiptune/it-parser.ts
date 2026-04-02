@@ -272,7 +272,7 @@ export class ItParser extends BaseParser {
     this.readU16LE(); // special
     this.setPos(48);
     const globalVol = this.readU8(); // GV (0-128)
-    this.readU8(); // MV
+    const mixVol = this.readU8(); // MV (0-128)
     const initSpeed = this.readU8();
     const initTempo = this.readU8();
     this.readU8(); // sep
@@ -488,9 +488,9 @@ export class ItParser extends BaseParser {
           if (this.readStr(4) === 'IMPI') {
             this.readStr(12); // dos filename
             this.readU8(); // zero
-            nna = this.readU8(); // nna (0=cut, 1=continue, 2=noteOff, 3=fade)
-            dct = this.readU8(); // dct
-            dca = this.readU8(); // dca
+            nna = Math.min(3, this.readU8()); // nna (0=cut, 1=continue, 2=noteOff, 3=fade)
+            dct = Math.min(3, this.readU8()); // dct
+            dca = Math.min(2, this.readU8()); // dca
             volFadeout = this.readU16LE(); // fadeout
             this.readU8(); // pps
             this.readU8(); // ppc
@@ -707,6 +707,7 @@ export class ItParser extends BaseParser {
       linearFrequencies: (flags & 8) !== 0,
       // IT stores global volume in 0-128; normalize to engine range 0-64.
       globalVolume: Math.min(64, Math.round(Math.min(globalVol, 128) / 2)),
+      mixingVolume: Math.max(0, Math.min(mixVol, 128)),
       channelVolumes,
       channelPanning,
     };
