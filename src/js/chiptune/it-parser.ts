@@ -249,8 +249,20 @@ function decodeCompressedItSample(
   is16Bit: boolean,
   preferIT215: boolean,
   isSigned: boolean,
-  sampleName: string
-): Float32Array {
+  sampleName: string,
+  allowFallback: boolean
+): {
+  data: Float32Array;
+  usedFallback: boolean;
+  preferredScore: number;
+  fallbackScore: number;
+  chosenIT215: boolean;
+} {
+  // Avoid flip-flopping between IT214/IT215 on tiny score differences.
+  // Mixed mode selection inside one module can sound like random noise.
+  const MIN_ABSOLUTE_GAIN = 0.45;
+  const MIN_RELATIVE_GAIN = 0.2;
+
   const preferred = is16Bit
     ? decompressIT16(data, samplePointer, sampleLength, preferIT215, isSigned)
     : decompressIT8(data, samplePointer, sampleLength, preferIT215, isSigned);
@@ -268,11 +280,31 @@ function decodeCompressedItSample(
     );
   }
 
-  if (fallbackScore < preferredScore) {
-    return new Float32Array(fallback);
+  const absoluteGain = preferredScore - fallbackScore;
+  const relativeGain = absoluteGain / Math.max(preferredScore, 0.0001);
+  const useFallback =
+    allowFallback &&
+    fallbackScore < preferredScore &&
+    absoluteGain >= MIN_ABSOLUTE_GAIN &&
+    relativeGain >= MIN_RELATIVE_GAIN;
+
+  if (useFallback) {
+    return {
+      data: new Float32Array(fallback),
+      usedFallback: true,
+      preferredScore,
+      fallbackScore,
+      chosenIT215: !preferIT215,
+    };
   }
 
-  return new Float32Array(preferred);
+  return {
+    data: new Float32Array(preferred),
+    usedFallback: false,
+    preferredScore,
+    fallbackScore,
+    chosenIT215: preferIT215,
+  };
 }
 
 export class ItParser extends BaseParser {
@@ -288,7 +320,7 @@ export class ItParser extends BaseParser {
     const patNum = this.readU16LE();
     this.setPos(40);
     const cwtv = this.readU16LE(); // created with tracker version
-    this.readU16LE(); // cmwt - compatible minimum tracker version
+    const cmwt = this.readU16LE(); // compatible minimum tracker version
     const flags = this.readU16LE();
     this.readU16LE(); // special
     this.setPos(48);
@@ -319,6 +351,16 @@ export class ItParser extends BaseParser {
     for (let i = 0; i < patNum; i++) dataOffsets.pat.push(this.readU32LE());
 
     const rawSamples: Sample[] = [];
+    // IT compression mode must be consistent module-wide. Use compatibility target.
+    const preferIT215ByCompat = cmwt >= 0x0215;
+    const allowPerSampleModeFallback = false;
+
+    let compressedSamples = 0;
+    let fallbackDecodeCount = 0;
+    let suspiciousDecodeCount = 0;
+    let stereoSampleCount = 0;
+    let chosenIT214Count = 0;
+    let chosenIT215Count = 0;
     for (let i = 0; i < smpNum; i++) {
       let name = `Sample ${i + 1}`;
       let sampleData = new Float32Array(0);
@@ -381,11 +423,12 @@ export class ItParser extends BaseParser {
                 `[Chiptune] IT sample has advanced flags (name="${name}", stereo=${isStereo}, cvt=0x${cvt.toString(16).padStart(2, '0')}, compressed=${isCompressed})`
               );
             }
-            // IT 2.15+ uses double integration. Some files are mislabeled, so we keep
-            // a decode fallback in case the declared mode sounds clearly corrupted.
-            const preferIT215 = cwtv >= 0x0215;
+            const preferIT215 = preferIT215ByCompat;
+
+            if (isStereo) stereoSampleCount++;
 
             if (isCompressed) {
+              compressedSamples++;
               const decoded = decodeCompressedItSample(
                 this.data,
                 this.pos,
@@ -393,10 +436,19 @@ export class ItParser extends BaseParser {
                 is16,
                 preferIT215,
                 isSigned,
-                name
+                name,
+                allowPerSampleModeFallback
               );
+
+              if (decoded.usedFallback) fallbackDecodeCount++;
+              if (decoded.preferredScore > 2.2 && decoded.fallbackScore > 2.2) {
+                suspiciousDecodeCount++;
+              }
+              if (decoded.chosenIT215) chosenIT215Count++;
+              else chosenIT214Count++;
+
               sampleData = new Float32Array(smpLength);
-              sampleData.set(decoded);
+              sampleData.set(decoded.data);
             } else {
               sampleData = new Float32Array(smpLength);
               for (let j = 0; j < smpLength; j++) {
@@ -462,6 +514,12 @@ export class ItParser extends BaseParser {
         data: sampleData,
         c5speed,
       });
+    }
+
+    if (compressedSamples > 0 || stereoSampleCount > 0) {
+      console.error(
+        `[Chiptune] IT decode summary: cwtv=0x${cwtv.toString(16)}, cmwt=0x${cmwt.toString(16)}, compatPrefer=${preferIT215ByCompat ? '2.15' : '2.14'}, perSampleFallback=${allowPerSampleModeFallback}, compressed=${compressedSamples}, chosen214=${chosenIT214Count}, chosen215=${chosenIT215Count}, fallback=${fallbackDecodeCount}, suspicious=${suspiciousDecodeCount}, stereo=${stereoSampleCount}`
+      );
     }
 
     const instruments: Instrument[] = [];

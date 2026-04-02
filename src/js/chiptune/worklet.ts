@@ -392,12 +392,6 @@ class WorkletChannel {
     if (this.instrument.sampleMap && noteValue >= 1 && noteValue <= maxNote) {
       sIdx = this.instrument.sampleMap[noteValue - 1];
     }
-    if (this.worklet.mod!.type === 'IT' && sIdx < 0) {
-      // IT instruments can intentionally map notes to "no sample".
-      this.sample = null;
-      this.playing = false;
-      return;
-    }
     if (sIdx < 0 || sIdx >= this.instrument.samples.length) sIdx = 0;
     this.sample = this.instrument.samples[sIdx] || this.instrument.samples[0] || null;
     // Don't overwrite MOD hardcoded panning
@@ -416,9 +410,6 @@ class WorkletChannel {
     const maxNote = this.worklet.mod.type === 'IT' ? 120 : 96;
     if (inst.sampleMap && noteValue >= 1 && noteValue <= maxNote)
       sIdx = inst.sampleMap[noteValue - 1];
-    if (this.worklet.mod.type === 'IT' && sIdx < 0) {
-      return 0;
-    }
     if (sIdx < 0 || sIdx >= inst.samples.length) sIdx = 0;
     const sample = inst.samples[sIdx] || inst.samples[0];
 

@@ -814,11 +814,6 @@ export class ChiptunePlayer {
       }
     }
 
-    if (this.module.type === 'IT' && sampleIndex < 0) {
-      chState.sample = null;
-      return;
-    }
-
     // Validate sampleIndex - must be >= 0 and within bounds
     if (sampleIndex < 0 || sampleIndex >= inst.samples.length) {
       sampleIndex = 0;
@@ -852,7 +847,6 @@ export class ChiptunePlayer {
     let sIdx = 0;
     if (note >= 1 && note <= 120 && inst.sampleMap && inst.sampleMap.length >= note) {
       sIdx = inst.sampleMap[note - 1];
-      if (this.module.type === 'IT' && sIdx < 0) return 0;
       // Validate out-of-range mappings by falling back to first sample.
       if (sIdx < 0 || sIdx >= inst.samples.length) sIdx = 0;
     }
