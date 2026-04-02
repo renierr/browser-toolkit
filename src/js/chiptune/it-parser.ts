@@ -69,7 +69,8 @@ function translateItEffect(itCmd: number, itParam: number): [number, number] {
     case 21: // U: Fine Vibrato (IT-specific, treat as vibrato with 4x finer depth)
       return [0x04, itParam]; // Approximate as regular vibrato
     case 22: // V: Set Global Volume → 0x10
-      return [0x10, itParam];
+      // IT Vxx is 0-128, internal engine uses 0-64.
+      return [0x10, Math.min(64, Math.round(itParam / 2))];
     case 23: // W: Global Volume Slide → 0x11
       return [0x11, itParam];
     case 24: // X: Set Panning → MOD 0x08
@@ -747,7 +748,8 @@ export class ItParser extends BaseParser {
       defaultSpeed: initSpeed,
       rowsPerPattern: Math.max(...patterns.map((p) => p.rows.length), 64),
       linearFrequencies: (flags & 8) !== 0,
-      globalVolume: Math.min(globalVol, 128),
+      // IT stores global volume in 0-128; normalize to engine range 0-64.
+      globalVolume: Math.min(64, Math.round(Math.min(globalVol, 128) / 2)),
     };
   }
 
