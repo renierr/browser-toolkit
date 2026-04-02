@@ -421,6 +421,10 @@ class WorkletChannel {
     }
     if (sIdx < 0 || sIdx >= this.instrument.samples.length) sIdx = 0;
     this.sample = this.instrument.samples[sIdx] || this.instrument.samples[0] || null;
+    if (this.sample) {
+      // Keep channel volume source aligned with the selected sample, not instrument sample 0.
+      this.baseVolume = this.sample.volume;
+    }
     // Don't overwrite MOD hardcoded panning
     if (this.sample && this.worklet.mod!.type !== 'MOD') {
       this.panning = this.sample.panning;

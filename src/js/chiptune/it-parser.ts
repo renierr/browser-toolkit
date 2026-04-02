@@ -322,6 +322,7 @@ export class ItParser extends BaseParser {
       let loopLength = 0;
       let c5speed = 8363;
       let sVol = 64;
+      let sampleGlobalVolume = 64;
       let isPingPong = false;
       let hasLoop = false;
       let dfp = 128; // default panning
@@ -335,7 +336,7 @@ export class ItParser extends BaseParser {
         if (this.readStr(4) === 'IMPS') {
           this.readStr(12); // dos filename
           this.readU8(); // zero
-          this.readU8(); // global volume (0-64)
+          sampleGlobalVolume = this.readU8(); // global volume (0-64)
           const sFlags = this.readU8();
           sVol = this.readU8(); // default volume (0-64)
           name = this.readStr(26).trim();
@@ -432,7 +433,7 @@ export class ItParser extends BaseParser {
             name,
             length: smpLength,
             finetune: 0,
-            volume: Math.min(sVol, 64),
+            volume: Math.min(64, Math.round((Math.min(sVol, 64) * Math.min(sampleGlobalVolume, 64)) / 64)),
             loopStart,
             loopLength: hasLoop ? loopLength : 0,
             panning: pan,
@@ -452,7 +453,7 @@ export class ItParser extends BaseParser {
         name,
         length: smpLength,
         finetune: 0,
-        volume: Math.min(sVol, 64),
+        volume: Math.min(64, Math.round((Math.min(sVol, 64) * Math.min(sampleGlobalVolume, 64)) / 64)),
         loopStart,
         loopLength: hasLoop ? loopLength : 0,
         panning: 128,
