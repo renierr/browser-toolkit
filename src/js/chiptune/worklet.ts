@@ -106,7 +106,9 @@ class BackgroundVoice {
         break;
       case 3: // Note Fade: immediate fadeout
         this.keyOn = false;
-        this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384); // accelerate fade
+        if (this.globalVolumeRef.mod?.type !== 'IT') {
+          this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        }
         break;
     }
   }
@@ -123,7 +125,9 @@ class BackgroundVoice {
         break;
       case 2: // fade
         this.keyOn = false;
-        this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        if (this.globalVolumeRef.mod?.type !== 'IT') {
+          this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        }
         break;
       default:
         break;
@@ -152,7 +156,7 @@ class BackgroundVoice {
             this.playing = false;
             return;
           }
-        } else {
+        } else if (!isIt) {
           // No fadeout defined + key off = stop immediately
           this.playing = false;
           return;
@@ -429,7 +433,9 @@ class WorkletChannel {
         break;
       case 2: // fade
         this.keyOn = false;
-        this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        if (this.worklet.mod?.type !== 'IT') {
+          this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        }
         break;
       default:
         break;
@@ -453,27 +459,10 @@ class WorkletChannel {
       this.applyDuplicateAction(dca);
     }
 
-    for (let i = 0; i < this.worklet.channels.length; i++) {
-      const other = this.worklet.channels[i];
-      if (other === this || !other.playing) continue;
-      if (
-        this.matchesDuplicate(
-          dct,
-          noteValue,
-          sample,
-          instrument,
-          other.note,
-          other.sample,
-          other.instrument
-        )
-      ) {
-        other.applyDuplicateAction(dca);
-      }
-    }
-
+    // IT duplicate check acts on the current host channel/voice set, not all channels.
     for (let i = 0; i < this.worklet.backgroundVoices.length; i++) {
       const bg = this.worklet.backgroundVoices[i];
-      if (!bg.playing) continue;
+      if (!bg.playing || bg.sourceChannelIndex !== this.channelIndex) continue;
       if (this.matchesDuplicate(dct, noteValue, sample, instrument, bg.note, bg.sample, bg.instrument)) {
         bg.applyDCA(dca);
       }
@@ -551,7 +540,9 @@ class WorkletChannel {
       } else if (note.note === 99) {
         // Note Fade: start fadeout without hard cut
         this.keyOn = false;
-        this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        if (this.worklet.mod?.type !== 'IT') {
+          this.fadeoutVolume = Math.min(this.fadeoutVolume, 16384);
+        }
       } else {
         if (tonePorta) {
           this.targetPeriod = this.calculatePeriod(note.note ?? 0, note.instrument ?? 0);
@@ -1129,7 +1120,7 @@ class WorkletChannel {
         if (this.instrument.volumeFadeout !== undefined && this.instrument.volumeFadeout > 0) {
           this.fadeoutVolume = Math.max(0, this.fadeoutVolume - this.instrument.volumeFadeout);
           if (this.fadeoutVolume <= 0) this.playing = false;
-        } else {
+        } else if (!isIt) {
           this.playing = false;
         }
       }
