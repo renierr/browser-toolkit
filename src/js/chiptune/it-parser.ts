@@ -303,7 +303,10 @@ export class ItParser extends BaseParser {
         channelPanning[i] = 128;
       } else {
         channelVolumes[i] = Math.max(0, Math.min(64, chanVol[i] & 0x7f));
-        channelPanning[i] = Math.max(0, Math.min(255, Math.round(((chanPan[i] & 0x7f) / 64) * 255)));
+        channelPanning[i] = Math.max(
+          0,
+          Math.min(255, Math.round(((chanPan[i] & 0x7f) / 64) * 255))
+        );
       }
     }
 
@@ -434,7 +437,10 @@ export class ItParser extends BaseParser {
             name,
             length: smpLength,
             finetune: 0,
-            volume: Math.min(64, Math.round((Math.min(sVol, 64) * Math.min(sampleGlobalVolume, 64)) / 64)),
+            volume: Math.min(
+              64,
+              Math.round((Math.min(sVol, 64) * Math.min(sampleGlobalVolume, 64)) / 64)
+            ),
             loopStart,
             loopLength: hasLoop ? loopLength : 0,
             panning: pan,
@@ -454,7 +460,10 @@ export class ItParser extends BaseParser {
         name,
         length: smpLength,
         finetune: 0,
-        volume: Math.min(64, Math.round((Math.min(sVol, 64) * Math.min(sampleGlobalVolume, 64)) / 64)),
+        volume: Math.min(
+          64,
+          Math.round((Math.min(sVol, 64) * Math.min(sampleGlobalVolume, 64)) / 64)
+        ),
         loopStart,
         loopLength: hasLoop ? loopLength : 0,
         panning: 128,
@@ -467,7 +476,6 @@ export class ItParser extends BaseParser {
         vibratoRate,
       });
     }
-
 
     const instruments: Instrument[] = [];
     if ((flags & 4) !== 0 && insNum > 0) {

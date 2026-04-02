@@ -1219,9 +1219,16 @@ export class ChiptunePlayer {
       chState.volume = Math.max(0, Math.min(64, chState.volume + chState.volSlideSpeed));
     }
     if (chState.channelVolSlide !== 0) {
-      chState.channelVolume = Math.max(0, Math.min(64, chState.channelVolume + chState.channelVolSlide));
+      chState.channelVolume = Math.max(
+        0,
+        Math.min(64, chState.channelVolume + chState.channelVolSlide)
+      );
     }
-    if (this.module?.type === 'IT' && effect === IT_EFFECT_TEMPO_SLIDE && chState.tempoSlide !== 0) {
+    if (
+      this.module?.type === 'IT' &&
+      effect === IT_EFFECT_TEMPO_SLIDE &&
+      chState.tempoSlide !== 0
+    ) {
       this.bpm = Math.max(32, Math.min(255, this.bpm + chState.tempoSlide));
     }
 

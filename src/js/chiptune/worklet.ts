@@ -175,7 +175,12 @@ class BackgroundVoice {
         tick = loopStartTick + ((tick - loopStartTick) % (loopEndTick - loopStartTick + 1));
       }
     }
-    if (this.keyOn && env.type & 2 && env.sustainStart !== undefined && env.sustainStart < points.length) {
+    if (
+      this.keyOn &&
+      env.type & 2 &&
+      env.sustainStart !== undefined &&
+      env.sustainStart < points.length
+    ) {
       const susStartTick = points[env.sustainStart].tick;
       const susEndIdx = env.sustainEnd ?? env.sustainStart;
       const susEndTick = points[Math.min(susEndIdx, points.length - 1)].tick;
@@ -453,7 +458,15 @@ class WorkletChannel {
 
     if (
       this.playing &&
-      this.matchesDuplicate(dct, noteValue, sample, instrument, this.note, this.sample, this.instrument)
+      this.matchesDuplicate(
+        dct,
+        noteValue,
+        sample,
+        instrument,
+        this.note,
+        this.sample,
+        this.instrument
+      )
     ) {
       matchedCurrent = true;
       this.applyDuplicateAction(dca);
@@ -463,7 +476,9 @@ class WorkletChannel {
     for (let i = 0; i < this.worklet.backgroundVoices.length; i++) {
       const bg = this.worklet.backgroundVoices[i];
       if (!bg.playing || bg.sourceChannelIndex !== this.channelIndex) continue;
-      if (this.matchesDuplicate(dct, noteValue, sample, instrument, bg.note, bg.sample, bg.instrument)) {
+      if (
+        this.matchesDuplicate(dct, noteValue, sample, instrument, bg.note, bg.sample, bg.instrument)
+      ) {
         bg.applyDCA(dca);
       }
     }
@@ -1107,7 +1122,10 @@ class WorkletChannel {
 
       // IT continues envelope progression during release; MOD/XM keep existing behavior.
       if (this.instrument.volumeEnv && (this.keyOn || isIt)) {
-        this.volumeEnvValue = this.calculateEnvelope(this.instrument.volumeEnv, this.volumeEnvTick++);
+        this.volumeEnvValue = this.calculateEnvelope(
+          this.instrument.volumeEnv,
+          this.volumeEnvTick++
+        );
       }
       if (this.instrument.panningEnv && (this.keyOn || isIt)) {
         this.panningEnvValue = this.calculateEnvelope(
@@ -1166,9 +1184,7 @@ class WorkletChannel {
 
     const isFineVibratoRow =
       this.worklet.currentRowNotes[this.channelIndex]?.effect === IT_EFFECT_FINE_VIBRATO;
-    const activeVibratoDepth = isFineVibratoRow
-      ? this.fineVibratoDepth / 4
-      : this.vibratoDepth;
+    const activeVibratoDepth = isFineVibratoRow ? this.fineVibratoDepth / 4 : this.vibratoDepth;
 
     if (activeVibratoDepth > 0) {
       const phase = Math.floor(this.vibratoPhase * 64) & 63;
@@ -1227,7 +1243,12 @@ class WorkletChannel {
           tick = loopStartTick + ((tick - loopStartTick) % (loopEndTick - loopStartTick + 1));
         }
       }
-      if (this.keyOn && env.type & 2 && env.sustainStart !== undefined && env.sustainStart < points.length) {
+      if (
+        this.keyOn &&
+        env.type & 2 &&
+        env.sustainStart !== undefined &&
+        env.sustainStart < points.length
+      ) {
         const susStartTick = points[env.sustainStart].tick;
         const susEndIdx = env.sustainEnd ?? env.sustainStart;
         const susEndTick = points[Math.min(susEndIdx, points.length - 1)].tick;
