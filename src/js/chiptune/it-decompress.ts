@@ -59,7 +59,8 @@ function decodeMethod2WidthChange8(value: number, bitWidth: number): number | nu
     // IT method-2 width change for widths 7-8 uses a reserved value range.
     const border = (0xff >> (9 - bitWidth)) - 4;
     if (value > border && value <= border + 8) {
-      const packedWidth = value - (border + 1);
+      // Encoded width domain is 1..8 (not 0..7).
+      const packedWidth = value - border;
       return packedWidth < bitWidth ? packedWidth : packedWidth + 1;
     }
   }
@@ -79,7 +80,8 @@ function decodeMethod2WidthChange16(value: number, bitWidth: number): number | n
     // IT method-2 width change for widths 7-16 uses a reserved value range.
     const border = (0xffff >> (17 - bitWidth)) - 8;
     if (value > border && value <= border + 16) {
-      const packedWidth = value - (border + 1);
+      // Encoded width domain is 1..16 (not 0..15).
+      const packedWidth = value - border;
       return packedWidth < bitWidth ? packedWidth : packedWidth + 1;
     }
   }
@@ -95,7 +97,8 @@ export function decompressIT8(
   inData: Uint8Array,
   offset: number,
   outLen: number,
-  isIT215: boolean
+  isIT215: boolean,
+  isSigned: boolean
 ): Float32Array {
   let pos = offset;
   let outPos = 0;
@@ -141,9 +144,14 @@ export function decompressIT8(
             d1 = v & 0xff;
             if (d1 >= 128) d1 -= 256;
             d2 += d1;
-            let finalVal = d2 & 0xff;
-            if (finalVal >= 128) finalVal -= 256;
-            out[outPos++] = finalVal / 128;
+            const wrapped = d2 & 0xff;
+            if (isSigned) {
+              let finalVal = wrapped;
+              if (finalVal >= 128) finalVal -= 256;
+              out[outPos++] = finalVal / 128;
+            } else {
+              out[outPos++] = (wrapped - 128) / 128;
+            }
             continue;
           } else {
             // IT 2.14: width change
@@ -161,13 +169,23 @@ export function decompressIT8(
       d1 += signedVal;
       if (isIT215) {
         d2 += d1;
-        let finalVal = d2 & 0xff;
-        if (finalVal >= 128) finalVal -= 256;
-        out[outPos++] = finalVal / 128;
+        const wrapped = d2 & 0xff;
+        if (isSigned) {
+          let finalVal = wrapped;
+          if (finalVal >= 128) finalVal -= 256;
+          out[outPos++] = finalVal / 128;
+        } else {
+          out[outPos++] = (wrapped - 128) / 128;
+        }
       } else {
-        let finalVal = d1 & 0xff;
-        if (finalVal >= 128) finalVal -= 256;
-        out[outPos++] = finalVal / 128;
+        const wrapped = d1 & 0xff;
+        if (isSigned) {
+          let finalVal = wrapped;
+          if (finalVal >= 128) finalVal -= 256;
+          out[outPos++] = finalVal / 128;
+        } else {
+          out[outPos++] = (wrapped - 128) / 128;
+        }
       }
     }
   }
@@ -183,7 +201,8 @@ export function decompressIT16(
   inData: Uint8Array,
   offset: number,
   outLen: number,
-  isIT215: boolean
+  isIT215: boolean,
+  isSigned: boolean
 ): Float32Array {
   let pos = offset;
   let outPos = 0;
@@ -229,9 +248,14 @@ export function decompressIT16(
             d1 = v & 0xffff;
             if (d1 >= 32768) d1 -= 65536;
             d2 += d1;
-            const fv = d2 & 0xffff;
-            let finalVal = fv >= 32768 ? fv - 65536 : fv;
-            out[outPos++] = finalVal / 32768;
+            const wrapped = d2 & 0xffff;
+            if (isSigned) {
+              let finalVal = wrapped;
+              if (finalVal >= 32768) finalVal -= 65536;
+              out[outPos++] = finalVal / 32768;
+            } else {
+              out[outPos++] = (wrapped - 32768) / 32768;
+            }
             continue;
           } else {
             // IT 2.14: width change
@@ -249,13 +273,23 @@ export function decompressIT16(
       d1 += signedVal;
       if (isIT215) {
         d2 += d1;
-        let finalVal = d2 & 0xffff;
-        if (finalVal >= 32768) finalVal -= 65536;
-        out[outPos++] = finalVal / 32768;
+        const wrapped = d2 & 0xffff;
+        if (isSigned) {
+          let finalVal = wrapped;
+          if (finalVal >= 32768) finalVal -= 65536;
+          out[outPos++] = finalVal / 32768;
+        } else {
+          out[outPos++] = (wrapped - 32768) / 32768;
+        }
       } else {
-        let finalVal = d1 & 0xffff;
-        if (finalVal >= 32768) finalVal -= 65536;
-        out[outPos++] = finalVal / 32768;
+        const wrapped = d1 & 0xffff;
+        if (isSigned) {
+          let finalVal = wrapped;
+          if (finalVal >= 32768) finalVal -= 65536;
+          out[outPos++] = finalVal / 32768;
+        } else {
+          out[outPos++] = (wrapped - 32768) / 32768;
+        }
       }
     }
   }

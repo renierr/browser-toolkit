@@ -247,20 +247,28 @@ function decodeCompressedItSample(
   samplePointer: number,
   sampleLength: number,
   is16Bit: boolean,
-  preferIT215: boolean
+  preferIT215: boolean,
+  isSigned: boolean,
+  sampleName: string
 ): Float32Array {
   const preferred = is16Bit
-    ? decompressIT16(data, samplePointer, sampleLength, preferIT215)
-    : decompressIT8(data, samplePointer, sampleLength, preferIT215);
+    ? decompressIT16(data, samplePointer, sampleLength, preferIT215, isSigned)
+    : decompressIT8(data, samplePointer, sampleLength, preferIT215, isSigned);
 
   const fallback = is16Bit
-    ? decompressIT16(data, samplePointer, sampleLength, !preferIT215)
-    : decompressIT8(data, samplePointer, sampleLength, !preferIT215);
+    ? decompressIT16(data, samplePointer, sampleLength, !preferIT215, isSigned)
+    : decompressIT8(data, samplePointer, sampleLength, !preferIT215, isSigned);
 
   const preferredScore = scoreDecodedSampleQuality(preferred);
   const fallbackScore = scoreDecodedSampleQuality(fallback);
 
-  if (fallbackScore + 0.35 < preferredScore) {
+  if (preferredScore > 2.2 && fallbackScore > 2.2) {
+    console.warn(
+      `[Chiptune] IT sample decode still suspicious for "${sampleName}" (preferred=${preferredScore.toFixed(2)}, fallback=${fallbackScore.toFixed(2)})`
+    );
+  }
+
+  if (fallbackScore < preferredScore) {
     return new Float32Array(fallback);
   }
 
@@ -363,8 +371,16 @@ export class ItParser extends BaseParser {
             this.setPos(samplePointer);
             const is16 = (sFlags & 0x02) !== 0;
             const isCompressed = (sFlags & 0x08) !== 0;
+            const isStereo = (sFlags & 0x04) !== 0;
             // cvt bit 0: 0=unsigned, 1=signed (IT standard is signed)
             const isSigned = (cvt & 1) !== 0;
+
+            // Diagnostics for still-unhandled edge cases seen in wild IT files.
+            if (isStereo || (cvt & 0xfe) !== 0) {
+              console.warn(
+                `[Chiptune] IT sample has advanced flags (name="${name}", stereo=${isStereo}, cvt=0x${cvt.toString(16).padStart(2, '0')}, compressed=${isCompressed})`
+              );
+            }
             // IT 2.15+ uses double integration. Some files are mislabeled, so we keep
             // a decode fallback in case the declared mode sounds clearly corrupted.
             const preferIT215 = cwtv >= 0x0215;
@@ -375,7 +391,9 @@ export class ItParser extends BaseParser {
                 this.pos,
                 smpLength,
                 is16,
-                preferIT215
+                preferIT215,
+                isSigned,
+                name
               );
               sampleData = new Float32Array(smpLength);
               sampleData.set(decoded);
