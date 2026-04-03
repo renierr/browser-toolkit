@@ -1100,8 +1100,20 @@ export class HtmlEditor {
 
       activeContainers.add(container);
 
-      if (container.dataset.imageSetup === 'true') {
+      if (!container.querySelector('.editor-image-container__handle')) {
+        const resizeHandle = document.createElement('div');
+        resizeHandle.className = 'editor-image-container__handle';
+        container.appendChild(resizeHandle);
+      }
+
+      if (container.dataset.imageSetup === 'true' && this.imageContainerDisposers.has(container)) {
         return;
+      }
+
+      const existingDispose = this.imageContainerDisposers.get(container);
+      if (existingDispose) {
+        existingDispose();
+        this.imageContainerDisposers.delete(container);
       }
 
       const dispose = this.setupImageResize(container, image);
@@ -1110,7 +1122,7 @@ export class HtmlEditor {
     });
 
     this.imageContainerDisposers.forEach((dispose, container) => {
-      if (activeContainers.has(container) || editor.contains(container)) {
+      if (activeContainers.has(container)) {
         return;
       }
 
