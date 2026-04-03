@@ -254,10 +254,10 @@ export const renderHtmlEditorTemplate = (
     </div>
 
     <div
-      class="html-editor__content bg-base-100 text-base-content min-h-60 px-4 prose max-w-none focus:outline-none"
+      class="html-editor__content bg-base-100 text-base-content min-h-60 px-4 prose max-w-none overflow-y-auto focus:outline-none"
       contenteditable="true"
       data-editor-content
-      style="height: 400px; max-height: 50vh; overflow-y: auto"
+      style="max-height: 50dvh; overflow-y: auto"
     ></div>
 
     <input type="file" accept="image/*" class="hidden" data-editor-image-input />
