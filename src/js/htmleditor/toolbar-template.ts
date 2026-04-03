@@ -29,7 +29,8 @@ const DEFAULT_HILITE_COLORS = [
 const renderColorSwatches = (colors: readonly string[]): string => {
   return colors
     .map((color) => {
-      const border = color === '#FFFFFF' || color === 'transparent' ? 'border: 1px solid #ccc;' : '';
+      const border =
+        color === '#FFFFFF' || color === 'transparent' ? 'border: 1px solid #ccc;' : '';
       return `<button
         type="button"
         class="html-editor__color-swatch w-6 h-6 rounded"
@@ -262,4 +263,3 @@ export const renderHtmlEditorTemplate = (
     <input type="file" accept="image/*" class="hidden" data-editor-image-input />
   </div>`;
 };
-

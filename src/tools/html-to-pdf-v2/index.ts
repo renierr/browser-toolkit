@@ -3,7 +3,6 @@ import { HtmlEditor } from '@js/htmleditor/index.ts';
 import { htmlToPdfBuffer } from '@js/mupdf-utils.ts';
 import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
 import { getPageSettings, wrapHtmlForPdf } from './pdf-generator.ts';
-import { sanitizeHtml } from './sanitizer.ts';
 
 const readFileAsText = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -84,7 +83,6 @@ export default function init(): (() => void) | undefined {
 
   const editor = new HtmlEditor({
     host: editorHost,
-    sanitizeHtml,
     extraToolbarButtons: [
       {
         id: 'generate-pdf',

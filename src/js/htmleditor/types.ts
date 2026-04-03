@@ -23,9 +23,11 @@ export type HtmlEditorOptions = {
   readonly initialHtml?: string;
   readonly contentClassName?: string;
   readonly extraToolbarButtons?: readonly HtmlEditorExtraToolbarButton[];
-  readonly onToolbarButtonClick?: (buttonId: string, editor: { readonly isFullscreen: boolean }) => void;
+  readonly onToolbarButtonClick?: (
+    buttonId: string,
+    editor: { readonly isFullscreen: boolean }
+  ) => void;
   readonly onContentChange?: (event: HtmlEditorContentChangeEvent) => void;
   readonly onToolbarStateChange?: (state: HtmlEditorToolbarState) => void;
   readonly onFullscreenChange?: (isFullscreen: boolean) => void;
 };
-

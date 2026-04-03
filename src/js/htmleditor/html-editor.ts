@@ -4,6 +4,7 @@ import type {
   HtmlEditorOptions,
   HtmlEditorToolbarState,
 } from './types.ts';
+import { sanitizeHtml } from './sanitizer.ts';
 
 type BlockFormat = {
   readonly tag: string;
@@ -23,10 +24,10 @@ export class HtmlEditor {
   private readonly initialHtml: string;
   private readonly contentClassName: string;
 
-  private root: HTMLElement | null = null;
-  private toolbar: HTMLElement | null = null;
-  private content: HTMLElement | null = null;
-  private imageInput: HTMLInputElement | null = null;
+  private readonly root: HTMLElement | null = null;
+  private readonly toolbar: HTMLElement | null = null;
+  private readonly content: HTMLElement | null = null;
+  private readonly imageInput: HTMLInputElement | null = null;
 
   private readonly disposers: Array<() => void> = [];
   private readonly imageContainerDisposers = new Map<HTMLElement, () => void>();
@@ -38,7 +39,7 @@ export class HtmlEditor {
 
   constructor(options: HtmlEditorOptions) {
     this.host = options.host;
-    this.sanitizeHtml = options.sanitizeHtml;
+    this.sanitizeHtml = options.sanitizeHtml ?? sanitizeHtml;
     this.initialHtml = options.initialHtml ?? '<p><br></p>';
     this.contentClassName = options.contentClassName ?? '';
     this.onContentChange = options.onContentChange;
@@ -72,7 +73,6 @@ export class HtmlEditor {
     this.setupEditorListeners();
     this.setHtml(this.initialHtml);
     this.focus();
-    this.refreshLucideIcons();
   }
 
   destroy(): void {
@@ -269,7 +269,9 @@ export class HtmlEditor {
       return;
     }
 
-    const headingSelect = this.toolbar.querySelector<HTMLSelectElement>('[data-editor-heading-select]');
+    const headingSelect = this.toolbar.querySelector<HTMLSelectElement>(
+      '[data-editor-heading-select]'
+    );
     if (headingSelect) {
       this.bindEvent(headingSelect, 'change', (event) => {
         const tag = (event.target as HTMLSelectElement).value;
@@ -303,7 +305,9 @@ export class HtmlEditor {
       this.reSetupImages();
     });
 
-    this.bindEvent(editor, 'keydown', (event) => this.onEditorKeyDownInternal(event as KeyboardEvent));
+    this.bindEvent(editor, 'keydown', (event) =>
+      this.onEditorKeyDownInternal(event as KeyboardEvent)
+    );
     this.bindEvent(editor, 'keyup', () => this.updateToolbarState());
     this.bindEvent(editor, 'pointerup', () => this.updateToolbarState());
     this.bindEvent(editor, 'click', (event) => this.handleEditorClick(event as MouseEvent));
@@ -353,7 +357,10 @@ export class HtmlEditor {
     }
 
     const commandContainer = swatch.closest<HTMLElement>('[data-editor-dropdown]');
-    const command = commandContainer?.dataset.editorDropdown as 'foreColor' | 'hiliteColor' | undefined;
+    const command = commandContainer?.dataset.editorDropdown as
+      | 'foreColor'
+      | 'hiliteColor'
+      | undefined;
     const color = swatch.dataset.editorColor;
 
     if (!command || !color) {
@@ -735,7 +742,9 @@ export class HtmlEditor {
     };
 
     Object.entries(commandButtons).forEach(([action, command]) => {
-      const button = this.toolbar?.querySelector<HTMLButtonElement>(`[data-editor-action="${action}"]`);
+      const button = this.toolbar?.querySelector<HTMLButtonElement>(
+        `[data-editor-action="${action}"]`
+      );
       if (!button) {
         return;
       }
@@ -760,7 +769,9 @@ export class HtmlEditor {
       }
     });
 
-    const headingSelect = this.toolbar.querySelector<HTMLSelectElement>('[data-editor-heading-select]');
+    const headingSelect = this.toolbar.querySelector<HTMLSelectElement>(
+      '[data-editor-heading-select]'
+    );
     if (headingSelect) {
       headingSelect.value = blockFormat && /^h[1-6]$/.test(blockFormat.tag) ? blockFormat.tag : '';
     }
@@ -825,7 +836,9 @@ export class HtmlEditor {
   }
 
   private updateColorIndicator(command: 'foreColor' | 'hiliteColor', hexColor: string): void {
-    const indicator = this.toolbar?.querySelector<HTMLElement>(`[data-editor-indicator="${command}"]`);
+    const indicator = this.toolbar?.querySelector<HTMLElement>(
+      `[data-editor-indicator="${command}"]`
+    );
     if (!indicator) {
       return;
     }
@@ -1196,10 +1209,5 @@ export class HtmlEditor {
 
       reader.readAsDataURL(file);
     });
-  }
-
-  private refreshLucideIcons(): void {
-    const lucideApi = (window as unknown as { lucide?: { createIcons?: () => void } }).lucide;
-    lucideApi?.createIcons?.();
   }
 }
