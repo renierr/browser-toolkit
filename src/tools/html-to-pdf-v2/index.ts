@@ -2,454 +2,221 @@ import { downloadFile } from '@js/file-utils.ts';
 import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
 import { htmlToPdfBuffer } from '@js/mupdf-utils.ts';
 import { wrapHtmlForPdf, getPageSettings } from './pdf-generator.ts';
-import { insertImageToEditor, setupAllImages, handleEditorClick } from './editor-utils.ts';
-import {
-  setupToolbarListeners,
-  updateToolbarState,
-  getCurrentBlockFormat,
-} from './toolbar-utils.ts';
 import { sanitizeHtml } from './sanitizer.ts';
+import { HtmlEditor } from '../../js/htmleditor/html-editor.ts';
 
-const generatePdfMupdf = async (): Promise<void> => {
-  const editor = document.getElementById('editor');
-  if (!editor) return;
-
-  if (!editor.innerText.trim()) {
-    showMessage('Please add some content before generating PDF.', { type: 'alert' });
-    return;
-  }
-
-  showProgress('Generating PDF...');
-
-  try {
-    const settings = getPageSettings();
-    const htmlContent = cleanEditorContent(editor);
-    const wrappedHtml = wrapHtmlForPdf(htmlContent);
-
-    const pdfBuffer = await htmlToPdfBuffer(wrappedHtml, {
-      width: settings.width,
-      height: settings.height,
-      fontSize: settings.fontSize,
-    });
-    const filename = `document-${new Date().toISOString().slice(0, 10)}.pdf`;
-
-    downloadFile(pdfBuffer, filename, 'application/pdf');
-    showMessage('PDF generated successfully!', { type: 'info', timeoutMs: 3000 });
-  } catch (error) {
-    console.error('PDF generation failed:', error);
-    showMessage('Failed to generate PDF. Please try again.', { type: 'alert' });
-  } finally {
-    hideProgress();
-  }
-};
-
-const cleanEditorContent = (editor: HTMLElement): string => {
-  const clone = editor.cloneNode(true) as HTMLElement;
-  const containers = clone.querySelectorAll('.editor-image-container');
-  containers.forEach((container) => {
-    const handle = container.querySelector('.editor-image-container__handle');
-    if (handle) handle.remove();
-    container.classList.remove('editor-image-container--selected');
-    container.removeAttribute('data-image-setup');
-  });
-  // Convert <font> elements to <span> with inline styles
-  const fontElements = clone.querySelectorAll('font');
-  fontElements.forEach((font) => {
-    const span = document.createElement('span');
-    // Copy all attributes
-    for (let i = 0; i < font.attributes.length; i++) {
-      const attr = font.attributes[i];
-      span.setAttribute(attr.name, attr.value);
-    }
-    // Convert color attribute to style
-    const color = font.getAttribute('color');
-    if (color) {
-      span.style.color = color;
-      span.removeAttribute('color');
-    }
-    // Convert face attribute to font-family
-    const face = font.getAttribute('face');
-    if (face) {
-      span.style.fontFamily = face;
-      span.removeAttribute('face');
-    }
-    // Convert size attribute (HTML font size 1-7) to approximate CSS font-size
-    const size = font.getAttribute('size');
-    if (size) {
-      // Mapping from HTML font size to CSS font-size (approx)
-      const sizeMap: Record<string, string> = {
-        '1': 'xx-small',
-        '2': 'x-small',
-        '3': 'small',
-        '4': 'medium',
-        '5': 'large',
-        '6': 'x-large',
-        '7': 'xx-large',
-      };
-      const cssSize = sizeMap[size];
-      if (cssSize) {
-        span.style.fontSize = cssSize;
-        span.removeAttribute('size');
-      }
-    }
-    // Move children
-    while (font.firstChild) {
-      span.appendChild(font.firstChild);
-    }
-    font.parentNode?.replaceChild(span, font);
-  });
-  return clone.innerHTML;
-};
-
-const saveContent = (): void => {
-  const editor = document.getElementById('editor');
-  if (!editor) return;
-
-  try {
-    const htmlContent = cleanEditorContent(editor);
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const filename = `document-${new Date().toISOString().slice(0, 10)}.html`;
-    downloadFile(blob, filename, 'text/html');
-  } catch (error) {
-    console.error('Failed to save content:', error);
-    showMessage('Could not save the editor content.', { type: 'alert' });
-  }
-};
-
-const loadContent = (): void => {
-  const input = document.getElementById('file-input') as HTMLInputElement;
-  if (!input) return;
-
-  input.onchange = (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
+const readFileAsText = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
+
     reader.onload = (event) => {
-      const editor = document.getElementById('editor');
-      const fileContent = event.target?.result;
-      if (editor && typeof fileContent === 'string') {
-        editor.innerHTML = sanitizeHtml(fileContent);
-        input.value = '';
-        setTimeout(() => {
-          updateToolbarState();
-          updateGenerateButtonState();
-        }, 0);
-      } else {
-        showMessage('Failed to read file content.', { type: 'alert' });
+      const content = event.target?.result;
+      if (typeof content === 'string') {
+        resolve(content);
+        return;
       }
+      reject(new Error('File content is not text.'));
     };
+
     reader.onerror = () => {
-      showMessage('Error reading the selected file.', { type: 'alert' });
+      reject(reader.error ?? new Error('Failed to read file.'));
     };
+
     reader.readAsText(file);
-  };
-
-  input.click();
+  });
 };
 
-const updateGenerateButtonState = (): void => {
-  const btnToolbar = document.getElementById('btn-generate-pdf');
-  const btnMain = document.getElementById('generate-pdf');
-  const hasContent = document.getElementById('editor')?.innerText.trim();
-  btnToolbar?.toggleAttribute('disabled', !hasContent);
-  btnMain?.toggleAttribute('disabled', !hasContent);
-};
-
-const insertLink = (): void => {
-  const editor = document.getElementById('editor');
-  if (!editor) return;
-  editor.focus();
-
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-
-  const anchorNode = selection.anchorNode;
-
-  let existingLink: HTMLAnchorElement | null = null;
-  if (anchorNode) {
-    existingLink = anchorNode.parentElement?.closest('a') as HTMLAnchorElement | null;
-  }
-
-  if (existingLink) {
-    const currentUrl = existingLink.href;
-    const newUrl = prompt('Edit link URL:', currentUrl);
-    if (newUrl !== null) {
-      if (newUrl.trim() === '') {
-        const parent = existingLink.parentNode;
-        while (existingLink.firstChild) {
-          parent?.insertBefore(existingLink.firstChild, existingLink);
-        }
-        parent?.removeChild(existingLink);
-      } else {
-        existingLink.href = newUrl;
-      }
-    }
-  } else {
-    const url = prompt('Enter URL:');
-    if (url) {
-      document.execCommand('createLink', false, url);
-    }
-  }
-};
-
-const insertImage = (): void => {
-  const input = document.getElementById('image-input') as HTMLInputElement;
-  if (!input) return;
-
-  input.onchange = (e) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
-
-    const editor = document.getElementById('editor');
-    if (!editor) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const fileContent = event.target?.result;
-      if (typeof fileContent === 'string') {
-        insertImageToEditor(editor, file, fileContent);
-      }
+const pickSingleFile = (input: HTMLInputElement): Promise<File | null> => {
+  return new Promise((resolve) => {
+    const handleChange = (event: Event): void => {
+      const file = (event.target as HTMLInputElement).files?.[0] ?? null;
+      input.removeEventListener('change', handleChange);
+      resolve(file);
     };
-    reader.readAsDataURL(file);
-  };
 
-  input.click();
+    input.addEventListener('change', handleChange);
+    input.click();
+  });
 };
 
-const setupPageSettings = (): void => {
-  const pageSizeSelect = document.getElementById('page-size') as HTMLSelectElement;
+const setupPageSettings = (): (() => void) => {
+  const pageSizeSelect = document.getElementById('page-size') as HTMLSelectElement | null;
   const customSizeContainer = document.getElementById('custom-size-container');
 
-  pageSizeSelect?.addEventListener('change', () => {
-    if (pageSizeSelect.value === 'Custom') {
-      customSizeContainer?.classList.remove('hidden');
-    } else {
-      customSizeContainer?.classList.add('hidden');
-    }
-  });
-};
-
-let isFullscreen = false;
-
-const toggleFullscreen = (): void => {
-  const editorContainer = document.getElementById('editor-container');
-  const btn = document.getElementById('btn-fullscreen');
-  const toolContent = document.getElementById('tool-content');
-
-  if (!editorContainer || !btn || !toolContent) return;
-
-  isFullscreen = !isFullscreen;
-
-  if (isFullscreen) {
-    editorContainer.classList.add('fullscreen');
-    toolContent.style.maxHeight = '0';
-    toolContent.style.overflow = 'hidden';
-  } else {
-    editorContainer.classList.remove('fullscreen');
-    toolContent.style.maxHeight = '';
-    toolContent.style.overflow = '';
+  if (!pageSizeSelect || !customSizeContainer) {
+    return () => undefined;
   }
-  document.getElementById('editor')?.focus();
+
+  const handlePageSizeChange = (): void => {
+    const showCustomSize = pageSizeSelect.value === 'Custom';
+    customSizeContainer.classList.toggle('hidden', !showCustomSize);
+  };
+
+  pageSizeSelect.addEventListener('change', handlePageSizeChange);
+  handlePageSizeChange();
+
+  return () => {
+    pageSizeSelect.removeEventListener('change', handlePageSizeChange);
+  };
 };
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
-  setupToolbarListeners();
-  setupPageSettings();
+export default function init(): (() => void) | undefined {
+  const editorElement = document.getElementById('editor');
+  const toolbarElement = document.getElementById('editor-toolbar');
+  const imageInput = document.getElementById('image-input') as HTMLInputElement | null;
+  const htmlInput = document.getElementById('file-input') as HTMLInputElement | null;
+  const editorContainer = document.getElementById('editor-container');
+  const toolContent = document.getElementById('tool-content');
 
-  document.getElementById('generate-pdf')?.addEventListener('click', generatePdfMupdf);
-  document.getElementById('btn-generate-pdf')?.addEventListener('click', generatePdfMupdf);
-  document.getElementById('save-content')?.addEventListener('click', saveContent);
-  document.getElementById('load-content')?.addEventListener('click', loadContent);
-  document.getElementById('btn-link')?.addEventListener('click', insertLink);
-  document.getElementById('btn-image')?.addEventListener('click', insertImage);
-  document.getElementById('btn-fullscreen')?.addEventListener('click', toggleFullscreen);
+  if (!editorElement || !toolbarElement || !htmlInput || !editorContainer || !toolContent) {
+    console.error('[HtmlToPdfV2] Missing required DOM elements');
+    return;
+  }
 
-  const editor = document.getElementById('editor');
-  if (editor) {
-    editor.focus();
+  const editor = new HtmlEditor({
+    editor: editorElement,
+    toolbar: toolbarElement,
+    imageInput,
+    sanitizeHtml,
+    onContentChange: () => {
+      const hasContent = Boolean(editorElement.innerText.trim());
+      document.getElementById('btn-generate-pdf')?.toggleAttribute('disabled', !hasContent);
+      document.getElementById('generate-pdf')?.toggleAttribute('disabled', !hasContent);
+    },
+  });
 
-    let lastBlockTag = '';
+  editor.mount();
 
-    editor.addEventListener('input', () => {
-      if (!editor.innerHTML.trim()) {
-        editor.innerHTML = '<p><br></p>';
-      }
-    });
+  const disposers: Array<() => void> = [];
+  let isFullscreen = false;
 
-    editor.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && isFullscreen) {
-        toggleFullscreen();
-        return;
-      }
-
-      if (e.key === 'Enter') {
-        const blockFormat = getCurrentBlockFormat();
-        if (blockFormat && (blockFormat.tag === 'blockquote' || blockFormat.tag === 'pre')) {
-          if (lastBlockTag === blockFormat.tag) {
-            document.execCommand('formatBlock', false, 'p');
-            lastBlockTag = '';
-            setTimeout(updateToolbarState, 0);
-          } else {
-            lastBlockTag = blockFormat.tag;
-          }
-        } else {
-          lastBlockTag = '';
-        }
-      } else if (e.key === 'ArrowUp') {
-        const selection = window.getSelection();
-        if (!selection || !selection.anchorNode) return;
-
-        const preEl =
-          selection.anchorNode.nodeType === Node.TEXT_NODE
-            ? (selection.anchorNode as Text).parentElement?.closest('pre')
-            : null;
-        const bqEl =
-          selection.anchorNode.nodeType === Node.TEXT_NODE
-            ? (selection.anchorNode as Text).parentElement?.closest('blockquote')
-            : null;
-        const blockEl = preEl || bqEl;
-        if (blockEl && blockEl === blockEl.parentElement?.firstChild) {
-          const range = selection.getRangeAt(0);
-          if (range.startOffset === 0 && range.endOffset === 0) {
-            e.preventDefault();
-            const newP = document.createElement('p');
-            newP.innerHTML = '<br>';
-            blockEl.parentNode?.insertBefore(newP, blockEl);
-            const newRange = document.createRange();
-            newRange.setStart(newP, 0);
-            newRange.setEnd(newP, 0);
-            selection.removeAllRanges();
-            selection.addRange(newRange);
-          }
-        }
-        lastBlockTag = '';
-      } else if (e.key === 'ArrowDown') {
-        const selection = window.getSelection();
-        if (!selection || !selection.anchorNode) return;
-
-        const preEl =
-          selection.anchorNode.nodeType === Node.TEXT_NODE
-            ? (selection.anchorNode as Text).parentElement?.closest('pre')
-            : null;
-        const bqEl =
-          selection.anchorNode.nodeType === Node.TEXT_NODE
-            ? (selection.anchorNode as Text).parentElement?.closest('blockquote')
-            : null;
-        const blockEl = preEl || bqEl;
-        if (blockEl && blockEl === blockEl.parentElement?.lastChild) {
-          e.preventDefault();
-          const newP = document.createElement('p');
-          newP.innerHTML = '<br>';
-          if (blockEl.nextSibling) {
-            blockEl.parentNode?.insertBefore(newP, blockEl.nextSibling);
-          } else {
-            blockEl.parentNode?.appendChild(newP);
-          }
-          const newRange = document.createRange();
-          newRange.setStart(newP, 0);
-          newRange.setEnd(newP, 0);
-          selection.removeAllRanges();
-          selection.addRange(newRange);
-        }
-        lastBlockTag = '';
-      } else {
-        lastBlockTag = '';
-      }
-    });
-
-    editor.addEventListener('keyup', updateToolbarState);
-    editor.addEventListener('pointerup', updateToolbarState);
-
-    editor.addEventListener('input', updateGenerateButtonState);
-    editor.addEventListener('keyup', updateGenerateButtonState);
-
-    editor.addEventListener('click', handleEditorClick);
-    editor.addEventListener('pointerdown', handleEditorClick);
-
-    let imageDebounce: number | undefined;
-    const reSetupImages = () => {
-      if (imageDebounce) clearTimeout(imageDebounce);
-      imageDebounce = window.setTimeout(() => {
-        setupAllImages(editor);
-      }, 50);
-    };
-
-    const imageObserver = new MutationObserver(() => {
-      reSetupImages();
-    });
-    imageObserver.observe(editor, { childList: true, subtree: true, characterData: true });
-
-    editor.addEventListener('input', reSetupImages);
-    editor.addEventListener('paste', async (e) => {
-      e.preventDefault();
-      const clipboardData = e.clipboardData;
-      if (!clipboardData) return;
-
-      const selection = window.getSelection();
-      if (!selection || !selection.rangeCount) return;
-      const range = selection.getRangeAt(0);
-      range.deleteContents();
-
-      const imageFiles: File[] = [];
-      if (clipboardData.files?.length) {
-        for (const file of clipboardData.files) {
-          if (file.type.startsWith('image/')) {
-            imageFiles.push(file);
-          }
-        }
-      }
-
-      if (!imageFiles.length && clipboardData.items?.length) {
-        for (const item of clipboardData.items) {
-          if (item.type.startsWith('image/')) {
-            const blob = item.getAsFile();
-            if (blob) {
-              imageFiles.push(blob as File);
-            }
-          }
-        }
-      }
-
-      if (imageFiles.length) {
-        for (const file of imageFiles) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const fileContent = event.target?.result;
-            if (typeof fileContent === 'string') {
-              insertImageToEditor(editor, file, fileContent);
-            }
-          };
-          reader.readAsDataURL(file);
-        }
-        setTimeout(reSetupImages, 150);
-        return;
-      }
-
-      const html = clipboardData.getData('text/html');
-      const text = clipboardData.getData('text/plain');
-
-      if (html) {
-        const sanitized = sanitizeHtml(html);
-        const temp = document.createElement('div');
-        temp.innerHTML = sanitized;
-        range.insertNode(temp);
-        range.collapse(false);
-      } else if (text) {
-        const textNode = document.createTextNode(text);
-        range.insertNode(textNode);
-        range.collapse(false);
-      }
-
-      setTimeout(reSetupImages, 150);
-    });
-
-    if (!editor.innerHTML.trim()) {
-      editor.innerHTML = '<p><br></p>';
+  const addClickListener = (id: string, handler: () => void): void => {
+    const element = document.getElementById(id);
+    if (!element) {
+      return;
     }
 
-    setupAllImages(editor);
-    updateGenerateButtonState();
-  }
+    const listener = (): void => {
+      handler();
+    };
+
+    element.addEventListener('click', listener);
+    disposers.push(() => {
+      element.removeEventListener('click', listener);
+    });
+  };
+
+  const toggleFullscreen = (): void => {
+    isFullscreen = !isFullscreen;
+
+    editorContainer.classList.toggle('fullscreen', isFullscreen);
+
+    if (isFullscreen) {
+      toolContent.style.maxHeight = '0';
+      toolContent.style.overflow = 'hidden';
+    } else {
+      toolContent.style.maxHeight = '';
+      toolContent.style.overflow = '';
+    }
+
+    editor.focus();
+  };
+
+  const generatePdf = async (): Promise<void> => {
+    if (!editorElement.innerText.trim()) {
+      showMessage('Please add some content before generating PDF.', { type: 'alert' });
+      return;
+    }
+
+    showProgress('Generating PDF...');
+
+    try {
+      const settings = getPageSettings();
+      const wrappedHtml = wrapHtmlForPdf(editor.getCleanHtml());
+
+      const pdfBuffer = await htmlToPdfBuffer(wrappedHtml, {
+        width: settings.width,
+        height: settings.height,
+        fontSize: settings.fontSize,
+      });
+
+      const filename = `document-${new Date().toISOString().slice(0, 10)}.pdf`;
+      downloadFile(pdfBuffer, filename, 'application/pdf');
+      showMessage('PDF generated successfully!', { type: 'info', timeoutMs: 3000 });
+    } catch (error) {
+      console.error('[HtmlToPdfV2] PDF generation failed:', error);
+      showMessage('Failed to generate PDF. Please try again.', { type: 'alert' });
+    } finally {
+      hideProgress();
+    }
+  };
+
+  const saveContent = (): void => {
+    try {
+      const htmlContent = editor.getCleanHtml();
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const filename = `document-${new Date().toISOString().slice(0, 10)}.html`;
+      downloadFile(blob, filename, 'text/html');
+    } catch (error) {
+      console.error('[HtmlToPdfV2] Failed to save content:', error);
+      showMessage('Could not save the editor content.', { type: 'alert' });
+    }
+  };
+
+  const loadContent = async (): Promise<void> => {
+    try {
+      const file = await pickSingleFile(htmlInput);
+      if (!file) {
+        return;
+      }
+
+      const content = await readFileAsText(file);
+      editor.setHtml(content);
+      htmlInput.value = '';
+    } catch (error) {
+      console.error('[HtmlToPdfV2] Failed to load content:', error);
+      showMessage('Error reading the selected file.', { type: 'alert' });
+    }
+  };
+
+  const pageSettingsCleanup = setupPageSettings();
+  disposers.push(pageSettingsCleanup);
+
+  addClickListener('generate-pdf', () => {
+    void generatePdf();
+  });
+  addClickListener('btn-generate-pdf', () => {
+    void generatePdf();
+  });
+  addClickListener('save-content', saveContent);
+  addClickListener('load-content', () => {
+    void loadContent();
+  });
+  addClickListener('btn-link', () => editor.promptForLink());
+  addClickListener('btn-image', () => editor.promptForImageInsert());
+  addClickListener('btn-fullscreen', toggleFullscreen);
+
+  const escapeListener = (event: KeyboardEvent): void => {
+    if (event.key === 'Escape' && isFullscreen) {
+      toggleFullscreen();
+    }
+  };
+  editorElement.addEventListener('keydown', escapeListener);
+  disposers.push(() => {
+    editorElement.removeEventListener('keydown', escapeListener);
+  });
+
+  return () => {
+    if (isFullscreen) {
+      editorContainer.classList.remove('fullscreen');
+      toolContent.style.maxHeight = '';
+      toolContent.style.overflow = '';
+    }
+
+    disposers.forEach((dispose) => {
+      dispose();
+    });
+    editor.destroy();
+  };
 }
