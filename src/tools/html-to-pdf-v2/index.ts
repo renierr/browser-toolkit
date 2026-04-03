@@ -2,7 +2,7 @@ import { downloadFile } from '@js/file-utils.ts';
 import { HtmlEditor } from '@js/htmleditor/index.ts';
 import { htmlToPdfBuffer } from '@js/mupdf-utils.ts';
 import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
-import { getPageSettings, wrapHtmlForPdf } from './pdf-generator.ts';
+import { getPageSettings, normalizeImagesForPdf, wrapHtmlForPdf } from './pdf-generator.ts';
 
 const readFileAsText = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -114,7 +114,9 @@ export default function init(): (() => void) | undefined {
 
     try {
       const settings = getPageSettings();
-      const wrappedHtml = wrapHtmlForPdf(editor.getCleanHtml());
+      const cleanHtml = editor.getCleanHtml();
+      const normalizedHtml = normalizeImagesForPdf(cleanHtml, editorHost);
+      const wrappedHtml = wrapHtmlForPdf(normalizedHtml, settings);
 
       const pdfBuffer = await htmlToPdfBuffer(wrappedHtml, {
         width: settings.width,

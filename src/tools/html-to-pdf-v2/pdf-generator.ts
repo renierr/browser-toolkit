@@ -55,6 +55,86 @@ export const getPageSettings = (): PageSettings => {
   };
 };
 
+const MIN_IMAGE_WIDTH_PERCENT = 5;
+
+const getRenderedImageWidths = (editorHost: HTMLElement | null): number[] => {
+  if (!editorHost) {
+    return [];
+  }
+
+  const editorContent = editorHost.querySelector<HTMLElement>('[data-editor-content]');
+  if (!editorContent) {
+    return [];
+  }
+
+  const contentWidth = editorContent.getBoundingClientRect().width;
+  if (!Number.isFinite(contentWidth) || contentWidth <= 0) {
+    return [];
+  }
+
+  return Array.from(editorContent.querySelectorAll<HTMLImageElement>('img')).map((image) => {
+    const imageWidth = image.getBoundingClientRect().width || image.width || image.naturalWidth;
+    const percent = (imageWidth / contentWidth) * 100;
+    return Math.min(100, Math.max(MIN_IMAGE_WIDTH_PERCENT, percent));
+  });
+};
+
+export const normalizeImagesForPdf = (
+  htmlContent: string,
+  editorHost: HTMLElement | null
+): string => {
+  const imageWidths = getRenderedImageWidths(editorHost);
+  if (!imageWidths.length) {
+    return htmlContent;
+  }
+
+  const parser = new DOMParser();
+  const htmlDocument = parser.parseFromString(`<body>${htmlContent}</body>`, 'text/html');
+
+  const imageContainers = Array.from(
+    htmlDocument.body.querySelectorAll<HTMLElement>('.editor-image-container')
+  );
+
+  imageContainers.forEach((container) => {
+    container.querySelectorAll('.editor-image-container__handle').forEach((handle) => {
+      handle.remove();
+    });
+
+    const wrappedImages = Array.from(container.querySelectorAll('img'));
+    if (!wrappedImages.length) {
+      container.remove();
+      return;
+    }
+
+    wrappedImages.forEach((wrappedImage) => {
+      container.parentNode?.insertBefore(wrappedImage, container);
+    });
+
+    container.remove();
+  });
+
+  const images = Array.from(htmlDocument.body.querySelectorAll<HTMLImageElement>('img'));
+
+  if (!images.length) {
+    return htmlContent;
+  }
+
+  images.forEach((image, index) => {
+    const widthPercent = imageWidths[index];
+    if (!widthPercent) {
+      return;
+    }
+
+    image.style.width = `${widthPercent.toFixed(2)}%`;
+    image.style.maxWidth = '100%';
+    image.style.height = 'auto';
+    image.removeAttribute('width');
+    image.removeAttribute('height');
+  });
+
+  return htmlDocument.body.innerHTML;
+};
+
 const getBaseCss = (settings: PageSettings): string => {
   return `
 * { box-sizing: border-box; }
@@ -93,6 +173,8 @@ ul, ol { margin: 8pt 0; padding-left: 25pt; }
 li { margin: 4pt 0; }
 a { color: #0066cc; text-decoration: underline; }
 img { max-width: 100%; height: auto; margin: 8pt 0; }
+.editor-image-container { display: block; max-width: 100%; margin: 8pt 0; }
+.editor-image-container img { display: block; max-width: 100%; }
 strong, b { font-weight: bold; }
 em, i { font-style: italic; }
 u { text-decoration: underline; }
@@ -100,8 +182,10 @@ s, strike { text-decoration: line-through; }
 `;
 };
 
-export const wrapHtmlForPdf = (htmlContent: string): string => {
-  const settings = getPageSettings();
+export const wrapHtmlForPdf = (
+  htmlContent: string,
+  settings: PageSettings = getPageSettings()
+): string => {
   return `<!DOCTYPE html>
 <html>
 <head>
