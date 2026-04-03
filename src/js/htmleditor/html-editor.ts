@@ -1,27 +1,32 @@
+import { renderHtmlEditorTemplate } from './toolbar-template.ts';
+import type {
+  HtmlEditorContentChangeEvent,
+  HtmlEditorOptions,
+  HtmlEditorToolbarState,
+} from './types.ts';
+
 type BlockFormat = {
   readonly tag: string;
   readonly level?: number;
 };
 
-export type HtmlEditorOptions = {
-  readonly editor: HTMLElement;
-  readonly toolbar: HTMLElement;
-  readonly imageInput?: HTMLInputElement | null;
-  readonly sanitizeHtml?: (html: string) => string;
-  readonly onContentChange?: () => void;
-  readonly onToolbarStateChange?: () => void;
-  readonly onEditorKeyDown?: (event: KeyboardEvent) => boolean | void;
-};
-
 export class HtmlEditor {
-  private readonly editor: HTMLElement;
-  private readonly toolbar: HTMLElement;
-  private readonly imageInput: HTMLInputElement | null;
+  private readonly host: HTMLElement;
   private readonly sanitizeHtml?: (html: string) => string;
-  private readonly onContentChange?: () => void;
-  private readonly onToolbarStateChange?: () => void;
-  private readonly onEditorKeyDown?: (event: KeyboardEvent) => boolean | void;
-  private readonly doc: Document;
+  private readonly onContentChange?: (event: HtmlEditorContentChangeEvent) => void;
+  private readonly onToolbarStateChange?: (state: HtmlEditorToolbarState) => void;
+  private readonly onToolbarButtonClick?: (
+    buttonId: string,
+    editor: { readonly isFullscreen: boolean }
+  ) => void;
+  private readonly onFullscreenChange?: (isFullscreen: boolean) => void;
+  private readonly initialHtml: string;
+  private readonly contentClassName: string;
+
+  private root: HTMLElement | null = null;
+  private toolbar: HTMLElement | null = null;
+  private content: HTMLElement | null = null;
+  private imageInput: HTMLInputElement | null = null;
 
   private readonly disposers: Array<() => void> = [];
   private readonly imageContainerDisposers = new Map<HTMLElement, () => void>();
@@ -29,26 +34,45 @@ export class HtmlEditor {
   private imageDebounce: number | undefined;
   private imageObserver: MutationObserver | null = null;
   private lastBlockTag = '';
+  private fullscreen = false;
 
   constructor(options: HtmlEditorOptions) {
-    this.editor = options.editor;
-    this.toolbar = options.toolbar;
-    this.imageInput = options.imageInput ?? null;
+    this.host = options.host;
     this.sanitizeHtml = options.sanitizeHtml;
+    this.initialHtml = options.initialHtml ?? '<p><br></p>';
+    this.contentClassName = options.contentClassName ?? '';
     this.onContentChange = options.onContentChange;
     this.onToolbarStateChange = options.onToolbarStateChange;
-    this.onEditorKeyDown = options.onEditorKeyDown;
-    this.doc = this.editor.ownerDocument;
+    this.onToolbarButtonClick = options.onToolbarButtonClick;
+    this.onFullscreenChange = options.onFullscreenChange;
+
+    this.host.innerHTML = renderHtmlEditorTemplate(options.extraToolbarButtons ?? []);
+
+    this.root = this.host.querySelector('.html-editor');
+    this.toolbar = this.host.querySelector('.html-editor__toolbar');
+    this.content = this.host.querySelector('[data-editor-content]');
+    this.imageInput = this.host.querySelector('[data-editor-image-input]');
+
+    if (this.contentClassName && this.content) {
+      this.content.classList.add(...this.contentClassName.split(' ').filter(Boolean));
+    }
+  }
+
+  get isFullscreen(): boolean {
+    return this.fullscreen;
   }
 
   mount(): void {
+    if (!this.toolbar || !this.content || !this.imageInput) {
+      console.error('[HtmlEditor] Required editor nodes were not created.');
+      return;
+    }
+
     this.setupToolbarListeners();
     this.setupEditorListeners();
-    this.ensureEditorContent();
-    this.setupAllImages();
-    this.updateToolbarState();
-    this.emitContentChange();
+    this.setHtml(this.initialHtml);
     this.focus();
+    this.refreshLucideIcons();
   }
 
   destroy(): void {
@@ -71,14 +95,22 @@ export class HtmlEditor {
       window.clearTimeout(this.imageDebounce);
       this.imageDebounce = undefined;
     }
+
+    if (this.fullscreen) {
+      this.toggleFullscreen(false);
+    }
   }
 
   focus(): void {
-    this.editor.focus();
+    this.content?.focus();
   }
 
   setHtml(html: string): void {
-    this.editor.innerHTML = this.sanitizeHtml ? this.sanitizeHtml(html) : html;
+    if (!this.content) {
+      return;
+    }
+
+    this.content.innerHTML = this.sanitizeHtml ? this.sanitizeHtml(html) : html;
     this.ensureEditorContent();
     this.setupAllImages();
     this.updateToolbarState();
@@ -86,16 +118,23 @@ export class HtmlEditor {
   }
 
   getHtml(): string {
-    return this.editor.innerHTML;
+    return this.content?.innerHTML ?? '';
+  }
+
+  getText(): string {
+    return this.content?.innerText ?? '';
   }
 
   getCleanHtml(): string {
-    const clone = this.editor.cloneNode(true) as HTMLElement;
+    if (!this.content) {
+      return '';
+    }
 
+    const clone = this.content.cloneNode(true) as HTMLElement;
     const containers = clone.querySelectorAll('.editor-image-container');
+
     containers.forEach((container) => {
-      const handle = container.querySelector('.editor-image-container__handle');
-      handle?.remove();
+      container.querySelector('.editor-image-container__handle')?.remove();
       container.classList.remove('editor-image-container--selected');
       container.classList.remove('editor-image-container--dragging');
       container.removeAttribute('data-image-setup');
@@ -103,7 +142,7 @@ export class HtmlEditor {
 
     const fontElements = clone.querySelectorAll('font');
     fontElements.forEach((font) => {
-      const span = this.doc.createElement('span');
+      const span = document.createElement('span');
 
       for (let index = 0; index < font.attributes.length; index += 1) {
         const attr = font.attributes[index];
@@ -151,11 +190,11 @@ export class HtmlEditor {
     return clone.innerHTML;
   }
 
-  refreshToolbarState(): void {
-    this.updateToolbarState();
-  }
-
   promptForLink(): void {
+    if (!this.content) {
+      return;
+    }
+
     this.focus();
 
     const selection = window.getSelection();
@@ -204,6 +243,7 @@ export class HtmlEditor {
     const handleChange = async (event: Event): Promise<void> => {
       const file = (event.target as HTMLInputElement).files?.[0];
       this.imageInput?.removeEventListener('change', handleChange);
+
       if (!file) {
         return;
       }
@@ -225,93 +265,155 @@ export class HtmlEditor {
   }
 
   private setupToolbarListeners(): void {
-    this.bindToolbarCommand('btn-bold', 'bold');
-    this.bindToolbarCommand('btn-italic', 'italic');
-    this.bindToolbarCommand('btn-underline', 'underline');
-    this.bindToolbarCommand('btn-strike', 'strikeThrough');
-    this.bindToolbarCommand('btn-sup', 'superscript');
-    this.bindToolbarCommand('btn-sub', 'subscript');
-
-    const clearBtn = this.getById<HTMLButtonElement>('btn-clear');
-    if (clearBtn) {
-      this.bindEvent(clearBtn, 'click', () => this.clearFormatting());
+    if (!this.toolbar) {
+      return;
     }
 
-    const headingSelect = this.getById<HTMLSelectElement>('heading-select');
+    const headingSelect = this.toolbar.querySelector<HTMLSelectElement>('[data-editor-heading-select]');
     if (headingSelect) {
       this.bindEvent(headingSelect, 'change', (event) => {
-        const value = (event.target as HTMLSelectElement).value;
-        if (value) {
-          this.execBlockFormat(value);
+        const tag = (event.target as HTMLSelectElement).value;
+        if (tag) {
+          this.execBlockFormat(tag);
           (event.target as HTMLSelectElement).value = '';
         }
         this.focus();
       });
     }
 
-    this.bindToolbarCommand('btn-ul', 'insertUnorderedList');
-    this.bindToolbarCommand('btn-ol', 'insertOrderedList');
+    this.bindEvent(this.toolbar, 'click', (event) => this.handleToolbarClick(event));
+    this.bindEvent(this.toolbar, 'input', (event) => this.handleToolbarInput(event));
 
-    this.bindToolbarCommand('btn-align-left', 'justifyLeft');
-    this.bindToolbarCommand('btn-align-center', 'justifyCenter');
-    this.bindToolbarCommand('btn-align-right', 'justifyRight');
-    this.bindToolbarCommand('btn-align-justify', 'justifyFull');
-
-    const blockquoteBtn = this.getById<HTMLButtonElement>('btn-blockquote');
-    if (blockquoteBtn) {
-      this.bindEvent(blockquoteBtn, 'click', () => this.execBlockFormat('blockquote'));
-    }
-
-    const codeBtn = this.getById<HTMLButtonElement>('btn-code');
-    if (codeBtn) {
-      this.bindEvent(codeBtn, 'click', () => this.execBlockFormat('pre'));
-    }
-
-    this.setupColorDropdown('forecolor-dropdown', 'foreColor', 'forecolor-indicator');
-    this.setupColorDropdown('hilitecolor-dropdown', 'hiliteColor', 'hilitecolor-indicator');
-
-    const handleSelectionChange = (): void => {
+    this.bindEvent(document, 'selectionchange', () => {
       if (this.isSelectionInEditor()) {
         this.updateToolbarState();
       }
-    };
-
-    this.bindEvent(this.doc, 'selectionchange', handleSelectionChange);
+    });
   }
 
   private setupEditorListeners(): void {
-    this.bindEvent(this.editor, 'input', () => {
+    const editor = this.content;
+    if (!editor) {
+      return;
+    }
+
+    this.bindEvent(editor, 'input', () => {
       this.ensureEditorContent();
       this.emitContentChange();
+      this.reSetupImages();
     });
 
-    this.bindEvent(this.editor, 'keydown', (event) =>
-      this.onEditorKeyDownInternal(event as KeyboardEvent)
-    );
-    this.bindEvent(this.editor, 'keyup', () => this.updateToolbarState());
-    this.bindEvent(this.editor, 'pointerup', () => this.updateToolbarState());
-    this.bindEvent(this.editor, 'click', (event) =>
-      this.handleEditorClick(event as MouseEvent | PointerEvent)
-    );
-    this.bindEvent(this.editor, 'pointerdown', (event) =>
-      this.handleEditorClick(event as MouseEvent | PointerEvent)
-    );
-    this.bindEvent(this.editor, 'input', () => this.reSetupImages());
-    this.bindEvent(this.editor, 'paste', (event) => this.handlePaste(event as ClipboardEvent));
+    this.bindEvent(editor, 'keydown', (event) => this.onEditorKeyDownInternal(event as KeyboardEvent));
+    this.bindEvent(editor, 'keyup', () => this.updateToolbarState());
+    this.bindEvent(editor, 'pointerup', () => this.updateToolbarState());
+    this.bindEvent(editor, 'click', (event) => this.handleEditorClick(event as MouseEvent));
+    this.bindEvent(editor, 'pointerdown', (event) => this.handleEditorClick(event as PointerEvent));
+    this.bindEvent(editor, 'paste', (event) => this.handlePaste(event as ClipboardEvent));
 
     this.imageObserver = new MutationObserver(() => {
       this.reSetupImages();
     });
 
-    this.imageObserver.observe(this.editor, {
+    this.imageObserver.observe(editor, {
       childList: true,
       subtree: true,
       characterData: true,
     });
   }
 
+  private handleToolbarClick(event: Event): void {
+    const target = event.target as HTMLElement | null;
+    if (!target) {
+      return;
+    }
+
+    const actionButton = target.closest<HTMLButtonElement>('[data-editor-action]');
+    if (actionButton) {
+      const action = actionButton.dataset.editorAction;
+      if (!action) {
+        return;
+      }
+
+      this.handleToolbarAction(action);
+      return;
+    }
+
+    const extraButton = target.closest<HTMLButtonElement>('[data-editor-extra-action]');
+    if (extraButton) {
+      const buttonId = extraButton.dataset.editorExtraAction;
+      if (buttonId) {
+        this.onToolbarButtonClick?.(buttonId, this);
+      }
+      return;
+    }
+
+    const swatch = target.closest<HTMLElement>('[data-editor-color]');
+    if (!swatch) {
+      return;
+    }
+
+    const commandContainer = swatch.closest<HTMLElement>('[data-editor-dropdown]');
+    const command = commandContainer?.dataset.editorDropdown as 'foreColor' | 'hiliteColor' | undefined;
+    const color = swatch.dataset.editorColor;
+
+    if (!command || !color) {
+      return;
+    }
+
+    this.applyColor(command, color);
+
+    const dropdownContent = swatch.closest<HTMLElement>('.dropdown-content');
+    const label = dropdownContent?.previousElementSibling as HTMLElement | null;
+    label?.blur();
+  }
+
+  private handleToolbarInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const command = input.dataset.editorColorPicker as 'foreColor' | 'hiliteColor' | undefined;
+    if (!command) {
+      return;
+    }
+
+    this.applyColor(command, input.value.toUpperCase());
+  }
+
+  private handleToolbarAction(action: string): void {
+    switch (action) {
+      case 'clear-format':
+        this.clearFormatting();
+        return;
+      case 'blockquote':
+      case 'pre':
+        this.execBlockFormat(action);
+        return;
+      case 'link':
+        this.promptForLink();
+        return;
+      case 'image':
+        this.promptForImageInsert();
+        return;
+      case 'fullscreen':
+        this.toggleFullscreen();
+        return;
+      default:
+        this.execFormatCommand(action);
+    }
+  }
+
+  private toggleFullscreen(forceState?: boolean): void {
+    if (!this.root) {
+      return;
+    }
+
+    this.fullscreen = forceState ?? !this.fullscreen;
+    this.root.classList.toggle('html-editor--fullscreen', this.fullscreen);
+    this.onFullscreenChange?.(this.fullscreen);
+    this.focus();
+  }
+
   private onEditorKeyDownInternal(event: KeyboardEvent): void {
-    if (this.onEditorKeyDown?.(event)) {
+    if (event.key === 'Escape' && this.fullscreen) {
+      this.toggleFullscreen(false);
       return;
     }
 
@@ -333,61 +435,46 @@ export class HtmlEditor {
       return;
     }
 
+    const selection = window.getSelection();
+    if (!selection || !selection.anchorNode) {
+      this.lastBlockTag = '';
+      return;
+    }
+
+    const preElement =
+      selection.anchorNode.nodeType === Node.TEXT_NODE
+        ? (selection.anchorNode as Text).parentElement?.closest('pre')
+        : null;
+    const blockquoteElement =
+      selection.anchorNode.nodeType === Node.TEXT_NODE
+        ? (selection.anchorNode as Text).parentElement?.closest('blockquote')
+        : null;
+    const blockElement = preElement || blockquoteElement;
+
     if (event.key === 'ArrowUp') {
-      const selection = window.getSelection();
-      if (!selection || !selection.anchorNode) {
-        return;
-      }
-
-      const preEl =
-        selection.anchorNode.nodeType === Node.TEXT_NODE
-          ? (selection.anchorNode as Text).parentElement?.closest('pre')
-          : null;
-      const blockquoteEl =
-        selection.anchorNode.nodeType === Node.TEXT_NODE
-          ? (selection.anchorNode as Text).parentElement?.closest('blockquote')
-          : null;
-      const blockElement = preEl || blockquoteEl;
-
       if (blockElement && blockElement === blockElement.parentElement?.firstChild) {
         const range = selection.getRangeAt(0);
         if (range.startOffset === 0 && range.endOffset === 0) {
           event.preventDefault();
-          const paragraph = this.doc.createElement('p');
+          const paragraph = document.createElement('p');
           paragraph.innerHTML = '<br>';
           blockElement.parentNode?.insertBefore(paragraph, blockElement);
 
-          const newRange = this.doc.createRange();
+          const newRange = document.createRange();
           newRange.setStart(paragraph, 0);
           newRange.setEnd(paragraph, 0);
           selection.removeAllRanges();
           selection.addRange(newRange);
         }
       }
-
       this.lastBlockTag = '';
       return;
     }
 
     if (event.key === 'ArrowDown') {
-      const selection = window.getSelection();
-      if (!selection || !selection.anchorNode) {
-        return;
-      }
-
-      const preEl =
-        selection.anchorNode.nodeType === Node.TEXT_NODE
-          ? (selection.anchorNode as Text).parentElement?.closest('pre')
-          : null;
-      const blockquoteEl =
-        selection.anchorNode.nodeType === Node.TEXT_NODE
-          ? (selection.anchorNode as Text).parentElement?.closest('blockquote')
-          : null;
-      const blockElement = preEl || blockquoteEl;
-
       if (blockElement && blockElement === blockElement.parentElement?.lastChild) {
         event.preventDefault();
-        const paragraph = this.doc.createElement('p');
+        const paragraph = document.createElement('p');
         paragraph.innerHTML = '<br>';
 
         if (blockElement.nextSibling) {
@@ -396,13 +483,12 @@ export class HtmlEditor {
           blockElement.parentNode?.appendChild(paragraph);
         }
 
-        const newRange = this.doc.createRange();
+        const newRange = document.createRange();
         newRange.setStart(paragraph, 0);
         newRange.setEnd(paragraph, 0);
         selection.removeAllRanges();
         selection.addRange(newRange);
       }
-
       this.lastBlockTag = '';
       return;
     }
@@ -411,6 +497,11 @@ export class HtmlEditor {
   }
 
   private async handlePaste(event: ClipboardEvent): Promise<void> {
+    const editor = this.content;
+    if (!editor) {
+      return;
+    }
+
     event.preventDefault();
 
     const clipboardData = event.clipboardData;
@@ -439,9 +530,9 @@ export class HtmlEditor {
     if (!imageFiles.length && clipboardData.items?.length) {
       for (const item of clipboardData.items) {
         if (item.type.startsWith('image/')) {
-          const file = item.getAsFile();
-          if (file) {
-            imageFiles.push(file);
+          const imageFile = item.getAsFile();
+          if (imageFile) {
+            imageFiles.push(imageFile);
           }
         }
       }
@@ -460,7 +551,6 @@ export class HtmlEditor {
       window.setTimeout(() => {
         this.reSetupImages();
       }, 150);
-
       return;
     }
 
@@ -473,7 +563,7 @@ export class HtmlEditor {
       range.insertNode(fragment);
       range.collapse(false);
     } else if (text) {
-      range.insertNode(this.doc.createTextNode(text));
+      range.insertNode(document.createTextNode(text));
       range.collapse(false);
     }
 
@@ -482,26 +572,6 @@ export class HtmlEditor {
     window.setTimeout(() => {
       this.reSetupImages();
     }, 150);
-  }
-
-  private bindToolbarCommand(id: string, command: string): void {
-    const button = this.getById<HTMLButtonElement>(id);
-    if (!button) {
-      return;
-    }
-
-    this.bindEvent(button, 'click', () => {
-      this.execFormatCommand(command);
-    });
-  }
-
-  private getById<T extends HTMLElement>(id: string): T | null {
-    const inToolbar = this.toolbar.querySelector<T>(`#${id}`);
-    if (inToolbar) {
-      return inToolbar;
-    }
-
-    return this.doc.getElementById(id) as T | null;
   }
 
   private bindEvent<T extends EventTarget>(
@@ -516,16 +586,26 @@ export class HtmlEditor {
   }
 
   private emitContentChange(): void {
-    this.onContentChange?.();
+    const event: HtmlEditorContentChangeEvent = {
+      html: this.getHtml(),
+      cleanHtml: this.getCleanHtml(),
+      hasContent: Boolean(this.getText().trim()),
+    };
+
+    this.onContentChange?.(event);
   }
 
-  private emitToolbarStateChange(): void {
-    this.onToolbarStateChange?.();
+  private emitToolbarStateChange(state: HtmlEditorToolbarState): void {
+    this.onToolbarStateChange?.(state);
   }
 
   private ensureEditorContent(): void {
-    if (!this.editor.innerHTML.trim()) {
-      this.editor.innerHTML = '<p><br></p>';
+    if (!this.content) {
+      return;
+    }
+
+    if (!this.content.innerHTML.trim()) {
+      this.content.innerHTML = '<p><br></p>';
     }
   }
 
@@ -558,7 +638,9 @@ export class HtmlEditor {
 
   private isSelectionInEditor(): boolean {
     const selection = window.getSelection();
-    if (!selection || !selection.anchorNode) {
+    const editor = this.content;
+
+    if (!selection || !selection.anchorNode || !editor) {
       return false;
     }
 
@@ -567,7 +649,7 @@ export class HtmlEditor {
       node = node.parentNode;
     }
 
-    return Boolean(node && (node === this.editor || this.editor.contains(node)));
+    return Boolean(node && (node === editor || editor.contains(node)));
   }
 
   private getCurrentBlockFormat(): BlockFormat | null {
@@ -589,10 +671,7 @@ export class HtmlEditor {
     const tagName = element.tagName.toLowerCase();
 
     if (/^h[1-6]$/.test(tagName)) {
-      return {
-        tag: tagName,
-        level: Number.parseInt(tagName[1], 10),
-      };
+      return { tag: tagName, level: Number.parseInt(tagName[1], 10) };
     }
 
     if (tagName === 'blockquote') {
@@ -633,26 +712,30 @@ export class HtmlEditor {
   }
 
   private updateToolbarState(): void {
+    if (!this.toolbar) {
+      return;
+    }
+
     const blockFormat = this.getCurrentBlockFormat();
     const isHeading = Boolean(blockFormat && /^h[1-6]$/.test(blockFormat.tag));
 
     const commandButtons: Record<string, string> = {
-      'btn-bold': 'bold',
-      'btn-italic': 'italic',
-      'btn-underline': 'underline',
-      'btn-strike': 'strikeThrough',
-      'btn-sup': 'superscript',
-      'btn-sub': 'subscript',
-      'btn-ul': 'insertUnorderedList',
-      'btn-ol': 'insertOrderedList',
-      'btn-align-left': 'justifyLeft',
-      'btn-align-center': 'justifyCenter',
-      'btn-align-right': 'justifyRight',
-      'btn-align-justify': 'justifyFull',
+      bold: 'bold',
+      italic: 'italic',
+      underline: 'underline',
+      strikeThrough: 'strikeThrough',
+      superscript: 'superscript',
+      subscript: 'subscript',
+      insertUnorderedList: 'insertUnorderedList',
+      insertOrderedList: 'insertOrderedList',
+      justifyLeft: 'justifyLeft',
+      justifyCenter: 'justifyCenter',
+      justifyRight: 'justifyRight',
+      justifyFull: 'justifyFull',
     };
 
-    Object.entries(commandButtons).forEach(([buttonId, command]) => {
-      const button = this.getById<HTMLButtonElement>(buttonId);
+    Object.entries(commandButtons).forEach(([action, command]) => {
+      const button = this.toolbar?.querySelector<HTMLButtonElement>(`[data-editor-action="${action}"]`);
       if (!button) {
         return;
       }
@@ -677,26 +760,28 @@ export class HtmlEditor {
       }
     });
 
-    const headingSelect = this.getById<HTMLSelectElement>('heading-select');
+    const headingSelect = this.toolbar.querySelector<HTMLSelectElement>('[data-editor-heading-select]');
     if (headingSelect) {
       headingSelect.value = blockFormat && /^h[1-6]$/.test(blockFormat.tag) ? blockFormat.tag : '';
     }
 
-    const blockquoteButton = this.getById<HTMLButtonElement>('btn-blockquote');
+    const blockquoteButton = this.toolbar.querySelector<HTMLButtonElement>(
+      '[data-editor-action="blockquote"]'
+    );
     if (blockquoteButton) {
       const isBlockquote = blockFormat?.tag === 'blockquote';
       blockquoteButton.classList.toggle('btn-active', isBlockquote);
       blockquoteButton.classList.toggle('btn-ghost', !isBlockquote);
     }
 
-    const codeButton = this.getById<HTMLButtonElement>('btn-code');
+    const codeButton = this.toolbar.querySelector<HTMLButtonElement>('[data-editor-action="pre"]');
     if (codeButton) {
       const isCode = blockFormat?.tag === 'pre';
       codeButton.classList.toggle('btn-active', isCode);
       codeButton.classList.toggle('btn-ghost', !isCode);
     }
 
-    const linkButton = this.getById<HTMLButtonElement>('btn-link');
+    const linkButton = this.toolbar.querySelector<HTMLButtonElement>('[data-editor-action="link"]');
     if (linkButton) {
       const isInLink = this.isCursorInLink();
       linkButton.classList.toggle('btn-active', isInLink);
@@ -704,12 +789,15 @@ export class HtmlEditor {
     }
 
     const foreColorValue = this.safeQueryCommandValue('foreColor');
-    this.updateColorIndicator('forecolor-indicator', this.colorStringToHex(foreColorValue));
+    this.updateColorIndicator('foreColor', this.colorStringToHex(foreColorValue));
 
     const hiliteColorValue = this.safeQueryCommandValue('hiliteColor');
-    this.updateColorIndicator('hilitecolor-indicator', this.colorStringToHex(hiliteColorValue));
+    this.updateColorIndicator('hiliteColor', this.colorStringToHex(hiliteColorValue));
 
-    this.emitToolbarStateChange();
+    this.emitToolbarStateChange({
+      hasSelectionInEditor: this.isSelectionInEditor(),
+      blockTag: blockFormat?.tag ?? null,
+    });
   }
 
   private safeQueryCommandValue(command: string): string {
@@ -721,58 +809,14 @@ export class HtmlEditor {
     }
   }
 
-  private setupColorDropdown(
-    dropdownId: string,
-    command: 'foreColor' | 'hiliteColor',
-    indicatorId: string
-  ): void {
-    const dropdown = this.getById<HTMLElement>(dropdownId);
-    if (!dropdown) {
-      return;
-    }
-
-    const swatches = dropdown.querySelectorAll<HTMLElement>('.color-swatch');
-    swatches.forEach((swatch) => {
-      this.bindEvent(swatch, 'click', (event) => {
-        const color = (event.currentTarget as HTMLElement).dataset.color;
-        if (!color) {
-          return;
-        }
-
-        this.applyColor(command, color);
-        this.updateColorIndicator(indicatorId, color);
-
-        const label = dropdown.previousElementSibling as HTMLElement | null;
-        label?.blur();
-      });
-    });
-
-    const picker = dropdown.querySelector<HTMLInputElement>('input[type="color"]');
-    if (picker) {
-      this.bindEvent(picker, 'input', (event) => {
-        const color = (event.target as HTMLInputElement).value.toUpperCase();
-        this.applyColor(command, color);
-        this.updateColorIndicator(indicatorId, color);
-      });
-    }
-
-    const removeButton = dropdown.querySelector<HTMLButtonElement>('button[id$="-remove"]');
-    if (removeButton) {
-      this.bindEvent(removeButton, 'click', () => {
-        this.applyColor(command, 'transparent');
-        this.updateColorIndicator(indicatorId, 'transparent');
-      });
-    }
-  }
-
-  private applyColor(command: 'foreColor' | 'hiliteColor', hex: string): void {
-    if (hex === 'transparent') {
+  private applyColor(command: 'foreColor' | 'hiliteColor', color: string): void {
+    if (color === 'transparent') {
       document.execCommand('removeFormat', false);
       if (command === 'hiliteColor') {
         document.execCommand('hiliteColor', false, 'transparent');
       }
     } else {
-      document.execCommand(command, false, hex);
+      document.execCommand(command, false, color);
     }
 
     this.updateToolbarState();
@@ -780,8 +824,8 @@ export class HtmlEditor {
     this.emitContentChange();
   }
 
-  private updateColorIndicator(indicatorId: string, hexColor: string): void {
-    const indicator = this.getById<HTMLElement>(indicatorId);
+  private updateColorIndicator(command: 'foreColor' | 'hiliteColor', hexColor: string): void {
+    const indicator = this.toolbar?.querySelector<HTMLElement>(`[data-editor-indicator="${command}"]`);
     if (!indicator) {
       return;
     }
@@ -816,10 +860,11 @@ export class HtmlEditor {
 
     const rgbMatch = colorString.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/i);
     if (rgbMatch) {
-      const r = Number.parseInt(rgbMatch[1], 10);
-      const g = Number.parseInt(rgbMatch[2], 10);
-      const b = Number.parseInt(rgbMatch[3], 10);
-      return this.rgbToHex(r, g, b);
+      return this.rgbToHex(
+        Number.parseInt(rgbMatch[1], 10),
+        Number.parseInt(rgbMatch[2], 10),
+        Number.parseInt(rgbMatch[3], 10)
+      );
     }
 
     if (colorString.startsWith('#')) {
@@ -848,13 +893,13 @@ export class HtmlEditor {
       if (startContainer.nodeType === Node.TEXT_NODE) {
         const textLength = startContainer.textContent?.length ?? 0;
         if (startOffset < textLength) {
-          range = this.doc.createRange();
+          range = document.createRange();
           range.setStart(startContainer, startOffset);
           range.setEnd(startContainer, startOffset + 1);
           selection.removeAllRanges();
           selection.addRange(range);
         } else if (startOffset > 0) {
-          range = this.doc.createRange();
+          range = document.createRange();
           range.setStart(startContainer, startOffset - 1);
           range.setEnd(startContainer, startOffset);
           selection.removeAllRanges();
@@ -868,7 +913,7 @@ export class HtmlEditor {
           return;
         }
 
-        range = this.doc.createRange();
+        range = document.createRange();
         range.setStart(child, 0);
         range.setEnd(child, Math.min(1, child.textContent?.length ?? 0));
         selection.removeAllRanges();
@@ -885,8 +930,13 @@ export class HtmlEditor {
   }
 
   private handleEditorClick(event: MouseEvent | PointerEvent): void {
+    const editor = this.content;
+    if (!editor) {
+      return;
+    }
+
     const target = event.target as Node;
-    const imageContainers = this.editor.querySelectorAll<HTMLElement>('.editor-image-container');
+    const imageContainers = editor.querySelectorAll<HTMLElement>('.editor-image-container');
 
     imageContainers.forEach((container) => {
       if (!container.contains(target)) {
@@ -901,7 +951,7 @@ export class HtmlEditor {
       return;
     }
 
-    const range = this.doc.createRange();
+    const range = document.createRange();
     range.selectNode(container);
     selection.removeAllRanges();
     selection.addRange(range);
@@ -910,11 +960,11 @@ export class HtmlEditor {
   }
 
   private wrapImageInContainer(image: HTMLImageElement): HTMLElement {
-    const container = this.doc.createElement('div');
+    const container = document.createElement('div');
     container.className = 'editor-image-container';
     container.setAttribute('contenteditable', 'false');
 
-    const resizeHandle = this.doc.createElement('div');
+    const resizeHandle = document.createElement('div');
     resizeHandle.className = 'editor-image-container__handle';
 
     image.parentNode?.insertBefore(container, image);
@@ -950,8 +1000,7 @@ export class HtmlEditor {
         return;
       }
 
-      const difference = event.clientX - startX;
-      const width = Math.max(50, Math.min(startWidth + difference, 800));
+      const width = Math.max(50, Math.min(startWidth + (event.clientX - startX), 800));
       image.style.width = `${width}px`;
       image.style.maxWidth = 'none';
     };
@@ -978,7 +1027,6 @@ export class HtmlEditor {
 
       event.preventDefault();
       event.stopPropagation();
-
       isResizing = true;
       startX = event.clientX;
       startWidth = image.offsetWidth;
@@ -1023,7 +1071,12 @@ export class HtmlEditor {
   }
 
   private setupAllImages(): void {
-    const images = this.editor.querySelectorAll<HTMLImageElement>('img');
+    const editor = this.content;
+    if (!editor) {
+      return;
+    }
+
+    const images = editor.querySelectorAll<HTMLImageElement>('img');
     const activeContainers = new Set<HTMLElement>();
 
     images.forEach((image) => {
@@ -1044,7 +1097,7 @@ export class HtmlEditor {
     });
 
     this.imageContainerDisposers.forEach((dispose, container) => {
-      if (activeContainers.has(container) || this.editor.contains(container)) {
+      if (activeContainers.has(container) || editor.contains(container)) {
         return;
       }
 
@@ -1064,21 +1117,26 @@ export class HtmlEditor {
   }
 
   private insertImageToEditor(file: File, fileContent: string): void {
+    const editor = this.content;
+    if (!editor) {
+      return;
+    }
+
     const selection = window.getSelection();
     let inserted = false;
 
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
-      if (this.editor.contains(range.commonAncestorContainer)) {
-        const imageContainer = this.doc.createElement('div');
+      if (editor.contains(range.commonAncestorContainer)) {
+        const imageContainer = document.createElement('div');
         imageContainer.className = 'editor-image-container';
         imageContainer.setAttribute('contenteditable', 'false');
 
-        const image = this.doc.createElement('img');
+        const image = document.createElement('img');
         image.src = fileContent;
         image.alt = file.name;
 
-        const resizeHandle = this.doc.createElement('div');
+        const resizeHandle = document.createElement('div');
         resizeHandle.className = 'editor-image-container__handle';
 
         imageContainer.appendChild(image);
@@ -1096,27 +1154,26 @@ export class HtmlEditor {
     }
 
     if (!inserted) {
-      const imageContainer = this.doc.createElement('div');
+      const imageContainer = document.createElement('div');
       imageContainer.className = 'editor-image-container';
       imageContainer.setAttribute('contenteditable', 'false');
 
-      const image = this.doc.createElement('img');
+      const image = document.createElement('img');
       image.src = fileContent;
       image.alt = file.name;
 
-      const resizeHandle = this.doc.createElement('div');
+      const resizeHandle = document.createElement('div');
       resizeHandle.className = 'editor-image-container__handle';
 
       imageContainer.appendChild(image);
       imageContainer.appendChild(resizeHandle);
-      this.editor.appendChild(imageContainer);
-
+      editor.appendChild(imageContainer);
       this.selectImageContainer(imageContainer);
     }
 
     this.setupAllImages();
-    this.emitContentChange();
     this.updateToolbarState();
+    this.emitContentChange();
   }
 
   private readFileAsDataUrl(file: File): Promise<string> {
@@ -1139,5 +1196,10 @@ export class HtmlEditor {
 
       reader.readAsDataURL(file);
     });
+  }
+
+  private refreshLucideIcons(): void {
+    const lucideApi = (window as unknown as { lucide?: { createIcons?: () => void } }).lucide;
+    lucideApi?.createIcons?.();
   }
 }

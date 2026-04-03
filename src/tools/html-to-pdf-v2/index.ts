@@ -1,9 +1,9 @@
 import { downloadFile } from '@js/file-utils.ts';
-import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
+import { HtmlEditor } from '@js/htmleditor/index.ts';
 import { htmlToPdfBuffer } from '@js/mupdf-utils.ts';
-import { wrapHtmlForPdf, getPageSettings } from './pdf-generator.ts';
+import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
+import { getPageSettings, wrapHtmlForPdf } from './pdf-generator.ts';
 import { sanitizeHtml } from './sanitizer.ts';
-import { HtmlEditor } from '../../js/htmleditor/html-editor.ts';
 
 const readFileAsText = (file: File): Promise<string> => {
   return new Promise((resolve, reject) => {
@@ -15,6 +15,7 @@ const readFileAsText = (file: File): Promise<string> => {
         resolve(content);
         return;
       }
+
       reject(new Error('File content is not text.'));
     };
 
@@ -48,8 +49,7 @@ const setupPageSettings = (): (() => void) => {
   }
 
   const handlePageSizeChange = (): void => {
-    const showCustomSize = pageSizeSelect.value === 'Custom';
-    customSizeContainer.classList.toggle('hidden', !showCustomSize);
+    customSizeContainer.classList.toggle('hidden', pageSizeSelect.value !== 'Custom');
   };
 
   pageSizeSelect.addEventListener('change', handlePageSizeChange);
@@ -62,69 +62,52 @@ const setupPageSettings = (): (() => void) => {
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(): (() => void) | undefined {
-  const editorElement = document.getElementById('editor');
-  const toolbarElement = document.getElementById('editor-toolbar');
-  const imageInput = document.getElementById('image-input') as HTMLInputElement | null;
+  const editorHost = document.getElementById('editor-host');
   const htmlInput = document.getElementById('file-input') as HTMLInputElement | null;
-  const editorContainer = document.getElementById('editor-container');
   const toolContent = document.getElementById('tool-content');
 
-  if (!editorElement || !toolbarElement || !htmlInput || !editorContainer || !toolContent) {
+  if (!editorHost || !htmlInput || !toolContent) {
     console.error('[HtmlToPdfV2] Missing required DOM elements');
     return;
   }
 
-  const editor = new HtmlEditor({
-    editor: editorElement,
-    toolbar: toolbarElement,
-    imageInput,
-    sanitizeHtml,
-    onContentChange: () => {
-      const hasContent = Boolean(editorElement.innerText.trim());
-      document.getElementById('btn-generate-pdf')?.toggleAttribute('disabled', !hasContent);
-      document.getElementById('generate-pdf')?.toggleAttribute('disabled', !hasContent);
-    },
-  });
-
-  editor.mount();
-
-  const disposers: Array<() => void> = [];
-  let isFullscreen = false;
-
-  const addClickListener = (id: string, handler: () => void): void => {
-    const element = document.getElementById(id);
-    if (!element) {
+  const setToolContentCollapsed = (collapsed: boolean): void => {
+    if (collapsed) {
+      toolContent.style.maxHeight = '0';
+      toolContent.style.overflow = 'hidden';
       return;
     }
 
-    const listener = (): void => {
-      handler();
-    };
-
-    element.addEventListener('click', listener);
-    disposers.push(() => {
-      element.removeEventListener('click', listener);
-    });
+    toolContent.style.maxHeight = '';
+    toolContent.style.overflow = '';
   };
 
-  const toggleFullscreen = (): void => {
-    isFullscreen = !isFullscreen;
-
-    editorContainer.classList.toggle('fullscreen', isFullscreen);
-
-    if (isFullscreen) {
-      toolContent.style.maxHeight = '0';
-      toolContent.style.overflow = 'hidden';
-    } else {
-      toolContent.style.maxHeight = '';
-      toolContent.style.overflow = '';
-    }
-
-    editor.focus();
-  };
+  const editor = new HtmlEditor({
+    host: editorHost,
+    sanitizeHtml,
+    extraToolbarButtons: [
+      {
+        id: 'generate-pdf',
+        title: 'Generate PDF',
+        icon: 'file-text',
+        className: 'btn-primary',
+      },
+    ],
+    onToolbarButtonClick: (buttonId) => {
+      if (buttonId === 'generate-pdf') {
+        void generatePdf();
+      }
+    },
+    onContentChange: (event) => {
+      document.getElementById('generate-pdf')?.toggleAttribute('disabled', !event.hasContent);
+    },
+    onFullscreenChange: (isFullscreen) => {
+      setToolContentCollapsed(isFullscreen);
+    },
+  });
 
   const generatePdf = async (): Promise<void> => {
-    if (!editorElement.innerText.trim()) {
+    if (!editor.getText().trim()) {
       showMessage('Please add some content before generating PDF.', { type: 'alert' });
       return;
     }
@@ -180,43 +163,44 @@ export default function init(): (() => void) | undefined {
     }
   };
 
+  const disposers: Array<() => void> = [];
+
+  const addClickListener = (id: string, handler: () => void): void => {
+    const element = document.getElementById(id);
+    if (!element) {
+      return;
+    }
+
+    const listener = (): void => {
+      handler();
+    };
+
+    element.addEventListener('click', listener);
+    disposers.push(() => {
+      element.removeEventListener('click', listener);
+    });
+  };
+
+  editor.mount();
+
   const pageSettingsCleanup = setupPageSettings();
   disposers.push(pageSettingsCleanup);
 
   addClickListener('generate-pdf', () => {
     void generatePdf();
   });
-  addClickListener('btn-generate-pdf', () => {
-    void generatePdf();
-  });
   addClickListener('save-content', saveContent);
   addClickListener('load-content', () => {
     void loadContent();
   });
-  addClickListener('btn-link', () => editor.promptForLink());
-  addClickListener('btn-image', () => editor.promptForImageInsert());
-  addClickListener('btn-fullscreen', toggleFullscreen);
-
-  const escapeListener = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape' && isFullscreen) {
-      toggleFullscreen();
-    }
-  };
-  editorElement.addEventListener('keydown', escapeListener);
-  disposers.push(() => {
-    editorElement.removeEventListener('keydown', escapeListener);
-  });
 
   return () => {
-    if (isFullscreen) {
-      editorContainer.classList.remove('fullscreen');
-      toolContent.style.maxHeight = '';
-      toolContent.style.overflow = '';
-    }
+    setToolContentCollapsed(false);
 
     disposers.forEach((dispose) => {
       dispose();
     });
+
     editor.destroy();
   };
 }
