@@ -1,53 +1,22 @@
-import type { SharedFilesPayload } from '../../js/share-target.ts';
-import { setupFileDropzone } from '../../js/file-utils.ts';
-import { showMessage } from '../../js/ui.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
+import { setupFileDropzone } from '@js/file-utils.ts';
+import { showMessage } from '@js/ui.ts';
 import * as kdbxweb from 'kdbxweb';
 import argon2 from 'argon2-browser';
-import { initDOM, type DOMEls } from './dom.ts';
+import { type DOMEls, initDOM } from './dom.ts';
 import {
-  renderGroupTree,
-  renderEntryList,
-  renderEntryDetail,
-  showPasswordDialog,
   hidePasswordDialog,
-  showPasswordError,
   hidePasswordError,
-  showPasswordLoading,
   hidePasswordLoading,
-  togglePasswordVisibility,
+  renderEntryDetail,
+  renderEntryList,
+  renderGroupTree,
+  showPasswordDialog,
+  showPasswordError,
+  showPasswordLoading,
   switchMobileTab,
+  togglePasswordVisibility,
 } from './ui.ts';
-
-let argon2Initialized = false;
-
-async function setupArgon2(): Promise<void> {
-  if (argon2Initialized) return;
-
-  kdbxweb.CryptoEngine.setArgon2Impl(
-    async (
-      password: ArrayBuffer,
-      salt: ArrayBuffer,
-      memory: number,
-      iterations: number,
-      length: number,
-      parallelism: number,
-      type: kdbxweb.CryptoEngine.Argon2Type,
-      _version: kdbxweb.CryptoEngine.Argon2Version
-    ): Promise<ArrayBuffer> => {
-      const result = await argon2.hash({
-        pass: new Uint8Array(password),
-        salt: new Uint8Array(salt),
-        time: iterations,
-        mem: memory,
-        hashLen: length,
-        parallelism,
-        type: type as any,
-      });
-      return result.hash.buffer.slice(0) as ArrayBuffer;
-    }
-  );
-  argon2Initialized = true;
-}
 
 async function loadDatabase(
   data: ArrayBuffer,
@@ -67,11 +36,49 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
   if (!resolved) return;
   const dom: DOMEls = resolved;
 
+  let argon2Initialized = false;
+  const setupArgon2 = (): void => {
+    if (argon2Initialized) return;
+
+    kdbxweb.CryptoEngine.setArgon2Impl(
+      async (
+        password: ArrayBuffer,
+        salt: ArrayBuffer,
+        memory: number,
+        iterations: number,
+        length: number,
+        parallelism: number,
+        type: kdbxweb.CryptoEngine.Argon2Type,
+        _version: kdbxweb.CryptoEngine.Argon2Version
+      ): Promise<ArrayBuffer> => {
+        const result = await argon2.hash({
+          pass: new Uint8Array(password),
+          salt: new Uint8Array(salt),
+          time: iterations,
+          mem: memory,
+          hashLen: length,
+          parallelism,
+          type: type as any,
+        });
+        return result.hash.buffer.slice(0) as ArrayBuffer;
+      }
+    );
+    argon2Initialized = true;
+  };
+
   setupArgon2();
 
   let db: kdbxweb.Kdbx | null = null;
   let pendingFile: ArrayBuffer | null = null;
   let pendingFileName = '';
+  const mobileTabs = {
+    tabGroups: dom.tabGroups,
+    tabEntries: dom.tabEntries,
+    tabDetails: dom.tabDetails,
+    groupPanel: dom.groupPanel,
+    entryPanel: dom.entryPanel,
+    detailPanel: dom.detailPanel,
+  };
 
   function closeDatabase(): void {
     db = null;
@@ -91,17 +98,18 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
   }
 
   function onGroupSelect(group: kdbxweb.KdbxGroup): void {
-    renderEntryList(dom.entryList, group, group.name || 'Root', onEntrySelect);
-    renderEntryList(dom.entryListMobile, group, group.name || 'Root', onEntrySelect);
+    const groupName = group.name || 'Root';
+    renderEntryList(dom.entryList, group, groupName, onEntrySelect, {
+      countEl: dom.entryCount,
+      nameEl: dom.entryGroupName,
+    });
+    renderEntryList(dom.entryListMobile, group, groupName, onEntrySelect, {
+      countEl: dom.entryCountMobile,
+      nameEl: dom.entryGroupNameMobile,
+    });
+
     if (window.innerWidth < 1024) {
-      switchMobileTab('entries', {
-        tabGroups: dom.tabGroups,
-        tabEntries: dom.tabEntries,
-        tabDetails: dom.tabDetails,
-        groupPanel: dom.groupPanel,
-        entryPanel: dom.entryPanel,
-        detailPanel: dom.detailPanel,
-      });
+      switchMobileTab('entries', mobileTabs);
     }
   }
 
@@ -123,14 +131,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
     renderEntryDetail(dom.detailFieldsMobile, entry);
 
     if (window.innerWidth < 1024) {
-      switchMobileTab('details', {
-        tabGroups: dom.tabGroups,
-        tabEntries: dom.tabEntries,
-        tabDetails: dom.tabDetails,
-        groupPanel: dom.groupPanel,
-        entryPanel: dom.entryPanel,
-        detailPanel: dom.detailPanel,
-      });
+      switchMobileTab('details', mobileTabs);
     }
   }
 
@@ -153,20 +154,13 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
       const defaultGroup = db.getDefaultGroup();
       const entryCount = Array.from(defaultGroup.allEntries()).length;
       const groupCount = Array.from(defaultGroup.allGroups()).length;
-      const info = `${groupCount} groups, ${entryCount} entries`;
-      dom.dbInfo.textContent = info;
+
+      dom.dbInfo.textContent = `${groupCount} groups, ${entryCount} entries`;
 
       renderGroupTree(dom.groupTree, db, onGroupSelect);
       renderGroupTree(dom.groupTreeMobile, db, onGroupSelect);
 
-      switchMobileTab('groups', {
-        tabGroups: dom.tabGroups,
-        tabEntries: dom.tabEntries,
-        tabDetails: dom.tabDetails,
-        groupPanel: dom.groupPanel,
-        entryPanel: dom.entryPanel,
-        detailPanel: dom.detailPanel,
-      });
+      switchMobileTab('groups', mobileTabs);
 
       return true;
     } catch (error) {
@@ -205,21 +199,28 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
     const kdbxFile = payload.sharedFiles.find((f) => f.name.toLowerCase().endsWith('.kdbx'));
     if (kdbxFile) {
       pendingFileName = kdbxFile.name;
-      kdbxFile.arrayBuffer().then((buf) => {
-        pendingFile = buf;
-        showPasswordDialog(dom.passwordModal);
-        dom.passwordFilename.textContent = pendingFileName;
-        dom.passwordInput.value = '';
-        dom.passwordInput.focus();
-      });
+      kdbxFile
+        .arrayBuffer()
+        .then((buf) => {
+          pendingFile = buf;
+          showPasswordDialog(dom.passwordModal);
+          dom.passwordFilename.textContent = pendingFileName;
+          dom.passwordInput.value = '';
+          dom.passwordInput.focus();
+        })
+        .catch((error) => {
+          console.error('[KeePass Viewer] Failed to read shared file', error);
+          showMessage('Failed to read shared file.', { type: 'alert' });
+        });
     }
   }
 
-  dom.togglePasswordBtn.addEventListener('click', () => {
+  const handleTogglePassword = (): void => {
     togglePasswordVisibility(dom.passwordInput, dom.togglePasswordBtn);
-  });
+  };
+  dom.togglePasswordBtn.addEventListener('click', handleTogglePassword);
 
-  dom.submitPasswordBtn.addEventListener('click', async () => {
+  const handleSubmitPassword = async (): Promise<void> => {
     const password = dom.passwordInput.value;
     const keyFile = dom.keyfileInput.files?.[0];
     let keyFileData: ArrayBuffer | undefined;
@@ -227,57 +228,43 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
       keyFileData = await keyFile.arrayBuffer();
     }
     await tryOpenDatabase(password, keyFileData);
-  });
+  };
+  dom.submitPasswordBtn.addEventListener('click', handleSubmitPassword);
 
-  dom.passwordInput.addEventListener('keydown', async (ev: KeyboardEvent) => {
+  const handlePasswordKeydown = (ev: KeyboardEvent): void => {
     if (ev.key === 'Enter') {
       ev.preventDefault();
       dom.submitPasswordBtn.click();
     }
-  });
+  };
+  dom.passwordInput.addEventListener('keydown', handlePasswordKeydown);
 
-  dom.cancelPasswordBtn.addEventListener('click', () => {
+  const handleCancelPassword = (): void => {
     hidePasswordDialog(dom.passwordModal);
     pendingFile = null;
     pendingFileName = '';
-  });
+  };
+  dom.cancelPasswordBtn.addEventListener('click', handleCancelPassword);
 
   dom.closeDbBtn.addEventListener('click', closeDatabase);
 
-  dom.tabGroups.addEventListener('click', () => {
-    switchMobileTab('groups', {
-      tabGroups: dom.tabGroups,
-      tabEntries: dom.tabEntries,
-      tabDetails: dom.tabDetails,
-      groupPanel: dom.groupPanel,
-      entryPanel: dom.entryPanel,
-      detailPanel: dom.detailPanel,
-    });
-  });
+  const handleTabGroups = (): void => switchMobileTab('groups', mobileTabs);
+  const handleTabEntries = (): void => switchMobileTab('entries', mobileTabs);
+  const handleTabDetails = (): void => switchMobileTab('details', mobileTabs);
 
-  dom.tabEntries.addEventListener('click', () => {
-    switchMobileTab('entries', {
-      tabGroups: dom.tabGroups,
-      tabEntries: dom.tabEntries,
-      tabDetails: dom.tabDetails,
-      groupPanel: dom.groupPanel,
-      entryPanel: dom.entryPanel,
-      detailPanel: dom.detailPanel,
-    });
-  });
-
-  dom.tabDetails.addEventListener('click', () => {
-    switchMobileTab('details', {
-      tabGroups: dom.tabGroups,
-      tabEntries: dom.tabEntries,
-      tabDetails: dom.tabDetails,
-      groupPanel: dom.groupPanel,
-      entryPanel: dom.entryPanel,
-      detailPanel: dom.detailPanel,
-    });
-  });
+  dom.tabGroups.addEventListener('click', handleTabGroups);
+  dom.tabEntries.addEventListener('click', handleTabEntries);
+  dom.tabDetails.addEventListener('click', handleTabDetails);
 
   return () => {
     closeDatabase();
+    dom.togglePasswordBtn.removeEventListener('click', handleTogglePassword);
+    dom.submitPasswordBtn.removeEventListener('click', handleSubmitPassword);
+    dom.passwordInput.removeEventListener('keydown', handlePasswordKeydown);
+    dom.cancelPasswordBtn.removeEventListener('click', handleCancelPassword);
+    dom.closeDbBtn.removeEventListener('click', closeDatabase);
+    dom.tabGroups.removeEventListener('click', handleTabGroups);
+    dom.tabEntries.removeEventListener('click', handleTabEntries);
+    dom.tabDetails.removeEventListener('click', handleTabDetails);
   };
 }

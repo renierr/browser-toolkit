@@ -1,5 +1,6 @@
 import type * as kdbxweb from 'kdbxweb';
-import { html } from '../../js/utils.ts';
+import { showMessage } from '@js/ui.ts';
+import { html } from '@js/utils.ts';
 
 function escapeHtml(str: string): string {
   return str
@@ -26,7 +27,12 @@ function getField(
 }
 
 function isProtectedValue(val: unknown): val is kdbxweb.ProtectedValue {
-  return typeof (val as any)?.getText === 'function';
+  return (
+    typeof val === 'object' &&
+    val !== null &&
+    'getText' in val &&
+    typeof (val as { getText?: unknown }).getText === 'function'
+  );
 }
 
 function getFieldValue(entry: kdbxweb.KdbxEntry, key: string): string {
@@ -39,6 +45,11 @@ function getFieldValue(entry: kdbxweb.KdbxEntry, key: string): string {
 type GroupSelectHandler = (group: kdbxweb.KdbxGroup) => void;
 type EntrySelectHandler = (entry: kdbxweb.KdbxEntry) => void;
 
+type EntryListHeaderEls = {
+  countEl?: HTMLElement;
+  nameEl?: HTMLElement;
+};
+
 export function renderGroupTree(
   container: HTMLElement,
   db: kdbxweb.Kdbx,
@@ -47,19 +58,21 @@ export function renderGroupTree(
   const defaultGroup = db.getDefaultGroup();
   if (!defaultGroup) {
     container.innerHTML = '<p class="text-sm text-base-content/50 p-2">No groups found</p>';
+    container.onclick = null;
     return;
   }
 
+  const groupById = new Map<string, kdbxweb.KdbxGroup>();
+
   const renderGroup = (group: kdbxweb.KdbxGroup, depth: number): string => {
+    groupById.set(group.uuid.id, group);
     const hasChildren = group.groups && group.groups.length > 0;
     const entryCount = group.entries ? group.entries.length : 0;
     const indent = depth * 12;
 
     let childHtml = '';
     if (hasChildren) {
-      childHtml = group.groups
-        .map((child: kdbxweb.KdbxGroup) => renderGroup(child, depth + 1))
-        .join('');
+      childHtml = group.groups.map((child) => renderGroup(child, depth + 1)).join('');
     }
 
     return html`
@@ -81,37 +94,49 @@ export function renderGroupTree(
   };
 
   container.innerHTML = renderGroup(defaultGroup, 0);
+  container.onclick = (event: MouseEvent) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
 
-  container.querySelectorAll('.group-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const groupId = btn.getAttribute('data-group-id');
-      if (!groupId) return;
-      const group = db.getGroup(groupId);
-      if (group) onGroupSelect(group);
-    });
-  });
+    const button = target.closest<HTMLButtonElement>('.group-btn');
+    if (!button) return;
+
+    const groupId = button.getAttribute('data-group-id');
+    if (!groupId) return;
+
+    const group = groupById.get(groupId);
+    if (group) onGroupSelect(group);
+  };
 }
 
 export function renderEntryList(
   container: HTMLElement,
   group: kdbxweb.KdbxGroup,
   groupName: string,
-  onEntrySelect: EntrySelectHandler
+  onEntrySelect: EntrySelectHandler,
+  headerEls?: EntryListHeaderEls
 ): void {
   const entries = group.entries || [];
-  const countEl = document.getElementById('entry-count');
-  const nameEl = document.getElementById('entry-group-name');
+  const countEl = headerEls?.countEl;
+  const nameEl = headerEls?.nameEl;
+
   if (countEl) countEl.textContent = String(entries.length);
   if (nameEl) nameEl.textContent = groupName;
 
   if (entries.length === 0) {
     container.innerHTML =
       '<p class="text-sm text-base-content/50 p-4 text-center">No entries in this group</p>';
+    container.onclick = null;
     return;
   }
 
+  const entryById = new Map<string, kdbxweb.KdbxEntry>();
+  entries.forEach((entry) => {
+    entryById.set(entry.uuid.id, entry);
+  });
+
   container.innerHTML = entries
-    .map((entry: kdbxweb.KdbxEntry) => {
+    .map((entry) => {
       const title = getFieldValue(entry, 'Title') || 'Untitled';
       const username = getFieldValue(entry, 'UserName');
       const url = getFieldValue(entry, 'URL');
@@ -146,18 +171,23 @@ export function renderEntryList(
     })
     .join('');
 
-  container.querySelectorAll('.entry-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const uuid = btn.getAttribute('data-entry-uuid');
-      const entry = entries.find((e: kdbxweb.KdbxEntry) => e.uuid.id === uuid);
-      if (entry) onEntrySelect(entry);
-    });
-  });
+  container.onclick = (event: MouseEvent) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const button = target.closest<HTMLButtonElement>('.entry-btn');
+    if (!button) return;
+
+    const uuid = button.getAttribute('data-entry-uuid');
+    if (!uuid) return;
+
+    const entry = entryById.get(uuid);
+    if (entry) onEntrySelect(entry);
+  };
 }
 
 export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEntry): void {
   const fields: { key: string; value: string; protected: boolean }[] = [];
-
   const standardFields = ['Title', 'UserName', 'Password', 'URL', 'Notes'];
   const fieldLabels: Record<string, string> = {
     Title: 'Title',
@@ -169,25 +199,25 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
 
   standardFields.forEach((key) => {
     const val = getField(entry, key);
-    if (val !== undefined) {
-      const prot = isProtectedValue(val);
-      fields.push({
-        key: fieldLabels[key] || key,
-        value: prot ? val.getText() : String(val),
-        protected: prot,
-      });
-    }
+    if (val === undefined) return;
+
+    const protectedValue = isProtectedValue(val);
+    fields.push({
+      key: fieldLabels[key] || key,
+      value: protectedValue ? val.getText() : String(val),
+      protected: protectedValue,
+    });
   });
 
   entry.fields.forEach((val, key) => {
-    if (!standardFields.includes(key)) {
-      const prot = isProtectedValue(val);
-      fields.push({
-        key,
-        value: prot ? val.getText() : String(val),
-        protected: prot,
-      });
-    }
+    if (standardFields.includes(key)) return;
+
+    const protectedValue = isProtectedValue(val);
+    fields.push({
+      key,
+      value: protectedValue ? val.getText() : String(val),
+      protected: protectedValue,
+    });
   });
 
   const isExpired =
@@ -235,44 +265,63 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
           (field) => html`
             <div class="field-block">
               <div class="text-xs text-base-content/50 mb-1">${escapeHtml(field.key)}</div>
-              <div class="flex items-center gap-1">
-                ${field.key === 'Password' || field.protected
-                  ? html`
-                      <input
-                        type="password"
-                        readonly
-                        value="${escapeHtml(field.value)}"
-                        class="input input-bordered input-sm flex-1 font-mono"
-                        data-field-value
-                      />
-                      <button
-                        class="btn btn-ghost btn-xs btn-square"
-                        data-toggle-reveal
-                        title="Reveal"
-                      >
-                        <i data-lucide="eye" class="w-4 h-4"></i>
-                      </button>
-                    `
-                  : field.key === 'URL'
+              <div class="grid grid-cols-[minmax(0,1fr)_auto] gap-2 items-start">
+                <div class="min-w-0">
+                  ${field.key === 'Password' || field.protected
                     ? html`
-                        <a
-                          href="${escapeHtml(
-                            field.value.startsWith('http') ? field.value : 'https://' + field.value
-                          )}"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          class="link link-primary text-sm flex-1 truncate"
-                          >${escapeHtml(field.value)}</a
-                        >
+                        <input
+                          type="password"
+                          readonly
+                          value="${escapeHtml(field.value)}"
+                          class="input input-bordered input-sm w-full min-w-0 font-mono"
+                          data-field-value
+                        />
                       `
-                    : html`
-                        <div class="text-sm flex-1 wrap-break-word whitespace-pre-wrap">
-                          ${escapeHtml(field.value)}
-                        </div>
-                      `}
-                <button class="btn btn-ghost btn-xs btn-square" data-copy title="Copy">
-                  <i data-lucide="copy" class="w-4 h-4"></i>
-                </button>
+                    : field.key === 'URL'
+                      ? html`
+                          <div
+                            class="w-full min-w-0 rounded-md border border-base-300 px-3 py-2 text-sm"
+                          >
+                            <a
+                              href="${escapeHtml(
+                                field.value.startsWith('http')
+                                  ? field.value
+                                  : 'https://' + field.value
+                              )}"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              class="link link-primary block min-w-0 truncate"
+                              >${escapeHtml(field.value)}</a
+                            >
+                          </div>
+                        `
+                      : html`
+                          <div
+                            class="w-full min-w-0 rounded-md border border-base-300 px-3 py-2 text-sm wrap-break-word whitespace-pre-wrap"
+                          >${escapeHtml(field.value)}</div>
+                        `}
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  ${field.key === 'Password' || field.protected
+                    ? html`
+                        <button
+                          class="btn btn-ghost btn-xs btn-square"
+                          data-toggle-reveal
+                          title="Reveal"
+                        >
+                          <i data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                      `
+                    : ''}
+                  <button
+                    class="btn btn-ghost btn-xs btn-square"
+                    data-copy
+                    data-copy-value="${escapeHtml(field.value)}"
+                    title="Copy"
+                  >
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                  </button>
+                </div>
               </div>
             </div>
           `
@@ -281,27 +330,35 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
     </div>
   `;
 
-  container.querySelectorAll('[data-toggle-reveal]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const input = btn.parentElement?.querySelector('input');
+  container.onclick = async (event: MouseEvent) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const revealButton = target.closest<HTMLButtonElement>('[data-toggle-reveal]');
+    if (revealButton) {
+      const input = revealButton.parentElement?.querySelector<HTMLInputElement>('input');
       if (input) {
         input.type = input.type === 'password' ? 'text' : 'password';
       }
-    });
-  });
+      return;
+    }
 
-  container.querySelectorAll('[data-copy]').forEach((btn) => {
-    btn.addEventListener('click', async () => {
-      const valueEl = btn.parentElement?.querySelector('[data-field-value]');
-      if (valueEl && 'value' in valueEl) {
-        try {
-          await navigator.clipboard.writeText(String((valueEl as HTMLInputElement).value));
-        } catch {
-          // clipboard not available
-        }
-      }
-    });
-  });
+    const copyButton = target.closest<HTMLButtonElement>('[data-copy]');
+    if (!copyButton) return;
+
+    if (!navigator.clipboard?.writeText) {
+      showMessage('Clipboard is not available in this browser.', { type: 'warning' });
+      return;
+    }
+
+    const copyValue = copyButton.getAttribute('data-copy-value') || '';
+    try {
+      await navigator.clipboard.writeText(copyValue);
+    } catch (error) {
+      console.error('[KeePass Viewer] Failed to copy field value', error);
+      showMessage('Failed to copy value to clipboard.', { type: 'alert' });
+    }
+  };
 }
 
 export function showPasswordDialog(modal: HTMLDialogElement): void {
