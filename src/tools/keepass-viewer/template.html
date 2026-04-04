@@ -37,61 +37,123 @@
   <div id="active-container" class="hidden flex-1 flex flex-col h-full overflow-hidden">
     <!-- Header -->
     <header
-      class="bg-base-200 border-b border-base-300 p-4 flex justify-between items-center shrink-0"
+      class="bg-base-200 border-b border-base-300 p-3 flex justify-between items-center shrink-0"
     >
-      <div class="flex items-center gap-3">
-        <i data-lucide="lock" class="w-5 h-5"></i>
-        <div>
-          <h2 class="text-xl font-bold" id="db-filename">Database</h2>
-          <span class="text-sm text-base-content/70" id="db-info"></span>
+      <div class="flex items-center gap-2 min-w-0">
+        <i data-lucide="lock" class="w-5 h-5 shrink-0"></i>
+        <div class="min-w-0">
+          <h2 class="text-lg font-bold truncate" id="db-filename">Database</h2>
+          <span class="text-xs text-base-content/70" id="db-info"></span>
         </div>
       </div>
-      <button id="close-db-btn" class="btn btn-ghost btn-sm">
-        <i data-lucide="x" class="w-4 h-4 mr-2"></i> Close Database
+      <button id="close-db-btn" class="btn btn-ghost btn-sm btn-square shrink-0">
+        <i data-lucide="x" class="w-4 h-4"></i>
       </button>
     </header>
 
-    <!-- 3-Panel Layout -->
-    <div class="flex flex-1 overflow-hidden">
-      <!-- Left Panel: Group Tree -->
+    <!-- Mobile Tabs -->
+    <div id="mobile-tabs" class="lg:hidden flex border-b border-base-300 bg-base-100 shrink-0">
+      <button
+        id="tab-groups"
+        class="mobile-tab flex-1 py-2.5 px-3 text-sm font-medium border-b-2 border-primary text-primary flex items-center justify-center gap-1.5"
+        data-tab="groups"
+      >
+        <i data-lucide="folder" class="w-4 h-4"></i>
+        <span>Groups</span>
+      </button>
+      <button
+        id="tab-entries"
+        class="mobile-tab flex-1 py-2.5 px-3 text-sm font-medium border-b-2 border-transparent text-base-content/50 flex items-center justify-center gap-1.5"
+        data-tab="entries"
+      >
+        <i data-lucide="key" class="w-4 h-4"></i>
+        <span>Entries</span>
+      </button>
+      <button
+        id="tab-details"
+        class="mobile-tab flex-1 py-2.5 px-3 text-sm font-medium border-b-2 border-transparent text-base-content/50 flex items-center justify-center gap-1.5"
+        data-tab="details"
+      >
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        <span>Details</span>
+      </button>
+    </div>
+
+    <!-- Desktop 3-Panel Layout -->
+    <div class="hidden lg:flex flex-1 overflow-hidden">
+      <!-- Group Panel -->
       <aside
-        id="group-panel"
         class="w-64 bg-base-100 border-r border-base-300 flex flex-col shrink-0 overflow-hidden"
       >
-        <div class="p-3 border-b border-base-300 bg-base-200/50">
-          <span class="font-semibold">Groups</span>
+        <div class="p-3 border-b border-base-300 bg-base-200/50 shrink-0">
+          <span class="font-semibold text-sm">Groups</span>
         </div>
-        <div id="group-tree" class="flex-1 overflow-y-auto p-2">
-          <!-- Group tree injected here -->
-        </div>
+        <div id="group-tree" class="flex-1 overflow-y-auto p-2"></div>
       </aside>
 
-      <!-- Middle Panel: Entry List -->
+      <!-- Entry Panel -->
       <section
-        id="entry-panel"
         class="w-80 bg-base-100 border-r border-base-300 flex flex-col shrink-0 overflow-hidden"
       >
-        <div class="p-3 border-b border-base-300 bg-base-200/50 flex justify-between items-center">
-          <span class="font-semibold" id="entry-group-name">Entries</span>
-          <span class="text-sm text-base-content/70" id="entry-count">0</span>
+        <div
+          class="p-3 border-b border-base-300 bg-base-200/50 flex justify-between items-center shrink-0"
+        >
+          <span class="font-semibold text-sm truncate mr-2" id="entry-group-name">Entries</span>
+          <span class="text-xs text-base-content/60 badge badge-sm" id="entry-count">0</span>
         </div>
-        <div id="entry-list" class="flex-1 overflow-y-auto">
-          <!-- Entry list injected here -->
-        </div>
+        <div id="entry-list" class="flex-1 overflow-y-auto"></div>
       </section>
 
-      <!-- Right Panel: Entry Detail -->
-      <main id="detail-panel" class="flex-1 bg-base-100 flex flex-col overflow-hidden">
+      <!-- Detail Panel -->
+      <main class="flex-1 bg-base-100 flex flex-col overflow-hidden">
         <div id="detail-empty" class="flex-1 flex items-center justify-center text-base-content/50">
           Select an entry to view details
         </div>
         <div id="detail-content" class="hidden flex-1 flex flex-col overflow-hidden">
-          <div class="p-4 border-b border-base-300 bg-base-200/50">
-            <h3 class="text-lg font-bold" id="detail-title">Entry Title</h3>
+          <div class="p-4 border-b border-base-300 bg-base-200/50 shrink-0">
+            <h3 class="text-lg font-bold truncate" id="detail-title">Entry Title</h3>
           </div>
-          <div id="detail-fields" class="flex-1 overflow-y-auto p-4 space-y-3">
-            <!-- Fields injected here -->
+          <div id="detail-fields" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Mobile Single Panel (switched by tabs) -->
+    <div class="lg:hidden flex flex-col flex-1 overflow-hidden">
+      <!-- Group Panel -->
+      <aside id="group-panel" class="flex flex-col flex-1 overflow-hidden hidden">
+        <div class="p-3 border-b border-base-300 bg-base-200/50 shrink-0">
+          <span class="font-semibold text-sm">Groups</span>
+        </div>
+        <div id="group-tree-mobile" class="flex-1 overflow-y-auto p-2"></div>
+      </aside>
+
+      <!-- Entry Panel -->
+      <section id="entry-panel" class="flex flex-col flex-1 overflow-hidden hidden">
+        <div
+          class="p-3 border-b border-base-300 bg-base-200/50 flex justify-between items-center shrink-0"
+        >
+          <span class="font-semibold text-sm truncate mr-2" id="entry-group-name-mobile"
+            >Entries</span
+          >
+          <span class="text-xs text-base-content/60 badge badge-sm" id="entry-count-mobile">0</span>
+        </div>
+        <div id="entry-list-mobile" class="flex-1 overflow-y-auto"></div>
+      </section>
+
+      <!-- Detail Panel -->
+      <main id="detail-panel" class="flex flex-col flex-1 overflow-hidden hidden">
+        <div
+          id="detail-empty-mobile"
+          class="flex-1 flex items-center justify-center text-base-content/50"
+        >
+          Select an entry to view details
+        </div>
+        <div id="detail-content-mobile" class="hidden flex-1 flex flex-col overflow-hidden">
+          <div class="p-4 border-b border-base-300 bg-base-200/50 shrink-0">
+            <h3 class="text-lg font-bold truncate" id="detail-title-mobile">Entry Title</h3>
           </div>
+          <div id="detail-fields-mobile" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
         </div>
       </main>
     </div>
@@ -101,7 +163,7 @@
   <dialog id="password-modal" class="modal">
     <div class="modal-box">
       <h3 class="text-lg font-bold">Enter Password</h3>
-      <p class="text-sm text-base-content/70 mt-1" id="password-filename">database.kdbx</p>
+      <p class="text-sm text-base-content/70 mt-1 truncate" id="password-filename">database.kdbx</p>
       <div class="form-control mt-4">
         <label class="label"><span class="label-text">Password</span></label>
         <div class="relative">

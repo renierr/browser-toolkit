@@ -340,3 +340,45 @@ export function togglePasswordVisibility(input: HTMLInputElement, btn: HTMLButto
     ? '<i data-lucide="eye-off" class="w-4 h-4"></i>'
     : '<i data-lucide="eye" class="w-4 h-4"></i>';
 }
+
+export function switchMobileTab(
+  activeTab: 'groups' | 'entries' | 'details',
+  tabs: {
+    tabGroups: HTMLButtonElement;
+    tabEntries: HTMLButtonElement;
+    tabDetails: HTMLButtonElement;
+    groupPanel: HTMLElement;
+    entryPanel: HTMLElement;
+    detailPanel: HTMLElement;
+  }
+): void {
+  const tabBtns = [tabs.tabGroups, tabs.tabEntries, tabs.tabDetails];
+  const panels = [tabs.groupPanel, tabs.entryPanel, tabs.detailPanel];
+
+  tabBtns.forEach((btn) => {
+    btn.classList.remove('border-primary', 'text-primary');
+    btn.classList.add('border-transparent', 'text-base-content/50');
+  });
+  panels.forEach((panel) => {
+    panel.classList.add('hidden');
+    panel.style.display = '';
+  });
+
+  const activeBtn =
+    activeTab === 'groups'
+      ? tabs.tabGroups
+      : activeTab === 'entries'
+        ? tabs.tabEntries
+        : tabs.tabDetails;
+  activeBtn.classList.remove('border-transparent', 'text-base-content/50');
+  activeBtn.classList.add('border-primary', 'text-primary');
+
+  const activePanel =
+    activeTab === 'groups'
+      ? tabs.groupPanel
+      : activeTab === 'entries'
+        ? tabs.entryPanel
+        : tabs.detailPanel;
+  activePanel.classList.remove('hidden');
+  activePanel.style.display = 'flex';
+}

@@ -3,7 +3,7 @@ import { setupFileDropzone } from '../../js/file-utils.ts';
 import { showMessage } from '../../js/ui.ts';
 import * as kdbxweb from 'kdbxweb';
 import argon2 from 'argon2-browser';
-import { initDOM } from './dom.ts';
+import { initDOM, type DOMEls } from './dom.ts';
 import {
   renderGroupTree,
   renderEntryList,
@@ -15,6 +15,7 @@ import {
   showPasswordLoading,
   hidePasswordLoading,
   togglePasswordVisibility,
+  switchMobileTab,
 } from './ui.ts';
 
 let argon2Initialized = false;
@@ -62,9 +63,9 @@ async function loadDatabase(
 }
 
 export default function init(payload?: SharedFilesPayload): (() => void) | void {
-  const dom = initDOM('keepass-viewer-app');
-  if (!dom) return;
-  const e = dom;
+  const resolved = initDOM('keepass-viewer-app');
+  if (!resolved) return;
+  const dom: DOMEls = resolved;
 
   setupArgon2();
 
@@ -77,57 +78,109 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
     pendingFile = null;
     pendingFileName = '';
 
-    e.activeContainer.classList.add('hidden');
-    e.introContainer.classList.remove('hidden');
-    e.detailEmpty.classList.remove('hidden');
-    e.detailContent.classList.add('hidden');
-    e.groupTree.innerHTML = '';
-    e.entryList.innerHTML = '';
+    dom.activeContainer.classList.add('hidden');
+    dom.introContainer.classList.remove('hidden');
+    dom.detailEmpty.classList.remove('hidden');
+    dom.detailContent.classList.add('hidden');
+    dom.detailEmptyMobile.classList.remove('hidden');
+    dom.detailContentMobile.classList.add('hidden');
+    dom.groupTree.innerHTML = '';
+    dom.groupTreeMobile.innerHTML = '';
+    dom.entryList.innerHTML = '';
+    dom.entryListMobile.innerHTML = '';
+  }
+
+  function onGroupSelect(group: kdbxweb.KdbxGroup): void {
+    renderEntryList(dom.entryList, group, group.name || 'Root', onEntrySelect);
+    renderEntryList(dom.entryListMobile, group, group.name || 'Root', onEntrySelect);
+    if (window.innerWidth < 1024) {
+      switchMobileTab('entries', {
+        tabGroups: dom.tabGroups,
+        tabEntries: dom.tabEntries,
+        tabDetails: dom.tabDetails,
+        groupPanel: dom.groupPanel,
+        entryPanel: dom.entryPanel,
+        detailPanel: dom.detailPanel,
+      });
+    }
+  }
+
+  function onEntrySelect(entry: kdbxweb.KdbxEntry): void {
+    const titleVal = entry.fields.get('Title');
+    const titleText =
+      titleVal && typeof (titleVal as any).getText === 'function'
+        ? (titleVal as kdbxweb.ProtectedValue).getText()
+        : String(titleVal || 'Untitled');
+
+    dom.detailEmpty.classList.add('hidden');
+    dom.detailContent.classList.remove('hidden');
+    dom.detailTitle.textContent = titleText;
+    renderEntryDetail(dom.detailFields, entry);
+
+    dom.detailEmptyMobile.classList.add('hidden');
+    dom.detailContentMobile.classList.remove('hidden');
+    dom.detailTitleMobile.textContent = titleText;
+    renderEntryDetail(dom.detailFieldsMobile, entry);
+
+    if (window.innerWidth < 1024) {
+      switchMobileTab('details', {
+        tabGroups: dom.tabGroups,
+        tabEntries: dom.tabEntries,
+        tabDetails: dom.tabDetails,
+        groupPanel: dom.groupPanel,
+        entryPanel: dom.entryPanel,
+        detailPanel: dom.detailPanel,
+      });
+    }
   }
 
   async function tryOpenDatabase(password: string, keyFileData?: ArrayBuffer): Promise<boolean> {
     if (!pendingFile) return false;
 
-    showPasswordLoading(e.passwordLoading);
-    hidePasswordError(e.passwordError);
+    showPasswordLoading(dom.passwordLoading);
+    hidePasswordError(dom.passwordError);
 
     try {
       db = await loadDatabase(pendingFile, password, keyFileData);
 
-      hidePasswordDialog(e.passwordModal);
-      hidePasswordLoading(e.passwordLoading);
+      hidePasswordDialog(dom.passwordModal);
+      hidePasswordLoading(dom.passwordLoading);
 
-      e.introContainer.classList.add('hidden');
-      e.activeContainer.classList.remove('hidden');
+      dom.introContainer.classList.add('hidden');
+      dom.activeContainer.classList.remove('hidden');
 
-      e.dbFilename.textContent = pendingFileName;
+      dom.dbFilename.textContent = pendingFileName;
       const defaultGroup = db.getDefaultGroup();
       const entryCount = Array.from(defaultGroup.allEntries()).length;
       const groupCount = Array.from(defaultGroup.allGroups()).length;
-      e.dbInfo.textContent = `${groupCount} groups, ${entryCount} entries`;
+      const info = `${groupCount} groups, ${entryCount} entries`;
+      dom.dbInfo.textContent = info;
 
-      renderGroupTree(e.groupTree, db, (group: kdbxweb.KdbxGroup) => {
-        renderEntryList(e.entryList, group, group.name || 'Root', (entry: kdbxweb.KdbxEntry) => {
-          e.detailEmpty.classList.add('hidden');
-          e.detailContent.classList.remove('hidden');
-          const titleVal = entry.fields.get('Title');
-          e.detailTitle.textContent =
-            titleVal && typeof (titleVal as any).getText === 'function'
-              ? (titleVal as kdbxweb.ProtectedValue).getText()
-              : String(titleVal || 'Untitled');
-          renderEntryDetail(e.detailFields, entry);
-        });
+      renderGroupTree(dom.groupTree, db, onGroupSelect);
+      renderGroupTree(dom.groupTreeMobile, db, onGroupSelect);
+
+      switchMobileTab('groups', {
+        tabGroups: dom.tabGroups,
+        tabEntries: dom.tabEntries,
+        tabDetails: dom.tabDetails,
+        groupPanel: dom.groupPanel,
+        entryPanel: dom.entryPanel,
+        detailPanel: dom.detailPanel,
       });
 
       return true;
     } catch (error) {
-      hidePasswordLoading(e.passwordLoading);
+      hidePasswordLoading(dom.passwordLoading);
       const message = error instanceof Error ? error.message : 'Unknown error';
       if (message.includes('BadSignature') || message.includes('invalid')) {
-        showPasswordError('Incorrect password or key file', e.passwordError, e.passwordErrorText);
+        showPasswordError(
+          'Incorrect password or key file',
+          dom.passwordError,
+          dom.passwordErrorText
+        );
       } else {
         showMessage(`Failed to open database: ${message}`, { type: 'alert' });
-        hidePasswordDialog(e.passwordModal);
+        hidePasswordDialog(dom.passwordModal);
       }
       return false;
     }
@@ -139,10 +192,10 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
     pendingFileName = file.name;
     try {
       pendingFile = await file.arrayBuffer();
-      showPasswordDialog(e.passwordModal);
-      e.passwordFilename.textContent = pendingFileName;
-      e.passwordInput.value = '';
-      e.passwordInput.focus();
+      showPasswordDialog(dom.passwordModal);
+      dom.passwordFilename.textContent = pendingFileName;
+      dom.passwordInput.value = '';
+      dom.passwordInput.focus();
     } catch {
       showMessage('Failed to read file', { type: 'alert' });
     }
@@ -154,21 +207,21 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
       pendingFileName = kdbxFile.name;
       kdbxFile.arrayBuffer().then((buf) => {
         pendingFile = buf;
-        showPasswordDialog(e.passwordModal);
-        e.passwordFilename.textContent = pendingFileName;
-        e.passwordInput.value = '';
-        e.passwordInput.focus();
+        showPasswordDialog(dom.passwordModal);
+        dom.passwordFilename.textContent = pendingFileName;
+        dom.passwordInput.value = '';
+        dom.passwordInput.focus();
       });
     }
   }
 
-  e.togglePasswordBtn.addEventListener('click', () => {
-    togglePasswordVisibility(e.passwordInput, e.togglePasswordBtn);
+  dom.togglePasswordBtn.addEventListener('click', () => {
+    togglePasswordVisibility(dom.passwordInput, dom.togglePasswordBtn);
   });
 
-  e.submitPasswordBtn.addEventListener('click', async () => {
-    const password = e.passwordInput.value;
-    const keyFile = e.keyfileInput.files?.[0];
+  dom.submitPasswordBtn.addEventListener('click', async () => {
+    const password = dom.passwordInput.value;
+    const keyFile = dom.keyfileInput.files?.[0];
     let keyFileData: ArrayBuffer | undefined;
     if (keyFile) {
       keyFileData = await keyFile.arrayBuffer();
@@ -176,20 +229,53 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
     await tryOpenDatabase(password, keyFileData);
   });
 
-  e.passwordInput.addEventListener('keydown', async (ev: KeyboardEvent) => {
+  dom.passwordInput.addEventListener('keydown', async (ev: KeyboardEvent) => {
     if (ev.key === 'Enter') {
       ev.preventDefault();
-      e.submitPasswordBtn.click();
+      dom.submitPasswordBtn.click();
     }
   });
 
-  e.cancelPasswordBtn.addEventListener('click', () => {
-    hidePasswordDialog(e.passwordModal);
+  dom.cancelPasswordBtn.addEventListener('click', () => {
+    hidePasswordDialog(dom.passwordModal);
     pendingFile = null;
     pendingFileName = '';
   });
 
-  e.closeDbBtn.addEventListener('click', closeDatabase);
+  dom.closeDbBtn.addEventListener('click', closeDatabase);
+
+  dom.tabGroups.addEventListener('click', () => {
+    switchMobileTab('groups', {
+      tabGroups: dom.tabGroups,
+      tabEntries: dom.tabEntries,
+      tabDetails: dom.tabDetails,
+      groupPanel: dom.groupPanel,
+      entryPanel: dom.entryPanel,
+      detailPanel: dom.detailPanel,
+    });
+  });
+
+  dom.tabEntries.addEventListener('click', () => {
+    switchMobileTab('entries', {
+      tabGroups: dom.tabGroups,
+      tabEntries: dom.tabEntries,
+      tabDetails: dom.tabDetails,
+      groupPanel: dom.groupPanel,
+      entryPanel: dom.entryPanel,
+      detailPanel: dom.detailPanel,
+    });
+  });
+
+  dom.tabDetails.addEventListener('click', () => {
+    switchMobileTab('details', {
+      tabGroups: dom.tabGroups,
+      tabEntries: dom.tabEntries,
+      tabDetails: dom.tabDetails,
+      groupPanel: dom.groupPanel,
+      entryPanel: dom.entryPanel,
+      detailPanel: dom.detailPanel,
+    });
+  });
 
   return () => {
     closeDatabase();

@@ -6,15 +6,29 @@ export interface DOMEls {
   dbFilename: HTMLElement;
   dbInfo: HTMLElement;
   closeDbBtn: HTMLButtonElement;
+  mobileTabs: HTMLElement;
+  tabGroups: HTMLButtonElement;
+  tabEntries: HTMLButtonElement;
+  tabDetails: HTMLButtonElement;
+  groupPanel: HTMLElement;
   groupTree: HTMLElement;
+  groupTreeMobile: HTMLElement;
   entryPanel: HTMLElement;
   entryGroupName: HTMLElement;
+  entryGroupNameMobile: HTMLElement;
   entryCount: HTMLElement;
+  entryCountMobile: HTMLElement;
   entryList: HTMLElement;
+  entryListMobile: HTMLElement;
   detailEmpty: HTMLElement;
+  detailEmptyMobile: HTMLElement;
   detailContent: HTMLElement;
+  detailContentMobile: HTMLElement;
   detailTitle: HTMLElement;
+  detailTitleMobile: HTMLElement;
   detailFields: HTMLElement;
+  detailFieldsMobile: HTMLElement;
+  detailPanel: HTMLElement;
   passwordModal: HTMLDialogElement;
   passwordFilename: HTMLElement;
   passwordInput: HTMLInputElement;
@@ -44,15 +58,29 @@ export function initDOM(containerId: string): DOMEls | false {
     dbFilename: $('#db-filename'),
     dbInfo: $('#db-info'),
     closeDbBtn: $btn('#close-db-btn'),
+    mobileTabs: $('#mobile-tabs'),
+    tabGroups: $btn('#tab-groups'),
+    tabEntries: $btn('#tab-entries'),
+    tabDetails: $btn('#tab-details'),
+    groupPanel: $('#group-panel'),
     groupTree: $('#group-tree'),
+    groupTreeMobile: $('#group-tree-mobile'),
     entryPanel: $('#entry-panel'),
     entryGroupName: $('#entry-group-name'),
+    entryGroupNameMobile: $('#entry-group-name-mobile'),
     entryCount: $('#entry-count'),
+    entryCountMobile: $('#entry-count-mobile'),
     entryList: $('#entry-list'),
+    entryListMobile: $('#entry-list-mobile'),
     detailEmpty: $('#detail-empty'),
+    detailEmptyMobile: $('#detail-empty-mobile'),
     detailContent: $('#detail-content'),
+    detailContentMobile: $('#detail-content-mobile'),
     detailTitle: $('#detail-title'),
+    detailTitleMobile: $('#detail-title-mobile'),
     detailFields: $('#detail-fields'),
+    detailFieldsMobile: $('#detail-fields-mobile'),
+    detailPanel: $('#detail-panel'),
     passwordModal: $dialog('#password-modal'),
     passwordFilename: $('#password-filename'),
     passwordInput: $input('#password-input'),
