@@ -206,10 +206,12 @@ background-color: color-mix(in srgb, var(--color-primary) 20%, transparent);
 
 ## Standard Dropzone Pattern
 
+Keep this baseline class stack consistent with existing tools unless doing a deliberate migration.
+
 ```html
 <div
   id="dropzone"
-  class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 border-base-300 transition-colors p-3 min-h-40 group hover:bg-base-300"
+  class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40 group hover:bg-base-300"
 >
   <div class="flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105">
     <!-- icon + text -->

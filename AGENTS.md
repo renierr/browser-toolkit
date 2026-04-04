@@ -51,6 +51,7 @@ For extended examples and walkthroughs, see:
   - `src/tools/<tool-id>/template.html`
   - `src/tools/<tool-id>/index.ts` (only if JS is needed)
 - Use DaisyUI/Tailwind tokens (`bg-base-100`, `text-base-content`, `border-base-300`) before custom dark-mode classes.
+- Keep shared dropzone classes aligned with existing tool templates unless intentionally refactoring the whole pattern.
 - Use pointer events for input handling when interaction is involved.
 - Check browser API availability (`navigator.clipboard`, `navigator.share`, etc.) before use.
 - For WASM usage, load lazily and clean up resources.
