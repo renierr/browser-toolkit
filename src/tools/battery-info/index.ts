@@ -126,10 +126,6 @@ function updateBatteryUI(battery: BatteryManager): void {
       statTime.textContent = timeText;
       statTimeDesc.textContent = 'Time remaining';
     }
-
-    if ((window as unknown as { lucide?: { createIcons?: () => void } }).lucide) {
-      (window as unknown as { lucide: { createIcons: () => void } }).lucide.createIcons();
-    }
   }
 }
 

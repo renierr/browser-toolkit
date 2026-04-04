@@ -223,8 +223,5 @@ export class UIManager {
     div.appendChild(info);
     div.appendChild(actions);
     this.historyList.prepend(div);
-
-    // @ts-ignore
-    if (window.lucide) window.lucide.createIcons();
   }
 }

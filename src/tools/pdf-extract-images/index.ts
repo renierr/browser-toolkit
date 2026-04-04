@@ -271,9 +271,6 @@ function renderImages() {
     wrapper.appendChild(actionBar);
     list.appendChild(wrapper);
   });
-
-  // @ts-ignore
-  if (window.lucide) window.lucide.createIcons();
 }
 
 function openLightbox(url: string, name: string) {
@@ -317,9 +314,5 @@ function openLightbox(url: string, name: string) {
   document.body.appendChild(overlay);
   document.getElementById('close-lightbox')?.addEventListener('click', close);
   document.addEventListener('keydown', handleEsc);
-
   document.getElementById('close-lightbox')?.focus();
-
-  // @ts-ignore
-  if (window.lucide) window.lucide.createIcons();
 }

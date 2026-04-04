@@ -151,13 +151,6 @@ export function init() {
 
       // Update battery icon based on level
       batteryIcon.setAttribute('data-lucide', getBatteryIcon(data.batteryLevel));
-      // @ts-ignore - Lucide is available globally
-      if ((window as any).lucide)
-        (window as any).lucide.createIcons({
-          attrs: { class: 'size-4' },
-          nameAttr: 'data-lucide',
-          icons: [batteryIcon],
-        });
     }
   };
 
