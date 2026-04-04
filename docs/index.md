@@ -159,6 +159,12 @@ Rule of thumb:
 - Listeners on elements that get replaced with the tool DOM are usually fine.
 - Anything attached to `document` / `window` should be cleaned up.
 
+Lifecycle note:
+
+- Routing lifecycle cleanup/cancellation is centralized in `src/js/render.ts`.
+- `render.ts` manages tool cleanup (`currentToolCleanup`), settings cleanup (`settingsCleanup`), and pending init cancellation (`cancelPendingInit`) during navigation.
+- Tool scripts should return cleanup from `init()` and let the renderer orchestrate lifecycle transitions.
+
 ### 4) Run it
 
 Start the dev server and open the app:

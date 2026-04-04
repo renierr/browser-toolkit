@@ -49,6 +49,15 @@ pnpm format
 4. Optional shared files are passed when configured.
 5. Cleanup runs on navigation away.
 
+## Project Patterns
+
+- App bootstrap and tool discovery live in `src/script.ts`.
+- Tools are discovered lazily via `import.meta.glob(...)` (`config.json`, `template.html`, `index.ts`).
+- Prefer the `html` tagged template from `src/js/utils.ts` for composing HTML strings.
+- Prefer `getSettings(toolId).bind(container)` from `src/js/settings.ts` for persisted form controls.
+- Tool lifecycle cleanup/cancellation is orchestrated in `src/js/render.ts` (`currentToolCleanup`, `settingsCleanup`, `cancelPendingInit`).
+- Do not reimplement your own global navigation lifecycle inside tools; return cleanup from `init()` instead.
+
 ## Tool Entry Contract
 
 ```ts
