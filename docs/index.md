@@ -2,7 +2,7 @@
 
 ![Preview](readme-preview.png)
 
-Minimalistic, lightning-fast tool collection  
+Minimal, lightning-fast tool collection  
 Vite + TypeScript + Tailwind – **no React, no framework**
 
 ## Commands
@@ -13,11 +13,11 @@ pnpm dev              # Start Vite dev server
 pnpm preview         # Preview production build on port 5000
 
 # Build & Type Check
-pnpm build            # Run tsc (type check) + Vite build
+pnpm build            # Production build (Vite build)
 pnpm tsc             # Type check only (tsc --noEmit)
 
 # Formatting
-pnpm format          # Format all source files with Prettier
+pnpm format          # Format all source files with Prettier (avoid by default for focused edits)
 pnpm format:check    # Check formatting without writing
 
 # Utilities
@@ -82,7 +82,7 @@ This is the tool’s UI. Keep it small and composable (cards, inputs, buttons).
 Practical tips:
 
 - Give your tool a single root container so it’s easy to render/replace.
-- Prefer semantic HTML (`label`, `input`, `button`)—it improves accessibility quickly.
+- Keep IDs and selectors scoped to your tool root where possible.
 
 ### 3) Add behavior in `index.ts` (optional)
 
@@ -101,17 +101,14 @@ Keep it defensive:
 
 **Export style**
 
-Your tool entry can be exported either as a default export **or** as a named `init` export:
+Use a default `init()` export for tool entries:
 
 ```ts
-// Default export
-export default function init() {
+export default function init(): void | (() => void) {
   // ...
-}
-
-// Named export
-export function init() {
-  // ...
+  return () => {
+    // cleanup
+  };
 }
 ```
 
@@ -120,6 +117,8 @@ export function init() {
 Tools can be opened/closed via routing, so your `index.ts` may run multiple times.
 If you attach any **global** listeners (e.g. `document.addEventListener`, `window.addEventListener`), timers (`setInterval`), observers, etc.,  
 make sure you return a **cleanup function** that removes them.
+
+Prefer listeners on tool-local container elements first. Use global listeners only when there is no practical local alternative.
 
 ```ts
 export default function init() {
@@ -145,7 +144,7 @@ Rule of thumb:
 Start the dev server and open the app:
 
 ```bash
-pnpm run dev
+pnpm dev
 ```
 
 Your tool should appear automatically on the overview page.
@@ -167,7 +166,7 @@ Each tool can declare its own dependencies by adding a `package.json` inside its
 This is supported by the project’s `pnpm-workspace.yaml` setup.
 
 **Example:**  
-The tool `example-package` in this project add its own dependencies:  
+The tool `example-package` in this project adds its own dependencies:  
 _(demo purpose only with a lightweight dependency)_
 
 `// src/tools/example-package/package.json`
@@ -182,8 +181,9 @@ _(demo purpose only with a lightweight dependency)_
 }
 ```
 
-- Run pnpm install at the project root to install all tool dependencies.
+- Run `pnpm install` at the project root to install all tool dependencies.
 - Each tool’s dependencies are isolated and won’t affect others.
+- Avoid adding dependencies unless needed. Prefer shared utilities in `src/js/*` first.
 
 > Note:
 > This allows tools to use different libraries or versions as needed,
@@ -236,7 +236,8 @@ which can return a cleanup function.
 
 ## Share Target for Tools (PWA)
 
-Tools can register as **share targets** to receive files shared from other apps (e.g., via the Android share menu or "Open with" on desktop). When a file is shared to the PWA, the app automatically routes to the appropriate tool based on the file's MIME type.
+Tools can register as **share targets** to receive files shared from other apps (for example via the Android share menu or "Open with" on desktop).
+When a file is shared to the PWA, the app routes to the appropriate tool based on MIME type.
 
 ### How to enable share target for a tool
 
@@ -362,21 +363,21 @@ Sections are rendered in the insertion order of `toolSections` first, followed b
 ### Site configuration override
 
 The default configuration lives in `src/config/site.config.template.ts`.  
-To customize the configuration for your project, copy the file to the Name `site.config.ts` and change any configuration values.
-See types in `src/config/site.config.ts` for possible values.
+To customize the configuration for your project, copy it to `src/config/site.config.ts` and change the values you need.
+See `src/config/types.ts` for available configuration fields.
 
 ## Tool Icons (Lucide)
 
 Each tool can optionally define an icon in its `config.json`.
 
-Use the icon id syntax from lucide (lower case with dashes)
+Use icon IDs in Lucide format (lowercase with dashes).
 
 If `icon` is missing or unknown, a default icon is used.
 
 ### Available icon ids
 
-per default all lucide icons are included.
-You can add additional icons registering them at startup (see `src/main.ts`).
+By default, all Lucide icons are included.
+You can register additional icons at startup (see `src/main.ts`).
 
 ### Register custom icons (derived projects)
 
@@ -384,19 +385,21 @@ This template exposes an icon registry so derived projects can add (or override)
 
 1. Import `registerToolIcons` in your entry file (e.g. `src/script.ts`).
 
-2. Import any additional icons you want from `lucide` or any other source follwing the syntax.
+2. Import additional icons from `lucide` (or another compatible source).
 
 3. Register them at once during startup (see `main.ts` hook above).
 
 ```ts
-import { registerToolIcons } from './src/js/tool-icons';
-import { ArrowLeft } from '@lucide/icons';
+import { registerToolIcons } from './js/tool-icons';
+import { ArrowLeft } from 'lucide';
 
 registerToolIcons({
-  ArrowLeft: ArrowLeft,
+  ArrowLeft,
   // add more icons here
 });
 ```
+
+For regular tool code, do not call `createIcons()` manually. Use `data-lucide` in HTML and let the observer render icons.
 
 Now you can reference your new icon IDs from any tool `config.json`:
 
@@ -448,8 +451,8 @@ async function copyToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text);
     return true;
-  } catch {
-    console.warn('Clipboard access denied');
+  } catch (error) {
+    console.error('[Clipboard] Failed to write text:', error);
     return false;
   }
 }
@@ -606,7 +609,7 @@ Most components include sensible focus/hover styles. If you need custom behavior
 
 ### Custom styles
 
-Add your own custom styles to `src/css/styles.css` below the marker comment to avoid conflicts with the template styles on merge.
+Add your own custom styles to `src/css/style.css` below the marker comment to avoid conflicts with template styles on merge.
 
 ---
 
@@ -665,7 +668,7 @@ You can also trigger it manually at any time via the GitHub Actions UI.
 
 ### Ignoring files during sync
 
-To prevent certain files or folders from being overwritten, a `.templatesyncignore` exist in the `.github` directory.  
+To prevent certain files or folders from being overwritten, a `.templatesyncignore` file exists in the `.github` directory.  
 Use glob patterns to specify files to ignore.
 
 ---
