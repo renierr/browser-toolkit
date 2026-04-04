@@ -229,7 +229,48 @@ Tools are navigated via URL hash: `https://example.com/#my-tool` or `/#pdf-viewe
 
 ### Module-Level State
 
-Module-level variables persist across tool navigation. See [Cleanup Pattern](#cleanup-pattern) above — always return cleanup functions from `init()`.
+**STRICT RULE: Do NOT create module-level variables for tool state.** They persist across tool navigation and cause bugs.
+
+**All tool state (DOM refs, data, flags) MUST be declared inside the `init()` function.** The only exception is a module-level flag for one-time global setup (e.g., `let argon2Initialized = false`).
+
+```ts
+// WRONG - module-level state persists across navigation
+let els: DOMEls | null = null;
+let db: Kdbx | null = null;
+let pendingFile: ArrayBuffer | null = null;
+
+export default function init() {
+  els = initDOM('app');
+  // ...
+}
+
+// CORRECT - all state inside init()
+export default function init() {
+  const els = initDOM('app');
+  if (!els) return;
+
+  let db: Kdbx | null = null;
+  let pendingFile: ArrayBuffer | null = null;
+
+  // ... all logic here
+
+  return () => {
+    db = null;
+    pendingFile = null;
+  };
+}
+```
+
+See [Cleanup Pattern](#cleanup-pattern) above — always return cleanup functions from `init()`.
+
+### Lucide Icons
+
+**NEVER manually call `createIcons()` or import `lucide`.** The project has a `MutationObserver` (in `src/js/tool-icons.ts`) that automatically detects and renders any `<i data-lucide="icon-name">` elements added to the DOM.
+
+- **Static HTML in `template.html`**: Just use `<i data-lucide="icon-name">` — handled automatically
+- **Dynamically injected HTML**: Just inject HTML with `data-lucide` attributes — the observer picks them up
+- **Do NOT**: `import { createIcons } from 'lucide'`, `window.lucide.createIcons()`, or any dynamic `createIcons()` call
+- **Exception**: If you need to update an icon that was already rendered (e.g., toggling eye/eye-off), just replace the innerHTML with a new `<i data-lucide="...">` — the observer will handle it
 
 ## Code Style Guidelines
 
