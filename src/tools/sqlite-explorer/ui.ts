@@ -15,10 +15,6 @@ export function renderTableList(tables: string[], onSelect: (table: string) => v
     )
     .join('');
 
-  if ((window as any).lucide) {
-    (window as any).lucide.createIcons({ root: UI.tableList });
-  }
-
   UI.tableList.querySelectorAll('a').forEach((aEl) => {
     aEl.addEventListener('click', (e) => {
       e.preventDefault();
@@ -68,7 +64,7 @@ export function renderDataTable(
             ${row
               .map(
                 (cell) =>
-                  `<td class="max-w-[200px] md:max-w-xs truncate" title="${cell ?? ''}">${cell ?? '<em class="text-base-content/30">NULL</em>'}</td>`
+                  `<td class="max-w-50 md:max-w-xs truncate" title="${cell ?? ''}">${cell ?? '<em class="text-base-content/30">NULL</em>'}</td>`
               )
               .join('')}
           </tr>`
@@ -111,7 +107,7 @@ export function renderCustomQueryResult(columns: string[], rows: any[][]) {
             ${row
               .map(
                 (cell) =>
-                  `<td class="max-w-[200px] md:max-w-sm truncate" title="${cell ?? ''}">${cell ?? '<em class="text-base-content/30">NULL</em>'}</td>`
+                  `<td class="max-w-50 md:max-w-sm truncate" title="${cell ?? ''}">${cell ?? '<em class="text-base-content/30">NULL</em>'}</td>`
               )
               .join('')}
           </tr>`
