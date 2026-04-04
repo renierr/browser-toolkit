@@ -71,6 +71,8 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
   let db: kdbxweb.Kdbx | null = null;
   let pendingFile: ArrayBuffer | null = null;
   let pendingFileName = '';
+  let detailCleanupDesktop: (() => void) | null = null;
+  let detailCleanupMobile: (() => void) | null = null;
   const mobileTabs = {
     tabGroups: dom.tabGroups,
     tabEntries: dom.tabEntries,
@@ -81,6 +83,11 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
   };
 
   function closeDatabase(): void {
+    detailCleanupDesktop?.();
+    detailCleanupDesktop = null;
+    detailCleanupMobile?.();
+    detailCleanupMobile = null;
+
     db = null;
     pendingFile = null;
     pendingFileName = '';
@@ -114,6 +121,11 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
   }
 
   function onEntrySelect(entry: kdbxweb.KdbxEntry): void {
+    detailCleanupDesktop?.();
+    detailCleanupDesktop = null;
+    detailCleanupMobile?.();
+    detailCleanupMobile = null;
+
     const titleVal = entry.fields.get('Title');
     const titleText =
       titleVal && typeof (titleVal as any).getText === 'function'
@@ -123,12 +135,12 @@ export default function init(payload?: SharedFilesPayload): (() => void) | void 
     dom.detailEmpty.classList.add('hidden');
     dom.detailContent.classList.remove('hidden');
     dom.detailTitle.textContent = titleText;
-    renderEntryDetail(dom.detailFields, entry);
+    detailCleanupDesktop = renderEntryDetail(dom.detailFields, entry);
 
     dom.detailEmptyMobile.classList.add('hidden');
     dom.detailContentMobile.classList.remove('hidden');
     dom.detailTitleMobile.textContent = titleText;
-    renderEntryDetail(dom.detailFieldsMobile, entry);
+    detailCleanupMobile = renderEntryDetail(dom.detailFieldsMobile, entry);
 
     if (window.innerWidth < 1024) {
       switchMobileTab('details', mobileTabs);

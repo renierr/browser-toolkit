@@ -1,4 +1,6 @@
 import type * as kdbxweb from 'kdbxweb';
+import { identifyFileType } from '@js/magic-bytes.ts';
+import { getMimeTypeFromFileName } from '@js/mime-types.ts';
 import { showMessage } from '@js/ui.ts';
 import { html } from '@js/utils.ts';
 
@@ -44,6 +46,12 @@ function getFieldValue(entry: kdbxweb.KdbxEntry, key: string): string {
 
 type GroupSelectHandler = (group: kdbxweb.KdbxGroup) => void;
 type EntrySelectHandler = (entry: kdbxweb.KdbxEntry) => void;
+
+type AttachmentRecord = {
+  name: string;
+  mime: string;
+  data: ArrayBuffer;
+};
 
 type EntryListHeaderEls = {
   countEl?: HTMLElement;
@@ -186,7 +194,79 @@ export function renderEntryList(
   };
 }
 
-export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEntry): void {
+function isProtectedBinaryValue(value: unknown): value is { getBinary: () => Uint8Array } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'getBinary' in value &&
+    typeof (value as { getBinary?: unknown }).getBinary === 'function'
+  );
+}
+
+function toAttachmentData(
+  binary: kdbxweb.KdbxBinary | kdbxweb.KdbxBinaryWithHash
+): ArrayBuffer | null {
+  const resolved =
+    typeof binary === 'object' &&
+    binary !== null &&
+    'value' in binary &&
+    'hash' in binary &&
+    (binary as { value?: unknown }).value !== undefined
+      ? (binary as kdbxweb.KdbxBinaryWithHash).value
+      : binary;
+  if (resolved instanceof ArrayBuffer) {
+    return resolved.slice(0);
+  }
+
+  if (isProtectedBinaryValue(resolved)) {
+    const bytes = resolved.getBinary();
+    return new Uint8Array(bytes).buffer;
+  }
+
+  return null;
+}
+
+function supportsInlinePreview(mime: string): boolean {
+  return (
+    mime.startsWith('image/') ||
+    mime.startsWith('audio/') ||
+    mime.startsWith('video/') ||
+    mime === 'application/pdf' ||
+    mime.startsWith('text/') ||
+    mime === 'application/json' ||
+    mime === 'application/xml' ||
+    mime === 'application/javascript'
+  );
+}
+
+function buildAttachmentList(entry: kdbxweb.KdbxEntry): AttachmentRecord[] {
+  const files: AttachmentRecord[] = [];
+  let index = 1;
+
+  entry.binaries.forEach((binary, key) => {
+    const data = toAttachmentData(binary);
+    if (!data) {
+      return;
+    }
+
+    const fallbackName = `attachment-${index}`;
+    const fileName = key?.trim() || fallbackName;
+    const detected = identifyFileType(new Uint8Array(data.slice(0, Math.min(4096, data.byteLength))));
+    const mimeFromName = getMimeTypeFromFileName('', fileName);
+    const mime = mimeFromName !== 'application/octet-stream' ? mimeFromName : detected?.type || mimeFromName;
+
+    files.push({
+      name: fileName,
+      mime,
+      data,
+    });
+    index++;
+  });
+
+  return files;
+}
+
+export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEntry): () => void {
   const fields: { key: string; value: string; protected: boolean }[] = [];
   const standardFields = ['Title', 'UserName', 'Password', 'URL', 'Notes'];
   const fieldLabels: Record<string, string> = {
@@ -222,6 +302,13 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
 
   const isExpired =
     entry.times.expires && entry.times.expiryTime && new Date() > entry.times.expiryTime;
+  const attachments = buildAttachmentList(entry);
+  const attachmentUrls = new Map<number, string>();
+
+  const releaseAttachmentUrls = (): void => {
+    attachmentUrls.forEach((url) => URL.revokeObjectURL(url));
+    attachmentUrls.clear();
+  };
 
   const metadataSection = html`
     <div class="divider my-1 opacity-60"></div>
@@ -330,6 +417,55 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
         )
         .join('')}
 
+      ${attachments.length
+        ? html`
+            <div class="divider my-1 opacity-60"></div>
+            <div class="space-y-2">
+              <div class="font-semibold text-sm">Attachments (${attachments.length})</div>
+              ${attachments
+                .map((attachment, idx) => {
+                  const canPreview = supportsInlinePreview(attachment.mime);
+                  return html`
+                    <div class="rounded-md border border-base-300 p-2 space-y-2">
+                      <div class="flex items-center justify-between gap-2">
+                        <div class="min-w-0">
+                          <div class="text-sm font-medium truncate">${escapeHtml(attachment.name)}</div>
+                          <div class="text-xs text-base-content/60">
+                            ${escapeHtml(attachment.mime)} · ${(attachment.data.byteLength / 1024).toFixed(1)} KB
+                          </div>
+                        </div>
+                        <div class="flex items-center gap-1 shrink-0">
+                          ${canPreview
+                            ? html`
+                                <button
+                                  class="btn btn-ghost btn-xs"
+                                  data-preview-attachment="${String(idx)}"
+                                >
+                                  Preview
+                                </button>
+                              `
+                            : ''}
+                          <button
+                            class="btn btn-outline btn-xs"
+                            data-download-attachment="${String(idx)}"
+                          >
+                            Download
+                          </button>
+                        </div>
+                      </div>
+                      ${canPreview
+                        ? html`<div class="hidden" data-attachment-preview="${String(idx)}"></div>`
+                        : html`<div class="text-xs text-base-content/60">
+                            Preview not available for this file type in the browser.
+                          </div>`}
+                    </div>
+                  `;
+                })
+                .join('')}
+            </div>
+          `
+        : ''}
+
       ${metadataSection}
     </div>
   `;
@@ -348,20 +484,95 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
     }
 
     const copyButton = target.closest<HTMLButtonElement>('[data-copy]');
-    if (!copyButton) return;
+    if (copyButton) {
+      if (!navigator.clipboard?.writeText) {
+        showMessage('Clipboard is not available in this browser.', { type: 'warning' });
+        return;
+      }
 
-    if (!navigator.clipboard?.writeText) {
-      showMessage('Clipboard is not available in this browser.', { type: 'warning' });
+      const copyValue = copyButton.getAttribute('data-copy-value') || '';
+      try {
+        await navigator.clipboard.writeText(copyValue);
+      } catch (error) {
+        console.error('[KeePass Viewer] Failed to copy field value', error);
+        showMessage('Failed to copy value to clipboard.', { type: 'alert' });
+      }
       return;
     }
 
-    const copyValue = copyButton.getAttribute('data-copy-value') || '';
-    try {
-      await navigator.clipboard.writeText(copyValue);
-    } catch (error) {
-      console.error('[KeePass Viewer] Failed to copy field value', error);
-      showMessage('Failed to copy value to clipboard.', { type: 'alert' });
+    const previewButton = target.closest<HTMLButtonElement>('[data-preview-attachment]');
+    if (previewButton) {
+      const rawIndex = previewButton.getAttribute('data-preview-attachment');
+      if (rawIndex === null) return;
+      const index = Number.parseInt(rawIndex, 10);
+      const attachment = attachments[index];
+      if (!attachment) return;
+
+      const previewContainer = container.querySelector<HTMLElement>(`[data-attachment-preview="${index}"]`);
+      if (!previewContainer) return;
+
+      if (!attachmentUrls.has(index)) {
+        const blob = new Blob([attachment.data], { type: attachment.mime || 'application/octet-stream' });
+        attachmentUrls.set(index, URL.createObjectURL(blob));
+      }
+
+      const url = attachmentUrls.get(index);
+      if (!url) return;
+
+      if (!previewContainer.classList.contains('hidden')) {
+        previewContainer.classList.add('hidden');
+        previewContainer.innerHTML = '';
+        previewButton.textContent = 'Preview';
+        return;
+      }
+
+      if (attachment.mime.startsWith('image/')) {
+        previewContainer.innerHTML = `<img src="${url}" alt="${escapeHtml(attachment.name)}" class="max-h-72 rounded border border-base-300" />`;
+      } else if (attachment.mime === 'application/pdf') {
+        previewContainer.innerHTML = `<iframe src="${url}" class="w-full h-72 rounded border border-base-300" title="${escapeHtml(attachment.name)}"></iframe>`;
+      } else if (attachment.mime.startsWith('audio/')) {
+        previewContainer.innerHTML = `<audio controls src="${url}" class="w-full"></audio>`;
+      } else if (attachment.mime.startsWith('video/')) {
+        previewContainer.innerHTML = `<video controls src="${url}" class="w-full max-h-72 rounded border border-base-300"></video>`;
+      } else {
+        const textBytes = new Uint8Array(attachment.data.slice(0, 64 * 1024));
+        const text = new TextDecoder().decode(textBytes);
+        const suffix = attachment.data.byteLength > 64 * 1024 ? '\n\n...truncated for preview' : '';
+        previewContainer.innerHTML = `<pre class="text-xs bg-base-200 rounded p-2 overflow-auto max-h-72 whitespace-pre-wrap wrap-break-word">${escapeHtml(text + suffix)}</pre>`;
+      }
+
+      previewContainer.classList.remove('hidden');
+      previewButton.textContent = 'Hide';
+      return;
     }
+
+    const downloadButton = target.closest<HTMLButtonElement>('[data-download-attachment]');
+    if (!downloadButton) return;
+
+    const rawIndex = downloadButton.getAttribute('data-download-attachment');
+    if (rawIndex === null) return;
+    const index = Number.parseInt(rawIndex, 10);
+    const attachment = attachments[index];
+    if (!attachment) return;
+
+    const blob = new Blob([attachment.data], { type: attachment.mime || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+
+    try {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = attachment.name;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  };
+
+  return () => {
+    releaseAttachmentUrls();
+    container.onclick = null;
   };
 }
 
