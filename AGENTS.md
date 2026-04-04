@@ -1,5 +1,18 @@
 # Code Assist - Project Rules & Context
 
+## Quick Rules (AI Must Follow)
+
+- Use `pnpm` only. Never use `npm`.
+- Check for existing implementations before adding new code (`src/js/`, similar tools, and project docs).
+- Do not add dependencies unless necessary; ask first when unclear.
+- Keep all tool state inside `init()` (no module-level tool state).
+- Prefer listeners on tool-local container elements; if global listeners are required, always clean them up.
+- Export tools as `export default function init(): void | (() => void)`.
+- For validation, run `pnpm tsc` (not full build) unless production behavior must be verified.
+- Do not run global formatting by default; format only touched files.
+- Do not call `createIcons()` manually; rely on `data-lucide` + observer.
+- Keep custom CSS minimal in `src/css/style.css`.
+
 ## Role & Objective
 
 You are a Senior Software Engineer. Your goal is to generate efficient, maintainable, secure, and scalable code.
@@ -47,7 +60,7 @@ pnpm build            # Run tsc (type check) + Vite build
 pnpm tsc              # Type check only (tsc --noEmit)
 
 # Formatting
-pnpm format           # Format all source files with Prettier
+pnpm format           # Format all source files with Prettier (avoid by default for AI edits)
 pnpm format:check     # Check formatting without writing
 
 # Utilities
@@ -59,6 +72,8 @@ pnpm upgrade:deps    # Update dependencies to latest
 **Note:** No ESLint configured - use `pnpm tsc` for type checking instead.
 
 > **Important:** Skip the full build during development. Running `pnpm tsc` (type check only) is sufficient to verify correctness. Only run `pnpm build` when you absolutely must test the production build or preview with `pnpm preview`.
+>
+> **Formatting rule for AI edits:** Prefer file-scoped Prettier only (for touched files). Do not run global format unless the user explicitly asks.
 
 ## AI Agent Guidelines
 
@@ -146,13 +161,23 @@ src/
    - `shareTarget.accept` supports wildcards: `"image/*"` matches all images, `"text/*"` matches all text types
 
 3. **Add `template.html`**: Each tool must have a `template.html` file. This file is auto-discovered and injected into the page when the tool is accessed. All HTML, styles, and UI for the tool must be placed here. Use semantic HTML + DaisyUI components + Tailwind utilities. The UI should match the look and feel of existing tools.
-4. **Add `index.ts`** (optional): Export `init()` function with cleanup support
+4. **Add `index.ts`** (optional): Export a default `init()` function with cleanup support
    - UI-only → template.html only
    - Need JS/cleanup → add index.ts with init() function
 
+```ts
+export default function init(): void | (() => void) {
+  // setup
+
+  return () => {
+    // cleanup
+  };
+}
+```
+
 **Critical: Cleanup Pattern (REQUIRED)**
 
-If your tool attaches any global listeners, timers, or observers, you MUST return a cleanup function.
+If your tool attaches listeners, timers, observers, or other side effects, you MUST return a cleanup function.
 
 **AVOID these patterns:**
 
@@ -185,18 +210,7 @@ export default function init() {
 }
 ```
 
-```ts
-export default function init() {
-  const onKeyDown = (e: KeyboardEvent) => {
-    /* ... */
-  };
-  document.addEventListener('keydown', onKeyDown);
-
-  return () => {
-    document.removeEventListener('keydown', onKeyDown);
-  };
-}
-```
+Global listeners are allowed only when there is no practical local-container alternative (for example, keyboard shortcuts). In that case, add and remove them inside `init()` cleanup.
 
 **Reference:** See `docs/index.md` for complete documentation on:
 
@@ -217,7 +231,7 @@ Tools are navigated via URL hash: `https://example.com/#my-tool` or `/#pdf-viewe
 - Tools are auto-discovered from `src/tools/*/config.json`
 - Tool scripts are **lazy-loaded on demand** (not bundled into main chunk)
 - Bundle size is not a concern - prioritize functionality over size
-- Each tool's `index.ts` exports `init()` function called when tool activates
+- Each tool's `index.ts` exports default `init()` function called when tool activates
 
 ### Tool Lifecycle
 
@@ -348,8 +362,7 @@ This is a **browser-only toolkit**. Avoid Node.js-specific APIs:
 
 ### Module-Level Variables
 
-**Do not create module-level variables** - they persist across tool navigation and cause bugs.
-If needed, always clean them up. The cleanup handling pattern exists for this reason.
+See [Module-Level State](#module-level-state). Keep tool state inside `init()`.
 
 ### WASM Memory Management
 
@@ -454,8 +467,8 @@ element.addEventListener('touchstart', handleTouchStart);
   - `bg-base-100` instead of `bg-white` / `dark:bg-slate-800`
   - `text-base-content` instead of `text-gray-900`
   - `border-base-300` instead of `border-gray-200`
-- Use `dark:` sparingly - prefer DaisyUI themes
-- Keep **custom CSS** in `src/css/styles.css` minimal
+- Use `dark:` only when DaisyUI tokens cannot express the requirement
+- Keep **custom CSS** in `src/css/style.css` minimal
 
 ### DaisyUI CSS Variables
 
@@ -505,7 +518,7 @@ All tools with file upload functionality should use this standardized dropzone p
 
 ### Standard Dropzone Classes
 
-- **Container**: `flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40 group hover:bg-base-300`
+- **Container**: `flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 border-base-300 transition-colors p-3 min-h-40 group hover:bg-base-300`
 - **Inner wrapper**: `flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105`
 
 ### Optional: Paste Button
