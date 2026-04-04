@@ -85,7 +85,7 @@
       <aside
         class="w-64 bg-base-100 border-r border-base-300 flex flex-col shrink-0 overflow-hidden min-h-0"
       >
-        <div class="p-3 border-b border-base-300 bg-base-200/50 shrink-0">
+        <div class="p-3 h-12 border-b border-base-300 bg-base-200/50 shrink-0 flex items-center">
           <span class="font-semibold text-sm">Groups</span>
         </div>
         <div id="group-tree" class="flex-1 overflow-y-auto p-2"></div>
@@ -96,7 +96,7 @@
         class="w-80 bg-base-100 border-r border-base-300 flex flex-col shrink-0 overflow-hidden min-h-0"
       >
         <div
-          class="p-3 border-b border-base-300 bg-base-200/50 flex justify-between items-center shrink-0"
+          class="p-3 h-12 border-b border-base-300 bg-base-200/50 flex justify-between items-center shrink-0"
         >
           <span class="font-semibold text-sm truncate mr-2" id="entry-group-name">Entries</span>
           <span class="text-xs text-base-content/60 badge badge-sm" id="entry-count">0</span>
@@ -110,8 +110,8 @@
           Select an entry to view details
         </div>
         <div id="detail-content" class="hidden flex-1 flex flex-col overflow-hidden">
-          <div class="p-3 border-b border-base-300 bg-base-200/50 shrink-0">
-            <h3 class="truncate" id="detail-title">Entry Title</h3>
+          <div class="p-3 h-12 border-b border-base-300 bg-base-200/50 shrink-0 flex items-center">
+            <h3 class="font-semibold text-sm truncate" id="detail-title">Entry Title</h3>
           </div>
           <div id="detail-fields" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
         </div>
