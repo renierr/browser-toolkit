@@ -476,7 +476,8 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
 
     const revealButton = target.closest<HTMLButtonElement>('[data-toggle-reveal]');
     if (revealButton) {
-      const input = revealButton.parentElement?.querySelector<HTMLInputElement>('input');
+      const fieldBlock = revealButton.closest<HTMLElement>('.field-block');
+      const input = fieldBlock?.querySelector<HTMLInputElement>('input[data-field-value]');
       if (input) {
         input.type = input.type === 'password' ? 'text' : 'password';
       }
