@@ -5,6 +5,26 @@
 Minimal, lightning-fast tool collection  
 Vite + TypeScript + Tailwind – **no React, no framework**
 
+## Table of Contents
+
+- [Commands](#commands)
+- [Features](#features)
+- [Create a new tool (30 seconds)](#create-a-new-tool-30-seconds)
+- [Tool-specific dependencies (`pnpm-workspace.yaml`)](#tool-specific-dependencies-pnpm-workspaceyaml)
+- [Optional: `src/main.ts` (custom startup invocation)](#optional-srcmaints-custom-startup-invocation)
+- [Share Target for Tools (PWA)](#share-target-for-tools-pwa)
+- [Ordering & Section grouping (Overview page)](#ordering--section-grouping-overview-page)
+- [Tool Icons (Lucide)](#tool-icons-lucide)
+- [WebAssembly (WASM) Modules](#webassembly-wasm-modules)
+- [Modern Browser APIs](#modern-browser-apis)
+- [Touch & Responsive Design](#touch--responsive-design)
+- [Error Handling](#error-handling)
+- [Shared Utilities](#shared-utilities)
+- [Template Placeholders](#template-placeholders)
+- [Dark/Light Mode](#darklight-mode)
+- [Extending `SiteContext` (derived projects)](#extending-sitecontext-derived-projects)
+- [Keeping Derived Projects Up-to-Date (Template Sync Workflow)](#keeping-derived-projects-up-to-date-template-sync-workflow)
+
 ## Commands
 
 ```bash

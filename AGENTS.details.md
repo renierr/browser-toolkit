@@ -61,6 +61,22 @@ export default function init(): void | (() => void) {
 }
 ```
 
+For share-target tools, `init()` may receive an optional payload:
+
+```ts
+import type { SharedFilesPayload } from '../../js/share-target';
+
+export default function init(payload?: SharedFilesPayload): void | (() => void) {
+  if (payload?.sharedFiles?.length) {
+    // handle shared files
+  }
+
+  return () => {
+    // cleanup
+  };
+}
+```
+
 ## New Tool Skeleton
 
 Create:
@@ -247,13 +263,13 @@ async function copyToClipboard(text: string): Promise<boolean> {
 
 Use existing helpers in `src/js/*` before writing new ones.
 
-- `src/js/file-utils.ts`
-- `src/js/theme.ts`
-- `src/js/utils.ts`
-- `src/js/mime-types.ts`
-- `src/js/share-target.ts`
-- `src/js/favorites.ts`
-- `src/js/tool-config.ts`
+- `src/js/file-utils.ts` - dropzone handling and browser-side file download helpers.
+- `src/js/theme.ts` - theme detection/toggle helpers via `data-theme`.
+- `src/js/utils.ts` - shared generic helpers (timing, placeholders, and utility functions).
+- `src/js/mime-types.ts` - MIME detection helpers from filename/content hints.
+- `src/js/share-target.ts` - shared-file intake, lookup, and routing helpers.
+- `src/js/favorites.ts` - read/write favorite tool state.
+- `src/js/tool-config.ts` - parse/build tool metadata from `config.json`.
 
 ## More Documentation
 

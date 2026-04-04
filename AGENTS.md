@@ -106,6 +106,15 @@ export default function init(): void | (() => void) {
 - Tools are routed by hash (for example `/#tool-id`).
 - Lucide icons are rendered by observer using `data-lucide`.
 
+## Key Concepts Not In Core Rules
+
+- `src/main.ts` is an optional one-time startup hook (project-level setup).
+- Tool-specific dependencies are supported via `pnpm-workspace.yaml` and per-tool `package.json`.
+- Share-target tools can receive `SharedFilesPayload` in `init(payload?)`.
+- Template placeholders use `{{ key.path }}` and are resolved from site context.
+- Site config overrides use `src/config/site.config.ts` (copied from template).
+- Advanced WASM usage patterns live in `docs/index.md`.
+
 ## Where To Look
 
 - Core rules: `AGENTS.md`
