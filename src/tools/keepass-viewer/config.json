@@ -1,0 +1,9 @@
+{
+  "name": "KeePass Viewer",
+  "description": "View KeePass (.kdbx) password databases locally. Browse groups, entries, and copy credentials securely in your browser.",
+  "icon": "lock",
+  "sectionId": "utilities",
+  "shareTarget": {
+    "accept": ["application/x-keepass", ".kdbx"]
+  }
+}

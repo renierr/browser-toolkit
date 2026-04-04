@@ -229,6 +229,13 @@ export default defineConfig({
         replacement: path.resolve(__dirname, 'src/tools'),
       },
       {
+        find: 'argon2-browser',
+        replacement: path.resolve(
+          __dirname,
+          'src/tools/keepass-viewer/node_modules/argon2-browser/dist/argon2-bundled.min.js'
+        ),
+      },
+      {
         find: '@js',
         replacement: path.resolve(__dirname, 'src/js'),
       },

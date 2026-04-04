@@ -1,0 +1,67 @@
+export interface DOMEls {
+  introContainer: HTMLElement;
+  activeContainer: HTMLElement;
+  dropzone: HTMLElement;
+  kdbxInput: HTMLInputElement;
+  dbFilename: HTMLElement;
+  dbInfo: HTMLElement;
+  closeDbBtn: HTMLButtonElement;
+  groupTree: HTMLElement;
+  entryPanel: HTMLElement;
+  entryGroupName: HTMLElement;
+  entryCount: HTMLElement;
+  entryList: HTMLElement;
+  detailEmpty: HTMLElement;
+  detailContent: HTMLElement;
+  detailTitle: HTMLElement;
+  detailFields: HTMLElement;
+  passwordModal: HTMLDialogElement;
+  passwordFilename: HTMLElement;
+  passwordInput: HTMLInputElement;
+  togglePasswordBtn: HTMLButtonElement;
+  keyfileInput: HTMLInputElement;
+  passwordError: HTMLElement;
+  passwordErrorText: HTMLElement;
+  passwordLoading: HTMLElement;
+  cancelPasswordBtn: HTMLButtonElement;
+  submitPasswordBtn: HTMLButtonElement;
+}
+
+export function initDOM(containerId: string): DOMEls | false {
+  const root = document.getElementById(containerId);
+  if (!root) return false;
+
+  const $ = (sel: string) => root.querySelector<HTMLElement>(sel)!;
+  const $input = (sel: string) => root.querySelector<HTMLInputElement>(sel)!;
+  const $btn = (sel: string) => root.querySelector<HTMLButtonElement>(sel)!;
+  const $dialog = (sel: string) => root.querySelector<HTMLDialogElement>(sel)!;
+
+  return {
+    introContainer: $('#intro-container'),
+    activeContainer: $('#active-container'),
+    dropzone: $('#dropzone'),
+    kdbxInput: $input('#kdbx-input'),
+    dbFilename: $('#db-filename'),
+    dbInfo: $('#db-info'),
+    closeDbBtn: $btn('#close-db-btn'),
+    groupTree: $('#group-tree'),
+    entryPanel: $('#entry-panel'),
+    entryGroupName: $('#entry-group-name'),
+    entryCount: $('#entry-count'),
+    entryList: $('#entry-list'),
+    detailEmpty: $('#detail-empty'),
+    detailContent: $('#detail-content'),
+    detailTitle: $('#detail-title'),
+    detailFields: $('#detail-fields'),
+    passwordModal: $dialog('#password-modal'),
+    passwordFilename: $('#password-filename'),
+    passwordInput: $input('#password-input'),
+    togglePasswordBtn: $btn('#toggle-password-btn'),
+    keyfileInput: $input('#keyfile-input'),
+    passwordError: $('#password-error'),
+    passwordErrorText: $('#password-error-text'),
+    passwordLoading: $('#password-loading'),
+    cancelPasswordBtn: $btn('#cancel-password-btn'),
+    submitPasswordBtn: $btn('#submit-password-btn'),
+  };
+}

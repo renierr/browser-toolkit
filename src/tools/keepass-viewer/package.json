@@ -1,0 +1,8 @@
+{
+  "name": "keepass-viewer",
+  "private": true,
+  "dependencies": {
+    "kdbxweb": "^2.1.1",
+    "argon2-browser": "^1.18.0"
+  }
+}

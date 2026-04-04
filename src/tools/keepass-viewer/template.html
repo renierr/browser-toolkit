@@ -1,0 +1,148 @@
+<div class="h-full flex flex-col" id="keepass-viewer-app">
+  <!-- Empty State / Dropzone -->
+  <div id="intro-container" class="flex-1 p-4">
+    <div class="card bg-base-100 shadow-xl max-w-4xl mx-auto">
+      <div class="card-body gap-4">
+        <h2 class="card-title text-2xl font-bold">KeePass Database Viewer</h2>
+        <p class="text-sm opacity-60">
+          Offline KeePass (.kdbx) viewer. Browse groups, entries, and copy credentials securely in
+          your browser. All data stays local.
+        </p>
+
+        <!-- Dropzone -->
+        <div
+          id="dropzone"
+          class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40 group hover:bg-base-300"
+        >
+          <div
+            class="flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105"
+          >
+            <div class="text-base-content/30 text-4xl">
+              <i data-lucide="upload-cloud"></i>
+            </div>
+            <p class="text-lg font-medium">Click or drag KeePass database here</p>
+          </div>
+          <input
+            type="file"
+            id="kdbx-input"
+            class="hidden"
+            accept=".kdbx,application/x-keepass,application/octet-stream"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active State -->
+  <div id="active-container" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+    <!-- Header -->
+    <header
+      class="bg-base-200 border-b border-base-300 p-4 flex justify-between items-center shrink-0"
+    >
+      <div class="flex items-center gap-3">
+        <i data-lucide="lock" class="w-5 h-5"></i>
+        <div>
+          <h2 class="text-xl font-bold" id="db-filename">Database</h2>
+          <span class="text-sm text-base-content/70" id="db-info"></span>
+        </div>
+      </div>
+      <button id="close-db-btn" class="btn btn-ghost btn-sm">
+        <i data-lucide="x" class="w-4 h-4 mr-2"></i> Close Database
+      </button>
+    </header>
+
+    <!-- 3-Panel Layout -->
+    <div class="flex flex-1 overflow-hidden">
+      <!-- Left Panel: Group Tree -->
+      <aside
+        id="group-panel"
+        class="w-64 bg-base-100 border-r border-base-300 flex flex-col shrink-0 overflow-hidden"
+      >
+        <div class="p-3 border-b border-base-300 bg-base-200/50">
+          <span class="font-semibold">Groups</span>
+        </div>
+        <div id="group-tree" class="flex-1 overflow-y-auto p-2">
+          <!-- Group tree injected here -->
+        </div>
+      </aside>
+
+      <!-- Middle Panel: Entry List -->
+      <section
+        id="entry-panel"
+        class="w-80 bg-base-100 border-r border-base-300 flex flex-col shrink-0 overflow-hidden"
+      >
+        <div class="p-3 border-b border-base-300 bg-base-200/50 flex justify-between items-center">
+          <span class="font-semibold" id="entry-group-name">Entries</span>
+          <span class="text-sm text-base-content/70" id="entry-count">0</span>
+        </div>
+        <div id="entry-list" class="flex-1 overflow-y-auto">
+          <!-- Entry list injected here -->
+        </div>
+      </section>
+
+      <!-- Right Panel: Entry Detail -->
+      <main id="detail-panel" class="flex-1 bg-base-100 flex flex-col overflow-hidden">
+        <div id="detail-empty" class="flex-1 flex items-center justify-center text-base-content/50">
+          Select an entry to view details
+        </div>
+        <div id="detail-content" class="hidden flex-1 flex flex-col overflow-hidden">
+          <div class="p-4 border-b border-base-300 bg-base-200/50">
+            <h3 class="text-lg font-bold" id="detail-title">Entry Title</h3>
+          </div>
+          <div id="detail-fields" class="flex-1 overflow-y-auto p-4 space-y-3">
+            <!-- Fields injected here -->
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Password Dialog Modal -->
+  <dialog id="password-modal" class="modal">
+    <div class="modal-box">
+      <h3 class="text-lg font-bold">Enter Password</h3>
+      <p class="text-sm text-base-content/70 mt-1" id="password-filename">database.kdbx</p>
+      <div class="form-control mt-4">
+        <label class="label"><span class="label-text">Password</span></label>
+        <div class="relative">
+          <input
+            type="password"
+            id="password-input"
+            class="input input-bordered w-full pr-10"
+            placeholder="Enter database password"
+            autocomplete="off"
+          />
+          <button
+            id="toggle-password-btn"
+            class="absolute right-3 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-square"
+            type="button"
+          >
+            <i data-lucide="eye" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+      <div class="form-control mt-4">
+        <label class="label"><span class="label-text">Key File (optional)</span></label>
+        <input
+          type="file"
+          id="keyfile-input"
+          class="file-input file-input-bordered w-full"
+          accept=".key,.keyx,*/*"
+        />
+      </div>
+      <div id="password-error" class="hidden alert alert-error mt-4 py-2">
+        <i data-lucide="alert-circle" class="w-4 h-4"></i>
+        <span id="password-error-text">Incorrect password</span>
+      </div>
+      <div id="password-loading" class="hidden mt-4">
+        <span class="loading loading-spinner loading-sm"></span>
+        <span class="ml-2 text-sm">Decrypting database...</span>
+      </div>
+      <div class="modal-action">
+        <button id="cancel-password-btn" class="btn btn-ghost">Cancel</button>
+        <button id="submit-password-btn" class="btn btn-primary">Unlock</button>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop"></form>
+  </dialog>
+</div>
