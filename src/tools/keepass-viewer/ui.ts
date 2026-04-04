@@ -223,6 +223,37 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
   const isExpired =
     entry.times.expires && entry.times.expiryTime && new Date() > entry.times.expiryTime;
 
+  const metadataSection = html`
+    <div class="divider my-1 opacity-60"></div>
+
+    <div class="grid gap-1">
+      <div class="text-xs text-base-content/50">Created</div>
+      <div class="text-xs text-base-content/60">${formatDate(entry.times.creationTime)}</div>
+    </div>
+
+    <div class="grid gap-1">
+      <div class="text-xs text-base-content/50">Modified</div>
+      <div class="text-xs text-base-content/60">${formatDate(entry.times.lastModTime)}</div>
+    </div>
+
+    ${entry.times.expiryTime
+      ? html`
+          <div class="grid gap-1">
+            <div class="text-xs text-base-content/50">Expires</div>
+            <div class="text-xs text-base-content/60">${formatDate(entry.times.expiryTime)}</div>
+          </div>
+        `
+      : ''}
+    ${entry.times.lastAccessTime
+      ? html`
+          <div class="grid gap-1">
+            <div class="text-xs text-base-content/50">Last accessed</div>
+            <div class="text-xs text-base-content/60">${formatDate(entry.times.lastAccessTime)}</div>
+          </div>
+        `
+      : ''}
+  `;
+
   container.innerHTML = html`
     <div class="space-y-3">
       ${isExpired
@@ -230,35 +261,6 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
             <i data-lucide="alert-triangle" class="w-4 h-4"></i><span>Entry has expired</span>
           </div>`
         : ''}
-
-      <div class="grid gap-2">
-        <div class="text-xs text-base-content/50">Created</div>
-        <div class="text-sm">${formatDate(entry.times.creationTime)}</div>
-      </div>
-
-      <div class="grid gap-2">
-        <div class="text-xs text-base-content/50">Modified</div>
-        <div class="text-sm">${formatDate(entry.times.lastModTime)}</div>
-      </div>
-
-      ${entry.times.expiryTime
-        ? html`
-            <div class="grid gap-2">
-              <div class="text-xs text-base-content/50">Expires</div>
-              <div class="text-sm">${formatDate(entry.times.expiryTime)}</div>
-            </div>
-          `
-        : ''}
-      ${entry.times.lastAccessTime
-        ? html`
-            <div class="grid gap-2">
-              <div class="text-xs text-base-content/50">Last accessed</div>
-              <div class="text-sm">${formatDate(entry.times.lastAccessTime)}</div>
-            </div>
-          `
-        : ''}
-
-      <div class="divider my-2"></div>
 
       ${fields
         .map(
@@ -327,6 +329,8 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
           `
         )
         .join('')}
+
+      ${metadataSection}
     </div>
   `;
 
