@@ -13,7 +13,10 @@ export interface ParsedDevice {
   knownDeviceName: string | null;
   identifiedType: string;
   identifiedCategory: string;
+  likelyRole: string;
+  localFingerprint: string;
   confidence: 'low' | 'medium' | 'high';
+  confidenceReasons: string[];
   manufacturer: string | null;
   advertisedServices: string[];
   matchedServiceFilters: string[];
@@ -84,13 +87,22 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
   const knownDeviceName = deviceInfo?.name || null;
   const identifiedType = deviceInfo?.type || beaconTypes[0]?.type || 'Unknown';
   const identifiedCategory = beaconTypes.length > 0 ? 'Beacon' : deviceInfo?.category || 'Unknown';
-  const confidence = calculateConfidence({
+  const likelyRole = deriveLikelyRole({ identifiedCategory, matchedServiceFilters, beaconTypes });
+  const confidenceResult = calculateConfidence({
     hasKnownDeviceMatch: Boolean(deviceInfo),
     hasManufacturer: Boolean(manufacturer),
     hasManufacturerData: Boolean(manufacturerData && manufacturerData.length > 0),
     matchedServiceFilterCount: matchedServiceFilters.length,
     advertisedServiceCount: advertisedServices.length,
     beaconCount: beaconTypes.length,
+  });
+  const localFingerprint = createLocalFingerprint({
+    manufacturer,
+    identifiedCategory,
+    identifiedType,
+    beaconTypes,
+    matchedServiceFilters,
+    manufacturerData,
   });
   const identificationHints = buildIdentificationHints({
     manufacturer,
@@ -105,7 +117,10 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
     knownDeviceName,
     identifiedType,
     identifiedCategory,
-    confidence,
+    likelyRole,
+    localFingerprint,
+    confidence: confidenceResult.level,
+    confidenceReasons: confidenceResult.reasons,
     manufacturer,
     advertisedServices,
     matchedServiceFilters,
@@ -118,6 +133,38 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
   };
 }
 
+function deriveLikelyRole(input: {
+  identifiedCategory: string;
+  matchedServiceFilters: string[];
+  beaconTypes: BeaconType[];
+}): string {
+  if (input.beaconTypes.length > 0) {
+    return 'Beacon';
+  }
+
+  if (input.matchedServiceFilters.includes('heart_rate')) {
+    return 'Health Sensor';
+  }
+
+  if (input.matchedServiceFilters.includes('audio')) {
+    return 'Audio Device';
+  }
+
+  if (input.identifiedCategory === 'Wearables') {
+    return 'Wearable';
+  }
+
+  if (input.identifiedCategory === 'IoT') {
+    return 'IoT Device';
+  }
+
+  if (input.identifiedCategory === 'Unknown') {
+    return 'Unclassified Device';
+  }
+
+  return input.identifiedCategory;
+}
+
 function calculateConfidence(input: {
   hasKnownDeviceMatch: boolean;
   hasManufacturer: boolean;
@@ -125,19 +172,66 @@ function calculateConfidence(input: {
   matchedServiceFilterCount: number;
   advertisedServiceCount: number;
   beaconCount: number;
-}): 'low' | 'medium' | 'high' {
+}): { level: 'low' | 'medium' | 'high'; reasons: string[] } {
   let score = 0;
+  const reasons: string[] = [];
 
-  if (input.hasKnownDeviceMatch) score += 4;
-  if (input.hasManufacturer) score += 2;
-  if (input.hasManufacturerData) score += 1;
-  if (input.matchedServiceFilterCount > 0) score += 1;
-  if (input.advertisedServiceCount > 0) score += 1;
-  if (input.beaconCount > 0) score += 3;
+  if (input.hasKnownDeviceMatch) {
+    score += 4;
+    reasons.push('Known device pattern');
+  }
+  if (input.hasManufacturer) {
+    score += 2;
+    reasons.push('Known manufacturer');
+  }
+  if (input.hasManufacturerData) {
+    score += 1;
+    reasons.push('Manufacturer payload');
+  }
+  if (input.matchedServiceFilterCount > 0) {
+    score += 1;
+    reasons.push('Service profile match');
+  }
+  if (input.advertisedServiceCount > 0) {
+    score += 1;
+    reasons.push('Advertised service');
+  }
+  if (input.beaconCount > 0) {
+    score += 3;
+    reasons.push('Beacon signature parsed');
+  }
 
-  if (score >= 6) return 'high';
-  if (score >= 3) return 'medium';
-  return 'low';
+  if (score >= 6) return { level: 'high', reasons };
+  if (score >= 3) return { level: 'medium', reasons };
+  return { level: 'low', reasons };
+}
+
+function createLocalFingerprint(input: {
+  manufacturer: string | null;
+  identifiedCategory: string;
+  identifiedType: string;
+  beaconTypes: BeaconType[];
+  matchedServiceFilters: string[];
+  manufacturerData: Array<{ id: number; name: string; data: string }> | null;
+}): string {
+  const parts = [
+    input.manufacturer ?? 'unknown-manufacturer',
+    input.identifiedCategory,
+    input.identifiedType,
+    input.beaconTypes.map((beacon) => beacon.type).sort().join('|') || 'no-beacon',
+    input.matchedServiceFilters.slice().sort().join('|') || 'no-filters',
+    input.manufacturerData?.map((entry) => entry.id.toString(16)).sort().join('|') || 'no-mfg-data',
+  ];
+
+  return `fp-${hashString(parts.join('::'))}`;
+}
+
+function hashString(value: string): string {
+  let hash = 5381;
+  for (let i = 0; i < value.length; i++) {
+    hash = (hash * 33) ^ value.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(16);
 }
 
 function buildIdentificationHints(input: {

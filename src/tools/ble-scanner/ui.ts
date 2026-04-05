@@ -2,12 +2,35 @@ import type { ParsedDevice } from './parser';
 
 const UNKNOWN_CATEGORY = 'Unknown';
 const UNKNOWN_MANUFACTURER_GROUP_MIN = 3;
+const RECENT_THRESHOLD_MS = 5 * 60 * 1000;
+
+export type DeviceFilter =
+  | 'high-confidence'
+  | 'beacons'
+  | 'unknown'
+  | 'recent'
+  | 'strong-signal';
+
+export type DeviceHistoryEntry = {
+  firstSeen: number;
+  lastSeen: number;
+  sightings: number;
+  strongestRssi: number | null;
+  averageRssi: number | null;
+};
+
+type RenderOptions = {
+  activeFilters?: Set<DeviceFilter>;
+  historyByFingerprint?: Map<string, DeviceHistoryEntry>;
+  now?: number;
+};
 
 export function renderDeviceGroups(
   devices: Map<string, ParsedDevice>,
-  collapsedCategories: Set<string>
+  collapsedCategories: Set<string>,
+  options: RenderOptions = {}
 ): string {
-  const grouped = groupByCategory(devices);
+  const grouped = groupByCategory(devices, options);
 
   if (grouped.size === 0) {
     return renderEmptyState();
@@ -22,7 +45,12 @@ export function renderDeviceGroups(
       const categoryBadgeClass = getCategoryBadgeClass(category);
       const icon = getCategoryIcon(category);
 
-      const deviceCards = categoryDevices.map((device) => renderDeviceCard(device)).join('');
+      const deviceCards = categoryDevices
+        .map((device) => {
+          const historyEntry = options.historyByFingerprint?.get(device.localFingerprint) ?? null;
+          return renderDeviceCard(device, historyEntry);
+        })
+        .join('');
 
       return `
         <div class="collapse collapse-arrow bg-base-200 mb-2" data-category="${category}">
@@ -43,11 +71,19 @@ export function renderDeviceGroups(
     .join('');
 }
 
-function groupByCategory(devices: Map<string, ParsedDevice>): Map<string, ParsedDevice[]> {
+function groupByCategory(devices: Map<string, ParsedDevice>, options: RenderOptions): Map<string, ParsedDevice[]> {
   const grouped = new Map<string, ParsedDevice[]>();
   const unknownDevices: ParsedDevice[] = [];
+  const now = options.now ?? Date.now();
+  const activeFilters = options.activeFilters ?? new Set<DeviceFilter>();
+  const historyByFingerprint = options.historyByFingerprint;
 
   for (const device of devices.values()) {
+    const historyEntry = historyByFingerprint?.get(device.localFingerprint);
+    if (!matchesActiveFilters(device, activeFilters, historyEntry, now)) {
+      continue;
+    }
+
     const category = device.beaconTypes.length > 0 ? 'Beacon' : device.identifiedCategory;
     if (category === UNKNOWN_CATEGORY) {
       unknownDevices.push(device);
@@ -158,13 +194,14 @@ function formatServiceFilterLabel(filterName: string): string {
     .join(' ');
 }
 
-export function renderDeviceCard(device: ParsedDevice): string {
+export function renderDeviceCard(device: ParsedDevice, historyEntry: DeviceHistoryEntry | null = null): string {
   const signalBars = getSignalBars(device.rssi);
   const timeSinceUpdate = getTimeSinceUpdate(device.timestamp);
   const confidenceLabel = getConfidenceLabel(device.confidence);
   const confidenceBadgeClass = getConfidenceBadgeClass(device.confidence);
   const effectiveCategory = device.beaconTypes.length > 0 ? 'Beacon' : device.identifiedCategory;
   const primaryIdentity = device.knownDeviceName || device.identifiedType;
+  const historyDetails = historyEntry ? renderHistoryDetails(historyEntry, Date.now()) : '';
 
   return `
     <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow" data-device-id="${device.id}">
@@ -184,6 +221,7 @@ export function renderDeviceCard(device: ParsedDevice): string {
               <div class="mt-1 flex flex-wrap gap-1">
                 <span class="badge badge-xs ${confidenceBadgeClass}">${confidenceLabel}</span>
                 <span class="badge badge-xs badge-outline">${effectiveCategory}</span>
+                <span class="badge badge-xs badge-ghost truncate max-w-40" title="Role: ${device.likelyRole}">${device.likelyRole}</span>
                 ${device.manufacturer ? `<span class="badge badge-xs badge-ghost truncate max-w-40" title="${device.manufacturer}">${device.manufacturer}</span>` : ''}
               </div>
             </div>
@@ -202,8 +240,28 @@ export function renderDeviceCard(device: ParsedDevice): string {
               ${device.knownDeviceName ? `<span class="badge badge-sm badge-primary truncate max-w-40" title="Known device: ${device.knownDeviceName}">${device.knownDeviceName}</span>` : ''}
               <span class="badge badge-sm badge-outline truncate max-w-40" title="Type: ${device.identifiedType}">${device.identifiedType}</span>
               <span class="badge badge-sm badge-ghost truncate max-w-40" title="Category: ${effectiveCategory}">${effectiveCategory}</span>
+              ${device.localFingerprint ? `<span class="badge badge-sm badge-ghost truncate max-w-40" title="Local fingerprint: ${device.localFingerprint}">${device.localFingerprint}</span>` : ''}
             </div>
           </div>
+
+          ${
+            device.confidenceReasons.length > 0
+              ? `
+            <div>
+              <p class="text-base-content/50 text-xs mb-1">Confidence factors</p>
+              <div class="flex flex-wrap gap-1 overflow-hidden">
+                ${device.confidenceReasons
+                  .slice(0, 4)
+                  .map(
+                    (reason) =>
+                      `<span class="badge badge-sm badge-ghost truncate max-w-42" title="${reason}">${reason}</span>`
+                  )
+                  .join('')}
+              </div>
+            </div>
+          `
+              : ''
+          }
 
           ${
             device.advertisedServices.length > 0
@@ -314,6 +372,8 @@ export function renderDeviceCard(device: ParsedDevice): string {
           `
               : ''
           }
+
+          ${historyDetails}
         </div>
 
         <div class="flex items-center justify-between mt-2 pt-2 border-t border-base-200 text-xs text-base-content/40 min-w-0 gap-2">
@@ -321,6 +381,63 @@ export function renderDeviceCard(device: ParsedDevice): string {
           ${device.rssi !== null ? `<span class="shrink-0">${device.rssi} dBm</span>` : ''}
           <span class="shrink-0">${timeSinceUpdate}</span>
         </div>
+      </div>
+    </div>
+  `;
+}
+
+function matchesActiveFilters(
+  device: ParsedDevice,
+  activeFilters: Set<DeviceFilter>,
+  historyEntry: DeviceHistoryEntry | undefined,
+  now: number
+): boolean {
+  if (activeFilters.size === 0) {
+    return true;
+  }
+
+  for (const filter of activeFilters) {
+    if (filter === 'high-confidence' && device.confidence !== 'high') {
+      return false;
+    }
+
+    if (filter === 'beacons' && device.beaconTypes.length === 0) {
+      return false;
+    }
+
+    if (filter === 'unknown' && device.identifiedCategory !== UNKNOWN_CATEGORY) {
+      return false;
+    }
+
+    if (filter === 'recent') {
+      const recentAt = historyEntry?.lastSeen ?? device.timestamp;
+      if (now - recentAt > RECENT_THRESHOLD_MS) {
+        return false;
+      }
+    }
+
+    if (filter === 'strong-signal' && (device.rssi === null || device.rssi < -70)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function renderHistoryDetails(historyEntry: DeviceHistoryEntry, now: number): string {
+  const age = now - historyEntry.firstSeen;
+  const minsSeen = Math.max(1, Math.round(age / 60000));
+  const strongest = historyEntry.strongestRssi !== null ? `${historyEntry.strongestRssi} dBm` : 'n/a';
+  const avg = historyEntry.averageRssi !== null ? `${Math.round(historyEntry.averageRssi)} dBm` : 'n/a';
+
+  return `
+    <div>
+      <p class="text-base-content/50 text-xs mb-1">Local history</p>
+      <div class="flex flex-wrap gap-1 overflow-hidden">
+        <span class="badge badge-sm badge-outline">Seen ${historyEntry.sightings}x</span>
+        <span class="badge badge-sm badge-ghost">First ${minsSeen}m ago</span>
+        <span class="badge badge-sm badge-ghost">Strongest ${strongest}</span>
+        <span class="badge badge-sm badge-ghost">Avg ${avg}</span>
       </div>
     </div>
   `;
