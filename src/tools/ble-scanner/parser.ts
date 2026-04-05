@@ -1,4 +1,10 @@
-import { getDeviceInfo, getManufacturerName, getServiceName, getServiceCategory } from './data';
+import {
+  getDeviceInfo,
+  getManufacturerName,
+  getMatchingServiceFilters,
+  getServiceCategory,
+  getServiceName,
+} from './data';
 
 export interface ParsedDevice {
   id: string;
@@ -7,6 +13,7 @@ export interface ParsedDevice {
   identifiedCategory: string;
   manufacturer: string | null;
   advertisedServices: string[];
+  matchedServiceFilters: string[];
   manufacturerData: Array<{ id: number; name: string; data: string }> | null;
   txPower: number | null;
   rssi: number | null;
@@ -26,8 +33,10 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
   const deviceInfo = getDeviceInfo(name);
 
   const advertisedServices: string[] = [];
+  const advertisedServiceUuids: string[] = [];
   for (const uuid of event.uuids) {
     const uuidStr = uuidToString(uuid);
+    advertisedServiceUuids.push(uuidStr);
     const serviceName = getServiceName(uuidStr);
     if (serviceName) {
       advertisedServices.push(serviceName);
@@ -37,6 +46,7 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
   }
 
   const manufacturer = deviceInfo?.manufacturer || null;
+  const matchedServiceFilters = getMatchingServiceFilters(advertisedServiceUuids);
 
   let manufacturerData: Array<{ id: number; name: string; data: string }> | null = null;
   if (event.manufacturerData.size > 0) {
@@ -57,6 +67,7 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
     identifiedCategory: deviceInfo?.category || 'Unknown',
     manufacturer,
     advertisedServices,
+    matchedServiceFilters,
     manufacturerData,
     txPower: event.txPower ?? null,
     rssi: event.rssi ?? null,

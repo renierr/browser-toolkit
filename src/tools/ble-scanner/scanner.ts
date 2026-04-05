@@ -12,6 +12,7 @@ export interface ScanOptions {
 export class BLEScanner {
   private activeDevices: Map<string, ParsedDevice> = new Map();
   private currentScan: BluetoothLEScan | null = null;
+  private advertisementHandler: ((event: BluetoothAdvertisingEvent) => void) | null = null;
   private onDeviceFound: ScanCallback;
   private onError: ErrorCallback;
 
@@ -45,7 +46,9 @@ export class BLEScanner {
       return;
     }
 
-    const advertisementHandler = (event: BluetoothAdvertisingEvent) => {
+    this.removeAdvertisementListener();
+
+    this.advertisementHandler = (event: BluetoothAdvertisingEvent) => {
       const parsedDevice = parseAdvertisingEvent(event);
       this.activeDevices.set(parsedDevice.id, parsedDevice);
       this.onDeviceFound(parsedDevice);
@@ -53,7 +56,7 @@ export class BLEScanner {
 
     navigator.bluetooth.addEventListener(
       'advertisementreceived',
-      advertisementHandler as EventListener
+      this.advertisementHandler as EventListener
     );
   }
 
@@ -62,7 +65,20 @@ export class BLEScanner {
       this.currentScan.stop();
       this.currentScan = null;
     }
+    this.removeAdvertisementListener();
     this.activeDevices.clear();
+  }
+
+  private removeAdvertisementListener(): void {
+    if (!this.advertisementHandler || !navigator.bluetooth) {
+      return;
+    }
+
+    navigator.bluetooth.removeEventListener(
+      'advertisementreceived',
+      this.advertisementHandler as EventListener
+    );
+    this.advertisementHandler = null;
   }
 
   getDevices(): ParsedDevice[] {

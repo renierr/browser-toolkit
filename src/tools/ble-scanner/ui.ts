@@ -124,16 +124,16 @@ function groupByCategory(devices: Map<string, ParsedDevice>): Map<string, Parsed
 }
 
 function getKnownManufacturerForUnknownGroup(device: ParsedDevice): string | null {
-  const manufacturerFromName = normalizeManufacturerName(device.manufacturer);
-  if (manufacturerFromName) {
-    return manufacturerFromName;
+  if (device.manufacturerData && device.manufacturerData.length > 0) {
+    for (const entry of device.manufacturerData) {
+      const normalized = normalizeManufacturerName(entry.name);
+      if (normalized) {
+        return normalized;
+      }
+    }
   }
 
-  if (!device.manufacturerData || device.manufacturerData.length === 0) {
-    return null;
-  }
-
-  return normalizeManufacturerName(device.manufacturerData[0]?.name ?? null);
+  return normalizeManufacturerName(device.manufacturer);
 }
 
 function normalizeManufacturerName(name: string | null): string | null {
@@ -146,7 +146,7 @@ function normalizeManufacturerName(name: string | null): string | null {
     .replace(/\binc\.?$/i, '')
     .trim();
 
-  if (!cleaned || /^unknown\b/i.test(cleaned)) {
+  if (!cleaned || /^(unknown|generic)\b/i.test(cleaned)) {
     return null;
   }
 
@@ -176,6 +176,13 @@ function compareCategoryNames(left: string, right: string): number {
   }
 
   return left.localeCompare(right);
+}
+
+function formatServiceFilterLabel(filterName: string): string {
+  return filterName
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 export function renderDeviceCard(device: ParsedDevice): string {
@@ -223,6 +230,30 @@ export function renderDeviceCard(device: ParsedDevice): string {
                 ${
                   device.advertisedServices.length > 4
                     ? `<span class="badge badge-sm badge-ghost">+${device.advertisedServices.length - 4}</span>`
+                    : ''
+                }
+              </div>
+            </div>
+          `
+              : ''
+          }
+
+          ${
+            device.matchedServiceFilters.length > 0
+              ? `
+            <div>
+              <p class="text-base-content/50 text-xs mb-1">Matches</p>
+              <div class="flex flex-wrap gap-1 overflow-hidden">
+                ${device.matchedServiceFilters
+                  .slice(0, 4)
+                  .map(
+                    (filter) =>
+                      `<span class="badge badge-sm badge-secondary truncate max-w-[140px]" title="${formatServiceFilterLabel(filter)}">${formatServiceFilterLabel(filter)}</span>`
+                  )
+                  .join('')}
+                ${
+                  device.matchedServiceFilters.length > 4
+                    ? `<span class="badge badge-sm badge-ghost">+${device.matchedServiceFilters.length - 4}</span>`
                     : ''
                 }
               </div>

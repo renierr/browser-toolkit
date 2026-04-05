@@ -220,6 +220,49 @@ export const SERVICE_FILTER_MAP: Record<string, string[]> = {
   beacon: ['feaa', 'a3c87500', 'a3c87501', 'a3c87502', 'a3c87503'],
 };
 
+function buildServiceUuidAliases(uuid: string): Set<string> {
+  const aliases = new Set<string>();
+  const normalized = uuid.toLowerCase().replace(/-/g, '');
+  if (!normalized) {
+    return aliases;
+  }
+
+  aliases.add(normalized);
+  aliases.add(normalized.replace(/^0+/, '') || '0');
+
+  // Convert Bluetooth base UUIDs to their 16-bit short aliases when possible.
+  const bluetoothBaseMatch = normalized.match(/^0000([0-9a-f]{4})00001000800000805f9b34fb$/);
+  if (bluetoothBaseMatch?.[1]) {
+    aliases.add(bluetoothBaseMatch[1]);
+  }
+
+  return aliases;
+}
+
+export function getMatchingServiceFilters(uuids: string[]): string[] {
+  if (uuids.length === 0) {
+    return [];
+  }
+
+  const normalizedServices = new Set<string>();
+  for (const uuid of uuids) {
+    const aliases = buildServiceUuidAliases(uuid);
+    for (const alias of aliases) {
+      normalizedServices.add(alias);
+    }
+  }
+
+  const matchedFilters: string[] = [];
+  for (const [filterName, filterServices] of Object.entries(SERVICE_FILTER_MAP)) {
+    const matchesFilter = filterServices.some((service) => normalizedServices.has(service));
+    if (matchesFilter) {
+      matchedFilters.push(filterName);
+    }
+  }
+
+  return matchedFilters;
+}
+
 export const MANUFACTURER_IDS: Record<number, ManufacturerInfo> = {
   0x004c: { id: 0x004c, name: 'Apple, Inc.' },
   0x0006: { id: 0x0006, name: 'Microsoft' },
