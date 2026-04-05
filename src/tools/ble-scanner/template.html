@@ -24,6 +24,11 @@
         </button>
         <button id="clear-btn" class="btn btn-ghost">
           <i data-lucide="trash-2" class="w-5 h-5"></i>
+          <span>Clear Scan</span>
+        </button>
+        <button id="clear-local-data-btn" class="btn btn-ghost">
+          <i data-lucide="database-zap" class="w-5 h-5"></i>
+          <span>Clear local data</span>
         </button>
         <span id="device-count" class="badge badge-neutral">0 devices</span>
         <span id="scan-status" class="badge badge-primary hidden">
@@ -34,11 +39,19 @@
 
       <div class="flex flex-wrap items-center gap-2 mt-2">
         <span class="text-xs text-base-content/60">Filters:</span>
-        <button id="filter-high-confidence" class="btn btn-xs btn-ghost" data-active="false">High confidence</button>
-        <button id="filter-beacons" class="btn btn-xs btn-ghost" data-active="false">Beacons</button>
-        <button id="filter-unknown" class="btn btn-xs btn-ghost" data-active="false">Unknown</button>
+        <button id="filter-high-confidence" class="btn btn-xs btn-ghost" data-active="false">
+          High confidence
+        </button>
+        <button id="filter-beacons" class="btn btn-xs btn-ghost" data-active="false">
+          Beacons
+        </button>
+        <button id="filter-unknown" class="btn btn-xs btn-ghost" data-active="false">
+          Unknown
+        </button>
         <button id="filter-recent" class="btn btn-xs btn-ghost" data-active="false">Recent</button>
-        <button id="filter-strong-signal" class="btn btn-xs btn-ghost" data-active="false">Strong signal</button>
+        <button id="filter-strong-signal" class="btn btn-xs btn-ghost" data-active="false">
+          Strong signal
+        </button>
       </div>
     </div>
   </div>

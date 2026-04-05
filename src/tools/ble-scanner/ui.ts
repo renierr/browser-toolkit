@@ -17,6 +17,7 @@ export type DeviceHistoryEntry = {
   sightings: number;
   strongestRssi: number | null;
   averageRssi: number | null;
+  rssiSampleCount?: number;
 };
 
 type RenderOptions = {

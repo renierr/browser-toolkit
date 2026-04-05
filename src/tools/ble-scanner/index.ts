@@ -5,6 +5,7 @@ import type { ParsedDevice } from './parser';
 import { showMessage } from '@js/ui';
 
 const HISTORY_STORAGE_KEY = 'ble-scanner.history.v1';
+const SIGHTING_GAP_MS = 8 * 60 * 60 * 1000;
 
 const FILTER_BUTTONS: Array<{ id: string; filter: DeviceFilter }> = [
   { id: 'filter-high-confidence', filter: 'high-confidence' },
@@ -28,6 +29,7 @@ export default function init() {
   const scanBtn = document.getElementById('scan-btn') as HTMLButtonElement;
   const stopBtn = document.getElementById('stop-btn') as HTMLButtonElement;
   const clearBtn = document.getElementById('clear-btn') as HTMLButtonElement;
+  const clearLocalDataBtn = document.getElementById('clear-local-data-btn') as HTMLButtonElement;
   const deviceList = document.getElementById('device-list') as HTMLDivElement;
   const deviceCount = document.getElementById('device-count') as HTMLSpanElement;
   const scanStatus = document.getElementById('scan-status') as HTMLSpanElement;
@@ -127,6 +129,21 @@ export default function init() {
     updateDeviceCount();
   };
 
+  const clearLocalData = () => {
+    state.historyByFingerprint.clear();
+
+    try {
+      localStorage.removeItem(HISTORY_STORAGE_KEY);
+      showMessage('BLE local history cleared.', { type: 'info', hideTypeText: false });
+    } catch (error) {
+      console.error('[BLEScanner] Failed to clear local history', error);
+      showMessage('Failed to clear BLE local history.', { type: 'alert' });
+      return;
+    }
+
+    renderAllGroups();
+  };
+
   const updateFilterButtonStates = () => {
     for (const { button, filter } of filterButtons) {
       const isActive = state.activeFilters.has(filter);
@@ -188,6 +205,7 @@ export default function init() {
   scanBtn.addEventListener('click', startScanning);
   stopBtn.addEventListener('click', stopScanning);
   clearBtn.addEventListener('click', clearDevices);
+  clearLocalDataBtn.addEventListener('click', clearLocalData);
   deviceList.addEventListener('click', handleCollapseToggle);
   for (const { button, filter } of filterButtons) {
     button.dataset.filter = filter;
@@ -200,6 +218,7 @@ export default function init() {
     scanBtn.removeEventListener('click', startScanning);
     stopBtn.removeEventListener('click', stopScanning);
     clearBtn.removeEventListener('click', clearDevices);
+    clearLocalDataBtn.removeEventListener('click', clearLocalData);
     deviceList.removeEventListener('click', handleCollapseToggle);
     for (const { button } of filterButtons) {
       button.removeEventListener('click', handleFilterButtonClick);
@@ -245,23 +264,29 @@ function updateLocalHistory(
       sightings: 1,
       strongestRssi: device.rssi,
       averageRssi: device.rssi,
+      rssiSampleCount: device.rssi === null ? 0 : 1,
     });
     return;
   }
 
+  const countAsNewSighting = now - current.lastSeen >= SIGHTING_GAP_MS;
   current.lastSeen = now;
-  current.sightings += 1;
+  if (countAsNewSighting) {
+    current.sightings += 1;
+  }
 
   if (device.rssi !== null) {
     if (current.strongestRssi === null || device.rssi > current.strongestRssi) {
       current.strongestRssi = device.rssi;
     }
 
+    const sampleCount = current.rssiSampleCount ?? current.sightings;
     if (current.averageRssi === null) {
       current.averageRssi = device.rssi;
+      current.rssiSampleCount = 1;
     } else {
-      current.averageRssi =
-        (current.averageRssi * (current.sightings - 1) + device.rssi) / current.sightings;
+      current.averageRssi = (current.averageRssi * sampleCount + device.rssi) / (sampleCount + 1);
+      current.rssiSampleCount = sampleCount + 1;
     }
   }
 }
