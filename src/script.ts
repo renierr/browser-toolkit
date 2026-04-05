@@ -108,6 +108,57 @@ function renderOverview() {
     });
   }
 
+  const refreshCachedFilesBtn = document.getElementById(
+    'refresh-cached-files-btn'
+  ) as HTMLButtonElement | null;
+  if (refreshCachedFilesBtn) {
+    refreshCachedFilesBtn.addEventListener('click', async () => {
+      if (refreshCachedFilesBtn.disabled) return;
+
+      refreshCachedFilesBtn.disabled = true;
+      refreshCachedFilesBtn.classList.add('loading');
+      refreshCachedFilesBtn.setAttribute('aria-busy', 'true');
+
+      try {
+        if (!('caches' in window)) {
+          showMessage('Cache Storage API is not available in this browser.', { type: 'warning' });
+          return;
+        }
+
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(
+            registrations.map((registration) =>
+              registration
+                .update()
+                .catch((error) =>
+                  console.error('[Overview] Failed to update service worker registration', error)
+                )
+            )
+          );
+        }
+
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((cacheKey) => caches.delete(cacheKey)));
+
+        showMessage('Cached app files cleared. Reloading...', {
+          type: 'info',
+          hideTypeText: false,
+          timeoutMs: 2500,
+        });
+        window.setTimeout(() => window.location.reload(), 300);
+      } catch (error) {
+        console.error('[Overview] Failed to refresh cached app files', error);
+        showMessage('Failed to refresh cached app files. Please try again.', { type: 'alert' });
+      } finally {
+        if (!refreshCachedFilesBtn.isConnected) return;
+        refreshCachedFilesBtn.disabled = false;
+        refreshCachedFilesBtn.classList.remove('loading');
+        refreshCachedFilesBtn.removeAttribute('aria-busy');
+      }
+    });
+  }
+
   // Track attached global key handler so we can remove it when toggling flatList
   let lastKeyHandler: ((e: KeyboardEvent) => void) | null = null;
 
