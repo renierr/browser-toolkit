@@ -16,6 +16,7 @@ export interface ParsedDevice {
   advertisedServices: string[];
   matchedServiceFilters: string[];
   beaconTypes: BeaconType[];
+  identificationHints: string[];
   manufacturerData: Array<{ id: number; name: string; data: string }> | null;
   txPower: number | null;
   rssi: number | null;
@@ -46,11 +47,14 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
 
   const matchedServiceFilters = getMatchingServiceFilters(advertisedServiceUuids);
   const manufacturerDataRaw: Array<{ id: number; data: DataView }> = [];
-  const serviceDataRaw: DataView[] = [];
+  const serviceDataRaw: Array<{ uuid: string; data: DataView }> = [];
 
   if (event.serviceData && event.serviceData.size > 0) {
-    event.serviceData.forEach((dataView) => {
-      serviceDataRaw.push(dataView);
+    event.serviceData.forEach((dataView, uuid) => {
+      serviceDataRaw.push({
+        uuid: uuidToString(uuid),
+        data: dataView,
+      });
     });
   }
 
@@ -76,7 +80,13 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
   const derivedManufacturer = manufacturerData?.find((entry) => !/^unknown\b/i.test(entry.name))?.name;
   const manufacturer = deviceInfo?.manufacturer || derivedManufacturer || null;
   const identifiedType = deviceInfo?.type || beaconTypes[0]?.type || 'Unknown';
-  const identifiedCategory = deviceInfo?.category || (beaconTypes.length > 0 ? 'Beacon' : 'Unknown');
+  const identifiedCategory = beaconTypes.length > 0 ? 'Beacon' : deviceInfo?.category || 'Unknown';
+  const identificationHints = buildIdentificationHints({
+    manufacturer,
+    matchedServiceFilters,
+    beaconTypes,
+    advertisedServices,
+  });
 
   return {
     id: event.device.id,
@@ -87,11 +97,39 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
     advertisedServices,
     matchedServiceFilters,
     beaconTypes,
+    identificationHints,
     manufacturerData,
     txPower: event.txPower ?? null,
     rssi: event.rssi ?? null,
     timestamp: Date.now(),
   };
+}
+
+function buildIdentificationHints(input: {
+  manufacturer: string | null;
+  matchedServiceFilters: string[];
+  beaconTypes: BeaconType[];
+  advertisedServices: string[];
+}): string[] {
+  const hints: string[] = [];
+
+  if (input.manufacturer) {
+    hints.push(`Manufacturer ${input.manufacturer}`);
+  }
+
+  for (const beacon of input.beaconTypes) {
+    hints.push(`Beacon ${beacon.type}`);
+  }
+
+  for (const filter of input.matchedServiceFilters.slice(0, 2)) {
+    hints.push(`Service profile ${filter.replace(/_/g, ' ')}`);
+  }
+
+  if (input.advertisedServices.length > 0) {
+    hints.push(`Advertises ${input.advertisedServices[0]}`);
+  }
+
+  return Array.from(new Set(hints));
 }
 
 export function formatUUID(uuid: string): string {

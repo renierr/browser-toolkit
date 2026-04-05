@@ -48,7 +48,7 @@ function groupByCategory(devices: Map<string, ParsedDevice>): Map<string, Parsed
   const unknownDevices: ParsedDevice[] = [];
 
   for (const device of devices.values()) {
-    const category = device.identifiedCategory;
+    const category = device.beaconTypes.length > 0 ? 'Beacon' : device.identifiedCategory;
     if (category === UNKNOWN_CATEGORY) {
       unknownDevices.push(device);
       continue;
@@ -247,6 +247,37 @@ export function renderDeviceCard(device: ParsedDevice): string {
                       `<span class="badge badge-sm badge-info truncate max-w-37.5" title="${beacon.format}">${beacon.type}</span>`
                   )
                   .join('')}
+              </div>
+              <div class="mt-1 space-y-1">
+                ${device.beaconTypes
+                  .flatMap((beacon) => (beacon.details && beacon.details.length > 0 ? beacon.details : []))
+                  .slice(0, 4)
+                  .map((detail) => `<p class="text-[11px] text-base-content/55 truncate" title="${detail}">${detail}</p>`)
+                  .join('')}
+              </div>
+            </div>
+          `
+              : ''
+          }
+
+          ${
+            device.identificationHints.length > 0
+              ? `
+            <div>
+              <p class="text-base-content/50 text-xs mb-1">Local hints</p>
+              <div class="flex flex-wrap gap-1 overflow-hidden">
+                ${device.identificationHints
+                  .slice(0, 4)
+                  .map(
+                    (hint) =>
+                      `<span class="badge badge-sm badge-ghost truncate max-w-42" title="${hint}">${hint}</span>`
+                  )
+                  .join('')}
+                ${
+                  device.identificationHints.length > 4
+                    ? `<span class="badge badge-sm badge-ghost">+${device.identificationHints.length - 4}</span>`
+                    : ''
+                }
               </div>
             </div>
           `

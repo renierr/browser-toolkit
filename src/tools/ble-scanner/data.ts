@@ -18,13 +18,15 @@ export interface DevicePattern {
 }
 
 export interface BeaconType {
+  key?: string;
   type: string;
   format: string;
+  details?: string[];
 }
 
 export interface BeaconDetectionInput {
   serviceUuids: string[];
-  serviceData: DataView[];
+  serviceData: Array<{ uuid: string; data: DataView }>;
   manufacturerData: Array<{ id: number; data: DataView }>;
 }
 
@@ -2869,43 +2871,203 @@ function hasIBeaconPrefix(data: DataView): boolean {
   return data.byteLength >= 2 && data.getUint8(0) === 0x02 && data.getUint8(1) === 0x15;
 }
 
-function getEddystoneFrameType(serviceData: DataView[]): number | null {
+function getEddystoneFrameType(serviceData: Array<{ uuid: string; data: DataView }>): number | null {
   for (const entry of serviceData) {
-    if (entry.byteLength > 0) {
-      return entry.getUint8(0);
+    if (!hasServiceUuid([entry.uuid], 'feaa')) {
+      continue;
+    }
+
+    if (entry.data.byteLength > 0) {
+      return entry.data.getUint8(0);
     }
   }
+
   return null;
+}
+
+function formatHexBytes(data: DataView, start: number, length: number): string {
+  const bytes: string[] = [];
+  for (let i = 0; i < length && start + i < data.byteLength; i++) {
+    bytes.push(data.getUint8(start + i).toString(16).padStart(2, '0'));
+  }
+  return bytes.join('');
+}
+
+function toSignedByte(value: number): number {
+  return value > 127 ? value - 256 : value;
+}
+
+function decodeEddystoneUrl(data: DataView): string | null {
+  if (data.byteLength < 3) {
+    return null;
+  }
+
+  const prefixes: Record<number, string> = {
+    0x00: 'http://www.',
+    0x01: 'https://www.',
+    0x02: 'http://',
+    0x03: 'https://',
+  };
+
+  const suffixes: Record<number, string> = {
+    0x00: '.com/',
+    0x01: '.org/',
+    0x02: '.edu/',
+    0x03: '.net/',
+    0x04: '.info/',
+    0x05: '.biz/',
+    0x06: '.gov/',
+    0x07: '.com',
+    0x08: '.org',
+    0x09: '.edu',
+    0x0a: '.net',
+    0x0b: '.info',
+    0x0c: '.biz',
+    0x0d: '.gov',
+  };
+
+  let url = prefixes[data.getUint8(2)] ?? '';
+
+  for (let i = 3; i < data.byteLength; i++) {
+    const value = data.getUint8(i);
+    if (value in suffixes) {
+      url += suffixes[value];
+      continue;
+    }
+
+    url += String.fromCharCode(value);
+  }
+
+  return url || null;
+}
+
+function parseEddystoneDetails(serviceData: Array<{ uuid: string; data: DataView }>): string[] {
+  for (const entry of serviceData) {
+    if (!hasServiceUuid([entry.uuid], 'feaa')) {
+      continue;
+    }
+
+    const data = entry.data;
+    if (data.byteLength < 2) {
+      continue;
+    }
+
+    const frameType = data.getUint8(0);
+    const txPower = toSignedByte(data.getUint8(1));
+
+    if (frameType === 0x00 && data.byteLength >= 18) {
+      const namespace = formatHexBytes(data, 2, 10);
+      const instance = formatHexBytes(data, 12, 6);
+      return [`Tx ${txPower} dBm`, `Namespace ${namespace}`, `Instance ${instance}`];
+    }
+
+    if (frameType === 0x10 && data.byteLength >= 3) {
+      const url = decodeEddystoneUrl(data);
+      return url ? [`Tx ${txPower} dBm`, `URL ${url}`] : [`Tx ${txPower} dBm`];
+    }
+
+    if (frameType === 0x20 && data.byteLength >= 14) {
+      const batteryMv = data.getUint16(2, false);
+      const tempIntegral = toSignedByte(data.getUint8(4));
+      const tempFraction = data.getUint8(5) / 256;
+      const temperature = (tempIntegral + tempFraction).toFixed(2);
+      const advCount = data.getUint32(6, false);
+      return [`Battery ${batteryMv} mV`, `Temp ${temperature} C`, `Adv ${advCount}`];
+    }
+
+    if (frameType === 0x30 && data.byteLength >= 10) {
+      const eid = formatHexBytes(data, 2, 8);
+      return [`EID ${eid}`];
+    }
+  }
+
+  return [];
+}
+
+function parseIBeaconDetails(data: DataView): string[] {
+  if (data.byteLength < 23 || !hasIBeaconPrefix(data)) {
+    return [];
+  }
+
+  const rawUuid = formatHexBytes(data, 2, 16);
+  const uuid = `${rawUuid.slice(0, 8)}-${rawUuid.slice(8, 12)}-${rawUuid.slice(12, 16)}-${rawUuid.slice(16, 20)}-${rawUuid.slice(20, 32)}`;
+  const major = data.getUint16(18, false);
+  const minor = data.getUint16(20, false);
+  const txPower = toSignedByte(data.getUint8(22));
+
+  return [`UUID ${uuid}`, `Major ${major}`, `Minor ${minor}`, `Tx ${txPower} dBm`];
+}
+
+function parseAltBeaconDetails(data: DataView): string[] {
+  if (data.byteLength < 24 || data.getUint8(0) !== 0xbe || data.getUint8(1) !== 0xac) {
+    return [];
+  }
+
+  const beaconId = formatHexBytes(data, 2, 20);
+  const refRssi = toSignedByte(data.getUint8(22));
+  return [`ID ${beaconId}`, `Ref RSSI ${refRssi} dBm`];
+}
+
+function parseRuuviDetails(data: DataView): string[] {
+  if (data.byteLength === 0) {
+    return [];
+  }
+
+  const format = data.getUint8(0);
+  const details = [`Format 0x${format.toString(16).padStart(2, '0')}`];
+
+  if (format === 0x05 && data.byteLength >= 3) {
+    const tempRaw = data.getInt16(1, false);
+    details.push(`Temp ${(tempRaw * 0.005).toFixed(2)} C`);
+  }
+
+  return details;
+}
+
+function addDetectedBeacon(
+  detected: Map<string, BeaconType>,
+  key: keyof typeof BEACON_TYPES,
+  details: string[] = []
+): void {
+  const base = BEACON_TYPES[key];
+  if (!base) {
+    return;
+  }
+
+  detected.set(key, {
+    key,
+    type: base.type,
+    format: base.format,
+    details,
+  });
 }
 
 export function detectBeaconTypes(input: BeaconDetectionInput): BeaconType[] {
   const detected = new Map<string, BeaconType>();
 
-  const addBeacon = (key: keyof typeof BEACON_TYPES): void => {
-    detected.set(key, BEACON_TYPES[key]);
-  };
-
   const usesEddystoneService = hasServiceUuid(input.serviceUuids, 'feaa');
   if (usesEddystoneService) {
     const frameType = getEddystoneFrameType(input.serviceData);
-    if (frameType === 0x00) addBeacon('eddystone_uid');
-    else if (frameType === 0x10) addBeacon('eddystone_url');
-    else if (frameType === 0x20) addBeacon('eddystone_tlm');
-    else if (frameType === 0x30) addBeacon('eddystone_eid');
-    else addBeacon('eddystone_uid');
+    const details = parseEddystoneDetails(input.serviceData);
+
+    if (frameType === 0x00) addDetectedBeacon(detected, 'eddystone_uid', details);
+    else if (frameType === 0x10) addDetectedBeacon(detected, 'eddystone_url', details);
+    else if (frameType === 0x20) addDetectedBeacon(detected, 'eddystone_tlm', details);
+    else if (frameType === 0x30) addDetectedBeacon(detected, 'eddystone_eid', details);
+    else addDetectedBeacon(detected, 'eddystone_uid', details);
   }
 
   for (const entry of input.manufacturerData) {
     if (entry.id === 0x004c && hasIBeaconPrefix(entry.data)) {
-      addBeacon('apple_ibeacon');
+      addDetectedBeacon(detected, 'apple_ibeacon', parseIBeaconDetails(entry.data));
     }
 
     if (entry.id === 0x0499) {
-      addBeacon('ruuvi');
+      addDetectedBeacon(detected, 'ruuvi', parseRuuviDetails(entry.data));
     }
 
     if (entry.data.byteLength >= 2 && entry.data.getUint8(0) === 0xbe && entry.data.getUint8(1) === 0xac) {
-      addBeacon('altbeacon');
+      addDetectedBeacon(detected, 'altbeacon', parseAltBeaconDetails(entry.data));
     }
   }
 
@@ -2932,7 +3094,3 @@ export function getServiceName(uuid: string): string | null {
   return SERVICE_UUIDS[normalized]?.name ?? null;
 }
 
-export function getServiceCategory(uuid: string): string | null {
-  const normalized = uuid.toLowerCase().replace(/-/g, '');
-  return SERVICE_UUIDS[normalized]?.category ?? null;
-}
