@@ -281,6 +281,7 @@ export const MANUFACTURER_IDS: Record<number, ManufacturerInfo> = {
   0x0059: { id: 0x0059, name: 'Nordic Semiconductor' },
   0x006f: { id: 0x006f, name: 'BlackBerry' },
   0x0075: { id: 0x0075, name: 'Samsung' },
+  0x00c4: { id: 0x00c4, name: 'LG Electronics' },
   0x00e0: { id: 0x00e0, name: 'Google' },
   0x0131: { id: 0x0131, name: 'GoPro' },
   0x0134: { id: 0x0134, name: 'Tile' },

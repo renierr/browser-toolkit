@@ -161,6 +161,10 @@ function formatServiceFilterLabel(filterName: string): string {
 export function renderDeviceCard(device: ParsedDevice): string {
   const signalBars = getSignalBars(device.rssi);
   const timeSinceUpdate = getTimeSinceUpdate(device.timestamp);
+  const confidenceLabel = getConfidenceLabel(device.confidence);
+  const confidenceBadgeClass = getConfidenceBadgeClass(device.confidence);
+  const effectiveCategory = device.beaconTypes.length > 0 ? 'Beacon' : device.identifiedCategory;
+  const primaryIdentity = device.knownDeviceName || device.identifiedType;
 
   return `
     <div class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow" data-device-id="${device.id}">
@@ -169,14 +173,19 @@ export function renderDeviceCard(device: ParsedDevice): string {
           <div class="flex items-center gap-2 min-w-0 flex-1">
             <div class="avatar placeholder items-center justify-center">
               <div class="bg-neutral text-neutral-content rounded-full w-8 sm:w-10 flex items-center justify-center">
-                <i data-lucide="${getCategoryIcon(device.identifiedCategory)}" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                <i data-lucide="${getCategoryIcon(effectiveCategory)}" class="w-4 h-4 sm:w-5 sm:h-5"></i>
               </div>
             </div>
             <div class="min-w-0 flex-1">
               <h3 class="font-semibold truncate text-sm sm:text-base" title="${device.name}">${device.name}</h3>
-              <p class="text-xs sm:text-sm text-base-content/60 truncate">
-                ${device.manufacturer ? device.manufacturer : device.identifiedType}
+              <p class="text-xs sm:text-sm text-base-content/60 truncate" title="${primaryIdentity}">
+                ${primaryIdentity}
               </p>
+              <div class="mt-1 flex flex-wrap gap-1">
+                <span class="badge badge-xs ${confidenceBadgeClass}">${confidenceLabel}</span>
+                <span class="badge badge-xs badge-outline">${effectiveCategory}</span>
+                ${device.manufacturer ? `<span class="badge badge-xs badge-ghost truncate max-w-40" title="${device.manufacturer}">${device.manufacturer}</span>` : ''}
+              </div>
             </div>
           </div>
           <div class="flex flex-col items-end gap-1 shrink-0">
@@ -187,6 +196,15 @@ export function renderDeviceCard(device: ParsedDevice): string {
         <div class="divider my-1 sm:my-2"></div>
 
         <div class="space-y-1 sm:space-y-2 text-xs sm:text-sm min-w-0">
+          <div>
+            <p class="text-base-content/50 text-xs mb-1">Identification</p>
+            <div class="flex flex-wrap gap-1 overflow-hidden">
+              ${device.knownDeviceName ? `<span class="badge badge-sm badge-primary truncate max-w-40" title="Known device: ${device.knownDeviceName}">${device.knownDeviceName}</span>` : ''}
+              <span class="badge badge-sm badge-outline truncate max-w-40" title="Type: ${device.identifiedType}">${device.identifiedType}</span>
+              <span class="badge badge-sm badge-ghost truncate max-w-40" title="Category: ${effectiveCategory}">${effectiveCategory}</span>
+            </div>
+          </div>
+
           ${
             device.advertisedServices.length > 0
               ? `
@@ -400,3 +418,16 @@ function getCategoryBadgeClass(category: string): string {
   };
   return classes[category] || 'badge-neutral';
 }
+
+function getConfidenceLabel(confidence: ParsedDevice['confidence']): string {
+  if (confidence === 'high') return 'High confidence';
+  if (confidence === 'medium') return 'Medium confidence';
+  return 'Low confidence';
+}
+
+function getConfidenceBadgeClass(confidence: ParsedDevice['confidence']): string {
+  if (confidence === 'high') return 'badge-success';
+  if (confidence === 'medium') return 'badge-warning';
+  return 'badge-ghost';
+}
+

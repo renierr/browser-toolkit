@@ -10,8 +10,10 @@ import type { BeaconType } from './data';
 export interface ParsedDevice {
   id: string;
   name: string;
+  knownDeviceName: string | null;
   identifiedType: string;
   identifiedCategory: string;
+  confidence: 'low' | 'medium' | 'high';
   manufacturer: string | null;
   advertisedServices: string[];
   matchedServiceFilters: string[];
@@ -79,8 +81,17 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
 
   const derivedManufacturer = manufacturerData?.find((entry) => !/^unknown\b/i.test(entry.name))?.name;
   const manufacturer = deviceInfo?.manufacturer || derivedManufacturer || null;
+  const knownDeviceName = deviceInfo?.name || null;
   const identifiedType = deviceInfo?.type || beaconTypes[0]?.type || 'Unknown';
   const identifiedCategory = beaconTypes.length > 0 ? 'Beacon' : deviceInfo?.category || 'Unknown';
+  const confidence = calculateConfidence({
+    hasKnownDeviceMatch: Boolean(deviceInfo),
+    hasManufacturer: Boolean(manufacturer),
+    hasManufacturerData: Boolean(manufacturerData && manufacturerData.length > 0),
+    matchedServiceFilterCount: matchedServiceFilters.length,
+    advertisedServiceCount: advertisedServices.length,
+    beaconCount: beaconTypes.length,
+  });
   const identificationHints = buildIdentificationHints({
     manufacturer,
     matchedServiceFilters,
@@ -91,8 +102,10 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
   return {
     id: event.device.id,
     name,
+    knownDeviceName,
     identifiedType,
     identifiedCategory,
+    confidence,
     manufacturer,
     advertisedServices,
     matchedServiceFilters,
@@ -103,6 +116,28 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
     rssi: event.rssi ?? null,
     timestamp: Date.now(),
   };
+}
+
+function calculateConfidence(input: {
+  hasKnownDeviceMatch: boolean;
+  hasManufacturer: boolean;
+  hasManufacturerData: boolean;
+  matchedServiceFilterCount: number;
+  advertisedServiceCount: number;
+  beaconCount: number;
+}): 'low' | 'medium' | 'high' {
+  let score = 0;
+
+  if (input.hasKnownDeviceMatch) score += 4;
+  if (input.hasManufacturer) score += 2;
+  if (input.hasManufacturerData) score += 1;
+  if (input.matchedServiceFilterCount > 0) score += 1;
+  if (input.advertisedServiceCount > 0) score += 1;
+  if (input.beaconCount > 0) score += 3;
+
+  if (score >= 6) return 'high';
+  if (score >= 3) return 'medium';
+  return 'low';
 }
 
 function buildIdentificationHints(input: {
