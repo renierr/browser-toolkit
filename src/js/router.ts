@@ -38,12 +38,50 @@ class Router {
 
     const overviewDelta = this.findOverviewHistoryDelta();
     if (overviewDelta !== null) {
-      history.go(overviewDelta);
+      this.navigateToOverviewByHistory(overviewDelta, token);
       return;
     }
 
     // Fallback: set hash to overview (empty)
     this.goTo('');
+  }
+
+  private navigateToOverviewByHistory(delta: number, token: number): void {
+    const initialHash = window.location.hash;
+    const initialPath = window.location.pathname;
+    const initialSearch = window.location.search;
+    let settled = false;
+
+    const finish = (): void => {
+      window.removeEventListener('hashchange', onSettled);
+      window.removeEventListener('popstate', onSettled);
+    };
+
+    const onSettled = (): void => {
+      settled = true;
+      finish();
+    };
+
+    window.addEventListener('hashchange', onSettled, { once: true });
+    window.addEventListener('popstate', onSettled, { once: true });
+
+    window.setTimeout(() => {
+      if (settled) return;
+      if (token !== this.pendingOverviewToken) return;
+
+      const isUnchanged =
+        window.location.hash === initialHash &&
+        window.location.pathname === initialPath &&
+        window.location.search === initialSearch;
+
+      if (isUnchanged) {
+        finish();
+        this.clearPendingOverviewScroll();
+        this.goTo('');
+      }
+    }, 250);
+
+    history.go(delta);
   }
 
   private clearPendingOverviewScroll(): void {
