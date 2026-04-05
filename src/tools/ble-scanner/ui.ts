@@ -1,5 +1,8 @@
 import type { ParsedDevice } from './parser';
 
+const UNKNOWN_CATEGORY = 'Unknown';
+const UNKNOWN_MANUFACTURER_GROUP_MIN = 3;
+
 export function renderDeviceGroups(
   devices: Map<string, ParsedDevice>,
   collapsedCategories: Set<string>
@@ -10,7 +13,7 @@ export function renderDeviceGroups(
     return renderEmptyState();
   }
 
-  const sortedCategories = Array.from(grouped.keys()).sort();
+  const sortedCategories = Array.from(grouped.keys()).sort(compareCategoryNames);
 
   return sortedCategories
     .map((category) => {
@@ -69,16 +72,110 @@ export function renderCategoryGroup(
 
 function groupByCategory(devices: Map<string, ParsedDevice>): Map<string, ParsedDevice[]> {
   const grouped = new Map<string, ParsedDevice[]>();
+  const unknownDevices: ParsedDevice[] = [];
 
   for (const device of devices.values()) {
     const category = device.identifiedCategory;
+    if (category === UNKNOWN_CATEGORY) {
+      unknownDevices.push(device);
+      continue;
+    }
+
     if (!grouped.has(category)) {
       grouped.set(category, []);
     }
     grouped.get(category)!.push(device);
   }
 
+  if (unknownDevices.length === 0) {
+    return grouped;
+  }
+
+  const unknownByManufacturer = new Map<string, ParsedDevice[]>();
+  const genericUnknown: ParsedDevice[] = [];
+
+  for (const device of unknownDevices) {
+    const manufacturer = getKnownManufacturerForUnknownGroup(device);
+    if (!manufacturer) {
+      genericUnknown.push(device);
+      continue;
+    }
+
+    if (!unknownByManufacturer.has(manufacturer)) {
+      unknownByManufacturer.set(manufacturer, []);
+    }
+    unknownByManufacturer.get(manufacturer)!.push(device);
+  }
+
+  for (const [manufacturer, manufacturerDevices] of unknownByManufacturer) {
+    if (manufacturerDevices.length >= UNKNOWN_MANUFACTURER_GROUP_MIN) {
+      grouped.set(`${UNKNOWN_CATEGORY} - ${manufacturer}`, manufacturerDevices);
+      continue;
+    }
+
+    genericUnknown.push(...manufacturerDevices);
+  }
+
+  if (genericUnknown.length > 0) {
+    grouped.set(UNKNOWN_CATEGORY, genericUnknown);
+  }
+
   return grouped;
+}
+
+function getKnownManufacturerForUnknownGroup(device: ParsedDevice): string | null {
+  const manufacturerFromName = normalizeManufacturerName(device.manufacturer);
+  if (manufacturerFromName) {
+    return manufacturerFromName;
+  }
+
+  if (!device.manufacturerData || device.manufacturerData.length === 0) {
+    return null;
+  }
+
+  return normalizeManufacturerName(device.manufacturerData[0]?.name ?? null);
+}
+
+function normalizeManufacturerName(name: string | null): string | null {
+  if (!name) {
+    return null;
+  }
+
+  const cleaned = name
+    .replace(/,\s*inc\.?$/i, '')
+    .replace(/\binc\.?$/i, '')
+    .trim();
+
+  if (!cleaned || /^unknown\b/i.test(cleaned)) {
+    return null;
+  }
+
+  return cleaned;
+}
+
+function compareCategoryNames(left: string, right: string): number {
+  const unknownGroupPrefix = `${UNKNOWN_CATEGORY} - `;
+
+  if (left === UNKNOWN_CATEGORY && right !== UNKNOWN_CATEGORY) {
+    return -1;
+  }
+
+  if (right === UNKNOWN_CATEGORY && left !== UNKNOWN_CATEGORY) {
+    return 1;
+  }
+
+  const leftIsUnknownSubgroup = left.startsWith(unknownGroupPrefix);
+  const rightIsUnknownSubgroup = right.startsWith(unknownGroupPrefix);
+
+  if (leftIsUnknownSubgroup && !rightIsUnknownSubgroup) {
+    return -1;
+  }
+
+  if (rightIsUnknownSubgroup && !leftIsUnknownSubgroup) {
+    return 1;
+  }
+
+  return left.localeCompare(right);
 }
 
 export function renderDeviceCard(device: ParsedDevice): string {
