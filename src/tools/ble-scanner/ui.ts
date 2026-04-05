@@ -43,33 +43,6 @@ export function renderDeviceGroups(
     .join('');
 }
 
-export function renderCategoryGroup(
-  category: string,
-  devices: ParsedDevice[],
-  isCollapsed: boolean
-): string {
-  const categoryBadgeClass = getCategoryBadgeClass(category);
-  const icon = getCategoryIcon(category);
-
-  const deviceCards = devices.map((device) => renderDeviceCard(device)).join('');
-
-  return `
-    <div class="collapse collapse-arrow bg-base-200 mb-2" data-category="${category}">
-      <input type="checkbox" class="peer" ${isCollapsed ? 'checked' : ''} />
-      <div class="collapse-title cursor-pointer flex items-center gap-2 min-h-0 py-2">
-        <i data-lucide="${icon}" class="w-5 h-5"></i>
-        <span class="font-semibold">${category}</span>
-        <span class="badge badge-sm ${categoryBadgeClass} ml-auto">${devices.length}</span>
-      </div>
-      <div class="collapse-content p-0">
-        <div class="grid gap-3 p-2 grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-          ${deviceCards}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 function groupByCategory(devices: Map<string, ParsedDevice>): Map<string, ParsedDevice[]> {
   const grouped = new Map<string, ParsedDevice[]>();
   const unknownDevices: ParsedDevice[] = [];
@@ -224,7 +197,7 @@ export function renderDeviceCard(device: ParsedDevice): string {
                   .slice(0, 4)
                   .map(
                     (service) =>
-                      `<span class="badge badge-sm badge-outline truncate max-w-[120px]" title="${service}">${service}</span>`
+                      `<span class="badge badge-sm badge-outline truncate max-w-30" title="${service}">${service}</span>`
                   )
                   .join('')}
                 ${
@@ -248,7 +221,7 @@ export function renderDeviceCard(device: ParsedDevice): string {
                   .slice(0, 4)
                   .map(
                     (filter) =>
-                      `<span class="badge badge-sm badge-secondary truncate max-w-[140px]" title="${formatServiceFilterLabel(filter)}">${formatServiceFilterLabel(filter)}</span>`
+                      `<span class="badge badge-sm badge-secondary truncate max-w-35" title="${formatServiceFilterLabel(filter)}">${formatServiceFilterLabel(filter)}</span>`
                   )
                   .join('')}
                 ${
@@ -256,6 +229,24 @@ export function renderDeviceCard(device: ParsedDevice): string {
                     ? `<span class="badge badge-sm badge-ghost">+${device.matchedServiceFilters.length - 4}</span>`
                     : ''
                 }
+              </div>
+            </div>
+          `
+              : ''
+          }
+
+          ${
+            device.beaconTypes.length > 0
+              ? `
+            <div>
+              <p class="text-base-content/50 text-xs mb-1">Beacon</p>
+              <div class="flex flex-wrap gap-1 overflow-hidden">
+                ${device.beaconTypes
+                  .map(
+                    (beacon) =>
+                      `<span class="badge badge-sm badge-info truncate max-w-37.5" title="${beacon.format}">${beacon.type}</span>`
+                  )
+                  .join('')}
               </div>
             </div>
           `
@@ -286,12 +277,6 @@ export function renderDeviceCard(device: ParsedDevice): string {
   `;
 }
 
-export function updateDeviceCard(device: ParsedDevice): void {
-  const existingCard = document.querySelector(`[data-device-id="${device.id}"]`);
-  if (existingCard) {
-    existingCard.outerHTML = renderDeviceCard(device);
-  }
-}
 
 export function renderEmptyState(): string {
   return `
@@ -361,6 +346,7 @@ function getCategoryIcon(category: string): string {
     VR: 'glasses',
     Computing: 'laptop',
     Vehicle: 'car',
+    Beacon: 'radio',
     Generic: 'bluetooth',
   };
   return icons[category] || icons['Generic'];
@@ -378,6 +364,7 @@ function getCategoryBadgeClass(category: string): string {
     Gaming: 'badge-secondary',
     VR: 'badge-accent',
     Computing: 'badge-ghost',
+    Beacon: 'badge-info',
     Generic: 'badge-neutral',
   };
   return classes[category] || 'badge-neutral';

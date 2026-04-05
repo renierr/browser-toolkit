@@ -22,6 +22,12 @@ export interface BeaconType {
   format: string;
 }
 
+export interface BeaconDetectionInput {
+  serviceUuids: string[];
+  serviceData: DataView[];
+  manufacturerData: Array<{ id: number; data: DataView }>;
+}
+
 export const SERVICE_UUIDS: Record<string, ServiceInfo> = {
   '1801': { uuid: '1801', name: 'GAP Service', category: 'Generic Access' },
   '1802': { uuid: '1802', name: 'GATT Service', category: 'Generic Attribute' },
@@ -506,6 +512,34 @@ export const MANUFACTURER_IDS: Record<number, ManufacturerInfo> = {
 };
 
 export const DEVICE_PATTERNS: DevicePattern[] = [
+  {
+    pattern: /AirTag/i,
+    name: 'AirTag',
+    type: 'Tracker',
+    category: 'IoT',
+    manufacturer: 'Apple',
+  },
+  {
+    pattern: /Find\s*My/i,
+    name: 'Find My Tracker',
+    type: 'Tracker',
+    category: 'IoT',
+    manufacturer: 'Apple',
+  },
+  {
+    pattern: /Chipolo/i,
+    name: 'Chipolo',
+    type: 'Tracker',
+    category: 'IoT',
+    manufacturer: 'Chipolo',
+  },
+  {
+    pattern: /Pebblebee/i,
+    name: 'Pebblebee',
+    type: 'Tracker',
+    category: 'IoT',
+    manufacturer: 'Pebblebee',
+  },
   {
     pattern: /AirPods/i,
     name: 'AirPods',
@@ -2648,6 +2682,61 @@ export const BEACON_TYPES: Record<string, BeaconType> = {
     format: 'Environmental sensor data (temp, humidity, pressure, acceleration)',
   },
 };
+
+function hasServiceUuid(serviceUuids: string[], targetUuid: string): boolean {
+  const normalizedTarget = targetUuid.toLowerCase().replace(/-/g, '');
+  return serviceUuids.some((uuid) => {
+    const aliases = buildServiceUuidAliases(uuid);
+    return aliases.has(normalizedTarget);
+  });
+}
+
+function hasIBeaconPrefix(data: DataView): boolean {
+  return data.byteLength >= 2 && data.getUint8(0) === 0x02 && data.getUint8(1) === 0x15;
+}
+
+function getEddystoneFrameType(serviceData: DataView[]): number | null {
+  for (const entry of serviceData) {
+    if (entry.byteLength > 0) {
+      return entry.getUint8(0);
+    }
+  }
+  return null;
+}
+
+export function detectBeaconTypes(input: BeaconDetectionInput): BeaconType[] {
+  const detected = new Map<string, BeaconType>();
+
+  const addBeacon = (key: keyof typeof BEACON_TYPES): void => {
+    detected.set(key, BEACON_TYPES[key]);
+  };
+
+  const usesEddystoneService = hasServiceUuid(input.serviceUuids, 'feaa');
+  if (usesEddystoneService) {
+    const frameType = getEddystoneFrameType(input.serviceData);
+    if (frameType === 0x00) addBeacon('eddystone_uid');
+    else if (frameType === 0x10) addBeacon('eddystone_url');
+    else if (frameType === 0x20) addBeacon('eddystone_tlm');
+    else if (frameType === 0x30) addBeacon('eddystone_eid');
+    else addBeacon('eddystone_uid');
+  }
+
+  for (const entry of input.manufacturerData) {
+    if (entry.id === 0x004c && hasIBeaconPrefix(entry.data)) {
+      addBeacon('apple_ibeacon');
+    }
+
+    if (entry.id === 0x0499) {
+      addBeacon('ruuvi');
+    }
+
+    if (entry.data.byteLength >= 2 && entry.data.getUint8(0) === 0xbe && entry.data.getUint8(1) === 0xac) {
+      addBeacon('altbeacon');
+    }
+  }
+
+  return Array.from(detected.values());
+}
 
 export function getDeviceInfo(deviceName: string): DevicePattern | null {
   if (!deviceName) return null;

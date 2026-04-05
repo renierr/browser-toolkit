@@ -81,9 +81,6 @@ export class BLEScanner {
     this.advertisementHandler = null;
   }
 
-  getDevices(): ParsedDevice[] {
-    return Array.from(this.activeDevices.values());
-  }
 
   clearDevices(): void {
     this.activeDevices.clear();
