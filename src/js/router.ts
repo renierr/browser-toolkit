@@ -4,6 +4,8 @@ class Router {
   private currentPath: string | null = null;
   private payload: any = null;
   private listeners: RouteListener[] = [];
+  private pendingOverviewCleanup: (() => void) | null = null;
+  private pendingOverviewToken = 0;
 
   constructor() {
     window.addEventListener('hashchange', this.handleHashChange.bind(this));
@@ -28,78 +30,145 @@ class Router {
 
   public goOverview() {
     const currentTool = this.currentPath;
+    const token = ++this.pendingOverviewToken;
 
-    const setupScrollHandler = () => {
-      let called = false;
-      const doScroll = () => {
-        if (called) return;
-        called = true;
-        if (currentTool) {
-          const el = document.getElementById(currentTool);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
-      };
+    // Keep at most one pending overview scroll handler alive.
+    this.clearPendingOverviewScroll();
+    this.setupOverviewScrollAfterNavigation(currentTool, token);
 
-      const handler = () => {
-        window.removeEventListener('hashchange', handler);
-        window.removeEventListener('popstate', handler);
-        requestAnimationFrame(() => requestAnimationFrame(doScroll));
-      };
-
-      window.addEventListener('hashchange', handler, { once: true });
-      window.addEventListener('popstate', handler, { once: true });
-    };
-
-    // Always set up scroll handler first
-    setupScrollHandler();
-
-    // Try to use the new Navigation API to find the earliest entry that points to the overview
-    // (no hash or a lone '#') and navigate back to it using history.go(delta).
-    // @ts-ignore - Navigation API is experimental
-    const nav = (window as any).navigation;
-    if (nav && typeof nav.entries === 'function') {
-      try {
-        const navEntries = nav.entries();
-        if (Array.isArray(navEntries) && navEntries.length > 1) {
-          // Determine the current entry index. If navigation provides it, use that, otherwise assume the last entry is current.
-          const currentIndex =
-            typeof nav.currentEntryIndex === 'number'
-              ? nav.currentEntryIndex
-              : navEntries.length - 1;
-
-          // Find the earliest entry (lowest index) before the current index whose URL has no hash or only a single '#'.
-          let foundIndex = -1;
-          for (let i = 0; i < currentIndex; i++) {
-            const entry = navEntries[i];
-            if (!entry || !entry.url) continue;
-            try {
-              const u = new URL(entry.url);
-              if (!u.hash || u.hash === '#') {
-                foundIndex = i;
-                break; // stop at the first (earliest) matching entry
-              }
-            } catch (e) {
-              // If entry.url isn't a valid absolute URL, skip this entry and continue searching.
-            }
-          }
-
-          if (foundIndex >= 0 && foundIndex < currentIndex) {
-            const delta = foundIndex - currentIndex; // negative number -> go back
-            history.go(delta);
-            return;
-          }
-        }
-      } catch (e) {
-        // If anything goes wrong, fall back to the hash-based navigation below.
-        // eslint-disable-next-line no-console
-        console.debug('Navigation API fallback:', e);
-      }
+    const overviewDelta = this.findOverviewHistoryDelta();
+    if (overviewDelta !== null) {
+      history.go(overviewDelta);
+      return;
     }
 
     // Fallback: set hash to overview (empty)
     this.goTo('');
+  }
+
+  private clearPendingOverviewScroll(): void {
+    if (this.pendingOverviewCleanup) {
+      this.pendingOverviewCleanup();
+      this.pendingOverviewCleanup = null;
+    }
+  }
+
+  private setupOverviewScrollAfterNavigation(toolId: string | null, token: number): void {
+    if (!toolId) return;
+
+    let raf1: number | null = null;
+    let raf2: number | null = null;
+    let timeoutId: number | null = null;
+
+    const cleanup = (): void => {
+      window.removeEventListener('hashchange', handler);
+      window.removeEventListener('popstate', handler);
+
+      if (raf1 !== null) {
+        cancelAnimationFrame(raf1);
+        raf1 = null;
+      }
+
+      if (raf2 !== null) {
+        cancelAnimationFrame(raf2);
+        raf2 = null;
+      }
+
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+        timeoutId = null;
+      }
+
+      if (this.pendingOverviewCleanup === cleanup) {
+        this.pendingOverviewCleanup = null;
+      }
+    };
+
+    const runScroll = (): void => {
+      if (token !== this.pendingOverviewToken) {
+        cleanup();
+        return;
+      }
+
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => {
+          if (token !== this.pendingOverviewToken) {
+            cleanup();
+            return;
+          }
+
+          const el = document.getElementById(toolId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+
+          cleanup();
+        });
+      });
+    };
+
+    const handler = (): void => {
+      cleanup();
+      runScroll();
+    };
+
+    window.addEventListener('hashchange', handler, { once: true });
+    window.addEventListener('popstate', handler, { once: true });
+
+    // Safety timeout to avoid dangling listeners when no navigation event fires.
+    timeoutId = window.setTimeout(cleanup, 2000);
+    this.pendingOverviewCleanup = cleanup;
+  }
+
+  private findOverviewHistoryDelta(): number | null {
+    // @ts-ignore - Navigation API is experimental
+    const nav = (window as any).navigation;
+    if (!nav || typeof nav.entries !== 'function') {
+      return null;
+    }
+
+    try {
+      const navEntries = nav.entries();
+      if (!Array.isArray(navEntries) || navEntries.length <= 1) {
+        return null;
+      }
+
+      const currentIndex =
+        typeof nav.currentEntryIndex === 'number' ? nav.currentEntryIndex : navEntries.length - 1;
+
+      // Prefer the nearest previous overview entry to avoid jumping too far back.
+      for (let i = currentIndex - 1; i >= 0; i--) {
+        const entry = navEntries[i];
+        if (!entry || typeof entry.url !== 'string') {
+          continue;
+        }
+
+        if (this.isOverviewUrl(entry.url)) {
+          return i - currentIndex;
+        }
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.debug('[Router] Navigation API fallback:', error);
+    }
+
+    return null;
+  }
+
+  private isOverviewUrl(url: string): boolean {
+    try {
+      const entryUrl = new URL(url, window.location.href);
+      const currentUrl = new URL(window.location.href);
+
+      return (
+        entryUrl.origin === currentUrl.origin &&
+        entryUrl.pathname === currentUrl.pathname &&
+        entryUrl.search === currentUrl.search &&
+        (!entryUrl.hash || entryUrl.hash === '#')
+      );
+    } catch {
+      return false;
+    }
   }
 
   public getCurrentPath(): string | null {
