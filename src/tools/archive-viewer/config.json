@@ -1,6 +1,6 @@
 {
   "name": "Archive Viewer",
-  "description": "View and extract files from ZIP, TAR, TAR.GZ and 7Z archives without extracting the entire archive.",
+  "description": "View archive contents and extract selected files from ZIP, TAR, TAR.GZ, and 7Z files.",
   "icon": "archive",
   "sectionId": "utilities",
   "order": 11,

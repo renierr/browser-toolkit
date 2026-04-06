@@ -1,6 +1,6 @@
 {
   "name": "BLE Scanner",
-  "description": "Scan for nearby Bluetooth Low Energy devices and identify them using an extensive device database",
+  "description": "Scan nearby Bluetooth Low Energy devices and identify them with a built-in device database.",
   "icon": "bluetooth",
   "sectionId": "devices",
   "order": 10

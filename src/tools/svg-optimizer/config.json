@@ -1,10 +1,12 @@
 {
   "name": "SVG Optimizer",
-  "description": "Optimize and minify SVG files. Upload or paste SVG code to reduce file size.",
+  "description": "Optimize and minify SVG files from pasted code or uploaded files.",
   "icon": "image",
   "sectionId": "utilities",
   "order": 11,
   "shareTarget": {
-    "accept": ["image/svg+xml"]
+    "accept": [
+      "image/svg+xml"
+    ]
   }
 }

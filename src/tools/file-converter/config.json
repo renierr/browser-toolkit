@@ -1,6 +1,6 @@
 {
   "name": "File Converter",
-  "description": "Convert documents between common formats.",
+  "description": "Convert documents between commonly used file formats.",
   "draft": false,
   "example": false,
   "icon": "file-text",

@@ -1,6 +1,6 @@
 {
   "name": "GPS Location Store",
-  "description": "Store and track your GPS locations offline with history and distance calculation.",
+  "description": "Save GPS locations, review history, and calculate traveled distance.",
   "icon": "map-pin",
   "sectionId": "general",
   "order": 10

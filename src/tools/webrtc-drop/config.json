@@ -1,6 +1,6 @@
 {
   "name": "WebRTC Drop (P2P)",
-  "description": "Send large files securely peer-to-peer using WebRTC. Finds peers on your local network automatically.",
+  "description": "Transfer large files peer-to-peer over WebRTC on the local network.",
   "icon": "share-2",
   "sectionId": "utilities",
   "order": 100

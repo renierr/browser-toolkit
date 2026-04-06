@@ -1,6 +1,6 @@
 {
   "name": "Audio Recorder",
-  "description": "Record audio, visualize waveforms, and save as WebM.",
+  "description": "Record audio, preview the waveform, and save the result as WebM.",
   "icon": "mic",
   "sectionId": "media",
   "order": 6

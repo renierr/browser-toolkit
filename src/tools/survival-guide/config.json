@@ -1,6 +1,6 @@
 {
   "name": "Survival Guide",
-  "description": "Offline survival guides for wilderness, emergency, and disaster situations. Fire starting, water purification, first aid, shelter, and more.",
+  "description": "Read survival guides for wilderness, emergency, and disaster scenarios.",
   "icon": "book-open",
   "sectionId": "utilities",
   "order": 10

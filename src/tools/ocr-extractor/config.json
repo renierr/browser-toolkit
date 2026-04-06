@@ -1,10 +1,12 @@
 {
   "name": "OCR Text Extractor",
-  "description": "Extract text from images using Tesseract",
+  "description": "Extract text from images using OCR.",
   "icon": "scan-text",
   "sectionId": "images",
   "order": 10,
   "shareTarget": {
-    "accept": ["image/*"]
+    "accept": [
+      "image/*"
+    ]
   }
 }

@@ -1,12 +1,14 @@
 {
   "name": "Flatten PDF as Image",
-  "description": "Take a PDF and flatten it to a series of images.",
+  "description": "Flatten each PDF page into image output.",
   "icon": "scan-text",
   "draft": false,
   "example": false,
   "sectionId": "pdf",
   "order": 3,
   "shareTarget": {
-    "accept": ["application/pdf"]
+    "accept": [
+      "application/pdf"
+    ]
   }
 }

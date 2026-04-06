@@ -1,6 +1,6 @@
 {
   "name": "Grocery List",
-  "description": "Manage your grocery items with amounts, reuse from history, and check off items.",
+  "description": "Create grocery lists with quantities, reusable items, and check-off tracking.",
   "icon": "shopping-cart",
   "sectionId": "general",
   "order": 10

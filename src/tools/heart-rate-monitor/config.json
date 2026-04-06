@@ -1,6 +1,6 @@
 {
   "name": "Heart Rate Monitor",
-  "description": "Connect to a Bluetooth Heart Rate monitor to see and record your heart rate in real-time.",
+  "description": "Connect to a Bluetooth heart rate monitor and track live pulse measurements.",
   "icon": "heart",
   "sectionId": "devices",
   "order": 1,

@@ -1,11 +1,13 @@
 {
   "name": "Document Scanner",
-  "description": "Scan documents, correct perspective, and apply clean filters",
+  "description": "Capture documents, correct perspective, and apply cleanup filters for readable scans.",
   "icon": "scan",
   "sectionId": "images",
   "order": 10,
   "hideFooter": true,
   "shareTarget": {
-    "accept": ["image/*"]
+    "accept": [
+      "image/*"
+    ]
   }
 }

@@ -1,6 +1,6 @@
 {
   "name": "Calculator",
-  "description": "Powerful scientific calculator with session history and mobile-first design.",
+  "description": "Run scientific calculations with expression history and mobile-friendly controls.",
   "icon": "calculator",
   "sectionId": "utilities",
   "hideFooter": true,

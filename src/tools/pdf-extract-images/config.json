@@ -1,12 +1,14 @@
 {
   "name": "Extract images",
-  "description": "Extract Images embedded inside a PDF",
+  "description": "Extract embedded images from PDF documents.",
   "icon": "image-down",
   "draft": false,
   "example": false,
   "sectionId": "pdf",
   "order": 4,
   "shareTarget": {
-    "accept": ["application/pdf"]
+    "accept": [
+      "application/pdf"
+    ]
   }
 }

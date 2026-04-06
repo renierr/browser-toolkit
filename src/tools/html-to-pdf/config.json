@@ -1,6 +1,6 @@
 {
   "name": "HTML to PDF",
-  "description": "Create PDF from HTML",
+  "description": "Generate a PDF document from HTML content.",
   "icon": "file-pen-line",
   "draft": false,
   "example": false,

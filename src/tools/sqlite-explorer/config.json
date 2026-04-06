@@ -1,9 +1,15 @@
 {
   "name": "SQLite Explorer",
-  "description": "Explore SQLite databases locally in your browser. View tables, schemas, and execute custom SQL queries.",
+  "description": "Open SQLite databases, browse schemas, and run SQL queries.",
   "icon": "database",
   "sectionId": "utilities",
   "shareTarget": {
-    "accept": ["application/vnd.sqlite3", "application/x-sqlite3", ".sqlite", ".sqlite3", ".db"]
+    "accept": [
+      "application/vnd.sqlite3",
+      "application/x-sqlite3",
+      ".sqlite",
+      ".sqlite3",
+      ".db"
+    ]
   }
 }

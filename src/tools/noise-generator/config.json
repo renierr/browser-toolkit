@@ -1,6 +1,6 @@
 {
   "name": "Focus Noise & Breathing",
-  "description": "Generate continuous background noise and follow guided breathing for focus or relaxation.",
+  "description": "Generate ambient noise and guide paced breathing sessions for focus or relaxation.",
   "icon": "waves",
   "sectionId": "media",
   "order": 1

@@ -1,6 +1,6 @@
 {
   "name": "Battery Info",
-  "description": "View battery status and detailed information for this device.",
+  "description": "Display battery level, charging state, and related device battery details.",
   "icon": "battery",
   "sectionId": "general",
   "order": 11

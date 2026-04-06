@@ -1,10 +1,12 @@
 {
   "name": "Share Debug",
-  "description": "Debug tool to inspect shared files and their MIME types",
+  "description": "Inspect shared files and MIME types for share-target debugging.",
   "icon": "bug",
   "sectionId": "utilities",
   "order": 100,
   "shareTarget": {
-    "accept": ["*/*"]
+    "accept": [
+      "*/*"
+    ]
   }
 }

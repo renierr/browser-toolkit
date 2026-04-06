@@ -1,6 +1,6 @@
 {
   "name": "Notes",
-  "description": "Offline-first note taking tool with search and date ordering.",
+  "description": "Write notes with search and date-based organization.",
   "icon": "notebook-pen",
   "sectionId": "general",
   "order": 3

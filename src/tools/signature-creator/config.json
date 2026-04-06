@@ -1,6 +1,6 @@
 {
   "name": "Signature Creator",
-  "description": "Draw and save signatures as transparent images or SVG paths for use in PDF annotations.",
+  "description": "Draw signatures and export them as transparent images or SVG paths.",
   "icon": "pen-tool",
   "sectionId": "general",
   "order": 4,

@@ -1,6 +1,6 @@
 {
   "name": "Regex Visualizer",
-  "description": "Visualize regular expressions as railroad diagrams to understand their matching logic.",
+  "description": "Visualize regular expressions as railroad diagrams to explain matching behavior.",
   "draft": false,
   "sectionId": "utilities",
   "icon": "regex"

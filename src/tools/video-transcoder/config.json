@@ -1,10 +1,12 @@
 {
   "name": "Video Transcoder",
-  "description": "Convert and compress video files using FFmpeg.wasm.",
+  "description": "Convert and compress video files with FFmpeg.wasm.",
   "draft": false,
   "sectionId": "media",
   "icon": "video",
   "shareTarget": {
-    "accept": ["video/*"]
+    "accept": [
+      "video/*"
+    ]
   }
 }

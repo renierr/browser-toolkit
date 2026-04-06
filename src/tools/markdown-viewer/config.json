@@ -1,9 +1,14 @@
 {
   "name": "Markdown Viewer",
-  "description": "Render and view Markdown files with GFM support, task lists, footnotes, and more",
+  "description": "Render Markdown files with GitHub Flavored Markdown extensions.",
   "icon": "file-text",
   "sectionId": "general",
   "shareTarget": {
-    "accept": ["text/markdown", "text/x-markdown", "text/plain", "application/octet-stream"]
+    "accept": [
+      "text/markdown",
+      "text/x-markdown",
+      "text/plain",
+      "application/octet-stream"
+    ]
   }
 }

@@ -1,10 +1,12 @@
 {
   "name": "AI Background Remover",
-  "description": "Remove backgrounds from images locally using AI",
+  "description": "Remove image backgrounds locally with an AI segmentation model.",
   "icon": "eraser",
   "sectionId": "images",
   "order": 5,
   "shareTarget": {
-    "accept": ["image/*"]
+    "accept": [
+      "image/*"
+    ]
   }
 }

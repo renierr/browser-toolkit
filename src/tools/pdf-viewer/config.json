@@ -1,12 +1,14 @@
 {
   "name": "PDF Viewer / Editor",
-  "description": "Use Empedpdf to view/edit PDF files",
+  "description": "View and edit PDF files with EmbedPDF.",
   "icon": "file-pen",
   "draft": false,
   "example": false,
   "sectionId": "pdf",
   "order": 1,
   "shareTarget": {
-    "accept": ["application/pdf"]
+    "accept": [
+      "application/pdf"
+    ]
   }
 }

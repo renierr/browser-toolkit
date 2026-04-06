@@ -1,10 +1,14 @@
 {
   "name": "Chiptune Tracker",
-  "description": "MOD tracker editor — load, edit, and export Amiga module files with sample-accurate playback.",
+  "description": "Load, edit, and export Amiga MOD tracker files with sample-accurate playback.",
   "icon": "music",
   "sectionId": "media",
   "order": 2,
   "shareTarget": {
-    "accept": ["audio/x-mod", "audio/mod", "application/octet-stream"]
+    "accept": [
+      "audio/x-mod",
+      "audio/mod",
+      "application/octet-stream"
+    ]
   }
 }

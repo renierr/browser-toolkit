@@ -1,6 +1,6 @@
 {
   "name": "Base64 Encoder/Decoder",
-  "description": "Encode and decode text to and from Base64 format (supports UTF-8).",
+  "description": "Encode and decode text using Base64 with UTF-8 support.",
   "draft": false,
   "sectionId": "utilities",
   "icon": "binary"

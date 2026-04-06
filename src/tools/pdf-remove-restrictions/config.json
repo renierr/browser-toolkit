@@ -1,10 +1,12 @@
 {
   "name": "PDF Un-/locker",
-  "description": "Modify printing, copying, and editing restrictions from PDF files.",
+  "description": "Update PDF permission flags for printing, copying, and editing.",
   "icon": "unlock",
   "sectionId": "pdf",
   "order": 6,
   "shareTarget": {
-    "accept": ["application/pdf"]
+    "accept": [
+      "application/pdf"
+    ]
   }
 }

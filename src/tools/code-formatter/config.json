@@ -1,6 +1,6 @@
 {
   "name": "Code Formatter",
-  "description": "Format, minify and highlight code and data formats",
+  "description": "Format, minify, and highlight source code and structured data.",
   "icon": "code",
   "sectionId": "utilities",
   "order": 10,

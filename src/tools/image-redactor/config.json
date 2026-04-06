@@ -1,9 +1,11 @@
 {
   "name": "Image Convert / Redact",
-  "description": "Convert, Crop, Redact and pixelate Images",
+  "description": "Convert, crop, redact, and pixelate images.",
   "icon": "crop",
   "sectionId": "images",
   "shareTarget": {
-    "accept": ["image/*"]
+    "accept": [
+      "image/*"
+    ]
   }
 }
