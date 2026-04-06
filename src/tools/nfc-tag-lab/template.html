@@ -1,0 +1,177 @@
+<div class="flex flex-col gap-6 max-w-5xl mx-auto p-4">
+  <div class="card bg-base-100 shadow-xl border border-base-300">
+    <div class="card-body gap-4">
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div>
+          <h2 class="card-title text-2xl flex items-center gap-2">
+            <i data-lucide="nfc" class="text-primary"></i>
+            NFC Tag Lab
+          </h2>
+          <p class="text-base-content/70">
+            Read, decode, edit, and write NDEF records directly in the browser.
+          </p>
+        </div>
+
+        <div class="badge badge-outline" id="nfc-scan-state">Idle</div>
+      </div>
+
+      <div id="nfc-unsupported" class="alert alert-warning hidden">
+        <i data-lucide="triangle-alert" class="w-4 h-4"></i>
+        <span>
+          Web NFC is not available in this browser/device. You can still parse NDEF hex data
+          locally.
+        </span>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="nfc-start-scan" class="btn btn-primary">
+          <i data-lucide="play" class="w-4 h-4"></i>
+          Start Scan
+        </button>
+        <button id="nfc-stop-scan" class="btn btn-outline hidden">
+          <i data-lucide="square" class="w-4 h-4"></i>
+          Stop Scan
+        </button>
+        <button id="nfc-write-tag" class="btn btn-secondary">
+          <i data-lucide="pen" class="w-4 h-4"></i>
+          Write Tag
+        </button>
+      </div>
+
+      <p id="nfc-last-scan" class="text-sm text-base-content/70">Waiting for NFC activity.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card bg-base-100 shadow-xl border border-base-300">
+      <div class="card-body gap-4">
+        <h3 class="card-title text-lg">Tag Editor</h3>
+
+        <div class="form-control w-full gap-1">
+          <label for="nfc-template" class="label py-0">
+            <span class="label-text">Template</span>
+          </label>
+          <select id="nfc-template" class="select select-bordered w-full">
+            <option value="custom">Custom</option>
+            <option value="url-homepage">Website URL</option>
+            <option value="text-note">Plain Text Note</option>
+            <option value="mime-json">MIME JSON Payload</option>
+            <option value="mime-vcard">MIME vCard</option>
+          </select>
+        </div>
+
+        <div class="form-control w-full gap-1">
+          <label for="nfc-record-type" class="label py-0">
+            <span class="label-text">Record Type</span>
+          </label>
+          <select id="nfc-record-type" class="select select-bordered w-full">
+            <option value="url">URI</option>
+            <option value="text">Text</option>
+            <option value="mime">MIME</option>
+          </select>
+        </div>
+
+        <div class="form-control w-full gap-1 hidden" id="nfc-url-field">
+          <label for="nfc-url" class="label py-0">
+            <span class="label-text">URI</span>
+          </label>
+          <input
+            id="nfc-url"
+            type="url"
+            class="input input-bordered w-full"
+            placeholder="https://example.com"
+          />
+        </div>
+
+        <div class="form-control w-full gap-1 hidden" id="nfc-lang-field">
+          <label for="nfc-lang" class="label py-0">
+            <span class="label-text">Text Language</span>
+          </label>
+          <input
+            id="nfc-lang"
+            type="text"
+            class="input input-bordered w-full"
+            value="en"
+            maxlength="8"
+          />
+        </div>
+
+        <div class="form-control w-full gap-1 hidden" id="nfc-mime-type-field">
+          <label for="nfc-mime-type" class="label py-0">
+            <span class="label-text">MIME Type</span>
+          </label>
+          <input
+            id="nfc-mime-type"
+            type="text"
+            class="input input-bordered w-full"
+            placeholder="application/json"
+          />
+        </div>
+
+        <div class="form-control w-full gap-1">
+          <label for="nfc-payload" class="label py-0">
+            <span class="label-text">Payload</span>
+          </label>
+          <textarea
+            id="nfc-payload"
+            class="textarea textarea-bordered min-h-32 font-mono text-sm w-full"
+            placeholder="Text or data payload"
+          ></textarea>
+        </div>
+
+        <p class="text-xs text-base-content/60">
+          Write flow: configure record, tap <strong>Write Tag</strong>, then scan again for
+          automatic verification.
+        </p>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl border border-base-300">
+      <div class="card-body gap-4">
+        <h3 class="card-title text-lg">Decoded Records</h3>
+
+        <div class="stats stats-vertical sm:stats-horizontal bg-base-200 border border-base-300">
+          <div class="stat px-4 py-3">
+            <div class="stat-title">Serial</div>
+            <div id="nfc-tag-serial" class="stat-value text-base font-mono">-</div>
+          </div>
+          <div class="stat px-4 py-3">
+            <div class="stat-title">Records</div>
+            <div id="nfc-record-count" class="stat-value text-base">0</div>
+          </div>
+        </div>
+
+        <div id="nfc-record-list" class="space-y-2">
+          <div class="text-sm text-base-content/60">No records read yet.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl border border-base-300">
+    <div class="card-body gap-4">
+      <h3 class="card-title text-lg">Raw NDEF Parser</h3>
+      <p class="text-sm text-base-content/70">
+        Paste a full NDEF message as hex (bytes separated by spaces or new lines) to decode it.
+      </p>
+
+      <textarea
+        id="nfc-hex-input"
+        class="textarea textarea-bordered min-h-28 font-mono text-sm"
+        placeholder="D1 01 0C 55 01 65 78 61 6D 70 6C 65 2E 63 6F 6D"
+      ></textarea>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="nfc-parse-hex" class="btn btn-outline">Parse Hex</button>
+        <button id="nfc-clear-hex" class="btn btn-ghost">Clear</button>
+      </div>
+
+      <pre
+        id="nfc-hex-output"
+        class="bg-base-200 border border-base-300 rounded-lg p-3 text-xs overflow-x-auto"
+      >
+No parsed output yet.</pre
+      >
+    </div>
+  </div>
+</div>

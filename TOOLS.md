@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `pnpm generate:tool-description` after changing tool metadata.
 
-- Total tools: **49**
+- Total tools: **50**
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -247,7 +247,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `not set`, icon `database`, share target capable `yes`, share target accepts `application/vnd.sqlite3`, `application/x-sqlite3`, `.sqlite`, `.sqlite3`, `.db`.
 - Source: `src/tools/sqlite-explorer/config.json`
 
-## Devices (3)
+## Devices (4)
 
 ### Heart Rate Monitor (`heart-rate-monitor`)
 - Description: Connect to a Bluetooth heart rate monitor and track live pulse measurements.
@@ -258,6 +258,11 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Description: Connect to an FTMS treadmill to monitor workouts and control speed or incline.
 - Metadata: Order `2`, icon `activity`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/treadmill-control/config.json`
+
+### NFC Tag Lab (`nfc-tag-lab`)
+- Description: Read, decode, edit, and write NDEF records for NFC tags locally.
+- Metadata: Order `3`, icon `nfc`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/nfc-tag-lab/config.json`
 
 ### BLE Scanner (`ble-scanner`)
 - Description: Scan nearby Bluetooth Low Energy devices and identify them with a built-in device database.

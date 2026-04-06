@@ -1,0 +1,10 @@
+{
+  "name": "NFC Tag Lab",
+  "description": "Read, decode, edit, and write NDEF records for NFC tags locally.",
+  "icon": "nfc",
+  "sectionId": "devices",
+  "order": 3,
+  "draft": false,
+  "example": false
+}
+
