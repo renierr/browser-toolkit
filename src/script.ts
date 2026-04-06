@@ -576,6 +576,7 @@ function invokeOptionalMain(ctx: CustomMainContext): Promise<void> | void {
 async function boot() {
   const loadedTools = await buildToolsList();
   setTools(loadedTools);
+  siteContext.toolCount = loadedTools.length;
 
   await invokeOptionalMain({
     tools: loadedTools,
