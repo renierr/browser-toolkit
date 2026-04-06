@@ -8,7 +8,7 @@
             NFC Tag Lab
           </h2>
           <p class="text-base-content/70">
-            Read, decode, edit, and write NDEF records directly in the browser.
+            Scan NFC targets, decode NDEF when available, and write supported editable tags.
           </p>
         </div>
 
@@ -36,6 +36,10 @@
           <i data-lucide="pen" class="w-4 h-4"></i>
           Write Tag
         </button>
+        <button id="nfc-clear-session" class="btn btn-ghost">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          Clear Session
+        </button>
       </div>
 
       <p id="nfc-last-scan" class="text-sm text-base-content/70">Waiting for NFC activity.</p>
@@ -46,6 +50,11 @@
     <div class="card bg-base-100 shadow-xl border border-base-300">
       <div class="card-body gap-4">
         <h3 class="card-title text-lg">Tag Editor</h3>
+
+        <div id="nfc-editor-lock-note" class="alert alert-warning hidden">
+          <i data-lucide="lock" class="w-4 h-4"></i>
+          <span>Editor is disabled for this NFC target.</span>
+        </div>
 
         <div class="form-control w-full gap-1">
           <label for="nfc-template" class="label py-0">
@@ -130,8 +139,8 @@
         </div>
 
         <p class="text-xs text-base-content/60">
-          Write flow: configure record, tap <strong>Write Tag</strong>, then scan again for
-          automatic verification.
+          Write flow: configure record, tap <strong>Write Tag</strong> on a writable NFC target,
+          then scan again for automatic verification.
         </p>
       </div>
     </div>
@@ -148,6 +157,21 @@
           <div class="stat px-4 py-3">
             <div class="stat-title">Records</div>
             <div id="nfc-record-count" class="stat-value text-base">0</div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+          <div class="rounded-md border border-base-300 bg-base-200 px-3 py-2">
+            <div class="text-base-content/60">Category</div>
+            <div id="nfc-scan-category" class="font-medium">No scan yet</div>
+          </div>
+          <div class="rounded-md border border-base-300 bg-base-200 px-3 py-2">
+            <div class="text-base-content/60">Technology</div>
+            <div id="nfc-scan-technology" class="font-medium">-</div>
+          </div>
+          <div class="rounded-md border border-base-300 bg-base-200 px-3 py-2 sm:col-span-2">
+            <div class="text-base-content/60">Capabilities</div>
+            <div id="nfc-scan-capabilities" class="font-medium">Awaiting scan.</div>
           </div>
         </div>
 

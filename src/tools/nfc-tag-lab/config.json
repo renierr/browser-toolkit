@@ -1,6 +1,6 @@
 {
   "name": "NFC Tag Lab",
-  "description": "Read, decode, edit, and write NDEF records for NFC tags locally.",
+  "description": "Scan NFC targets, decode NDEF when available, classify known card/passport/ID signatures, and write editable tags locally.",
   "icon": "nfc",
   "sectionId": "devices",
   "order": 3,

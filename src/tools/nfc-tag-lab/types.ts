@@ -69,3 +69,26 @@ export type EditorValues = {
   url: string;
   mimeType: string;
 };
+
+export type NfcCategoryId =
+  | 'ndef-data'
+  | 'payment-card'
+  | 'passport'
+  | 'id-card'
+  | 'secure-card'
+  | 'unknown';
+
+export type ScanConfidence = 'high' | 'medium' | 'low';
+
+export type NfcScanProfile = {
+  categoryId: NfcCategoryId;
+  categoryLabel: string;
+  technology: string;
+  confidence: ScanConfidence;
+  supportsNdefRead: boolean;
+  allowsEditor: boolean;
+  allowsWrite: boolean;
+  reason: string;
+  matchedRule: string;
+};
+

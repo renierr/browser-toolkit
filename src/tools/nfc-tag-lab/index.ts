@@ -9,9 +9,11 @@ import {
 } from './editor-records';
 import { decodeWebNfcRecord, encodeSingleRecordNdefHex, parseNdefMessageHex } from './ndef-codec';
 import { EMPTY_HEX_OUTPUT, formatRecordsForOutput, renderRecords } from './render';
+import { classifyScannedNfcTarget, getDefaultScanProfile } from './scan-profile';
 import type {
   DecodedRecord,
   EditorValues,
+  NfcScanProfile,
   NDEFReaderLike,
   NDEFReaderWindow,
   NDEFReadingEventLike,
@@ -22,10 +24,12 @@ type DomElements = {
   startButton: HTMLButtonElement;
   stopButton: HTMLButtonElement;
   writeButton: HTMLButtonElement;
+  clearSessionButton: HTMLButtonElement;
   copyHexButton: HTMLButtonElement;
   scanState: HTMLDivElement;
   unsupportedBanner: HTMLDivElement;
   lastScan: HTMLParagraphElement;
+  editorLockNote: HTMLDivElement;
   templateSelect: HTMLSelectElement;
   recordTypeSelect: HTMLSelectElement;
   payloadInput: HTMLTextAreaElement;
@@ -38,6 +42,9 @@ type DomElements = {
   mimeTypeField: HTMLDivElement;
   serialLabel: HTMLDivElement;
   recordCountLabel: HTMLDivElement;
+  scanCategoryLabel: HTMLDivElement;
+  scanTechnologyLabel: HTMLDivElement;
+  scanCapabilitiesLabel: HTMLDivElement;
   recordList: HTMLDivElement;
   hexInput: HTMLTextAreaElement;
   parseHexButton: HTMLButtonElement;
@@ -49,10 +56,12 @@ function getElements(): DomElements | null {
   const startButton = document.getElementById('nfc-start-scan') as HTMLButtonElement | null;
   const stopButton = document.getElementById('nfc-stop-scan') as HTMLButtonElement | null;
   const writeButton = document.getElementById('nfc-write-tag') as HTMLButtonElement | null;
+  const clearSessionButton = document.getElementById('nfc-clear-session') as HTMLButtonElement | null;
   const copyHexButton = document.getElementById('nfc-copy-hex') as HTMLButtonElement | null;
   const scanState = document.getElementById('nfc-scan-state') as HTMLDivElement | null;
   const unsupportedBanner = document.getElementById('nfc-unsupported') as HTMLDivElement | null;
   const lastScan = document.getElementById('nfc-last-scan') as HTMLParagraphElement | null;
+  const editorLockNote = document.getElementById('nfc-editor-lock-note') as HTMLDivElement | null;
   const templateSelect = document.getElementById('nfc-template') as HTMLSelectElement | null;
   const recordTypeSelect = document.getElementById('nfc-record-type') as HTMLSelectElement | null;
   const payloadInput = document.getElementById('nfc-payload') as HTMLTextAreaElement | null;
@@ -65,6 +74,9 @@ function getElements(): DomElements | null {
   const mimeTypeField = document.getElementById('nfc-mime-type-field') as HTMLDivElement | null;
   const serialLabel = document.getElementById('nfc-tag-serial') as HTMLDivElement | null;
   const recordCountLabel = document.getElementById('nfc-record-count') as HTMLDivElement | null;
+  const scanCategoryLabel = document.getElementById('nfc-scan-category') as HTMLDivElement | null;
+  const scanTechnologyLabel = document.getElementById('nfc-scan-technology') as HTMLDivElement | null;
+  const scanCapabilitiesLabel = document.getElementById('nfc-scan-capabilities') as HTMLDivElement | null;
   const recordList = document.getElementById('nfc-record-list') as HTMLDivElement | null;
   const hexInput = document.getElementById('nfc-hex-input') as HTMLTextAreaElement | null;
   const parseHexButton = document.getElementById('nfc-parse-hex') as HTMLButtonElement | null;
@@ -75,10 +87,12 @@ function getElements(): DomElements | null {
     !startButton ||
     !stopButton ||
     !writeButton ||
+    !clearSessionButton ||
     !copyHexButton ||
     !scanState ||
     !unsupportedBanner ||
     !lastScan ||
+    !editorLockNote ||
     !templateSelect ||
     !recordTypeSelect ||
     !payloadInput ||
@@ -91,6 +105,9 @@ function getElements(): DomElements | null {
     !mimeTypeField ||
     !serialLabel ||
     !recordCountLabel ||
+    !scanCategoryLabel ||
+    !scanTechnologyLabel ||
+    !scanCapabilitiesLabel ||
     !recordList ||
     !hexInput ||
     !parseHexButton ||
@@ -104,10 +121,12 @@ function getElements(): DomElements | null {
     startButton,
     stopButton,
     writeButton,
+    clearSessionButton,
     copyHexButton,
     scanState,
     unsupportedBanner,
     lastScan,
+    editorLockNote,
     templateSelect,
     recordTypeSelect,
     payloadInput,
@@ -120,6 +139,9 @@ function getElements(): DomElements | null {
     mimeTypeField,
     serialLabel,
     recordCountLabel,
+    scanCategoryLabel,
+    scanTechnologyLabel,
+    scanCapabilitiesLabel,
     recordList,
     hexInput,
     parseHexButton,
@@ -136,7 +158,7 @@ function setScanState(elements: DomElements, text: string, scanning: boolean): v
   elements.stopButton.classList.toggle('hidden', !scanning);
 }
 
-function syncVisibleRecordFields(elements: DomElements): void {
+function syncVisibleRecordFields(elements: DomElements, allowEditor: boolean): void {
   const currentType = elements.recordTypeSelect.value;
   const isUrl = currentType === 'url';
   const isText = currentType === 'text';
@@ -147,14 +169,23 @@ function syncVisibleRecordFields(elements: DomElements): void {
   elements.mimeTypeField.classList.toggle('hidden', !isMime);
 
   // Disable controls that are not used by the selected record type.
-  elements.urlInput.disabled = !isUrl;
-  elements.langInput.disabled = !isText;
-  elements.mimeTypeInput.disabled = !isMime;
-  elements.payloadInput.disabled = isUrl;
-  elements.payloadInput.classList.toggle('opacity-60', isUrl);
+  elements.templateSelect.disabled = !allowEditor;
+  elements.recordTypeSelect.disabled = !allowEditor;
+  elements.urlInput.disabled = !allowEditor || !isUrl;
+  elements.langInput.disabled = !allowEditor || !isText;
+  elements.mimeTypeInput.disabled = !allowEditor || !isMime;
+  elements.payloadInput.disabled = !allowEditor || isUrl;
+  elements.payloadInput.classList.toggle('opacity-60', !allowEditor || isUrl);
+  elements.copyHexButton.disabled = !allowEditor;
   elements.payloadHint.textContent = isUrl
     ? 'Not used for URI records. The URI field is encoded instead.'
     : 'Used when creating Text and MIME records.';
+}
+
+function setScanProfileDetails(elements: DomElements, profile: NfcScanProfile): void {
+  elements.scanCategoryLabel.textContent = `${profile.categoryLabel} (${profile.confidence})`;
+  elements.scanTechnologyLabel.textContent = profile.technology;
+  elements.scanCapabilitiesLabel.textContent = `${profile.reason} Rule: ${profile.matchedRule}.`;
 }
 
 function getEditorValues(elements: DomElements): EditorValues {
@@ -168,13 +199,13 @@ function getEditorValues(elements: DomElements): EditorValues {
   };
 }
 
-function setEditorValues(elements: DomElements, values: EditorValues): void {
+function setEditorValues(elements: DomElements, values: EditorValues, allowEditor = true): void {
   elements.recordTypeSelect.value = values.recordType;
   elements.payloadInput.value = values.payload;
   elements.langInput.value = values.lang;
   elements.urlInput.value = values.url;
   elements.mimeTypeInput.value = values.mimeType;
-  syncVisibleRecordFields(elements);
+  syncVisibleRecordFields(elements, allowEditor);
 }
 
 // noinspection JSUnusedGlobalSymbols
@@ -194,6 +225,23 @@ export default function init(): void | (() => void) {
     isScanning: false,
     lastReadRecords: [] as DecodedRecord[],
     expectedVerifyRecords: null as NormalizedRecord[] | null,
+    scanProfile: getDefaultScanProfile(),
+  };
+
+  const canUseWebNfc = hasWebNfc;
+
+  const updateActionState = (): void => {
+    const editorEnabled = state.scanProfile.allowsEditor;
+    syncVisibleRecordFields(elements, editorEnabled);
+    elements.editorLockNote.classList.toggle('hidden', editorEnabled);
+    elements.writeButton.disabled = !canUseWebNfc || !state.scanProfile.allowsWrite;
+  };
+
+  const applyScanProfile = (profile: NfcScanProfile): void => {
+    state.scanProfile = profile;
+    setScanProfileDetails(elements, profile);
+    updateActionState();
+    renderDecodedRecords(state.lastReadRecords);
   };
 
   const getOrCreateReader = (): NDEFReaderLike => {
@@ -208,13 +256,19 @@ export default function init(): void | (() => void) {
     return state.reader;
   };
 
-  const loadDecodedRecordIntoEditor = (record: DecodedRecord): void => {
-    setEditorValues(elements, decodedRecordToEditorValues(record));
+  const loadDecodedRecordIntoEditor = (record: DecodedRecord): boolean => {
+    if (!state.scanProfile.allowsEditor) {
+      return false;
+    }
+    setEditorValues(elements, decodedRecordToEditorValues(record), state.scanProfile.allowsEditor);
     elements.templateSelect.value = 'custom';
+    return true;
   };
 
   const renderDecodedRecords = (records: DecodedRecord[]): void => {
-    renderRecords(elements.recordList, records);
+    renderRecords(elements.recordList, records, {
+      disableLoadAction: !state.scanProfile.allowsEditor,
+    });
     elements.recordCountLabel.textContent = String(records.length);
   };
 
@@ -226,6 +280,13 @@ export default function init(): void | (() => void) {
     state.lastReadRecords = decoded;
     elements.serialLabel.textContent = event.serialNumber || '-';
     renderDecodedRecords(decoded);
+    applyScanProfile(
+      classifyScannedNfcTarget({
+        source: 'reading',
+        serialNumber: event.serialNumber || '',
+        records: decoded,
+      })
+    );
 
     const now = new Date().toLocaleTimeString();
     elements.lastScan.textContent = `Tag read at ${now}.`;
@@ -261,7 +322,7 @@ export default function init(): void | (() => void) {
     }
 
     state.isScanning = false;
-    setScanState(elements, 'Idle', false);
+    setScanState(elements, canUseWebNfc ? 'Idle' : 'Unsupported', false);
   };
 
   const startScan = async (): Promise<void> => {
@@ -275,7 +336,19 @@ export default function init(): void | (() => void) {
 
       reader.onreading = handleRead;
       reader.onreadingerror = () => {
-        showMessage('Tag detected, but the data could not be decoded.', {
+        state.lastReadRecords = [];
+        renderDecodedRecords([]);
+        elements.serialLabel.textContent = '-';
+        applyScanProfile(
+          classifyScannedNfcTarget({
+            source: 'reading-error',
+            serialNumber: '',
+            records: [],
+          })
+        );
+        elements.lastScan.textContent =
+          'NFC target detected, but no NDEF records were readable for this target.';
+        showMessage('NFC target detected, but the data could not be decoded.', {
           type: 'warning',
           hideTypeText: false,
         });
@@ -285,7 +358,7 @@ export default function init(): void | (() => void) {
       state.scanAbortController = abortController;
       state.isScanning = true;
       setScanState(elements, 'Scanning', true);
-      showMessage('NFC scan started. Bring a tag close to your device.', {
+      showMessage('NFC scan started. Bring an NFC target close to your device.', {
         type: 'info',
         hideTypeText: false,
       });
@@ -349,6 +422,13 @@ export default function init(): void | (() => void) {
       renderDecodedRecords(parsed);
       elements.serialLabel.textContent = 'Hex parser';
       elements.hexOutput.textContent = formatRecordsForOutput(parsed);
+      applyScanProfile(
+        classifyScannedNfcTarget({
+          source: 'hex-parser',
+          serialNumber: 'hex-parser',
+          records: parsed,
+        })
+      );
     } catch (error) {
       console.error('[NFCTagLab] Failed to parse NDEF hex:', error);
       const message = error instanceof Error ? error.message : 'Invalid NDEF hex input.';
@@ -360,6 +440,28 @@ export default function init(): void | (() => void) {
   const handleClearHex = (): void => {
     elements.hexInput.value = '';
     elements.hexOutput.textContent = EMPTY_HEX_OUTPUT;
+  };
+
+  const handleClearSession = (): void => {
+    stopScan();
+    state.lastReadRecords = [];
+    state.expectedVerifyRecords = null;
+    renderDecodedRecords([]);
+    elements.serialLabel.textContent = '-';
+    elements.lastScan.textContent = 'Waiting for NFC activity.';
+    applyScanProfile(getDefaultScanProfile());
+    setEditorValues(
+      elements,
+      {
+        recordType: 'text',
+        payload: '',
+        lang: 'en',
+        url: '',
+        mimeType: '',
+      },
+      true
+    );
+    elements.templateSelect.value = 'custom';
   };
 
   const handleRecordListClick = (event: Event): void => {
@@ -374,8 +476,10 @@ export default function init(): void | (() => void) {
       return;
     }
 
-    loadDecodedRecordIntoEditor(state.lastReadRecords[index]);
-    showMessage(`Loaded record #${index + 1} into editor.`, { type: 'info' });
+    const loaded = loadDecodedRecordIntoEditor(state.lastReadRecords[index]);
+    if (loaded) {
+      showMessage(`Loaded record #${index + 1} into editor.`, { type: 'info' });
+    }
   };
 
   const handleTemplateChange = (): void => {
@@ -383,7 +487,7 @@ export default function init(): void | (() => void) {
     if (!values) {
       return;
     }
-    setEditorValues(elements, values);
+    setEditorValues(elements, values, state.scanProfile.allowsEditor);
   };
 
   if (!hasWebNfc) {
@@ -394,7 +498,19 @@ export default function init(): void | (() => void) {
     setScanState(elements, 'Unsupported', false);
   }
 
-  syncVisibleRecordFields(elements);
+  applyScanProfile(getDefaultScanProfile());
+  setEditorValues(
+    elements,
+    {
+      recordType: 'text',
+      payload: '',
+      lang: 'en',
+      url: '',
+      mimeType: '',
+    },
+    state.scanProfile.allowsEditor
+  );
+  elements.templateSelect.value = 'custom';
   elements.hexOutput.textContent = EMPTY_HEX_OUTPUT;
 
   const handleStartClick = (): void => {
@@ -407,12 +523,13 @@ export default function init(): void | (() => void) {
     void handleCopyHex();
   };
   const handleRecordTypeChange = (): void => {
-    syncVisibleRecordFields(elements);
+    syncVisibleRecordFields(elements, state.scanProfile.allowsEditor);
   };
 
   elements.startButton.addEventListener('click', handleStartClick);
   elements.stopButton.addEventListener('click', stopScan);
   elements.writeButton.addEventListener('click', handleWriteClick);
+  elements.clearSessionButton.addEventListener('click', handleClearSession);
   elements.copyHexButton.addEventListener('click', handleCopyHexClick);
   elements.templateSelect.addEventListener('change', handleTemplateChange);
   elements.recordTypeSelect.addEventListener('change', handleRecordTypeChange);
@@ -425,6 +542,7 @@ export default function init(): void | (() => void) {
     elements.startButton.removeEventListener('click', handleStartClick);
     elements.stopButton.removeEventListener('click', stopScan);
     elements.writeButton.removeEventListener('click', handleWriteClick);
+    elements.clearSessionButton.removeEventListener('click', handleClearSession);
     elements.copyHexButton.removeEventListener('click', handleCopyHexClick);
     elements.templateSelect.removeEventListener('change', handleTemplateChange);
     elements.recordTypeSelect.removeEventListener('change', handleRecordTypeChange);

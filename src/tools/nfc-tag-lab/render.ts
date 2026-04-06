@@ -2,7 +2,15 @@ import type { DecodedRecord } from './types';
 
 export const EMPTY_HEX_OUTPUT = 'No parsed output yet.';
 
-export function renderRecords(host: HTMLElement, records: DecodedRecord[]): void {
+type RenderRecordOptions = {
+  disableLoadAction?: boolean;
+};
+
+export function renderRecords(
+  host: HTMLElement,
+  records: DecodedRecord[],
+  options: RenderRecordOptions = {}
+): void {
   host.replaceChildren();
 
   if (records.length === 0) {
@@ -26,6 +34,7 @@ export function renderRecords(host: HTMLElement, records: DecodedRecord[]): void
     loadButton.type = 'button';
     loadButton.dataset.loadRecordIndex = String(record.index);
     loadButton.textContent = 'Load into editor';
+    loadButton.disabled = options.disableLoadAction === true;
 
     const summary = document.createElement('pre');
     summary.className =
