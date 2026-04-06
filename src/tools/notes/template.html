@@ -88,17 +88,17 @@
           class="textarea textarea-bordered p-0 h-96 max-h-[50dvh] text-lg w-full"
         ></div>
       </div>
-      <div class="flex justify-end gap-2">
-        <button id="import-md-btn" class="btn btn-outline" title="Import from Markdown file">
+      <div class="flex justify-end gap-2 flex-wrap">
+        <button id="import-md-btn" class="btn btn-outline btn-xs" title="Import from Markdown file">
           <i data-lucide="file-up" class="w-4 h-4"></i>
           Import MD
         </button>
-        <button id="export-input-btn" class="btn btn-outline" title="Export input as PDF" disabled>
+        <button id="export-input-btn" class="btn btn-outline btn-xs" title="Export input as PDF" disabled>
           <i data-lucide="file-down" class="w-4 h-4"></i>
           Export PDF
         </button>
-        <button id="cancel-edit-btn" class="btn btn-secondary hidden">Cancel</button>
-        <button id="add-note-btn" class="btn btn-primary">Add Note</button>
+        <button id="cancel-edit-btn" class="btn btn-secondary btn-xs hidden">Cancel</button>
+        <button id="add-note-btn" class="btn btn-primary btn-xs">Add Note</button>
         <input type="file" id="import-md-input" class="hidden" accept=".md,.markdown" />
       </div>
     </div>
@@ -117,11 +117,11 @@
           </span>
         </div>
         <div class="flex gap-2">
-          <button id="import-btn" class="btn btn-outline btn-sm" title="Import JSON">
+          <button id="import-btn" class="btn btn-outline btn-xs" title="Import JSON">
             <i data-lucide="file-up" class="w-4 h-4"></i>
             Import
           </button>
-          <button id="export-all-btn" class="btn btn-outline btn-sm" title="Export all as JSON">
+          <button id="export-all-btn" class="btn btn-outline btn-xs" title="Export all as JSON">
             <i data-lucide="file-output" class="w-4 h-4"></i>
             Export All
           </button>
