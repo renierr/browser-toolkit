@@ -5,7 +5,8 @@ This file contains detailed examples and optional depth.
 Read order:
 1. `AGENTS.md` (core rules)
 2. `AGENTS.details.md` (examples and deeper patterns)
-3. `docs/index.md` (full project docs)
+3. `TOOLS.md` (full tool inventory from `src/tools/*/config.json`)
+4. `docs/index.md` (full project docs)
 
 ## Project Overview
 
@@ -284,6 +285,7 @@ Use existing helpers in `src/js/*` before writing new ones.
 
 ## More Documentation
 
+- Full tool inventory: `TOOLS.md`
 - Full docs: `docs/index.md`
 - Core rules: `AGENTS.md`
 
