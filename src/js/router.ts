@@ -123,26 +123,9 @@ class Router {
     };
 
     const runScroll = (): void => {
-      if (token !== this.pendingOverviewToken) {
-        cleanup();
-        return;
-      }
-
-      raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => {
-          if (token !== this.pendingOverviewToken) {
-            cleanup();
-            return;
-          }
-
-          const el = document.getElementById(toolId);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-
-          cleanup();
-        });
-      });
+      const rafHandles = this.scrollToOverviewCard(toolId, token, cleanup);
+      raf1 = rafHandles.raf1;
+      raf2 = rafHandles.raf2;
     };
 
     const handler = (): void => {
@@ -156,6 +139,42 @@ class Router {
     // Safety timeout to avoid dangling listeners when no navigation event fires.
     timeoutId = window.setTimeout(cleanup, 2000);
     this.pendingOverviewCleanup = cleanup;
+  }
+
+  private scrollToOverviewCard(
+    toolId: string,
+    token: number,
+    onDone?: () => void
+  ): { raf1: number | null; raf2: number | null } {
+    let raf1: number | null = null;
+    let raf2: number | null = null;
+
+    const finish = (): void => {
+      onDone?.();
+    };
+
+    if (token !== this.pendingOverviewToken) {
+      finish();
+      return { raf1, raf2 };
+    }
+
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (token !== this.pendingOverviewToken) {
+          finish();
+          return;
+        }
+
+        const el = document.getElementById(toolId);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        finish();
+      });
+    });
+
+    return { raf1, raf2 };
   }
 
   private findOverviewHistoryDelta(): number | null {
@@ -223,8 +242,16 @@ class Router {
   }
 
   private handleHashChange() {
+    const previousPath = this.currentPath;
     this.currentPath = window.location.hash.slice(1) || null;
     this.listeners.forEach((l) => l(this.currentPath, this.consumePayload()));
+
+    // Native browser/gesture back from tool -> overview should restore the related card.
+    if (previousPath && !this.currentPath) {
+      const token = ++this.pendingOverviewToken;
+      this.clearPendingOverviewScroll();
+      this.scrollToOverviewCard(previousPath, token);
+    }
   }
 }
 
