@@ -29,6 +29,7 @@ type DomElements = {
   templateSelect: HTMLSelectElement;
   recordTypeSelect: HTMLSelectElement;
   payloadInput: HTMLTextAreaElement;
+  payloadHint: HTMLSpanElement;
   urlInput: HTMLInputElement;
   langInput: HTMLInputElement;
   mimeTypeInput: HTMLInputElement;
@@ -55,6 +56,7 @@ function getElements(): DomElements | null {
   const templateSelect = document.getElementById('nfc-template') as HTMLSelectElement | null;
   const recordTypeSelect = document.getElementById('nfc-record-type') as HTMLSelectElement | null;
   const payloadInput = document.getElementById('nfc-payload') as HTMLTextAreaElement | null;
+  const payloadHint = document.getElementById('nfc-payload-hint') as HTMLSpanElement | null;
   const urlInput = document.getElementById('nfc-url') as HTMLInputElement | null;
   const langInput = document.getElementById('nfc-lang') as HTMLInputElement | null;
   const mimeTypeInput = document.getElementById('nfc-mime-type') as HTMLInputElement | null;
@@ -80,6 +82,7 @@ function getElements(): DomElements | null {
     !templateSelect ||
     !recordTypeSelect ||
     !payloadInput ||
+    !payloadHint ||
     !urlInput ||
     !langInput ||
     !mimeTypeInput ||
@@ -108,6 +111,7 @@ function getElements(): DomElements | null {
     templateSelect,
     recordTypeSelect,
     payloadInput,
+    payloadHint,
     urlInput,
     langInput,
     mimeTypeInput,
@@ -141,6 +145,16 @@ function syncVisibleRecordFields(elements: DomElements): void {
   elements.urlField.classList.toggle('hidden', !isUrl);
   elements.langField.classList.toggle('hidden', !isText);
   elements.mimeTypeField.classList.toggle('hidden', !isMime);
+
+  // Disable controls that are not used by the selected record type.
+  elements.urlInput.disabled = !isUrl;
+  elements.langInput.disabled = !isText;
+  elements.mimeTypeInput.disabled = !isMime;
+  elements.payloadInput.disabled = isUrl;
+  elements.payloadInput.classList.toggle('opacity-60', isUrl);
+  elements.payloadHint.textContent = isUrl
+    ? 'Not used for URI records. The URI field is encoded instead.'
+    : 'Used when creating Text and MIME records.';
 }
 
 function getEditorValues(elements: DomElements): EditorValues {
