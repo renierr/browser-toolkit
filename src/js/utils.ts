@@ -464,3 +464,17 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, message: string)
     );
   });
 }
+
+export async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (!navigator.clipboard?.writeText) {
+    return false;
+  }
+
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (error) {
+    console.error('[Utils] Failed to copy text to clipboard:', error);
+    return false;
+  }
+}

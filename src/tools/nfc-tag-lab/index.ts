@@ -1,4 +1,5 @@
 import { showMessage } from '@js/ui';
+import { copyTextToClipboard } from '@js/utils';
 import {
   areRecordsEqual,
   buildEditorRecord,
@@ -6,7 +7,7 @@ import {
   getTemplateValues,
   normalizeRecord,
 } from './editor-records';
-import { decodeWebNfcRecord, parseNdefMessageHex } from './ndef-codec';
+import { decodeWebNfcRecord, encodeSingleRecordNdefHex, parseNdefMessageHex } from './ndef-codec';
 import { EMPTY_HEX_OUTPUT, formatRecordsForOutput, renderRecords } from './render';
 import type {
   DecodedRecord,
@@ -21,6 +22,7 @@ type DomElements = {
   startButton: HTMLButtonElement;
   stopButton: HTMLButtonElement;
   writeButton: HTMLButtonElement;
+  copyHexButton: HTMLButtonElement;
   scanState: HTMLDivElement;
   unsupportedBanner: HTMLDivElement;
   lastScan: HTMLParagraphElement;
@@ -46,6 +48,7 @@ function getElements(): DomElements | null {
   const startButton = document.getElementById('nfc-start-scan') as HTMLButtonElement | null;
   const stopButton = document.getElementById('nfc-stop-scan') as HTMLButtonElement | null;
   const writeButton = document.getElementById('nfc-write-tag') as HTMLButtonElement | null;
+  const copyHexButton = document.getElementById('nfc-copy-hex') as HTMLButtonElement | null;
   const scanState = document.getElementById('nfc-scan-state') as HTMLDivElement | null;
   const unsupportedBanner = document.getElementById('nfc-unsupported') as HTMLDivElement | null;
   const lastScan = document.getElementById('nfc-last-scan') as HTMLParagraphElement | null;
@@ -70,6 +73,7 @@ function getElements(): DomElements | null {
     !startButton ||
     !stopButton ||
     !writeButton ||
+    !copyHexButton ||
     !scanState ||
     !unsupportedBanner ||
     !lastScan ||
@@ -97,6 +101,7 @@ function getElements(): DomElements | null {
     startButton,
     stopButton,
     writeButton,
+    copyHexButton,
     scanState,
     unsupportedBanner,
     lastScan,
@@ -300,6 +305,29 @@ export default function init(): void | (() => void) {
     }
   };
 
+  const handleCopyHex = async (): Promise<void> => {
+    try {
+      const editorRecord = buildEditorRecord(getEditorValues(elements));
+      const ndefHex = encodeSingleRecordNdefHex(editorRecord.ndef);
+      const copied = await copyTextToClipboard(ndefHex);
+
+      if (!copied) {
+        showMessage('Clipboard is not available in this browser/device.', {
+          type: 'warning',
+          hideTypeText: false,
+        });
+        return;
+      }
+
+      elements.hexOutput.textContent = ndefHex;
+      showMessage('NDEF hex copied to clipboard.', { type: 'info', hideTypeText: false });
+    } catch (error) {
+      console.error('[NFCTagLab] Failed to copy NDEF hex:', error);
+      const message = error instanceof Error ? error.message : 'Failed to generate NDEF hex.';
+      showMessage(message, { type: 'alert', hideTypeText: false });
+    }
+  };
+
   const handleParseHex = (): void => {
     try {
       const parsed = parseNdefMessageHex(elements.hexInput.value);
@@ -361,6 +389,9 @@ export default function init(): void | (() => void) {
   const handleWriteClick = (): void => {
     void handleWrite();
   };
+  const handleCopyHexClick = (): void => {
+    void handleCopyHex();
+  };
   const handleRecordTypeChange = (): void => {
     syncVisibleRecordFields(elements);
   };
@@ -368,6 +399,7 @@ export default function init(): void | (() => void) {
   elements.startButton.addEventListener('click', handleStartClick);
   elements.stopButton.addEventListener('click', stopScan);
   elements.writeButton.addEventListener('click', handleWriteClick);
+  elements.copyHexButton.addEventListener('click', handleCopyHexClick);
   elements.templateSelect.addEventListener('change', handleTemplateChange);
   elements.recordTypeSelect.addEventListener('change', handleRecordTypeChange);
   elements.parseHexButton.addEventListener('click', handleParseHex);
@@ -379,6 +411,7 @@ export default function init(): void | (() => void) {
     elements.startButton.removeEventListener('click', handleStartClick);
     elements.stopButton.removeEventListener('click', stopScan);
     elements.writeButton.removeEventListener('click', handleWriteClick);
+    elements.copyHexButton.removeEventListener('click', handleCopyHexClick);
     elements.templateSelect.removeEventListener('change', handleTemplateChange);
     elements.recordTypeSelect.removeEventListener('change', handleRecordTypeChange);
     elements.parseHexButton.removeEventListener('click', handleParseHex);
