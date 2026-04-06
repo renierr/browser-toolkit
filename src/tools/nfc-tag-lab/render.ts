@@ -15,10 +15,10 @@ export function renderRecords(host: HTMLElement, records: DecodedRecord[]): void
 
   for (const record of records) {
     const item = document.createElement('div');
-    item.className = 'border border-base-300 rounded-lg p-3 bg-base-200';
+    item.className = 'border border-base-300 rounded-lg p-3 bg-base-200 w-full max-w-full min-w-0 overflow-hidden';
 
     const title = document.createElement('div');
-    title.className = 'flex flex-wrap items-center justify-between gap-2 mb-2';
+    title.className = 'flex flex-wrap items-center justify-between gap-2 mb-2 min-w-0';
     title.textContent = `#${record.index + 1} ${record.recordType}`;
 
     const loadButton = document.createElement('button');
@@ -28,7 +28,8 @@ export function renderRecords(host: HTMLElement, records: DecodedRecord[]): void
     loadButton.textContent = 'Load into editor';
 
     const summary = document.createElement('pre');
-    summary.className = 'text-xs whitespace-pre-wrap break-all font-mono';
+    summary.className =
+      'text-xs whitespace-pre font-mono overflow-auto w-full max-w-full min-w-0 rounded-md bg-base-100 p-2';
     summary.textContent = JSON.stringify(
       {
         type: record.recordType,
