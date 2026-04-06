@@ -14,7 +14,8 @@
     "format": "prettier --write \"src/**/*.{js,ts,html,css,json,md}\"",
     "format:check": "prettier --check \"src/**/*.{js,ts,html,css,json,md}\"",
     "upgrade:check": "pnpm outdated",
-    "upgrade:deps": "pnpm up --latest"
+    "upgrade:deps": "pnpm up --latest",
+    "generate:tool-description": "node scripts/generate-tool-description.mjs"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.2",
