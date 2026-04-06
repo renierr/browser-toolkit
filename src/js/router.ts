@@ -42,8 +42,14 @@ class Router {
       return;
     }
 
-    // Fallback: set hash to overview (empty)
-    this.goTo('');
+    // Fallback: replace current entry so back does not return to this tool.
+    this.replaceToOverview();
+  }
+
+  private replaceToOverview(): void {
+    const url = new URL(window.location.href);
+    url.hash = '';
+    window.location.replace(url.toString());
   }
 
   private navigateToOverviewByHistory(delta: number, token: number): void {
@@ -77,7 +83,7 @@ class Router {
       if (isUnchanged) {
         finish();
         this.clearPendingOverviewScroll();
-        this.goTo('');
+        this.replaceToOverview();
       }
     }, 250);
 
@@ -193,8 +199,8 @@ class Router {
       const currentIndex =
         typeof nav.currentEntryIndex === 'number' ? nav.currentEntryIndex : navEntries.length - 1;
 
-      // Prefer the nearest previous overview entry to avoid jumping too far back.
-      for (let i = currentIndex - 1; i >= 0; i--) {
+      // Prefer the oldest previous overview entry so one more back can leave the app/view.
+      for (let i = 0; i < currentIndex; i++) {
         const entry = navEntries[i];
         if (!entry || typeof entry.url !== 'string') {
           continue;
