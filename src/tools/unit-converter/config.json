@@ -1,0 +1,10 @@
+{
+  "name": "Unit Converter Pro",
+  "description": "Convert between 1000+ units across 20+ categories with a built-in scientific calculator.",
+  "icon": "ruler",
+  "sectionId": "utilities",
+  "order": 6,
+  "tags": ["converter", "calculator", "units", "measurement", "scientific"],
+  "hideHeader": true,
+  "hideFooter": true
+}

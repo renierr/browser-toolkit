@@ -1,0 +1,1035 @@
+{
+  "categories": {
+    "length": {
+      "name": "Length",
+      "icon": "ruler",
+      "baseUnit": "meter",
+      "units": {
+        "meter": { "name": "Meter", "symbol": "m", "toBase": 1 },
+        "kilometer": { "name": "Kilometer", "symbol": "km", "toBase": 1000 },
+        "centimeter": { "name": "Centimeter", "symbol": "cm", "toBase": 0.01 },
+        "millimeter": { "name": "Millimeter", "symbol": "mm", "toBase": 0.001 },
+        "micrometer": { "name": "Micrometer", "symbol": "μm", "toBase": 1e-6 },
+        "nanometer": { "name": "Nanometer", "symbol": "nm", "toBase": 1e-9 },
+        "picometer": { "name": "Picometer", "symbol": "pm", "toBase": 1e-12 },
+        "femtometer": { "name": "Femtometer", "symbol": "fm", "toBase": 1e-15 },
+        "angstrom": { "name": "Angstrom", "symbol": "Å", "toBase": 1e-10 },
+        "mile": { "name": "Mile", "symbol": "mi", "toBase": 1609.344 },
+        "yard": { "name": "Yard", "symbol": "yd", "toBase": 0.9144 },
+        "foot": { "name": "Foot", "symbol": "ft", "toBase": 0.3048 },
+        "inch": { "name": "Inch", "symbol": "in", "toBase": 0.0254 },
+        "nautical_mile": { "name": "Nautical Mile", "symbol": "nmi", "toBase": 1852 },
+        "fathom": { "name": "Fathom", "symbol": "ftm", "toBase": 1.8288 },
+        "furlong": { "name": "Furlong", "symbol": "fur", "toBase": 201.168 },
+        "chain": { "name": "Chain", "symbol": "ch", "toBase": 20.1168 },
+        "rod": { "name": "Rod", "symbol": "rd", "toBase": 5.0292 },
+        "league": { "name": "League", "symbol": "lea", "toBase": 4828.032 },
+        "hand": { "name": "Hand", "symbol": "hand", "toBase": 0.1016 },
+        "thou": { "name": "Thou (Mil)", "symbol": "thou", "toBase": 2.54e-5 },
+        "light_year": { "name": "Light Year", "symbol": "ly", "toBase": 9.461e15 },
+        "astronomical_unit": { "name": "Astronomical Unit", "symbol": "au", "toBase": 1.496e11 },
+        "parsec": { "name": "Parsec", "symbol": "pc", "toBase": 3.086e16 },
+        "planck_length": { "name": "Planck Length", "symbol": "ℓₚ", "toBase": 1.616e-35 }
+      }
+    },
+    "area": {
+      "name": "Area",
+      "icon": "square",
+      "baseUnit": "square_meter",
+      "units": {
+        "square_meter": { "name": "Square Meter", "symbol": "m²", "toBase": 1 },
+        "square_kilometer": { "name": "Square Kilometer", "symbol": "km²", "toBase": 1e6 },
+        "square_centimeter": { "name": "Square Centimeter", "symbol": "cm²", "toBase": 1e-4 },
+        "square_millimeter": { "name": "Square Millimeter", "symbol": "mm²", "toBase": 1e-6 },
+        "square_micrometer": { "name": "Square Micrometer", "symbol": "μm²", "toBase": 1e-12 },
+        "hectare": { "name": "Hectare", "symbol": "ha", "toBase": 10000 },
+        "acre": { "name": "Acre", "symbol": "ac", "toBase": 4046.8564224 },
+        "square_mile": { "name": "Square Mile", "symbol": "mi²", "toBase": 2.59e6 },
+        "square_yard": { "name": "Square Yard", "symbol": "yd²", "toBase": 0.83612736 },
+        "square_foot": { "name": "Square Foot", "symbol": "ft²", "toBase": 0.09290304 },
+        "square_inch": { "name": "Square Inch", "symbol": "in²", "toBase": 6.4516e-4 },
+        "square_rod": { "name": "Square Rod", "symbol": "sq rd", "toBase": 25.29285264 },
+        "are": { "name": "Are", "symbol": "a", "toBase": 100 },
+        "barn": { "name": "Barn", "symbol": "b", "toBase": 1e-28 },
+        "township": { "name": "Township", "symbol": "twp", "toBase": 9.324e7 },
+        "section": { "name": "Section", "symbol": "sec", "toBase": 2.59e6 }
+      }
+    },
+    "volume": {
+      "name": "Volume",
+      "icon": "beaker",
+      "baseUnit": "liter",
+      "units": {
+        "liter": { "name": "Liter", "symbol": "L", "toBase": 1 },
+        "milliliter": { "name": "Milliliter", "symbol": "mL", "toBase": 0.001 },
+        "cubic_meter": { "name": "Cubic Meter", "symbol": "m³", "toBase": 1000 },
+        "cubic_centimeter": { "name": "Cubic Centimeter", "symbol": "cm³", "toBase": 0.001 },
+        "cubic_millimeter": { "name": "Cubic Millimeter", "symbol": "mm³", "toBase": 1e-6 },
+        "cubic_inch": { "name": "Cubic Inch", "symbol": "in³", "toBase": 0.016387064 },
+        "cubic_foot": { "name": "Cubic Foot", "symbol": "ft³", "toBase": 28.316846592 },
+        "cubic_yard": { "name": "Cubic Yard", "symbol": "yd³", "toBase": 764.554857984 },
+        "us_gallon": { "name": "US Gallon", "symbol": "gal (US)", "toBase": 3.785411784 },
+        "us_quart": { "name": "US Quart", "symbol": "qt (US)", "toBase": 0.946352946 },
+        "us_pint": { "name": "US Pint", "symbol": "pt (US)", "toBase": 0.473176473 },
+        "us_cup": { "name": "US Cup", "symbol": "cup (US)", "toBase": 0.2365882365 },
+        "us_fluid_ounce": {
+          "name": "US Fluid Ounce",
+          "symbol": "fl oz (US)",
+          "toBase": 0.029573529563
+        },
+        "us_tablespoon": {
+          "name": "US Tablespoon",
+          "symbol": "tbsp (US)",
+          "toBase": 0.014786764782
+        },
+        "us_teaspoon": { "name": "US Teaspoon", "symbol": "tsp (US)", "toBase": 0.004928921594 },
+        "us_gill": { "name": "US Gill", "symbol": "gi (US)", "toBase": 0.11829411825 },
+        "us_barrel_oil": { "name": "US Barrel (Oil)", "symbol": "bbl", "toBase": 158.987294928 },
+        "imperial_gallon": { "name": "Imperial Gallon", "symbol": "gal (imp)", "toBase": 4.54609 },
+        "imperial_quart": { "name": "Imperial Quart", "symbol": "qt (imp)", "toBase": 1.1365225 },
+        "imperial_pint": { "name": "Imperial Pint", "symbol": "pt (imp)", "toBase": 0.56826125 },
+        "imperial_cup": { "name": "Imperial Cup", "symbol": "cup (imp)", "toBase": 0.284130625 },
+        "imperial_fluid_ounce": {
+          "name": "Imperial Fluid Ounce",
+          "symbol": "fl oz (imp)",
+          "toBase": 0.0284130625
+        },
+        "imperial_tablespoon": {
+          "name": "Imperial Tablespoon",
+          "symbol": "tbsp (imp)",
+          "toBase": 0.0177582
+        },
+        "imperial_teaspoon": {
+          "name": "Imperial Teaspoon",
+          "symbol": "tsp (imp)",
+          "toBase": 0.00591939
+        },
+        "imperial_gill": { "name": "Imperial Gill", "symbol": "gi (imp)", "toBase": 0.1420653125 },
+        "deciliter": { "name": "Deciliter", "symbol": "dL", "toBase": 0.1 },
+        "centiliter": { "name": "Centiliter", "symbol": "cL", "toBase": 0.01 },
+        "microliter": { "name": "Microliter", "symbol": "μL", "toBase": 1e-6 },
+        "cubic_kilometer": { "name": "Cubic Kilometer", "symbol": "km³", "toBase": 1e12 },
+        "acre_foot": { "name": "Acre-Foot", "symbol": "ac·ft", "toBase": 1233481.837548 },
+        "board_foot": { "name": "Board Foot", "symbol": "bf", "toBase": 2.359737216 },
+        "cord": { "name": "Cord", "symbol": "cd", "toBase": 3624.556363776 },
+        "drop": { "name": "Drop", "symbol": "gtt", "toBase": 5e-5 },
+        "dash": { "name": "Dash (US)", "symbol": "dash", "toBase": 0.00061611519922 },
+        "pinch": { "name": "Pinch (US)", "symbol": "pinch", "toBase": 0.00030805759961 },
+        "fluid_dram_us": { "name": "Fluid Dram (US)", "symbol": "fl dr", "toBase": 0.0036966911953 }
+      }
+    },
+    "mass": {
+      "name": "Mass",
+      "icon": "weight",
+      "baseUnit": "kilogram",
+      "units": {
+        "kilogram": { "name": "Kilogram", "symbol": "kg", "toBase": 1 },
+        "gram": { "name": "Gram", "symbol": "g", "toBase": 0.001 },
+        "milligram": { "name": "Milligram", "symbol": "mg", "toBase": 1e-6 },
+        "microgram": { "name": "Microgram", "symbol": "μg", "toBase": 1e-9 },
+        "nanogram": { "name": "Nanogram", "symbol": "ng", "toBase": 1e-12 },
+        "picogram": { "name": "Picogram", "symbol": "pg", "toBase": 1e-15 },
+        "femtogram": { "name": "Femtogram", "symbol": "fg", "toBase": 1e-18 },
+        "attogram": { "name": "Attogram", "symbol": "ag", "toBase": 1e-21 },
+        "metric_ton": { "name": "Metric Ton (Tonne)", "symbol": "t", "toBase": 1000 },
+        "pound": { "name": "Pound", "symbol": "lb", "toBase": 0.45359237 },
+        "ounce": { "name": "Ounce", "symbol": "oz", "toBase": 0.028349523125 },
+        "stone": { "name": "Stone", "symbol": "st", "toBase": 6.35029318 },
+        "us_ton_short": { "name": "US Ton (Short)", "symbol": "ton (US)", "toBase": 907.18474 },
+        "uk_ton_long": { "name": "UK Ton (Long)", "symbol": "ton (UK)", "toBase": 1016.0469088 },
+        "grain": { "name": "Grain", "symbol": "gr", "toBase": 6.479891e-5 },
+        "carat": { "name": "Carat", "symbol": "ct", "toBase": 0.0002 },
+        "atomic_mass_unit": {
+          "name": "Atomic Mass Unit",
+          "symbol": "u",
+          "toBase": 1.6605390666e-27
+        },
+        "slug": { "name": "Slug", "symbol": "slug", "toBase": 14.593902937 },
+        "pennyweight": { "name": "Pennyweight", "symbol": "dwt", "toBase": 0.00155517384 },
+        "troy_ounce": { "name": "Troy Ounce", "symbol": "oz t", "toBase": 0.0311034768 },
+        "troy_pound": { "name": "Troy Pound", "symbol": "lb t", "toBase": 0.3732417216 },
+        "dram": { "name": "Dram (avoirdupois)", "symbol": "dr", "toBase": 0.0017718451953 },
+        "hundredweight_us": {
+          "name": "Hundredweight (US)",
+          "symbol": "cwt (US)",
+          "toBase": 45.359237
+        },
+        "hundredweight_uk": {
+          "name": "Hundredweight (UK)",
+          "symbol": "cwt (UK)",
+          "toBase": 50.80234544
+        },
+        "quarter_us": { "name": "Quarter (US)", "symbol": "qr (US)", "toBase": 11.33980925 },
+        "quarter_uk": { "name": "Quarter (UK)", "symbol": "qr (UK)", "toBase": 12.70058636 },
+        "planck_mass": { "name": "Planck Mass", "symbol": "mₚ", "toBase": 2.176434e-8 },
+        "solar_mass": { "name": "Solar Mass", "symbol": "M☉", "toBase": 1.989e30 },
+        "earth_mass": { "name": "Earth Mass", "symbol": "M⊕", "toBase": 5.972e24 },
+        "dalton": { "name": "Dalton", "symbol": "Da", "toBase": 1.6605390666e-27 },
+        "quintal": { "name": "Quintal", "symbol": "q", "toBase": 100 },
+        "decagram": { "name": "Decagram", "symbol": "dag", "toBase": 0.01 },
+        "hectogram": { "name": "Hectogram", "symbol": "hg", "toBase": 0.1 }
+      }
+    },
+    "temperature": {
+      "name": "Temperature",
+      "icon": "thermometer",
+      "baseUnit": "celsius",
+      "units": {
+        "celsius": { "name": "Celsius", "symbol": "°C", "toBase": 1, "isTemperature": true },
+        "fahrenheit": { "name": "Fahrenheit", "symbol": "°F", "toBase": 1, "isTemperature": true },
+        "kelvin": { "name": "Kelvin", "symbol": "K", "toBase": 1, "isTemperature": true },
+        "rankine": { "name": "Rankine", "symbol": "°R", "toBase": 1, "isTemperature": true },
+        "reaumur": { "name": "Réaumur", "symbol": "°Ré", "toBase": 1, "isTemperature": true },
+        "newton": { "name": "Newton", "symbol": "°N", "toBase": 1, "isTemperature": true },
+        "delisle": { "name": "Delisle", "symbol": "°D", "toBase": 1, "isTemperature": true },
+        "romer": { "name": "Rømer", "symbol": "°Rø", "toBase": 1, "isTemperature": true }
+      }
+    },
+    "speed": {
+      "name": "Speed",
+      "icon": "gauge",
+      "baseUnit": "meter_per_second",
+      "units": {
+        "meter_per_second": { "name": "Meter/Second", "symbol": "m/s", "toBase": 1 },
+        "kilometer_per_hour": { "name": "Kilometer/Hour", "symbol": "km/h", "toBase": 0.277778 },
+        "mile_per_hour": { "name": "Mile/Hour", "symbol": "mph", "toBase": 0.44704 },
+        "knot": { "name": "Knot", "symbol": "kn", "toBase": 0.514444 },
+        "foot_per_second": { "name": "Foot/Second", "symbol": "ft/s", "toBase": 0.3048 },
+        "mach_si": { "name": "Mach (SI standard)", "symbol": "Ma", "toBase": 295.0464 },
+        "mach_20c": { "name": "Mach (20°C, 1 atm)", "symbol": "Ma₂₀", "toBase": 343.2 },
+        "speed_of_light": { "name": "Speed of Light", "symbol": "c", "toBase": 299792458 },
+        "yard_per_second": { "name": "Yard/Second", "symbol": "yd/s", "toBase": 0.9144 },
+        "mile_per_minute": { "name": "Mile/Minute", "symbol": "mi/min", "toBase": 26.8224 },
+        "kilometer_per_second": { "name": "Kilometer/Second", "symbol": "km/s", "toBase": 1000 },
+        "centimeter_per_second": { "name": "Centimeter/Second", "symbol": "cm/s", "toBase": 0.01 },
+        "millimeter_per_second": { "name": "Millimeter/Second", "symbol": "mm/s", "toBase": 0.001 },
+        "inch_per_second": { "name": "Inch/Second", "symbol": "in/s", "toBase": 0.0254 },
+        "foot_per_hour": { "name": "Foot/Hour", "symbol": "ft/h", "toBase": 8.46667e-5 },
+        "furlong_per_fortnight": {
+          "name": "Furlong/Fortnight",
+          "symbol": "fur/ftn",
+          "toBase": 1.66309e-4
+        },
+        "earth_escape_velocity": {
+          "name": "Earth Escape Velocity",
+          "symbol": "vₑ",
+          "toBase": 11186
+        }
+      }
+    },
+    "time": {
+      "name": "Time",
+      "icon": "clock",
+      "baseUnit": "second",
+      "units": {
+        "second": { "name": "Second", "symbol": "s", "toBase": 1 },
+        "millisecond": { "name": "Millisecond", "symbol": "ms", "toBase": 0.001 },
+        "microsecond": { "name": "Microsecond", "symbol": "μs", "toBase": 1e-6 },
+        "nanosecond": { "name": "Nanosecond", "symbol": "ns", "toBase": 1e-9 },
+        "picosecond": { "name": "Picosecond", "symbol": "ps", "toBase": 1e-12 },
+        "femtosecond": { "name": "Femtosecond", "symbol": "fs", "toBase": 1e-15 },
+        "attosecond": { "name": "Attosecond", "symbol": "as", "toBase": 1e-18 },
+        "minute": { "name": "Minute", "symbol": "min", "toBase": 60 },
+        "hour": { "name": "Hour", "symbol": "h", "toBase": 3600 },
+        "day": { "name": "Day", "symbol": "d", "toBase": 86400 },
+        "week": { "name": "Week", "symbol": "wk", "toBase": 604800 },
+        "fortnight": { "name": "Fortnight", "symbol": "ftn", "toBase": 1209600 },
+        "month_synodic": { "name": "Month (Synodic)", "symbol": "mo", "toBase": 2551443 },
+        "year_tropical": { "name": "Year (Tropical)", "symbol": "yr", "toBase": 31556925.2 },
+        "year_sidereal": { "name": "Year (Sidereal)", "symbol": "yrₛ", "toBase": 31558149.8 },
+        "year_julian": { "name": "Year (Julian)", "symbol": "yrⱼ", "toBase": 31557600 },
+        "year_gregorian": { "name": "Year (Gregorian)", "symbol": "yrɢ", "toBase": 31556952 },
+        "decade": { "name": "Decade", "symbol": "dec", "toBase": 315569520 },
+        "century": { "name": "Century", "symbol": "cent", "toBase": 3155695200 },
+        "millennium": { "name": "Millennium", "symbol": "mill", "toBase": 31556952000 },
+        "planck_time": { "name": "Planck Time", "symbol": "tₚ", "toBase": 5.391247e-44 },
+        "shake": { "name": "Shake", "symbol": "shake", "toBase": 1e-8 },
+        "sidereal_day": { "name": "Sidereal Day", "symbol": "dₛ", "toBase": 86164.0905 },
+        "sidereal_hour": { "name": "Sidereal Hour", "symbol": "hₛ", "toBase": 3590.17044 },
+        "sidereal_minute": { "name": "Sidereal Minute", "symbol": "minₛ", "toBase": 59.836174 },
+        "sidereal_second": { "name": "Sidereal Second", "symbol": "sₛ", "toBase": 0.9972696 },
+        "lunar_month": { "name": "Lunar Month", "symbol": "moₗ", "toBase": 2551443 },
+        "svedberg": { "name": "Svedberg", "symbol": "S", "toBase": 1e-13 }
+      }
+    },
+    "pressure": {
+      "name": "Pressure",
+      "icon": "activity",
+      "baseUnit": "pascal",
+      "units": {
+        "pascal": { "name": "Pascal", "symbol": "Pa", "toBase": 1 },
+        "kilopascal": { "name": "Kilopascal", "symbol": "kPa", "toBase": 1000 },
+        "megapascal": { "name": "Megapascal", "symbol": "MPa", "toBase": 1e6 },
+        "gigapascal": { "name": "Gigapascal", "symbol": "GPa", "toBase": 1e9 },
+        "bar": { "name": "Bar", "symbol": "bar", "toBase": 100000 },
+        "millibar": { "name": "Millibar", "symbol": "mbar", "toBase": 100 },
+        "atmosphere": { "name": "Atmosphere", "symbol": "atm", "toBase": 101325 },
+        "psi": { "name": "PSI", "symbol": "psi", "toBase": 6894.757293168 },
+        "torr": { "name": "Torr", "symbol": "Torr", "toBase": 133.3223684 },
+        "mmhg": { "name": "mmHg", "symbol": "mmHg", "toBase": 133.322387415 },
+        "inhg": { "name": "inHg", "symbol": "inHg", "toBase": 3386.388640341 },
+        "technical_atmosphere": {
+          "name": "Technical Atmosphere",
+          "symbol": "at",
+          "toBase": 98066.5
+        },
+        "dyne_per_sq_cm": { "name": "Dyne/cm²", "symbol": "dyn/cm²", "toBase": 0.1 },
+        "kgf_per_sq_cm": { "name": "kgf/cm²", "symbol": "kgf/cm²", "toBase": 98066.5 },
+        "kgf_per_sq_mm": { "name": "kgf/mm²", "symbol": "kgf/mm²", "toBase": 9806650 },
+        "poundal_per_sq_foot": {
+          "name": "Poundal/ft²",
+          "symbol": "pdl/ft²",
+          "toBase": 1.4881639436
+        },
+        "poundal_per_sq_inch": {
+          "name": "Poundal/in²",
+          "symbol": "pdl/in²",
+          "toBase": 214.29580788
+        }
+      }
+    },
+    "energy": {
+      "name": "Energy",
+      "icon": "zap",
+      "baseUnit": "joule",
+      "units": {
+        "joule": { "name": "Joule", "symbol": "J", "toBase": 1 },
+        "kilojoule": { "name": "Kilojoule", "symbol": "kJ", "toBase": 1000 },
+        "megajoule": { "name": "Megajoule", "symbol": "MJ", "toBase": 1e6 },
+        "gigajoule": { "name": "Gigajoule", "symbol": "GJ", "toBase": 1e9 },
+        "millijoule": { "name": "Millijoule", "symbol": "mJ", "toBase": 0.001 },
+        "microjoule": { "name": "Microjoule", "symbol": "μJ", "toBase": 1e-6 },
+        "calorie": { "name": "Calorie (thermochemical)", "symbol": "cal", "toBase": 4.184 },
+        "kilocalorie": { "name": "Kilocalorie", "symbol": "kcal", "toBase": 4184 },
+        "calorie_it": {
+          "name": "Calorie (International Table)",
+          "symbol": "calᵢₜ",
+          "toBase": 4.1868
+        },
+        "watt_hour": { "name": "Watt-Hour", "symbol": "Wh", "toBase": 3600 },
+        "kilowatt_hour": { "name": "Kilowatt-Hour", "symbol": "kWh", "toBase": 3600000 },
+        "megawatt_hour": { "name": "Megawatt-Hour", "symbol": "MWh", "toBase": 3.6e9 },
+        "electronvolt": { "name": "Electronvolt", "symbol": "eV", "toBase": 1.602176634e-19 },
+        "btu": { "name": "BTU (thermochemical)", "symbol": "BTU", "toBase": 1054.35026444 },
+        "btu_it": {
+          "name": "BTU (International Table)",
+          "symbol": "BTUᵢₜ",
+          "toBase": 1055.05585262
+        },
+        "therm_us": { "name": "Therm (US)", "symbol": "thm", "toBase": 105480400 },
+        "therm_ec": { "name": "Therm (EC)", "symbol": "thmₑ꜀", "toBase": 105506000 },
+        "foot_pound": { "name": "Foot-Pound", "symbol": "ft·lbf", "toBase": 1.3558179483 },
+        "erg": { "name": "Erg", "symbol": "erg", "toBase": 1e-7 },
+        "ton_tnt": { "name": "Ton of TNT", "symbol": "tTNT", "toBase": 4.184e9 },
+        "barrel_oil_equiv": {
+          "name": "Barrel of Oil Equivalent",
+          "symbol": "BOE",
+          "toBase": 6.12e9
+        },
+        "quad": { "name": "Quad", "symbol": "quad", "toBase": 1.055e18 },
+        "rydberg": { "name": "Rydberg", "symbol": "Ry", "toBase": 2.179872361e-18 },
+        "hartree": { "name": "Hartree", "symbol": "Eₕ", "toBase": 4.359744722e-18 }
+      }
+    },
+    "power": {
+      "name": "Power",
+      "icon": "battery-charging",
+      "baseUnit": "watt",
+      "units": {
+        "watt": { "name": "Watt", "symbol": "W", "toBase": 1 },
+        "milliwatt": { "name": "Milliwatt", "symbol": "mW", "toBase": 0.001 },
+        "kilowatt": { "name": "Kilowatt", "symbol": "kW", "toBase": 1000 },
+        "megawatt": { "name": "Megawatt", "symbol": "MW", "toBase": 1e6 },
+        "gigawatt": { "name": "Gigawatt", "symbol": "GW", "toBase": 1e9 },
+        "terawatt": { "name": "Terawatt", "symbol": "TW", "toBase": 1e12 },
+        "petawatt": { "name": "Petawatt", "symbol": "PW", "toBase": 1e15 },
+        "horsepower_mechanical": {
+          "name": "Horsepower (mechanical)",
+          "symbol": "hp",
+          "toBase": 745.69987158
+        },
+        "horsepower_metric": { "name": "Horsepower (metric)", "symbol": "PS", "toBase": 735.49875 },
+        "horsepower_electric": { "name": "Horsepower (electric)", "symbol": "hpₑ", "toBase": 746 },
+        "horsepower_boiler": { "name": "Horsepower (boiler)", "symbol": "hpₛ", "toBase": 9809.5 },
+        "horsepower_water": { "name": "Horsepower (water)", "symbol": "hpᵥ", "toBase": 746.043 },
+        "btu_per_hour": { "name": "BTU/hour", "symbol": "BTU/h", "toBase": 0.29307107 },
+        "btu_per_minute": { "name": "BTU/minute", "symbol": "BTU/min", "toBase": 17.5842642 },
+        "foot_pound_per_second": {
+          "name": "Foot-Pound/Second",
+          "symbol": "ft·lbf/s",
+          "toBase": 1.3558179483
+        },
+        "foot_pound_per_minute": {
+          "name": "Foot-Pound/Minute",
+          "symbol": "ft·lbf/min",
+          "toBase": 0.0225969658
+        },
+        "ton_refrigeration": {
+          "name": "Ton of Refrigeration",
+          "symbol": "TR",
+          "toBase": 3516.8528421
+        },
+        "kilocalorie_per_hour": {
+          "name": "Kilocalorie/hour",
+          "symbol": "kcal/h",
+          "toBase": 1.16222222
+        },
+        "erg_per_second": { "name": "Erg/Second", "symbol": "erg/s", "toBase": 1e-7 },
+        "joule_per_second": { "name": "Joule/Second", "symbol": "J/s", "toBase": 1 },
+        "volt_ampere": { "name": "Volt-Ampere", "symbol": "VA", "toBase": 1 },
+        "decibel_milliwatt": {
+          "name": "dBm",
+          "symbol": "dBm",
+          "toBase": 1,
+          "note": "logarithmic, approximate"
+        },
+        "newton_meter_per_second": { "name": "Newton-Meter/Second", "symbol": "N·m/s", "toBase": 1 }
+      }
+    },
+    "data": {
+      "name": "Digital Storage",
+      "icon": "database",
+      "baseUnit": "byte",
+      "units": {
+        "bit": { "name": "Bit", "symbol": "b", "toBase": 0.125 },
+        "byte": { "name": "Byte", "symbol": "B", "toBase": 1 },
+        "kilobit": { "name": "Kilobit", "symbol": "Kb", "toBase": 125 },
+        "kilobyte": { "name": "Kilobyte", "symbol": "KB", "toBase": 1000 },
+        "kibibyte": { "name": "Kibibyte", "symbol": "KiB", "toBase": 1024 },
+        "megabit": { "name": "Megabit", "symbol": "Mb", "toBase": 125000 },
+        "megabyte": { "name": "Megabyte", "symbol": "MB", "toBase": 1e6 },
+        "mebibyte": { "name": "Mebibyte", "symbol": "MiB", "toBase": 1048576 },
+        "gigabit": { "name": "Gigabit", "symbol": "Gb", "toBase": 1.25e8 },
+        "gigabyte": { "name": "Gigabyte", "symbol": "GB", "toBase": 1e9 },
+        "gibibyte": { "name": "Gibibyte", "symbol": "GiB", "toBase": 1073741824 },
+        "terabit": { "name": "Terabit", "symbol": "Tb", "toBase": 1.25e11 },
+        "terabyte": { "name": "Terabyte", "symbol": "TB", "toBase": 1e12 },
+        "tebibyte": { "name": "Tebibyte", "symbol": "TiB", "toBase": 1099511627776 },
+        "petabit": { "name": "Petabit", "symbol": "Pb", "toBase": 1.25e14 },
+        "petabyte": { "name": "Petabyte", "symbol": "PB", "toBase": 1e15 },
+        "pebibyte": { "name": "Pebibyte", "symbol": "PiB", "toBase": 1125899906842624 },
+        "exabit": { "name": "Exabit", "symbol": "Eb", "toBase": 1.25e17 },
+        "exabyte": { "name": "Exabyte", "symbol": "EB", "toBase": 1e18 },
+        "exbibyte": { "name": "Exbibyte", "symbol": "EiB", "toBase": 1152921504606846976 },
+        "zettabit": { "name": "Zettabit", "symbol": "Zb", "toBase": 1.25e20 },
+        "zettabyte": { "name": "Zettabyte", "symbol": "ZB", "toBase": 1e21 },
+        "yottabit": { "name": "Yottabit", "symbol": "Yb", "toBase": 1.25e23 },
+        "yottabyte": { "name": "Yottabyte", "symbol": "YB", "toBase": 1e24 },
+        "nibble": { "name": "Nibble", "symbol": "nibble", "toBase": 0.5 },
+        "word_32bit": { "name": "Word (32-bit)", "symbol": "word", "toBase": 4 },
+        "double_word": { "name": "Double Word (64-bit)", "symbol": "dword", "toBase": 8 },
+        "block": { "name": "Block", "symbol": "block", "toBase": 512 },
+        "sector": { "name": "Sector", "symbol": "sector", "toBase": 512 },
+        "track": { "name": "Track", "symbol": "track", "toBase": 12288 },
+        "floppy_5_25_dd": { "name": "Floppy 5.25\" DD", "symbol": "FD5.25", "toBase": 368640 },
+        "floppy_3_5_hd": { "name": "Floppy 3.5\" HD", "symbol": "FD3.5", "toBase": 1474560 },
+        "cd_74": { "name": "CD (74 min)", "symbol": "CD₇₄", "toBase": 681984000 },
+        "dvd_sl": { "name": "DVD (Single Layer)", "symbol": "DVD", "toBase": 4700000000 },
+        "bluray_sl": { "name": "Blu-ray (Single Layer)", "symbol": "BD", "toBase": 25000000000 }
+      }
+    },
+    "data_rate": {
+      "name": "Data Transfer Rate",
+      "icon": "wifi",
+      "baseUnit": "bit_per_second",
+      "units": {
+        "bit_per_second": { "name": "Bit/Second", "symbol": "bps", "toBase": 1 },
+        "kilobit_per_second": { "name": "Kilobit/Second", "symbol": "Kbps", "toBase": 1000 },
+        "kibibit_per_second": { "name": "Kibibit/Second", "symbol": "Kibps", "toBase": 1024 },
+        "megabit_per_second": { "name": "Megabit/Second", "symbol": "Mbps", "toBase": 1e6 },
+        "mebibit_per_second": { "name": "Mebibit/Second", "symbol": "Mibps", "toBase": 1048576 },
+        "gigabit_per_second": { "name": "Gigabit/Second", "symbol": "Gbps", "toBase": 1e9 },
+        "gibibit_per_second": { "name": "Gibibit/Second", "symbol": "Gibps", "toBase": 1073741824 },
+        "terabit_per_second": { "name": "Terabit/Second", "symbol": "Tbps", "toBase": 1e12 },
+        "byte_per_second": { "name": "Byte/Second", "symbol": "B/s", "toBase": 8 },
+        "kilobyte_per_second": { "name": "Kilobyte/Second", "symbol": "KB/s", "toBase": 8000 },
+        "kibibyte_per_second": { "name": "Kibibyte/Second", "symbol": "KiB/s", "toBase": 8192 },
+        "megabyte_per_second": { "name": "Megabyte/Second", "symbol": "MB/s", "toBase": 8e6 },
+        "mebibyte_per_second": { "name": "Mebibyte/Second", "symbol": "MiB/s", "toBase": 8388608 },
+        "gigabyte_per_second": { "name": "Gigabyte/Second", "symbol": "GB/s", "toBase": 8e9 },
+        "gibibyte_per_second": {
+          "name": "Gibibyte/Second",
+          "symbol": "GiB/s",
+          "toBase": 8589934592
+        }
+      }
+    },
+    "angle": {
+      "name": "Angle",
+      "icon": "corner-up-right",
+      "baseUnit": "degree",
+      "units": {
+        "degree": { "name": "Degree", "symbol": "°", "toBase": 1 },
+        "radian": { "name": "Radian", "symbol": "rad", "toBase": 57.295779513 },
+        "gradian": { "name": "Gradian", "symbol": "gon", "toBase": 0.9 },
+        "arcminute": { "name": "Arcminute", "symbol": "'", "toBase": 0.0166666667 },
+        "arcsecond": { "name": "Arcsecond", "symbol": "\"", "toBase": 0.0002777778 },
+        "milliarcsecond": { "name": "Milliarcsecond", "symbol": "mas", "toBase": 2.77778e-7 },
+        "turn": { "name": "Turn", "symbol": "tr", "toBase": 360 },
+        "milliradian": { "name": "Milliradian", "symbol": "mrad", "toBase": 0.0572957795 },
+        "sign": { "name": "Sign", "symbol": "sign", "toBase": 30 },
+        "octant": { "name": "Octant", "symbol": "oct", "toBase": 45 },
+        "sextant": { "name": "Sextant", "symbol": "sext", "toBase": 60 },
+        "quadrant": { "name": "Quadrant", "symbol": "quad", "toBase": 90 },
+        "nato_mil": { "name": "NATO Mil", "symbol": "mil", "toBase": 0.05625 },
+        "soviet_mil": { "name": "Soviet Mil", "symbol": "milₛ", "toBase": 0.06 },
+        "swedish_streck": { "name": "Swedish Streck", "symbol": "streck", "toBase": 0.05625 }
+      }
+    },
+    "frequency": {
+      "name": "Frequency",
+      "icon": "radio",
+      "baseUnit": "hertz",
+      "units": {
+        "hertz": { "name": "Hertz", "symbol": "Hz", "toBase": 1 },
+        "millihertz": { "name": "Millihertz", "symbol": "mHz", "toBase": 0.001 },
+        "kilohertz": { "name": "Kilohertz", "symbol": "kHz", "toBase": 1000 },
+        "megahertz": { "name": "Megahertz", "symbol": "MHz", "toBase": 1e6 },
+        "gigahertz": { "name": "Gigahertz", "symbol": "GHz", "toBase": 1e9 },
+        "terahertz": { "name": "Terahertz", "symbol": "THz", "toBase": 1e12 },
+        "rpm": { "name": "Revolutions/Minute", "symbol": "RPM", "toBase": 0.0166666667 },
+        "radian_per_second": { "name": "Radian/Second", "symbol": "rad/s", "toBase": 0.1591549431 },
+        "degree_per_second": { "name": "Degree/Second", "symbol": "°/s", "toBase": 0.0027777778 },
+        "cycle_per_second": { "name": "Cycle/Second", "symbol": "cps", "toBase": 1 },
+        "beat_per_minute": { "name": "Beats/Minute", "symbol": "BPM", "toBase": 0.0166666667 },
+        "frame_per_second": { "name": "Frames/Second", "symbol": "fps", "toBase": 1 },
+        "wavelength_in_metres": {
+          "name": "Wavelength (m)",
+          "symbol": "λ",
+          "toBase": 0,
+          "note": "special: c/λ"
+        }
+      }
+    },
+    "fuel_economy": {
+      "name": "Fuel Economy",
+      "icon": "fuel",
+      "baseUnit": "km_per_liter",
+      "units": {
+        "km_per_liter": { "name": "Kilometer/Liter", "symbol": "km/L", "toBase": 1 },
+        "liter_per_100km": {
+          "name": "Liter/100km",
+          "symbol": "L/100km",
+          "toBase": 0,
+          "isInverse": true
+        },
+        "mpg_us": { "name": "Miles/Gallon (US)", "symbol": "mpg (US)", "toBase": 0.425143707 },
+        "mpg_uk": { "name": "Miles/Gallon (UK)", "symbol": "mpg (UK)", "toBase": 0.354006 },
+        "miles_per_liter": { "name": "Miles/Liter", "symbol": "mi/L", "toBase": 1.609344 },
+        "meters_per_liter": { "name": "Meters/Liter", "symbol": "m/L", "toBase": 0.001 }
+      }
+    },
+    "electric_current": {
+      "name": "Electric Current",
+      "icon": "zap",
+      "baseUnit": "ampere",
+      "units": {
+        "ampere": { "name": "Ampere", "symbol": "A", "toBase": 1 },
+        "milliampere": { "name": "Milliampere", "symbol": "mA", "toBase": 0.001 },
+        "microampere": { "name": "Microampere", "symbol": "μA", "toBase": 1e-6 },
+        "kiloampere": { "name": "Kiloampere", "symbol": "kA", "toBase": 1000 },
+        "abampere": { "name": "Abampere", "symbol": "abA", "toBase": 10 },
+        "biot": { "name": "Biot", "symbol": "Bi", "toBase": 10 },
+        "gaussian_current": { "name": "Gaussian Current", "symbol": "CGS", "toBase": 0.1 },
+        "statampere": { "name": "Statampere", "symbol": "statA", "toBase": 3.335641e-10 },
+        "franklin_per_second": {
+          "name": "Franklin/Second",
+          "symbol": "Fr/s",
+          "toBase": 3.335641e-10
+        },
+        "coulomb_per_second": { "name": "Coulomb/Second", "symbol": "C/s", "toBase": 1 },
+        "emu_current": { "name": "EMU of Current", "symbol": "emu", "toBase": 10 },
+        "esu_current": { "name": "ESU of Current", "symbol": "esu", "toBase": 3.335641e-10 }
+      }
+    },
+    "electric_charge": {
+      "name": "Electric Charge",
+      "icon": "battery",
+      "baseUnit": "coulomb",
+      "units": {
+        "coulomb": { "name": "Coulomb", "symbol": "C", "toBase": 1 },
+        "millicoulomb": { "name": "Millicoulomb", "symbol": "mC", "toBase": 0.001 },
+        "microcoulomb": { "name": "Microcoulomb", "symbol": "μC", "toBase": 1e-6 },
+        "nanocoulomb": { "name": "Nanocoulomb", "symbol": "nC", "toBase": 1e-9 },
+        "picocoulomb": { "name": "Picocoulomb", "symbol": "pC", "toBase": 1e-12 },
+        "ampere_hour": { "name": "Ampere-Hour", "symbol": "Ah", "toBase": 3600 },
+        "milliampere_hour": { "name": "Milliampere-Hour", "symbol": "mAh", "toBase": 3.6 },
+        "faraday": { "name": "Faraday", "symbol": "F", "toBase": 96485.33212 },
+        "elementary_charge": {
+          "name": "Elementary Charge",
+          "symbol": "e",
+          "toBase": 1.602176634e-19
+        },
+        "abcoulomb": { "name": "Abcoulomb", "symbol": "abC", "toBase": 10 },
+        "statcoulomb": { "name": "Statcoulomb", "symbol": "statC", "toBase": 3.335641e-10 },
+        "franklin": { "name": "Franklin", "symbol": "Fr", "toBase": 3.335641e-10 }
+      }
+    },
+    "electric_potential": {
+      "name": "Electric Potential",
+      "icon": "battery-charging",
+      "baseUnit": "volt",
+      "units": {
+        "volt": { "name": "Volt", "symbol": "V", "toBase": 1 },
+        "millivolt": { "name": "Millivolt", "symbol": "mV", "toBase": 0.001 },
+        "microvolt": { "name": "Microvolt", "symbol": "μV", "toBase": 1e-6 },
+        "nanovolt": { "name": "Nanovolt", "symbol": "nV", "toBase": 1e-9 },
+        "kilovolt": { "name": "Kilovolt", "symbol": "kV", "toBase": 1000 },
+        "megavolt": { "name": "Megavolt", "symbol": "MV", "toBase": 1e6 },
+        "abvolt": { "name": "Abvolt", "symbol": "abV", "toBase": 1e-8 },
+        "statvolt": { "name": "Statvolt", "symbol": "statV", "toBase": 299.792458 },
+        "planck_voltage": { "name": "Planck Voltage", "symbol": "Vₚ", "toBase": 1.04295e27 }
+      }
+    },
+    "electric_resistance": {
+      "name": "Electric Resistance",
+      "icon": "cable",
+      "baseUnit": "ohm",
+      "units": {
+        "ohm": { "name": "Ohm", "symbol": "Ω", "toBase": 1 },
+        "milliohm": { "name": "Milliohm", "symbol": "mΩ", "toBase": 0.001 },
+        "microohm": { "name": "Microohm", "symbol": "μΩ", "toBase": 1e-6 },
+        "kiloohm": { "name": "Kiloohm", "symbol": "kΩ", "toBase": 1000 },
+        "megaohm": { "name": "Megaohm", "symbol": "MΩ", "toBase": 1e6 },
+        "gigaohm": { "name": "Gigaohm", "symbol": "GΩ", "toBase": 1e9 },
+        "abohm": { "name": "Abohm", "symbol": "abΩ", "toBase": 1e-9 },
+        "statohm": { "name": "Statohm", "symbol": "statΩ", "toBase": 8.987551787e11 },
+        "quantum_hall_resistance": {
+          "name": "Quantum Hall Resistance",
+          "symbol": "Rₖ",
+          "toBase": 25812.80745
+        },
+        "volt_per_ampere": { "name": "Volt/Ampere", "symbol": "V/A", "toBase": 1 },
+        "reciprocal_siemens": { "name": "Reciprocal Siemens", "symbol": "1/S", "toBase": 1 },
+        "planck_resistance": { "name": "Planck Resistance", "symbol": "Rₚ", "toBase": 29979245800 }
+      }
+    },
+    "luminance": {
+      "name": "Luminance",
+      "icon": "sun",
+      "baseUnit": "nit",
+      "units": {
+        "nit": { "name": "Nit", "symbol": "nt", "toBase": 1 },
+        "candela_per_sq_meter": { "name": "Candela/m²", "symbol": "cd/m²", "toBase": 1 },
+        "kilocandela_per_sq_meter": {
+          "name": "Kilocandela/m²",
+          "symbol": "kcd/m²",
+          "toBase": 1000
+        },
+        "stilb": { "name": "Stilb", "symbol": "sb", "toBase": 10000 },
+        "lambert": { "name": "Lambert", "symbol": "L", "toBase": 3183.0988618 },
+        "millilambert": { "name": "Millilambert", "symbol": "mL", "toBase": 3.1830988618 },
+        "foot_lambert": { "name": "Foot-Lambert", "symbol": "fL", "toBase": 3.4262590996 },
+        "apostilb": { "name": "Apostilb", "symbol": "asb", "toBase": 0.3183098862 },
+        "blondel": { "name": "Blondel", "symbol": "bl", "toBase": 0.3183098862 },
+        "candela_per_sq_foot": {
+          "name": "Candela/ft²",
+          "symbol": "cd/ft²",
+          "toBase": 10.763910417
+        },
+        "candela_per_sq_inch": { "name": "Candela/in²", "symbol": "cd/in²", "toBase": 1550.0031 }
+      }
+    },
+    "illuminance": {
+      "name": "Illuminance",
+      "icon": "lightbulb",
+      "baseUnit": "lux",
+      "units": {
+        "lux": { "name": "Lux", "symbol": "lx", "toBase": 1 },
+        "phot": { "name": "Phot", "symbol": "ph", "toBase": 10000 },
+        "foot_candle": { "name": "Foot-Candle", "symbol": "fc", "toBase": 10.763910417 },
+        "nox": { "name": "Nox", "symbol": "nox", "toBase": 0.001 },
+        "meter_candle": { "name": "Meter-Candle", "symbol": "m·cd", "toBase": 1 },
+        "centimeter_candle": { "name": "Centimeter-Candle", "symbol": "cm·cd", "toBase": 10000 }
+      }
+    },
+    "radiation": {
+      "name": "Radiation",
+      "icon": "radiation",
+      "baseUnit": "gray",
+      "units": {
+        "gray": { "name": "Gray", "symbol": "Gy", "toBase": 1 },
+        "milligray": { "name": "Milligray", "symbol": "mGy", "toBase": 0.001 },
+        "microgray": { "name": "Microgray", "symbol": "μGy", "toBase": 1e-6 },
+        "rad": { "name": "Rad", "symbol": "rad", "toBase": 0.01 },
+        "millirad": { "name": "Millirad", "symbol": "mrad", "toBase": 1e-5 },
+        "sievert": { "name": "Sievert", "symbol": "Sv", "toBase": 1 },
+        "millisievert": { "name": "Millisievert", "symbol": "mSv", "toBase": 0.001 },
+        "microsievert": { "name": "Microsievert", "symbol": "μSv", "toBase": 1e-6 },
+        "rem": { "name": "Rem", "symbol": "rem", "toBase": 0.01 },
+        "millirem": { "name": "Millirem", "symbol": "mrem", "toBase": 1e-5 },
+        "becquerel": { "name": "Becquerel", "symbol": "Bq", "toBase": 1 },
+        "kilobecquerel": { "name": "Kilobecquerel", "symbol": "kBq", "toBase": 1000 },
+        "megabecquerel": { "name": "Megabecquerel", "symbol": "MBq", "toBase": 1e6 },
+        "curie": { "name": "Curie", "symbol": "Ci", "toBase": 3.7e10 },
+        "millicurie": { "name": "Millicurie", "symbol": "mCi", "toBase": 3.7e7 },
+        "microcurie": { "name": "Microcurie", "symbol": "μCi", "toBase": 37000 },
+        "rutherford": { "name": "Rutherford", "symbol": "Rd", "toBase": 1e6 },
+        "roentgen": { "name": "Roentgen", "symbol": "R", "toBase": 0.00877 }
+      }
+    },
+    "force": {
+      "name": "Force",
+      "icon": "arrow-down-up",
+      "baseUnit": "newton",
+      "units": {
+        "newton": { "name": "Newton", "symbol": "N", "toBase": 1 },
+        "kilonewton": { "name": "Kilonewton", "symbol": "kN", "toBase": 1000 },
+        "meganewton": { "name": "Meganewton", "symbol": "MN", "toBase": 1e6 },
+        "giganewton": { "name": "Giganewton", "symbol": "GN", "toBase": 1e9 },
+        "millinewton": { "name": "Millinewton", "symbol": "mN", "toBase": 0.001 },
+        "micronewton": { "name": "Micronewton", "symbol": "μN", "toBase": 1e-6 },
+        "nanonewton": { "name": "Nanonewton", "symbol": "nN", "toBase": 1e-9 },
+        "dyne": { "name": "Dyne", "symbol": "dyn", "toBase": 1e-5 },
+        "kilogram_force": { "name": "Kilogram-Force", "symbol": "kgf", "toBase": 9.80665 },
+        "gram_force": { "name": "Gram-Force", "symbol": "gf", "toBase": 0.00980665 },
+        "pound_force": { "name": "Pound-Force", "symbol": "lbf", "toBase": 4.4482216153 },
+        "ounce_force": { "name": "Ounce-Force", "symbol": "ozf", "toBase": 0.2780138509 },
+        "poundal": { "name": "Poundal", "symbol": "pdl", "toBase": 0.1382549544 },
+        "kip": { "name": "Kip", "symbol": "kip", "toBase": 4448.2216153 },
+        "ton_force_us": { "name": "Ton-Force (US)", "symbol": "tonf", "toBase": 8896.4432305 },
+        "ton_force_uk": { "name": "Ton-Force (UK)", "symbol": "tonfₖ", "toBase": 9964.0164182 },
+        "joule_per_meter": { "name": "Joule/Meter", "symbol": "J/m", "toBase": 1 },
+        "joule_per_centimeter": { "name": "Joule/Centimeter", "symbol": "J/cm", "toBase": 100 },
+        "ton_force_metric": { "name": "Ton-Force (metric)", "symbol": "tf", "toBase": 9806.65 }
+      }
+    },
+    "torque": {
+      "name": "Torque",
+      "icon": "rotate-cw",
+      "baseUnit": "newton_meter",
+      "units": {
+        "newton_meter": { "name": "Newton-Meter", "symbol": "N·m", "toBase": 1 },
+        "kilonewton_meter": { "name": "Kilonewton-Meter", "symbol": "kN·m", "toBase": 1000 },
+        "millinewton_meter": { "name": "Millinewton-Meter", "symbol": "mN·m", "toBase": 0.001 },
+        "newton_centimeter": { "name": "Newton-Centimeter", "symbol": "N·cm", "toBase": 0.01 },
+        "newton_millimeter": { "name": "Newton-Millimeter", "symbol": "N·mm", "toBase": 0.001 },
+        "kilonewton_centimeter": {
+          "name": "Kilonewton-Centimeter",
+          "symbol": "kN·cm",
+          "toBase": 10
+        },
+        "dyne_meter": { "name": "Dyne-Meter", "symbol": "dyn·m", "toBase": 1e-5 },
+        "dyne_centimeter": { "name": "Dyne-Centimeter", "symbol": "dyn·cm", "toBase": 1e-7 },
+        "dyne_millimeter": { "name": "Dyne-Millimeter", "symbol": "dyn·mm", "toBase": 1e-8 },
+        "kilogram_force_meter": {
+          "name": "Kilogram-Force Meter",
+          "symbol": "kgf·m",
+          "toBase": 9.80665
+        },
+        "kilogram_force_centimeter": {
+          "name": "Kilogram-Force Centimeter",
+          "symbol": "kgf·cm",
+          "toBase": 0.0980665
+        },
+        "kilogram_force_millimeter": {
+          "name": "Kilogram-Force Millimeter",
+          "symbol": "kgf·mm",
+          "toBase": 0.00980665
+        },
+        "gram_force_centimeter": {
+          "name": "Gram-Force Centimeter",
+          "symbol": "gf·cm",
+          "toBase": 9.80665e-5
+        },
+        "gram_force_millimeter": {
+          "name": "Gram-Force Millimeter",
+          "symbol": "gf·mm",
+          "toBase": 9.80665e-6
+        },
+        "ounce_force_inch": {
+          "name": "Ounce-Force Inch",
+          "symbol": "ozf·in",
+          "toBase": 0.0070615518
+        },
+        "pound_force_foot": {
+          "name": "Pound-Force Foot",
+          "symbol": "lbf·ft",
+          "toBase": 1.3558179483
+        },
+        "pound_force_inch": {
+          "name": "Pound-Force Inch",
+          "symbol": "lbf·in",
+          "toBase": 0.112984829
+        }
+      }
+    },
+    "density": {
+      "name": "Density",
+      "icon": "layers",
+      "baseUnit": "kg_per_cubic_meter",
+      "units": {
+        "kg_per_cubic_meter": { "name": "kg/m³", "symbol": "kg/m³", "toBase": 1 },
+        "gram_per_cubic_meter": { "name": "g/m³", "symbol": "g/m³", "toBase": 0.001 },
+        "gram_per_cubic_centimeter": { "name": "g/cm³", "symbol": "g/cm³", "toBase": 1000 },
+        "gram_per_milliliter": { "name": "g/mL", "symbol": "g/mL", "toBase": 1000 },
+        "gram_per_liter": { "name": "g/L", "symbol": "g/L", "toBase": 1 },
+        "milligram_per_liter": { "name": "mg/L", "symbol": "mg/L", "toBase": 0.001 },
+        "kilogram_per_liter": { "name": "kg/L", "symbol": "kg/L", "toBase": 1000 },
+        "pound_per_cubic_foot": { "name": "lb/ft³", "symbol": "lb/ft³", "toBase": 16.018463374 },
+        "pound_per_cubic_inch": { "name": "lb/in³", "symbol": "lb/in³", "toBase": 27679.90471 },
+        "pound_per_gallon_us": { "name": "lb/gal (US)", "symbol": "lb/gal", "toBase": 119.826427 },
+        "pound_per_gallon_uk": { "name": "lb/gal (UK)", "symbol": "lb/galₖ", "toBase": 99.776373 },
+        "ounce_per_gallon_us": { "name": "oz/gal (US)", "symbol": "oz/gal", "toBase": 7.489151687 },
+        "ounce_per_cubic_foot": { "name": "oz/ft³", "symbol": "oz/ft³", "toBase": 1.001153961 },
+        "ounce_per_cubic_inch": { "name": "oz/in³", "symbol": "oz/in³", "toBase": 1729.9940444 },
+        "slug_per_cubic_foot": { "name": "slug/ft³", "symbol": "slug/ft³", "toBase": 515.3788184 },
+        "psi_per_1000ft": { "name": "psi/1000ft", "symbol": "psi/kft", "toBase": 2.306658736 },
+        "grain_per_gallon_us": { "name": "gr/gal (US)", "symbol": "gr/gal", "toBase": 0.017118061 },
+        "grain_per_gallon_uk": {
+          "name": "gr/gal (UK)",
+          "symbol": "gr/galₖ",
+          "toBase": 0.014253767
+        },
+        "grain_per_cubic_foot": { "name": "gr/ft³", "symbol": "gr/ft³", "toBase": 0.0022883519 },
+        "ton_short_per_cubic_yard": {
+          "name": "ton/yd³ (US)",
+          "symbol": "ton/yd³",
+          "toBase": 1186.5528425
+        },
+        "ton_long_per_cubic_yard": {
+          "name": "ton/yd³ (UK)",
+          "symbol": "tonₖ/yd³",
+          "toBase": 1328.9391836
+        },
+        "ton_per_cubic_meter": { "name": "t/m³", "symbol": "t/m³", "toBase": 1000 },
+        "ton_per_cubic_yard": { "name": "t/yd³", "symbol": "t/yd³", "toBase": 1307.9506193 },
+        "water_density_4c": { "name": "Water (4°C)", "symbol": "ρH₂O", "toBase": 1000 },
+        "earth_density_mean": { "name": "Earth (mean)", "symbol": "ρ⊕", "toBase": 5515 },
+        "air_density_stp": { "name": "Air (STP)", "symbol": "ρair", "toBase": 1.2922 }
+      }
+    },
+    "magnetic_flux": {
+      "name": "Magnetic Flux",
+      "icon": "magnet",
+      "baseUnit": "weber",
+      "units": {
+        "weber": { "name": "Weber", "symbol": "Wb", "toBase": 1 },
+        "milliweber": { "name": "Milliweber", "symbol": "mWb", "toBase": 0.001 },
+        "microweber": { "name": "Microweber", "symbol": "μWb", "toBase": 1e-6 },
+        "kiloweber": { "name": "Kiloweber", "symbol": "kWb", "toBase": 1000 },
+        "megaline": { "name": "Megaline", "symbol": "Mline", "toBase": 0.01 },
+        "maxwell": { "name": "Maxwell", "symbol": "Mx", "toBase": 1e-8 },
+        "unit_pole": { "name": "Unit Pole", "symbol": "P", "toBase": 1.2566370614e-7 },
+        "line": { "name": "Line", "symbol": "line", "toBase": 1e-8 },
+        "kiloline": { "name": "Kiloline", "symbol": "kline", "toBase": 1e-5 },
+        "megaline": { "name": "Megaline", "symbol": "Mline", "toBase": 0.01 }
+      }
+    },
+    "magnetic_flux_density": {
+      "name": "Magnetic Flux Density",
+      "icon": "radio",
+      "baseUnit": "tesla",
+      "units": {
+        "tesla": { "name": "Tesla", "symbol": "T", "toBase": 1 },
+        "millitesla": { "name": "Millitesla", "symbol": "mT", "toBase": 0.001 },
+        "microtesla": { "name": "Microtesla", "symbol": "μT", "toBase": 1e-6 },
+        "nanotesla": { "name": "Nanotesla", "symbol": "nT", "toBase": 1e-9 },
+        "gauss": { "name": "Gauss", "symbol": "G", "toBase": 1e-4 },
+        "milligauss": { "name": "Milligauss", "symbol": "mG", "toBase": 1e-7 },
+        "gamma": { "name": "Gamma", "symbol": "γ", "toBase": 1e-9 },
+        "weber_per_sq_meter": { "name": "Wb/m²", "symbol": "Wb/m²", "toBase": 1 },
+        "maxwell_per_sq_meter": { "name": "Mx/m²", "symbol": "Mx/m²", "toBase": 1e-8 },
+        "line_per_sq_centimeter": { "name": "line/cm²", "symbol": "line/cm²", "toBase": 1e-4 },
+        "line_per_sq_inch": { "name": "line/in²", "symbol": "line/in²", "toBase": 1.55e-6 }
+      }
+    },
+    "flow_rate": {
+      "name": "Flow Rate",
+      "icon": "droplets",
+      "baseUnit": "cubic_meter_per_second",
+      "units": {
+        "cubic_meter_per_second": { "name": "m³/s", "symbol": "m³/s", "toBase": 1 },
+        "cubic_meter_per_minute": { "name": "m³/min", "symbol": "m³/min", "toBase": 0.0166666667 },
+        "cubic_meter_per_hour": { "name": "m³/h", "symbol": "m³/h", "toBase": 2.77778e-4 },
+        "cubic_meter_per_day": { "name": "m³/day", "symbol": "m³/day", "toBase": 1.15741e-5 },
+        "liter_per_second": { "name": "L/s", "symbol": "L/s", "toBase": 0.001 },
+        "liter_per_minute": { "name": "L/min", "symbol": "L/min", "toBase": 1.66667e-5 },
+        "liter_per_hour": { "name": "L/h", "symbol": "L/h", "toBase": 2.77778e-7 },
+        "liter_per_day": { "name": "L/day", "symbol": "L/day", "toBase": 1.15741e-8 },
+        "milliliter_per_second": { "name": "mL/s", "symbol": "mL/s", "toBase": 1e-6 },
+        "milliliter_per_minute": { "name": "mL/min", "symbol": "mL/min", "toBase": 1.66667e-8 },
+        "milliliter_per_hour": { "name": "mL/h", "symbol": "mL/h", "toBase": 2.77778e-10 },
+        "milliliter_per_day": { "name": "mL/day", "symbol": "mL/day", "toBase": 1.15741e-11 },
+        "gallon_us_per_second": { "name": "gal/s (US)", "symbol": "gal/s", "toBase": 0.0037854118 },
+        "gallon_us_per_minute": { "name": "GPM (US)", "symbol": "GPM", "toBase": 6.30902e-5 },
+        "gallon_us_per_hour": { "name": "gal/h (US)", "symbol": "gal/h", "toBase": 1.0515e-6 },
+        "gallon_us_per_day": { "name": "gal/day (US)", "symbol": "gal/day", "toBase": 4.38127e-8 },
+        "gallon_uk_per_second": { "name": "gal/s (UK)", "symbol": "galₖ/s", "toBase": 0.00454609 },
+        "gallon_uk_per_minute": { "name": "GPM (UK)", "symbol": "GPMₖ", "toBase": 7.57682e-5 },
+        "gallon_uk_per_hour": { "name": "gal/h (UK)", "symbol": "galₖ/h", "toBase": 1.2628e-6 },
+        "gallon_uk_per_day": { "name": "gal/day (UK)", "symbol": "galₖ/day", "toBase": 5.26168e-8 },
+        "cubic_foot_per_second": { "name": "ft³/s", "symbol": "ft³/s", "toBase": 0.0283168466 },
+        "cubic_foot_per_minute": { "name": "CFM", "symbol": "CFM", "toBase": 4.71947e-4 },
+        "cubic_foot_per_hour": { "name": "ft³/h", "symbol": "ft³/h", "toBase": 7.86579e-6 },
+        "cubic_inch_per_second": { "name": "in³/s", "symbol": "in³/s", "toBase": 1.63871e-5 },
+        "cubic_inch_per_minute": { "name": "in³/min", "symbol": "in³/min", "toBase": 2.73118e-7 },
+        "barrel_oil_per_day": { "name": "bbl/day", "symbol": "bbl/day", "toBase": 1.84013e-6 },
+        "barrel_oil_per_hour": { "name": "bbl/h", "symbol": "bbl/h", "toBase": 4.41631e-5 },
+        "barrel_oil_per_minute": { "name": "bbl/min", "symbol": "bbl/min", "toBase": 0.00264979 },
+        "barrel_oil_per_second": { "name": "bbl/s", "symbol": "bbl/s", "toBase": 0.1589872949 },
+        "acre_foot_per_year": { "name": "ac·ft/yr", "symbol": "ac·ft/yr", "toBase": 3.91136e-5 },
+        "acre_foot_per_day": { "name": "ac·ft/day", "symbol": "ac·ft/day", "toBase": 0.0142765 },
+        "ounce_us_per_second": {
+          "name": "fl oz/s (US)",
+          "symbol": "fl oz/s",
+          "toBase": 2.95735e-5
+        },
+        "ounce_us_per_minute": {
+          "name": "fl oz/min (US)",
+          "symbol": "fl oz/min",
+          "toBase": 4.92892e-7
+        },
+        "ounce_us_per_hour": { "name": "fl oz/h (US)", "symbol": "fl oz/h", "toBase": 8.21487e-9 },
+        "ounce_uk_per_second": {
+          "name": "fl oz/s (UK)",
+          "symbol": "fl ozₖ/s",
+          "toBase": 2.84131e-5
+        },
+        "ounce_uk_per_minute": {
+          "name": "fl oz/min (UK)",
+          "symbol": "fl ozₖ/min",
+          "toBase": 4.73551e-7
+        },
+        "ounce_uk_per_hour": { "name": "fl oz/h (UK)", "symbol": "fl ozₖ/h", "toBase": 7.89252e-9 },
+        "cubic_yard_per_second": { "name": "yd³/s", "symbol": "yd³/s", "toBase": 0.764554858 },
+        "cubic_yard_per_minute": { "name": "yd³/min", "symbol": "yd³/min", "toBase": 0.012742581 },
+        "cubic_yard_per_hour": { "name": "yd³/h", "symbol": "yd³/h", "toBase": 2.12376e-4 },
+        "cubic_yard_per_day": { "name": "yd³/day", "symbol": "yd³/day", "toBase": 8.84901e-6 }
+      }
+    },
+    "cooking": {
+      "name": "Cooking",
+      "icon": "utensils",
+      "baseUnit": "milliliter",
+      "units": {
+        "milliliter": { "name": "Milliliter", "symbol": "mL", "toBase": 1 },
+        "liter": { "name": "Liter", "symbol": "L", "toBase": 1000 },
+        "teaspoon_metric": { "name": "Teaspoon (Metric)", "symbol": "tsp", "toBase": 5 },
+        "tablespoon_metric": { "name": "Tablespoon (Metric)", "symbol": "tbsp", "toBase": 15 },
+        "cup_metric": { "name": "Cup (Metric)", "symbol": "cup", "toBase": 250 },
+        "teaspoon_us": { "name": "Teaspoon (US)", "symbol": "tsp (US)", "toBase": 4.92892159375 },
+        "tablespoon_us": {
+          "name": "Tablespoon (US)",
+          "symbol": "tbsp (US)",
+          "toBase": 14.78676478125
+        },
+        "cup_us": { "name": "Cup (US)", "symbol": "cup (US)", "toBase": 236.5882365 },
+        "fluid_ounce_us": {
+          "name": "Fluid Ounce (US)",
+          "symbol": "fl oz (US)",
+          "toBase": 29.5735295625
+        },
+        "pint_us": { "name": "Pint (US)", "symbol": "pt (US)", "toBase": 473.176473 },
+        "quart_us": { "name": "Quart (US)", "symbol": "qt (US)", "toBase": 946.352946 },
+        "gallon_us": { "name": "Gallon (US)", "symbol": "gal (US)", "toBase": 3785.411784 },
+        "teaspoon_uk": { "name": "Teaspoon (UK)", "symbol": "tsp (UK)", "toBase": 5.91938802083 },
+        "tablespoon_uk": {
+          "name": "Tablespoon (UK)",
+          "symbol": "tbsp (UK)",
+          "toBase": 17.7581640625
+        },
+        "cup_uk": { "name": "Cup (UK)", "symbol": "cup (UK)", "toBase": 284.130625 },
+        "fluid_ounce_uk": {
+          "name": "Fluid Ounce (UK)",
+          "symbol": "fl oz (UK)",
+          "toBase": 28.4130625
+        },
+        "pint_uk": { "name": "Pint (UK)", "symbol": "pt (UK)", "toBase": 568.26125 },
+        "quart_uk": { "name": "Quart (UK)", "symbol": "qt (UK)", "toBase": 1136.5225 },
+        "gallon_uk": { "name": "Gallon (UK)", "symbol": "gal (UK)", "toBase": 4546.09 },
+        "dash_us": { "name": "Dash (US)", "symbol": "dash", "toBase": 0.61611519922 },
+        "pinch_us": { "name": "Pinch (US)", "symbol": "pinch", "toBase": 0.30805759961 },
+        "smidgen": { "name": "Smidgen", "symbol": "smidgen", "toBase": 0.15402879981 },
+        "drop": { "name": "Drop", "symbol": "drop", "toBase": 0.05 },
+        "gill_us": { "name": "Gill (US)", "symbol": "gi (US)", "toBase": 118.29411825 },
+        "gill_uk": { "name": "Gill (UK)", "symbol": "gi (UK)", "toBase": 142.0653125 },
+        "barrel_us": { "name": "Barrel (US)", "symbol": "bbl", "toBase": 119240.471196 },
+        "deciliter": { "name": "Deciliter", "symbol": "dL", "toBase": 100 },
+        "centiliter": { "name": "Centiliter", "symbol": "cL", "toBase": 10 }
+      }
+    },
+    "typography": {
+      "name": "Typography",
+      "icon": "type",
+      "baseUnit": "point",
+      "units": {
+        "point": { "name": "Point", "symbol": "pt", "toBase": 1 },
+        "pica": { "name": "Pica", "symbol": "pc", "toBase": 12 },
+        "inch": { "name": "Inch", "symbol": "in", "toBase": 72 },
+        "centimeter": { "name": "Centimeter", "symbol": "cm", "toBase": 28.346456693 },
+        "millimeter": { "name": "Millimeter", "symbol": "mm", "toBase": 2.8346456693 },
+        "pixel_96dpi": { "name": "Pixel (96 DPI)", "symbol": "px₉₆", "toBase": 0.75 },
+        "pixel_72dpi": { "name": "Pixel (72 DPI)", "symbol": "px₇₂", "toBase": 1 },
+        "pixel_150dpi": { "name": "Pixel (150 DPI)", "symbol": "px₁₅₀", "toBase": 0.48 },
+        "pixel_300dpi": { "name": "Pixel (300 DPI)", "symbol": "px₃₀₀", "toBase": 0.24 },
+        "pixel_600dpi": { "name": "Pixel (600 DPI)", "symbol": "px₆₀₀", "toBase": 0.12 },
+        "twip": { "name": "Twip", "symbol": "twip", "toBase": 0.0555555556 },
+        "css_pixel": { "name": "CSS Pixel", "symbol": "px", "toBase": 0.75 },
+        "didot_point": { "name": "Didot Point", "symbol": "dd", "toBase": 1.066024 },
+        "cicero": { "name": "Cicero", "symbol": "cic", "toBase": 12.792288 },
+        "fournier_point": { "name": "Fournier Point", "symbol": "ptF", "toBase": 0.923 },
+        "ems_12pt": { "name": "Em (12pt)", "symbol": "em₁₂", "toBase": 12 },
+        "ems_10pt": { "name": "Em (10pt)", "symbol": "em₁₀", "toBase": 10 },
+        "ems_16pt": { "name": "Em (16pt)", "symbol": "em₁₆", "toBase": 16 },
+        "ens_12pt": { "name": "En (12pt)", "symbol": "en₁₂", "toBase": 6 },
+        "ens_10pt": { "name": "En (10pt)", "symbol": "en₁₀", "toBase": 5 },
+        "ens_16pt": { "name": "En (16pt)", "symbol": "en₁₆", "toBase": 8 }
+      }
+    },
+    "programming": {
+      "name": "Number Bases",
+      "icon": "code",
+      "baseUnit": "decimal",
+      "units": {
+        "decimal": { "name": "Decimal", "symbol": "DEC", "toBase": 1, "isBase": true },
+        "binary": { "name": "Binary", "symbol": "BIN", "toBase": 1, "isBase": true },
+        "octal": { "name": "Octal", "symbol": "OCT", "toBase": 1, "isBase": true },
+        "hexadecimal": { "name": "Hexadecimal", "symbol": "HEX", "toBase": 1, "isBase": true }
+      }
+    },
+    "currency": {
+      "name": "Currency (Static Rates)",
+      "icon": "banknote",
+      "baseUnit": "usd",
+      "units": {
+        "usd": { "name": "US Dollar", "symbol": "$", "toBase": 1 },
+        "eur": { "name": "Euro", "symbol": "€", "toBase": 1.08 },
+        "gbp": { "name": "British Pound", "symbol": "£", "toBase": 1.26 },
+        "jpy": { "name": "Japanese Yen", "symbol": "¥", "toBase": 0.0067 },
+        "cny": { "name": "Chinese Yuan", "symbol": "¥", "toBase": 0.14 },
+        "inr": { "name": "Indian Rupee", "symbol": "₹", "toBase": 0.012 },
+        "aud": { "name": "Australian Dollar", "symbol": "A$", "toBase": 0.65 },
+        "cad": { "name": "Canadian Dollar", "symbol": "C$", "toBase": 0.74 },
+        "chf": { "name": "Swiss Franc", "symbol": "CHF", "toBase": 1.13 },
+        "krw": { "name": "South Korean Won", "symbol": "₩", "toBase": 0.00075 },
+        "sgd": { "name": "Singapore Dollar", "symbol": "S$", "toBase": 0.74 },
+        "hkd": { "name": "Hong Kong Dollar", "symbol": "HK$", "toBase": 0.13 },
+        "nok": { "name": "Norwegian Krone", "symbol": "kr", "toBase": 0.095 },
+        "sek": { "name": "Swedish Krona", "symbol": "kr", "toBase": 0.096 },
+        "dkk": { "name": "Danish Krone", "symbol": "kr", "toBase": 0.14 },
+        "nzd": { "name": "New Zealand Dollar", "symbol": "NZ$", "toBase": 0.61 },
+        "mxn": { "name": "Mexican Peso", "symbol": "MX$", "toBase": 0.059 },
+        "brl": { "name": "Brazilian Real", "symbol": "R$", "toBase": 0.2 },
+        "zar": { "name": "South African Rand", "symbol": "R", "toBase": 0.055 },
+        "rub": { "name": "Russian Ruble", "symbol": "₽", "toBase": 0.011 },
+        "try": { "name": "Turkish Lira", "symbol": "₺", "toBase": 0.031 },
+        "thb": { "name": "Thai Baht", "symbol": "฿", "toBase": 0.028 },
+        "idr": { "name": "Indonesian Rupiah", "symbol": "Rp", "toBase": 6.4e-5 },
+        "myr": { "name": "Malaysian Ringgit", "symbol": "RM", "toBase": 0.21 },
+        "php": { "name": "Philippine Peso", "symbol": "₱", "toBase": 0.018 },
+        "pln": { "name": "Polish Zloty", "symbol": "zł", "toBase": 0.25 },
+        "czk": { "name": "Czech Koruna", "symbol": "Kč", "toBase": 0.044 },
+        "huf": { "name": "Hungarian Forint", "symbol": "Ft", "toBase": 0.0028 },
+        "ils": { "name": "Israeli Shekel", "symbol": "₪", "toBase": 0.27 },
+        "clp": { "name": "Chilean Peso", "symbol": "CL$", "toBase": 0.0011 },
+        "aed": { "name": "UAE Dirham", "symbol": "د.إ", "toBase": 0.27 },
+        "sar": { "name": "Saudi Riyal", "symbol": "﷼", "toBase": 0.27 },
+        "btc": { "name": "Bitcoin", "symbol": "₿", "toBase": 65000 },
+        "eth": { "name": "Ethereum", "symbol": "Ξ", "toBase": 3500 },
+        "xau": { "name": "Gold (Troy Oz)", "symbol": "XAU", "toBase": 2000 },
+        "xag": { "name": "Silver (Troy Oz)", "symbol": "XAG", "toBase": 24 }
+      }
+    }
+  }
+}
