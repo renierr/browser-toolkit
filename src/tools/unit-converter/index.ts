@@ -1,36 +1,33 @@
-/**
- * Unit Converter Pro - Main entry point.
- * Initializes the converter UI, handles all interactions, and manages state.
- */
-
 import {
   loadUnitsDatabase,
-  getCategories,
   getUnitsForCategory,
   getUnitDefinition,
   convert,
   formatNumber,
-  evaluateExpression,
   saveHistory,
-  getHistory,
-  searchHistory,
   clearHistory,
   exportHistoryAsJSON,
   exportHistoryAsCSV,
-  getFavorites,
   toggleFavorite,
-  isFavorite,
-  getRecentPairs,
   addRecentPair,
   saveLastState,
   loadLastState,
   loadCustomUnits,
   addCustomUnit,
-  generateBatchTable,
 } from './utils/converter';
-import type { UnitsDatabase, UnitDefinition, ConversionRecord } from './types';
+import { createCalculator } from './utils/calculator';
+import {
+  renderCategories,
+  updateActiveCategory,
+  updateUnitLabels,
+  renderUnitList,
+  updateBatchTable,
+  updateFavoriteIcon,
+  renderHistory,
+  type UIDOM,
+} from './utils/ui';
+import type { UnitsDatabase, ConversionRecord, CustomUnit } from './types';
 
-// noinspection JSUnusedGlobalSymbols
 export default function init(): void | (() => void) {
   const container = document.getElementById('unit-converter');
   if (!container) return;
@@ -39,12 +36,10 @@ export default function init(): void | (() => void) {
   let currentCategory = 'length';
   let currentFromUnit = 'meter';
   let currentToUnit = 'kilometer';
-  let calcInput = '0';
   let isScientific = false;
   let historyOpen = false;
   let calcOpen = false;
 
-  // DOM references
   const categoryScroll = document.getElementById('uc-category-scroll');
   const fromUnitBtn = document.getElementById('uc-from-unit-btn');
   const fromUnitLabel = document.getElementById('uc-from-unit-label');
@@ -91,179 +86,28 @@ export default function init(): void | (() => void) {
   const customCategory = document.getElementById('uc-custom-category') as HTMLSelectElement;
   const customFactor = document.getElementById('uc-custom-factor') as HTMLInputElement;
 
-  // Initialize
-  async function initialize(): Promise<void> {
-    try {
-      db = await loadUnitsDatabase();
-      renderCategories();
-      loadCustomUnits();
+  const uiDOM: UIDOM = {
+    categoryScroll,
+    fromUnitLabel,
+    fromUnitList,
+    fromSearch,
+    toUnitLabel,
+    toUnitList,
+    toSearch,
+    result,
+    formula,
+    favoriteBtn,
+    batchBody,
+    historyList,
+    historySearch,
+    customCategory,
+  };
 
-      // Restore last state
-      const lastState = loadLastState();
-      if (lastState && db.categories[lastState.category]) {
-        currentCategory = lastState.category;
-        const units = getUnitsForCategory(db, currentCategory);
-        if (units.find((u) => u.id === lastState.fromUnit)) {
-          currentFromUnit = lastState.fromUnit;
-        }
-        if (units.find((u) => u.id === lastState.toUnit)) {
-          currentToUnit = lastState.toUnit;
-        }
-      } else {
-        const units = getUnitsForCategory(db, currentCategory);
-        if (units.length >= 2) {
-          currentFromUnit = units[0].id;
-          currentToUnit = units[1].id;
-        }
-      }
-
-      updateUnitLabels();
-      updateFavoriteIcon();
-      renderHistory();
-      populateCustomCategorySelect();
-      updateActiveCategory();
-    } catch (error) {
-      console.error('[UnitConverter] Initialization failed:', error);
-      if (result) result.textContent = 'Failed to load units database';
-    }
-  }
-
-  function renderCategories(): void {
-    if (!db || !categoryScroll) return;
-    const categories = getCategories(db);
-    categoryScroll.innerHTML = categories
-      .map(
-        (cat) => `
-      <button
-        class="btn btn-sm btn-ghost gap-1 shrink-0 uc-category-btn ${cat.key === currentCategory ? 'btn-active' : ''}"
-        data-category="${cat.key}"
-        role="tab"
-        aria-selected="${cat.key === currentCategory}"
-      >
-        <i data-lucide="${cat.icon}" class="w-3.5 h-3.5"></i>
-        <span class="hidden sm:inline">${cat.name}</span>
-      </button>
-    `
-      )
-      .join('');
-
-    createIcons();
-  }
-
-  function updateActiveCategory(): void {
-    if (!categoryScroll) return;
-    categoryScroll.querySelectorAll('.uc-category-btn').forEach((btn) => {
-      const isActive = btn.getAttribute('data-category') === currentCategory;
-      btn.classList.toggle('btn-active', isActive);
-      btn.setAttribute('aria-selected', isActive.toString());
-    });
-  }
-
-  function updateUnitLabels(): void {
-    if (!db) return;
-    const fromDef = getUnitDefinition(db, currentCategory, currentFromUnit);
-    const toDef = getUnitDefinition(db, currentCategory, currentToUnit);
-    if (fromUnitLabel && fromDef) {
-      fromUnitLabel.textContent = `${fromDef.name} (${fromDef.symbol})`;
-    }
-    if (toUnitLabel && toDef) {
-      toUnitLabel.textContent = `${toDef.name} (${toDef.symbol})`;
-    }
-  }
-
-  function renderUnitList(
-    container: HTMLElement | null,
-    searchInput: HTMLInputElement | null,
-    isFrom: boolean
-  ): void {
-    if (!db || !container) return;
-    const database = db;
-    const units = getUnitsForCategory(database, currentCategory);
-    const favorites = getFavorites();
-    const recent = getRecentPairs();
-
-    let html = '';
-
-    // Recent pairs section
-    if (!searchInput?.value && recent.length > 0) {
-      const recentForCategory = recent.filter((p) => p.startsWith(`${currentCategory}:`));
-      if (recentForCategory.length > 0) {
-        html += '<div class="text-xs text-base-content/50 px-2 py-1 font-semibold">Recent</div>';
-        recentForCategory.slice(0, 3).forEach((pair) => {
-          const [, fromId, toId] = pair.split(':');
-          const fromDef = getUnitDefinition(database, currentCategory, fromId);
-          const toDef = getUnitDefinition(database, currentCategory, toId);
-          if (fromDef && toDef) {
-            const isCurrentFrom = isFrom ? fromId === currentFromUnit : toId === currentToUnit;
-            html += `
-              <button
-                class="w-full text-left px-2 py-1.5 rounded hover:bg-base-200 text-sm flex items-center justify-between ${isCurrentFrom ? 'bg-primary/10' : ''}"
-                data-unit="${isFrom ? fromId : toId}"
-              >
-                <span class="truncate">${isFrom ? fromDef.symbol : toDef.symbol}</span>
-                <span class="text-xs text-base-content/50 truncate ml-2">${isFrom ? fromDef.name : toDef.name}</span>
-              </button>
-            `;
-          }
-        });
-      }
-    }
-
-    // Favorites section
-    if (!searchInput?.value) {
-      const favUnits = units.filter((u) => favorites.has(`${currentCategory}:${u.id}`));
-      if (favUnits.length > 0) {
-        html +=
-          '<div class="text-xs text-base-content/50 px-2 py-1 font-semibold mt-1">Favorites</div>';
-        favUnits.forEach((unit) => {
-          const isCurrent = isFrom ? unit.id === currentFromUnit : unit.id === currentToUnit;
-          html += `
-            <button
-              class="w-full text-left px-2 py-1.5 rounded hover:bg-base-200 text-sm flex items-center gap-2 ${isCurrent ? 'bg-primary/10' : ''}"
-              data-unit="${unit.id}"
-            >
-              <i data-lucide="star" class="w-3 h-3 text-warning shrink-0"></i>
-              <span class="truncate">${unit.name}</span>
-              <span class="text-xs text-base-content/50 ml-auto">${unit.symbol}</span>
-            </button>
-          `;
-        });
-      }
-    }
-
-    // All units
-    const searchTerm = searchInput?.value?.toLowerCase() || '';
-    const filteredUnits = searchTerm
-      ? units.filter(
-          (u) =>
-            u.name.toLowerCase().includes(searchTerm) ||
-            u.symbol.toLowerCase().includes(searchTerm) ||
-            u.id.toLowerCase().includes(searchTerm)
-        )
-      : units;
-
-    if (filteredUnits.length > 0) {
-      html +=
-        '<div class="text-xs text-base-content/50 px-2 py-1 font-semibold mt-1">All Units</div>';
-      filteredUnits.forEach((unit) => {
-        const isCurrent = isFrom ? unit.id === currentFromUnit : unit.id === currentToUnit;
-        const isFav = favorites.has(`${currentCategory}:${unit.id}`);
-        html += `
-          <button
-            class="w-full text-left px-2 py-1.5 rounded hover:bg-base-200 text-sm flex items-center gap-2 ${isCurrent ? 'bg-primary/10' : ''}"
-            data-unit="${unit.id}"
-          >
-            ${isFav ? '<i data-lucide="star" class="w-3 h-3 text-warning flex-shrink-0"></i>' : '<span class="w-3 shrink-0"></span>'}
-            <span class="truncate">${unit.name}</span>
-            <span class="text-xs text-base-content/50 ml-auto">${unit.symbol}</span>
-          </button>
-        `;
-      });
-    }
-
-    container.innerHTML = html;
-    createIcons();
-  }
+  const { handlers: calc } = createCalculator({
+    calcCurrent,
+    calcLastOp,
+    input,
+  });
 
   function performConversion(options?: { saveHistory?: boolean }): void {
     if (!db || !input) return;
@@ -296,7 +140,7 @@ export default function init(): void | (() => void) {
     if (result) result.textContent = `${formatNumber(converted)} ${toDef.symbol}`;
     if (formula) formula.textContent = formulaStr;
 
-    updateFavoriteIcon();
+    updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
 
     if (shouldSaveHistory) {
       const record: ConversionRecord = {
@@ -308,219 +152,30 @@ export default function init(): void | (() => void) {
         toValue: formatNumber(converted),
         formula: formulaStr,
         timestamp: Date.now(),
-        isFavorite: isFavorite(`${currentCategory}:${currentFromUnit}:${currentToUnit}`),
+        isFavorite: false,
       };
       saveHistory(record);
       addRecentPair(`${currentCategory}:${currentFromUnit}:${currentToUnit}`);
-      renderHistory();
+      renderHistory(uiDOM, (fromValue) => {
+        if (input) input.value = fromValue;
+        performConversion({ saveHistory: false });
+      });
     }
 
-    updateBatchTable(value, fromDef);
+    updateBatchTable(uiDOM, value, fromDef, db, currentCategory, currentFromUnit);
 
     saveLastState({ category: currentCategory, fromUnit: currentFromUnit, toUnit: currentToUnit });
   }
 
-  function updateBatchTable(value: number, fromDef: UnitDefinition): void {
-    if (!db || !batchBody) return;
-    const database = db;
-    const units = getUnitsForCategory(database, currentCategory);
-    const toUnits = units
-      .filter((u) => u.id !== currentFromUnit)
-      .slice(0, 8)
-      .map((u) => ({
-        id: u.id,
-        unit: getUnitDefinition(database, currentCategory, u.id)!,
-      }))
-      .filter((u) => u.unit);
-
-    const rows = generateBatchTable(value, fromDef, toUnits);
-    batchBody.innerHTML = rows
-      .map(
-        (row) => `
-      <tr class="hover">
-        <td class="font-medium">${row.symbol}</td>
-        <td class="text-right font-mono">${row.value}</td>
-      </tr>
-    `
-      )
+  function populateCustomCategorySelect(): void {
+    if (!db || !customCategory) return;
+    const categories = Object.entries(db.categories).map(([key, cat]) => ({
+      key,
+      name: cat.name,
+    }));
+    customCategory.innerHTML = categories
+      .map((cat) => `<option value="${cat.key}">${cat.name}</option>`)
       .join('');
-  }
-
-  function updateFavoriteIcon(): void {
-    if (!favoriteBtn) return;
-    const pair = `${currentCategory}:${currentFromUnit}:${currentToUnit}`;
-    const fav = isFavorite(pair);
-    const icon = favoriteBtn.querySelector('.uc-fav-icon');
-    if (icon) {
-      icon.setAttribute('data-lucide', fav ? 'star' : 'star-off');
-      icon.classList.toggle('fill-warning', fav);
-      icon.classList.toggle('text-warning', fav);
-    }
-  }
-
-  function renderHistory(): void {
-    if (!historyList) return;
-    const query = historySearch?.value || '';
-    const records = query ? searchHistory(query) : getHistory();
-
-    if (records.length === 0) {
-      historyList.innerHTML =
-        '<div class="text-center text-base-content/40 py-8">No conversions yet</div>';
-      return;
-    }
-
-    historyList.innerHTML = records
-      .map(
-        (record) => `
-      <div class="card bg-base-100 p-3 cursor-pointer hover:bg-base-300 transition-colors" data-history-id="${record.id}">
-        <div class="flex items-center justify-between">
-          <div class="text-xs text-base-content/50">${new Date(record.timestamp).toLocaleString()}</div>
-          ${record.isFavorite ? '<i data-lucide="star" class="w-3 h-3 text-warning"></i>' : ''}
-        </div>
-        <div class="text-sm font-medium truncate mt-1">${record.formula}</div>
-        <div class="text-xs text-base-content/60">${record.category}</div>
-      </div>
-    `
-      )
-      .join('');
-
-    createIcons();
-
-    historyList.querySelectorAll('[data-history-id]').forEach((card) => {
-      card.addEventListener('click', () => {
-        const id = card.getAttribute('data-history-id');
-        const records = getHistory();
-        const record = records.find((r) => r.id === id);
-        if (record) {
-          if (input) input.value = record.fromValue;
-          performConversion({ saveHistory: false });
-        }
-      });
-    });
-  }
-
-  function toggleHistory(): void {
-    historyOpen = !historyOpen;
-    if (historyPanel) {
-      historyPanel.classList.toggle('translate-x-full', !historyOpen);
-    }
-  }
-
-  function toggleCalc(): void {
-    calcOpen = !calcOpen;
-    if (calcPanel) {
-      calcPanel.classList.toggle('hidden', !calcOpen);
-      calcPanel.classList.toggle('lg:block', true);
-      if (calcOpen) {
-        calcPanel.classList.remove('hidden');
-      } else if (window.innerWidth < 1024) {
-        calcPanel.classList.add('hidden');
-      }
-    }
-  }
-
-  function updateCalcDisplay(): void {
-    if (calcCurrent) calcCurrent.textContent = calcInput;
-  }
-
-  function handleCalcInput(val: string): void {
-    if (calcInput === 'Error') {
-      calcInput = '0';
-      if (calcLastOp) calcLastOp.textContent = '';
-    }
-
-    const isOperator = (s: string): boolean => /[+\-*/^]/.test(s);
-
-    if (calcInput === '0') {
-      if (/[0-9.]/.test(val)) {
-        calcInput = val;
-        updateCalcDisplay();
-        return;
-      }
-      if (/\w+\($/.test(val) || /^PI$/.test(val) || /^E$/.test(val) || val === '(') {
-        calcInput = val;
-        updateCalcDisplay();
-        return;
-      }
-      calcInput = '0' + val;
-      updateCalcDisplay();
-      return;
-    }
-
-    const lastChar = calcInput[calcInput.length - 1];
-    if (isOperator(lastChar) && isOperator(val)) {
-      calcInput = calcInput.slice(0, -1) + val;
-      updateCalcDisplay();
-      return;
-    }
-
-    calcInput += val;
-    updateCalcDisplay();
-  }
-
-  function handleCalcBackspace(): void {
-    if (calcInput.length > 1) {
-      calcInput = calcInput.slice(0, -1);
-    } else {
-      calcInput = '0';
-    }
-    updateCalcDisplay();
-  }
-
-  function handleCalcBracket(): void {
-    if (calcInput === '0') {
-      calcInput = '(';
-      updateCalcDisplay();
-      return;
-    }
-
-    const lastChar = calcInput[calcInput.length - 1];
-    if (lastChar === '(' || lastChar === ')') {
-      calcInput += '(';
-    } else {
-      const openCount = (calcInput.match(/\(/g) || []).length;
-      const closeCount = (calcInput.match(/\)/g) || []).length;
-      calcInput += openCount > closeCount ? ')' : '(';
-    }
-    updateCalcDisplay();
-  }
-
-  function handleCalcEquals(): void {
-    if (calcInput === '0' && calcLastOp?.textContent === '') return;
-
-    let balancedInput = calcInput;
-    const opens = (balancedInput.match(/\(/g) || []).length;
-    const closes = (balancedInput.match(/\)/g) || []).length;
-    if (opens > closes) {
-      balancedInput = balancedInput + ')'.repeat(opens - closes);
-    }
-
-    const sanitizedInput = balancedInput.replace(/[+\-*/^]$/, '');
-    const calculation = evaluateExpression(sanitizedInput);
-
-    if (calculation.error) {
-      if (calcLastOp) calcLastOp.textContent = 'Error';
-      calcInput = calculation.result.toString();
-    } else {
-      if (calcLastOp) calcLastOp.textContent = `${calculation.expression} =`;
-      calcInput = calculation.result.toString();
-    }
-    updateCalcDisplay();
-  }
-
-  function handleCalcCopy(): void {
-    if (navigator.clipboard && calcInput) {
-      navigator.clipboard.writeText(calcInput).catch((err) => {
-        console.error('[UnitConverter] Failed to copy:', err);
-      });
-    }
-  }
-
-  function handleCalcSend(): void {
-    if (input && calcInput && calcInput !== '0' && calcInput !== 'Error') {
-      input.value = calcInput;
-      performConversion();
-    }
   }
 
   function handleCustomUnitSubmit(e: Event): void {
@@ -534,7 +189,7 @@ export default function init(): void | (() => void) {
 
     if (!name || !symbol || !category || isNaN(factor)) return;
 
-    const unit: import('./types').CustomUnit = {
+    const unit: CustomUnit = {
       id: `custom_${Date.now()}`,
       name,
       symbol,
@@ -547,32 +202,64 @@ export default function init(): void | (() => void) {
     customModal.close();
     customForm.reset();
 
-    renderUnitList(fromUnitList, fromSearch, true);
-    renderUnitList(toUnitList, toSearch, false);
+    renderUnitList(
+      fromUnitList,
+      fromSearch,
+      true,
+      db,
+      currentCategory,
+      currentFromUnit,
+      currentToUnit
+    );
+    renderUnitList(
+      toUnitList,
+      toSearch,
+      false,
+      db,
+      currentCategory,
+      currentFromUnit,
+      currentToUnit
+    );
   }
 
-  function populateCustomCategorySelect(): void {
-    if (!db || !customCategory) return;
-    const categories = getCategories(db);
-    customCategory.innerHTML = categories
-      .map((cat) => `<option value="${cat.key}">${cat.name}</option>`)
-      .join('');
-  }
+  async function initialize(): Promise<void> {
+    try {
+      db = await loadUnitsDatabase();
+      renderCategories(uiDOM, db, currentCategory);
+      loadCustomUnits();
 
-  function createIcons(): void {
-    if (typeof window !== 'undefined' && (window as unknown as Record<string, unknown>).lucide) {
-      try {
-        (
-          (window as unknown as Record<string, Record<string, () => void>>).lucide
-            .createIcons as () => void
-        )();
-      } catch {
-        // Ignore
+      const lastState = loadLastState();
+      if (lastState && db.categories[lastState.category]) {
+        currentCategory = lastState.category;
+        const units = getUnitsForCategory(db, currentCategory);
+        if (units.find((u) => u.id === lastState.fromUnit)) {
+          currentFromUnit = lastState.fromUnit;
+        }
+        if (units.find((u) => u.id === lastState.toUnit)) {
+          currentToUnit = lastState.toUnit;
+        }
+      } else {
+        const units = getUnitsForCategory(db, currentCategory);
+        if (units.length >= 2) {
+          currentFromUnit = units[0].id;
+          currentToUnit = units[1].id;
+        }
       }
+
+      updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
+      updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      renderHistory(uiDOM, (fromValue) => {
+        if (input) input.value = fromValue;
+        performConversion({ saveHistory: false });
+      });
+      populateCustomCategorySelect();
+      updateActiveCategory(uiDOM, currentCategory);
+    } catch (error) {
+      console.error('[UnitConverter] Initialization failed:', error);
+      if (result) result.textContent = 'Failed to load units database';
     }
   }
 
-  // Event listeners
   if (categoryScroll) {
     categoryScroll.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('.uc-category-btn') as HTMLElement | null;
@@ -587,11 +274,27 @@ export default function init(): void | (() => void) {
         currentToUnit = units[1].id;
       }
 
-      updateActiveCategory();
-      updateUnitLabels();
-      updateFavoriteIcon();
-      renderUnitList(fromUnitList, fromSearch, true);
-      renderUnitList(toUnitList, toSearch, false);
+      updateActiveCategory(uiDOM, currentCategory);
+      updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
+      updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      renderUnitList(
+        fromUnitList,
+        fromSearch,
+        true,
+        db,
+        currentCategory,
+        currentFromUnit,
+        currentToUnit
+      );
+      renderUnitList(
+        toUnitList,
+        toSearch,
+        false,
+        db,
+        currentCategory,
+        currentFromUnit,
+        currentToUnit
+      );
 
       if (input && input.value) {
         performConversion();
@@ -601,26 +304,44 @@ export default function init(): void | (() => void) {
 
   if (fromUnitBtn) {
     fromUnitBtn.addEventListener('click', () => {
-      renderUnitList(fromUnitList, fromSearch, true);
+      if (!db) return;
+      renderUnitList(
+        fromUnitList,
+        fromSearch,
+        true,
+        db,
+        currentCategory,
+        currentFromUnit,
+        currentToUnit
+      );
     });
   }
 
   if (toUnitBtn) {
     toUnitBtn.addEventListener('click', () => {
-      renderUnitList(toUnitList, toSearch, true);
+      if (!db) return;
+      renderUnitList(
+        toUnitList,
+        toSearch,
+        true,
+        db,
+        currentCategory,
+        currentFromUnit,
+        currentToUnit
+      );
     });
   }
 
   if (fromUnitList) {
     fromUnitList.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('[data-unit]') as HTMLElement | null;
-      if (!btn) return;
+      if (!btn || !db) return;
       const unitId = btn.getAttribute('data-unit');
       if (!unitId) return;
 
       currentFromUnit = unitId;
-      updateUnitLabels();
-      updateFavoriteIcon();
+      updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
+      updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
       if (input && input.value) {
         performConversion();
       }
@@ -631,13 +352,13 @@ export default function init(): void | (() => void) {
   if (toUnitList) {
     toUnitList.addEventListener('click', (e) => {
       const btn = (e.target as HTMLElement).closest('[data-unit]') as HTMLElement | null;
-      if (!btn) return;
+      if (!btn || !db) return;
       const unitId = btn.getAttribute('data-unit');
       if (!unitId) return;
 
       currentToUnit = unitId;
-      updateUnitLabels();
-      updateFavoriteIcon();
+      updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
+      updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
       if (input && input.value) {
         performConversion();
       }
@@ -647,13 +368,31 @@ export default function init(): void | (() => void) {
 
   if (fromSearch) {
     fromSearch.addEventListener('input', () => {
-      renderUnitList(fromUnitList, fromSearch, true);
+      if (!db) return;
+      renderUnitList(
+        fromUnitList,
+        fromSearch,
+        true,
+        db,
+        currentCategory,
+        currentFromUnit,
+        currentToUnit
+      );
     });
   }
 
   if (toSearch) {
     toSearch.addEventListener('input', () => {
-      renderUnitList(toUnitList, toSearch, true);
+      if (!db) return;
+      renderUnitList(
+        toUnitList,
+        toSearch,
+        true,
+        db,
+        currentCategory,
+        currentFromUnit,
+        currentToUnit
+      );
     });
   }
 
@@ -665,11 +404,12 @@ export default function init(): void | (() => void) {
 
   if (swapBtn) {
     swapBtn.addEventListener('click', () => {
+      if (!db) return;
       const temp = currentFromUnit;
       currentFromUnit = currentToUnit;
       currentToUnit = temp;
-      updateUnitLabels();
-      updateFavoriteIcon();
+      updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
+      updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
       if (input && input.value) {
         performConversion();
       }
@@ -678,10 +418,12 @@ export default function init(): void | (() => void) {
 
   if (favoriteBtn) {
     favoriteBtn.addEventListener('click', () => {
-      const pair = `${currentCategory}:${currentFromUnit}:${currentToUnit}`;
-      toggleFavorite(pair);
-      updateFavoriteIcon();
-      renderHistory();
+      toggleFavorite(`${currentCategory}:${currentFromUnit}:${currentToUnit}`);
+      updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      renderHistory(uiDOM, (fromValue) => {
+        if (input) input.value = fromValue;
+        performConversion({ saveHistory: false });
+      });
     });
   }
 
@@ -699,37 +441,36 @@ export default function init(): void | (() => void) {
     calcPanel.querySelectorAll('[data-calc-val]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const val = btn.getAttribute('data-calc-val');
-        if (val) handleCalcInput(val);
+        if (val) calc.handleCalcInput(val);
       });
     });
   }
 
   if (calcClear) {
-    calcClear.addEventListener('click', () => {
-      calcInput = '0';
-      if (calcLastOp) calcLastOp.textContent = '';
-      updateCalcDisplay();
-    });
+    calcClear.addEventListener('click', calc.handleCalcClear);
   }
 
   if (calcBackspace) {
-    calcBackspace.addEventListener('click', handleCalcBackspace);
+    calcBackspace.addEventListener('click', calc.handleCalcBackspace);
   }
 
   if (calcBracket) {
-    calcBracket.addEventListener('click', handleCalcBracket);
+    calcBracket.addEventListener('click', calc.handleCalcBracket);
   }
 
   if (calcEquals) {
-    calcEquals.addEventListener('click', handleCalcEquals);
+    calcEquals.addEventListener('click', calc.handleCalcEquals);
   }
 
   if (calcCopy) {
-    calcCopy.addEventListener('click', handleCalcCopy);
+    calcCopy.addEventListener('click', calc.handleCalcCopy);
   }
 
   if (calcSend) {
-    calcSend.addEventListener('click', handleCalcSend);
+    calcSend.addEventListener('click', () => {
+      calc.handleCalcSend();
+      performConversion();
+    });
   }
 
   if (calcSciToggle) {
@@ -751,25 +492,54 @@ export default function init(): void | (() => void) {
   }
 
   if (calcToggle) {
-    calcToggle.addEventListener('click', toggleCalc);
+    calcToggle.addEventListener('click', () => {
+      calcOpen = !calcOpen;
+      if (calcPanel) {
+        calcPanel.classList.toggle('hidden', !calcOpen);
+        calcPanel.classList.toggle('lg:block', true);
+        if (calcOpen) {
+          calcPanel.classList.remove('hidden');
+        } else if (window.innerWidth < 1024) {
+          calcPanel.classList.add('hidden');
+        }
+      }
+    });
   }
 
   if (historyToggle) {
-    historyToggle.addEventListener('click', toggleHistory);
+    historyToggle.addEventListener('click', () => {
+      historyOpen = !historyOpen;
+      if (historyPanel) {
+        historyPanel.classList.toggle('translate-x-full', !historyOpen);
+      }
+    });
   }
 
   if (historyClose) {
-    historyClose.addEventListener('click', toggleHistory);
+    historyClose.addEventListener('click', () => {
+      historyOpen = !historyOpen;
+      if (historyPanel) {
+        historyPanel.classList.toggle('translate-x-full', !historyOpen);
+      }
+    });
   }
 
   if (historySearch) {
-    historySearch.addEventListener('input', renderHistory);
+    historySearch.addEventListener('input', () => {
+      renderHistory(uiDOM, (fromValue) => {
+        if (input) input.value = fromValue;
+        performConversion({ saveHistory: false });
+      });
+    });
   }
 
   if (historyClear) {
     historyClear.addEventListener('click', () => {
       clearHistory();
-      renderHistory();
+      renderHistory(uiDOM, (fromValue) => {
+        if (input) input.value = fromValue;
+        performConversion({ saveHistory: false });
+      });
     });
   }
 
@@ -805,7 +575,6 @@ export default function init(): void | (() => void) {
     customForm.addEventListener('submit', handleCustomUnitSubmit);
   }
 
-  // Global keyboard support for calculator
   const onKeyDown = (e: KeyboardEvent): void => {
     if (
       document.activeElement === input ||
@@ -817,28 +586,24 @@ export default function init(): void | (() => void) {
       return;
     }
 
-    if (/[0-9]/.test(e.key)) handleCalcInput(e.key);
-    if (['+', '-', '*', '/'].includes(e.key)) handleCalcInput(e.key);
-    if (e.key === '.') handleCalcInput('.');
-    if (e.key === '(' || e.key === ')') handleCalcBracket();
-    if (e.key === 'Backspace') handleCalcBackspace();
+    if (/[0-9]/.test(e.key)) calc.handleCalcInput(e.key);
+    if (['+', '-', '*', '/'].includes(e.key)) calc.handleCalcInput(e.key);
+    if (e.key === '.') calc.handleCalcInput('.');
+    if (e.key === '(' || e.key === ')') calc.handleCalcBracket();
+    if (e.key === 'Backspace') calc.handleCalcBackspace();
     if (e.key === 'Enter' || e.key === '=') {
       e.preventDefault();
-      handleCalcEquals();
+      calc.handleCalcEquals();
     }
     if (e.key === 'Escape') {
-      calcInput = '0';
-      if (calcLastOp) calcLastOp.textContent = '';
-      updateCalcDisplay();
+      calc.handleCalcClear();
     }
   };
 
   document.addEventListener('keydown', onKeyDown);
 
-  // Initialize
   initialize();
 
-  // Cleanup
   return () => {
     document.removeEventListener('keydown', onKeyDown);
   };
