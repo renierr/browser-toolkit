@@ -992,6 +992,8 @@
       "name": "Currency (Static Rates)",
       "icon": "banknote",
       "baseUnit": "usd",
+      "volatile": true,
+      "volatilityWarning": "Exchange rates are static snapshots and may be outdated.",
       "units": {
         "usd": { "name": "US Dollar", "symbol": "$", "toBase": 1 },
         "eur": { "name": "Euro", "symbol": "€", "toBase": 1.08 },

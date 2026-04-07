@@ -23,6 +23,7 @@ import {
   renderUnitList,
   updateBatchTable,
   updateFavoriteIcon,
+  updateVolatilityWarning,
   renderHistory,
   type UIDOM,
 } from './utils/ui';
@@ -96,6 +97,8 @@ export default function init(): void | (() => void) {
   const input = document.getElementById('uc-input') as HTMLInputElement;
   const result = document.getElementById('uc-result');
   const formula = document.getElementById('uc-formula');
+  const volatilityWarning = document.getElementById('uc-volatility-warning');
+  const volatilityWarningText = document.getElementById('uc-volatility-warning-text');
   const swapBtn = document.getElementById('uc-swap');
   const favoriteBtn = document.getElementById('uc-favorite');
   const copyResultBtn = document.getElementById('uc-copy-result');
@@ -140,6 +143,8 @@ export default function init(): void | (() => void) {
     toSearch,
     result,
     formula,
+    volatilityWarning,
+    volatilityWarningText,
     favoriteBtn,
     batchBody,
     historyList,
@@ -158,6 +163,7 @@ export default function init(): void | (() => void) {
     const shouldSaveHistory = options?.saveHistory ?? true;
     const valueStr = input.value.trim();
     if (!valueStr) {
+      updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       if (result) result.textContent = '—';
       if (formula) formula.textContent = 'Enter a value to convert';
       return;
@@ -166,6 +172,8 @@ export default function init(): void | (() => void) {
     const fromDef = getUnitDefinition(db, currentCategory, currentFromUnit);
     const toDef = getUnitDefinition(db, currentCategory, currentToUnit);
     if (!fromDef || !toDef) return;
+
+    updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
 
     if (currentCategory === 'programming') {
       const programming = convertProgrammingValue(valueStr, currentFromUnit, currentToUnit);
@@ -333,6 +341,7 @@ export default function init(): void | (() => void) {
 
       updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       renderHistory(uiDOM, (fromValue) => {
         if (input) input.value = fromValue;
         performConversion({ saveHistory: false });
@@ -362,6 +371,7 @@ export default function init(): void | (() => void) {
       updateActiveCategory(uiDOM, currentCategory);
       updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       renderUnitList(
         fromUnitList,
         fromSearch,
@@ -427,6 +437,7 @@ export default function init(): void | (() => void) {
       currentFromUnit = unitId;
       updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       if (input && input.value) {
         performConversion();
       }
@@ -444,6 +455,7 @@ export default function init(): void | (() => void) {
       currentToUnit = unitId;
       updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       if (input && input.value) {
         performConversion();
       }
@@ -495,6 +507,7 @@ export default function init(): void | (() => void) {
       currentToUnit = temp;
       updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       if (input && input.value) {
         performConversion();
       }

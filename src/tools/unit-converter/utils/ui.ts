@@ -21,6 +21,8 @@ export interface UIDOM {
   toSearch: HTMLInputElement | null;
   result: HTMLElement | null;
   formula: HTMLElement | null;
+  volatilityWarning: HTMLElement | null;
+  volatilityWarningText: HTMLElement | null;
   favoriteBtn: HTMLElement | null;
   batchBody: HTMLElement | null;
   historyList: HTMLElement | null;
@@ -282,3 +284,36 @@ export function renderHistory(
     });
   });
 }
+
+export function updateVolatilityWarning(
+  dom: Pick<UIDOM, 'volatilityWarning' | 'volatilityWarningText'>,
+  db: UnitsDatabase,
+  currentCategory: string,
+  currentFromUnit: string,
+  currentToUnit: string
+): void {
+  if (!dom.volatilityWarning || !dom.volatilityWarningText) return;
+
+  const category = db.categories[currentCategory];
+  const fromDef = getUnitDefinition(db, currentCategory, currentFromUnit);
+  const toDef = getUnitDefinition(db, currentCategory, currentToUnit);
+
+  const isVolatile =
+    Boolean(category?.volatile) || Boolean(fromDef?.volatile) || Boolean(toDef?.volatile);
+
+  if (!isVolatile) {
+    dom.volatilityWarning.classList.add('hidden');
+    dom.volatilityWarningText.textContent = '';
+    return;
+  }
+
+  const warningText =
+    fromDef?.volatilityWarning ||
+    toDef?.volatilityWarning ||
+    category?.volatilityWarning ||
+    'This conversion uses non-static rates and may be inaccurate.';
+
+  dom.volatilityWarningText.textContent = warningText;
+  dom.volatilityWarning.classList.remove('hidden');
+}
+

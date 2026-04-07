@@ -12,6 +12,8 @@ export type UnitDefinition = {
   isInverse?: boolean;
   isBase?: boolean;
   note?: string;
+  volatile?: boolean;
+  volatilityWarning?: string;
 };
 
 export type CategoryDefinition = {
@@ -19,6 +21,8 @@ export type CategoryDefinition = {
   icon: string;
   baseUnit: string;
   units: Record<string, UnitDefinition>;
+  volatile?: boolean;
+  volatilityWarning?: string;
 };
 
 export type UnitsDatabase = {
