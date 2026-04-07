@@ -13,9 +13,6 @@ import type {
   CalculatorResult,
 } from '../types';
 
-let unitsCache: UnitsDatabase | null = null;
-let customUnitsCache: CustomUnit[] = [];
-
 const STORAGE_KEYS = {
   CUSTOM_UNITS: 'unitconverter:customUnits',
   HISTORY: 'unitconverter:history',
@@ -25,11 +22,9 @@ const STORAGE_KEYS = {
 };
 
 export async function loadUnitsDatabase(): Promise<UnitsDatabase> {
-  if (unitsCache) return unitsCache;
   try {
     const response = await import('../data/units.json');
-    unitsCache = response.default as UnitsDatabase;
-    return unitsCache;
+    return response.default as UnitsDatabase;
   } catch (error) {
     console.error('[UnitConverter] Failed to load units database:', error);
     throw error;
@@ -39,16 +34,13 @@ export async function loadUnitsDatabase(): Promise<UnitsDatabase> {
 export function loadCustomUnits(): CustomUnit[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEYS.CUSTOM_UNITS);
-    customUnitsCache = stored ? (JSON.parse(stored) as CustomUnit[]) : [];
-    return customUnitsCache;
+    return stored ? (JSON.parse(stored) as CustomUnit[]) : [];
   } catch {
-    customUnitsCache = [];
     return [];
   }
 }
 
 export function saveCustomUnits(units: CustomUnit[]): void {
-  customUnitsCache = units;
   localStorage.setItem(STORAGE_KEYS.CUSTOM_UNITS, JSON.stringify(units));
 }
 

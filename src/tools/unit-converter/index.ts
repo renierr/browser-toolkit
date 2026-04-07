@@ -135,7 +135,7 @@ export default function init(): void | (() => void) {
       .map(
         (cat) => `
       <button
-        class="btn btn-sm btn-ghost gap-1 flex-shrink-0 uc-category-btn ${cat.key === currentCategory ? 'btn-active' : ''}"
+        class="btn btn-sm btn-ghost gap-1 shrink-0 uc-category-btn ${cat.key === currentCategory ? 'btn-active' : ''}"
         data-category="${cat.key}"
         role="tab"
         aria-selected="${cat.key === currentCategory}"
@@ -222,7 +222,7 @@ export default function init(): void | (() => void) {
               class="w-full text-left px-2 py-1.5 rounded hover:bg-base-200 text-sm flex items-center gap-2 ${isCurrent ? 'bg-primary/10' : ''}"
               data-unit="${unit.id}"
             >
-              <i data-lucide="star" class="w-3 h-3 text-warning flex-shrink-0"></i>
+              <i data-lucide="star" class="w-3 h-3 text-warning shrink-0"></i>
               <span class="truncate">${unit.name}</span>
               <span class="text-xs text-base-content/50 ml-auto">${unit.symbol}</span>
             </button>
@@ -253,7 +253,7 @@ export default function init(): void | (() => void) {
             class="w-full text-left px-2 py-1.5 rounded hover:bg-base-200 text-sm flex items-center gap-2 ${isCurrent ? 'bg-primary/10' : ''}"
             data-unit="${unit.id}"
           >
-            ${isFav ? '<i data-lucide="star" class="w-3 h-3 text-warning flex-shrink-0"></i>' : '<span class="w-3 flex-shrink-0"></span>'}
+            ${isFav ? '<i data-lucide="star" class="w-3 h-3 text-warning flex-shrink-0"></i>' : '<span class="w-3 shrink-0"></span>'}
             <span class="truncate">${unit.name}</span>
             <span class="text-xs text-base-content/50 ml-auto">${unit.symbol}</span>
           </button>
@@ -265,8 +265,9 @@ export default function init(): void | (() => void) {
     createIcons();
   }
 
-  function performConversion(): void {
+  function performConversion(options?: { saveHistory?: boolean }): void {
     if (!db || !input) return;
+    const shouldSaveHistory = options?.saveHistory ?? true;
     const valueStr = input.value.trim();
     if (!valueStr) {
       if (result) result.textContent = '—';
@@ -297,20 +298,22 @@ export default function init(): void | (() => void) {
 
     updateFavoriteIcon();
 
-    const record: ConversionRecord = {
-      id: Date.now().toString(),
-      category: db.categories[currentCategory]?.name || currentCategory,
-      fromUnit: fromDef.name,
-      toUnit: toDef.name,
-      fromValue: valueStr,
-      toValue: formatNumber(converted),
-      formula: formulaStr,
-      timestamp: Date.now(),
-      isFavorite: isFavorite(`${currentCategory}:${currentFromUnit}:${currentToUnit}`),
-    };
-    saveHistory(record);
-    addRecentPair(`${currentCategory}:${currentFromUnit}:${currentToUnit}`);
-    renderHistory();
+    if (shouldSaveHistory) {
+      const record: ConversionRecord = {
+        id: Date.now().toString(),
+        category: db.categories[currentCategory]?.name || currentCategory,
+        fromUnit: fromDef.name,
+        toUnit: toDef.name,
+        fromValue: valueStr,
+        toValue: formatNumber(converted),
+        formula: formulaStr,
+        timestamp: Date.now(),
+        isFavorite: isFavorite(`${currentCategory}:${currentFromUnit}:${currentToUnit}`),
+      };
+      saveHistory(record);
+      addRecentPair(`${currentCategory}:${currentFromUnit}:${currentToUnit}`);
+      renderHistory();
+    }
 
     updateBatchTable(value, fromDef);
 
@@ -390,7 +393,7 @@ export default function init(): void | (() => void) {
         const record = records.find((r) => r.id === id);
         if (record) {
           if (input) input.value = record.fromValue;
-          performConversion();
+          performConversion({ saveHistory: false });
         }
       });
     });
