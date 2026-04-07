@@ -21,6 +21,8 @@ const STORAGE_KEYS = {
   LAST_STATE: 'unitconverter:lastState',
 };
 
+const SPEED_OF_LIGHT_MPS = 299792458;
+
 export async function loadUnitsDatabase(): Promise<UnitsDatabase> {
   try {
     const response = await import('../data/units.json');
@@ -121,8 +123,12 @@ export function convert(
     return convertTemperature(value, fromId, toId);
   }
 
+  if (isWavelengthUnit(fromId, fromUnit) || isWavelengthUnit(toId, toUnit)) {
+    return convertFrequencyWavelength(value, fromUnit, toUnit, fromId, toId);
+  }
+
   if (fromUnit.isInverse || toUnit.isInverse) {
-    return convertInverse(value, fromUnit, toUnit);
+    return convertInverse(value, fromUnit, toUnit, fromId, toId);
   }
 
   if (fromUnit.isBase && toUnit.isBase) {
@@ -220,22 +226,12 @@ function convertTemperature(
 function convertInverse(
   value: number,
   fromUnit: UnitDefinition,
-  toUnit: UnitDefinition
+  toUnit: UnitDefinition,
+  fromId: string,
+  toId: string
 ): { result: number; formula: string } {
-  let result: number;
-
-  if (fromUnit.isInverse && toUnit.isInverse) {
-    result = value;
-  } else if (fromUnit.isInverse) {
-    const directValue = value === 0 ? 0 : 1 / value;
-    const baseValue = directValue * fromUnit.toBase;
-    result = baseValue / toUnit.toBase;
-    result = result === 0 ? 0 : 1 / result;
-  } else {
-    const baseValue = value * fromUnit.toBase;
-    const directResult = baseValue / toUnit.toBase;
-    result = directResult === 0 ? 0 : 1 / directResult;
-  }
+  const directBase = toDirectBase(value, fromUnit, fromId);
+  const result = fromDirectBase(directBase, toUnit, toId);
 
   const formula = `${formatNumber(value)} ${fromUnit.symbol} → ${formatNumber(result)} ${toUnit.symbol}`;
   return { result, formula };
@@ -246,7 +242,7 @@ function convertBase(
   fromId: string,
   toId: string
 ): { result: number; formula: string } {
-  const intValue = Math.round(value);
+  const intValue = Math.trunc(value);
   let decimalValue: number;
 
   switch (fromId) {
@@ -272,7 +268,8 @@ function convertBase(
       result = parseInt(decimalValue.toString(8), 10);
       break;
     case 'hexadecimal':
-      result = parseInt(decimalValue.toString(16), 10);
+      // Numeric return type cannot represent A-F digits; fall back to decimal value.
+      result = decimalValue;
       break;
     default:
       result = decimalValue;
@@ -280,6 +277,90 @@ function convertBase(
 
   const formula = `${formatNumber(value)} (${fromId}) → ${formatNumber(result)} (${toId})`;
   return { result, formula };
+}
+
+function isWavelengthUnit(unitId: string, unit: UnitDefinition): boolean {
+  return unitId === 'wavelength_in_metres' || unit.symbol === 'λ';
+}
+
+function convertFrequencyWavelength(
+  value: number,
+  fromUnit: UnitDefinition,
+  toUnit: UnitDefinition,
+  fromId: string,
+  toId: string
+): { result: number; formula: string } {
+  const fromIsWavelength = isWavelengthUnit(fromId, fromUnit);
+  const toIsWavelength = isWavelengthUnit(toId, toUnit);
+
+  if (fromIsWavelength && toIsWavelength) {
+    return {
+      result: value,
+      formula: `${formatNumber(value)} ${fromUnit.symbol} = ${formatNumber(value)} ${toUnit.symbol}`,
+    };
+  }
+
+  if (fromIsWavelength) {
+    if (value === 0) {
+      return { result: NaN, formula: 'λ cannot be 0' };
+    }
+
+    const frequencyHz = SPEED_OF_LIGHT_MPS / value;
+    const result = frequencyHz / toUnit.toBase;
+    return {
+      result,
+      formula: `f = c/λ, c = ${SPEED_OF_LIGHT_MPS.toLocaleString('en-US')} m/s`,
+    };
+  }
+
+  const frequencyHz = value * fromUnit.toBase;
+  if (frequencyHz === 0) {
+    return { result: NaN, formula: 'f cannot be 0' };
+  }
+
+  const result = SPEED_OF_LIGHT_MPS / frequencyHz;
+  return {
+    result,
+    formula: `λ = c/f, c = ${SPEED_OF_LIGHT_MPS.toLocaleString('en-US')} m/s`,
+  };
+}
+
+function isLiterPer100Km(unitId: string, unit: UnitDefinition): boolean {
+  return unitId === 'liter_per_100km' || unit.symbol === 'L/100km';
+}
+
+function toDirectBase(value: number, unit: UnitDefinition, unitId: string): number {
+  if (!unit.isInverse) {
+    return value * unit.toBase;
+  }
+
+  if (isLiterPer100Km(unitId, unit)) {
+    return value === 0 ? NaN : 100 / value;
+  }
+
+  if (unit.toBase === 0) {
+    return NaN;
+  }
+
+  const directValue = value === 0 ? NaN : 1 / value;
+  return directValue * unit.toBase;
+}
+
+function fromDirectBase(value: number, unit: UnitDefinition, unitId: string): number {
+  if (!unit.isInverse) {
+    return value / unit.toBase;
+  }
+
+  if (isLiterPer100Km(unitId, unit)) {
+    return value === 0 ? NaN : 100 / value;
+  }
+
+  if (unit.toBase === 0) {
+    return NaN;
+  }
+
+  const directResult = value / unit.toBase;
+  return directResult === 0 ? NaN : 1 / directResult;
 }
 
 function generateFormula(

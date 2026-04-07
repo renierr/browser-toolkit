@@ -28,6 +28,50 @@ import {
 } from './utils/ui';
 import type { UnitsDatabase, ConversionRecord, CustomUnit } from './types';
 
+function convertProgrammingValue(
+  value: string,
+  fromId: string,
+  toId: string
+): { result: string; formula: string } | null {
+  const baseById: Record<string, number> = {
+    binary: 2,
+    octal: 8,
+    decimal: 10,
+    hexadecimal: 16,
+  };
+
+  const fromBase = baseById[fromId] ?? 10;
+  const toBase = baseById[toId] ?? 10;
+  const raw = value.trim();
+
+  if (!raw) return null;
+
+  const normalized =
+    fromId === 'hexadecimal' && raw.toLowerCase().startsWith('0x') ? raw.slice(2) : raw;
+
+  const validators: Record<number, RegExp> = {
+    2: /^[01]+$/,
+    8: /^[0-7]+$/,
+    10: /^[-+]?\d+$/,
+    16: /^[0-9a-fA-F]+$/,
+  };
+
+  if (!validators[fromBase]?.test(normalized)) {
+    return null;
+  }
+
+  const decimalValue = parseInt(normalized, fromBase);
+  if (!Number.isFinite(decimalValue)) {
+    return null;
+  }
+
+  const result = decimalValue.toString(toBase).toUpperCase();
+  return {
+    result,
+    formula: `${raw.toUpperCase()} (${fromId}) → ${result} (${toId})`,
+  };
+}
+
 export default function init(): void | (() => void) {
   const container = document.getElementById('unit-converter');
   if (!container) return;
@@ -119,15 +163,56 @@ export default function init(): void | (() => void) {
       return;
     }
 
+    const fromDef = getUnitDefinition(db, currentCategory, currentFromUnit);
+    const toDef = getUnitDefinition(db, currentCategory, currentToUnit);
+    if (!fromDef || !toDef) return;
+
+    if (currentCategory === 'programming') {
+      const programming = convertProgrammingValue(valueStr, currentFromUnit, currentToUnit);
+      if (!programming) {
+        if (result) result.textContent = 'Invalid value for selected base';
+        return;
+      }
+
+      if (result) result.textContent = `${programming.result} ${toDef.symbol}`;
+      if (formula) formula.textContent = programming.formula;
+
+      updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+
+      if (shouldSaveHistory) {
+        const record: ConversionRecord = {
+          id: Date.now().toString(),
+          category: db.categories[currentCategory]?.name || currentCategory,
+          fromUnit: fromDef.name,
+          toUnit: toDef.name,
+          fromValue: valueStr,
+          toValue: programming.result,
+          formula: programming.formula,
+          timestamp: Date.now(),
+          isFavorite: false,
+        };
+        saveHistory(record);
+        addRecentPair(`${currentCategory}:${currentFromUnit}:${currentToUnit}`);
+        renderHistory(uiDOM, (fromValue) => {
+          if (input) input.value = fromValue;
+          performConversion({ saveHistory: false });
+        });
+      }
+
+      if (batchBody) {
+        batchBody.innerHTML = '';
+      }
+
+      saveLastState({ category: currentCategory, fromUnit: currentFromUnit, toUnit: currentToUnit });
+      return;
+    }
+
     const value = parseFloat(valueStr);
     if (isNaN(value)) {
       if (result) result.textContent = 'Invalid number';
       return;
     }
 
-    const fromDef = getUnitDefinition(db, currentCategory, currentFromUnit);
-    const toDef = getUnitDefinition(db, currentCategory, currentToUnit);
-    if (!fromDef || !toDef) return;
 
     const { result: converted, formula: formulaStr } = convert(
       value,
