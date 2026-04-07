@@ -15,6 +15,8 @@ import {
   loadLastState,
   loadCustomUnits,
   addCustomUnit,
+  loadCachedCurrencyRates,
+  refreshCurrencyRates,
 } from './utils/converter';
 import { createCalculator } from './utils/calculator';
 import {
@@ -28,7 +30,7 @@ import {
   renderHistory,
   type UIDOM,
 } from './utils/ui';
-import type { UnitsDatabase, ConversionRecord, CustomUnit } from './types';
+import type { UnitsDatabase, ConversionRecord, CustomUnit, FxRatesSnapshot } from './types';
 
 function convertProgrammingValue(
   value: string,
@@ -100,6 +102,13 @@ export default function init(): void | (() => void) {
   const formula = document.getElementById('uc-formula');
   const volatilityWarning = document.getElementById('uc-volatility-warning');
   const volatilityWarningText = document.getElementById('uc-volatility-warning-text');
+  const currencyLiveControls = document.getElementById('uc-currency-live-controls');
+  const currencyRefreshBtn = document.getElementById('uc-currency-refresh') as HTMLButtonElement | null;
+  const currencyRatesOpenBtn = document.getElementById('uc-currency-rates-open') as HTMLButtonElement | null;
+  const currencyUpdated = document.getElementById('uc-currency-updated');
+  const currencyRatesModal = document.getElementById('uc-currency-rates-modal') as HTMLDialogElement | null;
+  const currencyRatesMeta = document.getElementById('uc-currency-rates-meta');
+  const currencyRatesBody = document.getElementById('uc-currency-rates-body');
   const swapBtn = document.getElementById('uc-swap');
   const favoriteBtn = document.getElementById('uc-favorite');
   const copyResultBtn = document.getElementById('uc-copy-result');
@@ -158,6 +167,59 @@ export default function init(): void | (() => void) {
     calcLastOp,
     input,
   });
+
+  let currencySnapshot: FxRatesSnapshot | null = null;
+
+  function applyCurrencySnapshot(snapshot: FxRatesSnapshot): void {
+    if (!db) return;
+    const category = db.categories.currency;
+    if (!category) return;
+
+    Object.entries(snapshot.rates).forEach(([unitId, rate]) => {
+      if (category.units[unitId] && typeof rate === 'number' && rate > 0) {
+        category.units[unitId].toBase = rate;
+      }
+    });
+  }
+
+  function formatSnapshotTime(snapshot: FxRatesSnapshot | null): string {
+    if (!snapshot) return 'No live rates loaded yet';
+    return `Last loaded: ${new Date(snapshot.timestamp).toLocaleString()}`;
+  }
+
+  function renderCurrencyRatesModal(): void {
+    if (!currencyRatesMeta || !currencyRatesBody) return;
+
+    if (!currencySnapshot) {
+      currencyRatesMeta.textContent = 'No externally loaded rates available yet.';
+      currencyRatesBody.innerHTML =
+        '<tr><td colspan="2" class="text-center text-base-content/60 py-3">Press "Refresh rates" to load live data.</td></tr>';
+      return;
+    }
+
+    currencyRatesMeta.textContent = `${formatSnapshotTime(currencySnapshot)} | Source: ${currencySnapshot.source}`;
+
+    const rows = Object.entries(currencySnapshot.rates)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(
+        ([currency, rate]) =>
+          `<tr><td class="uppercase font-medium">${currency}</td><td class="text-right font-mono">${formatNumber(rate)}</td></tr>`
+      )
+      .join('');
+
+    currencyRatesBody.innerHTML = rows;
+  }
+
+  function updateCurrencyLiveControls(): void {
+    if (!currencyLiveControls || !currencyUpdated) return;
+    const isCurrency = currentCategory === 'currency';
+    currencyLiveControls.classList.toggle('hidden', !isCurrency);
+    if (currencyRatesOpenBtn) {
+      currencyRatesOpenBtn.disabled = !currencySnapshot;
+    }
+    if (!isCurrency) return;
+    currencyUpdated.textContent = formatSnapshotTime(currencySnapshot);
+  }
 
   function performConversion(options?: { saveHistory?: boolean }): void {
     if (!db || !input) return;
@@ -320,6 +382,11 @@ export default function init(): void | (() => void) {
   async function initialize(): Promise<void> {
     try {
       db = await loadUnitsDatabase();
+      currencySnapshot = await loadCachedCurrencyRates();
+      if (currencySnapshot) {
+        applyCurrencySnapshot(currencySnapshot);
+      }
+      renderCurrencyRatesModal();
       renderCategories(uiDOM, db, currentCategory);
       loadCustomUnits();
 
@@ -350,6 +417,7 @@ export default function init(): void | (() => void) {
       });
       populateCustomCategorySelect();
       updateActiveCategory(uiDOM, currentCategory);
+      updateCurrencyLiveControls();
     } catch (error) {
       console.error('[UnitConverter] Initialization failed:', error);
       if (result) result.textContent = 'Failed to load units database';
@@ -374,6 +442,7 @@ export default function init(): void | (() => void) {
       updateUnitLabels(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
       updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
       updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
+      updateCurrencyLiveControls();
       renderUnitList(
         fromUnitList,
         fromSearch,
@@ -544,6 +613,42 @@ export default function init(): void | (() => void) {
         if (input) input.value = fromValue;
         performConversion({ saveHistory: false });
       });
+    });
+  }
+
+  if (currencyRefreshBtn) {
+    currencyRefreshBtn.addEventListener('click', async () => {
+      if (currentCategory !== 'currency' || !db) return;
+
+      const initialLabel = currencyRefreshBtn.innerHTML;
+      currencyRefreshBtn.disabled = true;
+      currencyRefreshBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Refreshing';
+
+      try {
+        const snapshot = await refreshCurrencyRates();
+        currencySnapshot = snapshot;
+        applyCurrencySnapshot(snapshot);
+        renderCurrencyRatesModal();
+        updateCurrencyLiveControls();
+        if (input?.value.trim()) {
+          performConversion({ saveHistory: false });
+        }
+      } catch (error) {
+        console.error('[UnitConverter] Failed to refresh currency rates', error);
+        if (currencyUpdated) {
+          currencyUpdated.textContent = 'Could not refresh rates (offline or blocked).';
+        }
+      } finally {
+        currencyRefreshBtn.disabled = false;
+        currencyRefreshBtn.innerHTML = initialLabel;
+      }
+    });
+  }
+
+  if (currencyRatesOpenBtn && currencyRatesModal) {
+    currencyRatesOpenBtn.addEventListener('click', () => {
+      renderCurrencyRatesModal();
+      currencyRatesModal.showModal();
     });
   }
 

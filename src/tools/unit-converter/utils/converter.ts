@@ -11,6 +11,7 @@ import type {
   ConversionRecord,
   CustomUnit,
   CalculatorResult,
+  FxRatesSnapshot,
 } from '../types';
 
 const STORAGE_KEYS = {
@@ -22,6 +23,170 @@ const STORAGE_KEYS = {
 };
 
 const SPEED_OF_LIGHT_MPS = 299792458;
+const FX_DB_NAME = 'unitconverter-db';
+const FX_DB_VERSION = 1;
+const FX_STORE = 'fx-rates';
+const FX_CACHE_KEY = 'currency-usd';
+const FX_ENDPOINTS = [
+  'https://open.er-api.com/v6/latest/USD',
+  'https://api.frankfurter.app/latest?from=USD',
+];
+
+type FxApiResponse = {
+  rates?: Record<string, number>;
+};
+
+const FX_UNIT_IDS = [
+  'usd',
+  'eur',
+  'gbp',
+  'jpy',
+  'cny',
+  'inr',
+  'aud',
+  'cad',
+  'chf',
+  'krw',
+  'sgd',
+  'hkd',
+  'nok',
+  'sek',
+  'dkk',
+  'nzd',
+  'mxn',
+  'brl',
+  'zar',
+  'rub',
+  'try',
+  'thb',
+  'idr',
+  'myr',
+  'php',
+  'pln',
+  'czk',
+  'huf',
+  'ils',
+  'clp',
+  'aed',
+  'sar',
+];
+
+function openFxDb(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(FX_DB_NAME, FX_DB_VERSION);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(FX_STORE)) {
+        db.createObjectStore(FX_STORE);
+      }
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error ?? new Error('Failed to open FX DB'));
+  });
+}
+
+function readFxSnapshot(db: IDBDatabase): Promise<FxRatesSnapshot | null> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FX_STORE, 'readonly');
+    const store = tx.objectStore(FX_STORE);
+    const request = store.get(FX_CACHE_KEY);
+
+    request.onsuccess = () => {
+      resolve((request.result as FxRatesSnapshot | undefined) ?? null);
+    };
+    request.onerror = () => reject(request.error ?? new Error('Failed to read FX cache'));
+  });
+}
+
+function writeFxSnapshot(db: IDBDatabase, snapshot: FxRatesSnapshot): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(FX_STORE, 'readwrite');
+    const store = tx.objectStore(FX_STORE);
+    const request = store.put(snapshot, FX_CACHE_KEY);
+
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error ?? new Error('Failed to write FX cache'));
+  });
+}
+
+export async function loadCachedCurrencyRates(): Promise<FxRatesSnapshot | null> {
+  if (typeof indexedDB === 'undefined') {
+    return null;
+  }
+
+  try {
+    const db = await openFxDb();
+    return await readFxSnapshot(db);
+  } catch (error) {
+    console.error('[UnitConverter] Failed to load cached FX rates', error);
+    return null;
+  }
+}
+
+export async function refreshCurrencyRates(): Promise<FxRatesSnapshot> {
+  let payload: FxApiResponse | null = null;
+  let usedEndpoint = '';
+  let lastError: unknown = null;
+
+  for (const endpoint of FX_ENDPOINTS) {
+    try {
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        lastError = new Error(`Rate refresh failed (${response.status})`);
+        continue;
+      }
+
+      payload = (await response.json()) as FxApiResponse;
+      usedEndpoint = endpoint;
+      break;
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (!payload) {
+    throw new Error(
+      `[UnitConverter] Currency refresh failed for all endpoints: ${String(lastError)}`
+    );
+  }
+
+  const apiRates = payload.rates ?? {};
+
+  const rates: Record<string, number> = { usd: 1 };
+
+  for (const unitId of FX_UNIT_IDS) {
+    if (unitId === 'usd') continue;
+    const quote = apiRates[unitId.toUpperCase()];
+    if (typeof quote === 'number' && quote > 0) {
+      // API gives target currency per 1 USD; converter expects USD per unit.
+      rates[unitId] = 1 / quote;
+    }
+  }
+
+  const snapshot: FxRatesSnapshot = {
+    base: 'USD',
+    source: usedEndpoint,
+    timestamp: Date.now(),
+    rates,
+  };
+
+  if (typeof indexedDB !== 'undefined') {
+    try {
+      const db = await openFxDb();
+      await writeFxSnapshot(db, snapshot);
+    } catch (error) {
+      console.error('[UnitConverter] Failed to persist FX rates', error);
+    }
+  }
+
+  return snapshot;
+}
 
 export async function loadUnitsDatabase(): Promise<UnitsDatabase> {
   try {

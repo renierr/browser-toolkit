@@ -66,3 +66,11 @@ export type CalculatorResult = {
   result: string | number;
   error?: string;
 };
+
+export type FxRatesSnapshot = {
+  base: string;
+  timestamp: number;
+  source: string;
+  rates: Record<string, number>;
+};
+

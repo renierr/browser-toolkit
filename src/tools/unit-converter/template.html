@@ -168,6 +168,18 @@
                   <i data-lucide="triangle-alert" class="w-3.5 h-3.5"></i>
                   <span id="uc-volatility-warning-text"></span>
                 </div>
+                <div id="uc-currency-live-controls" class="mt-2 hidden">
+                  <div class="flex items-center gap-2">
+                    <button id="uc-currency-refresh" class="btn btn-xs btn-outline gap-1" type="button">
+                      <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+                      Refresh rates
+                    </button>
+                    <button id="uc-currency-rates-open" class="btn btn-xs btn-ghost" type="button">
+                      View loaded rates
+                    </button>
+                    <span id="uc-currency-updated" class="text-xs text-base-content/60"></span>
+                  </div>
+                </div>
                 <div class="flex gap-2 mt-2">
                   <button id="uc-copy-result" class="btn btn-ghost btn-xs gap-1">
                     <i data-lucide="copy" class="w-3 h-3"></i>
@@ -414,6 +426,30 @@
             <button type="submit" class="btn btn-primary">Create Unit</button>
           </div>
         </form>
+      </div>
+      <form method="dialog" class="modal-backdrop">
+        <button>close</button>
+      </form>
+    </dialog>
+
+    <dialog id="uc-currency-rates-modal" class="modal">
+      <div class="modal-box max-w-2xl">
+        <form method="dialog">
+          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">x</button>
+        </form>
+        <h3 class="text-lg font-bold mb-2">Loaded Currency Rates</h3>
+        <p id="uc-currency-rates-meta" class="text-sm text-base-content/70 mb-3"></p>
+        <div class="overflow-x-auto max-h-96">
+          <table class="table table-xs w-full">
+            <thead>
+              <tr>
+                <th>Currency</th>
+                <th class="text-right">1 Unit in USD</th>
+              </tr>
+            </thead>
+            <tbody id="uc-currency-rates-body"></tbody>
+          </table>
+        </div>
       </div>
       <form method="dialog" class="modal-backdrop">
         <button>close</button>

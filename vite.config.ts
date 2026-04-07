@@ -187,6 +187,14 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: ({ url }) =>
+              url.origin === 'https://open.er-api.com' || url.origin === 'https://api.frankfurter.app',
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'no-cache-external-fx',
+            },
+          },
+          {
+            urlPattern: ({ url }) =>
               url.pathname.endsWith('.mjs') ||
               url.pathname.endsWith('.bcmap') ||
               url.pathname.endsWith('.pfb') ||
