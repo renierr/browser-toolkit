@@ -112,6 +112,31 @@ export function renderUnitList(
   const units = getUnitsForCategory(db, currentCategory);
   const favorites = getFavorites();
   const recent = getRecentPairs();
+  const favoriteFromUnits = new Set<string>();
+  const favoriteToUnits = new Set<string>();
+
+  favorites.forEach((favoriteKey) => {
+    if (!favoriteKey.startsWith(`${currentCategory}:`)) {
+      return;
+    }
+
+    const parts = favoriteKey.split(':');
+    if (parts.length === 3) {
+      const fromId = parts[1];
+      const toId = parts[2];
+      favoriteFromUnits.add(fromId);
+      favoriteToUnits.add(toId);
+      return;
+    }
+
+    // Backward compatibility with legacy unit-only favorite keys.
+    if (parts.length === 2) {
+      favoriteFromUnits.add(parts[1]);
+      favoriteToUnits.add(parts[1]);
+    }
+  });
+
+  const favoriteUnits = isFrom ? favoriteFromUnits : favoriteToUnits;
 
   let html = '';
 
@@ -140,7 +165,7 @@ export function renderUnitList(
   }
 
   if (!searchInput?.value) {
-    const favUnits = units.filter((u) => favorites.has(`${currentCategory}:${u.id}`));
+    const favUnits = units.filter((u) => favoriteUnits.has(u.id));
     if (favUnits.length > 0) {
       html +=
         '<div class="text-xs text-base-content/50 px-2 py-1 font-semibold mt-1">Favorites</div>';
@@ -175,7 +200,7 @@ export function renderUnitList(
       '<div class="text-xs text-base-content/50 px-2 py-1 font-semibold mt-1">All Units</div>';
     filteredUnits.forEach((unit) => {
       const isCurrent = isFrom ? unit.id === currentFromUnit : unit.id === currentToUnit;
-      const isFav = favorites.has(`${currentCategory}:${unit.id}`);
+      const isFav = favoriteUnits.has(unit.id);
       html += `
         <button
           class="w-full text-left px-2 py-1.5 rounded hover:bg-base-200 text-sm flex items-center gap-2 ${isCurrent ? 'bg-primary/10' : ''}"

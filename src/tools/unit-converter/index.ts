@@ -9,6 +9,7 @@ import {
   exportHistoryAsJSON,
   exportHistoryAsCSV,
   toggleFavorite,
+  isFavorite,
   addRecentPair,
   saveLastState,
   loadLastState,
@@ -172,6 +173,7 @@ export default function init(): void | (() => void) {
     const fromDef = getUnitDefinition(db, currentCategory, currentFromUnit);
     const toDef = getUnitDefinition(db, currentCategory, currentToUnit);
     if (!fromDef || !toDef) return;
+    const pairKey = `${currentCategory}:${currentFromUnit}:${currentToUnit}`;
 
     updateVolatilityWarning(uiDOM, db, currentCategory, currentFromUnit, currentToUnit);
 
@@ -197,7 +199,7 @@ export default function init(): void | (() => void) {
           toValue: programming.result,
           formula: programming.formula,
           timestamp: Date.now(),
-          isFavorite: false,
+          isFavorite: isFavorite(pairKey),
         };
         saveHistory(record);
         addRecentPair(`${currentCategory}:${currentFromUnit}:${currentToUnit}`);
@@ -245,7 +247,7 @@ export default function init(): void | (() => void) {
         toValue: formatNumber(converted),
         formula: formulaStr,
         timestamp: Date.now(),
-        isFavorite: false,
+        isFavorite: isFavorite(pairKey),
       };
       saveHistory(record);
       addRecentPair(`${currentCategory}:${currentFromUnit}:${currentToUnit}`);
@@ -418,7 +420,7 @@ export default function init(): void | (() => void) {
       renderUnitList(
         toUnitList,
         toSearch,
-        true,
+        false,
         db,
         currentCategory,
         currentFromUnit,
@@ -484,7 +486,7 @@ export default function init(): void | (() => void) {
       renderUnitList(
         toUnitList,
         toSearch,
-        true,
+        false,
         db,
         currentCategory,
         currentFromUnit,
@@ -518,6 +520,26 @@ export default function init(): void | (() => void) {
     favoriteBtn.addEventListener('click', () => {
       toggleFavorite(`${currentCategory}:${currentFromUnit}:${currentToUnit}`);
       updateFavoriteIcon(uiDOM, currentCategory, currentFromUnit, currentToUnit);
+      if (db) {
+        renderUnitList(
+          fromUnitList,
+          fromSearch,
+          true,
+          db,
+          currentCategory,
+          currentFromUnit,
+          currentToUnit
+        );
+        renderUnitList(
+          toUnitList,
+          toSearch,
+          false,
+          db,
+          currentCategory,
+          currentFromUnit,
+          currentToUnit
+        );
+      }
       renderHistory(uiDOM, (fromValue) => {
         if (input) input.value = fromValue;
         performConversion({ saveHistory: false });
