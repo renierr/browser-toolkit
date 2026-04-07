@@ -186,11 +186,11 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         runtimeCaching: [
           {
-            urlPattern: ({ url }) =>
-              url.origin === 'https://open.er-api.com' || url.origin === 'https://api.frankfurter.app',
+            // Never cache cross-origin requests in the app SW.
+            urlPattern: ({ url }) => url.origin !== self.location.origin,
             handler: 'NetworkOnly',
             options: {
-              cacheName: 'no-cache-external-fx',
+              cacheName: 'no-cache-external',
             },
           },
           {
