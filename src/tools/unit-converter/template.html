@@ -222,7 +222,10 @@
       </div>
 
       <!-- Calculator Panel -->
-      <div id="uc-calc-panel" class="card bg-base-200 shadow-sm hidden lg:block">
+      <div
+        id="uc-calc-panel"
+        class="card bg-base-200 shadow-sm hidden lg:block rounded-3xl border border-base-300 overflow-hidden"
+      >
         <div class="card-body p-4">
           <div class="flex items-center justify-between mb-2">
             <h2 class="text-lg font-bold flex items-center gap-2">
@@ -230,7 +233,7 @@
               Calculator
             </h2>
             <div class="flex gap-1">
-              <button id="uc-calc-sci-toggle" class="btn btn-xs btn-ghost">SCI</button>
+              <button id="uc-calc-sci-toggle" class="btn btn-xs btn-ghost rounded-xl">SCI</button>
               <button id="uc-calc-close" class="btn btn-xs btn-ghost lg:hidden">
                 <i data-lucide="x" class="w-4 h-4"></i>
               </button>
@@ -240,7 +243,7 @@
           <!-- Calculator Display -->
           <div
             id="uc-calc-display"
-            class="bg-base-100 rounded-lg p-3 mb-3 font-mono text-right min-h-16 flex flex-col justify-end border border-base-300"
+            class="bg-base-100 rounded-2xl p-3 mb-3 font-mono text-right min-h-16 flex flex-col justify-end border border-base-300"
             aria-label="Calculator display"
           >
             <div id="uc-calc-last-op" class="text-xs text-base-content/50 min-h-4"></div>
@@ -255,57 +258,73 @@
           </div>
 
           <!-- Scientific Buttons (hidden by default) -->
-          <div id="uc-calc-sci-buttons" class="hidden grid grid-cols-4 gap-1 mb-2">
-            <button class="btn btn-xs btn-outline" data-calc-val="sin(">sin(</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="cos(">cos(</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="tan(">tan(</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="log(">log</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="ln(">ln</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="sqrt(">√</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="^">xʸ</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="PI">π</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="E">e</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="abs(">|x|</button>
-            <button class="btn btn-xs btn-outline" data-calc-val="(">(</button>
-            <button class="btn btn-xs btn-outline" data-calc-val=")">)</button>
+          <div id="uc-calc-sci-buttons" class="hidden grid grid-cols-4 gap-2 mb-3">
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="sin(">sin(</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="cos(">cos(</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="tan(">tan(</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="log(">log</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="ln(">ln</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="sqrt(">√</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="^">xʸ</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="PI">π</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="E">e</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="abs(">|x|</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val="(">(</button>
+            <button class="btn btn-xs btn-neutral rounded-xl" data-calc-val=")">)</button>
           </div>
 
           <!-- Calculator Buttons -->
-          <div class="grid grid-cols-4 gap-1">
-            <button class="btn btn-sm btn-error text-white" id="uc-calc-clear">AC</button>
-            <button class="btn btn-sm btn-ghost" id="uc-calc-backspace">
+          <div class="grid grid-cols-4 gap-2">
+            <button
+              class="btn btn-sm btn-error btn-outline rounded-2xl font-bold"
+              id="uc-calc-clear"
+            >
+              AC
+            </button>
+            <button class="btn btn-sm btn-neutral rounded-2xl" id="uc-calc-backspace">
               <i data-lucide="delete" class="w-4 h-4"></i>
             </button>
-            <button class="btn btn-sm btn-ghost" id="uc-calc-bracket">( )</button>
-            <button class="btn btn-sm btn-outline" data-calc-val="÷">÷</button>
-
-            <button class="btn btn-sm" data-calc-val="7">7</button>
-            <button class="btn btn-sm" data-calc-val="8">8</button>
-            <button class="btn btn-sm" data-calc-val="9">9</button>
-            <button class="btn btn-sm btn-outline" data-calc-val="×">×</button>
-
-            <button class="btn btn-sm" data-calc-val="4">4</button>
-            <button class="btn btn-sm" data-calc-val="5">5</button>
-            <button class="btn btn-sm" data-calc-val="6">6</button>
-            <button class="btn btn-sm btn-outline" data-calc-val="-">−</button>
-
-            <button class="btn btn-sm" data-calc-val="1">1</button>
-            <button class="btn btn-sm" data-calc-val="2">2</button>
-            <button class="btn btn-sm" data-calc-val="3">3</button>
-            <button class="btn btn-sm btn-outline" data-calc-val="+">+</button>
-
-            <button class="btn btn-sm" data-calc-val="0">0</button>
-            <button class="btn btn-sm" data-calc-val=".">.</button>
-            <button class="btn btn-sm btn-primary text-primary-content" id="uc-calc-equals">
-              =
+            <button class="btn btn-sm btn-neutral rounded-2xl" id="uc-calc-bracket">( )</button>
+            <button class="btn btn-sm btn-primary rounded-2xl font-bold" data-calc-val="÷">
+              ÷
             </button>
-            <button class="btn btn-sm btn-ghost" id="uc-calc-copy">
+
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="7">7</button>
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="8">8</button>
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="9">9</button>
+            <button class="btn btn-sm btn-primary rounded-2xl font-bold" data-calc-val="×">
+              ×
+            </button>
+
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="4">4</button>
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="5">5</button>
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="6">6</button>
+            <button class="btn btn-sm btn-primary rounded-2xl font-bold" data-calc-val="-">
+              −
+            </button>
+
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="1">1</button>
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="2">2</button>
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="3">3</button>
+            <button class="btn btn-sm btn-primary rounded-2xl font-bold" data-calc-val="+">
+              +
+            </button>
+
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val="0">0</button>
+            <button class="btn btn-sm btn-base-300 rounded-2xl" data-calc-val=".">.</button>
+            <button class="btn btn-sm btn-neutral rounded-2xl" id="uc-calc-copy">
               <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+            <button
+              class="btn btn-sm btn-success text-success-content rounded-2xl font-bold"
+              id="uc-calc-equals"
+            >
+              =
             </button>
           </div>
 
           <!-- Send to Converter -->
-          <button id="uc-calc-send" class="btn btn-sm btn-outline w-full mt-2 gap-2">
+          <button id="uc-calc-send" class="btn btn-sm btn-outline rounded-2xl w-full mt-3 gap-2">
             <i data-lucide="arrow-right" class="w-4 h-4"></i>
             Send result to converter
           </button>
