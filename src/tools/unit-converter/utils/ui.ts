@@ -60,7 +60,7 @@ export function renderCategories(
       aria-selected="${cat.key === currentCategory}"
     >
       <i data-lucide="${cat.icon}" class="w-3.5 h-3.5"></i>
-      <span class="hidden sm:inline">${cat.name}</span>
+      <span class="inline">${cat.name}</span>
     </button>
   `
     )
@@ -341,4 +341,3 @@ export function updateVolatilityWarning(
   dom.volatilityWarningText.textContent = warningText;
   dom.volatilityWarning.classList.remove('hidden');
 }
-

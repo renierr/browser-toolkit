@@ -170,7 +170,11 @@
                 </div>
                 <div id="uc-currency-live-controls" class="mt-2 hidden">
                   <div class="flex items-center gap-2">
-                    <button id="uc-currency-refresh" class="btn btn-xs btn-outline gap-1" type="button">
+                    <button
+                      id="uc-currency-refresh"
+                      class="btn btn-xs btn-outline gap-1"
+                      type="button"
+                    >
                       <i data-lucide="refresh-cw" class="w-3 h-3"></i>
                       Refresh rates
                     </button>
@@ -237,12 +241,17 @@
           <div
             id="uc-calc-display"
             class="bg-base-100 rounded-lg p-3 mb-3 font-mono text-right min-h-16 flex flex-col justify-end border border-base-300"
-            contenteditable="true"
-            role="textbox"
             aria-label="Calculator display"
           >
             <div id="uc-calc-last-op" class="text-xs text-base-content/50 min-h-4"></div>
-            <div id="uc-calc-current" class="text-xl font-bold truncate">0</div>
+            <div
+              id="uc-calc-current"
+              contenteditable="true"
+              inputmode="decimal"
+              class="text-xl font-bold truncate"
+            >
+              0
+            </div>
           </div>
 
           <!-- Scientific Buttons (hidden by default) -->

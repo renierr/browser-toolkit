@@ -1,36 +1,36 @@
 import {
-  loadUnitsDatabase,
-  getUnitsForCategory,
-  getUnitDefinition,
-  convert,
-  formatNumber,
-  saveHistory,
-  clearHistory,
-  exportHistoryAsJSON,
-  exportHistoryAsCSV,
-  toggleFavorite,
-  isFavorite,
-  addRecentPair,
-  saveLastState,
-  loadLastState,
-  loadCustomUnits,
   addCustomUnit,
+  addRecentPair,
+  clearHistory,
+  convert,
+  exportHistoryAsCSV,
+  exportHistoryAsJSON,
+  formatNumber,
+  getUnitDefinition,
+  getUnitsForCategory,
+  isFavorite,
   loadCachedCurrencyRates,
+  loadCustomUnits,
+  loadLastState,
+  loadUnitsDatabase,
   refreshCurrencyRates,
+  saveHistory,
+  saveLastState,
+  toggleFavorite,
 } from './utils/converter';
 import { createCalculator } from './utils/calculator';
 import {
   renderCategories,
-  updateActiveCategory,
-  updateUnitLabels,
+  renderHistory,
   renderUnitList,
+  type UIDOM,
+  updateActiveCategory,
   updateBatchTable,
   updateFavoriteIcon,
+  updateUnitLabels,
   updateVolatilityWarning,
-  renderHistory,
-  type UIDOM,
 } from './utils/ui';
-import type { UnitsDatabase, ConversionRecord, CustomUnit, FxRatesSnapshot } from './types';
+import type { ConversionRecord, CustomUnit, FxRatesSnapshot, UnitsDatabase } from './types';
 
 function convertProgrammingValue(
   value: string,
@@ -103,10 +103,16 @@ export default function init(): void | (() => void) {
   const volatilityWarning = document.getElementById('uc-volatility-warning');
   const volatilityWarningText = document.getElementById('uc-volatility-warning-text');
   const currencyLiveControls = document.getElementById('uc-currency-live-controls');
-  const currencyRefreshBtn = document.getElementById('uc-currency-refresh') as HTMLButtonElement | null;
-  const currencyRatesOpenBtn = document.getElementById('uc-currency-rates-open') as HTMLButtonElement | null;
+  const currencyRefreshBtn = document.getElementById(
+    'uc-currency-refresh'
+  ) as HTMLButtonElement | null;
+  const currencyRatesOpenBtn = document.getElementById(
+    'uc-currency-rates-open'
+  ) as HTMLButtonElement | null;
   const currencyUpdated = document.getElementById('uc-currency-updated');
-  const currencyRatesModal = document.getElementById('uc-currency-rates-modal') as HTMLDialogElement | null;
+  const currencyRatesModal = document.getElementById(
+    'uc-currency-rates-modal'
+  ) as HTMLDialogElement | null;
   const currencyRatesMeta = document.getElementById('uc-currency-rates-meta');
   const currencyRatesBody = document.getElementById('uc-currency-rates-body');
   const swapBtn = document.getElementById('uc-swap');
@@ -176,7 +182,7 @@ export default function init(): void | (() => void) {
     if (!category) return;
 
     Object.entries(snapshot.rates).forEach(([unitId, rate]) => {
-      if (category.units[unitId] && typeof rate === 'number' && rate > 0) {
+      if (category.units[unitId] && rate > 0) {
         category.units[unitId].toBase = rate;
       }
     });
@@ -199,15 +205,13 @@ export default function init(): void | (() => void) {
 
     currencyRatesMeta.textContent = `${formatSnapshotTime(currencySnapshot)} | Source: ${currencySnapshot.source}`;
 
-    const rows = Object.entries(currencySnapshot.rates)
+    currencyRatesBody.innerHTML = Object.entries(currencySnapshot.rates)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(
         ([currency, rate]) =>
           `<tr><td class="uppercase font-medium">${currency}</td><td class="text-right font-mono">${formatNumber(rate)}</td></tr>`
       )
       .join('');
-
-    currencyRatesBody.innerHTML = rows;
   }
 
   function updateCurrencyLiveControls(): void {
@@ -275,7 +279,11 @@ export default function init(): void | (() => void) {
         batchBody.innerHTML = '';
       }
 
-      saveLastState({ category: currentCategory, fromUnit: currentFromUnit, toUnit: currentToUnit });
+      saveLastState({
+        category: currentCategory,
+        fromUnit: currentFromUnit,
+        toUnit: currentToUnit,
+      });
       return;
     }
 
@@ -284,7 +292,6 @@ export default function init(): void | (() => void) {
       if (result) result.textContent = 'Invalid number';
       return;
     }
-
 
     const { result: converted, formula: formulaStr } = convert(
       value,
@@ -622,7 +629,8 @@ export default function init(): void | (() => void) {
 
       const initialLabel = currencyRefreshBtn.innerHTML;
       currencyRefreshBtn.disabled = true;
-      currencyRefreshBtn.innerHTML = '<span class="loading loading-spinner loading-xs"></span> Refreshing';
+      currencyRefreshBtn.innerHTML =
+        '<span class="loading loading-spinner loading-xs"></span> Refreshing';
 
       try {
         const snapshot = await refreshCurrencyRates();
@@ -825,11 +833,11 @@ export default function init(): void | (() => void) {
     }
   };
 
-  document.addEventListener('keydown', onKeyDown);
+  calcCurrent?.addEventListener('keydown', onKeyDown);
 
   initialize();
 
   return () => {
-    document.removeEventListener('keydown', onKeyDown);
+    calcCurrent?.removeEventListener('keydown', onKeyDown);
   };
 }

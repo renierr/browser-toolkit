@@ -73,4 +73,3 @@ export type FxRatesSnapshot = {
   source: string;
   rates: Record<string, number>;
 };
-
