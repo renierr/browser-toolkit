@@ -1,5 +1,6 @@
 import { CalculatorLogic } from './logic';
 import { HistoryManager } from './history';
+import { SharedCalculator } from './core';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -12,7 +13,9 @@ export default function init() {
   const scrollRightIndicator = document.getElementById('calc-scroll-right') as HTMLDivElement;
 
   const historyManager = new HistoryManager();
-  let currentInput = '0';
+  const calculator = new SharedCalculator({
+    formatResult: CalculatorLogic.formatDisplay,
+  });
   let isScientific = false;
 
   const checkScroll = () => {
@@ -33,7 +36,7 @@ export default function init() {
   };
 
   const updateDisplay = (animate = false) => {
-    display.innerText = currentInput;
+    display.innerText = calculator.getInput();
     if (animate) {
       display.classList.add('calc-result-flash');
       setTimeout(() => display.classList.remove('calc-result-flash'), 300);
@@ -69,7 +72,7 @@ export default function init() {
         const id = card.getAttribute('data-id');
         const item = history.find((i) => i.id === id);
         if (item) {
-          currentInput = item.result.toString();
+          calculator.setInput(item.result.toString());
           lastOp.innerText = item.expression;
           updateDisplay();
           // Hide popover when item selected
@@ -80,120 +83,47 @@ export default function init() {
   };
 
   const calculate = () => {
-    if (currentInput === '0' && lastOp.innerText === '') return;
+    if (calculator.getInput() === '0' && lastOp.innerText === '') return;
 
-    let balancedInput = currentInput;
-    const opens = (balancedInput.match(/\(/g) || []).length;
-    const closes = (balancedInput.match(/\)/g) || []).length;
-    if (opens > closes) {
-      balancedInput = balancedInput + ')'.repeat(opens - closes);
-    }
-
-    // Check for trailing operators
-    const sanitizedInput = balancedInput.replace(/[+\-*/^]$/, '');
-
-    const calculation = CalculatorLogic.evaluate(sanitizedInput);
+    const calculation = calculator.evaluate();
     if (calculation.error) {
       lastOp.innerText = 'Error';
-      currentInput = calculation.result.toString();
     } else {
       lastOp.innerText = `${calculation.expression} =`;
-      const formattedResult = CalculatorLogic.formatDisplay(calculation.result);
-      historyManager.addItem(calculation.expression, formattedResult);
-      currentInput = formattedResult;
+      historyManager.addItem(calculation.expression, calculator.getInput());
       updateHistory();
     }
     updateDisplay(true);
   };
 
   const handleInput = (val: string) => {
-    if (currentInput === 'Error') {
-      currentInput = '0';
+    if (calculator.getInput() === 'Error') {
+      calculator.clear();
       lastOp.innerText = '';
     }
 
-    const isOperator = (s: string) => /[+\-*/^]/.test(s);
-
-    if (currentInput === '0') {
-      // If starting from zero and input is a digit or '.', replace the 0
-      if (/[0-9.]/.test(val)) {
-        currentInput = val;
-        updateDisplay();
-        return;
-      }
-      // If the value looks like a function (ends with '(') or is a constant, replace the 0
-      if (/\w+\($/.test(val) || /^PI$/.test(val) || /^E$/.test(val) || val === '(') {
-        currentInput = val;
-        updateDisplay();
-        return;
-      }
-      // Otherwise, keep the 0 and append operator or other token
-      currentInput = '0' + val;
-      updateDisplay();
-      return;
-    }
-
-    // If both last char and new val are operators, replace the last operator
-    const lastChar = currentInput[currentInput.length - 1];
-    if (isOperator(lastChar) && isOperator(val)) {
-      currentInput = currentInput.slice(0, -1) + val;
-      updateDisplay();
-      return;
-    }
-
-    // Default: append the value
-    currentInput += val;
+    calculator.appendInput(val);
     updateDisplay();
   };
 
   const handleBackspace = () => {
-    if (currentInput.length > 1) {
-      currentInput = currentInput.slice(0, -1);
-    } else {
-      currentInput = '0';
-    }
+    calculator.backspace();
     updateDisplay();
   };
 
   const handleBracket = () => {
-    if (currentInput === '0') {
-      currentInput = '(';
-      updateDisplay();
-      return;
-    }
-
-    const lastChar = currentInput[currentInput.length - 1];
-
-    if (lastChar === '(') {
-      currentInput += '(';
-      updateDisplay();
-      return;
-    }
-
-    if (lastChar === ')') {
-      currentInput += '(';
-      updateDisplay();
-      return;
-    }
-
-    const openCount = (currentInput.match(/\(/g) || []).length;
-    const closeCount = (currentInput.match(/\)/g) || []).length;
-
-    if (openCount > closeCount) {
-      currentInput += ')';
-    } else {
-      currentInput += '(';
-    }
+    calculator.toggleBracket();
     updateDisplay();
   };
 
   const handleNegate = () => {
-    if (currentInput === '0') return;
+    const inputValue = calculator.getInput();
+    if (inputValue === '0') return;
 
-    if (currentInput.startsWith('-')) {
-      currentInput = currentInput.slice(1);
+    if (inputValue.startsWith('-')) {
+      calculator.setInput(inputValue.slice(1));
     } else {
-      currentInput = '-' + currentInput;
+      calculator.setInput(`-${inputValue}`);
     }
     updateDisplay();
   };
@@ -211,7 +141,7 @@ export default function init() {
   document.getElementById('calc-negate')?.addEventListener('click', handleNegate);
 
   document.getElementById('calc-clear')?.addEventListener('click', () => {
-    currentInput = '0';
+    calculator.clear();
     lastOp.innerText = '';
     updateDisplay();
   });
@@ -222,7 +152,7 @@ export default function init() {
 
   document.getElementById('calc-copy')?.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText(currentInput);
+      await navigator.clipboard.writeText(calculator.getInput());
     } catch (err) {
       console.error('Failed to copy: ', err);
     }
@@ -252,7 +182,7 @@ export default function init() {
 
   // Handle direct display editing
   display.addEventListener('input', (e) => {
-    currentInput = (e.target as HTMLDivElement).innerText;
+    calculator.setInput((e.target as HTMLDivElement).innerText);
     checkScroll();
   });
 
@@ -280,7 +210,7 @@ export default function init() {
       calculate();
     }
     if (e.key === 'Escape') {
-      currentInput = '0';
+      calculator.clear();
       lastOp.innerText = '';
       updateDisplay();
     }

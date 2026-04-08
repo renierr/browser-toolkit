@@ -61,11 +61,6 @@ export type ConverterState = {
 
 export type FavoritePair = string; // Format: "category:fromUnit:toUnit"
 
-export type CalculatorResult = {
-  expression: string;
-  result: string | number;
-  error?: string;
-};
 
 export type FxRatesSnapshot = {
   base: string;

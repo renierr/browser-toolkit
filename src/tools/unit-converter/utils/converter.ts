@@ -10,7 +10,6 @@ import type {
   UnitDefinition,
   ConversionRecord,
   CustomUnit,
-  CalculatorResult,
   FxRatesSnapshot,
 } from '../types';
 
@@ -554,52 +553,6 @@ export function formatNumber(value: number): string {
   return formatted.toLocaleString('en-US', { maximumFractionDigits: 10 });
 }
 
-export function evaluateExpression(expression: string): CalculatorResult {
-  try {
-    let sanitized = expression
-      .replace(/×/g, '*')
-      .replace(/÷/g, '/')
-      .replace(/\)\(/g, ')*(')
-      .replace(/(?<=\d)\(/g, '*(')
-      .replace(/(\d+(?:\.\d+)?|\([^)]*\))%/g, '($1/100)')
-      .replace(/\bpow\(/gi, 'Math.pow(')
-      .replace(/\^/g, '**')
-      .replace(/\bsqrt\(/gi, 'Math.sqrt(')
-      .replace(/\bsin\(/gi, 'Math.sin(')
-      .replace(/\bcos\(/gi, 'Math.cos(')
-      .replace(/\btan\(/gi, 'Math.tan(')
-      .replace(/\basin\(/gi, 'Math.asin(')
-      .replace(/\bacos\(/gi, 'Math.acos(')
-      .replace(/\batan\(/gi, 'Math.atan(')
-      .replace(/\basinh\(/gi, 'Math.asinh(')
-      .replace(/\bacosh\(/gi, 'Math.acosh(')
-      .replace(/\batanh\(/gi, 'Math.atanh(')
-      .replace(/\bsinh\(/gi, 'Math.sinh(')
-      .replace(/\bcosh\(/gi, 'Math.cosh(')
-      .replace(/\btanh\(/gi, 'Math.tanh(')
-      .replace(/\bexp\(/gi, 'Math.exp(')
-      .replace(/\blog\(/gi, 'Math.log10(')
-      .replace(/\bln\(/gi, 'Math.log(')
-      .replace(/\babs\(/gi, 'Math.abs(')
-      .replace(/\bfloor\(/gi, 'Math.floor(')
-      .replace(/\bceil\(/gi, 'Math.ceil(')
-      .replace(/\bround\(/gi, 'Math.round(')
-      .replace(/\bPI\b/gi, 'Math.PI')
-      .replace(/\bE\b/gi, 'Math.E');
-
-    const result = new Function(`return ${sanitized}`)();
-
-    if (typeof result !== 'number' || !isFinite(result)) {
-      return { expression, result: 'Error', error: 'Invalid calculation' };
-    }
-
-    const formattedResult = Number.isInteger(result) ? result : parseFloat(result.toFixed(10));
-
-    return { expression, result: formattedResult };
-  } catch {
-    return { expression, result: 'Error', error: 'Syntax Error' };
-  }
-}
 
 export function saveHistory(record: ConversionRecord): void {
   try {
