@@ -39,6 +39,8 @@ const BATTERY_SERVICE_UUID: BluetoothServiceUUID = 0x180f;
 const XIAOMI_ENV_SERVICE_UUID: BluetoothServiceUUID = 'ebe0ccb0-7a0a-4b0c-8a1a-6ff2997da3a6';
 const XIAOMI_ENV_DATA_CHAR_UUID: BluetoothCharacteristicUUID =
   'ebe0ccc1-7a0a-4b0c-8a1a-6ff2997da3a6';
+const MJ_HT_V1_TEXT_SERVICE_UUID: BluetoothServiceUUID = '226c0000-6476-4566-7562-66734470666d';
+const MJ_HT_V1_TEXT_CHAR_UUID: BluetoothCharacteristicUUID = '226caa55-6476-4566-7562-66734470666d';
 
 export default function init(): void | (() => void) {
   const pairBtn = document.getElementById('pair-btn') as HTMLButtonElement;
@@ -74,6 +76,7 @@ export default function init(): void | (() => void) {
   };
 
   const profileCandidates: SensorProfile[] = [
+    buildMjHtV1TextProfile(),
     buildXiaomiProfile(),
     buildEnvironmentalSensingProfile(),
   ];
@@ -215,6 +218,9 @@ export default function init(): void | (() => void) {
       showMessage(`Connected to ${device.name || 'sensor'}.`, { type: 'info' });
     } catch (error) {
       console.error('[BLEClimateMonitor] Connection failed', error);
+      if (device.gatt?.connected) {
+        device.gatt.disconnect();
+      }
       connectionChip.textContent = 'Disconnected';
       connectionChip.className = 'badge badge-outline';
       showMessage(error instanceof Error ? error.message : 'Failed to connect sensor.', {
@@ -229,12 +235,14 @@ export default function init(): void | (() => void) {
     try {
       const device = await navigator.bluetooth.requestDevice({
         filters: [
+          { services: [MJ_HT_V1_TEXT_SERVICE_UUID] },
           { namePrefix: 'MJ_HT_V1' },
           { namePrefix: 'LYWSD' },
           { namePrefix: 'Qingping' },
           { services: [ENVIRONMENTAL_SERVICE_UUID] },
         ],
         optionalServices: [
+          MJ_HT_V1_TEXT_SERVICE_UUID,
           ENVIRONMENTAL_SERVICE_UUID,
           BATTERY_SERVICE_UUID,
           XIAOMI_ENV_SERVICE_UUID,
@@ -282,6 +290,8 @@ export default function init(): void | (() => void) {
   };
 
   const disconnectCurrentDevice = async (): Promise<void> => {
+    const hadActiveDevice = Boolean(state.device || state.activeConnection);
+
     if (state.device) {
       state.device.removeEventListener('gattserverdisconnected', handleDeviceDisconnected);
     }
@@ -295,7 +305,9 @@ export default function init(): void | (() => void) {
       state.device.gatt.disconnect();
     }
 
-    handleDeviceDisconnected();
+    if (hadActiveDevice) {
+      handleDeviceDisconnected();
+    }
   };
 
   const clearTrustedDevices = (): void => {
@@ -501,6 +513,74 @@ function buildXiaomiProfile(): SensorProfile {
           listeners.forEach((unsubscribe) => unsubscribe());
           try {
             await dataChar.stopNotifications();
+          } catch {
+            // Ignore devices that do not support explicit stop notifications.
+          }
+        },
+      };
+    },
+  };
+}
+
+function buildMjHtV1TextProfile(): SensorProfile {
+  return {
+    id: 'mj-ht-v1-text',
+    name: 'MJ_HT_V1 text profile',
+    connect: async (
+      server: BluetoothRemoteGATTServer,
+      onReading: (reading: Partial<ClimateReading>) => void
+    ): Promise<ActiveConnection> => {
+      const service = await server.getPrimaryService(MJ_HT_V1_TEXT_SERVICE_UUID);
+      const characteristic = await service.getCharacteristic(MJ_HT_V1_TEXT_CHAR_UUID);
+
+      const parseAndApply = (value: DataView): void => {
+        const text = new TextDecoder('utf-8').decode(value).trim();
+        const temperatureMatch = text.match(/T\s*=\s*([+-]?\d+(?:\.\d+)?)/i);
+        const humidityMatch = text.match(/H\s*=\s*([+-]?\d+(?:\.\d+)?)/i);
+
+        const patch: Partial<ClimateReading> = {};
+        if (temperatureMatch) {
+          patch.temperatureC = Number.parseFloat(temperatureMatch[1]);
+        }
+        if (humidityMatch) {
+          patch.humidityPercent = Number.parseFloat(humidityMatch[1]);
+        }
+
+        if (Object.keys(patch).length > 0) {
+          onReading(patch);
+        }
+      };
+
+      const onChanged = (event: Event): void => {
+        const target = event.target as BluetoothRemoteGATTCharacteristic;
+        if (!target.value) {
+          return;
+        }
+        parseAndApply(target.value);
+      };
+
+      await characteristic.startNotifications();
+      characteristic.addEventListener('characteristicvaluechanged', onChanged);
+
+      const refresh = async (): Promise<void> => {
+        try {
+          const value = await characteristic.readValue();
+          parseAndApply(value);
+        } catch (error) {
+          console.error('[BLEClimateMonitor] Failed reading MJ_HT_V1 text characteristic', error);
+        }
+      };
+
+      await refresh();
+
+      return {
+        profileId: 'mj-ht-v1-text',
+        profileName: 'MJ_HT_V1 text profile',
+        refresh,
+        cleanup: async () => {
+          characteristic.removeEventListener('characteristicvaluechanged', onChanged);
+          try {
+            await characteristic.stopNotifications();
           } catch {
             // Ignore devices that do not support explicit stop notifications.
           }
