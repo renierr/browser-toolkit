@@ -32,6 +32,10 @@ type SensorProfile = {
   ) => Promise<ActiveConnection>;
 };
 
+type ConnectOptions = {
+  silent?: boolean;
+};
+
 const STORAGE_KEY = 'ble-climate-monitor.trusted-devices.v1';
 const LAST_DEVICE_STORAGE_KEY = 'ble-climate-monitor.last-device-id.v1';
 const ENVIRONMENTAL_SERVICE_UUID: BluetoothServiceUUID = 0x181a;
@@ -73,6 +77,14 @@ export default function init(): void | (() => void) {
     trustedDevices: loadTrustedDevices(),
     grantedDevices: [] as BluetoothDevice[],
     isBusy: false,
+    isDisconnecting: false,
+    connectAttemptToken: 0,
+    autoReconnectTimer: null as number | null,
+    lastConnectedDeviceId: null as string | null,
+    lastConnectedDeviceRef: null as BluetoothDevice | null,
+    lastConnectedProfileId: null as string | null,
+    connectedAtMs: 0,
+    mjReconnectAttempts: 0,
   };
 
   const profileCandidates: SensorProfile[] = [
@@ -81,7 +93,14 @@ export default function init(): void | (() => void) {
     buildEnvironmentalSensingProfile(),
   ];
 
-  const handleDeviceDisconnected = (): void => {
+  const clearAutoReconnectTimer = (): void => {
+    if (state.autoReconnectTimer !== null) {
+      clearTimeout(state.autoReconnectTimer);
+      state.autoReconnectTimer = null;
+    }
+  };
+
+  const handleDeviceDisconnected = (reason: 'manual' | 'remote' = 'remote'): void => {
     state.device = null;
     state.activeConnection = null;
     connectionChip.textContent = 'Disconnected';
@@ -93,7 +112,69 @@ export default function init(): void | (() => void) {
     pairBtn.disabled = false;
     reconnectLastBtn.disabled = false;
     connectSelectedBtn.disabled = false;
+
+    if (reason === 'manual') {
+      return;
+    }
+
+    const shouldRetryMj = state.lastConnectedProfileId === 'mj-ht-v1-text';
+    if (shouldRetryMj) {
+      scheduleMjReconnect();
+      return;
+    }
+
     showMessage('Sensor disconnected.', { type: 'warning' });
+  };
+
+  const onGattDisconnected = (): void => {
+    handleDeviceDisconnected('remote');
+  };
+
+  const scheduleMjReconnect = (): void => {
+    clearAutoReconnectTimer();
+    if (state.isDisconnecting || state.isBusy) {
+      return;
+    }
+    if (!state.lastConnectedDeviceId || state.lastConnectedProfileId !== 'mj-ht-v1-text') {
+      return;
+    }
+    const delayMs = Math.min(10000, 1200 + state.mjReconnectAttempts * 1400);
+    state.autoReconnectTimer = window.setTimeout(() => {
+      void attemptMjReconnect();
+    }, delayMs);
+  };
+
+  const attemptMjReconnect = async (): Promise<void> => {
+    clearAutoReconnectTimer();
+    state.mjReconnectAttempts += 1;
+
+    const cachedDevice = state.lastConnectedDeviceRef;
+    if (cachedDevice) {
+      connectionChip.textContent = 'Reconnecting';
+      connectionChip.className = 'badge badge-warning';
+      const connectedFromCache = await connectToDevice(cachedDevice, { silent: true });
+      if (connectedFromCache) {
+        return;
+      }
+    }
+
+    await refreshGrantedDevices();
+    const deviceId = state.lastConnectedDeviceId;
+    const device = deviceId
+      ? state.grantedDevices.find((candidate) => candidate.id === deviceId)
+      : undefined;
+
+    if (!device) {
+      scheduleMjReconnect();
+      return;
+    }
+
+    connectionChip.textContent = 'Reconnecting';
+    connectionChip.className = 'badge badge-warning';
+    const connected = await connectToDevice(device, { silent: true });
+    if (!connected) {
+      scheduleMjReconnect();
+    }
   };
 
   const mergeReading = (patch: Partial<ClimateReading>): void => {
@@ -166,7 +247,12 @@ export default function init(): void | (() => void) {
     renderTrustedOptions();
   };
 
-  const connectToDevice = async (device: BluetoothDevice): Promise<void> => {
+  const connectToDevice = async (
+    device: BluetoothDevice,
+    options: ConnectOptions = {}
+  ): Promise<boolean> => {
+    clearAutoReconnectTimer();
+    const attemptToken = ++state.connectAttemptToken;
     setBusy(true);
 
     try {
@@ -180,6 +266,13 @@ export default function init(): void | (() => void) {
       const server = await device.gatt?.connect();
       if (!server) {
         throw new Error('Could not connect to GATT server.');
+      }
+
+      if (attemptToken !== state.connectAttemptToken) {
+        if (device.gatt?.connected) {
+          device.gatt.disconnect();
+        }
+        return false;
       }
 
       let activeConnection: ActiveConnection | null = null;
@@ -204,7 +297,13 @@ export default function init(): void | (() => void) {
 
       state.device = device;
       state.activeConnection = activeConnection;
-      device.addEventListener('gattserverdisconnected', handleDeviceDisconnected);
+      device.removeEventListener('gattserverdisconnected', onGattDisconnected);
+      device.addEventListener('gattserverdisconnected', onGattDisconnected);
+      state.connectedAtMs = Date.now();
+      state.lastConnectedDeviceId = device.id;
+      state.lastConnectedDeviceRef = device;
+      state.lastConnectedProfileId = activeConnection.profileId;
+      state.mjReconnectAttempts = 0;
 
       connectionChip.textContent = 'Connected';
       connectionChip.className = 'badge badge-success';
@@ -215,7 +314,10 @@ export default function init(): void | (() => void) {
       updateRememberedDevice(device, activeConnection.profileId);
 
       await activeConnection.refresh();
-      showMessage(`Connected to ${device.name || 'sensor'}.`, { type: 'info' });
+      if (!options.silent) {
+        showMessage(`Connected to ${device.name || 'sensor'}.`, { type: 'info' });
+      }
+      return true;
     } catch (error) {
       console.error('[BLEClimateMonitor] Connection failed', error);
       if (device.gatt?.connected) {
@@ -223,11 +325,16 @@ export default function init(): void | (() => void) {
       }
       connectionChip.textContent = 'Disconnected';
       connectionChip.className = 'badge badge-outline';
-      showMessage(error instanceof Error ? error.message : 'Failed to connect sensor.', {
-        type: 'alert',
-      });
+      if (!options.silent) {
+        showMessage(error instanceof Error ? error.message : 'Failed to connect sensor.', {
+          type: 'alert',
+        });
+      }
+      return false;
     } finally {
-      setBusy(false);
+      if (attemptToken === state.connectAttemptToken) {
+        setBusy(false);
+      }
     }
   };
 
@@ -290,10 +397,12 @@ export default function init(): void | (() => void) {
   };
 
   const disconnectCurrentDevice = async (): Promise<void> => {
+    state.isDisconnecting = true;
+    clearAutoReconnectTimer();
     const hadActiveDevice = Boolean(state.device || state.activeConnection);
 
     if (state.device) {
-      state.device.removeEventListener('gattserverdisconnected', handleDeviceDisconnected);
+      state.device.removeEventListener('gattserverdisconnected', onGattDisconnected);
     }
 
     if (state.activeConnection) {
@@ -306,8 +415,9 @@ export default function init(): void | (() => void) {
     }
 
     if (hadActiveDevice) {
-      handleDeviceDisconnected();
+      handleDeviceDisconnected('manual');
     }
+    state.isDisconnecting = false;
   };
 
   const clearTrustedDevices = (): void => {
@@ -344,7 +454,7 @@ export default function init(): void | (() => void) {
     if (!lastDevice) return;
 
     // Auto reconnect only for trusted devices that are already granted.
-    void connectToDevice(lastDevice);
+    void connectToDevice(lastDevice, { silent: true });
   });
 
   return () => {
@@ -354,6 +464,7 @@ export default function init(): void | (() => void) {
     refreshBtn.removeEventListener('click', onRefreshClick);
     connectSelectedBtn.removeEventListener('click', onConnectSelectedClick);
     clearTrustedBtn.removeEventListener('click', clearTrustedDevices);
+    clearAutoReconnectTimer();
     void disconnectCurrentDevice();
   };
 }
@@ -532,6 +643,8 @@ function buildMjHtV1TextProfile(): SensorProfile {
     ): Promise<ActiveConnection> => {
       const service = await server.getPrimaryService(MJ_HT_V1_TEXT_SERVICE_UUID);
       const characteristic = await service.getCharacteristic(MJ_HT_V1_TEXT_CHAR_UUID);
+      let pollingTimer: number | null = null;
+      let notificationsStarted = false;
 
       const parseAndApply = (value: DataView): void => {
         const text = new TextDecoder('utf-8').decode(value).trim();
@@ -559,8 +672,16 @@ function buildMjHtV1TextProfile(): SensorProfile {
         parseAndApply(target.value);
       };
 
-      await characteristic.startNotifications();
-      characteristic.addEventListener('characteristicvaluechanged', onChanged);
+      try {
+        await characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', onChanged);
+        notificationsStarted = true;
+      } catch (error) {
+        console.warn(
+          '[BLEClimateMonitor] MJ_HT_V1 notifications unavailable, falling back to read',
+          error
+        );
+      }
 
       const refresh = async (): Promise<void> => {
         try {
@@ -573,14 +694,26 @@ function buildMjHtV1TextProfile(): SensorProfile {
 
       await refresh();
 
+      if (!notificationsStarted) {
+        pollingTimer = window.setInterval(() => {
+          void refresh();
+        }, 10000);
+      }
+
       return {
         profileId: 'mj-ht-v1-text',
         profileName: 'MJ_HT_V1 text profile',
         refresh,
         cleanup: async () => {
+          if (pollingTimer !== null) {
+            clearInterval(pollingTimer);
+            pollingTimer = null;
+          }
           characteristic.removeEventListener('characteristicvaluechanged', onChanged);
           try {
-            await characteristic.stopNotifications();
+            if (notificationsStarted) {
+              await characteristic.stopNotifications();
+            }
           } catch {
             // Ignore devices that do not support explicit stop notifications.
           }
