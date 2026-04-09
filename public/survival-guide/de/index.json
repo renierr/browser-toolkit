@@ -899,148 +899,46 @@
       "contentPath": "water/toxic-algae/content.md"
     },
     {
-      "id": "weather-lightning",
-      "title": "Blitzschlag-Sicherheit",
-      "excerpt": "Wie man das Risiko eines Blitzeinschlags minimiert, wenn man ohne Schutz in ein Gewitter gerät.",
-      "category": "weather",
-      "tags": [
-        "wetter",
-        "blitz",
-        "gewitter",
-        "sicherheit",
-        "elektrizität"
-      ],
-      "contentPath": "weather/lightning/content.md"
-    },
-    {
-      "id": "weather-avalanche",
-      "title": "Lawinen-Überleben",
-      "excerpt": "Lawinengelände erkennen und wissen, was zu tun ist, wenn man von einer Lawine erfasst wird.",
-      "category": "weather",
-      "tags": [
-        "wetter",
-        "lawine",
-        "schnee",
-        "winter",
-        "berge"
-      ],
-      "contentPath": "weather/avalanche/content.md"
-    },
-    {
-      "id": "first-aid-tourniquet",
-      "title": "Ein Tourniquet anlegen",
-      "excerpt": "Wie man ein kommerzielles oder improvisiertes Tourniquet richtig anlegt, um lebensbedrohliche arterielle Blutungen zu stoppen.",
+      "id": "first-aid-dehydration",
+      "title": "Dehydration erkennen und behandeln",
+      "excerpt": "Dehydration früh erkennen, sicher im Feld behandeln und das Fortschreiten zum Hitzennotfall verhindern.",
       "category": "first-aid",
       "tags": [
         "erste-hilfe",
-        "blutung",
-        "tourniquet",
-        "trauma",
-        "arteriell"
+        "dehydration",
+        "hitze",
+        "wasser",
+        "rehydration"
       ],
-      "contentPath": "first-aid/tourniquet/content.md"
+      "contentPath": "first-aid/dehydration/content.md"
     },
     {
-      "id": "food-cleaning-fish",
-      "title": "Fisch ausnehmen und filetieren",
-      "excerpt": "Eine Schritt-für-Schritt-Anleitung zur Verarbeitung eines frisch gefangenen Fisches für die Zubereitung in der Wildnis.",
-      "category": "food",
+      "id": "signaling-phone-battery",
+      "title": "Handy-Akku im Notfall sparen",
+      "excerpt": "Akkulaufzeit im Notfall verlängern, um Kommunikation zu sichern und Rettungschancen zu erhöhen.",
+      "category": "signaling",
       "tags": [
-        "nahrung",
-        "fisch",
-        "ausnehmen",
-        "filetieren",
-        "fleisch",
-        "zubereitung"
+        "signal",
+        "handy",
+        "akku",
+        "notfall",
+        "rettung"
       ],
-      "contentPath": "food/cleaning-fish/content.md"
+      "contentPath": "signaling/phone-battery/content.md"
     },
     {
-      "id": "general-hygiene",
-      "title": "Wildnis-Hygiene",
-      "excerpt": "Sich in Überlebenssituationen sauber zu halten, ist entscheidend, um Infektionen, Wundreiben und Krankheiten zu verhindern.",
+      "id": "general-evacuation-route",
+      "title": "Evakuierungsroute planen",
+      "excerpt": "Primär-, Ausweich- und Notroute vorbereiten und klare Auslöser für den Aufbruch festlegen.",
       "category": "general",
       "tags": [
-        "allgemein",
-        "hygiene",
-        "gesundheit",
-        "reinigung",
-        "sanitär",
-        "seife"
+        "evakuierung",
+        "route",
+        "planung",
+        "katastrophe",
+        "vorsorge"
       ],
-      "contentPath": "general/hygiene/content.md"
-    },
-    {
-      "id": "navigation-pacing",
-      "title": "Schrittzählen und Entfernungen",
-      "excerpt": "Wie du die zurückgelegte Entfernung durch Schrittzählen und Ranger-Beads präzise erfassen kannst.",
-      "category": "navigation",
-      "tags": [
-        "navigation",
-        "schrittzählen",
-        "entfernung",
-        "tracking",
-        "ranger-beads"
-      ],
-      "contentPath": "navigation/pacing/content.md"
-    },
-    {
-      "id": "fire-banking",
-      "title": "Ein Feuer abdecken (Banking)",
-      "excerpt": "Wie du deine heißen Kohlen über Nacht aufbewahrst, um dein Feuer am Morgen sofort wieder zu entfachen.",
-      "category": "fire",
-      "tags": [
-        "feuer",
-        "kohlen",
-        "abdecken",
-        "banking",
-        "über-nacht",
-        "hitze"
-      ],
-      "contentPath": "fire/banking/content.md"
-    },
-    {
-      "id": "shelter-hammock",
-      "title": "Hängematten-Sicherheit & Aufbau",
-      "excerpt": "Wie man eine Überlebens-Hängematte richtig aufbaut und dabei tödliche herabfallende Äste vermeidet.",
-      "category": "shelter",
-      "tags": [
-        "unterstand",
-        "hängematte",
-        "bäume",
-        "witwenmacher",
-        "aufbau"
-      ],
-      "contentPath": "shelter/hammock/content.md"
-    },
-    {
-      "id": "first-aid-frostbite",
-      "title": "Erfrierungen behandeln",
-      "excerpt": "Wie man gefrorenes Gewebe richtig auftaut, ohne schwere und dauerhafte Schäden zu verursachen.",
-      "category": "first-aid",
-      "tags": [
-        "erste-hilfe",
-        "erfrierungen",
-        "kälte",
-        "winter",
-        "gefrieren"
-      ],
-      "contentPath": "first-aid/frostbite/content.md"
-    },
-    {
-      "id": "food-toxic-algae",
-      "title": "Giftige Algen & Rote Flut",
-      "excerpt": "Wie man gefährliche, mit Cyanobakterien verseuchte Gewässer erkennt, bei denen weder Filtern noch Abkochen hilft.",
-      "category": "water",
-      "tags": [
-        "wasser",
-        "algen",
-        "giftig",
-        "cyanobakterien",
-        "gift",
-        "nahrungssuche"
-      ],
-      "contentPath": "water/toxic-algae/content.md"
+      "contentPath": "general/evacuation-route/content.md"
     }
   ]
 }
