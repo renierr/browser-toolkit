@@ -1,6 +1,6 @@
 # Feuerbohrer Feuer machen
 
-Der Feuerbohrer ist eine der effektivsten primitiven Feuerentzungsmethoden. Er nutzt Reibung, um einen Glut aus einem hölzernen Stab und einem Feuerbrett zu erzeugen.
+Der Feuerbohrer ist eine der effektivsten primitiven Feuerentzündungsmethoden. Er nutzt Reibung, um eine Glut aus einem hölzernen Stab und einem Feuerbrett zu erzeugen.
 
 ## Was du brauchst
 
@@ -48,7 +48,7 @@ Halte alles trocken - Feuchtigkeit ist dein Feind beim Feuer machen.
    - Ein kleiner schwarzer Glut wird sich in der Vertiefung bilden
 
 10. **Übertrage zum Zunder**
-    - Bewege vorsichtig den glühenden Glut zu deinem Zunderbündel
+    - Bewege vorsichtig die glühende Glut zu deinem Zunderbündel
 
 11. **Pflege die Flamme**
     - Blase vorsichtig auf den Glut, bis er sich entzündet

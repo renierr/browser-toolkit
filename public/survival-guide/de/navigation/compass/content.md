@@ -1,6 +1,6 @@
-# Einen improvidierten Kompass herstellen
+# Einen improvisierten Kompass herstellen
 
-Ein Kompass hilft dir, Richtung zu finden. So hergestellt mit minimalen Materialien.
+Ein Kompass hilft dir, die Richtung zu finden. So baust du ihn mit minimalen Materialien.
 
 ## Methode 1: Magnetisierte Nadel
 

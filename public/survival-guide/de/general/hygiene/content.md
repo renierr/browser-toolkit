@@ -5,7 +5,7 @@ In einer Überlebenssituation wird die Hygiene oft vernachlässigt, aber mangelh
 ## Händewaschen ohne Seife
 
 Das Sauberhalten der Hände verhindert die Aufnahme von Krankheitserregern beim Umgang mit Lebensmitteln.
-1. **Asche und Wasser**: Lagefeuer aus Hartholz produzieren weiße Asche. Das Mischen von weißer Asche mit Wasser erzeugt eine einfache, rutschige alkalische Substanz (Lauge), die Fett löst und Bakterien abtötet.
+1. **Asche und Wasser**: Lagerfeuer aus Hartholz produzieren weiße Asche. Das Mischen von weißer Asche mit Wasser erzeugt eine einfache, rutschige alkalische Substanz (Lauge), die Fett löst und Bakterien abtötet.
 2. **Sand und Schlamm**: Verwende feinen Sand oder Lehm als Schleifmittel, um Schmutz und Öle abzuschrubben, und spüle dann mit dem saubersten verfügbaren Wasser nach.
 
 ## Zahnpflege
