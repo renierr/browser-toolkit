@@ -280,6 +280,21 @@ export default function init(): void | (() => void) {
     renderTrustedOptions();
   };
 
+  const resolveReconnectDevice = async (deviceId: string): Promise<BluetoothDevice | null> => {
+    await refreshGrantedDevices();
+
+    const granted = state.grantedDevices.find((device) => device.id === deviceId);
+    if (granted) {
+      return granted;
+    }
+
+    if (state.lastConnectedDeviceRef?.id === deviceId) {
+      return state.lastConnectedDeviceRef;
+    }
+
+    return null;
+  };
+
   const connectToDevice = async (
     device: BluetoothDevice,
     options: ConnectOptions = {}
@@ -407,13 +422,24 @@ export default function init(): void | (() => void) {
     const selectedDeviceId = trustedDeviceSelect.value;
     if (!selectedDeviceId) return;
 
-    const grantedDevice = state.grantedDevices.find((device) => device.id === selectedDeviceId);
-    if (!grantedDevice) {
+    const remembered = state.trustedDevices.find((entry) => entry.id === selectedDeviceId);
+    state.lastConnectedDeviceId = selectedDeviceId;
+    state.lastConnectedProfileId = remembered?.profileId ?? null;
+
+    const reconnectDevice = await resolveReconnectDevice(selectedDeviceId);
+    if (!reconnectDevice) {
+      if (remembered?.profileId === 'mj-ht-v1-text') {
+        scheduleMjReconnect();
+        return;
+      }
       showMessage('This trusted device is not ready yet. Pair it again once.', { type: 'warning' });
       return;
     }
 
-    await connectToDevice(grantedDevice);
+    const connected = await connectToDevice(reconnectDevice);
+    if (!connected && remembered?.profileId === 'mj-ht-v1-text') {
+      scheduleMjReconnect();
+    }
   };
 
   const reconnectLastDevice = async (): Promise<void> => {
@@ -424,13 +450,24 @@ export default function init(): void | (() => void) {
       return;
     }
 
-    const lastDevice = state.grantedDevices.find((device) => device.id === lastDeviceId);
-    if (!lastDevice) {
+    const remembered = state.trustedDevices.find((entry) => entry.id === lastDeviceId);
+    state.lastConnectedDeviceId = lastDeviceId;
+    state.lastConnectedProfileId = remembered?.profileId ?? null;
+
+    const reconnectDevice = await resolveReconnectDevice(lastDeviceId);
+    if (!reconnectDevice) {
+      if (remembered?.profileId === 'mj-ht-v1-text') {
+        scheduleMjReconnect();
+        return;
+      }
       showMessage('Last sensor is not currently available. Use Pair Sensor.', { type: 'warning' });
       return;
     }
 
-    await connectToDevice(lastDevice);
+    const connected = await connectToDevice(reconnectDevice);
+    if (!connected && remembered?.profileId === 'mj-ht-v1-text') {
+      scheduleMjReconnect();
+    }
   };
 
   const disconnectCurrentDevice = async (): Promise<void> => {
@@ -492,11 +529,11 @@ export default function init(): void | (() => void) {
   void refreshGrantedDevices().then(() => {
     const lastDeviceId = localStorage.getItem(LAST_DEVICE_STORAGE_KEY);
     if (!lastDeviceId) return;
-    const lastDevice = state.grantedDevices.find((device) => device.id === lastDeviceId);
-    if (!lastDevice) return;
-
-    // Auto reconnect only for trusted devices that are already granted.
-    void connectToDevice(lastDevice, { silent: true });
+    void resolveReconnectDevice(lastDeviceId).then((lastDevice) => {
+      if (!lastDevice) return;
+      // Auto reconnect only for trusted devices that are already granted or cached in-session.
+      void connectToDevice(lastDevice, { silent: true });
+    });
   });
 
   return () => {
