@@ -45,6 +45,7 @@ const XIAOMI_ENV_DATA_CHAR_UUID: BluetoothCharacteristicUUID =
   'ebe0ccc1-7a0a-4b0c-8a1a-6ff2997da3a6';
 const MJ_HT_V1_TEXT_SERVICE_UUID: BluetoothServiceUUID = '226c0000-6476-4566-7562-66734470666d';
 const MJ_HT_V1_TEXT_CHAR_UUID: BluetoothCharacteristicUUID = '226caa55-6476-4566-7562-66734470666d';
+const MJ_RECONNECT_DELAY_MS = 30000;
 
 export default function init(): void | (() => void) {
   const pairBtn = document.getElementById('pair-btn') as HTMLButtonElement;
@@ -60,6 +61,7 @@ export default function init(): void | (() => void) {
   const connectionChip = document.getElementById('connection-chip') as HTMLDivElement;
   const profileLabel = document.getElementById('profile-label') as HTMLDivElement;
   const deviceLabel = document.getElementById('device-label') as HTMLDivElement;
+  const disconnectBtnDefaultHtml = disconnectBtn.innerHTML;
 
   if (!navigator.bluetooth) {
     unsupportedAlert.classList.remove('hidden');
@@ -85,6 +87,8 @@ export default function init(): void | (() => void) {
     lastConnectedProfileId: null as string | null,
     connectedAtMs: 0,
     mjReconnectAttempts: 0,
+    mjAutoReconnectEnabled: true,
+    isMjAutoRetrying: false,
   };
 
   const profileCandidates: SensorProfile[] = [
@@ -98,6 +102,28 @@ export default function init(): void | (() => void) {
       clearTimeout(state.autoReconnectTimer);
       state.autoReconnectTimer = null;
     }
+    state.isMjAutoRetrying = false;
+  };
+
+  const renderDisconnectButton = (): void => {
+    if (state.isMjAutoRetrying && !state.device) {
+      disconnectBtn.innerHTML = 'Stop Auto Reconnect';
+      disconnectBtn.classList.remove('hidden');
+      return;
+    }
+
+    disconnectBtn.innerHTML = disconnectBtnDefaultHtml;
+    if (state.device) {
+      disconnectBtn.classList.remove('hidden');
+    } else {
+      disconnectBtn.classList.add('hidden');
+    }
+  };
+
+  const stopMjAutoReconnect = (): void => {
+    state.mjAutoReconnectEnabled = false;
+    clearAutoReconnectTimer();
+    renderDisconnectButton();
   };
 
   const handleDeviceDisconnected = (reason: 'manual' | 'remote' = 'remote'): void => {
@@ -107,18 +133,18 @@ export default function init(): void | (() => void) {
     connectionChip.className = 'badge badge-outline';
     profileLabel.textContent = '-';
     deviceLabel.textContent = 'No active device';
-    disconnectBtn.classList.add('hidden');
     refreshBtn.classList.add('hidden');
     pairBtn.disabled = false;
     reconnectLastBtn.disabled = false;
     connectSelectedBtn.disabled = false;
+    renderDisconnectButton();
 
     if (reason === 'manual') {
       return;
     }
 
     const shouldRetryMj = state.lastConnectedProfileId === 'mj-ht-v1-text';
-    if (shouldRetryMj) {
+    if (shouldRetryMj && state.mjAutoReconnectEnabled) {
       scheduleMjReconnect();
       return;
     }
@@ -135,17 +161,24 @@ export default function init(): void | (() => void) {
     if (state.isDisconnecting || state.isBusy) {
       return;
     }
+    if (!state.mjAutoReconnectEnabled) {
+      return;
+    }
     if (!state.lastConnectedDeviceId || state.lastConnectedProfileId !== 'mj-ht-v1-text') {
       return;
     }
-    const delayMs = Math.min(10000, 1200 + state.mjReconnectAttempts * 1400);
+    state.isMjAutoRetrying = true;
+    renderDisconnectButton();
     state.autoReconnectTimer = window.setTimeout(() => {
       void attemptMjReconnect();
-    }, delayMs);
+    }, MJ_RECONNECT_DELAY_MS);
   };
 
   const attemptMjReconnect = async (): Promise<void> => {
     clearAutoReconnectTimer();
+    if (!state.mjAutoReconnectEnabled) {
+      return;
+    }
     state.mjReconnectAttempts += 1;
 
     const cachedDevice = state.lastConnectedDeviceRef;
@@ -304,13 +337,14 @@ export default function init(): void | (() => void) {
       state.lastConnectedDeviceRef = device;
       state.lastConnectedProfileId = activeConnection.profileId;
       state.mjReconnectAttempts = 0;
+      state.mjAutoReconnectEnabled = true;
 
       connectionChip.textContent = 'Connected';
       connectionChip.className = 'badge badge-success';
       profileLabel.textContent = activeConnection.profileName;
       deviceLabel.textContent = `${device.name || 'Unnamed sensor'} (${device.id.slice(0, 8)})`;
-      disconnectBtn.classList.remove('hidden');
       refreshBtn.classList.remove('hidden');
+      renderDisconnectButton();
       updateRememberedDevice(device, activeConnection.profileId);
 
       await activeConnection.refresh();
@@ -339,6 +373,7 @@ export default function init(): void | (() => void) {
   };
 
   const requestAndConnect = async (): Promise<void> => {
+    state.mjAutoReconnectEnabled = true;
     try {
       const device = await navigator.bluetooth.requestDevice({
         filters: [
@@ -368,6 +403,7 @@ export default function init(): void | (() => void) {
   };
 
   const connectSelectedDevice = async (): Promise<void> => {
+    state.mjAutoReconnectEnabled = true;
     const selectedDeviceId = trustedDeviceSelect.value;
     if (!selectedDeviceId) return;
 
@@ -381,6 +417,7 @@ export default function init(): void | (() => void) {
   };
 
   const reconnectLastDevice = async (): Promise<void> => {
+    state.mjAutoReconnectEnabled = true;
     const lastDeviceId = localStorage.getItem(LAST_DEVICE_STORAGE_KEY);
     if (!lastDeviceId) {
       showMessage('No previous sensor found. Pair one first.', { type: 'warning' });
@@ -397,6 +434,7 @@ export default function init(): void | (() => void) {
   };
 
   const disconnectCurrentDevice = async (): Promise<void> => {
+    state.mjAutoReconnectEnabled = false;
     state.isDisconnecting = true;
     clearAutoReconnectTimer();
     const hadActiveDevice = Boolean(state.device || state.activeConnection);
@@ -429,6 +467,10 @@ export default function init(): void | (() => void) {
   };
 
   const onDisconnectClick = (): void => {
+    if (!state.device && state.isMjAutoRetrying) {
+      stopMjAutoReconnect();
+      return;
+    }
     void disconnectCurrentDevice();
   };
   const onRefreshClick = (): void => {
