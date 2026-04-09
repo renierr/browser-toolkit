@@ -1,0 +1,137 @@
+<div class="flex flex-col gap-4">
+  <div
+    class="card bg-gradient-to-br from-primary/15 via-base-100 to-secondary/10 shadow-xl border border-base-300"
+  >
+    <div class="card-body gap-4">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 class="card-title text-2xl">BLE Climate Monitor</h2>
+          <p class="text-sm text-base-content/70">
+            Pair Mijia MJ_HT_V1 and other BLE temperature and humidity sensors.
+          </p>
+        </div>
+        <div id="connection-chip" class="badge badge-outline">Disconnected</div>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="pair-btn" class="btn btn-primary">
+          <i data-lucide="bluetooth" class="w-4 h-4"></i>
+          Pair Sensor
+        </button>
+        <button id="reconnect-last-btn" class="btn btn-secondary">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          Reconnect Last
+        </button>
+        <button id="disconnect-btn" class="btn btn-error hidden">
+          <i data-lucide="bluetooth-off" class="w-4 h-4"></i>
+          Disconnect
+        </button>
+        <button id="refresh-btn" class="btn btn-ghost hidden">
+          <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          Refresh
+        </button>
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-[2fr_1fr]">
+        <div class="rounded-xl border border-base-300 bg-base-200/40 p-3">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">Trusted Devices</div>
+          <div class="mt-2 flex flex-wrap gap-2">
+            <select
+              id="trusted-device-select"
+              class="select select-bordered select-sm w-full max-w-md"
+            ></select>
+            <button id="connect-selected-btn" class="btn btn-sm btn-outline">
+              Connect Selected
+            </button>
+            <button id="clear-trusted-btn" class="btn btn-sm btn-ghost">Clear Trusted</button>
+          </div>
+          <p id="trusted-hint" class="mt-2 text-xs text-base-content/60">
+            Trusted devices are remembered and can reconnect without pairing again.
+          </p>
+        </div>
+
+        <div class="rounded-xl border border-base-300 bg-base-200/40 p-3">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">Sensor Profile</div>
+          <div id="profile-label" class="mt-2 font-semibold">-</div>
+          <div id="device-label" class="mt-1 text-sm text-base-content/70">No active device</div>
+        </div>
+      </div>
+
+      <div id="unsupported-alert" class="alert alert-error hidden">
+        <i data-lucide="bluetooth-off" class="w-4 h-4"></i>
+        <span>Web Bluetooth is not supported in this browser.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs uppercase text-base-content/60">Temperature</div>
+        <div class="flex items-end gap-2">
+          <span id="temperature-value" class="text-4xl font-black tabular-nums text-primary"
+            >--</span
+          >
+          <span class="text-base-content/60 pb-1">deg C</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs uppercase text-base-content/60">Humidity</div>
+        <div class="flex items-end gap-2">
+          <span id="humidity-value" class="text-4xl font-black tabular-nums text-secondary"
+            >--</span
+          >
+          <span class="text-base-content/60 pb-1">%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs uppercase text-base-content/60">Comfort</div>
+        <div id="comfort-value" class="text-2xl font-bold">Waiting for data</div>
+        <div id="dewpoint-value" class="text-sm text-base-content/70">Dew point: --</div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs uppercase text-base-content/60">Battery</div>
+        <div class="flex items-end gap-2">
+          <span id="battery-value" class="text-3xl font-extrabold tabular-nums">--</span>
+          <span class="text-base-content/60 pb-1">%</span>
+        </div>
+        <progress
+          id="battery-progress"
+          class="progress progress-primary w-full"
+          value="0"
+          max="100"
+        ></progress>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs uppercase text-base-content/60">Pressure</div>
+        <div class="flex items-end gap-2">
+          <span id="pressure-value" class="text-3xl font-extrabold tabular-nums">--</span>
+          <span class="text-base-content/60 pb-1">hPa</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs uppercase text-base-content/60">Voltage</div>
+        <div class="flex items-end gap-2">
+          <span id="voltage-value" class="text-3xl font-extrabold tabular-nums">--</span>
+          <span class="text-base-content/60 pb-1">V</span>
+        </div>
+        <div id="updated-at" class="text-xs text-base-content/60">Last update: --</div>
+      </div>
+    </div>
+  </div>
+</div>

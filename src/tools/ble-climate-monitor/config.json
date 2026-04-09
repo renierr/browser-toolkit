@@ -1,0 +1,7 @@
+{
+  "name": "BLE Climate Monitor",
+  "description": "Connect to BLE temperature and humidity sensors like Mijia MJ_HT_V1 and compatible environmental devices.",
+  "icon": "thermometer",
+  "sectionId": "devices",
+  "order": 11
+}
