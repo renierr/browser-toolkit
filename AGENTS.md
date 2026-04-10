@@ -15,6 +15,7 @@ For extended examples and walkthroughs, see:
 
 ## ALWAYS
 
+- **Caveman terse style** (caveman.md): REQUIRED. Drop filler, articles, pleasantries.
 - Use `pnpm` only. Never use `npm`.
 - Check existing implementations before adding new code:
   - similar tools in `src/tools/*`
@@ -31,7 +32,6 @@ For extended examples and walkthroughs, see:
 - Keep custom CSS minimal in `src/css/style.css`.
 - Do not add dependencies unless necessary. Ask first if unclear.
 - No Node.js-only APIs in tool code (`fs`, `path`, `os`, `child_process`, Node `crypto`, etc.).
-- Use terse communication. Drop filler, keep technical accuracy. See [caveman.md](caveman.md).
 
 ## PREFER
 
