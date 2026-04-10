@@ -3,6 +3,7 @@
 This file is the fast, high-priority rule set for AI coding agents.
 
 For extended examples and walkthroughs, see:
+
 - `AGENTS.details.md`
 - `docs/index.md`
 
@@ -30,6 +31,7 @@ For extended examples and walkthroughs, see:
 - Keep custom CSS minimal in `src/css/style.css`.
 - Do not add dependencies unless necessary. Ask first if unclear.
 - No Node.js-only APIs in tool code (`fs`, `path`, `os`, `child_process`, Node `crypto`, etc.).
+- Use terse communication. Drop filler, keep technical accuracy. See [caveman.md](caveman.md).
 
 ## PREFER
 
@@ -59,17 +61,20 @@ For extended examples and walkthroughs, see:
 ## Agent Workflow Checklist
 
 Before editing:
+
 - Confirm similar code does not already exist.
 - Confirm needed utilities are not already in `src/js/*`.
 - Confirm new dependency is truly required.
 
 While editing:
+
 - Keep changes scoped to requested areas.
 - Keep state local to `init()`.
 - Keep listeners local to tool container where possible.
 - Add cleanup for side effects.
 
 After editing:
+
 - Run `pnpm tsc`.
 - Optionally run file-scoped formatting on touched files.
 - Report what changed and why.
