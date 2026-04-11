@@ -194,3 +194,4 @@ After creating tool:
 
 - pnpm tsc
 - pnpm exec prettier --write <touched-file>
+- pnpm generate:tool-description
