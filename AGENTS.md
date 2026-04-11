@@ -126,6 +126,7 @@ export default function init(): void | (() => void) {
 
 - Core rules: `AGENTS.md`
 - Extended guidance and examples: `AGENTS.details.md`
+- Skill routing helpers: `.agents/skills/*/SKILL.md` (for task-specific entry points, not source-of-truth rules)
 - Full project documentation: `docs/index.md`
 - Shared utilities: `src/js/*`
 - Existing tool patterns: `src/tools/*`

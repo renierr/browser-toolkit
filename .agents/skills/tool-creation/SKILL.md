@@ -1,20 +1,39 @@
 ---
 name: tool-creation
-description: Create new browser-toolkit tools following project patterns
+description: Create new browser-toolkit tools following project patterns. Validates with pnpm tsc, checks for similar tools first, returns cleanup from init().
 ---
 
-## When to use
+## When to use me
 
-User wants to create or add a new tool to browser-toolkit.
+Use this skill when user wants to create or add a new tool to browser-toolkit.
+
+**Trigger phrases:**
+
+- "add a tool"
+- "new tool"
+- "create a tool"
+- "build a tool"
+- "I need a tool that..."
+- "can you make a [X] tool?"
+
+**Recognition patterns:**
+
+- User describes functionality that doesn't exist in TOOLS.md
+- User asks "we should add..." or "let's add..."
+- User wants features available in other browser toolkits but not here
 
 ## Workflow
 
-1. Plan first—ask user for requirements and confirm approach before implementing
-2. Check src/tools/\* for similar tools first to find reusable patterns
+1. Plan first-ask questions only when requirements are unclear
+2. Check src/tools/* for similar tools first to find reusable patterns
 3. Use pnpm (not npm)
-4. Create required files: config.json, template.html, index.ts (only if JS needed)
-5. Follow tool entry contract
-6. Run pnpm tsc before completing
+4. Keep tool code browser-only (no Node.js-only APIs)
+5. Ask before adding dependencies when unclear
+6. Create required files: config.json, template.html, index.ts (only if JS needed)
+7. Follow tool entry contract
+8. Run pnpm tsc before completing
+
+Source of truth: follow `AGENTS.md` and `AGENTS.details.md` when any rule conflicts with this skill.
 
 ## Tool Entry Contract
 
@@ -179,7 +198,7 @@ return false;
 
 ## Shared Utilities
 
-Use existing helpers in src/js/_ before writing new ones. This list is not exhaustive—check src/js/_ in plan mode for newly added utilities.
+Use existing helpers in src/js/* before writing new ones. This list is not exhaustive; check src/js/* for newly added utilities.
 
 Known utilities:
 
