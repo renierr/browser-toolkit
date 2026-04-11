@@ -1,6 +1,20 @@
 ---
 name: tool-creation
-description: Create new browser-toolkit tools following project patterns. Validates with pnpm tsc, checks for similar tools first, returns cleanup from init().
+description: Create or add a new tool for browser-toolkit.
+when_to_use: User asks to add/create/build a new tool in src/tools/*.
+triggers:
+  - add a tool
+  - new tool
+  - create a tool
+  - build a tool
+  - can you make a tool
+keywords:
+  - src/tools
+  - config.json
+  - template.html
+  - index.ts
+  - init cleanup
+  - pnpm tsc
 ---
 
 ## When to use me
