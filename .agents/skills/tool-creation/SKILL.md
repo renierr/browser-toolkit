@@ -9,11 +9,12 @@ User wants to create or add a new tool to browser-toolkit.
 
 ## Workflow
 
-1. Check src/tools/\* for similar tools first
-2. Use pnpm (not npm)
-3. Create required files: config.json, template.html, index.ts (only if JS needed)
-4. Follow tool entry contract
-5. Run pnpm tsc before completing
+1. Plan first—ask user for requirements and confirm approach before implementing
+2. Check src/tools/\* for similar tools first to find reusable patterns
+3. Use pnpm (not npm)
+4. Create required files: config.json, template.html, index.ts (only if JS needed)
+5. Follow tool entry contract
+6. Run pnpm tsc before completing
 
 ## Tool Entry Contract
 
@@ -178,7 +179,9 @@ return false;
 
 ## Shared Utilities
 
-Use existing helpers in src/js/\* before writing new ones:
+Use existing helpers in src/js/_ before writing new ones. This list is not exhaustive—check src/js/_ in plan mode for newly added utilities.
+
+Known utilities:
 
 - src/js/file-utils.ts: dropzone handling and file download
 - src/js/theme.ts: theme detection via data-theme
