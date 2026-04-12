@@ -141,6 +141,32 @@ export default function init(): void | (() => void) {
 
   const setMode = (next: ToolMode): void => {
     mode = next;
+    const isDrawMode = next !== 'pan';
+
+    if (isDrawMode) {
+      ui.btnModeDraw.classList.add('btn-primary');
+      ui.btnModePan.classList.remove('btn-primary');
+      ui.drawTools.classList.remove('hidden');
+      ui.drawOptions.classList.remove('hidden');
+      ui.drawOptions.classList.add('h-7', 'w-px', 'bg-base-300');
+      ui.drawOptionsDivider.classList.remove('hidden');
+      for (const el of ui.drawOpts) {
+        el.classList.remove('hidden');
+      }
+      ui.btnModeDraw.title = `Drawing: ${next}`;
+    } else {
+      ui.btnModePan.classList.add('btn-primary');
+      ui.btnModeDraw.classList.remove('btn-primary');
+      ui.drawTools.classList.add('hidden');
+      ui.drawOptions.classList.add('hidden');
+      ui.drawOptions.classList.remove('h-7', 'w-px', 'bg-base-300');
+      ui.drawOptionsDivider.classList.add('hidden');
+      for (const el of ui.drawOpts) {
+        el.classList.add('hidden');
+      }
+      ui.btnModeDraw.title = 'Draw';
+    }
+
     for (const [key, btn] of Object.entries(ui.modeButtons)) {
       if (key === next) {
         btn.classList.add('btn-primary');
@@ -613,6 +639,14 @@ export default function init(): void | (() => void) {
     button.addEventListener('click', onQuickColorClick);
   }
 
+  ui.btnModePan.addEventListener('click', () => setMode('pan'));
+  ui.btnModeDraw.addEventListener('click', () => {
+    if (mode === 'pan') {
+      setMode('freehand');
+    } else {
+      setMode('pan');
+    }
+  });
   ui.modeButtons.pan.addEventListener('click', () => setMode('pan'));
   ui.modeButtons.freehand.addEventListener('click', () => setMode('freehand'));
   ui.modeButtons.line.addEventListener('click', () => setMode('line'));

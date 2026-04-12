@@ -21,6 +21,12 @@ export type SketchDom = {
   btnZoomOut: HTMLButtonElement;
   btnZoomIn: HTMLButtonElement;
   btnZoomReset: HTMLButtonElement;
+  btnModeDraw: HTMLButtonElement;
+  btnModePan: HTMLButtonElement;
+  drawTools: HTMLElement;
+  drawOptions: HTMLElement;
+  drawOptionsDivider: HTMLElement;
+  drawOpts: HTMLElement[];
   modeButtons: Record<ToolMode, HTMLButtonElement>;
 };
 
@@ -45,11 +51,17 @@ export function getDom(doc: Document): SketchDom | null {
   const btnZoomOut = doc.getElementById('zoom-out') as HTMLButtonElement | null;
   const btnZoomIn = doc.getElementById('zoom-in') as HTMLButtonElement | null;
   const btnZoomReset = doc.getElementById('zoom-reset') as HTMLButtonElement | null;
+  const btnModeDraw = doc.getElementById('mode-draw') as HTMLButtonElement | null;
+  const btnModePan = doc.getElementById('mode-pan') as HTMLButtonElement | null;
   const modePan = doc.getElementById('mode-pan') as HTMLButtonElement | null;
   const modeFreehand = doc.getElementById('mode-freehand') as HTMLButtonElement | null;
   const modeLine = doc.getElementById('mode-line') as HTMLButtonElement | null;
   const modeRect = doc.getElementById('mode-rect') as HTMLButtonElement | null;
   const modeEllipse = doc.getElementById('mode-ellipse') as HTMLButtonElement | null;
+  const drawTools = doc.getElementById('draw-tools') as HTMLElement | null;
+  const drawOptions = doc.getElementById('draw-options') as HTMLElement | null;
+  const drawOptionsDivider = doc.getElementById('draw-options-divider') as HTMLElement | null;
+  const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
 
   if (
     !canvas ||
@@ -71,11 +83,16 @@ export function getDom(doc: Document): SketchDom | null {
     !btnZoomOut ||
     !btnZoomIn ||
     !btnZoomReset ||
+    !btnModeDraw ||
+    !btnModePan ||
     !modePan ||
     !modeFreehand ||
     !modeLine ||
     !modeRect ||
-    !modeEllipse
+    !modeEllipse ||
+    !drawTools ||
+    !drawOptions ||
+    !drawOptionsDivider
   ) {
     return null;
   }
@@ -101,6 +118,12 @@ export function getDom(doc: Document): SketchDom | null {
     btnZoomOut,
     btnZoomIn,
     btnZoomReset,
+    btnModeDraw,
+    btnModePan,
+    drawTools,
+    drawOptions,
+    drawOptionsDivider,
+    drawOpts,
     modeButtons: {
       pan: modePan,
       freehand: modeFreehand,

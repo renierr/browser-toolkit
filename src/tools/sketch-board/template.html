@@ -12,9 +12,15 @@
       </button>
 
       <div class="join">
-        <button id="mode-pan" class="btn btn-sm join-item btn-primary" title="Scroll / Pan">
+        <button id="mode-pan" class="btn btn-sm join-item" title="Scroll / Pan">
           <i data-lucide="hand" class="w-4 h-4"></i>
         </button>
+        <button id="mode-draw" class="btn btn-sm join-item btn-primary" title="Draw">
+          <i data-lucide="pen" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div id="draw-tools" class="join hidden">
         <button id="mode-freehand" class="btn btn-sm join-item" title="Freehand">
           <i data-lucide="pen-tool" class="w-4 h-4"></i>
         </button>
@@ -41,9 +47,9 @@
         </button>
       </div>
 
-      <div class="h-7 w-px bg-base-300"></div>
+      <div id="draw-options" class="h-7 w-px bg-base-300"></div>
 
-      <label class="flex items-center gap-2 text-xs">
+      <label class="draw-opt flex items-center gap-2 text-xs">
         <span>Color</span>
         <input
           id="stroke-color"
@@ -53,7 +59,7 @@
         />
       </label>
 
-      <details id="color-popup" class="dropdown dropdown-bottom dropdown-end">
+      <details id="color-popup" class="draw-opt dropdown dropdown-bottom dropdown-end">
         <summary class="btn btn-sm btn-outline" title="Quick colors">
           <i data-lucide="palette" class="w-4 h-4"></i>
         </summary>
@@ -135,7 +141,7 @@
         </div>
       </details>
 
-      <label class="flex items-center gap-2 text-xs min-w-44">
+      <label class="draw-opt flex items-center gap-2 text-xs min-w-44">
         <span>Width</span>
         <input
           id="stroke-width"
@@ -158,6 +164,8 @@
         <option value="png">PNG</option>
         <option value="jpg">JPG</option>
       </select>
+
+      <div id="draw-options-divider" class="h-7 w-px bg-base-300 hidden"></div>
 
       <button id="clear-canvas" class="btn btn-sm btn-outline" title="Clear canvas">
         <i data-lucide="trash-2" class="w-4 h-4"></i>
