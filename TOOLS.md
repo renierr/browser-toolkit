@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `pnpm generate:tool-description` after changing tool metadata.
 
-- Total tools: **50**
+- Total tools: **53**
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -64,7 +64,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `not set`, icon `file-text`, share target capable `yes`, share target accepts `text/markdown`, `text/x-markdown`, `text/plain`, `application/octet-stream`.
 - Source: `src/tools/markdown-viewer/config.json`
 
-## Images (8)
+## Images (9)
 
 ### AI Background Remover (`background-remover`)
 - Description: Remove image backgrounds locally with an AI segmentation model.
@@ -75,6 +75,11 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Description: Apply AI image effects such as upscaling and line-art conversion.
 - Metadata: Order `5`, icon `sparkles`, share target capable `yes`, share target accepts `image/*`.
 - Source: `src/tools/image-manipulation/config.json`
+
+### Sketch Board (`sketch-board`)
+- Description: Canvas whiteboard with freehand, shapes, export, and local version storage.
+- Metadata: Order `7`, icon `pen-tool`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/sketch-board/config.json`
 
 ### Document Scanner (`document-scanner`)
 - Description: Capture documents, correct perspective, and apply cleanup filters for readable scans.
@@ -170,12 +175,17 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `info`, share target capable `yes`, share target accepts `application/pdf`.
 - Source: `src/tools/pdf-metadata/config.json`
 
-## Utilities (15)
+## Utilities (16)
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
 - Metadata: Order `5`, icon `calculator`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/calculator/config.json`
+
+### Unit Converter Pro (`unit-converter`)
+- Description: Convert between 1000+ units across 20+ categories with a built-in scientific calculator.
+- Metadata: Order `6`, icon `ruler`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/unit-converter/config.json`
 
 ### Code Formatter (`code-formatter`)
 - Description: Format, minify, and highlight source code and structured data.
@@ -247,7 +257,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `not set`, icon `database`, share target capable `yes`, share target accepts `application/vnd.sqlite3`, `application/x-sqlite3`, `.sqlite`, `.sqlite3`, `.db`.
 - Source: `src/tools/sqlite-explorer/config.json`
 
-## Devices (4)
+## Devices (5)
 
 ### Heart Rate Monitor (`heart-rate-monitor`)
 - Description: Connect to a Bluetooth heart rate monitor and track live pulse measurements.
@@ -260,7 +270,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Source: `src/tools/treadmill-control/config.json`
 
 ### NFC Tag Lab (`nfc-tag-lab`)
-- Description: Read, decode, edit, and write NDEF records for NFC tags locally.
+- Description: Scan NFC targets, decode NDEF when available, classify known card/passport/ID signatures, and write editable tags locally.
 - Metadata: Order `3`, icon `nfc`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/nfc-tag-lab/config.json`
 
@@ -268,6 +278,11 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Description: Scan nearby Bluetooth Low Energy devices and identify them with a built-in device database.
 - Metadata: Order `10`, icon `bluetooth`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/ble-scanner/config.json`
+
+### BLE Climate Monitor (`ble-climate-monitor`)
+- Description: Connect to BLE temperature and humidity sensors like Mijia MJ_HT_V1 and compatible environmental devices.
+- Metadata: Order `11`, icon `thermometer`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/ble-climate-monitor/config.json`
 
 ## Notes
 
