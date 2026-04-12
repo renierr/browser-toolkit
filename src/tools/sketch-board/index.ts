@@ -83,6 +83,9 @@ export default function init(): void | (() => void) {
       window.cancelAnimationFrame(renderRaf);
       renderRaf = null;
     }
+    if (isStreamingFreehand) {
+      return;
+    }
     drawScene();
   };
 
@@ -313,6 +316,8 @@ export default function init(): void | (() => void) {
     isStreamingFreehand = mode === 'freehand';
 
     if (isStreamingFreehand) {
+      ctx2.save();
+      ctx2.translate(viewport.x, viewport.y);
       drawLivePreview(
         ctx2,
         'freehand',
@@ -322,6 +327,7 @@ export default function init(): void | (() => void) {
         parseInt(ui.widthInput.value, 10),
         freehandPoints
       );
+      ctx2.restore();
       event.preventDefault();
       return;
     }
@@ -365,7 +371,10 @@ export default function init(): void | (() => void) {
         const dy = next.y - prev.y;
         if (dx * dx + dy * dy >= 0.8) {
           freehandPoints.push(next);
+          ctx2.save();
+          ctx2.translate(viewport.x, viewport.y);
           drawLiveFreehandSegment(ctx2, prev, next, color, width);
+          ctx2.restore();
         }
       }
     }
