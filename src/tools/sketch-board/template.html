@@ -1,0 +1,94 @@
+<div class="relative w-[100dvw] h-[100dvh] overflow-hidden bg-base-200">
+  <canvas id="sketch-canvas" class="absolute inset-0 w-full h-full"></canvas>
+
+  <div class="sticky top-0 z-30 p-2 sm:p-3 pointer-events-none">
+    <div
+      class="pointer-events-auto inline-flex flex-wrap items-center gap-2 rounded-box border border-base-300 bg-base-100/90 px-2 py-2 shadow-lg backdrop-blur"
+    >
+      <div class="join">
+        <button id="mode-pan" class="btn btn-sm join-item btn-primary" title="Scroll / Pan">
+          <i data-lucide="hand" class="w-4 h-4"></i>
+        </button>
+        <button id="mode-freehand" class="btn btn-sm join-item" title="Freehand">
+          <i data-lucide="pen-tool" class="w-4 h-4"></i>
+        </button>
+        <button id="mode-line" class="btn btn-sm join-item" title="Line">
+          <i data-lucide="slash" class="w-4 h-4"></i>
+        </button>
+        <button id="mode-rect" class="btn btn-sm join-item" title="Rectangle">
+          <i data-lucide="square" class="w-4 h-4"></i>
+        </button>
+        <button id="mode-ellipse" class="btn btn-sm join-item" title="Ellipse">
+          <i data-lucide="circle" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="h-7 w-px bg-base-300"></div>
+
+      <label class="flex items-center gap-2 text-xs">
+        <span>Color</span>
+        <input id="stroke-color" type="color" class="h-8 w-10 rounded border border-base-300" />
+      </label>
+
+      <label class="flex items-center gap-2 text-xs min-w-44">
+        <span>Width</span>
+        <input id="stroke-width" type="range" min="1" max="24" value="3" class="range range-xs" />
+      </label>
+
+      <select id="export-format" class="select select-sm w-24" title="Export format">
+        <option value="png">PNG</option>
+        <option value="jpg">JPG</option>
+        <option value="webp">WEBP</option>
+      </select>
+
+      <button id="clear-canvas" class="btn btn-sm btn-outline" title="Clear canvas">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+
+      <button id="save-drawing" class="btn btn-sm btn-primary" title="Save drawing">
+        <i data-lucide="save" class="w-4 h-4 mr-1"></i>Save
+      </button>
+
+      <button id="open-gallery" class="btn btn-sm" title="Show saved drawings">
+        <i data-lucide="images" class="w-4 h-4 mr-1"></i>Gallery
+      </button>
+
+      <button id="export-file" class="btn btn-sm" title="Export to file">
+        <i data-lucide="download" class="w-4 h-4"></i>
+      </button>
+
+      <button id="copy-image" class="btn btn-sm" title="Copy as image">
+        <i data-lucide="clipboard" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <dialog id="gallery-modal" class="modal">
+    <div class="modal-box max-w-4xl">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+      </form>
+      <h3 class="font-bold text-lg mb-2">Saved drawings</h3>
+      <p class="text-sm opacity-70 mb-4">Manual versions from local IndexedDB store.</p>
+
+      <div id="gallery-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
+
+  <template id="gallery-item-template">
+    <article class="rounded-box border border-base-300 p-2 bg-base-100">
+      <img class="gallery-thumb w-full h-28 object-contain rounded bg-base-200" alt="Preview" />
+      <div class="mt-2">
+        <div class="gallery-name text-sm font-medium truncate"></div>
+        <div class="gallery-meta text-xs opacity-70"></div>
+      </div>
+      <div class="mt-2 flex gap-1 justify-end">
+        <button class="btn btn-xs load-drawing" type="button">Load</button>
+        <button class="btn btn-xs btn-outline delete-drawing" type="button">Delete</button>
+      </div>
+    </article>
+  </template>
+</div>
