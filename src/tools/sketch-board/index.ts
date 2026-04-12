@@ -361,9 +361,20 @@ export default function init(): void | (() => void) {
     }
   };
 
+  const onQuickColorClick = (event: Event): void => {
+    const target = event.currentTarget as HTMLButtonElement;
+    const color = target.getAttribute('data-color');
+    if (!color) return;
+    ui.colorInput.value = color;
+    ui.colorPopup.removeAttribute('open');
+  };
+
   ui.btnBackOverview.addEventListener('click', onBackOverview);
   ui.btnUndo.addEventListener('click', onUndo);
   ui.btnRedo.addEventListener('click', onRedo);
+  for (const button of ui.quickColorButtons) {
+    button.addEventListener('click', onQuickColorClick);
+  }
 
   ui.modeButtons.pan.addEventListener('click', () => setMode('pan'));
   ui.modeButtons.freehand.addEventListener('click', () => setMode('freehand'));
@@ -426,5 +437,8 @@ export default function init(): void | (() => void) {
     ui.canvas.removeEventListener('pointermove', onPointerMove);
     ui.canvas.removeEventListener('pointerup', onPointerUp);
     ui.canvas.removeEventListener('pointercancel', onPointerUp);
+    for (const button of ui.quickColorButtons) {
+      button.removeEventListener('click', onQuickColorClick);
+    }
   };
 }

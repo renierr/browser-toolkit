@@ -156,9 +156,6 @@ export function makeThumbnail(elements: SketchElement[]): string {
   const ctx = thumbCanvas.getContext('2d');
   if (!ctx) return '';
 
-  ctx.fillStyle = '#f4f5f6';
-  ctx.fillRect(0, 0, thumbCanvas.width, thumbCanvas.height);
-
   const bounds = computeSceneBounds(elements);
   if (!bounds) return thumbCanvas.toDataURL('image/png');
 

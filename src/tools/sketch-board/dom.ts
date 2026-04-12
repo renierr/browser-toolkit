@@ -6,6 +6,8 @@ export type SketchDom = {
   galleryList: HTMLDivElement;
   galleryTemplate: HTMLTemplateElement;
   colorInput: HTMLInputElement;
+  colorPopup: HTMLDetailsElement;
+  quickColorButtons: HTMLButtonElement[];
   widthInput: HTMLInputElement;
   exportFormat: HTMLSelectElement;
   btnBackOverview: HTMLButtonElement;
@@ -25,6 +27,8 @@ export function getDom(doc: Document): SketchDom | null {
   const galleryList = doc.getElementById('gallery-list') as HTMLDivElement | null;
   const galleryTemplate = doc.getElementById('gallery-item-template') as HTMLTemplateElement | null;
   const colorInput = doc.getElementById('stroke-color') as HTMLInputElement | null;
+  const colorPopup = doc.getElementById('color-popup') as HTMLDetailsElement | null;
+  const quickColorButtons = Array.from(doc.querySelectorAll('.quick-color')) as HTMLButtonElement[];
   const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
   const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
   const btnBackOverview = doc.getElementById('back-overview') as HTMLButtonElement | null;
@@ -47,6 +51,7 @@ export function getDom(doc: Document): SketchDom | null {
     !galleryList ||
     !galleryTemplate ||
     !colorInput ||
+    !colorPopup ||
     !widthInput ||
     !exportFormat ||
     !btnBackOverview ||
@@ -72,6 +77,8 @@ export function getDom(doc: Document): SketchDom | null {
     galleryList,
     galleryTemplate,
     colorInput,
+    colorPopup,
+    quickColorButtons,
     widthInput,
     exportFormat,
     btnBackOverview,
