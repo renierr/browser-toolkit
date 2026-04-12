@@ -54,9 +54,10 @@ export default function init(): void | (() => void) {
   let panStartPointer: Point | null = null;
   let panStartViewport: ViewportState = { x: 0, y: 0, scale: 1 };
 
-  let lastPinchDist = 0;
-  let lastPinchCenter: Point | null = null;
   let isStreamingFreehand = false;
+
+  let pinchStartDist = 0;
+  let pinchStartCenter: Point | null = null;
 
   const dpr = window.devicePixelRatio || 1;
   const baseLayerCanvas = document.createElement('canvas');
@@ -323,38 +324,11 @@ export default function init(): void | (() => void) {
   };
 
   const onPointerDown = (event: PointerEvent): void => {
-    if (event.pointerType === 'touch') {
-      const allTouches = document.querySelectorAll('#sketch-canvas');
-      if (!allTouches.length) return;
-    }
-
-    if (activePointerId !== null && activePointerId !== event.pointerId) {
-      const otherActive = document.elementFromPoint(event.clientX, event.clientY);
-      if (otherActive === ui.canvas) {
-        if (activePointerId !== null && lastPinchCenter) {
-          const currentPointers = [event];
-          const newDist = getPinchDist(currentPointers);
-          if (newDist > 0 && lastPinchDist > 0) {
-            const scale = newDist / lastPinchDist;
-            if (Math.abs(scale - 1) > 0.1) {
-              const delta = scale > 1 ? 1 : -1;
-              applyZoom(delta, lastPinchCenter.x, lastPinchCenter.y);
-              lastPinchDist = newDist;
-              return;
-            }
-          }
-        }
-      }
-    }
-
     if (activePointerId !== null && event.button !== 0) return;
 
     activePointerId = event.pointerId;
     isPointerActive = true;
     ui.canvas.setPointerCapture(event.pointerId);
-
-    lastPinchDist = event.pressure > 0 ? event.pressure : 0;
-    lastPinchCenter = { x: event.clientX, y: event.clientY };
 
     if (mode === 'pan') {
       panStartPointer = { x: event.clientX, y: event.clientY };
@@ -637,11 +611,54 @@ export default function init(): void | (() => void) {
     applyZoom(delta, event.clientX, event.clientY);
   };
 
-  const getPinchDist = (pts: PointerEvent[]): number => {
-    if (pts.length < 2) return 0;
-    const dx = pts[1].clientX - pts[0].clientX;
-    const dy = pts[1].clientY - pts[0].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
+  const getTouchDistance = (t0: Touch, t1: Touch): number => {
+    const dx = t0.clientX - t1.clientX;
+    const dy = t0.clientY - t1.clientY;
+    return Math.hypot(dx, dy);
+  };
+
+  const getTouchCenter = (t0: Touch, t1: Touch): Point => {
+    return {
+      x: (t0.clientX + t1.clientX) / 2,
+      y: (t0.clientY + t1.clientY) / 2,
+    };
+  };
+
+  const onTouchStart = (event: TouchEvent): void => {
+    const touches = event.touches;
+    if (touches.length === 2) {
+      event.preventDefault();
+      const t0 = touches[0];
+      const t1 = touches[1];
+      pinchStartDist = getTouchDistance(t0, t1);
+      pinchStartCenter = getTouchCenter(t0, t1);
+    }
+  };
+
+  const onTouchMove = (event: TouchEvent): void => {
+    const touches = event.touches;
+    if (touches.length === 2 && pinchStartDist > 0 && pinchStartCenter) {
+      event.preventDefault();
+      const t0 = touches[0];
+      const t1 = touches[1];
+      const currentDist = getTouchDistance(t0, t1);
+      const currentCenter = getTouchCenter(t0, t1);
+
+      const scaleRatio = currentDist / pinchStartDist;
+      if (Math.abs(scaleRatio - 1) > 0.05) {
+        const delta = scaleRatio > 1 ? 1 : -1;
+        applyZoom(delta, currentCenter.x, currentCenter.y);
+        pinchStartDist = currentDist;
+        pinchStartCenter = currentCenter;
+      }
+    }
+  };
+
+  const onTouchEnd = (event: TouchEvent): void => {
+    if (event.touches.length < 2) {
+      pinchStartDist = 0;
+      pinchStartCenter = null;
+    }
   };
 
   const onQuickColorClick = (event: Event): void => {
@@ -720,6 +737,11 @@ export default function init(): void | (() => void) {
   ui.canvas.addEventListener('pointerup', onPointerUp, { passive: false });
   ui.canvas.addEventListener('pointercancel', onPointerUp, { passive: false });
 
+  ui.canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+  ui.canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+  ui.canvas.addEventListener('touchend', onTouchEnd, { passive: false });
+  ui.canvas.addEventListener('touchcancel', onTouchEnd, { passive: false });
+
   const resizeObserver = new ResizeObserver(() => {
     resizeCanvas();
   });
@@ -742,6 +764,10 @@ export default function init(): void | (() => void) {
     ui.canvas.removeEventListener('pointerup', onPointerUp);
     ui.canvas.removeEventListener('pointercancel', onPointerUp);
     ui.canvas.removeEventListener('wheel', onWheel);
+    ui.canvas.removeEventListener('touchstart', onTouchStart);
+    ui.canvas.removeEventListener('touchmove', onTouchMove);
+    ui.canvas.removeEventListener('touchend', onTouchEnd);
+    ui.canvas.removeEventListener('touchcancel', onTouchEnd);
     for (const button of ui.quickColorButtons) {
       button.removeEventListener('click', onQuickColorClick);
     }
