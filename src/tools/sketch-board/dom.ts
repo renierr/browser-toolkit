@@ -28,7 +28,7 @@ export type SketchDom = {
   toolbarInners: HTMLElement[];
   drawTools: HTMLElement;
   drawToolsBtn: HTMLLabelElement;
-  drawToolsIcon: HTMLElement;
+  drawToolsIcon: HTMLSpanElement;
   drawToolsLabel: HTMLSpanElement;
   drawOptions: HTMLElement;
   drawOptionsDivider: HTMLElement;

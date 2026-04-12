@@ -1,3 +1,4 @@
+import { renderToolIconSvg } from '@js/tool-icons.ts';
 import { CanvasExporter } from '@js/canvas-utils.ts';
 import router from '@js/router.ts';
 import { showMessage } from '@js/ui.ts';
@@ -163,11 +164,17 @@ export default function init(): void | (() => void) {
 
   const updateDrawToolsLabel = (tool: ToolMode): void => {
     ui.drawToolsLabel.textContent = TOOL_LABELS[tool];
-    ui.drawToolsIcon.setAttribute('data-lucide', TOOL_ICONS[tool]);
-    ui.drawToolsBtn.parentElement?.removeAttribute('open');
+    const className =
+      'w-4 h-4' + (tool === 'ellipse-filled' || tool === 'rect-filled' ? ' fill-current' : '');
+    ui.drawToolsIcon.innerHTML = renderToolIconSvg(TOOL_ICONS[tool], className);
+  };
+
+  const closeDrawToolsDropdown = (): void => {
+    (document.activeElement as HTMLElement)?.blur();
   };
 
   const setMode = (next: ToolMode): void => {
+    closeDrawToolsDropdown();
     mode = next;
     const isDrawMode = next !== 'pan';
 
