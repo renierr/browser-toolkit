@@ -446,8 +446,8 @@ export default function init(): void | (() => void) {
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return null;
 
-    const offsetX = -bounds.x + viewport.x;
-    const offsetY = -bounds.y + viewport.y;
+    const offsetX = -bounds.x;
+    const offsetY = -bounds.y;
     tempCtx.translate(offsetX, offsetY);
     for (const el of elements) {
       drawElement(tempCtx, el);
