@@ -11,6 +11,7 @@ export type SketchDom = {
   widthInput: HTMLInputElement;
   exportFormat: HTMLSelectElement;
   btnBackOverview: HTMLButtonElement;
+  btnOverviewLabel: HTMLSpanElement;
   btnClear: HTMLButtonElement;
   btnUndo: HTMLButtonElement;
   btnRedo: HTMLButtonElement;
@@ -23,6 +24,8 @@ export type SketchDom = {
   btnZoomReset: HTMLButtonElement;
   btnModeDraw: HTMLButtonElement;
   btnModePan: HTMLButtonElement;
+  btnCollapse: HTMLButtonElement;
+  toolbarInners: HTMLElement[];
   drawTools: HTMLElement;
   drawOptions: HTMLElement;
   drawOptionsDivider: HTMLElement;
@@ -41,6 +44,7 @@ export function getDom(doc: Document): SketchDom | null {
   const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
   const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
   const btnBackOverview = doc.getElementById('back-overview') as HTMLButtonElement | null;
+  const btnOverviewLabel = doc.getElementById('overview-label') as HTMLSpanElement | null;
   const btnClear = doc.getElementById('clear-canvas') as HTMLButtonElement | null;
   const btnUndo = doc.getElementById('undo-action') as HTMLButtonElement | null;
   const btnRedo = doc.getElementById('redo-action') as HTMLButtonElement | null;
@@ -62,6 +66,8 @@ export function getDom(doc: Document): SketchDom | null {
   const drawOptions = doc.getElementById('draw-options') as HTMLElement | null;
   const drawOptionsDivider = doc.getElementById('draw-options-divider') as HTMLElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
+  const btnCollapse = doc.getElementById('collapse-toolbar') as HTMLButtonElement | null;
+  const toolbarInners = Array.from(doc.querySelectorAll('.toolbar-inner')) as HTMLElement[];
 
   if (
     !canvas ||
@@ -73,6 +79,7 @@ export function getDom(doc: Document): SketchDom | null {
     !widthInput ||
     !exportFormat ||
     !btnBackOverview ||
+    !btnOverviewLabel ||
     !btnClear ||
     !btnUndo ||
     !btnRedo ||
@@ -92,7 +99,9 @@ export function getDom(doc: Document): SketchDom | null {
     !modeEllipse ||
     !drawTools ||
     !drawOptions ||
-    !drawOptionsDivider
+    !drawOptionsDivider ||
+    !btnCollapse ||
+    toolbarInners.length === 0
   ) {
     return null;
   }
@@ -108,6 +117,7 @@ export function getDom(doc: Document): SketchDom | null {
     widthInput,
     exportFormat,
     btnBackOverview,
+    btnOverviewLabel,
     btnClear,
     btnUndo,
     btnRedo,
@@ -120,6 +130,8 @@ export function getDom(doc: Document): SketchDom | null {
     btnZoomReset,
     btnModeDraw,
     btnModePan,
+    btnCollapse,
+    toolbarInners,
     drawTools,
     drawOptions,
     drawOptionsDivider,

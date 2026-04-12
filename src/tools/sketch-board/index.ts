@@ -40,6 +40,7 @@ export default function init(): void | (() => void) {
   let renderRaf: number | null = null;
   let renderQueued = false;
   let baseLayerDirty = true;
+  let isToolbarCollapsed = false;
 
   const MIN_SCALE = 0.1;
   const MAX_SCALE = 10;
@@ -581,6 +582,25 @@ export default function init(): void | (() => void) {
     }
   };
 
+  const onToggleToolbar = (): void => {
+    isToolbarCollapsed = !isToolbarCollapsed;
+    if (isToolbarCollapsed) {
+      ui.btnOverviewLabel.classList.add('hidden');
+      for (const el of ui.toolbarInners) {
+        el.classList.add('hidden');
+      }
+      ui.btnCollapse.classList.add('rotate-180');
+      ui.btnCollapse.title = 'Expand toolbar';
+    } else {
+      ui.btnOverviewLabel.classList.remove('hidden');
+      for (const el of ui.toolbarInners) {
+        el.classList.remove('hidden');
+      }
+      ui.btnCollapse.classList.remove('rotate-180');
+      ui.btnCollapse.title = 'Collapse toolbar';
+    }
+  };
+
   const applyZoom = (delta: number, focusX?: number, focusY?: number): void => {
     const oldScale = viewport.scale;
     let newScale = oldScale * Math.pow(ZOOM_STEP, delta);
@@ -693,6 +713,7 @@ export default function init(): void | (() => void) {
   });
   ui.btnExport.addEventListener('click', () => void onExport());
   ui.btnClipboard.addEventListener('click', () => void onClipboard());
+  ui.btnCollapse.addEventListener('click', onToggleToolbar);
 
   ui.canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
   ui.canvas.addEventListener('pointermove', onPointerMove, { passive: false });

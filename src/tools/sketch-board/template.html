@@ -8,10 +8,11 @@
       class="pointer-events-auto inline-flex flex-wrap items-center gap-2 rounded-box border border-base-300 bg-base-100/90 px-2 py-2 shadow-lg backdrop-blur"
     >
       <button id="back-overview" class="btn btn-sm btn-outline" title="Back to overview">
-        <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i>Overview
+        <i data-lucide="arrow-left" class="w-4 h-4"></i
+        ><span id="overview-label" class="ml-1">Overview</span>
       </button>
 
-      <div class="join">
+      <div class="join toolbar-inner">
         <button id="mode-pan" class="btn btn-sm join-item" title="Scroll / Pan">
           <i data-lucide="hand" class="w-4 h-4"></i>
         </button>
@@ -20,7 +21,7 @@
         </button>
       </div>
 
-      <div id="draw-tools" class="join hidden">
+      <div id="draw-tools" class="join toolbar-inner hidden">
         <button id="mode-freehand" class="btn btn-sm join-item" title="Freehand">
           <i data-lucide="pen-tool" class="w-4 h-4"></i>
         </button>
@@ -35,7 +36,7 @@
         </button>
       </div>
 
-      <div class="join">
+      <div class="join toolbar-inner">
         <button id="zoom-out" class="btn btn-sm join-item" title="Zoom out">
           <i data-lucide="zoom-out" class="w-4 h-4"></i>
         </button>
@@ -47,9 +48,9 @@
         </button>
       </div>
 
-      <div id="draw-options" class="h-7 w-px bg-base-300"></div>
+      <div id="draw-options" class="h-7 w-px bg-base-300 toolbar-inner"></div>
 
-      <label class="draw-opt flex items-center gap-2 text-xs">
+      <label class="draw-opt toolbar-inner flex items-center gap-2 text-xs">
         <span>Color</span>
         <input
           id="stroke-color"
@@ -59,7 +60,10 @@
         />
       </label>
 
-      <details id="color-popup" class="draw-opt dropdown dropdown-bottom dropdown-end">
+      <details
+        id="color-popup"
+        class="draw-opt toolbar-inner dropdown dropdown-bottom dropdown-end"
+      >
         <summary class="btn btn-sm btn-outline" title="Quick colors">
           <i data-lucide="palette" class="w-4 h-4"></i>
         </summary>
@@ -141,7 +145,7 @@
         </div>
       </details>
 
-      <label class="draw-opt flex items-center gap-2 text-xs min-w-44">
+      <label class="draw-opt toolbar-inner flex items-center gap-2 text-xs min-w-44">
         <span>Width</span>
         <input
           id="stroke-width"
@@ -156,7 +160,7 @@
 
       <select
         id="export-format"
-        class="select select-sm w-24"
+        class="select select-sm w-24 toolbar-inner"
         title="Export format"
         data-setting="exportFormat"
       >
@@ -165,34 +169,47 @@
         <option value="jpg">JPG</option>
       </select>
 
-      <div id="draw-options-divider" class="h-7 w-px bg-base-300 hidden"></div>
+      <div id="draw-options-divider" class="h-7 w-px bg-base-300 toolbar-inner hidden"></div>
 
-      <button id="clear-canvas" class="btn btn-sm btn-outline" title="Clear canvas">
+      <button id="clear-canvas" class="btn btn-sm btn-outline toolbar-inner" title="Clear canvas">
         <i data-lucide="trash-2" class="w-4 h-4"></i>
       </button>
 
-      <button id="undo-action" class="btn btn-sm btn-outline" title="Undo" disabled>
+      <button id="undo-action" class="btn btn-sm btn-outline toolbar-inner" title="Undo" disabled>
         <i data-lucide="corner-left-up" class="w-4 h-4"></i>
       </button>
 
-      <button id="redo-action" class="btn btn-sm btn-outline" title="Redo" disabled>
+      <button id="redo-action" class="btn btn-sm btn-outline toolbar-inner" title="Redo" disabled>
         <i data-lucide="corner-right-up" class="w-4 h-4"></i>
       </button>
 
-      <button id="save-drawing" class="btn btn-sm" title="Save drawing">
+      <button id="save-drawing" class="btn btn-sm toolbar-inner" title="Save drawing">
         <i data-lucide="save" class="w-4 h-4 mr-1"></i>Save
       </button>
 
-      <button id="open-gallery" class="btn btn-sm" title="Show saved drawings">
+      <button id="open-gallery" class="btn btn-sm toolbar-inner" title="Show saved drawings">
         <i data-lucide="images" class="w-4 h-4 mr-1"></i>Gallery
       </button>
 
-      <button id="export-file" class="btn btn-sm btn-secondary" title="Export to file">
+      <button
+        id="export-file"
+        class="btn btn-sm btn-secondary toolbar-inner"
+        title="Export to file"
+      >
         <i data-lucide="download" class="w-4 h-4"></i>
       </button>
 
-      <button id="copy-image" class="btn btn-sm" title="Copy as image">
+      <button id="copy-image" class="btn btn-sm toolbar-inner" title="Copy as image">
         <i data-lucide="clipboard" class="w-4 h-4"></i>
+      </button>
+
+      <button
+        id="collapse-toolbar"
+        class="btn btn-sm btn-outline"
+        title="Collapse toolbar"
+        style="transition: transform 200ms ease"
+      >
+        <i data-lucide="chevron-left" class="w-4 h-4" style="transition: transform 200ms ease"></i>
       </button>
     </div>
   </div>
