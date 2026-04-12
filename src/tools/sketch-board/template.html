@@ -1,4 +1,6 @@
-<div class="relative w-[100dvw] h-[100dvh] overflow-hidden bg-base-200">
+<div
+  class="fixed inset-0 w-[100dvw] h-[100dvh] max-w-[100dvw] max-h-[100dvh] overflow-hidden overscroll-none checkerboard-bg"
+>
   <canvas id="sketch-canvas" class="absolute inset-0 w-full h-full"></canvas>
 
   <div class="sticky top-0 z-30 p-2 sm:p-3 pointer-events-none">
@@ -27,18 +29,31 @@
 
       <label class="flex items-center gap-2 text-xs">
         <span>Color</span>
-        <input id="stroke-color" type="color" class="h-8 w-10 rounded border border-base-300" />
+        <input id="stroke-color" type="color" class="h-8 w-10 rounded border border-base-300" data-setting="strokeColor" />
       </label>
 
       <label class="flex items-center gap-2 text-xs min-w-44">
         <span>Width</span>
-        <input id="stroke-width" type="range" min="1" max="24" value="3" class="range range-xs" />
+        <input
+          id="stroke-width"
+          type="range"
+          min="1"
+          max="24"
+          value="3"
+          class="range range-xs"
+          data-setting="strokeWidth"
+        />
       </label>
 
-      <select id="export-format" class="select select-sm w-24" title="Export format">
+      <select
+        id="export-format"
+        class="select select-sm w-24"
+        title="Export format"
+        data-setting="exportFormat"
+      >
+        <option value="webp">WEBP</option>
         <option value="png">PNG</option>
         <option value="jpg">JPG</option>
-        <option value="webp">WEBP</option>
       </select>
 
       <button id="clear-canvas" class="btn btn-sm btn-outline" title="Clear canvas">

@@ -1,376 +1,27 @@
 import { CanvasExporter } from '@js/canvas-utils.ts';
+import { isDarkMode } from '@js/theme.ts';
 import { showMessage } from '@js/ui.ts';
-
-type ToolMode = 'pan' | 'freehand' | 'line' | 'rect' | 'ellipse';
-
-type Point = {
-  x: number;
-  y: number;
-};
-
-type BaseElement = {
-  id: string;
-  type: ToolMode;
-  color: string;
-  width: number;
-};
-
-type FreehandElement = BaseElement & {
-  type: 'freehand';
-  points: Point[];
-};
-
-type LineElement = BaseElement & {
-  type: 'line';
-  start: Point;
-  end: Point;
-};
-
-type RectElement = BaseElement & {
-  type: 'rect';
-  start: Point;
-  end: Point;
-};
-
-type EllipseElement = BaseElement & {
-  type: 'ellipse';
-  start: Point;
-  end: Point;
-};
-
-type SketchElement = FreehandElement | LineElement | RectElement | EllipseElement;
-
-type ViewportState = {
-  x: number;
-  y: number;
-};
-
-type DrawingMeta = {
-  elementCount: number;
-  colors: string[];
-  lastTool: ToolMode;
-};
-
-type DrawingRecord = {
-  id: string;
-  name: string;
-  createdAt: number;
-  updatedAt: number;
-  viewport: ViewportState;
-  elements: SketchElement[];
-  thumbnailDataUrl: string;
-  meta: DrawingMeta;
-};
-
-const DB_NAME = 'bt-sketch-board-db';
-const DB_VERSION = 1;
-const STORE_NAME = 'drawings';
-
-function openDb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-      }
-    };
-
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function getAllDrawings(): Promise<DrawingRecord[]> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).getAll();
-
-    req.onsuccess = () => {
-      const rows = (req.result as DrawingRecord[]) || [];
-      rows.sort((a, b) => b.updatedAt - a.updatedAt);
-      resolve(rows);
-    };
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function putDrawing(record: DrawingRecord): Promise<void> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const req = tx.objectStore(STORE_NAME).put(record);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function deleteDrawing(id: string): Promise<void> {
-  const db = await openDb();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, 'readwrite');
-    const req = tx.objectStore(STORE_NAME).delete(id);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
-}
-
-function normalizeRect(start: Point, end: Point): { x: number; y: number; w: number; h: number } {
-  return {
-    x: Math.min(start.x, end.x),
-    y: Math.min(start.y, end.y),
-    w: Math.abs(end.x - start.x),
-    h: Math.abs(end.y - start.y),
-  };
-}
-
-function createElementId(): string {
-  return crypto.randomUUID();
-}
-
-function computeSceneBounds(elements: SketchElement[]): {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-} | null {
-  if (elements.length === 0) return null;
-
-  let minX = Number.POSITIVE_INFINITY;
-  let minY = Number.POSITIVE_INFINITY;
-  let maxX = Number.NEGATIVE_INFINITY;
-  let maxY = Number.NEGATIVE_INFINITY;
-
-  for (const el of elements) {
-    if (el.type === 'freehand') {
-      for (const p of el.points) {
-        minX = Math.min(minX, p.x - el.width);
-        minY = Math.min(minY, p.y - el.width);
-        maxX = Math.max(maxX, p.x + el.width);
-        maxY = Math.max(maxY, p.y + el.width);
-      }
-      continue;
-    }
-
-    const rect = normalizeRect(el.start, el.end);
-    minX = Math.min(minX, rect.x - el.width);
-    minY = Math.min(minY, rect.y - el.width);
-    maxX = Math.max(maxX, rect.x + rect.w + el.width);
-    maxY = Math.max(maxY, rect.y + rect.h + el.width);
-  }
-
-  return { minX, minY, maxX, maxY };
-}
-
-function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): void {
-  ctx.strokeStyle = el.color;
-  ctx.lineWidth = el.width;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-
-  if (el.type === 'freehand') {
-    if (el.points.length < 2) return;
-    ctx.beginPath();
-    ctx.moveTo(el.points[0].x, el.points[0].y);
-    for (let i = 1; i < el.points.length; i++) {
-      const p = el.points[i];
-      ctx.lineTo(p.x, p.y);
-    }
-    ctx.stroke();
-    return;
-  }
-
-  if (el.type === 'line') {
-    ctx.beginPath();
-    ctx.moveTo(el.start.x, el.start.y);
-    ctx.lineTo(el.end.x, el.end.y);
-    ctx.stroke();
-    return;
-  }
-
-  const rect = normalizeRect(el.start, el.end);
-
-  if (el.type === 'rect') {
-    if (rect.w < 1 || rect.h < 1) return;
-    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-    return;
-  }
-
-  if (rect.w < 1 || rect.h < 1) return;
-
-  ctx.beginPath();
-  ctx.ellipse(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, rect.h / 2, 0, 0, Math.PI * 2);
-  ctx.stroke();
-}
-
-function buildPreviewElement(
-  mode: Exclude<ToolMode, 'pan'>,
-  start: Point,
-  end: Point,
-  color: string,
-  width: number,
-  points: Point[]
-): SketchElement | null {
-  if (mode === 'freehand') {
-    if (points.length < 2) return null;
-    return {
-      id: createElementId(),
-      type: 'freehand',
-      color,
-      width,
-      points: points.map((p) => ({ ...p })),
-    };
-  }
-
-  const dx = Math.abs(end.x - start.x);
-  const dy = Math.abs(end.y - start.y);
-  if (dx < 1 && dy < 1) return null;
-
-  if (mode === 'line') {
-    return {
-      id: createElementId(),
-      type: 'line',
-      color,
-      width,
-      start: { ...start },
-      end: { ...end },
-    };
-  }
-
-  if (mode === 'rect') {
-    return {
-      id: createElementId(),
-      type: 'rect',
-      color,
-      width,
-      start: { ...start },
-      end: { ...end },
-    };
-  }
-
-  return {
-    id: createElementId(),
-    type: 'ellipse',
-    color,
-    width,
-    start: { ...start },
-    end: { ...end },
-  };
-}
-
-function buildMeta(elements: SketchElement[], lastTool: ToolMode): DrawingMeta {
-  const colors = Array.from(new Set(elements.map((el) => el.color))).slice(0, 12);
-  return {
-    elementCount: elements.length,
-    colors,
-    lastTool,
-  };
-}
-
-function makeThumbnail(elements: SketchElement[]): string {
-  const thumbCanvas = document.createElement('canvas');
-  thumbCanvas.width = 320;
-  thumbCanvas.height = 200;
-  const ctx = thumbCanvas.getContext('2d');
-  if (!ctx) return '';
-
-  ctx.fillStyle = '#f4f5f6';
-  ctx.fillRect(0, 0, thumbCanvas.width, thumbCanvas.height);
-
-  const bounds = computeSceneBounds(elements);
-  if (!bounds) return thumbCanvas.toDataURL('image/png');
-
-  const pad = 12;
-  const contentW = Math.max(1, bounds.maxX - bounds.minX);
-  const contentH = Math.max(1, bounds.maxY - bounds.minY);
-  const scale = Math.min(
-    (thumbCanvas.width - pad * 2) / contentW,
-    (thumbCanvas.height - pad * 2) / contentH
-  );
-  const drawW = contentW * scale;
-  const drawH = contentH * scale;
-  const offsetX = (thumbCanvas.width - drawW) / 2;
-  const offsetY = (thumbCanvas.height - drawH) / 2;
-
-  ctx.save();
-  ctx.translate(offsetX, offsetY);
-  ctx.scale(scale, scale);
-  ctx.translate(-bounds.minX, -bounds.minY);
-  for (const el of elements) drawElement(ctx, el);
-  ctx.restore();
-
-  return thumbCanvas.toDataURL('image/png');
-}
+import { drawElement, buildMeta, buildPreviewElement, makeThumbnail } from './drawing.ts';
+import { getDom } from './dom.ts';
+import { deleteDrawing, getAllDrawings, putDrawing } from './store.ts';
+import type {
+  DrawMode,
+  DrawingRecord,
+  Point,
+  SketchElement,
+  ToolMode,
+  ViewportState,
+} from './types.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(): void | (() => void) {
-  const canvas = document.getElementById('sketch-canvas') as HTMLCanvasElement | null;
-  const galleryModal = document.getElementById('gallery-modal') as HTMLDialogElement | null;
-  const galleryList = document.getElementById('gallery-list') as HTMLDivElement | null;
-  const galleryTemplate = document.getElementById(
-    'gallery-item-template'
-  ) as HTMLTemplateElement | null;
-  const colorInput = document.getElementById('stroke-color') as HTMLInputElement | null;
-  const widthInput = document.getElementById('stroke-width') as HTMLInputElement | null;
-  const exportFormat = document.getElementById('export-format') as HTMLSelectElement | null;
-  const btnClear = document.getElementById('clear-canvas') as HTMLButtonElement | null;
-  const btnSave = document.getElementById('save-drawing') as HTMLButtonElement | null;
-  const btnGallery = document.getElementById('open-gallery') as HTMLButtonElement | null;
-  const btnExport = document.getElementById('export-file') as HTMLButtonElement | null;
-  const btnClipboard = document.getElementById('copy-image') as HTMLButtonElement | null;
+  const dom = getDom(document);
+  if (!dom) return;
 
-  const modeButtons = {
-    pan: document.getElementById('mode-pan') as HTMLButtonElement | null,
-    freehand: document.getElementById('mode-freehand') as HTMLButtonElement | null,
-    line: document.getElementById('mode-line') as HTMLButtonElement | null,
-    rect: document.getElementById('mode-rect') as HTMLButtonElement | null,
-    ellipse: document.getElementById('mode-ellipse') as HTMLButtonElement | null,
-  };
-
-  if (
-    !canvas ||
-    !galleryModal ||
-    !galleryList ||
-    !galleryTemplate ||
-    !colorInput ||
-    !widthInput ||
-    !exportFormat ||
-    !btnClear ||
-    !btnSave ||
-    !btnGallery ||
-    !btnExport ||
-    !btnClipboard ||
-    !modeButtons.pan ||
-    !modeButtons.freehand ||
-    !modeButtons.line ||
-    !modeButtons.rect ||
-    !modeButtons.ellipse
-  ) {
-    return;
-  }
-
-  const canvasEl: HTMLCanvasElement = canvas;
-  const colorInputEl: HTMLInputElement = colorInput;
-  const widthInputEl: HTMLInputElement = widthInput;
-  const exportFormatEl: HTMLSelectElement = exportFormat;
-  const galleryModalEl: HTMLDialogElement = galleryModal;
-  const galleryListEl: HTMLDivElement = galleryList;
-  const galleryTemplateEl: HTMLTemplateElement = galleryTemplate;
-  const modeButtonsEl: Record<ToolMode, HTMLButtonElement> = {
-    pan: modeButtons.pan,
-    freehand: modeButtons.freehand,
-    line: modeButtons.line,
-    rect: modeButtons.rect,
-    ellipse: modeButtons.ellipse,
-  };
-  const ctx = canvasEl.getContext('2d');
+  const ctx = dom.canvas.getContext('2d');
   if (!ctx) return;
-  const ctx2: CanvasRenderingContext2D = ctx;
+  const ui = dom;
+  const ctx2 = ctx;
 
   let mode: ToolMode = 'pan';
   let elements: SketchElement[] = [];
@@ -388,7 +39,7 @@ export default function init(): void | (() => void) {
 
   const setMode = (next: ToolMode): void => {
     mode = next;
-    for (const [key, btn] of Object.entries(modeButtonsEl)) {
+    for (const [key, btn] of Object.entries(ui.modeButtons)) {
       if (key === next) {
         btn.classList.add('btn-primary');
       } else {
@@ -396,26 +47,26 @@ export default function init(): void | (() => void) {
       }
     }
 
-    canvasEl.style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
+    ui.canvas.style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
   };
 
   const resizeCanvas = (): void => {
-    const rect = canvasEl.getBoundingClientRect();
+    const rect = ui.canvas.getBoundingClientRect();
     const nextWidth = Math.max(1, Math.round(rect.width * dpr));
     const nextHeight = Math.max(1, Math.round(rect.height * dpr));
 
-    if (canvasEl.width === nextWidth && canvasEl.height === nextHeight) {
+    if (ui.canvas.width === nextWidth && ui.canvas.height === nextHeight) {
       return;
     }
 
-    canvasEl.width = nextWidth;
-    canvasEl.height = nextHeight;
+    ui.canvas.width = nextWidth;
+    ui.canvas.height = nextHeight;
     ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawScene();
   };
 
   const toWorld = (clientX: number, clientY: number): Point => {
-    const rect = canvasEl.getBoundingClientRect();
+    const rect = ui.canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
     return {
@@ -425,11 +76,10 @@ export default function init(): void | (() => void) {
   };
 
   function drawScene(): void {
-    const cssWidth = canvasEl.width / dpr;
-    const cssHeight = canvasEl.height / dpr;
+    const cssWidth = ui.canvas.width / dpr;
+    const cssHeight = ui.canvas.height / dpr;
 
     ctx2.clearRect(0, 0, cssWidth, cssHeight);
-
     ctx2.save();
     ctx2.translate(viewport.x, viewport.y);
 
@@ -439,11 +89,11 @@ export default function init(): void | (() => void) {
 
     if (drawStart && drawEnd && mode !== 'pan') {
       const preview = buildPreviewElement(
-        mode,
+        mode as DrawMode,
         drawStart,
         drawEnd,
-        colorInputEl.value,
-        parseInt(widthInputEl.value, 10),
+        ui.colorInput.value,
+        parseInt(ui.widthInput.value, 10),
         freehandPoints
       );
 
@@ -464,18 +114,18 @@ export default function init(): void | (() => void) {
     drawEnd = null;
     freehandPoints = [];
     panStartPointer = null;
-    canvasEl.style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
+    ui.canvas.style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
   };
 
   const commitCurrentDraft = (): void => {
     if (!drawStart || !drawEnd || mode === 'pan') return;
 
     const draft = buildPreviewElement(
-      mode,
+      mode as DrawMode,
       drawStart,
       drawEnd,
-      colorInputEl.value,
-      parseInt(widthInputEl.value, 10),
+      ui.colorInput.value,
+      parseInt(ui.widthInput.value, 10),
       freehandPoints
     );
 
@@ -486,18 +136,18 @@ export default function init(): void | (() => void) {
 
   const renderGallery = async (): Promise<void> => {
     const rows = await getAllDrawings();
-    galleryListEl.innerHTML = '';
+    ui.galleryList.innerHTML = '';
 
     if (rows.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'col-span-full text-sm opacity-70';
       empty.textContent = 'No drawings saved yet.';
-      galleryListEl.appendChild(empty);
+      ui.galleryList.appendChild(empty);
       return;
     }
 
     for (const row of rows) {
-      const node = galleryTemplateEl.content.cloneNode(true) as DocumentFragment;
+      const node = ui.galleryTemplate.content.cloneNode(true) as DocumentFragment;
       const root = node.querySelector('article');
       const thumb = node.querySelector('.gallery-thumb') as HTMLImageElement | null;
       const name = node.querySelector('.gallery-name') as HTMLDivElement | null;
@@ -515,7 +165,7 @@ export default function init(): void | (() => void) {
         elements = row.elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
         viewport = { ...row.viewport };
         drawScene();
-        galleryModalEl.close();
+        ui.galleryModal.close();
         showMessage(`Loaded "${row.name}".`, { timeoutMs: 2000 });
       });
 
@@ -524,23 +174,22 @@ export default function init(): void | (() => void) {
         await renderGallery();
       });
 
-      galleryListEl.appendChild(node);
+      ui.galleryList.appendChild(node);
     }
   };
 
   const onPointerDown = (event: PointerEvent): void => {
     if (activePointerId !== null) return;
-
     if (event.pointerType === 'mouse' && event.button !== 0) return;
 
     activePointerId = event.pointerId;
     isPointerActive = true;
-    canvasEl.setPointerCapture(event.pointerId);
+    ui.canvas.setPointerCapture(event.pointerId);
 
     if (mode === 'pan') {
       panStartPointer = { x: event.clientX, y: event.clientY };
       panStartViewport = { ...viewport };
-      canvasEl.style.cursor = 'grabbing';
+      ui.canvas.style.cursor = 'grabbing';
       return;
     }
 
@@ -574,6 +223,7 @@ export default function init(): void | (() => void) {
         freehandPoints.push(next);
       }
     }
+
     event.preventDefault();
     drawScene();
   };
@@ -581,8 +231,8 @@ export default function init(): void | (() => void) {
   const onPointerUp = (event: PointerEvent): void => {
     if (!isPointerActive || activePointerId !== event.pointerId) return;
 
-    if (canvasEl.hasPointerCapture(event.pointerId)) {
-      canvasEl.releasePointerCapture(event.pointerId);
+    if (ui.canvas.hasPointerCapture(event.pointerId)) {
+      ui.canvas.releasePointerCapture(event.pointerId);
     }
 
     if (mode !== 'pan') {
@@ -598,22 +248,7 @@ export default function init(): void | (() => void) {
     drawScene();
   };
 
-  const onModeClick = (nextMode: ToolMode): void => {
-    setMode(nextMode);
-  };
-
-  modeButtons.pan.addEventListener('click', () => onModeClick('pan'));
-  modeButtons.freehand.addEventListener('click', () => onModeClick('freehand'));
-  modeButtons.line.addEventListener('click', () => onModeClick('line'));
-  modeButtons.rect.addEventListener('click', () => onModeClick('rect'));
-  modeButtons.ellipse.addEventListener('click', () => onModeClick('ellipse'));
-
-  btnClear.addEventListener('click', () => {
-    elements = [];
-    drawScene();
-  });
-
-  btnSave.addEventListener('click', async () => {
+  const onSave = async (): Promise<void> => {
     if (elements.length === 0) {
       showMessage('Nothing to save yet.', { type: 'warning', timeoutMs: 2500 });
       return;
@@ -641,61 +276,73 @@ export default function init(): void | (() => void) {
       console.error('[SketchBoard] Failed to save drawing', error);
       showMessage('Failed to save drawing.', { type: 'alert', timeoutMs: 3000 });
     }
-  });
+  };
 
-  btnGallery.addEventListener('click', async () => {
+  const onExport = async (): Promise<void> => {
+    const format = (ui.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
     try {
-      await renderGallery();
-      galleryModalEl.showModal();
-    } catch (error) {
-      console.error('[SketchBoard] Failed to open gallery', error);
-      showMessage('Failed to load saved drawings.', { type: 'alert', timeoutMs: 3000 });
-    }
-  });
-
-  btnExport.addEventListener('click', async () => {
-    const format = (exportFormatEl.value as 'png' | 'jpg' | 'webp') || 'png';
-
-    try {
-      await CanvasExporter.download(canvasEl, `sketch-${Date.now()}`, format, 0.92);
+      await CanvasExporter.download(ui.canvas, `sketch-${Date.now()}`, format, 0.92);
     } catch (error) {
       console.error('[SketchBoard] Export failed', error);
       showMessage('Export failed.', { type: 'alert', timeoutMs: 3000 });
     }
-  });
+  };
 
-  btnClipboard.addEventListener('click', async () => {
+  const onClipboard = async (): Promise<void> => {
     try {
-      await CanvasExporter.copyToClipboard(canvasEl);
+      await CanvasExporter.copyToClipboard(ui.canvas);
       showMessage('Copied canvas image to clipboard.', { timeoutMs: 2500 });
     } catch (error) {
       console.error('[SketchBoard] Clipboard copy failed', error);
       showMessage('Clipboard copy failed.', { type: 'alert', timeoutMs: 3000 });
     }
+  };
+
+  ui.modeButtons.pan.addEventListener('click', () => setMode('pan'));
+  ui.modeButtons.freehand.addEventListener('click', () => setMode('freehand'));
+  ui.modeButtons.line.addEventListener('click', () => setMode('line'));
+  ui.modeButtons.rect.addEventListener('click', () => setMode('rect'));
+  ui.modeButtons.ellipse.addEventListener('click', () => setMode('ellipse'));
+
+  ui.btnClear.addEventListener('click', () => {
+    elements = [];
+    drawScene();
   });
 
-  colorInput.value = '#111827';
-  canvasEl.style.touchAction = 'none';
-  setMode('pan');
+  ui.btnSave.addEventListener('click', () => void onSave());
+  ui.btnGallery.addEventListener('click', async () => {
+    try {
+      await renderGallery();
+      ui.galleryModal.showModal();
+    } catch (error) {
+      console.error('[SketchBoard] Failed to open gallery', error);
+      showMessage('Failed to load saved drawings.', { type: 'alert', timeoutMs: 3000 });
+    }
+  });
+  ui.btnExport.addEventListener('click', () => void onExport());
+  ui.btnClipboard.addEventListener('click', () => void onClipboard());
 
-  canvasEl.addEventListener('pointerdown', onPointerDown, { passive: false });
-  canvasEl.addEventListener('pointermove', onPointerMove, { passive: false });
-  canvasEl.addEventListener('pointerup', onPointerUp, { passive: false });
-  canvasEl.addEventListener('pointercancel', onPointerUp, { passive: false });
+  ui.canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
+  ui.canvas.addEventListener('pointermove', onPointerMove, { passive: false });
+  ui.canvas.addEventListener('pointerup', onPointerUp, { passive: false });
+  ui.canvas.addEventListener('pointercancel', onPointerUp, { passive: false });
 
   const resizeObserver = new ResizeObserver(() => {
     resizeCanvas();
   });
-  resizeObserver.observe(canvasEl);
+  resizeObserver.observe(ui.canvas);
 
+  ui.colorInput.value = isDarkMode() ? '#f8fafc' : '#111827';
+  ui.canvas.style.touchAction = 'none';
+  setMode('pan');
   resizeCanvas();
   drawScene();
 
   return () => {
     resizeObserver.disconnect();
-    canvasEl.removeEventListener('pointerdown', onPointerDown);
-    canvasEl.removeEventListener('pointermove', onPointerMove);
-    canvasEl.removeEventListener('pointerup', onPointerUp);
-    canvasEl.removeEventListener('pointercancel', onPointerUp);
+    ui.canvas.removeEventListener('pointerdown', onPointerDown);
+    ui.canvas.removeEventListener('pointermove', onPointerMove);
+    ui.canvas.removeEventListener('pointerup', onPointerUp);
+    ui.canvas.removeEventListener('pointercancel', onPointerUp);
   };
 }

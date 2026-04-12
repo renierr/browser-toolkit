@@ -2,7 +2,7 @@
   "name": "Sketch Board",
   "description": "Canvas whiteboard with freehand, shapes, export, and local version storage.",
   "icon": "pen-tool",
-  "sectionId": "general",
+  "sectionId": "images",
   "order": 7,
   "hideHeader": true,
   "hideFooter": true,
