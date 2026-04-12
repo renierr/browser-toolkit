@@ -33,7 +33,7 @@ export default function init(): void | (() => void) {
 
   let mode: ToolMode = 'pan';
   let elements: SketchElement[] = [];
-  let viewport: ViewportState = { x: 0, y: 0 };
+  let viewport: ViewportState = { x: 0, y: 0, scale: 1 };
   let hasUnsavedChanges = false;
   let undoStack: SketchElement[][] = [];
   let redoStack: SketchElement[][] = [];
@@ -41,13 +41,20 @@ export default function init(): void | (() => void) {
   let renderQueued = false;
   let baseLayerDirty = true;
 
+  const MIN_SCALE = 0.1;
+  const MAX_SCALE = 10;
+  const ZOOM_STEP = 1.25;
+
   let isPointerActive = false;
   let activePointerId: number | null = null;
   let drawStart: Point | null = null;
   let drawEnd: Point | null = null;
   let freehandPoints: Point[] = [];
   let panStartPointer: Point | null = null;
-  let panStartViewport: ViewportState = { x: 0, y: 0 };
+  let panStartViewport: ViewportState = { x: 0, y: 0, scale: 1 };
+
+  let lastPinchDist = 0;
+  let lastPinchCenter: Point | null = null;
   let isStreamingFreehand = false;
 
   const dpr = window.devicePixelRatio || 1;
@@ -109,6 +116,7 @@ export default function init(): void | (() => void) {
     baseLayerCtx.clearRect(0, 0, cssWidth, cssHeight);
     baseLayerCtx.save();
     baseLayerCtx.translate(viewport.x, viewport.y);
+    baseLayerCtx.scale(viewport.scale, viewport.scale);
     for (const el of elements) {
       drawElement(baseLayerCtx, el);
     }
@@ -164,9 +172,10 @@ export default function init(): void | (() => void) {
     const rect = ui.canvas.getBoundingClientRect();
     const x = clientX - rect.left;
     const y = clientY - rect.top;
+    const { scale } = viewport;
     return {
-      x: x - viewport.x,
-      y: y - viewport.y,
+      x: (x - viewport.x) / scale,
+      y: (y - viewport.y) / scale,
     };
   };
 
@@ -181,6 +190,7 @@ export default function init(): void | (() => void) {
 
     ctx2.save();
     ctx2.translate(viewport.x, viewport.y);
+    ctx2.scale(viewport.scale, viewport.scale);
 
     if (drawStart && drawEnd && mode !== 'pan') {
       drawLivePreview(
@@ -189,7 +199,7 @@ export default function init(): void | (() => void) {
         drawStart,
         drawEnd,
         ui.colorInput.value,
-        parseInt(ui.widthInput.value, 10),
+        Math.round(parseInt(ui.widthInput.value, 10) / viewport.scale),
         freehandPoints
       );
     }
@@ -265,7 +275,7 @@ export default function init(): void | (() => void) {
         if (!confirmDiscardIfNeeded()) return;
 
         elements = row.elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
-        viewport = { ...row.viewport };
+        viewport = { ...row.viewport, scale: row.viewport.scale || 1 };
         hasUnsavedChanges = false;
         undoStack = [];
         redoStack = [];
@@ -286,12 +296,38 @@ export default function init(): void | (() => void) {
   };
 
   const onPointerDown = (event: PointerEvent): void => {
-    if (activePointerId !== null) return;
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    if (event.pointerType === 'touch') {
+      const allTouches = document.querySelectorAll('#sketch-canvas');
+      if (!allTouches.length) return;
+    }
+
+    if (activePointerId !== null && activePointerId !== event.pointerId) {
+      const otherActive = document.elementFromPoint(event.clientX, event.clientY);
+      if (otherActive === ui.canvas) {
+        if (activePointerId !== null && lastPinchCenter) {
+          const currentPointers = [event];
+          const newDist = getPinchDist(currentPointers);
+          if (newDist > 0 && lastPinchDist > 0) {
+            const scale = newDist / lastPinchDist;
+            if (Math.abs(scale - 1) > 0.1) {
+              const delta = scale > 1 ? 1 : -1;
+              applyZoom(delta, lastPinchCenter.x, lastPinchCenter.y);
+              lastPinchDist = newDist;
+              return;
+            }
+          }
+        }
+      }
+    }
+
+    if (activePointerId !== null && event.button !== 0) return;
 
     activePointerId = event.pointerId;
     isPointerActive = true;
     ui.canvas.setPointerCapture(event.pointerId);
+
+    lastPinchDist = event.pressure > 0 ? event.pressure : 0;
+    lastPinchCenter = { x: event.clientX, y: event.clientY };
 
     if (mode === 'pan') {
       panStartPointer = { x: event.clientX, y: event.clientY };
@@ -309,13 +345,14 @@ export default function init(): void | (() => void) {
     if (isStreamingFreehand) {
       ctx2.save();
       ctx2.translate(viewport.x, viewport.y);
+      ctx2.scale(viewport.scale, viewport.scale);
       drawLivePreview(
         ctx2,
         'freehand',
         point,
         point,
         ui.colorInput.value,
-        parseInt(ui.widthInput.value, 10),
+        Math.round(parseInt(ui.widthInput.value, 10) / viewport.scale),
         freehandPoints
       );
       ctx2.restore();
@@ -364,7 +401,8 @@ export default function init(): void | (() => void) {
           freehandPoints.push(next);
           ctx2.save();
           ctx2.translate(viewport.x, viewport.y);
-          drawLiveFreehandSegment(ctx2, prev, next, color, width);
+          ctx2.scale(viewport.scale, viewport.scale);
+          drawLiveFreehandSegment(ctx2, prev, next, color, Math.round(width / viewport.scale));
           ctx2.restore();
         }
       }
@@ -517,6 +555,51 @@ export default function init(): void | (() => void) {
     }
   };
 
+  const applyZoom = (delta: number, focusX?: number, focusY?: number): void => {
+    const oldScale = viewport.scale;
+    let newScale = oldScale * Math.pow(ZOOM_STEP, delta);
+    newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
+
+    if (newScale === oldScale) return;
+
+    if (focusX !== undefined && focusY !== undefined) {
+      const rect = ui.canvas.getBoundingClientRect();
+      const canvasX = focusX - rect.left;
+      const canvasY = focusY - rect.top;
+      const worldX = (canvasX - viewport.x) / oldScale;
+      const worldY = (canvasY - viewport.y) / oldScale;
+      viewport.x = canvasX - worldX * newScale;
+      viewport.y = canvasY - worldY * newScale;
+    }
+
+    viewport.scale = newScale;
+    markBaseLayerDirty();
+    requestDrawImmediate();
+  };
+
+  const onZoomIn = (): void => applyZoom(1);
+  const onZoomOut = (): void => applyZoom(-1);
+  const onZoomReset = (): void => {
+    viewport.scale = 1;
+    markBaseLayerDirty();
+    requestDrawImmediate();
+  };
+
+  const onWheel = (event: WheelEvent): void => {
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+      const delta = -Math.sign(event.deltaY);
+      applyZoom(delta, event.clientX, event.clientY);
+    }
+  };
+
+  const getPinchDist = (pts: PointerEvent[]): number => {
+    if (pts.length < 2) return 0;
+    const dx = pts[1].clientX - pts[0].clientX;
+    const dy = pts[1].clientY - pts[0].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
   const onQuickColorClick = (event: Event): void => {
     const target = event.currentTarget as HTMLButtonElement;
     const color = target.getAttribute('data-color');
@@ -537,6 +620,12 @@ export default function init(): void | (() => void) {
   ui.modeButtons.line.addEventListener('click', () => setMode('line'));
   ui.modeButtons.rect.addEventListener('click', () => setMode('rect'));
   ui.modeButtons.ellipse.addEventListener('click', () => setMode('ellipse'));
+
+  ui.btnZoomIn.addEventListener('click', onZoomIn);
+  ui.btnZoomOut.addEventListener('click', onZoomOut);
+  ui.btnZoomReset.addEventListener('click', onZoomReset);
+
+  ui.canvas.addEventListener('wheel', onWheel, { passive: false });
 
   ui.btnClear.addEventListener('click', () => {
     if (elements.length === 0 || !hasUnsavedChanges) {
@@ -599,6 +688,7 @@ export default function init(): void | (() => void) {
     ui.canvas.removeEventListener('pointermove', onPointerMove);
     ui.canvas.removeEventListener('pointerup', onPointerUp);
     ui.canvas.removeEventListener('pointercancel', onPointerUp);
+    ui.canvas.removeEventListener('wheel', onWheel);
     for (const button of ui.quickColorButtons) {
       button.removeEventListener('click', onQuickColorClick);
     }

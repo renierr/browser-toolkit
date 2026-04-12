@@ -18,6 +18,9 @@ export type SketchDom = {
   btnGallery: HTMLButtonElement;
   btnExport: HTMLButtonElement;
   btnClipboard: HTMLButtonElement;
+  btnZoomOut: HTMLButtonElement;
+  btnZoomIn: HTMLButtonElement;
+  btnZoomReset: HTMLButtonElement;
   modeButtons: Record<ToolMode, HTMLButtonElement>;
 };
 
@@ -39,6 +42,9 @@ export function getDom(doc: Document): SketchDom | null {
   const btnGallery = doc.getElementById('open-gallery') as HTMLButtonElement | null;
   const btnExport = doc.getElementById('export-file') as HTMLButtonElement | null;
   const btnClipboard = doc.getElementById('copy-image') as HTMLButtonElement | null;
+  const btnZoomOut = doc.getElementById('zoom-out') as HTMLButtonElement | null;
+  const btnZoomIn = doc.getElementById('zoom-in') as HTMLButtonElement | null;
+  const btnZoomReset = doc.getElementById('zoom-reset') as HTMLButtonElement | null;
   const modePan = doc.getElementById('mode-pan') as HTMLButtonElement | null;
   const modeFreehand = doc.getElementById('mode-freehand') as HTMLButtonElement | null;
   const modeLine = doc.getElementById('mode-line') as HTMLButtonElement | null;
@@ -62,6 +68,9 @@ export function getDom(doc: Document): SketchDom | null {
     !btnGallery ||
     !btnExport ||
     !btnClipboard ||
+    !btnZoomOut ||
+    !btnZoomIn ||
+    !btnZoomReset ||
     !modePan ||
     !modeFreehand ||
     !modeLine ||
@@ -89,6 +98,9 @@ export function getDom(doc: Document): SketchDom | null {
     btnGallery,
     btnExport,
     btnClipboard,
+    btnZoomOut,
+    btnZoomIn,
+    btnZoomReset,
     modeButtons: {
       pan: modePan,
       freehand: modeFreehand,

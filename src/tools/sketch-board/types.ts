@@ -40,6 +40,7 @@ export type SketchElement = FreehandElement | LineElement | RectElement | Ellips
 export type ViewportState = {
   x: number;
   y: number;
+  scale: number;
 };
 
 export type DrawingMeta = {
