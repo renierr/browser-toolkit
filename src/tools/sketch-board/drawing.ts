@@ -41,7 +41,17 @@ function applyStrokeStyle(ctx: CanvasRenderingContext2D, color: string, width: n
 }
 
 function drawFreehand(ctx: CanvasRenderingContext2D, points: Point[]): void {
-  if (points.length < 2) return;
+  if (points.length === 0) return;
+  if (points.length === 1) {
+    const p = points[0];
+    const radius = Math.max(0.5, (ctx.lineWidth as number) / 2);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
+    return;
+  }
+
   ctx.beginPath();
   ctx.moveTo(points[0].x, points[0].y);
   for (let i = 1; i < points.length; i++) {
@@ -103,6 +113,20 @@ export function drawLivePreview(
 
   drawEllipse(ctx, drawStart, drawEnd);
   ctx.globalAlpha = 1;
+}
+
+export function drawLiveFreehandSegment(
+  ctx: CanvasRenderingContext2D,
+  from: Point,
+  to: Point,
+  color: string,
+  width: number
+): void {
+  applyStrokeStyle(ctx, color, width);
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
 }
 
 export function buildPreviewElement(

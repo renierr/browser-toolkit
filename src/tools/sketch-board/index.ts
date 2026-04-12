@@ -5,6 +5,7 @@ import {
   buildMeta,
   buildPreviewElement,
   drawElement,
+  drawLiveFreehandSegment,
   drawLivePreview,
   makeThumbnail,
 } from './drawing.ts';
@@ -46,6 +47,7 @@ export default function init(): void | (() => void) {
   let freehandPoints: Point[] = [];
   let panStartPointer: Point | null = null;
   let panStartViewport: ViewportState = { x: 0, y: 0 };
+  let isStreamingFreehand = false;
 
   const dpr = window.devicePixelRatio || 1;
   const baseLayerCanvas = document.createElement('canvas');
@@ -72,6 +74,15 @@ export default function init(): void | (() => void) {
     }
     if (!renderQueued) return;
     renderQueued = false;
+    drawScene();
+  };
+
+  const requestDrawImmediate = (): void => {
+    renderQueued = false;
+    if (renderRaf !== null) {
+      window.cancelAnimationFrame(renderRaf);
+      renderRaf = null;
+    }
     drawScene();
   };
 
@@ -198,6 +209,7 @@ export default function init(): void | (() => void) {
     drawStart = null;
     drawEnd = null;
     freehandPoints = [];
+    isStreamingFreehand = false;
     panStartPointer = null;
     ui.canvas.style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
   };
@@ -298,8 +310,24 @@ export default function init(): void | (() => void) {
     drawStart = point;
     drawEnd = point;
     freehandPoints = [point];
+    isStreamingFreehand = mode === 'freehand';
+
+    if (isStreamingFreehand) {
+      drawLivePreview(
+        ctx2,
+        'freehand',
+        point,
+        point,
+        ui.colorInput.value,
+        parseInt(ui.widthInput.value, 10),
+        freehandPoints
+      );
+      event.preventDefault();
+      return;
+    }
+
     event.preventDefault();
-    requestDraw();
+    requestDrawImmediate();
   };
 
   const onPointerMove = (event: PointerEvent): void => {
@@ -315,23 +343,39 @@ export default function init(): void | (() => void) {
     }
 
     if (!drawStart) return;
-    const coalesced = event.getCoalescedEvents();
+    const coalesced =
+      typeof event.getCoalescedEvents === 'function'
+        ? event.getCoalescedEvents()
+        : ([] as PointerEvent[]);
     const samples = coalesced.length > 0 ? coalesced : [event];
+    const color = ui.colorInput.value;
+    const width = parseInt(ui.widthInput.value, 10);
 
     for (const sample of samples) {
       const next = toWorld(sample.clientX, sample.clientY);
       drawEnd = next;
       if (mode === 'freehand') {
         const prev = freehandPoints[freehandPoints.length - 1];
+        if (!prev) {
+          freehandPoints.push(next);
+          continue;
+        }
+
         const dx = next.x - prev.x;
         const dy = next.y - prev.y;
         if (dx * dx + dy * dy >= 0.8) {
           freehandPoints.push(next);
+          drawLiveFreehandSegment(ctx2, prev, next, color, width);
         }
       }
     }
 
     event.preventDefault();
+
+    if (mode === 'freehand' && isStreamingFreehand) {
+      return;
+    }
+
     requestDraw();
   };
 
@@ -346,13 +390,16 @@ export default function init(): void | (() => void) {
       const point = toWorld(event.clientX, event.clientY);
       drawEnd = point;
       if (mode === 'freehand') {
-        freehandPoints.push(point);
+        const prev = freehandPoints[freehandPoints.length - 1];
+        if (!prev || prev.x !== point.x || prev.y !== point.y) {
+          freehandPoints.push(point);
+        }
       }
       commitCurrentDraft();
     }
 
     resetPointerState();
-    requestDraw();
+    requestDrawImmediate();
   };
 
   const onSave = async (): Promise<void> => {
