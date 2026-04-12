@@ -26,11 +26,11 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
   }
 
   if (el.type === 'rect') {
-    drawRect(ctx, el.start, el.end);
+    drawRect(ctx, el.start, el.end, el.filled);
     return;
   }
 
-  drawEllipse(ctx, el.start, el.end);
+  drawEllipse(ctx, el.start, el.end, el.filled);
 }
 
 function applyStrokeStyle(ctx: CanvasRenderingContext2D, color: string, width: number): void {
@@ -67,18 +67,33 @@ function drawLine(ctx: CanvasRenderingContext2D, start: Point, end: Point): void
   ctx.stroke();
 }
 
-function drawRect(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+function drawRect(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
   const rect = normalizeRect(start, end);
   if (rect.w < 1 || rect.h < 1) return;
-  ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+  if (filled) {
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+  } else {
+    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+  }
 }
 
-function drawEllipse(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+function drawEllipse(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+  filled?: boolean
+): void {
   const rect = normalizeRect(start, end);
   if (rect.w < 1 || rect.h < 1) return;
   ctx.beginPath();
   ctx.ellipse(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, rect.h / 2, 0, 0, Math.PI * 2);
-  ctx.stroke();
+  if (filled) {
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
+  } else {
+    ctx.stroke();
+  }
 }
 
 export function drawLivePreview(
@@ -106,12 +121,24 @@ export function drawLivePreview(
   }
 
   if (mode === 'rect') {
-    drawRect(ctx, drawStart, drawEnd);
+    drawRect(ctx, drawStart, drawEnd, false);
     ctx.globalAlpha = 1;
     return;
   }
 
-  drawEllipse(ctx, drawStart, drawEnd);
+  if (mode === 'rect-filled') {
+    drawRect(ctx, drawStart, drawEnd, true);
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  if (mode === 'ellipse') {
+    drawEllipse(ctx, drawStart, drawEnd, false);
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  drawEllipse(ctx, drawStart, drawEnd, true);
   ctx.globalAlpha = 1;
 }
 
@@ -171,6 +198,31 @@ export function buildPreviewElement(
       width,
       start: { ...start },
       end: { ...end },
+      filled: false,
+    };
+  }
+
+  if (mode === 'rect-filled') {
+    return {
+      id: crypto.randomUUID(),
+      type: 'rect',
+      color,
+      width,
+      start: { ...start },
+      end: { ...end },
+      filled: true,
+    };
+  }
+
+  if (mode === 'ellipse') {
+    return {
+      id: crypto.randomUUID(),
+      type: 'ellipse',
+      color,
+      width,
+      start: { ...start },
+      end: { ...end },
+      filled: false,
     };
   }
 
@@ -181,6 +233,7 @@ export function buildPreviewElement(
     width,
     start: { ...start },
     end: { ...end },
+    filled: true,
   };
 }
 

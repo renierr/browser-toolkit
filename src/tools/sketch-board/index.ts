@@ -141,6 +141,32 @@ export default function init(): void | (() => void) {
     updateUndoRedoButtons();
   };
 
+  const TOOL_ICONS: Record<ToolMode, string> = {
+    pan: 'hand',
+    freehand: 'pen-tool',
+    line: 'slash',
+    rect: 'square',
+    'rect-filled': 'square',
+    ellipse: 'circle',
+    'ellipse-filled': 'circle',
+  };
+
+  const TOOL_LABELS: Record<ToolMode, string> = {
+    pan: 'Pan',
+    freehand: 'Freehand',
+    line: 'Line',
+    rect: 'Rect (outline)',
+    'rect-filled': 'Rect (filled)',
+    ellipse: 'Ellipse (outline)',
+    'ellipse-filled': 'Ellipse (filled)',
+  };
+
+  const updateDrawToolsLabel = (tool: ToolMode): void => {
+    ui.drawToolsLabel.textContent = TOOL_LABELS[tool];
+    ui.drawToolsIcon.setAttribute('data-lucide', TOOL_ICONS[tool]);
+    ui.drawToolsBtn.parentElement?.removeAttribute('open');
+  };
+
   const setMode = (next: ToolMode): void => {
     mode = next;
     const isDrawMode = next !== 'pan';
@@ -155,7 +181,7 @@ export default function init(): void | (() => void) {
       for (const el of ui.drawOpts) {
         el.classList.remove('hidden');
       }
-      ui.btnModeDraw.title = `Drawing: ${next}`;
+      updateDrawToolsLabel(next);
     } else {
       ui.btnModePan.classList.add('btn-primary');
       ui.btnModeDraw.classList.remove('btn-primary');
@@ -688,7 +714,15 @@ export default function init(): void | (() => void) {
   ui.modeButtons.freehand.addEventListener('click', () => setMode('freehand'));
   ui.modeButtons.line.addEventListener('click', () => setMode('line'));
   ui.modeButtons.rect.addEventListener('click', () => setMode('rect'));
+  (ui.modeButtons as Record<string, HTMLButtonElement>)['rect-filled'].addEventListener(
+    'click',
+    () => setMode('rect-filled')
+  );
   ui.modeButtons.ellipse.addEventListener('click', () => setMode('ellipse'));
+  (ui.modeButtons as Record<string, HTMLButtonElement>)['ellipse-filled'].addEventListener(
+    'click',
+    () => setMode('ellipse-filled')
+  );
 
   ui.btnZoomIn.addEventListener('click', onZoomIn);
   ui.btnZoomOut.addEventListener('click', onZoomOut);

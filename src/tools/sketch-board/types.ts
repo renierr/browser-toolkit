@@ -1,4 +1,11 @@
-export type ToolMode = 'pan' | 'freehand' | 'line' | 'rect' | 'ellipse';
+export type ToolMode =
+  | 'pan'
+  | 'freehand'
+  | 'line'
+  | 'rect'
+  | 'rect-filled'
+  | 'ellipse'
+  | 'ellipse-filled';
 export type DrawMode = Exclude<ToolMode, 'pan'>;
 
 export type Point = {
@@ -27,12 +34,14 @@ export type RectElement = BaseElement & {
   type: 'rect';
   start: Point;
   end: Point;
+  filled?: boolean;
 };
 
 export type EllipseElement = BaseElement & {
   type: 'ellipse';
   start: Point;
   end: Point;
+  filled?: boolean;
 };
 
 export type SketchElement = FreehandElement | LineElement | RectElement | EllipseElement;

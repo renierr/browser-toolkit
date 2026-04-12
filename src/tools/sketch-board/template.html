@@ -21,19 +21,59 @@
         </button>
       </div>
 
-      <div id="draw-tools" class="join toolbar-inner hidden">
-        <button id="mode-freehand" class="btn btn-sm join-item" title="Freehand">
-          <i data-lucide="pen-tool" class="w-4 h-4"></i>
-        </button>
-        <button id="mode-line" class="btn btn-sm join-item" title="Line">
-          <i data-lucide="slash" class="w-4 h-4"></i>
-        </button>
-        <button id="mode-rect" class="btn btn-sm join-item" title="Rectangle">
-          <i data-lucide="square" class="w-4 h-4"></i>
-        </button>
-        <button id="mode-ellipse" class="btn btn-sm join-item" title="Ellipse">
-          <i data-lucide="circle" class="w-4 h-4"></i>
-        </button>
+      <div id="draw-tools" class="dropdown dropdown-bottom dropdown-end toolbar-inner hidden">
+        <label id="draw-tools-btn" tabindex="0" class="btn btn-sm gap-1">
+          <i id="draw-tools-icon" data-lucide="pen-tool" class="w-4 h-4"></i>
+          <span id="draw-tools-label" class="text-xs">Freehand</span>
+          <i data-lucide="chevron-down" class="w-3 h-3"></i>
+        </label>
+        <ul
+          tabindex="0"
+          class="dropdown-content menu z-50 mt-1 w-48 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+        >
+          <li>
+            <button id="mode-freehand" class="btn btn-sm btn-ghost justify-between">
+              Freehand
+              <i data-lucide="pen-tool" class="w-4 h-4"></i>
+            </button>
+          </li>
+          <li>
+            <button id="mode-line" class="btn btn-sm btn-ghost justify-between">
+              Line
+              <i data-lucide="slash" class="w-4 h-4"></i>
+            </button>
+          </li>
+          <li class="menu-title px-2 py-1">
+            <span class="text-xs opacity-70">Rectangle</span>
+          </li>
+          <li>
+            <button id="mode-rect" class="btn btn-sm btn-ghost justify-between">
+              Outline
+              <i data-lucide="square" class="w-4 h-4"></i>
+            </button>
+          </li>
+          <li>
+            <button id="mode-rect-filled" class="btn btn-sm btn-ghost justify-between">
+              Filled
+              <i data-lucide="square" class="w-4 h-4 fill-current"></i>
+            </button>
+          </li>
+          <li class="menu-title px-2 py-1">
+            <span class="text-xs opacity-70">Ellipse</span>
+          </li>
+          <li>
+            <button id="mode-ellipse" class="btn btn-sm btn-ghost justify-between">
+              Outline
+              <i data-lucide="circle" class="w-4 h-4"></i>
+            </button>
+          </li>
+          <li>
+            <button id="mode-ellipse-filled" class="btn btn-sm btn-ghost justify-between">
+              Filled
+              <i data-lucide="circle" class="w-4 h-4 fill-current"></i>
+            </button>
+          </li>
+        </ul>
       </div>
 
       <div class="join toolbar-inner">

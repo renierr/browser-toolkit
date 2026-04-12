@@ -27,6 +27,9 @@ export type SketchDom = {
   btnCollapse: HTMLButtonElement;
   toolbarInners: HTMLElement[];
   drawTools: HTMLElement;
+  drawToolsBtn: HTMLLabelElement;
+  drawToolsIcon: HTMLElement;
+  drawToolsLabel: HTMLSpanElement;
   drawOptions: HTMLElement;
   drawOptionsDivider: HTMLElement;
   drawOpts: HTMLElement[];
@@ -61,8 +64,13 @@ export function getDom(doc: Document): SketchDom | null {
   const modeFreehand = doc.getElementById('mode-freehand') as HTMLButtonElement | null;
   const modeLine = doc.getElementById('mode-line') as HTMLButtonElement | null;
   const modeRect = doc.getElementById('mode-rect') as HTMLButtonElement | null;
+  const modeRectFilled = doc.getElementById('mode-rect-filled') as HTMLButtonElement | null;
   const modeEllipse = doc.getElementById('mode-ellipse') as HTMLButtonElement | null;
+  const modeEllipseFilled = doc.getElementById('mode-ellipse-filled') as HTMLButtonElement | null;
   const drawTools = doc.getElementById('draw-tools') as HTMLElement | null;
+  const drawToolsBtn = doc.getElementById('draw-tools-btn') as HTMLLabelElement | null;
+  const drawToolsIcon = doc.getElementById('draw-tools-icon') as HTMLElement | null;
+  const drawToolsLabel = doc.getElementById('draw-tools-label') as HTMLSpanElement | null;
   const drawOptions = doc.getElementById('draw-options') as HTMLElement | null;
   const drawOptionsDivider = doc.getElementById('draw-options-divider') as HTMLElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
@@ -96,8 +104,13 @@ export function getDom(doc: Document): SketchDom | null {
     !modeFreehand ||
     !modeLine ||
     !modeRect ||
+    !modeRectFilled ||
     !modeEllipse ||
+    !modeEllipseFilled ||
     !drawTools ||
+    !drawToolsBtn ||
+    !drawToolsIcon ||
+    !drawToolsLabel ||
     !drawOptions ||
     !drawOptionsDivider ||
     !btnCollapse ||
@@ -133,6 +146,9 @@ export function getDom(doc: Document): SketchDom | null {
     btnCollapse,
     toolbarInners,
     drawTools,
+    drawToolsBtn,
+    drawToolsIcon,
+    drawToolsLabel,
     drawOptions,
     drawOptionsDivider,
     drawOpts,
@@ -141,7 +157,9 @@ export function getDom(doc: Document): SketchDom | null {
       freehand: modeFreehand,
       line: modeLine,
       rect: modeRect,
+      'rect-filled': modeRectFilled,
       ellipse: modeEllipse,
+      'ellipse-filled': modeEllipseFilled,
     },
   };
 }
