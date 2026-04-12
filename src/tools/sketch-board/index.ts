@@ -1,7 +1,13 @@
 import { CanvasExporter } from '@js/canvas-utils.ts';
 import router from '@js/router.ts';
 import { showMessage } from '@js/ui.ts';
-import { drawElement, buildMeta, buildPreviewElement, makeThumbnail } from './drawing.ts';
+import {
+  buildMeta,
+  buildPreviewElement,
+  drawElement,
+  drawLivePreview,
+  makeThumbnail,
+} from './drawing.ts';
 import { getDom } from './dom.ts';
 import { deleteDrawing, getAllDrawings, putDrawing } from './store.ts';
 import type {
@@ -29,6 +35,9 @@ export default function init(): void | (() => void) {
   let hasUnsavedChanges = false;
   let undoStack: SketchElement[][] = [];
   let redoStack: SketchElement[][] = [];
+  let renderRaf: number | null = null;
+  let renderQueued = false;
+  let baseLayerDirty = true;
 
   let isPointerActive = false;
   let activePointerId: number | null = null;
@@ -39,9 +48,68 @@ export default function init(): void | (() => void) {
   let panStartViewport: ViewportState = { x: 0, y: 0 };
 
   const dpr = window.devicePixelRatio || 1;
+  const baseLayerCanvas = document.createElement('canvas');
+  const baseLayerCtx = baseLayerCanvas.getContext('2d');
+
+  if (!baseLayerCtx) return;
+
+  const requestDraw = (): void => {
+    renderQueued = true;
+    if (renderRaf !== null) return;
+
+    renderRaf = window.requestAnimationFrame(() => {
+      renderRaf = null;
+      if (!renderQueued) return;
+      renderQueued = false;
+      drawScene();
+    });
+  };
+
+  const flushDraw = (): void => {
+    if (renderRaf !== null) {
+      window.cancelAnimationFrame(renderRaf);
+      renderRaf = null;
+    }
+    if (!renderQueued) return;
+    renderQueued = false;
+    drawScene();
+  };
 
   const cloneElements = (source: SketchElement[]): SketchElement[] => {
     return source.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
+  };
+
+  const markBaseLayerDirty = (): void => {
+    baseLayerDirty = true;
+  };
+
+  const syncBaseLayerSize = (): void => {
+    if (baseLayerCanvas.width === ui.canvas.width && baseLayerCanvas.height === ui.canvas.height) {
+      return;
+    }
+    baseLayerCanvas.width = ui.canvas.width;
+    baseLayerCanvas.height = ui.canvas.height;
+    markBaseLayerDirty();
+  };
+
+  const renderBaseLayer = (): void => {
+    if (!baseLayerDirty) return;
+
+    syncBaseLayerSize();
+
+    const cssWidth = ui.canvas.width / dpr;
+    const cssHeight = ui.canvas.height / dpr;
+
+    baseLayerCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    baseLayerCtx.clearRect(0, 0, cssWidth, cssHeight);
+    baseLayerCtx.save();
+    baseLayerCtx.translate(viewport.x, viewport.y);
+    for (const el of elements) {
+      drawElement(baseLayerCtx, el);
+    }
+    baseLayerCtx.restore();
+
+    baseLayerDirty = false;
   };
 
   const updateUndoRedoButtons = (): void => {
@@ -83,7 +151,8 @@ export default function init(): void | (() => void) {
     ui.canvas.width = nextWidth;
     ui.canvas.height = nextHeight;
     ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drawScene();
+    markBaseLayerDirty();
+    requestDraw();
   };
 
   const toWorld = (clientX: number, clientY: number): Point => {
@@ -97,19 +166,20 @@ export default function init(): void | (() => void) {
   };
 
   function drawScene(): void {
-    const cssWidth = ui.canvas.width / dpr;
-    const cssHeight = ui.canvas.height / dpr;
+    renderBaseLayer();
 
-    ctx2.clearRect(0, 0, cssWidth, cssHeight);
+    ctx2.save();
+    ctx2.setTransform(1, 0, 0, 1, 0, 0);
+    ctx2.clearRect(0, 0, ui.canvas.width, ui.canvas.height);
+    ctx2.drawImage(baseLayerCanvas, 0, 0);
+    ctx2.restore();
+
     ctx2.save();
     ctx2.translate(viewport.x, viewport.y);
 
-    for (const el of elements) {
-      drawElement(ctx2, el);
-    }
-
     if (drawStart && drawEnd && mode !== 'pan') {
-      const preview = buildPreviewElement(
+      drawLivePreview(
+        ctx2,
         mode as DrawMode,
         drawStart,
         drawEnd,
@@ -117,12 +187,6 @@ export default function init(): void | (() => void) {
         parseInt(ui.widthInput.value, 10),
         freehandPoints
       );
-
-      if (preview) {
-        ctx2.globalAlpha = 0.8;
-        drawElement(ctx2, preview);
-        ctx2.globalAlpha = 1;
-      }
     }
 
     ctx2.restore();
@@ -154,6 +218,7 @@ export default function init(): void | (() => void) {
       pushUndoState();
       elements.push(draft);
       hasUnsavedChanges = true;
+      markBaseLayerDirty();
       updateUndoRedoButtons();
     }
   };
@@ -198,8 +263,9 @@ export default function init(): void | (() => void) {
         hasUnsavedChanges = false;
         undoStack = [];
         redoStack = [];
+        markBaseLayerDirty();
         updateUndoRedoButtons();
-        drawScene();
+        requestDraw();
         ui.galleryModal.close();
         showMessage(`Loaded "${row.name}".`, { timeoutMs: 2000 });
       });
@@ -233,7 +299,7 @@ export default function init(): void | (() => void) {
     drawEnd = point;
     freehandPoints = [point];
     event.preventDefault();
-    drawScene();
+    requestDraw();
   };
 
   const onPointerMove = (event: PointerEvent): void => {
@@ -243,24 +309,30 @@ export default function init(): void | (() => void) {
       if (!panStartPointer) return;
       viewport.x = panStartViewport.x + (event.clientX - panStartPointer.x);
       viewport.y = panStartViewport.y + (event.clientY - panStartPointer.y);
-      drawScene();
+      markBaseLayerDirty();
+      requestDraw();
       return;
     }
 
     if (!drawStart) return;
-    const next = toWorld(event.clientX, event.clientY);
-    drawEnd = next;
-    if (mode === 'freehand') {
-      const prev = freehandPoints[freehandPoints.length - 1];
-      const dx = next.x - prev.x;
-      const dy = next.y - prev.y;
-      if (dx * dx + dy * dy >= 0.8) {
-        freehandPoints.push(next);
+    const coalesced = event.getCoalescedEvents();
+    const samples = coalesced.length > 0 ? coalesced : [event];
+
+    for (const sample of samples) {
+      const next = toWorld(sample.clientX, sample.clientY);
+      drawEnd = next;
+      if (mode === 'freehand') {
+        const prev = freehandPoints[freehandPoints.length - 1];
+        const dx = next.x - prev.x;
+        const dy = next.y - prev.y;
+        if (dx * dx + dy * dy >= 0.8) {
+          freehandPoints.push(next);
+        }
       }
     }
 
     event.preventDefault();
-    drawScene();
+    requestDraw();
   };
 
   const onPointerUp = (event: PointerEvent): void => {
@@ -280,7 +352,7 @@ export default function init(): void | (() => void) {
     }
 
     resetPointerState();
-    drawScene();
+    requestDraw();
   };
 
   const onSave = async (): Promise<void> => {
@@ -317,6 +389,7 @@ export default function init(): void | (() => void) {
   const onExport = async (): Promise<void> => {
     const format = (ui.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
     try {
+      flushDraw();
       await CanvasExporter.download(ui.canvas, `sketch-${Date.now()}`, format, 0.92);
     } catch (error) {
       console.error('[SketchBoard] Export failed', error);
@@ -336,8 +409,9 @@ export default function init(): void | (() => void) {
     if (!prev) return;
     elements = cloneElements(prev);
     hasUnsavedChanges = true;
+    markBaseLayerDirty();
     updateUndoRedoButtons();
-    drawScene();
+    requestDraw();
   };
 
   const onRedo = (): void => {
@@ -347,12 +421,14 @@ export default function init(): void | (() => void) {
     if (!next) return;
     elements = cloneElements(next);
     hasUnsavedChanges = true;
+    markBaseLayerDirty();
     updateUndoRedoButtons();
-    drawScene();
+    requestDraw();
   };
 
   const onClipboard = async (): Promise<void> => {
     try {
+      flushDraw();
       await CanvasExporter.copyToClipboard(ui.canvas);
       showMessage('Copied canvas image to clipboard.', { timeoutMs: 2500 });
     } catch (error) {
@@ -387,8 +463,9 @@ export default function init(): void | (() => void) {
       elements = [];
       undoStack = [];
       redoStack = [];
+      markBaseLayerDirty();
       updateUndoRedoButtons();
-      drawScene();
+      requestDraw();
       return;
     }
 
@@ -398,8 +475,9 @@ export default function init(): void | (() => void) {
     hasUnsavedChanges = false;
     undoStack = [];
     redoStack = [];
+    markBaseLayerDirty();
     updateUndoRedoButtons();
-    drawScene();
+    requestDraw();
   });
 
   ui.btnSave.addEventListener('click', () => void onSave());
@@ -429,9 +507,13 @@ export default function init(): void | (() => void) {
   updateUndoRedoButtons();
   setMode('pan');
   resizeCanvas();
-  drawScene();
+  requestDraw();
 
   return () => {
+    if (renderRaf !== null) {
+      window.cancelAnimationFrame(renderRaf);
+      renderRaf = null;
+    }
     resizeObserver.disconnect();
     ui.canvas.removeEventListener('pointerdown', onPointerDown);
     ui.canvas.removeEventListener('pointermove', onPointerMove);

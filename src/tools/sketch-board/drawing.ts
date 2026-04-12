@@ -13,42 +13,96 @@ export function normalizeRect(
 }
 
 export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): void {
-  ctx.strokeStyle = el.color;
-  ctx.lineWidth = el.width;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
+  applyStrokeStyle(ctx, el.color, el.width);
 
   if (el.type === 'freehand') {
-    if (el.points.length < 2) return;
-    ctx.beginPath();
-    ctx.moveTo(el.points[0].x, el.points[0].y);
-    for (let i = 1; i < el.points.length; i++) {
-      ctx.lineTo(el.points[i].x, el.points[i].y);
-    }
-    ctx.stroke();
+    drawFreehand(ctx, el.points);
     return;
   }
 
   if (el.type === 'line') {
-    ctx.beginPath();
-    ctx.moveTo(el.start.x, el.start.y);
-    ctx.lineTo(el.end.x, el.end.y);
-    ctx.stroke();
+    drawLine(ctx, el.start, el.end);
     return;
   }
-
-  const rect = normalizeRect(el.start, el.end);
 
   if (el.type === 'rect') {
-    if (rect.w < 1 || rect.h < 1) return;
-    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    drawRect(ctx, el.start, el.end);
     return;
   }
 
+  drawEllipse(ctx, el.start, el.end);
+}
+
+function applyStrokeStyle(ctx: CanvasRenderingContext2D, color: string, width: number): void {
+  ctx.strokeStyle = color;
+  ctx.lineWidth = width;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+}
+
+function drawFreehand(ctx: CanvasRenderingContext2D, points: Point[]): void {
+  if (points.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+  ctx.stroke();
+}
+
+function drawLine(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+}
+
+function drawRect(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  const rect = normalizeRect(start, end);
+  if (rect.w < 1 || rect.h < 1) return;
+  ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+}
+
+function drawEllipse(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  const rect = normalizeRect(start, end);
   if (rect.w < 1 || rect.h < 1) return;
   ctx.beginPath();
   ctx.ellipse(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, rect.h / 2, 0, 0, Math.PI * 2);
   ctx.stroke();
+}
+
+export function drawLivePreview(
+  ctx: CanvasRenderingContext2D,
+  mode: DrawMode,
+  drawStart: Point,
+  drawEnd: Point,
+  color: string,
+  width: number,
+  freehandPoints: Point[]
+): void {
+  applyStrokeStyle(ctx, color, width);
+  ctx.globalAlpha = 0.8;
+
+  if (mode === 'freehand') {
+    drawFreehand(ctx, freehandPoints);
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  if (mode === 'line') {
+    drawLine(ctx, drawStart, drawEnd);
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  if (mode === 'rect') {
+    drawRect(ctx, drawStart, drawEnd);
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  drawEllipse(ctx, drawStart, drawEnd);
+  ctx.globalAlpha = 1;
 }
 
 export function buildPreviewElement(
