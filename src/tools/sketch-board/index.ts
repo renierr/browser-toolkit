@@ -586,11 +586,9 @@ export default function init(): void | (() => void) {
   };
 
   const onWheel = (event: WheelEvent): void => {
-    if (event.ctrlKey || event.metaKey) {
-      event.preventDefault();
-      const delta = -Math.sign(event.deltaY);
-      applyZoom(delta, event.clientX, event.clientY);
-    }
+    event.preventDefault();
+    const delta = -Math.sign(event.deltaY);
+    applyZoom(delta, event.clientX, event.clientY);
   };
 
   const getPinchDist = (pts: PointerEvent[]): number => {
