@@ -2872,7 +2872,9 @@ function hasIBeaconPrefix(data: DataView): boolean {
   return data.byteLength >= 2 && data.getUint8(0) === 0x02 && data.getUint8(1) === 0x15;
 }
 
-function getEddystoneFrameType(serviceData: Array<{ uuid: string; data: DataView }>): number | null {
+function getEddystoneFrameType(
+  serviceData: Array<{ uuid: string; data: DataView }>
+): number | null {
   for (const entry of serviceData) {
     if (!hasServiceUuid([entry.uuid], 'feaa')) {
       continue;
@@ -2889,7 +2891,12 @@ function getEddystoneFrameType(serviceData: Array<{ uuid: string; data: DataView
 function formatHexBytes(data: DataView, start: number, length: number): string {
   const bytes: string[] = [];
   for (let i = 0; i < length && start + i < data.byteLength; i++) {
-    bytes.push(data.getUint8(start + i).toString(16).padStart(2, '0'));
+    bytes.push(
+      data
+        .getUint8(start + i)
+        .toString(16)
+        .padStart(2, '0')
+    );
   }
   return bytes.join('');
 }
@@ -3067,7 +3074,11 @@ export function detectBeaconTypes(input: BeaconDetectionInput): BeaconType[] {
       addDetectedBeacon(detected, 'ruuvi', parseRuuviDetails(entry.data));
     }
 
-    if (entry.data.byteLength >= 2 && entry.data.getUint8(0) === 0xbe && entry.data.getUint8(1) === 0xac) {
+    if (
+      entry.data.byteLength >= 2 &&
+      entry.data.getUint8(0) === 0xbe &&
+      entry.data.getUint8(1) === 0xac
+    ) {
       addDetectedBeacon(detected, 'altbeacon', parseAltBeaconDetails(entry.data));
     }
   }
@@ -3094,4 +3105,3 @@ export function getServiceName(uuid: string): string | null {
   const normalized = uuid.toLowerCase().replace(/-/g, '');
   return SERVICE_UUIDS[normalized]?.name ?? null;
 }
-

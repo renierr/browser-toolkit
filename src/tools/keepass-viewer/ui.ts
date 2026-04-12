@@ -251,9 +251,12 @@ function buildAttachmentList(entry: kdbxweb.KdbxEntry): AttachmentRecord[] {
 
     const fallbackName = `attachment-${index}`;
     const fileName = key?.trim() || fallbackName;
-    const detected = identifyFileType(new Uint8Array(data.slice(0, Math.min(4096, data.byteLength))));
+    const detected = identifyFileType(
+      new Uint8Array(data.slice(0, Math.min(4096, data.byteLength)))
+    );
     const mimeFromName = getMimeTypeFromFileName('', fileName);
-    const mime = mimeFromName !== 'application/octet-stream' ? mimeFromName : detected?.type || mimeFromName;
+    const mime =
+      mimeFromName !== 'application/octet-stream' ? mimeFromName : detected?.type || mimeFromName;
 
     files.push({
       name: fileName,
@@ -335,7 +338,9 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
       ? html`
           <div class="grid gap-1">
             <div class="text-xs text-base-content/50">Last accessed</div>
-            <div class="text-xs text-base-content/60">${formatDate(entry.times.lastAccessTime)}</div>
+            <div class="text-xs text-base-content/60">
+              ${formatDate(entry.times.lastAccessTime)}
+            </div>
           </div>
         `
       : ''}
@@ -348,7 +353,6 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
             <i data-lucide="alert-triangle" class="w-4 h-4"></i><span>Entry has expired</span>
           </div>`
         : ''}
-
       ${fields
         .map(
           (field) => html`
@@ -387,7 +391,9 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
                       : html`
                           <div
                             class="w-full min-w-0 rounded-md border border-base-300 px-3 py-2 text-sm wrap-break-word whitespace-pre-wrap"
-                          >${escapeHtml(field.value)}</div>
+                          >
+                            ${escapeHtml(field.value)}
+                          </div>
                         `}
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
@@ -416,7 +422,6 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
           `
         )
         .join('')}
-
       ${attachments.length
         ? html`
             <div class="divider my-1 opacity-60"></div>
@@ -429,9 +434,12 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
                     <div class="rounded-md border border-base-300 p-2 space-y-2">
                       <div class="flex items-center justify-between gap-2">
                         <div class="min-w-0">
-                          <div class="text-sm font-medium truncate">${escapeHtml(attachment.name)}</div>
+                          <div class="text-sm font-medium truncate">
+                            ${escapeHtml(attachment.name)}
+                          </div>
                           <div class="text-xs text-base-content/60">
-                            ${escapeHtml(attachment.mime)} · ${(attachment.data.byteLength / 1024).toFixed(1)} KB
+                            ${escapeHtml(attachment.mime)} ·
+                            ${(attachment.data.byteLength / 1024).toFixed(1)} KB
                           </div>
                         </div>
                         <div class="flex items-center gap-1 shrink-0">
@@ -465,7 +473,6 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
             </div>
           `
         : ''}
-
       ${metadataSection}
     </div>
   `;
@@ -509,11 +516,15 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
       const attachment = attachments[index];
       if (!attachment) return;
 
-      const previewContainer = container.querySelector<HTMLElement>(`[data-attachment-preview="${index}"]`);
+      const previewContainer = container.querySelector<HTMLElement>(
+        `[data-attachment-preview="${index}"]`
+      );
       if (!previewContainer) return;
 
       if (!attachmentUrls.has(index)) {
-        const blob = new Blob([attachment.data], { type: attachment.mime || 'application/octet-stream' });
+        const blob = new Blob([attachment.data], {
+          type: attachment.mime || 'application/octet-stream',
+        });
         attachmentUrls.set(index, URL.createObjectURL(blob));
       }
 
@@ -556,7 +567,9 @@ export function renderEntryDetail(container: HTMLElement, entry: kdbxweb.KdbxEnt
     const attachment = attachments[index];
     if (!attachment) return;
 
-    const blob = new Blob([attachment.data], { type: attachment.mime || 'application/octet-stream' });
+    const blob = new Blob([attachment.data], {
+      type: attachment.mime || 'application/octet-stream',
+    });
     const url = URL.createObjectURL(blob);
 
     try {

@@ -4,9 +4,6 @@
   "icon": "lock",
   "sectionId": "utilities",
   "shareTarget": {
-    "accept": [
-      "application/x-keepass",
-      ".kdbx"
-    ]
+    "accept": ["application/x-keepass", ".kdbx"]
   }
 }

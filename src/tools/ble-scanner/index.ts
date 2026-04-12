@@ -34,12 +34,12 @@ export default function init() {
   const deviceCount = document.getElementById('device-count') as HTMLSpanElement;
   const scanStatus = document.getElementById('scan-status') as HTMLSpanElement;
   const noBluetooth = document.getElementById('no-bluetooth') as HTMLDivElement;
-  const filterButtons = FILTER_BUTTONS
-    .map(({ id, filter }) => {
-      const button = document.getElementById(id) as HTMLButtonElement | null;
-      return button ? { button, filter } : null;
-    })
-    .filter((entry): entry is { button: HTMLButtonElement; filter: DeviceFilter } => entry !== null);
+  const filterButtons = FILTER_BUTTONS.map(({ id, filter }) => {
+    const button = document.getElementById(id) as HTMLButtonElement | null;
+    return button ? { button, filter } : null;
+  }).filter(
+    (entry): entry is { button: HTMLButtonElement; filter: DeviceFilter } => entry !== null
+  );
 
   if (!isBluetoothSupported()) {
     noBluetooth.classList.remove('hidden');
@@ -290,4 +290,3 @@ function updateLocalHistory(
     }
   }
 }
-

@@ -56,7 +56,9 @@ function getElements(): DomElements | null {
   const startButton = document.getElementById('nfc-start-scan') as HTMLButtonElement | null;
   const stopButton = document.getElementById('nfc-stop-scan') as HTMLButtonElement | null;
   const writeButton = document.getElementById('nfc-write-tag') as HTMLButtonElement | null;
-  const clearSessionButton = document.getElementById('nfc-clear-session') as HTMLButtonElement | null;
+  const clearSessionButton = document.getElementById(
+    'nfc-clear-session'
+  ) as HTMLButtonElement | null;
   const copyHexButton = document.getElementById('nfc-copy-hex') as HTMLButtonElement | null;
   const scanState = document.getElementById('nfc-scan-state') as HTMLDivElement | null;
   const unsupportedBanner = document.getElementById('nfc-unsupported') as HTMLDivElement | null;
@@ -75,8 +77,12 @@ function getElements(): DomElements | null {
   const serialLabel = document.getElementById('nfc-tag-serial') as HTMLDivElement | null;
   const recordCountLabel = document.getElementById('nfc-record-count') as HTMLDivElement | null;
   const scanCategoryLabel = document.getElementById('nfc-scan-category') as HTMLDivElement | null;
-  const scanTechnologyLabel = document.getElementById('nfc-scan-technology') as HTMLDivElement | null;
-  const scanCapabilitiesLabel = document.getElementById('nfc-scan-capabilities') as HTMLDivElement | null;
+  const scanTechnologyLabel = document.getElementById(
+    'nfc-scan-technology'
+  ) as HTMLDivElement | null;
+  const scanCapabilitiesLabel = document.getElementById(
+    'nfc-scan-capabilities'
+  ) as HTMLDivElement | null;
   const recordList = document.getElementById('nfc-record-list') as HTMLDivElement | null;
   const hexInput = document.getElementById('nfc-hex-input') as HTMLTextAreaElement | null;
   const parseHexButton = document.getElementById('nfc-parse-hex') as HTMLButtonElement | null;

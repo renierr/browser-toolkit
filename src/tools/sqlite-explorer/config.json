@@ -4,12 +4,6 @@
   "icon": "database",
   "sectionId": "utilities",
   "shareTarget": {
-    "accept": [
-      "application/vnd.sqlite3",
-      "application/x-sqlite3",
-      ".sqlite",
-      ".sqlite3",
-      ".db"
-    ]
+    "accept": ["application/vnd.sqlite3", "application/x-sqlite3", ".sqlite", ".sqlite3", ".db"]
   }
 }

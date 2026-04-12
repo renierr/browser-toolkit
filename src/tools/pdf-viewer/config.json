@@ -7,8 +7,6 @@
   "sectionId": "pdf",
   "order": 1,
   "shareTarget": {
-    "accept": [
-      "application/pdf"
-    ]
+    "accept": ["application/pdf"]
   }
 }

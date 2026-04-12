@@ -5,8 +5,6 @@
   "sectionId": "images",
   "order": 5,
   "shareTarget": {
-    "accept": [
-      "image/*"
-    ]
+    "accept": ["image/*"]
   }
 }

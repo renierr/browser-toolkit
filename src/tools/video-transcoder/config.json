@@ -5,8 +5,6 @@
   "sectionId": "media",
   "icon": "video",
   "shareTarget": {
-    "accept": [
-      "video/*"
-    ]
+    "accept": ["video/*"]
   }
 }

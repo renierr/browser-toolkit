@@ -91,4 +91,3 @@ export type NfcScanProfile = {
   reason: string;
   matchedRule: string;
 };
-

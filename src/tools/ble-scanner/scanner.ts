@@ -81,7 +81,6 @@ export class BLEScanner {
     this.advertisementHandler = null;
   }
 
-
   clearDevices(): void {
     this.activeDevices.clear();
   }

@@ -82,7 +82,9 @@ export function parseAdvertisingEvent(event: BluetoothAdvertisingEvent): ParsedD
     manufacturerData: manufacturerDataRaw,
   });
 
-  const derivedManufacturer = manufacturerData?.find((entry) => !/^unknown\b/i.test(entry.name))?.name;
+  const derivedManufacturer = manufacturerData?.find(
+    (entry) => !/^unknown\b/i.test(entry.name)
+  )?.name;
   const manufacturer = deviceInfo?.manufacturer || derivedManufacturer || null;
   const knownDeviceName = deviceInfo?.name || null;
   const identifiedType = deviceInfo?.type || beaconTypes[0]?.type || 'Unknown';
@@ -218,9 +220,15 @@ function createLocalFingerprint(input: {
     input.manufacturer ?? 'unknown-manufacturer',
     input.identifiedCategory,
     input.identifiedType,
-    input.beaconTypes.map((beacon) => beacon.type).sort().join('|') || 'no-beacon',
+    input.beaconTypes
+      .map((beacon) => beacon.type)
+      .sort()
+      .join('|') || 'no-beacon',
     input.matchedServiceFilters.slice().sort().join('|') || 'no-filters',
-    input.manufacturerData?.map((entry) => entry.id.toString(16)).sort().join('|') || 'no-mfg-data',
+    input.manufacturerData
+      ?.map((entry) => entry.id.toString(16))
+      .sort()
+      .join('|') || 'no-mfg-data',
   ];
 
   return `fp-${hashString(parts.join('::'))}`;
@@ -278,7 +286,6 @@ export function formatUUID(uuid: string): string {
   }
   return uuid;
 }
-
 
 export function formatManufacturerData(data: DataView): string {
   const bytes: string[] = [];

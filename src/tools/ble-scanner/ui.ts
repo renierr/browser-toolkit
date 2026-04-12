@@ -4,12 +4,7 @@ const UNKNOWN_CATEGORY = 'Unknown';
 const UNKNOWN_MANUFACTURER_GROUP_MIN = 3;
 const RECENT_THRESHOLD_MS = 5 * 60 * 1000;
 
-export type DeviceFilter =
-  | 'high-confidence'
-  | 'beacons'
-  | 'unknown'
-  | 'recent'
-  | 'strong-signal';
+export type DeviceFilter = 'high-confidence' | 'beacons' | 'unknown' | 'recent' | 'strong-signal';
 
 export type DeviceHistoryEntry = {
   firstSeen: number;
@@ -72,7 +67,10 @@ export function renderDeviceGroups(
     .join('');
 }
 
-function groupByCategory(devices: Map<string, ParsedDevice>, options: RenderOptions): Map<string, ParsedDevice[]> {
+function groupByCategory(
+  devices: Map<string, ParsedDevice>,
+  options: RenderOptions
+): Map<string, ParsedDevice[]> {
   const grouped = new Map<string, ParsedDevice[]>();
   const unknownDevices: ParsedDevice[] = [];
   const now = options.now ?? Date.now();
@@ -195,7 +193,10 @@ function formatServiceFilterLabel(filterName: string): string {
     .join(' ');
 }
 
-export function renderDeviceCard(device: ParsedDevice, historyEntry: DeviceHistoryEntry | null = null): string {
+export function renderDeviceCard(
+  device: ParsedDevice,
+  historyEntry: DeviceHistoryEntry | null = null
+): string {
   const signalBars = getSignalBars(device.rssi);
   const timeSinceUpdate = getTimeSinceUpdate(device.timestamp);
   const confidenceLabel = getConfidenceLabel(device.confidence);
@@ -327,9 +328,14 @@ export function renderDeviceCard(device: ParsedDevice, historyEntry: DeviceHisto
               </div>
               <div class="mt-1 space-y-1">
                 ${device.beaconTypes
-                  .flatMap((beacon) => (beacon.details && beacon.details.length > 0 ? beacon.details : []))
+                  .flatMap((beacon) =>
+                    beacon.details && beacon.details.length > 0 ? beacon.details : []
+                  )
                   .slice(0, 4)
-                  .map((detail) => `<p class="text-[11px] text-base-content/55 truncate" title="${detail}">${detail}</p>`)
+                  .map(
+                    (detail) =>
+                      `<p class="text-[11px] text-base-content/55 truncate" title="${detail}">${detail}</p>`
+                  )
                   .join('')}
               </div>
             </div>
@@ -428,8 +434,10 @@ function matchesActiveFilters(
 function renderHistoryDetails(historyEntry: DeviceHistoryEntry, now: number): string {
   const age = now - historyEntry.firstSeen;
   const minsSeen = Math.max(1, Math.round(age / 60000));
-  const strongest = historyEntry.strongestRssi !== null ? `${historyEntry.strongestRssi} dBm` : 'n/a';
-  const avg = historyEntry.averageRssi !== null ? `${Math.round(historyEntry.averageRssi)} dBm` : 'n/a';
+  const strongest =
+    historyEntry.strongestRssi !== null ? `${historyEntry.strongestRssi} dBm` : 'n/a';
+  const avg =
+    historyEntry.averageRssi !== null ? `${Math.round(historyEntry.averageRssi)} dBm` : 'n/a';
 
   return `
     <div>
@@ -443,7 +451,6 @@ function renderHistoryDetails(historyEntry: DeviceHistoryEntry, now: number): st
     </div>
   `;
 }
-
 
 export function renderEmptyState(): string {
   return `
@@ -548,4 +555,3 @@ function getConfidenceBadgeClass(confidence: ParsedDevice['confidence']): string
   if (confidence === 'medium') return 'badge-warning';
   return 'badge-ghost';
 }
-

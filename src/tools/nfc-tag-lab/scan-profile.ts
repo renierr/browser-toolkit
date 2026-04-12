@@ -21,7 +21,13 @@ type ProfileRule = {
   matches: (context: ScanContext) => boolean;
 };
 
-const PAYMENT_SIGNATURES = ['2PAY.SYS.DDF01', 'A000000003', 'A000000004', 'A000000025', 'A000000152'];
+const PAYMENT_SIGNATURES = [
+  '2PAY.SYS.DDF01',
+  'A000000003',
+  'A000000004',
+  'A000000025',
+  'A000000152',
+];
 const PASSPORT_SIGNATURES = ['A0000002471001', 'ICAO', 'LDS'];
 const ID_SIGNATURES = ['A000000167455349474E', 'A000000248', 'EID', 'IDENTITY'];
 
@@ -153,4 +159,3 @@ function buildScanHaystack(context: ScanContext): string {
 
   return `${context.serialNumber}|${joinedRecords}`.toUpperCase();
 }
-

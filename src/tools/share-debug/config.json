@@ -5,8 +5,6 @@
   "sectionId": "utilities",
   "order": 100,
   "shareTarget": {
-    "accept": [
-      "*/*"
-    ]
+    "accept": ["*/*"]
   }
 }

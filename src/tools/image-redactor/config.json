@@ -4,8 +4,6 @@
   "icon": "crop",
   "sectionId": "images",
   "shareTarget": {
-    "accept": [
-      "image/*"
-    ]
+    "accept": ["image/*"]
   }
 }

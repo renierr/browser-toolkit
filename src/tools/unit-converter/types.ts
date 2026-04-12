@@ -61,7 +61,6 @@ export type ConverterState = {
 
 export type FavoritePair = string; // Format: "category:fromUnit:toUnit"
 
-
 export type FxRatesSnapshot = {
   base: string;
   timestamp: number;

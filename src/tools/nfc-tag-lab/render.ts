@@ -23,7 +23,8 @@ export function renderRecords(
 
   for (const record of records) {
     const item = document.createElement('div');
-    item.className = 'border border-base-300 rounded-lg p-3 bg-base-200 w-full max-w-full min-w-0 overflow-hidden';
+    item.className =
+      'border border-base-300 rounded-lg p-3 bg-base-200 w-full max-w-full min-w-0 overflow-hidden';
 
     const title = document.createElement('div');
     title.className = 'flex flex-wrap items-center justify-between gap-2 mb-2 min-w-0';

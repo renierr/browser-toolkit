@@ -553,7 +553,6 @@ export function formatNumber(value: number): string {
   return formatted.toLocaleString('en-US', { maximumFractionDigits: 10 });
 }
 
-
 export function saveHistory(record: ConversionRecord): void {
   try {
     const history = getHistory();

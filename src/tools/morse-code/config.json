@@ -5,8 +5,6 @@
   "sectionId": "general",
   "order": 5,
   "shareTarget": {
-    "accept": [
-      "audio/*"
-    ]
+    "accept": ["audio/*"]
   }
 }

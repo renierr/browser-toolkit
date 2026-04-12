@@ -5,10 +5,6 @@
   "sectionId": "media",
   "order": 2,
   "shareTarget": {
-    "accept": [
-      "audio/x-mod",
-      "audio/mod",
-      "application/octet-stream"
-    ]
+    "accept": ["audio/x-mod", "audio/mod", "application/octet-stream"]
   }
 }
