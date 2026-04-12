@@ -227,6 +227,24 @@ function computeSceneBounds(elements: SketchElement[]): {
   return { minX, minY, maxX, maxY };
 }
 
+export function getCropBounds(elements: SketchElement[]): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} | null {
+  const bounds = computeSceneBounds(elements);
+  if (!bounds) return null;
+
+  const padding = 4;
+  return {
+    x: Math.floor(bounds.minX - padding),
+    y: Math.floor(bounds.minY - padding),
+    w: Math.ceil(bounds.maxX - bounds.minX + padding * 2),
+    h: Math.ceil(bounds.maxY - bounds.minY + padding * 2),
+  };
+}
+
 export function makeThumbnail(elements: SketchElement[]): string {
   const thumbCanvas = document.createElement('canvas');
   thumbCanvas.width = 320;

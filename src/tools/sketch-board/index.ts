@@ -7,6 +7,7 @@ import {
   drawElement,
   drawLiveFreehandSegment,
   drawLivePreview,
+  getCropBounds,
   makeThumbnail,
 } from './drawing.ts';
 import { getDom } from './dom.ts';
@@ -65,16 +66,6 @@ export default function init(): void | (() => void) {
       renderQueued = false;
       drawScene();
     });
-  };
-
-  const flushDraw = (): void => {
-    if (renderRaf !== null) {
-      window.cancelAnimationFrame(renderRaf);
-      renderRaf = null;
-    }
-    if (!renderQueued) return;
-    renderQueued = false;
-    drawScene();
   };
 
   const requestDrawImmediate = (): void => {
@@ -420,6 +411,9 @@ export default function init(): void | (() => void) {
     const nameInput = window.prompt('Version name:', `Drawing ${new Date().toLocaleString()}`);
     if (!nameInput) return;
 
+    const bounds = getCropBounds(elements);
+    const thumbUrl = bounds ? makeThumbnail(elements) : '';
+
     const now = Date.now();
     const record: DrawingRecord = {
       id: crypto.randomUUID(),
@@ -428,7 +422,7 @@ export default function init(): void | (() => void) {
       updatedAt: now,
       viewport: { ...viewport },
       elements: elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement),
-      thumbnailDataUrl: makeThumbnail(elements),
+      thumbnailDataUrl: thumbUrl,
       meta: buildMeta(elements, mode),
     };
 
@@ -442,11 +436,36 @@ export default function init(): void | (() => void) {
     }
   };
 
+  const renderTempCanvas = (): HTMLCanvasElement | null => {
+    const bounds = getCropBounds(elements);
+    if (!bounds) return null;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = bounds.w;
+    tempCanvas.height = bounds.h;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return null;
+
+    const offsetX = -bounds.x + viewport.x;
+    const offsetY = -bounds.y + viewport.y;
+    tempCtx.translate(offsetX, offsetY);
+    for (const el of elements) {
+      drawElement(tempCtx, el);
+    }
+
+    return tempCanvas;
+  };
+
   const onExport = async (): Promise<void> => {
     const format = (ui.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
+    const tempCanvas = renderTempCanvas();
+    if (!tempCanvas) {
+      showMessage('Nothing to export.', { type: 'warning', timeoutMs: 2500 });
+      return;
+    }
+
     try {
-      flushDraw();
-      await CanvasExporter.download(ui.canvas, `sketch-${Date.now()}`, format, 0.92);
+      await CanvasExporter.download(tempCanvas, `sketch-${Date.now()}`, format, 0.92);
     } catch (error) {
       console.error('[SketchBoard] Export failed', error);
       showMessage('Export failed.', { type: 'alert', timeoutMs: 3000 });
@@ -483,9 +502,14 @@ export default function init(): void | (() => void) {
   };
 
   const onClipboard = async (): Promise<void> => {
+    const tempCanvas = renderTempCanvas();
+    if (!tempCanvas) {
+      showMessage('Nothing to copy.', { type: 'warning', timeoutMs: 2500 });
+      return;
+    }
+
     try {
-      flushDraw();
-      await CanvasExporter.copyToClipboard(ui.canvas);
+      await CanvasExporter.copyToClipboard(tempCanvas);
       showMessage('Copied canvas image to clipboard.', { timeoutMs: 2500 });
     } catch (error) {
       console.error('[SketchBoard] Clipboard copy failed', error);
