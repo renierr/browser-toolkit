@@ -1,4 +1,5 @@
 import { CanvasExporter } from '@js/canvas-utils.ts';
+import router from '@js/router.ts';
 import { isDarkMode } from '@js/theme.ts';
 import { showMessage } from '@js/ui.ts';
 import { drawElement, buildMeta, buildPreviewElement, makeThumbnail } from './drawing.ts';
@@ -26,6 +27,7 @@ export default function init(): void | (() => void) {
   let mode: ToolMode = 'pan';
   let elements: SketchElement[] = [];
   let viewport: ViewportState = { x: 0, y: 0 };
+  let hasUnsavedChanges = false;
 
   let isPointerActive = false;
   let activePointerId: number | null = null;
@@ -131,7 +133,13 @@ export default function init(): void | (() => void) {
 
     if (draft) {
       elements.push(draft);
+      hasUnsavedChanges = true;
     }
+  };
+
+  const confirmDiscardIfNeeded = (): boolean => {
+    if (!hasUnsavedChanges) return true;
+    return window.confirm('Discard current unsaved changes?');
   };
 
   const renderGallery = async (): Promise<void> => {
@@ -162,8 +170,11 @@ export default function init(): void | (() => void) {
       meta.textContent = `${new Date(row.updatedAt).toLocaleString()} - ${row.meta.elementCount} elements`;
 
       btnLoad.addEventListener('click', () => {
+        if (!confirmDiscardIfNeeded()) return;
+
         elements = row.elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
         viewport = { ...row.viewport };
+        hasUnsavedChanges = false;
         drawScene();
         ui.galleryModal.close();
         showMessage(`Loaded "${row.name}".`, { timeoutMs: 2000 });
@@ -271,6 +282,7 @@ export default function init(): void | (() => void) {
 
     try {
       await putDrawing(record);
+      hasUnsavedChanges = false;
       showMessage(`Saved version "${record.name}".`, { timeoutMs: 2500 });
     } catch (error) {
       console.error('[SketchBoard] Failed to save drawing', error);
@@ -288,6 +300,11 @@ export default function init(): void | (() => void) {
     }
   };
 
+  const onBackOverview = (): void => {
+    if (!confirmDiscardIfNeeded()) return;
+    router.goOverview();
+  };
+
   const onClipboard = async (): Promise<void> => {
     try {
       await CanvasExporter.copyToClipboard(ui.canvas);
@@ -298,6 +315,8 @@ export default function init(): void | (() => void) {
     }
   };
 
+  ui.btnBackOverview.addEventListener('click', onBackOverview);
+
   ui.modeButtons.pan.addEventListener('click', () => setMode('pan'));
   ui.modeButtons.freehand.addEventListener('click', () => setMode('freehand'));
   ui.modeButtons.line.addEventListener('click', () => setMode('line'));
@@ -305,7 +324,16 @@ export default function init(): void | (() => void) {
   ui.modeButtons.ellipse.addEventListener('click', () => setMode('ellipse'));
 
   ui.btnClear.addEventListener('click', () => {
+    if (elements.length === 0 || !hasUnsavedChanges) {
+      elements = [];
+      drawScene();
+      return;
+    }
+
+    if (!window.confirm('Discard current unsaved changes and clear canvas?')) return;
+
     elements = [];
+    hasUnsavedChanges = false;
     drawScene();
   });
 

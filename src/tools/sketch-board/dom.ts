@@ -8,6 +8,7 @@ export type SketchDom = {
   colorInput: HTMLInputElement;
   widthInput: HTMLInputElement;
   exportFormat: HTMLSelectElement;
+  btnBackOverview: HTMLButtonElement;
   btnClear: HTMLButtonElement;
   btnSave: HTMLButtonElement;
   btnGallery: HTMLButtonElement;
@@ -24,6 +25,7 @@ export function getDom(doc: Document): SketchDom | null {
   const colorInput = doc.getElementById('stroke-color') as HTMLInputElement | null;
   const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
   const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
+  const btnBackOverview = doc.getElementById('back-overview') as HTMLButtonElement | null;
   const btnClear = doc.getElementById('clear-canvas') as HTMLButtonElement | null;
   const btnSave = doc.getElementById('save-drawing') as HTMLButtonElement | null;
   const btnGallery = doc.getElementById('open-gallery') as HTMLButtonElement | null;
@@ -43,6 +45,7 @@ export function getDom(doc: Document): SketchDom | null {
     !colorInput ||
     !widthInput ||
     !exportFormat ||
+    !btnBackOverview ||
     !btnClear ||
     !btnSave ||
     !btnGallery ||
@@ -65,6 +68,7 @@ export function getDom(doc: Document): SketchDom | null {
     colorInput,
     widthInput,
     exportFormat,
+    btnBackOverview,
     btnClear,
     btnSave,
     btnGallery,

@@ -7,6 +7,10 @@
     <div
       class="pointer-events-auto inline-flex flex-wrap items-center gap-2 rounded-box border border-base-300 bg-base-100/90 px-2 py-2 shadow-lg backdrop-blur"
     >
+      <button id="back-overview" class="btn btn-sm btn-outline" title="Back to overview">
+        <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i>Overview
+      </button>
+
       <div class="join">
         <button id="mode-pan" class="btn btn-sm join-item btn-primary" title="Scroll / Pan">
           <i data-lucide="hand" class="w-4 h-4"></i>
@@ -29,7 +33,12 @@
 
       <label class="flex items-center gap-2 text-xs">
         <span>Color</span>
-        <input id="stroke-color" type="color" class="h-8 w-10 rounded border border-base-300" data-setting="strokeColor" />
+        <input
+          id="stroke-color"
+          type="color"
+          class="h-8 w-10 rounded border border-base-300"
+          data-setting="strokeColor"
+        />
       </label>
 
       <label class="flex items-center gap-2 text-xs min-w-44">
@@ -95,7 +104,9 @@
 
   <template id="gallery-item-template">
     <article class="rounded-box border border-base-300 p-2 bg-base-100">
-      <img class="gallery-thumb w-full h-28 object-contain rounded bg-base-200" alt="Preview" />
+      <div class="checkerboard-bg rounded">
+        <img class="gallery-thumb w-full h-28 object-contain rounded" alt="Preview" />
+      </div>
       <div class="mt-2">
         <div class="gallery-name text-sm font-medium truncate"></div>
         <div class="gallery-meta text-xs opacity-70"></div>
