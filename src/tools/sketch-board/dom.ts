@@ -10,6 +10,8 @@ export type SketchDom = {
   exportFormat: HTMLSelectElement;
   btnBackOverview: HTMLButtonElement;
   btnClear: HTMLButtonElement;
+  btnUndo: HTMLButtonElement;
+  btnRedo: HTMLButtonElement;
   btnSave: HTMLButtonElement;
   btnGallery: HTMLButtonElement;
   btnExport: HTMLButtonElement;
@@ -27,6 +29,8 @@ export function getDom(doc: Document): SketchDom | null {
   const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
   const btnBackOverview = doc.getElementById('back-overview') as HTMLButtonElement | null;
   const btnClear = doc.getElementById('clear-canvas') as HTMLButtonElement | null;
+  const btnUndo = doc.getElementById('undo-action') as HTMLButtonElement | null;
+  const btnRedo = doc.getElementById('redo-action') as HTMLButtonElement | null;
   const btnSave = doc.getElementById('save-drawing') as HTMLButtonElement | null;
   const btnGallery = doc.getElementById('open-gallery') as HTMLButtonElement | null;
   const btnExport = doc.getElementById('export-file') as HTMLButtonElement | null;
@@ -47,6 +51,8 @@ export function getDom(doc: Document): SketchDom | null {
     !exportFormat ||
     !btnBackOverview ||
     !btnClear ||
+    !btnUndo ||
+    !btnRedo ||
     !btnSave ||
     !btnGallery ||
     !btnExport ||
@@ -70,6 +76,8 @@ export function getDom(doc: Document): SketchDom | null {
     exportFormat,
     btnBackOverview,
     btnClear,
+    btnUndo,
+    btnRedo,
     btnSave,
     btnGallery,
     btnExport,

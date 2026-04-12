@@ -1,6 +1,5 @@
 import { CanvasExporter } from '@js/canvas-utils.ts';
 import router from '@js/router.ts';
-import { isDarkMode } from '@js/theme.ts';
 import { showMessage } from '@js/ui.ts';
 import { drawElement, buildMeta, buildPreviewElement, makeThumbnail } from './drawing.ts';
 import { getDom } from './dom.ts';
@@ -28,6 +27,8 @@ export default function init(): void | (() => void) {
   let elements: SketchElement[] = [];
   let viewport: ViewportState = { x: 0, y: 0 };
   let hasUnsavedChanges = false;
+  let undoStack: SketchElement[][] = [];
+  let redoStack: SketchElement[][] = [];
 
   let isPointerActive = false;
   let activePointerId: number | null = null;
@@ -38,6 +39,24 @@ export default function init(): void | (() => void) {
   let panStartViewport: ViewportState = { x: 0, y: 0 };
 
   const dpr = window.devicePixelRatio || 1;
+
+  const cloneElements = (source: SketchElement[]): SketchElement[] => {
+    return source.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
+  };
+
+  const updateUndoRedoButtons = (): void => {
+    ui.btnUndo.disabled = undoStack.length === 0;
+    ui.btnRedo.disabled = redoStack.length === 0;
+  };
+
+  const pushUndoState = (): void => {
+    undoStack.push(cloneElements(elements));
+    if (undoStack.length > 100) {
+      undoStack.shift();
+    }
+    redoStack = [];
+    updateUndoRedoButtons();
+  };
 
   const setMode = (next: ToolMode): void => {
     mode = next;
@@ -132,8 +151,10 @@ export default function init(): void | (() => void) {
     );
 
     if (draft) {
+      pushUndoState();
       elements.push(draft);
       hasUnsavedChanges = true;
+      updateUndoRedoButtons();
     }
   };
 
@@ -175,6 +196,9 @@ export default function init(): void | (() => void) {
         elements = row.elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
         viewport = { ...row.viewport };
         hasUnsavedChanges = false;
+        undoStack = [];
+        redoStack = [];
+        updateUndoRedoButtons();
         drawScene();
         ui.galleryModal.close();
         showMessage(`Loaded "${row.name}".`, { timeoutMs: 2000 });
@@ -305,6 +329,28 @@ export default function init(): void | (() => void) {
     router.goOverview();
   };
 
+  const onUndo = (): void => {
+    if (undoStack.length === 0) return;
+    redoStack.push(cloneElements(elements));
+    const prev = undoStack.pop();
+    if (!prev) return;
+    elements = cloneElements(prev);
+    hasUnsavedChanges = true;
+    updateUndoRedoButtons();
+    drawScene();
+  };
+
+  const onRedo = (): void => {
+    if (redoStack.length === 0) return;
+    undoStack.push(cloneElements(elements));
+    const next = redoStack.pop();
+    if (!next) return;
+    elements = cloneElements(next);
+    hasUnsavedChanges = true;
+    updateUndoRedoButtons();
+    drawScene();
+  };
+
   const onClipboard = async (): Promise<void> => {
     try {
       await CanvasExporter.copyToClipboard(ui.canvas);
@@ -316,6 +362,8 @@ export default function init(): void | (() => void) {
   };
 
   ui.btnBackOverview.addEventListener('click', onBackOverview);
+  ui.btnUndo.addEventListener('click', onUndo);
+  ui.btnRedo.addEventListener('click', onRedo);
 
   ui.modeButtons.pan.addEventListener('click', () => setMode('pan'));
   ui.modeButtons.freehand.addEventListener('click', () => setMode('freehand'));
@@ -326,6 +374,9 @@ export default function init(): void | (() => void) {
   ui.btnClear.addEventListener('click', () => {
     if (elements.length === 0 || !hasUnsavedChanges) {
       elements = [];
+      undoStack = [];
+      redoStack = [];
+      updateUndoRedoButtons();
       drawScene();
       return;
     }
@@ -334,6 +385,9 @@ export default function init(): void | (() => void) {
 
     elements = [];
     hasUnsavedChanges = false;
+    undoStack = [];
+    redoStack = [];
+    updateUndoRedoButtons();
     drawScene();
   });
 
@@ -360,8 +414,8 @@ export default function init(): void | (() => void) {
   });
   resizeObserver.observe(ui.canvas);
 
-  ui.colorInput.value = isDarkMode() ? '#f8fafc' : '#111827';
   ui.canvas.style.touchAction = 'none';
+  updateUndoRedoButtons();
   setMode('pan');
   resizeCanvas();
   drawScene();
