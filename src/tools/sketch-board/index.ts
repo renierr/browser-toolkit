@@ -630,18 +630,42 @@ export default function init(): void | (() => void) {
     requestDrawImmediate();
   };
 
-  const onZoomIn = (): void => applyZoom(1);
-  const onZoomOut = (): void => applyZoom(-1);
+  const centerViewportOnContent = (): void => {
+    const bounds = getCropBounds(elements);
+    if (!bounds) return;
+
+    const rect = ui.canvas.getBoundingClientRect();
+    const canvasCenterX = rect.left + rect.width / 2;
+    const canvasCenterY = rect.top + rect.height / 2;
+    const worldCenterX = bounds.x + bounds.w / 2;
+    const worldCenterY = bounds.y + bounds.h / 2;
+
+    viewport.x = canvasCenterX - worldCenterX * viewport.scale;
+    viewport.y = canvasCenterY - worldCenterY * viewport.scale;
+    markBaseLayerDirty();
+    requestDrawImmediate();
+  };
+
+  const onZoomIn = (): void => {
+    applyZoom(1);
+    centerViewportOnContent();
+  };
+  const onZoomOut = (): void => {
+    applyZoom(-1);
+    centerViewportOnContent();
+  };
   const onZoomReset = (): void => {
     viewport.scale = 1;
     markBaseLayerDirty();
-    requestDrawImmediate();
+    drawScene();
+    centerViewportOnContent();
   };
 
   const onWheel = (event: WheelEvent): void => {
     event.preventDefault();
     const delta = -Math.sign(event.deltaY);
-    applyZoom(delta, event.clientX, event.clientY);
+    applyZoom(delta);
+    centerViewportOnContent();
   };
 
   const getTouchDistance = (t0: Touch, t1: Touch): number => {
@@ -680,7 +704,8 @@ export default function init(): void | (() => void) {
       const scaleRatio = currentDist / pinchStartDist;
       if (Math.abs(scaleRatio - 1) > 0.05) {
         const delta = scaleRatio > 1 ? 1 : -1;
-        applyZoom(delta, currentCenter.x, currentCenter.y);
+        applyZoom(delta);
+        centerViewportOnContent();
         pinchStartDist = currentDist;
         pinchStartCenter = currentCenter;
       }
