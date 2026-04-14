@@ -85,3 +85,20 @@ export type DrawingRecord = {
   thumbnailDataUrl: string;
   meta: DrawingMeta;
 };
+
+export type SketchState = {
+  elements: SketchElement[];
+  viewport: ViewportState;
+  mode: ToolMode;
+  hasUnsavedChanges: boolean;
+};
+
+export type DrawToolContext = {
+  readonly color: string;
+  readonly strokeWidth: number;
+  readonly fontFamily: string;
+  readonly fontSize: number;
+  readonly fontWeight: 'normal' | 'bold';
+  readonly fontStyle: 'normal' | 'italic';
+  readonly viewport: ViewportState;
+};
