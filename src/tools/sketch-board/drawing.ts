@@ -149,27 +149,30 @@ function drawArrow(ctx: CanvasRenderingContext2D, start: Point, end: Point): voi
   const len = Math.hypot(dx, dy);
   if (len < 1) return;
 
-  // Shaft
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.lineTo(end.x, end.y);
-  ctx.stroke();
-
-  // Arrowhead
-  const headLen = Math.min(20, len * 0.3);
+  const strokeW = ctx.lineWidth;
+  const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
   const angle = Math.atan2(dy, dx);
   const spread = Math.PI / 6;
 
+  // Shaft — stop at the base of the arrowhead
+  const shaftEndX = end.x - headLen * Math.cos(angle);
+  const shaftEndY = end.y - headLen * Math.sin(angle);
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(shaftEndX, shaftEndY);
+  ctx.stroke();
+
+  // Arrowhead — width scales with stroke
+  const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
+  const baseX = end.x - headLen * Math.cos(angle);
+  const baseY = end.y - headLen * Math.sin(angle);
+  const perpX = -Math.sin(angle);
+  const perpY = Math.cos(angle);
+
   ctx.beginPath();
   ctx.moveTo(end.x, end.y);
-  ctx.lineTo(
-    end.x - headLen * Math.cos(angle - spread),
-    end.y - headLen * Math.sin(angle - spread)
-  );
-  ctx.lineTo(
-    end.x - headLen * Math.cos(angle + spread),
-    end.y - headLen * Math.sin(angle + spread)
-  );
+  ctx.lineTo(baseX + perpX * halfBase, baseY + perpY * halfBase);
+  ctx.lineTo(baseX - perpX * halfBase, baseY - perpY * halfBase);
   ctx.closePath();
   ctx.fillStyle = ctx.strokeStyle as string;
   ctx.fill();

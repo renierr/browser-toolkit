@@ -48,27 +48,30 @@ export class ArrowTool implements DrawTool {
     canvasCtx.lineCap = 'round';
     canvasCtx.globalAlpha = 0.8;
 
-    // Shaft
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(this.start.x, this.start.y);
-    canvasCtx.lineTo(this.end.x, this.end.y);
-    canvasCtx.stroke();
-
-    // Arrowhead
-    const headLen = Math.min(20, len * 0.3);
+    const strokeW = ctx.strokeWidth;
+    const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
     const angle = Math.atan2(dy, dx);
     const spread = Math.PI / 6;
 
+    // Shaft — stop at base of arrowhead
+    const shaftEndX = this.end.x - headLen * Math.cos(angle);
+    const shaftEndY = this.end.y - headLen * Math.sin(angle);
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(this.start.x, this.start.y);
+    canvasCtx.lineTo(shaftEndX, shaftEndY);
+    canvasCtx.stroke();
+
+    // Arrowhead — width scales with stroke
+    const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
+    const baseX = this.end.x - headLen * Math.cos(angle);
+    const baseY = this.end.y - headLen * Math.sin(angle);
+    const perpX = -Math.sin(angle);
+    const perpY = Math.cos(angle);
+
     canvasCtx.beginPath();
     canvasCtx.moveTo(this.end.x, this.end.y);
-    canvasCtx.lineTo(
-      this.end.x - headLen * Math.cos(angle - spread),
-      this.end.y - headLen * Math.sin(angle - spread)
-    );
-    canvasCtx.lineTo(
-      this.end.x - headLen * Math.cos(angle + spread),
-      this.end.y - headLen * Math.sin(angle + spread)
-    );
+    canvasCtx.lineTo(baseX + perpX * halfBase, baseY + perpY * halfBase);
+    canvasCtx.lineTo(baseX - perpX * halfBase, baseY - perpY * halfBase);
     canvasCtx.closePath();
     canvasCtx.fillStyle = ctx.color;
     canvasCtx.fill();
