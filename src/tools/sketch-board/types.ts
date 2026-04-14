@@ -1,12 +1,14 @@
 export type ToolMode =
   | 'pan'
+  | 'select'
   | 'freehand'
   | 'line'
   | 'rect'
   | 'rect-filled'
   | 'ellipse'
-  | 'ellipse-filled';
-export type DrawMode = Exclude<ToolMode, 'pan'>;
+  | 'ellipse-filled'
+  | 'text';
+export type DrawMode = Exclude<ToolMode, 'pan' | 'select'>;
 
 export type Point = {
   x: number;
@@ -44,7 +46,22 @@ export type EllipseElement = BaseElement & {
   filled?: boolean;
 };
 
-export type SketchElement = FreehandElement | LineElement | RectElement | EllipseElement;
+export type TextElement = BaseElement & {
+  type: 'text';
+  position: Point;
+  text: string;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: 'normal' | 'bold';
+  fontStyle: 'normal' | 'italic';
+};
+
+export type SketchElement =
+  | FreehandElement
+  | LineElement
+  | RectElement
+  | EllipseElement
+  | TextElement;
 
 export type ViewportState = {
   x: number;

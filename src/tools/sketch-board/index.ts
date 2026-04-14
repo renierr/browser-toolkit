@@ -9,6 +9,7 @@ import {
   drawLiveFreehandSegment,
   drawLivePreview,
   getCropBounds,
+  getTextBounds,
   makeThumbnail,
 } from './drawing.ts';
 import { getDom } from './dom.ts';
@@ -18,6 +19,7 @@ import type {
   DrawingRecord,
   Point,
   SketchElement,
+  TextElement,
   ToolMode,
   ViewportState,
 } from './types.ts';
@@ -42,6 +44,11 @@ export default function init(): void | (() => void) {
   let renderQueued = false;
   let baseLayerDirty = true;
   let isToolbarCollapsed = false;
+
+  let textInputActive = false;
+  let textInputPosition: Point | null = null;
+  let textInputValue = '';
+  let selectedElementId: string | null = null;
 
   const MIN_SCALE = 0.1;
   const MAX_SCALE = 10;
@@ -144,22 +151,26 @@ export default function init(): void | (() => void) {
 
   const TOOL_ICONS: Record<ToolMode, string> = {
     pan: 'hand',
+    select: 'mouse-pointer-2',
     freehand: 'pen-tool',
     line: 'slash',
     rect: 'square',
     'rect-filled': 'square',
     ellipse: 'circle',
     'ellipse-filled': 'circle',
+    text: 'type',
   };
 
   const TOOL_LABELS: Record<ToolMode, string> = {
     pan: 'Pan',
+    select: 'Select',
     freehand: 'Freehand',
     line: 'Line',
     rect: 'Rect (outline)',
     'rect-filled': 'Rect (filled)',
     ellipse: 'Ellipse (outline)',
     'ellipse-filled': 'Ellipse (filled)',
+    text: 'Text',
   };
 
   const updateDrawToolsLabel = (tool: ToolMode): void => {
@@ -175,8 +186,16 @@ export default function init(): void | (() => void) {
 
   const setMode = (next: ToolMode): void => {
     closeDrawToolsDropdown();
+
+    if (next === 'pan' || next === 'select') {
+      selectedElementId = null;
+      ui.deleteText.classList.add('hidden');
+    }
+
     mode = next;
-    const isDrawMode = next !== 'pan';
+    const isDrawMode = next !== 'pan' && next !== 'select';
+    const isTextMode = next === 'text';
+    const isSelectMode = next === 'select';
 
     if (isDrawMode) {
       ui.btnModeDraw.classList.add('btn-primary');
@@ -189,6 +208,26 @@ export default function init(): void | (() => void) {
         el.classList.remove('hidden');
       }
       updateDrawToolsLabel(next);
+    } else if (isSelectMode) {
+      ui.btnModeDraw.classList.remove('btn-primary');
+      ui.btnModePan.classList.remove('btn-primary');
+      ui.drawTools.classList.add('hidden');
+      ui.drawOptions.classList.add('hidden');
+      ui.drawOptions.classList.remove('h-7', 'w-px', 'bg-base-300');
+      ui.drawOptionsDivider.classList.add('hidden');
+      for (const el of ui.drawOpts) {
+        el.classList.add('hidden');
+      }
+    } else if (isTextMode) {
+      ui.btnModeDraw.classList.remove('btn-primary');
+      ui.btnModePan.classList.remove('btn-primary');
+      ui.drawTools.classList.add('hidden');
+      ui.drawOptions.classList.add('hidden');
+      ui.drawOptions.classList.remove('h-7', 'w-px', 'bg-base-300');
+      ui.drawOptionsDivider.classList.add('hidden');
+      for (const el of ui.drawOpts) {
+        el.classList.add('hidden');
+      }
     } else {
       ui.btnModePan.classList.add('btn-primary');
       ui.btnModeDraw.classList.remove('btn-primary');
@@ -202,6 +241,13 @@ export default function init(): void | (() => void) {
       ui.btnModeDraw.title = 'Draw';
     }
 
+    if (isTextMode || isSelectMode) {
+      ui.textToolbar.classList.remove('hidden');
+    } else {
+      ui.textToolbar.classList.add('hidden');
+      ui.deleteText.classList.add('hidden');
+    }
+
     for (const [key, btn] of Object.entries(ui.modeButtons)) {
       if (key === next) {
         btn.classList.add('btn-primary');
@@ -210,7 +256,13 @@ export default function init(): void | (() => void) {
       }
     }
 
-    ui.canvas.style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
+    if (isSelectMode) {
+      ui.canvas.style.cursor = 'pointer';
+    } else if (mode === 'pan') {
+      ui.canvas.style.cursor = 'grab';
+    } else {
+      ui.canvas.style.cursor = 'crosshair';
+    }
   };
 
   const resizeCanvas = (): void => {
@@ -253,7 +305,22 @@ export default function init(): void | (() => void) {
     ctx2.translate(viewport.x, viewport.y);
     ctx2.scale(viewport.scale, viewport.scale);
 
-    if (drawStart && drawEnd && mode !== 'pan') {
+    if (selectedElementId) {
+      const selectedEl = elements.find((el) => el.id === selectedElementId);
+      if (selectedEl && selectedEl.type === 'text') {
+        const bounds = getTextBounds(ctx2, selectedEl);
+        ctx2.setLineDash([4, 4]);
+        ctx2.strokeStyle = '#2563eb';
+        ctx2.lineWidth = 2;
+        ctx2.strokeRect(bounds.x - 4, bounds.y - 4, bounds.w + 8, bounds.h + 8);
+        ctx2.setLineDash([]);
+      }
+    }
+
+    if (drawStart && drawEnd && mode !== 'pan' && mode !== 'select') {
+      const fontSize = parseInt(ui.fontSize.value, 10);
+      const fontWeight = ui.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal';
+      const fontStyle = ui.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal';
       drawLivePreview(
         ctx2,
         mode as DrawMode,
@@ -261,7 +328,12 @@ export default function init(): void | (() => void) {
         drawEnd,
         ui.colorInput.value,
         Math.round(parseInt(ui.widthInput.value, 10) / viewport.scale),
-        freehandPoints
+        freehandPoints,
+        textInputActive ? textInputValue : undefined,
+        ui.fontFamily.value,
+        fontSize,
+        fontWeight,
+        fontStyle
       );
     }
 
@@ -280,7 +352,11 @@ export default function init(): void | (() => void) {
   };
 
   const commitCurrentDraft = (): void => {
-    if (!drawStart || !drawEnd || mode === 'pan') return;
+    if (!drawStart || !drawEnd || mode === 'pan' || mode === 'select') return;
+
+    const fontSize = parseInt(ui.fontSize.value, 10);
+    const fontWeight = ui.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal';
+    const fontStyle = ui.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal';
 
     const draft = buildPreviewElement(
       mode as DrawMode,
@@ -288,7 +364,12 @@ export default function init(): void | (() => void) {
       drawEnd,
       ui.colorInput.value,
       parseInt(ui.widthInput.value, 10),
-      freehandPoints
+      freehandPoints,
+      textInputValue || undefined,
+      ui.fontFamily.value,
+      fontSize,
+      fontWeight,
+      fontStyle
     );
 
     if (draft) {
@@ -370,6 +451,61 @@ export default function init(): void | (() => void) {
       return;
     }
 
+    if (mode === 'select') {
+      const point = toWorld(event.clientX, event.clientY);
+      let foundText: TextElement | null = null;
+      for (let i = elements.length - 1; i >= 0; i--) {
+        const el = elements[i];
+        if (el.type === 'text') {
+          const bounds = getTextBounds(ctx2, el);
+          const padding = Math.max(4, el.width / 2);
+          if (
+            point.x >= bounds.x - padding &&
+            point.x <= bounds.x + bounds.w + padding &&
+            point.y >= bounds.y - padding &&
+            point.y <= bounds.y + bounds.h + padding
+          ) {
+            foundText = el;
+            break;
+          }
+        }
+      }
+      if (foundText) {
+        selectedElementId = foundText.id;
+        ui.fontFamily.value = foundText.fontFamily;
+        ui.fontSize.value = String(foundText.fontSize);
+        if (foundText.fontWeight === 'bold') {
+          ui.fontBold.classList.add('btn-primary');
+        } else {
+          ui.fontBold.classList.remove('btn-primary');
+        }
+        if (foundText.fontStyle === 'italic') {
+          ui.fontItalic.classList.add('btn-primary');
+        } else {
+          ui.fontItalic.classList.remove('btn-primary');
+        }
+        ui.deleteText.classList.remove('hidden');
+      } else {
+        selectedElementId = null;
+        ui.deleteText.classList.add('hidden');
+      }
+      requestDrawImmediate();
+      return;
+    }
+
+    if (mode === 'text') {
+      const point = toWorld(event.clientX, event.clientY);
+      drawStart = point;
+      drawEnd = point;
+      textInputActive = true;
+      textInputPosition = point;
+      textInputValue = '';
+      ui.canvas.style.cursor = 'text';
+      showTextInputOverlay(point);
+      event.preventDefault();
+      return;
+    }
+
     const point = toWorld(event.clientX, event.clientY);
     drawStart = point;
     drawEnd = point;
@@ -380,6 +516,9 @@ export default function init(): void | (() => void) {
       ctx2.save();
       ctx2.translate(viewport.x, viewport.y);
       ctx2.scale(viewport.scale, viewport.scale);
+      const fontSize = parseInt(ui.fontSize.value, 10);
+      const fontWeight = ui.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal';
+      const fontStyle = ui.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal';
       drawLivePreview(
         ctx2,
         'freehand',
@@ -387,7 +526,12 @@ export default function init(): void | (() => void) {
         point,
         ui.colorInput.value,
         Math.round(parseInt(ui.widthInput.value, 10) / viewport.scale),
-        freehandPoints
+        freehandPoints,
+        undefined,
+        ui.fontFamily.value,
+        fontSize,
+        fontWeight,
+        fontStyle
       );
       ctx2.restore();
       event.preventDefault();
@@ -407,6 +551,10 @@ export default function init(): void | (() => void) {
       viewport.y = panStartViewport.y + (event.clientY - panStartPointer.y);
       markBaseLayerDirty();
       requestDraw();
+      return;
+    }
+
+    if (mode === 'select' || mode === 'text') {
       return;
     }
 
@@ -458,6 +606,11 @@ export default function init(): void | (() => void) {
       ui.canvas.releasePointerCapture(event.pointerId);
     }
 
+    if (mode === 'select' || mode === 'text') {
+      resetPointerState();
+      return;
+    }
+
     if (mode !== 'pan') {
       const point = toWorld(event.clientX, event.clientY);
       drawEnd = point;
@@ -471,6 +624,107 @@ export default function init(): void | (() => void) {
     }
 
     resetPointerState();
+    requestDrawImmediate();
+  };
+
+  const showTextInputOverlay = (position: Point): void => {
+    const rect = ui.canvas.getBoundingClientRect();
+    const x = rect.left + viewport.x + position.x * viewport.scale;
+    const y = rect.top + viewport.y + position.y * viewport.scale;
+
+    const existingInput = document.getElementById('text-input-overlay');
+    if (existingInput) existingInput.remove();
+
+    const input = document.createElement('input');
+    input.id = 'text-input-overlay';
+    input.type = 'text';
+    input.className =
+      'absolute bg-transparent border-2 border-blue-500 rounded px-1 text-base-content outline-none z-50';
+    input.style.left = `${x}px`;
+    input.style.top = `${y}px`;
+    const fontSize = parseInt(ui.fontSize.value, 10);
+    input.style.fontSize = `${fontSize * viewport.scale}px`;
+    input.style.fontFamily = ui.fontFamily.value;
+    input.style.fontWeight = ui.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal';
+    input.style.fontStyle = ui.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal';
+    input.style.color = ui.colorInput.value;
+    input.style.width = '200px';
+
+    input.addEventListener('input', () => {
+      textInputValue = input.value;
+      requestDraw();
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        finishTextInput();
+      } else if (e.key === 'Escape') {
+        cancelTextInput();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      finishTextInput();
+    });
+
+    document.body.appendChild(input);
+    input.focus();
+  };
+
+  const finishTextInput = (): void => {
+    const input = document.getElementById('text-input-overlay') as HTMLInputElement | null;
+    if (input) {
+      textInputValue = input.value;
+      input.remove();
+    }
+    textInputActive = false;
+    if (textInputValue.trim() !== '' && textInputPosition) {
+      drawStart = textInputPosition;
+      drawEnd = textInputPosition;
+      commitCurrentDraft();
+    }
+    textInputPosition = null;
+    textInputValue = '';
+    ui.canvas.style.cursor = mode === 'text' ? 'text' : 'crosshair';
+    requestDrawImmediate();
+  };
+
+  const cancelTextInput = (): void => {
+    const input = document.getElementById('text-input-overlay') as HTMLInputElement | null;
+    if (input) input.remove();
+    textInputActive = false;
+    textInputPosition = null;
+    textInputValue = '';
+    ui.canvas.style.cursor = mode === 'text' ? 'text' : 'crosshair';
+    requestDrawImmediate();
+  };
+
+  const updateSelectedText = (): void => {
+    if (!selectedElementId) return;
+    const el = elements.find((e) => e.id === selectedElementId);
+    if (!el || el.type !== 'text') return;
+    el.color = ui.colorInput.value;
+    el.fontFamily = ui.fontFamily.value;
+    el.fontSize = parseInt(ui.fontSize.value, 10);
+    el.fontWeight = ui.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal';
+    el.fontStyle = ui.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal';
+    pushUndoState();
+    hasUnsavedChanges = true;
+    markBaseLayerDirty();
+    updateUndoRedoButtons();
+    requestDrawImmediate();
+  };
+
+  const deleteSelectedText = (): void => {
+    if (!selectedElementId) return;
+    elements = elements.filter((e) => e.id !== selectedElementId);
+    selectedElementId = null;
+    ui.deleteText.classList.add('hidden');
+    pushUndoState();
+    hasUnsavedChanges = true;
+    markBaseLayerDirty();
+    updateUndoRedoButtons();
     requestDrawImmediate();
   };
 
@@ -743,6 +997,7 @@ export default function init(): void | (() => void) {
     }
   });
   ui.modeButtons.pan.addEventListener('click', () => setMode('pan'));
+  ui.modeButtons.select.addEventListener('click', () => setMode('select'));
   ui.modeButtons.freehand.addEventListener('click', () => setMode('freehand'));
   ui.modeButtons.line.addEventListener('click', () => setMode('line'));
   ui.modeButtons.rect.addEventListener('click', () => setMode('rect'));
@@ -755,6 +1010,7 @@ export default function init(): void | (() => void) {
     'click',
     () => setMode('ellipse-filled')
   );
+  ui.modeButtons.text.addEventListener('click', () => setMode('text'));
 
   ui.btnZoomIn.addEventListener('click', onZoomIn);
   ui.btnZoomOut.addEventListener('click', onZoomOut);
@@ -798,6 +1054,30 @@ export default function init(): void | (() => void) {
   ui.btnClipboard.addEventListener('click', () => void onClipboard());
   ui.btnCollapse.addEventListener('click', onToggleToolbar);
 
+  ui.fontFamily.addEventListener('change', () => {
+    if (selectedElementId) updateSelectedText();
+  });
+  ui.fontSize.addEventListener('input', () => {
+    if (selectedElementId) updateSelectedText();
+  });
+  ui.fontBold.addEventListener('click', () => {
+    ui.fontBold.classList.toggle('btn-primary');
+    if (selectedElementId) updateSelectedText();
+  });
+  ui.fontItalic.addEventListener('click', () => {
+    ui.fontItalic.classList.toggle('btn-primary');
+    if (selectedElementId) updateSelectedText();
+  });
+  ui.deleteText.addEventListener('click', deleteSelectedText);
+
+  const onKeyDown = (e: KeyboardEvent): void => {
+    if (selectedElementId && (e.key === 'Delete' || e.key === 'Backspace')) {
+      e.preventDefault();
+      deleteSelectedText();
+    }
+  };
+
+  ui.canvas.addEventListener('keydown', onKeyDown, { passive: false });
   ui.canvas.addEventListener('pointerdown', onPointerDown, { passive: false });
   ui.canvas.addEventListener('pointermove', onPointerMove, { passive: false });
   ui.canvas.addEventListener('pointerup', onPointerUp, { passive: false });
@@ -837,5 +1117,6 @@ export default function init(): void | (() => void) {
     for (const button of ui.quickColorButtons) {
       button.removeEventListener('click', onQuickColorClick);
     }
+    ui.canvas.removeEventListener('keydown', onKeyDown);
   };
 }

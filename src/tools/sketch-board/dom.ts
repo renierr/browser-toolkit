@@ -34,6 +34,13 @@ export type SketchDom = {
   drawOptionsDivider: HTMLElement;
   drawOpts: HTMLElement[];
   modeButtons: Record<ToolMode, HTMLButtonElement>;
+  textToolbar: HTMLElement;
+  fontFamily: HTMLSelectElement;
+  fontSize: HTMLInputElement;
+  fontBold: HTMLButtonElement;
+  fontItalic: HTMLButtonElement;
+  deleteText: HTMLButtonElement;
+  textInputOverlay: HTMLDivElement | null;
 };
 
 export function getDom(doc: Document): SketchDom | null {
@@ -67,12 +74,20 @@ export function getDom(doc: Document): SketchDom | null {
   const modeRectFilled = doc.getElementById('mode-rect-filled') as HTMLButtonElement | null;
   const modeEllipse = doc.getElementById('mode-ellipse') as HTMLButtonElement | null;
   const modeEllipseFilled = doc.getElementById('mode-ellipse-filled') as HTMLButtonElement | null;
+  const modeText = doc.getElementById('mode-text') as HTMLButtonElement | null;
+  const modeSelect = doc.getElementById('mode-select') as HTMLButtonElement | null;
   const drawTools = doc.getElementById('draw-tools') as HTMLElement | null;
   const drawToolsBtn = doc.getElementById('draw-tools-btn') as HTMLLabelElement | null;
   const drawToolsIcon = doc.getElementById('draw-tools-icon') as HTMLElement | null;
   const drawToolsLabel = doc.getElementById('draw-tools-label') as HTMLSpanElement | null;
   const drawOptions = doc.getElementById('draw-options') as HTMLElement | null;
   const drawOptionsDivider = doc.getElementById('draw-options-divider') as HTMLElement | null;
+  const textToolbar = doc.getElementById('text-toolbar') as HTMLElement | null;
+  const fontFamily = doc.getElementById('font-family') as HTMLSelectElement | null;
+  const fontSize = doc.getElementById('font-size') as HTMLInputElement | null;
+  const fontBold = doc.getElementById('font-bold') as HTMLButtonElement | null;
+  const fontItalic = doc.getElementById('font-italic') as HTMLButtonElement | null;
+  const deleteText = doc.getElementById('delete-text') as HTMLButtonElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
   const btnCollapse = doc.getElementById('collapse-toolbar') as HTMLButtonElement | null;
   const toolbarInners = Array.from(doc.querySelectorAll('.toolbar-inner')) as HTMLElement[];
@@ -107,12 +122,20 @@ export function getDom(doc: Document): SketchDom | null {
     !modeRectFilled ||
     !modeEllipse ||
     !modeEllipseFilled ||
+    !modeText ||
+    !modeSelect ||
     !drawTools ||
     !drawToolsBtn ||
     !drawToolsIcon ||
     !drawToolsLabel ||
     !drawOptions ||
     !drawOptionsDivider ||
+    !textToolbar ||
+    !fontFamily ||
+    !fontSize ||
+    !fontBold ||
+    !fontItalic ||
+    !deleteText ||
     !btnCollapse ||
     toolbarInners.length === 0
   ) {
@@ -154,12 +177,21 @@ export function getDom(doc: Document): SketchDom | null {
     drawOpts,
     modeButtons: {
       pan: modePan,
+      select: modeSelect,
       freehand: modeFreehand,
       line: modeLine,
       rect: modeRect,
       'rect-filled': modeRectFilled,
       ellipse: modeEllipse,
       'ellipse-filled': modeEllipseFilled,
+      text: modeText,
     },
+    textToolbar,
+    fontFamily,
+    fontSize,
+    fontBold,
+    fontItalic,
+    deleteText,
+    textInputOverlay: null,
   };
 }

@@ -1,7 +1,7 @@
 <div
   class="fixed inset-0 w-dvw h-dvh max-w-dvw max-h-dvh overflow-hidden overscroll-none checkerboard-bg"
 >
-  <canvas id="sketch-canvas" class="absolute inset-0 w-full h-full"></canvas>
+  <canvas id="sketch-canvas" tabindex="0" class="absolute inset-0 w-full h-full"></canvas>
 
   <div class="sticky top-0 z-30 p-2 sm:p-3 pointer-events-none">
     <div
@@ -15,6 +15,9 @@
       <div class="join toolbar-inner">
         <button id="mode-pan" class="btn btn-sm join-item" title="Scroll / Pan">
           <i data-lucide="hand" class="w-4 h-4"></i>
+        </button>
+        <button id="mode-select" class="btn btn-sm join-item" title="Select / Move">
+          <i data-lucide="mouse-pointer-2" class="w-4 h-4"></i>
         </button>
         <button id="mode-draw" class="btn btn-sm join-item btn-primary" title="Draw">
           <i data-lucide="pen" class="w-4 h-4"></i>
@@ -35,6 +38,12 @@
             <button id="mode-freehand" class="btn btn-sm btn-ghost justify-between">
               Freehand
               <i data-lucide="pen-tool" class="w-4 h-4"></i>
+            </button>
+          </li>
+          <li>
+            <button id="mode-text" class="btn btn-sm btn-ghost justify-between">
+              Text
+              <i data-lucide="type" class="w-4 h-4"></i>
             </button>
           </li>
           <li>
@@ -196,6 +205,37 @@
       </label>
 
       <div id="draw-options-divider" class="h-7 w-px bg-base-300 toolbar-inner hidden"></div>
+
+      <div id="text-toolbar" class="toolbar-inner hidden flex items-center gap-2">
+        <select id="font-family" class="select select-sm w-24" title="Font family">
+          <option value="sans-serif">Sans-serif</option>
+          <option value="serif">Serif</option>
+          <option value="monospace">Monospace</option>
+          <option value="cursive">Cursive</option>
+        </select>
+        <input
+          id="font-size"
+          type="number"
+          min="8"
+          max="72"
+          value="24"
+          class="input input-sm w-16"
+          title="Font size"
+        />
+        <button id="font-bold" class="btn btn-sm btn-outline" title="Bold">
+          <i data-lucide="bold" class="w-4 h-4"></i>
+        </button>
+        <button id="font-italic" class="btn btn-sm btn-outline" title="Italic">
+          <i data-lucide="italic" class="w-4 h-4"></i>
+        </button>
+        <button
+          id="delete-text"
+          class="btn btn-sm btn-outline btn-error hidden"
+          title="Delete selected text"
+        >
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
 
       <button id="clear-canvas" class="btn btn-sm btn-outline toolbar-inner" title="Clear canvas">
         <i data-lucide="trash-2" class="w-4 h-4"></i>

@@ -1,4 +1,11 @@
-import type { DrawMode, DrawingMeta, Point, SketchElement, ToolMode } from './types.ts';
+import type {
+  DrawMode,
+  DrawingMeta,
+  Point,
+  SketchElement,
+  TextElement,
+  ToolMode,
+} from './types.ts';
 
 export function normalizeRect(
   start: Point,
@@ -30,7 +37,15 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
     return;
   }
 
-  drawEllipse(ctx, el.start, el.end, el.filled);
+  if (el.type === 'ellipse') {
+    drawEllipse(ctx, el.start, el.end, el.filled);
+    return;
+  }
+
+  if (el.type === 'text') {
+    drawText(ctx, el);
+    return;
+  }
 }
 
 function applyStrokeStyle(ctx: CanvasRenderingContext2D, color: string, width: number): void {
@@ -96,6 +111,28 @@ function drawEllipse(
   }
 }
 
+function drawText(ctx: CanvasRenderingContext2D, el: TextElement): void {
+  ctx.font = `${el.fontStyle} ${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
+  ctx.fillStyle = el.color;
+  ctx.textBaseline = 'top';
+  ctx.fillText(el.text, el.position.x, el.position.y);
+}
+
+export function getTextBounds(
+  ctx: CanvasRenderingContext2D,
+  el: TextElement
+): { x: number; y: number; w: number; h: number } {
+  ctx.font = `${el.fontStyle} ${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
+  const metrics = ctx.measureText(el.text);
+  const h = el.fontSize;
+  return {
+    x: el.position.x,
+    y: el.position.y,
+    w: metrics.width,
+    h: h,
+  };
+}
+
 export function drawLivePreview(
   ctx: CanvasRenderingContext2D,
   mode: DrawMode,
@@ -103,13 +140,35 @@ export function drawLivePreview(
   drawEnd: Point,
   color: string,
   width: number,
-  freehandPoints: Point[]
+  freehandPoints: Point[],
+  text?: string,
+  fontFamily?: string,
+  fontSize?: number,
+  fontWeight?: 'normal' | 'bold',
+  fontStyle?: 'normal' | 'italic'
 ): void {
   applyStrokeStyle(ctx, color, width);
   ctx.globalAlpha = 0.8;
 
   if (mode === 'freehand') {
     drawFreehand(ctx, freehandPoints);
+    ctx.globalAlpha = 1;
+    return;
+  }
+
+  if (mode === 'text') {
+    if (text) {
+      ctx.font = `${fontStyle || 'normal'} ${fontWeight || 'normal'} ${fontSize || 24}px ${fontFamily || 'sans-serif'}`;
+      ctx.fillStyle = color;
+      ctx.textBaseline = 'top';
+      ctx.fillText(text, drawStart.x, drawStart.y);
+    } else {
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(drawStart.x, drawStart.y, 100, parseInt(String(fontSize || 24), 10) * 1.2);
+      ctx.setLineDash([]);
+    }
     ctx.globalAlpha = 1;
     return;
   }
@@ -162,7 +221,12 @@ export function buildPreviewElement(
   end: Point,
   color: string,
   width: number,
-  points: Point[]
+  points: Point[],
+  text?: string,
+  fontFamily?: string,
+  fontSize?: number,
+  fontWeight?: 'normal' | 'bold',
+  fontStyle?: 'normal' | 'italic'
 ): SketchElement | null {
   if (mode === 'freehand') {
     if (points.length < 2) return null;
@@ -172,6 +236,22 @@ export function buildPreviewElement(
       color,
       width,
       points: points.map((p) => ({ ...p })),
+    };
+  }
+
+  if (mode === 'text') {
+    if (!text || text.trim() === '') return null;
+    return {
+      id: crypto.randomUUID(),
+      type: 'text',
+      color,
+      width: fontSize || 24,
+      position: { ...start },
+      text: text,
+      fontFamily: fontFamily || 'sans-serif',
+      fontSize: fontSize || 24,
+      fontWeight: fontWeight || 'normal',
+      fontStyle: fontStyle || 'normal',
     };
   }
 
@@ -266,6 +346,18 @@ function computeSceneBounds(elements: SketchElement[]): {
         minY = Math.min(minY, p.y - el.width);
         maxX = Math.max(maxX, p.x + el.width);
         maxY = Math.max(maxY, p.y + el.width);
+      }
+      continue;
+    }
+
+    if (el.type === 'text') {
+      const ctx = document.createElement('canvas').getContext('2d');
+      if (ctx) {
+        const bounds = getTextBounds(ctx, el);
+        minX = Math.min(minX, bounds.x);
+        minY = Math.min(minY, bounds.y);
+        maxX = Math.max(maxX, bounds.x + bounds.w);
+        maxY = Math.max(maxY, bounds.y + bounds.h);
       }
       continue;
     }
