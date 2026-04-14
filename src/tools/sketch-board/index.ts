@@ -2,17 +2,19 @@ import router from '@js/router.ts';
 import { showMessage } from '@js/ui.ts';
 import { getCropBounds } from './drawing.ts';
 import { getDom } from './dom.ts';
+import { ElementEditor } from './element-editor.ts';
 import { copyToClipboard, exportDrawing, renderGallery, saveDrawing } from './gallery.ts';
 import { HistoryManager } from './history.ts';
 import { PointerInputHandler } from './input-handler.ts';
 import { SceneRenderer } from './renderer.ts';
 import type { DrawTool } from './shapes/base-tool.ts';
+import { ArrowTool } from './shapes/arrow-tool.ts';
 import { EllipseTool } from './shapes/ellipse-tool.ts';
 import { FreehandTool } from './shapes/freehand-tool.ts';
 import { LineTool } from './shapes/line-tool.ts';
 import { RectTool } from './shapes/rect-tool.ts';
 import { TextTool } from './shapes/text-tool.ts';
-import { TextEditor } from './text-editor.ts';
+import { TriangleTool } from './shapes/triangle-tool.ts';
 import { ToolbarController } from './toolbar.ts';
 import type { DrawMode, DrawToolContext, SketchElement, ToolMode } from './types.ts';
 import { ViewportController } from './viewport.ts';
@@ -33,17 +35,17 @@ export default function init(): void | (() => void) {
   const history = new HistoryManager();
   const viewport = new ViewportController(dom.canvas);
   const renderer = new SceneRenderer(dom.canvas, ctx);
-  const textEditor = new TextEditor(dom, ctx, history, renderer);
+  const elementEditor = new ElementEditor(dom, ctx, history, renderer);
   const toolbar = new ToolbarController(dom);
 
   // --- Draw tool registry ---
   const toolRegistry = new Map<DrawMode, DrawTool>();
   toolRegistry.set('freehand', new FreehandTool());
   toolRegistry.set('line', new LineTool());
-  toolRegistry.set('rect', new RectTool(false));
-  toolRegistry.set('rect-filled', new RectTool(true));
-  toolRegistry.set('ellipse', new EllipseTool(false));
-  toolRegistry.set('ellipse-filled', new EllipseTool(true));
+  toolRegistry.set('rect', new RectTool());
+  toolRegistry.set('ellipse', new EllipseTool());
+  toolRegistry.set('triangle', new TriangleTool());
+  toolRegistry.set('arrow', new ArrowTool());
   toolRegistry.set('text', new TextTool());
 
   // --- State accessors for modules ---
@@ -60,6 +62,7 @@ export default function init(): void | (() => void) {
     fontSize: parseInt(dom.fontSize.value, 10),
     fontWeight: dom.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal',
     fontStyle: dom.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal',
+    filled: toolbar.isFilled(),
     viewport: viewport.state,
   });
 
@@ -68,7 +71,7 @@ export default function init(): void | (() => void) {
     dom,
     viewport,
     renderer,
-    textEditor,
+    elementEditor,
     toolRegistry,
     history,
     getState,
@@ -84,7 +87,7 @@ export default function init(): void | (() => void) {
     renderer.drawScene(
       elements,
       viewport.state,
-      textEditor.getSelectedId(),
+      elementEditor,
       mode !== 'pan' && mode !== 'select' ? activeTool : null,
       toolCtx,
       start,
@@ -96,7 +99,7 @@ export default function init(): void | (() => void) {
 
   // --- Toolbar mode changes ---
   const setMode = (next: ToolMode): void => {
-    textEditor.clearSelection();
+    elementEditor.clearSelection();
     mode = next;
     toolbar.setMode(next);
     renderer.requestDrawImmediate(inputHandler.getStreamingState());
@@ -239,50 +242,32 @@ export default function init(): void | (() => void) {
     await copyToClipboard(renderer.renderTempCanvas(elements));
   });
 
-  dom.fontFamily.addEventListener('change', () => {
-    textEditor.updateSelectedText(elements);
-    if (textEditor.getSelectedId()) {
+  // --- Text property changes (apply to selected text element) ---
+  const applyTextChange = (): void => {
+    elementEditor.updateSelectedText(elements);
+    if (elementEditor.getSelectedId()) {
       hasUnsavedChanges = true;
       renderer.markDirty();
       updateUndoRedoButtons();
       renderer.requestDrawImmediate();
     }
-  });
+  };
 
-  dom.fontSize.addEventListener('input', () => {
-    textEditor.updateSelectedText(elements);
-    if (textEditor.getSelectedId()) {
-      hasUnsavedChanges = true;
-      renderer.markDirty();
-      updateUndoRedoButtons();
-      renderer.requestDrawImmediate();
-    }
-  });
+  dom.fontFamily.addEventListener('change', applyTextChange);
+  dom.fontSize.addEventListener('input', applyTextChange);
 
   dom.fontBold.addEventListener('click', () => {
     dom.fontBold.classList.toggle('btn-primary');
-    textEditor.updateSelectedText(elements);
-    if (textEditor.getSelectedId()) {
-      hasUnsavedChanges = true;
-      renderer.markDirty();
-      updateUndoRedoButtons();
-      renderer.requestDrawImmediate();
-    }
+    applyTextChange();
   });
 
   dom.fontItalic.addEventListener('click', () => {
     dom.fontItalic.classList.toggle('btn-primary');
-    textEditor.updateSelectedText(elements);
-    if (textEditor.getSelectedId()) {
-      hasUnsavedChanges = true;
-      renderer.markDirty();
-      updateUndoRedoButtons();
-      renderer.requestDrawImmediate();
-    }
+    applyTextChange();
   });
 
-  dom.deleteText.addEventListener('click', () => {
-    elements = textEditor.deleteSelectedText(elements);
+  dom.deleteElement.addEventListener('click', () => {
+    elements = elementEditor.deleteSelected(elements);
     hasUnsavedChanges = true;
     renderer.markDirty();
     updateUndoRedoButtons();
@@ -290,9 +275,9 @@ export default function init(): void | (() => void) {
   });
 
   const onKeyDown = (e: KeyboardEvent): void => {
-    if (textEditor.getSelectedId() && (e.key === 'Delete' || e.key === 'Backspace')) {
+    if (elementEditor.getSelectedId() && (e.key === 'Delete' || e.key === 'Backspace')) {
       e.preventDefault();
-      elements = textEditor.deleteSelectedText(elements);
+      elements = elementEditor.deleteSelected(elements);
       hasUnsavedChanges = true;
       renderer.markDirty();
       updateUndoRedoButtons();
@@ -326,6 +311,6 @@ export default function init(): void | (() => void) {
     for (const button of dom.quickColorButtons) {
       button.removeEventListener('click', onQuickColorClick);
     }
-    textEditor.reset();
+    elementEditor.reset();
   };
 }

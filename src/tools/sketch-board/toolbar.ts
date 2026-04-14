@@ -8,9 +8,9 @@ const TOOL_ICONS: Record<ToolMode, string> = {
   freehand: 'pen-tool',
   line: 'slash',
   rect: 'square',
-  'rect-filled': 'square',
   ellipse: 'circle',
-  'ellipse-filled': 'circle',
+  triangle: 'triangle',
+  arrow: 'arrow-up-right',
   text: 'type',
 };
 
@@ -19,12 +19,14 @@ const TOOL_LABELS: Record<ToolMode, string> = {
   select: 'Select',
   freehand: 'Freehand',
   line: 'Line',
-  rect: 'Rect (outline)',
-  'rect-filled': 'Rect (filled)',
-  ellipse: 'Ellipse (outline)',
-  'ellipse-filled': 'Ellipse (filled)',
+  rect: 'Rectangle',
+  ellipse: 'Ellipse',
+  triangle: 'Triangle',
+  arrow: 'Arrow',
   text: 'Text',
 };
+
+const SHAPE_MODES: ReadonlySet<ToolMode> = new Set(['rect', 'ellipse', 'triangle']);
 
 export class ToolbarController {
   private readonly dom: SketchDom;
@@ -40,57 +42,73 @@ export class ToolbarController {
     this.onModeChange = handler;
   }
 
+  isFilled(): boolean {
+    return this.dom.filledToggle.classList.contains('btn-primary');
+  }
+
   setMode(next: ToolMode): void {
     const dom = this.dom;
     closeDrawToolsDropdown();
 
-    const isDrawMode = next !== 'pan' && next !== 'select' && next !== 'text';
+    const isDrawMode = next !== 'pan' && next !== 'select';
     const isTextMode = next === 'text';
     const isSelectMode = next === 'select';
+    const isShapeMode = SHAPE_MODES.has(next);
 
+    // Main mode buttons
     if (isDrawMode) {
       dom.btnModeDraw.classList.add('btn-primary');
       dom.btnModePan.classList.remove('btn-primary');
       dom.drawTools.classList.remove('hidden');
       dom.drawOptions.classList.remove('hidden');
       dom.drawOptions.classList.add('h-7', 'w-px', 'bg-base-300');
-      dom.drawOptionsDivider.classList.remove('hidden');
       for (const el of dom.drawOpts) el.classList.remove('hidden');
       this.updateDrawToolsLabel(next);
-    } else if (isSelectMode) {
-      dom.btnModeDraw.classList.remove('btn-primary');
-      dom.btnModePan.classList.remove('btn-primary');
-      dom.drawTools.classList.add('hidden');
-      dom.drawOptions.classList.add('hidden');
-      dom.drawOptions.classList.remove('h-7', 'w-px', 'bg-base-300');
-      dom.drawOptionsDivider.classList.add('hidden');
-      for (const el of dom.drawOpts) el.classList.add('hidden');
-    } else if (isTextMode) {
-      dom.btnModeDraw.classList.remove('btn-primary');
-      dom.btnModePan.classList.remove('btn-primary');
-      dom.drawTools.classList.add('hidden');
-      dom.drawOptions.classList.add('hidden');
-      dom.drawOptions.classList.remove('h-7', 'w-px', 'bg-base-300');
-      dom.drawOptionsDivider.classList.add('hidden');
-      for (const el of dom.drawOpts) el.classList.add('hidden');
     } else {
-      dom.btnModePan.classList.add('btn-primary');
-      dom.btnModeDraw.classList.remove('btn-primary');
+      if (isSelectMode) {
+        dom.btnModeDraw.classList.remove('btn-primary');
+        dom.btnModePan.classList.remove('btn-primary');
+      } else {
+        dom.btnModePan.classList.add('btn-primary');
+        dom.btnModeDraw.classList.remove('btn-primary');
+      }
       dom.drawTools.classList.add('hidden');
       dom.drawOptions.classList.add('hidden');
       dom.drawOptions.classList.remove('h-7', 'w-px', 'bg-base-300');
-      dom.drawOptionsDivider.classList.add('hidden');
       for (const el of dom.drawOpts) el.classList.add('hidden');
-      dom.btnModeDraw.title = 'Draw';
     }
 
-    if (isTextMode || isSelectMode) {
-      dom.textToolbar.classList.remove('hidden');
+    // Per-tool options visibility
+    if (isTextMode || isSelectMode || isShapeMode) {
+      dom.toolOptions.classList.remove('hidden');
     } else {
-      dom.textToolbar.classList.add('hidden');
-      dom.deleteText.classList.add('hidden');
+      dom.toolOptions.classList.add('hidden');
     }
 
+    // Shape fill toggle
+    for (const el of dom.toolOptShapes) {
+      if (isShapeMode) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }
+
+    // Text options
+    for (const el of dom.toolOptTexts) {
+      if (isTextMode || isSelectMode) {
+        el.classList.remove('hidden');
+      } else {
+        el.classList.add('hidden');
+      }
+    }
+
+    // Delete button only visible when something is selected (handled by ElementEditor)
+    if (!isSelectMode) {
+      dom.deleteElement.classList.add('hidden');
+    }
+
+    // Mode button highlight
     for (const [key, btn] of Object.entries(dom.modeButtons)) {
       if (key === next) {
         btn.classList.add('btn-primary');
@@ -99,10 +117,13 @@ export class ToolbarController {
       }
     }
 
+    // Cursor
     if (isSelectMode) {
       dom.canvas.setAttribute('data-cursor', 'pointer');
     } else if (next === 'pan') {
       dom.canvas.setAttribute('data-cursor', 'grab');
+    } else if (isTextMode) {
+      dom.canvas.setAttribute('data-cursor', 'text');
     } else {
       dom.canvas.setAttribute('data-cursor', 'crosshair');
     }
@@ -137,15 +158,14 @@ export class ToolbarController {
     this.on(dom.modeButtons.freehand, 'click', () => setMode('freehand'));
     this.on(dom.modeButtons.line, 'click', () => setMode('line'));
     this.on(dom.modeButtons.rect, 'click', () => setMode('rect'));
-    this.on((dom.modeButtons as Record<string, HTMLButtonElement>)['rect-filled'], 'click', () =>
-      setMode('rect-filled')
-    );
     this.on(dom.modeButtons.ellipse, 'click', () => setMode('ellipse'));
-    this.on((dom.modeButtons as Record<string, HTMLButtonElement>)['ellipse-filled'], 'click', () =>
-      setMode('ellipse-filled')
-    );
+    this.on(dom.modeButtons.triangle, 'click', () => setMode('triangle'));
+    this.on(dom.modeButtons.arrow, 'click', () => setMode('arrow'));
     this.on(dom.modeButtons.text, 'click', () => setMode('text'));
     this.on(dom.btnCollapse, 'click', () => this.toggleCollapse());
+    this.on(dom.filledToggle, 'click', () => {
+      dom.filledToggle.classList.toggle('btn-primary');
+    });
   }
 
   detach(): void {
@@ -162,9 +182,7 @@ export class ToolbarController {
 
   private updateDrawToolsLabel(tool: ToolMode): void {
     this.dom.drawToolsLabel.textContent = TOOL_LABELS[tool];
-    const className =
-      'w-4 h-4' + (tool === 'ellipse-filled' || tool === 'rect-filled' ? ' fill-current' : '');
-    this.dom.drawToolsIcon.innerHTML = renderToolIconSvg(TOOL_ICONS[tool], className);
+    this.dom.drawToolsIcon.innerHTML = renderToolIconSvg(TOOL_ICONS[tool], 'w-4 h-4');
   }
 }
 

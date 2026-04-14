@@ -1,10 +1,9 @@
-import { getCropBounds } from './drawing.ts';
 import type { SketchDom } from './dom.ts';
+import type { ElementEditor } from './element-editor.ts';
 import type { HistoryManager } from './history.ts';
 import type { SceneRenderer } from './renderer.ts';
 import type { DrawTool } from './shapes/base-tool.ts';
 import type { TextTool } from './shapes/text-tool.ts';
-import type { TextEditor } from './text-editor.ts';
 import type { DrawMode, DrawToolContext, Point, SketchElement, ToolMode } from './types.ts';
 import { getTouchCenter, getTouchDistance, type ViewportController } from './viewport.ts';
 
@@ -12,7 +11,7 @@ export class PointerInputHandler {
   private readonly dom: SketchDom;
   private readonly viewport: ViewportController;
   private readonly renderer: SceneRenderer;
-  private readonly textEditor: TextEditor;
+  private readonly elementEditor: ElementEditor;
   private readonly toolRegistry: Map<DrawMode, DrawTool>;
   private readonly history: HistoryManager;
 
@@ -47,7 +46,7 @@ export class PointerInputHandler {
     dom: SketchDom,
     viewport: ViewportController,
     renderer: SceneRenderer,
-    textEditor: TextEditor,
+    elementEditor: ElementEditor,
     toolRegistry: Map<DrawMode, DrawTool>,
     history: HistoryManager,
     getState: () => { mode: ToolMode; elements: SketchElement[]; hasUnsavedChanges: boolean },
@@ -57,7 +56,7 @@ export class PointerInputHandler {
     this.dom = dom;
     this.viewport = viewport;
     this.renderer = renderer;
-    this.textEditor = textEditor;
+    this.elementEditor = elementEditor;
     this.toolRegistry = toolRegistry;
     this.history = history;
     this.getState = getState;
@@ -67,15 +66,15 @@ export class PointerInputHandler {
 
   attach(): void {
     const canvas = this.dom.canvas;
-    this.on(canvas, 'pointerdown', this.onPointerDown, { passive: false });
-    this.on(canvas, 'pointermove', this.onPointerMove, { passive: false });
-    this.on(canvas, 'pointerup', this.onPointerUp, { passive: false });
-    this.on(canvas, 'pointercancel', this.onPointerUp, { passive: false });
-    this.on(canvas, 'wheel', this.onWheel, { passive: false });
-    this.on(canvas, 'touchstart', this.onTouchStart, { passive: false });
-    this.on(canvas, 'touchmove', this.onTouchMove, { passive: false });
-    this.on(canvas, 'touchend', this.onTouchEnd, { passive: false });
-    this.on(canvas, 'touchcancel', this.onTouchEnd, { passive: false });
+    this.on<PointerEvent>(canvas, 'pointerdown', this.onPointerDown, { passive: false });
+    this.on<PointerEvent>(canvas, 'pointermove', this.onPointerMove, { passive: false });
+    this.on<PointerEvent>(canvas, 'pointerup', this.onPointerUp, { passive: false });
+    this.on<PointerEvent>(canvas, 'pointercancel', this.onPointerUp, { passive: false });
+    this.on<WheelEvent>(canvas, 'wheel', this.onWheel, { passive: false });
+    this.on<TouchEvent>(canvas, 'touchstart', this.onTouchStart, { passive: false });
+    this.on<TouchEvent>(canvas, 'touchmove', this.onTouchMove, { passive: false });
+    this.on<TouchEvent>(canvas, 'touchend', this.onTouchEnd, { passive: false });
+    this.on<TouchEvent>(canvas, 'touchcancel', this.onTouchEnd, { passive: false });
   }
 
   detach(): void {
@@ -114,7 +113,7 @@ export class PointerInputHandler {
 
     if (mode === 'select') {
       const point = this.viewport.toWorld(e.clientX, e.clientY);
-      this.textEditor.handleSelectPointerDown(point, elements);
+      this.elementEditor.handleSelectPointerDown(point, elements);
       this.renderer.requestDrawImmediate();
       return;
     }
@@ -128,7 +127,7 @@ export class PointerInputHandler {
         const ctx = this.getToolContext();
         textTool.onPointerDown(point, ctx);
         this.dom.canvas.setAttribute('data-cursor', 'text');
-        this.textEditor.showTextInputOverlay(point, textTool, ctx, (el) => {
+        this.elementEditor.showTextInputOverlay(point, textTool, ctx, (el) => {
           if (el) {
             const state = this.getState();
             this.history.push(state.elements);
@@ -138,7 +137,7 @@ export class PointerInputHandler {
           }
           this.drawStart = null;
           this.drawEnd = null;
-          this.dom.canvas.setAttribute('data-cursor', mode === 'text' ? 'text' : 'crosshair');
+          this.dom.canvas.setAttribute('data-cursor', 'text');
           this.renderer.requestDrawImmediate();
         });
       }
@@ -189,7 +188,7 @@ export class PointerInputHandler {
 
     if (mode === 'select') {
       const point = this.viewport.toWorld(e.clientX, e.clientY);
-      if (this.textEditor.handleSelectPointerMove(point, elements)) {
+      if (this.elementEditor.handleSelectPointerMove(point, elements)) {
         this.renderer.markDirty();
         this.renderer.requestDrawImmediate();
       }
@@ -238,7 +237,7 @@ export class PointerInputHandler {
     const { mode, elements, hasUnsavedChanges } = this.getState();
 
     if (mode === 'select') {
-      const result = this.textEditor.handleSelectPointerUp(elements, hasUnsavedChanges);
+      const result = this.elementEditor.handleSelectPointerUp(elements, hasUnsavedChanges);
       if (result.pushed) {
         this.setState({ hasUnsavedChanges: result.hasUnsavedChanges });
         this.renderer.markDirty();
@@ -276,10 +275,7 @@ export class PointerInputHandler {
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
     const delta = -Math.sign(e.deltaY);
-    this.viewport.applyZoom(delta);
-    const { elements } = this.getState();
-    const bounds = getCropBounds(elements);
-    if (bounds) this.viewport.centerOnContent(bounds);
+    this.viewport.applyZoom(delta, e.clientX, e.clientY);
     this.renderer.markDirty();
     this.renderer.requestDrawImmediate();
   }
@@ -300,10 +296,7 @@ export class PointerInputHandler {
       const scaleRatio = currentDist / this.pinchStartDist;
       if (Math.abs(scaleRatio - 1) > 0.05) {
         const delta = scaleRatio > 1 ? 1 : -1;
-        this.viewport.applyZoom(delta);
-        const { elements } = this.getState();
-        const bounds = getCropBounds(elements);
-        if (bounds) this.viewport.centerOnContent(bounds);
+        this.viewport.applyZoom(delta, currentCenter.x, currentCenter.y);
         this.renderer.markDirty();
         this.renderer.requestDrawImmediate();
         this.pinchStartDist = currentDist;
@@ -326,18 +319,20 @@ export class PointerInputHandler {
     this.drawEnd = null;
     this.isStreamingFreehand = false;
     this.panStartPointer = null;
+    this.dom.canvas.style.cursor = '';
 
     const { mode } = this.getState();
     if (mode === 'pan') {
       this.dom.canvas.setAttribute('data-cursor', 'grab');
     } else if (mode === 'select') {
       this.dom.canvas.setAttribute('data-cursor', 'pointer');
+    } else if (mode === 'text') {
+      this.dom.canvas.setAttribute('data-cursor', 'text');
     } else {
       this.dom.canvas.setAttribute('data-cursor', 'crosshair');
     }
   }
 
-  /** Expose current draw points for the scene renderer */
   getDrawPoints(): { start: Point | null; end: Point | null } {
     return { start: this.drawStart, end: this.drawEnd };
   }

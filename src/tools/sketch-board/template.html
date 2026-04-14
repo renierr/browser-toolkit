@@ -16,7 +16,7 @@
         <button id="mode-pan" class="btn btn-sm join-item" title="Scroll / Pan">
           <i data-lucide="hand" class="w-4 h-4"></i>
         </button>
-        <button id="mode-select" class="btn btn-sm join-item" title="Select / Move">
+        <button id="mode-select" class="btn btn-sm join-item" title="Select / Move / Resize">
           <i data-lucide="mouse-pointer-2" class="w-4 h-4"></i>
         </button>
         <button id="mode-draw" class="btn btn-sm join-item btn-primary" title="Draw">
@@ -32,7 +32,7 @@
         </label>
         <ul
           tabindex="0"
-          class="dropdown-content menu z-50 mt-1 w-48 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+          class="dropdown-content menu z-50 mt-1 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl max-h-[80dvh] overflow-y-auto"
         >
           <li>
             <button id="mode-freehand" class="btn btn-sm btn-ghost justify-between">
@@ -52,34 +52,31 @@
               <i data-lucide="slash" class="w-4 h-4"></i>
             </button>
           </li>
+          <li>
+            <button id="mode-arrow" class="btn btn-sm btn-ghost justify-between">
+              Arrow
+              <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+            </button>
+          </li>
           <li class="menu-title px-2 py-1">
-            <span class="text-xs opacity-70">Rectangle</span>
+            <span class="text-xs opacity-70">Shapes</span>
           </li>
           <li>
             <button id="mode-rect" class="btn btn-sm btn-ghost justify-between">
-              Outline
+              Rectangle
               <i data-lucide="square" class="w-4 h-4"></i>
             </button>
           </li>
           <li>
-            <button id="mode-rect-filled" class="btn btn-sm btn-ghost justify-between">
-              Filled
-              <i data-lucide="square" class="w-4 h-4 fill-current"></i>
-            </button>
-          </li>
-          <li class="menu-title px-2 py-1">
-            <span class="text-xs opacity-70">Ellipse</span>
-          </li>
-          <li>
             <button id="mode-ellipse" class="btn btn-sm btn-ghost justify-between">
-              Outline
+              Ellipse
               <i data-lucide="circle" class="w-4 h-4"></i>
             </button>
           </li>
           <li>
-            <button id="mode-ellipse-filled" class="btn btn-sm btn-ghost justify-between">
-              Filled
-              <i data-lucide="circle" class="w-4 h-4 fill-current"></i>
+            <button id="mode-triangle" class="btn btn-sm btn-ghost justify-between">
+              Triangle
+              <i data-lucide="triangle" class="w-4 h-4"></i>
             </button>
           </li>
         </ul>
@@ -204,10 +201,24 @@
         />
       </label>
 
-      <div id="draw-options-divider" class="h-7 w-px bg-base-300 toolbar-inner hidden"></div>
+      <!-- Per-tool options area (wraps with toolbar) -->
+      <div id="tool-options" class="toolbar-inner hidden flex flex-wrap items-center gap-2">
+        <!-- Shape filled toggle (rect/ellipse/triangle) -->
+        <button
+          id="filled-toggle"
+          class="tool-opt-shape btn btn-sm btn-outline hidden"
+          title="Toggle filled / outline"
+        >
+          <i data-lucide="paint-bucket" class="w-4 h-4"></i>
+          <span class="text-xs">Fill</span>
+        </button>
 
-      <div id="text-toolbar" class="toolbar-inner hidden flex items-center gap-2">
-        <select id="font-family" class="select select-sm w-24" title="Font family">
+        <!-- Text options -->
+        <select
+          id="font-family"
+          class="tool-opt-text select select-sm w-24 hidden"
+          title="Font family"
+        >
           <option value="sans-serif">Sans-serif</option>
           <option value="serif">Serif</option>
           <option value="monospace">Monospace</option>
@@ -219,19 +230,21 @@
           min="8"
           max="72"
           value="24"
-          class="input input-sm w-16"
+          class="tool-opt-text input input-sm w-16 hidden"
           title="Font size"
         />
-        <button id="font-bold" class="btn btn-sm btn-outline" title="Bold">
+        <button id="font-bold" class="tool-opt-text btn btn-sm btn-outline hidden" title="Bold">
           <i data-lucide="bold" class="w-4 h-4"></i>
         </button>
-        <button id="font-italic" class="btn btn-sm btn-outline" title="Italic">
+        <button id="font-italic" class="tool-opt-text btn btn-sm btn-outline hidden" title="Italic">
           <i data-lucide="italic" class="w-4 h-4"></i>
         </button>
+
+        <!-- Delete selected element (any type in select mode) -->
         <button
-          id="delete-text"
+          id="delete-element"
           class="btn btn-sm btn-outline btn-error hidden"
-          title="Delete selected text"
+          title="Delete selected element"
         >
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>

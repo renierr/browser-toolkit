@@ -2,8 +2,8 @@ import { normalizeRect } from '../drawing.ts';
 import type { DrawTool } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
-export class EllipseTool implements DrawTool {
-  readonly mode = 'ellipse' as const;
+export class TriangleTool implements DrawTool {
+  readonly mode = 'triangle' as const;
   readonly streamsLive = false;
 
   private start: Point | null = null;
@@ -27,7 +27,7 @@ export class EllipseTool implements DrawTool {
 
     return {
       id: crypto.randomUUID(),
-      type: 'ellipse',
+      type: 'triangle',
       color: ctx.color,
       width: ctx.strokeWidth,
       start: { ...this.start },
@@ -47,16 +47,14 @@ export class EllipseTool implements DrawTool {
     canvasCtx.lineCap = 'round';
     canvasCtx.globalAlpha = 0.8;
 
+    const topX = rect.x + rect.w / 2;
+    const topY = rect.y;
+
     canvasCtx.beginPath();
-    canvasCtx.ellipse(
-      rect.x + rect.w / 2,
-      rect.y + rect.h / 2,
-      rect.w / 2,
-      rect.h / 2,
-      0,
-      0,
-      Math.PI * 2
-    );
+    canvasCtx.moveTo(topX, topY);
+    canvasCtx.lineTo(rect.x + rect.w, rect.y + rect.h);
+    canvasCtx.lineTo(rect.x, rect.y + rect.h);
+    canvasCtx.closePath();
 
     if (ctx.filled) {
       canvasCtx.fillStyle = ctx.color;

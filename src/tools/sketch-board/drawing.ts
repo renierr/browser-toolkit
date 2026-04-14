@@ -1,11 +1,4 @@
-import type {
-  DrawMode,
-  DrawingMeta,
-  Point,
-  SketchElement,
-  TextElement,
-  ToolMode,
-} from './types.ts';
+import type { DrawingMeta, Point, SketchElement, TextElement, ToolMode } from './types.ts';
 
 export function normalizeRect(
   start: Point,
@@ -39,6 +32,16 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
 
   if (el.type === 'ellipse') {
     drawEllipse(ctx, el.start, el.end, el.filled);
+    return;
+  }
+
+  if (el.type === 'triangle') {
+    drawTriangle(ctx, el.start, el.end, el.filled);
+    return;
+  }
+
+  if (el.type === 'arrow') {
+    drawArrow(ctx, el.start, el.end);
     return;
   }
 
@@ -111,6 +114,67 @@ function drawEllipse(
   }
 }
 
+function drawTriangle(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+  filled?: boolean
+): void {
+  const rect = normalizeRect(start, end);
+  if (rect.w < 1 || rect.h < 1) return;
+  const topX = rect.x + rect.w / 2;
+  const topY = rect.y;
+  const bottomLeftX = rect.x;
+  const bottomLeftY = rect.y + rect.h;
+  const bottomRightX = rect.x + rect.w;
+  const bottomRightY = rect.y + rect.h;
+
+  ctx.beginPath();
+  ctx.moveTo(topX, topY);
+  ctx.lineTo(bottomRightX, bottomRightY);
+  ctx.lineTo(bottomLeftX, bottomLeftY);
+  ctx.closePath();
+
+  if (filled) {
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
+  } else {
+    ctx.stroke();
+  }
+}
+
+function drawArrow(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return;
+
+  // Shaft
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+
+  // Arrowhead
+  const headLen = Math.min(20, len * 0.3);
+  const angle = Math.atan2(dy, dx);
+  const spread = Math.PI / 6;
+
+  ctx.beginPath();
+  ctx.moveTo(end.x, end.y);
+  ctx.lineTo(
+    end.x - headLen * Math.cos(angle - spread),
+    end.y - headLen * Math.sin(angle - spread)
+  );
+  ctx.lineTo(
+    end.x - headLen * Math.cos(angle + spread),
+    end.y - headLen * Math.sin(angle + spread)
+  );
+  ctx.closePath();
+  ctx.fillStyle = ctx.strokeStyle as string;
+  ctx.fill();
+}
+
 function drawText(ctx: CanvasRenderingContext2D, el: TextElement): void {
   ctx.font = `${el.fontStyle} ${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
   ctx.fillStyle = el.color;
@@ -133,72 +197,41 @@ export function getTextBounds(
   };
 }
 
-export function drawLivePreview(
+/** Generic bounds for any element type */
+export function getElementBounds(
   ctx: CanvasRenderingContext2D,
-  mode: DrawMode,
-  drawStart: Point,
-  drawEnd: Point,
-  color: string,
-  width: number,
-  freehandPoints: Point[],
-  text?: string,
-  fontFamily?: string,
-  fontSize?: number,
-  fontWeight?: 'normal' | 'bold',
-  fontStyle?: 'normal' | 'italic'
-): void {
-  applyStrokeStyle(ctx, color, width);
-  ctx.globalAlpha = 0.8;
-
-  if (mode === 'freehand') {
-    drawFreehand(ctx, freehandPoints);
-    ctx.globalAlpha = 1;
-    return;
+  el: SketchElement
+): { x: number; y: number; w: number; h: number } {
+  if (el.type === 'text') {
+    return getTextBounds(ctx, el);
   }
-
-  if (mode === 'text') {
-    if (text) {
-      ctx.font = `${fontStyle || 'normal'} ${fontWeight || 'normal'} ${fontSize || 24}px ${fontFamily || 'sans-serif'}`;
-      ctx.fillStyle = color;
-      ctx.textBaseline = 'top';
-      ctx.fillText(text, drawStart.x, drawStart.y);
-    } else {
-      ctx.setLineDash([4, 4]);
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1;
-      ctx.strokeRect(drawStart.x, drawStart.y, 100, parseInt(String(fontSize || 24), 10) * 1.2);
-      ctx.setLineDash([]);
+  if (el.type === 'freehand') {
+    if (el.points.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const p of el.points) {
+      minX = Math.min(minX, p.x);
+      minY = Math.min(minY, p.y);
+      maxX = Math.max(maxX, p.x);
+      maxY = Math.max(maxY, p.y);
     }
-    ctx.globalAlpha = 1;
-    return;
+    return {
+      x: minX - el.width / 2,
+      y: minY - el.width / 2,
+      w: maxX - minX + el.width,
+      h: maxY - minY + el.width,
+    };
   }
-
-  if (mode === 'line') {
-    drawLine(ctx, drawStart, drawEnd);
-    ctx.globalAlpha = 1;
-    return;
-  }
-
-  if (mode === 'rect') {
-    drawRect(ctx, drawStart, drawEnd, false);
-    ctx.globalAlpha = 1;
-    return;
-  }
-
-  if (mode === 'rect-filled') {
-    drawRect(ctx, drawStart, drawEnd, true);
-    ctx.globalAlpha = 1;
-    return;
-  }
-
-  if (mode === 'ellipse') {
-    drawEllipse(ctx, drawStart, drawEnd, false);
-    ctx.globalAlpha = 1;
-    return;
-  }
-
-  drawEllipse(ctx, drawStart, drawEnd, true);
-  ctx.globalAlpha = 1;
+  // line, rect, ellipse, triangle, arrow — all have start/end
+  const rect = normalizeRect(el.start, el.end);
+  return {
+    x: rect.x - el.width / 2,
+    y: rect.y - el.width / 2,
+    w: rect.w + el.width,
+    h: rect.h + el.width,
+  };
 }
 
 export function drawLiveFreehandSegment(
@@ -213,108 +246,6 @@ export function drawLiveFreehandSegment(
   ctx.moveTo(from.x, from.y);
   ctx.lineTo(to.x, to.y);
   ctx.stroke();
-}
-
-export function buildPreviewElement(
-  mode: DrawMode,
-  start: Point,
-  end: Point,
-  color: string,
-  width: number,
-  points: Point[],
-  text?: string,
-  fontFamily?: string,
-  fontSize?: number,
-  fontWeight?: 'normal' | 'bold',
-  fontStyle?: 'normal' | 'italic'
-): SketchElement | null {
-  if (mode === 'freehand') {
-    if (points.length < 2) return null;
-    return {
-      id: crypto.randomUUID(),
-      type: 'freehand',
-      color,
-      width,
-      points: points.map((p) => ({ ...p })),
-    };
-  }
-
-  if (mode === 'text') {
-    if (!text || text.trim() === '') return null;
-    return {
-      id: crypto.randomUUID(),
-      type: 'text',
-      color,
-      width: fontSize || 24,
-      position: { ...start },
-      text: text,
-      fontFamily: fontFamily || 'sans-serif',
-      fontSize: fontSize || 24,
-      fontWeight: fontWeight || 'normal',
-      fontStyle: fontStyle || 'normal',
-    };
-  }
-
-  const dx = Math.abs(end.x - start.x);
-  const dy = Math.abs(end.y - start.y);
-  if (dx < 1 && dy < 1) return null;
-
-  if (mode === 'line') {
-    return {
-      id: crypto.randomUUID(),
-      type: 'line',
-      color,
-      width,
-      start: { ...start },
-      end: { ...end },
-    };
-  }
-
-  if (mode === 'rect') {
-    return {
-      id: crypto.randomUUID(),
-      type: 'rect',
-      color,
-      width,
-      start: { ...start },
-      end: { ...end },
-      filled: false,
-    };
-  }
-
-  if (mode === 'rect-filled') {
-    return {
-      id: crypto.randomUUID(),
-      type: 'rect',
-      color,
-      width,
-      start: { ...start },
-      end: { ...end },
-      filled: true,
-    };
-  }
-
-  if (mode === 'ellipse') {
-    return {
-      id: crypto.randomUUID(),
-      type: 'ellipse',
-      color,
-      width,
-      start: { ...start },
-      end: { ...end },
-      filled: false,
-    };
-  }
-
-  return {
-    id: crypto.randomUUID(),
-    type: 'ellipse',
-    color,
-    width,
-    start: { ...start },
-    end: { ...end },
-    filled: true,
-  };
 }
 
 export function buildMeta(elements: SketchElement[], lastTool: ToolMode): DrawingMeta {
@@ -362,6 +293,7 @@ function computeSceneBounds(elements: SketchElement[]): {
       continue;
     }
 
+    // line, rect, ellipse, triangle, arrow
     const rect = normalizeRect(el.start, el.end);
     minX = Math.min(minX, rect.x - el.width);
     minY = Math.min(minY, rect.y - el.width);

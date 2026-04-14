@@ -1,19 +1,13 @@
 import { normalizeRect } from '../drawing.ts';
 import type { DrawTool } from './base-tool.ts';
-import type { DrawMode, DrawToolContext, Point, SketchElement } from '../types.ts';
+import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class RectTool implements DrawTool {
-  readonly mode: DrawMode;
+  readonly mode = 'rect' as const;
   readonly streamsLive = false;
-  private readonly filled: boolean;
 
   private start: Point | null = null;
   private end: Point | null = null;
-
-  constructor(filled: boolean) {
-    this.filled = filled;
-    this.mode = filled ? 'rect-filled' : 'rect';
-  }
 
   onPointerDown(point: Point, _ctx: DrawToolContext): void {
     this.start = point;
@@ -38,7 +32,7 @@ export class RectTool implements DrawTool {
       width: ctx.strokeWidth,
       start: { ...this.start },
       end: { ...point },
-      filled: this.filled,
+      filled: ctx.filled,
     };
   }
 
@@ -53,7 +47,7 @@ export class RectTool implements DrawTool {
     canvasCtx.lineCap = 'round';
     canvasCtx.globalAlpha = 0.8;
 
-    if (this.filled) {
+    if (ctx.filled) {
       canvasCtx.fillStyle = ctx.color;
       canvasCtx.fillRect(rect.x, rect.y, rect.w, rect.h);
     } else {

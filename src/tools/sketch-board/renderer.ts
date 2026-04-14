@@ -1,4 +1,5 @@
-import { drawElement, getCropBounds, getTextBounds } from './drawing.ts';
+import { drawElement, getCropBounds } from './drawing.ts';
+import type { ElementEditor } from './element-editor.ts';
 import type { DrawTool } from './shapes/base-tool.ts';
 import type { DrawToolContext, Point, SketchElement, ViewportState } from './types.ts';
 
@@ -24,7 +25,6 @@ export class SceneRenderer {
     this.baseLayerCtx = blCtx;
   }
 
-  /** Bind the full scene draw function (set once from orchestrator) */
   setDrawScene(fn: () => void): void {
     this.drawSceneFn = fn;
   }
@@ -69,7 +69,7 @@ export class SceneRenderer {
   drawScene(
     elements: SketchElement[],
     viewport: ViewportState,
-    selectedElementId: string | null,
+    elementEditor: ElementEditor,
     activeTool: DrawTool | null,
     toolCtx: DrawToolContext | null,
     drawStart: Point | null,
@@ -87,17 +87,8 @@ export class SceneRenderer {
     this.ctx.translate(viewport.x, viewport.y);
     this.ctx.scale(viewport.scale, viewport.scale);
 
-    if (selectedElementId) {
-      const selectedEl = elements.find((el) => el.id === selectedElementId);
-      if (selectedEl && selectedEl.type === 'text') {
-        const bounds = getTextBounds(this.ctx, selectedEl);
-        this.ctx.setLineDash([4, 4]);
-        this.ctx.strokeStyle = '#2563eb';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(bounds.x - 4, bounds.y - 4, bounds.w + 8, bounds.h + 8);
-        this.ctx.setLineDash([]);
-      }
-    }
+    // Selection highlight + resize handles
+    elementEditor.drawSelection(this.ctx, elements);
 
     if (activeTool && toolCtx && drawStart && drawEnd) {
       activeTool.drawPreview(this.ctx, toolCtx);
@@ -124,7 +115,6 @@ export class SceneRenderer {
     return tempCanvas;
   }
 
-  /** Provide access to the main context for tools that need incremental drawing */
   getContext(): CanvasRenderingContext2D {
     return this.ctx;
   }

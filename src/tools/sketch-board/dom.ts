@@ -31,15 +31,17 @@ export type SketchDom = {
   drawToolsIcon: HTMLSpanElement;
   drawToolsLabel: HTMLSpanElement;
   drawOptions: HTMLElement;
-  drawOptionsDivider: HTMLElement;
   drawOpts: HTMLElement[];
   modeButtons: Record<ToolMode, HTMLButtonElement>;
-  textToolbar: HTMLElement;
+  toolOptions: HTMLElement;
+  toolOptShapes: HTMLElement[];
+  toolOptTexts: HTMLElement[];
+  filledToggle: HTMLButtonElement;
   fontFamily: HTMLSelectElement;
   fontSize: HTMLInputElement;
   fontBold: HTMLButtonElement;
   fontItalic: HTMLButtonElement;
-  deleteText: HTMLButtonElement;
+  deleteElement: HTMLButtonElement;
   textInputOverlay: HTMLDivElement | null;
 };
 
@@ -71,9 +73,9 @@ export function getDom(doc: Document): SketchDom | null {
   const modeFreehand = doc.getElementById('mode-freehand') as HTMLButtonElement | null;
   const modeLine = doc.getElementById('mode-line') as HTMLButtonElement | null;
   const modeRect = doc.getElementById('mode-rect') as HTMLButtonElement | null;
-  const modeRectFilled = doc.getElementById('mode-rect-filled') as HTMLButtonElement | null;
   const modeEllipse = doc.getElementById('mode-ellipse') as HTMLButtonElement | null;
-  const modeEllipseFilled = doc.getElementById('mode-ellipse-filled') as HTMLButtonElement | null;
+  const modeTriangle = doc.getElementById('mode-triangle') as HTMLButtonElement | null;
+  const modeArrow = doc.getElementById('mode-arrow') as HTMLButtonElement | null;
   const modeText = doc.getElementById('mode-text') as HTMLButtonElement | null;
   const modeSelect = doc.getElementById('mode-select') as HTMLButtonElement | null;
   const drawTools = doc.getElementById('draw-tools') as HTMLElement | null;
@@ -81,16 +83,18 @@ export function getDom(doc: Document): SketchDom | null {
   const drawToolsIcon = doc.getElementById('draw-tools-icon') as HTMLElement | null;
   const drawToolsLabel = doc.getElementById('draw-tools-label') as HTMLSpanElement | null;
   const drawOptions = doc.getElementById('draw-options') as HTMLElement | null;
-  const drawOptionsDivider = doc.getElementById('draw-options-divider') as HTMLElement | null;
-  const textToolbar = doc.getElementById('text-toolbar') as HTMLElement | null;
+  const toolOptions = doc.getElementById('tool-options') as HTMLElement | null;
+  const filledToggle = doc.getElementById('filled-toggle') as HTMLButtonElement | null;
   const fontFamily = doc.getElementById('font-family') as HTMLSelectElement | null;
   const fontSize = doc.getElementById('font-size') as HTMLInputElement | null;
   const fontBold = doc.getElementById('font-bold') as HTMLButtonElement | null;
   const fontItalic = doc.getElementById('font-italic') as HTMLButtonElement | null;
-  const deleteText = doc.getElementById('delete-text') as HTMLButtonElement | null;
+  const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
   const btnCollapse = doc.getElementById('collapse-toolbar') as HTMLButtonElement | null;
   const toolbarInners = Array.from(doc.querySelectorAll('.toolbar-inner')) as HTMLElement[];
+  const toolOptShapes = Array.from(doc.querySelectorAll('.tool-opt-shape')) as HTMLElement[];
+  const toolOptTexts = Array.from(doc.querySelectorAll('.tool-opt-text')) as HTMLElement[];
 
   if (
     !canvas ||
@@ -119,9 +123,9 @@ export function getDom(doc: Document): SketchDom | null {
     !modeFreehand ||
     !modeLine ||
     !modeRect ||
-    !modeRectFilled ||
     !modeEllipse ||
-    !modeEllipseFilled ||
+    !modeTriangle ||
+    !modeArrow ||
     !modeText ||
     !modeSelect ||
     !drawTools ||
@@ -129,13 +133,13 @@ export function getDom(doc: Document): SketchDom | null {
     !drawToolsIcon ||
     !drawToolsLabel ||
     !drawOptions ||
-    !drawOptionsDivider ||
-    !textToolbar ||
+    !toolOptions ||
+    !filledToggle ||
     !fontFamily ||
     !fontSize ||
     !fontBold ||
     !fontItalic ||
-    !deleteText ||
+    !deleteElement ||
     !btnCollapse ||
     toolbarInners.length === 0
   ) {
@@ -173,7 +177,6 @@ export function getDom(doc: Document): SketchDom | null {
     drawToolsIcon,
     drawToolsLabel,
     drawOptions,
-    drawOptionsDivider,
     drawOpts,
     modeButtons: {
       pan: modePan,
@@ -181,17 +184,20 @@ export function getDom(doc: Document): SketchDom | null {
       freehand: modeFreehand,
       line: modeLine,
       rect: modeRect,
-      'rect-filled': modeRectFilled,
       ellipse: modeEllipse,
-      'ellipse-filled': modeEllipseFilled,
+      triangle: modeTriangle,
+      arrow: modeArrow,
       text: modeText,
     },
-    textToolbar,
+    toolOptions,
+    toolOptShapes,
+    toolOptTexts,
+    filledToggle,
     fontFamily,
     fontSize,
     fontBold,
     fontItalic,
-    deleteText,
+    deleteElement,
     textInputOverlay: null,
   };
 }

@@ -1,9 +1,8 @@
-import { normalizeRect } from '../drawing.ts';
 import type { DrawTool } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
-export class EllipseTool implements DrawTool {
-  readonly mode = 'ellipse' as const;
+export class ArrowTool implements DrawTool {
+  readonly mode = 'arrow' as const;
   readonly streamsLive = false;
 
   private start: Point | null = null;
@@ -27,19 +26,20 @@ export class EllipseTool implements DrawTool {
 
     return {
       id: crypto.randomUUID(),
-      type: 'ellipse',
+      type: 'arrow',
       color: ctx.color,
       width: ctx.strokeWidth,
       start: { ...this.start },
       end: { ...point },
-      filled: ctx.filled,
     };
   }
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const rect = normalizeRect(this.start, this.end);
-    if (rect.w < 1 || rect.h < 1) return;
+    const dx = this.end.x - this.start.x;
+    const dy = this.end.y - this.start.y;
+    const len = Math.hypot(dx, dy);
+    if (len < 1) return;
 
     canvasCtx.strokeStyle = ctx.color;
     canvasCtx.lineWidth = ctx.strokeWidth;
@@ -47,23 +47,31 @@ export class EllipseTool implements DrawTool {
     canvasCtx.lineCap = 'round';
     canvasCtx.globalAlpha = 0.8;
 
+    // Shaft
     canvasCtx.beginPath();
-    canvasCtx.ellipse(
-      rect.x + rect.w / 2,
-      rect.y + rect.h / 2,
-      rect.w / 2,
-      rect.h / 2,
-      0,
-      0,
-      Math.PI * 2
-    );
+    canvasCtx.moveTo(this.start.x, this.start.y);
+    canvasCtx.lineTo(this.end.x, this.end.y);
+    canvasCtx.stroke();
 
-    if (ctx.filled) {
-      canvasCtx.fillStyle = ctx.color;
-      canvasCtx.fill();
-    } else {
-      canvasCtx.stroke();
-    }
+    // Arrowhead
+    const headLen = Math.min(20, len * 0.3);
+    const angle = Math.atan2(dy, dx);
+    const spread = Math.PI / 6;
+
+    canvasCtx.beginPath();
+    canvasCtx.moveTo(this.end.x, this.end.y);
+    canvasCtx.lineTo(
+      this.end.x - headLen * Math.cos(angle - spread),
+      this.end.y - headLen * Math.sin(angle - spread)
+    );
+    canvasCtx.lineTo(
+      this.end.x - headLen * Math.cos(angle + spread),
+      this.end.y - headLen * Math.sin(angle + spread)
+    );
+    canvasCtx.closePath();
+    canvasCtx.fillStyle = ctx.color;
+    canvasCtx.fill();
+
     canvasCtx.globalAlpha = 1;
   }
 

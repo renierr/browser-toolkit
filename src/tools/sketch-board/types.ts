@@ -4,9 +4,9 @@ export type ToolMode =
   | 'freehand'
   | 'line'
   | 'rect'
-  | 'rect-filled'
   | 'ellipse'
-  | 'ellipse-filled'
+  | 'triangle'
+  | 'arrow'
   | 'text';
 export type DrawMode = Exclude<ToolMode, 'pan' | 'select'>;
 
@@ -46,6 +46,19 @@ export type EllipseElement = BaseElement & {
   filled?: boolean;
 };
 
+export type TriangleElement = BaseElement & {
+  type: 'triangle';
+  start: Point;
+  end: Point;
+  filled?: boolean;
+};
+
+export type ArrowElement = BaseElement & {
+  type: 'arrow';
+  start: Point;
+  end: Point;
+};
+
 export type TextElement = BaseElement & {
   type: 'text';
   position: Point;
@@ -61,6 +74,8 @@ export type SketchElement =
   | LineElement
   | RectElement
   | EllipseElement
+  | TriangleElement
+  | ArrowElement
   | TextElement;
 
 export type ViewportState = {
@@ -86,13 +101,6 @@ export type DrawingRecord = {
   meta: DrawingMeta;
 };
 
-export type SketchState = {
-  elements: SketchElement[];
-  viewport: ViewportState;
-  mode: ToolMode;
-  hasUnsavedChanges: boolean;
-};
-
 export type DrawToolContext = {
   readonly color: string;
   readonly strokeWidth: number;
@@ -100,5 +108,6 @@ export type DrawToolContext = {
   readonly fontSize: number;
   readonly fontWeight: 'normal' | 'bold';
   readonly fontStyle: 'normal' | 'italic';
+  readonly filled: boolean;
   readonly viewport: ViewportState;
 };
