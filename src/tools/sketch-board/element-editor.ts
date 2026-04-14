@@ -2,7 +2,9 @@ import { getElementBounds, normalizeRect } from './drawing.ts';
 import type { SketchDom } from './dom.ts';
 import type { HistoryManager } from './history.ts';
 import type { SceneRenderer } from './renderer.ts';
+import { optionsForElementType } from './shapes/base-tool.ts';
 import type { TextTool } from './shapes/text-tool.ts';
+import type { ToolbarController } from './toolbar.ts';
 import type { DrawToolContext, Point, SketchElement } from './types.ts';
 
 const HANDLE_SIZE = 8;
@@ -14,6 +16,7 @@ export class ElementEditor {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly history: HistoryManager;
   private readonly renderer: SceneRenderer;
+  private toolbar: ToolbarController | null = null;
 
   private selectedElementId: string | null = null;
   private isDragging = false;
@@ -33,6 +36,10 @@ export class ElementEditor {
     this.ctx = ctx;
     this.history = history;
     this.renderer = renderer;
+  }
+
+  setToolbar(toolbar: ToolbarController): void {
+    this.toolbar = toolbar;
   }
 
   getSelectedId(): string | null {
@@ -83,14 +90,9 @@ export class ElementEditor {
         this.isDragging = true;
         this.dragStartPos = point;
 
-        // Populate text-specific toolbar if text element
-        if (el.type === 'text') {
-          this.dom.fontFamily.value = el.fontFamily;
-          this.dom.fontSize.value = String(el.fontSize);
-          this.syncBoldItalicButtons(el.fontWeight, el.fontStyle);
-        }
+        // Sync toolbar options for selected element type
+        this.syncToolbarForElement(el);
 
-        this.dom.deleteElement.classList.remove('hidden');
         this.dom.canvas.setAttribute('data-cursor', 'move');
         return { found: true, elementId: el.id };
       }
@@ -101,7 +103,7 @@ export class ElementEditor {
     this.isResizing = false;
     this.activeHandle = null;
     this.dragStartPos = null;
-    this.dom.deleteElement.classList.add('hidden');
+    this.toolbar?.hideSelectionOptions();
     return { found: false, elementId: null };
   }
 
@@ -224,11 +226,31 @@ export class ElementEditor {
     this.history.push(elements);
   }
 
+  /** Update color of any selected element */
+  updateSelectedColor(elements: SketchElement[]): void {
+    if (!this.selectedElementId) return;
+    const el = elements.find((e) => e.id === this.selectedElementId);
+    if (!el) return;
+    el.color = this.dom.colorInput.value;
+    this.history.push(elements);
+  }
+
+  /** Toggle filled state of the selected shape element */
+  updateSelectedFilled(elements: SketchElement[], filled: boolean): void {
+    if (!this.selectedElementId) return;
+    const el = elements.find((e) => e.id === this.selectedElementId);
+    if (!el) return;
+    if ('filled' in el) {
+      (el as { filled?: boolean }).filled = filled;
+      this.history.push(elements);
+    }
+  }
+
   deleteSelected(elements: SketchElement[]): SketchElement[] {
     if (!this.selectedElementId) return elements;
     const filtered = elements.filter((e) => e.id !== this.selectedElementId);
     this.selectedElementId = null;
-    this.dom.deleteElement.classList.add('hidden');
+    this.toolbar?.hideSelectionOptions();
     this.history.push(filtered);
     return filtered;
   }
@@ -236,7 +258,7 @@ export class ElementEditor {
   clearSelection(): void {
     if (this.selectedElementId) {
       this.selectedElementId = null;
-      this.dom.deleteElement.classList.add('hidden');
+      this.toolbar?.hideSelectionOptions();
     }
   }
 
@@ -248,7 +270,7 @@ export class ElementEditor {
     this.dragStartPos = null;
     this.resizeStartBounds = null;
     this.textInputActive = false;
-    this.dom.deleteElement.classList.add('hidden');
+    this.toolbar?.hideSelectionOptions();
     const existingInput = document.getElementById('text-input-overlay');
     if (existingInput) existingInput.remove();
   }
@@ -460,6 +482,30 @@ export class ElementEditor {
       this.dom.fontItalic.classList.add('btn-primary');
     } else {
       this.dom.fontItalic.classList.remove('btn-primary');
+    }
+  }
+
+  /** Sync toolbar options and color input based on selected element type */
+  private syncToolbarForElement(el: SketchElement): void {
+    // Sync color input to the selected element's color
+    this.dom.colorInput.value = el.color;
+
+    // Show context-appropriate options via generic option set
+    const options = optionsForElementType(el.type);
+    this.toolbar?.showSelectionOptions(options);
+
+    // Populate text-specific fields
+    if (el.type === 'text') {
+      this.dom.fontFamily.value = el.fontFamily;
+      this.dom.fontSize.value = String(el.fontSize);
+      this.syncBoldItalicButtons(el.fontWeight, el.fontStyle);
+    }
+
+    // Sync filled toggle for shapes
+    if ('filled' in el && el.filled) {
+      this.dom.filledToggle.classList.add('btn-primary');
+    } else {
+      this.dom.filledToggle.classList.remove('btn-primary');
     }
   }
 }

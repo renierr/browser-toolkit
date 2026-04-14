@@ -1,9 +1,10 @@
-import type { DrawTool } from './base-tool.ts';
+import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class TextTool implements DrawTool {
   readonly mode = 'text' as const;
   readonly streamsLive = false;
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'font']);
 
   private position: Point | null = null;
   private text = '';

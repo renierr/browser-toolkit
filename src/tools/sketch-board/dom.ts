@@ -36,6 +36,7 @@ export type SketchDom = {
   toolOptions: HTMLElement;
   toolOptShapes: HTMLElement[];
   toolOptTexts: HTMLElement[];
+  toolOptColors: HTMLElement[];
   filledToggle: HTMLButtonElement;
   fontFamily: HTMLSelectElement;
   fontSize: HTMLInputElement;
@@ -95,6 +96,7 @@ export function getDom(doc: Document): SketchDom | null {
   const toolbarInners = Array.from(doc.querySelectorAll('.toolbar-inner')) as HTMLElement[];
   const toolOptShapes = Array.from(doc.querySelectorAll('.tool-opt-shape')) as HTMLElement[];
   const toolOptTexts = Array.from(doc.querySelectorAll('.tool-opt-text')) as HTMLElement[];
+  const toolOptColors = Array.from(doc.querySelectorAll('.tool-opt-color')) as HTMLElement[];
 
   if (
     !canvas ||
@@ -192,6 +194,7 @@ export function getDom(doc: Document): SketchDom | null {
     toolOptions,
     toolOptShapes,
     toolOptTexts,
+    toolOptColors,
     filledToggle,
     fontFamily,
     fontSize,

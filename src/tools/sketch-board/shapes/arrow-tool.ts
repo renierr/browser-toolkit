@@ -1,9 +1,10 @@
-import type { DrawTool } from './base-tool.ts';
+import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class ArrowTool implements DrawTool {
   readonly mode = 'arrow' as const;
   readonly streamsLive = false;
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color']);
 
   private start: Point | null = null;
   private end: Point | null = null;

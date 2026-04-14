@@ -1,9 +1,10 @@
-import type { DrawTool } from './base-tool.ts';
+import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class LineTool implements DrawTool {
   readonly mode = 'line' as const;
   readonly streamsLive = false;
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color']);
 
   private start: Point | null = null;
   private end: Point | null = null;

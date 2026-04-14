@@ -1,10 +1,11 @@
 import { drawLiveFreehandSegment } from '../drawing.ts';
-import type { DrawTool } from './base-tool.ts';
+import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class FreehandTool implements DrawTool {
   readonly mode = 'freehand' as const;
   readonly streamsLive = true;
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color']);
 
   private points: Point[] = [];
 

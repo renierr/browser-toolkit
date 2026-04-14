@@ -1,6 +1,7 @@
 import { renderToolIconSvg } from '@js/tool-icons.ts';
+import type { ToolOptionId } from './shapes/base-tool.ts';
 import type { SketchDom } from './dom.ts';
-import type { ToolMode } from './types.ts';
+import type { DrawMode, ToolMode } from './types.ts';
 
 const TOOL_ICONS: Record<ToolMode, string> = {
   pan: 'hand',
@@ -26,13 +27,13 @@ const TOOL_LABELS: Record<ToolMode, string> = {
   text: 'Text',
 };
 
-const SHAPE_MODES: ReadonlySet<ToolMode> = new Set(['rect', 'ellipse', 'triangle']);
-
 export class ToolbarController {
   private readonly dom: SketchDom;
   private isCollapsed = false;
   private onModeChange: ((mode: ToolMode) => void) | null = null;
+  private onFilledToggle: (() => void) | null = null;
   private readonly listeners: Array<{ el: EventTarget; type: string; fn: EventListener }> = [];
+  private toolOptionsMap = new Map<DrawMode, ReadonlySet<ToolOptionId>>();
 
   constructor(dom: SketchDom) {
     this.dom = dom;
@@ -40,6 +41,15 @@ export class ToolbarController {
 
   setModeChangeHandler(handler: (mode: ToolMode) => void): void {
     this.onModeChange = handler;
+  }
+
+  setFilledToggleHandler(handler: () => void): void {
+    this.onFilledToggle = handler;
+  }
+
+  /** Register tool options from the tool registry */
+  registerToolOptions(mode: DrawMode, options: ReadonlySet<ToolOptionId>): void {
+    this.toolOptionsMap.set(mode, options);
   }
 
   isFilled(): boolean {
@@ -51,9 +61,7 @@ export class ToolbarController {
     closeDrawToolsDropdown();
 
     const isDrawMode = next !== 'pan' && next !== 'select';
-    const isTextMode = next === 'text';
     const isSelectMode = next === 'select';
-    const isShapeMode = SHAPE_MODES.has(next);
 
     // Main mode buttons
     if (isDrawMode) {
@@ -78,35 +86,17 @@ export class ToolbarController {
       for (const el of dom.drawOpts) el.classList.add('hidden');
     }
 
-    // Per-tool options visibility
-    if (isTextMode || isSelectMode || isShapeMode) {
-      dom.toolOptions.classList.remove('hidden');
+    // Per-tool options: driven by the tool's declared toolOptions
+    if (isDrawMode) {
+      const opts = this.toolOptionsMap.get(next as DrawMode) ?? new Set();
+      this.applyToolOptions(opts);
     } else {
-      dom.toolOptions.classList.add('hidden');
+      // Pan/select: hide all tool options (select will be driven by ElementEditor)
+      this.applyToolOptions(new Set());
     }
 
-    // Shape fill toggle
-    for (const el of dom.toolOptShapes) {
-      if (isShapeMode) {
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    }
-
-    // Text options
-    for (const el of dom.toolOptTexts) {
-      if (isTextMode || isSelectMode) {
-        el.classList.remove('hidden');
-      } else {
-        el.classList.add('hidden');
-      }
-    }
-
-    // Delete button only visible when something is selected (handled by ElementEditor)
-    if (!isSelectMode) {
-      dom.deleteElement.classList.add('hidden');
-    }
+    // Delete button hidden — ElementEditor shows it on selection
+    dom.deleteElement.classList.add('hidden');
 
     // Mode button highlight
     for (const [key, btn] of Object.entries(dom.modeButtons)) {
@@ -122,11 +112,25 @@ export class ToolbarController {
       dom.canvas.setAttribute('data-cursor', 'pointer');
     } else if (next === 'pan') {
       dom.canvas.setAttribute('data-cursor', 'grab');
-    } else if (isTextMode) {
+    } else if (next === 'text') {
       dom.canvas.setAttribute('data-cursor', 'text');
     } else {
       dom.canvas.setAttribute('data-cursor', 'crosshair');
     }
+  }
+
+  /** Show tool options matching the given option set + delete button (used by ElementEditor) */
+  showSelectionOptions(options: ReadonlySet<ToolOptionId>): void {
+    this.applyToolOptions(options);
+    this.dom.deleteElement.classList.remove('hidden');
+  }
+
+  /** Hide all selection/tool options (used by ElementEditor on deselect) */
+  hideSelectionOptions(): void {
+    this.applyToolOptions(new Set());
+    this.dom.deleteElement.classList.add('hidden');
+    // Also hide color controls that are outside #tool-options
+    for (const el of this.dom.toolOptColors) el.classList.add('hidden');
   }
 
   toggleCollapse(): void {
@@ -165,6 +169,7 @@ export class ToolbarController {
     this.on(dom.btnCollapse, 'click', () => this.toggleCollapse());
     this.on(dom.filledToggle, 'click', () => {
       dom.filledToggle.classList.toggle('btn-primary');
+      this.onFilledToggle?.();
     });
   }
 
@@ -183,6 +188,36 @@ export class ToolbarController {
   private updateDrawToolsLabel(tool: ToolMode): void {
     this.dom.drawToolsLabel.textContent = TOOL_LABELS[tool];
     this.dom.drawToolsIcon.innerHTML = renderToolIconSvg(TOOL_ICONS[tool], 'w-4 h-4');
+  }
+
+  /** Generic option group visibility driver */
+  private applyToolOptions(options: ReadonlySet<ToolOptionId>): void {
+    const dom = this.dom;
+    const hasAny = options.size > 0;
+
+    if (hasAny) {
+      dom.toolOptions.classList.remove('hidden');
+    } else {
+      dom.toolOptions.classList.add('hidden');
+    }
+
+    // Color controls (live outside #tool-options, in the main toolbar)
+    for (const el of dom.toolOptColors) {
+      if (options.has('color')) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
+
+    // Fill toggle
+    for (const el of dom.toolOptShapes) {
+      if (options.has('fill')) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
+
+    // Font options
+    for (const el of dom.toolOptTexts) {
+      if (options.has('font')) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
   }
 }
 

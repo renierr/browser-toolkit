@@ -37,6 +37,7 @@ export default function init(): void | (() => void) {
   const renderer = new SceneRenderer(dom.canvas, ctx);
   const elementEditor = new ElementEditor(dom, ctx, history, renderer);
   const toolbar = new ToolbarController(dom);
+  elementEditor.setToolbar(toolbar);
 
   // --- Draw tool registry ---
   const toolRegistry = new Map<DrawMode, DrawTool>();
@@ -47,6 +48,11 @@ export default function init(): void | (() => void) {
   toolRegistry.set('triangle', new TriangleTool());
   toolRegistry.set('arrow', new ArrowTool());
   toolRegistry.set('text', new TextTool());
+
+  // Register each tool's declared options with the toolbar
+  for (const [mode, tool] of toolRegistry) {
+    toolbar.registerToolOptions(mode, tool.toolOptions);
+  }
 
   // --- State accessors for modules ---
   const getState = () => ({ mode, elements, hasUnsavedChanges });
@@ -166,13 +172,35 @@ export default function init(): void | (() => void) {
   };
 
   // --- Quick color ---
+  const applySelectedChange = (): void => {
+    if (elementEditor.getSelectedId()) {
+      hasUnsavedChanges = true;
+      renderer.markDirty();
+      updateUndoRedoButtons();
+      renderer.requestDrawImmediate();
+    }
+  };
+
   const onQuickColorClick = (event: Event): void => {
     const target = event.currentTarget as HTMLButtonElement;
     const color = target.getAttribute('data-color');
     if (!color) return;
     dom.colorInput.value = color;
     dom.colorPopup.removeAttribute('open');
+    // Also apply to selected element if in select mode
+    if (elementEditor.getSelectedId()) {
+      elementEditor.updateSelectedColor(elements);
+      applySelectedChange();
+    }
   };
+
+  // --- Filled toggle handler for selected elements ---
+  toolbar.setFilledToggleHandler(() => {
+    if (elementEditor.getSelectedId()) {
+      elementEditor.updateSelectedFilled(elements, toolbar.isFilled());
+      applySelectedChange();
+    }
+  });
 
   // --- Event listeners ---
   dom.btnBackOverview.addEventListener('click', () => {
@@ -255,6 +283,14 @@ export default function init(): void | (() => void) {
 
   dom.fontFamily.addEventListener('change', applyTextChange);
   dom.fontSize.addEventListener('input', applyTextChange);
+
+  // Color change applies to selected element in select mode
+  dom.colorInput.addEventListener('input', () => {
+    if (elementEditor.getSelectedId()) {
+      elementEditor.updateSelectedColor(elements);
+      applySelectedChange();
+    }
+  });
 
   dom.fontBold.addEventListener('click', () => {
     dom.fontBold.classList.toggle('btn-primary');
