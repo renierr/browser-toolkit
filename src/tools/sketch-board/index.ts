@@ -1036,13 +1036,7 @@ export default function init(): void | (() => void) {
   }
 
   ui.btnModePan.addEventListener('click', () => setMode('pan'));
-  ui.btnModeDraw.addEventListener('click', () => {
-    if (mode === 'pan') {
-      setMode('freehand');
-    } else {
-      setMode('pan');
-    }
-  });
+  ui.btnModeDraw.addEventListener('click', () => setMode('freehand'));
   ui.modeButtons.pan.addEventListener('click', () => setMode('pan'));
   ui.modeButtons.select.addEventListener('click', () => setMode('select'));
   ui.modeButtons.freehand.addEventListener('click', () => setMode('freehand'));
