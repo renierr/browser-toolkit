@@ -49,6 +49,8 @@ export default function init(): void | (() => void) {
   let textInputPosition: Point | null = null;
   let textInputValue = '';
   let selectedElementId: string | null = null;
+  let isDraggingText = false;
+  let dragStartPos: Point | null = null;
 
   const MIN_SCALE = 0.1;
   const MAX_SCALE = 10;
@@ -187,9 +189,10 @@ export default function init(): void | (() => void) {
   const setMode = (next: ToolMode): void => {
     closeDrawToolsDropdown();
 
-    if (next === 'pan' || next === 'select') {
+    if (selectedElementId) {
       selectedElementId = null;
       ui.deleteText.classList.add('hidden');
+      requestDrawImmediate();
     }
 
     mode = next;
@@ -348,7 +351,15 @@ export default function init(): void | (() => void) {
     freehandPoints = [];
     isStreamingFreehand = false;
     panStartPointer = null;
-    ui.canvas.style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
+    if (mode === 'pan') {
+      ui.canvas.style.cursor = 'grab';
+    } else if (mode === 'select') {
+      ui.canvas.style.cursor = 'pointer';
+    } else if (mode === 'text') {
+      ui.canvas.style.cursor = 'text';
+    } else {
+      ui.canvas.style.cursor = 'crosshair';
+    }
   };
 
   const commitCurrentDraft = (): void => {
@@ -472,6 +483,8 @@ export default function init(): void | (() => void) {
       }
       if (foundText) {
         selectedElementId = foundText.id;
+        isDraggingText = true;
+        dragStartPos = point;
         ui.fontFamily.value = foundText.fontFamily;
         ui.fontSize.value = String(foundText.fontSize);
         if (foundText.fontWeight === 'bold') {
@@ -485,8 +498,11 @@ export default function init(): void | (() => void) {
           ui.fontItalic.classList.remove('btn-primary');
         }
         ui.deleteText.classList.remove('hidden');
+        ui.canvas.style.cursor = 'move';
       } else {
         selectedElementId = null;
+        isDraggingText = false;
+        dragStartPos = null;
         ui.deleteText.classList.add('hidden');
       }
       requestDrawImmediate();
@@ -554,6 +570,21 @@ export default function init(): void | (() => void) {
       return;
     }
 
+    if (mode === 'select' && isDraggingText && selectedElementId && dragStartPos) {
+      const point = toWorld(event.clientX, event.clientY);
+      const dx = point.x - dragStartPos.x;
+      const dy = point.y - dragStartPos.y;
+      const el = elements.find((e) => e.id === selectedElementId);
+      if (el && el.type === 'text') {
+        el.position.x += dx;
+        el.position.y += dy;
+        dragStartPos = point;
+        markBaseLayerDirty();
+        requestDrawImmediate();
+      }
+      return;
+    }
+
     if (mode === 'select' || mode === 'text') {
       return;
     }
@@ -606,7 +637,23 @@ export default function init(): void | (() => void) {
       ui.canvas.releasePointerCapture(event.pointerId);
     }
 
-    if (mode === 'select' || mode === 'text') {
+    if (mode === 'select') {
+      if (isDraggingText && selectedElementId) {
+        pushUndoState();
+        hasUnsavedChanges = true;
+        markBaseLayerDirty();
+        updateUndoRedoButtons();
+      }
+      isDraggingText = false;
+      dragStartPos = null;
+      if (selectedElementId) {
+        ui.canvas.style.cursor = 'pointer';
+      }
+      resetPointerState();
+      return;
+    }
+
+    if (mode === 'text') {
       resetPointerState();
       return;
     }
