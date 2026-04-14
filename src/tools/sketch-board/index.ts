@@ -686,7 +686,7 @@ export default function init(): void | (() => void) {
     input.id = 'text-input-overlay';
     input.type = 'text';
     input.className =
-      'absolute bg-transparent border-2 border-blue-500 rounded px-1 text-base-content outline-none z-50';
+      'absolute bg-transparent border border-blue-500 rounded text-base-content outline-none z-50';
     input.style.left = `${x}px`;
     input.style.top = `${y}px`;
     const fontSize = parseInt(ui.fontSize.value, 10);
@@ -727,8 +727,10 @@ export default function init(): void | (() => void) {
     }
     textInputActive = false;
     if (textInputValue.trim() !== '' && textInputPosition) {
-      drawStart = textInputPosition;
-      drawEnd = textInputPosition;
+      const offsetX = 1;
+      const offsetY = 7;
+      drawStart = { x: textInputPosition.x + offsetX, y: textInputPosition.y + offsetY };
+      drawEnd = drawStart;
       commitCurrentDraft();
       drawStart = null;
       drawEnd = null;
