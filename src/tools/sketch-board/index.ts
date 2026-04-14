@@ -260,11 +260,11 @@ export default function init(): void | (() => void) {
     }
 
     if (isSelectMode) {
-      ui.canvas.style.cursor = 'pointer';
+      ui.canvas.setAttribute('data-cursor', 'pointer');
     } else if (mode === 'pan') {
-      ui.canvas.style.cursor = 'grab';
+      ui.canvas.setAttribute('data-cursor', 'grab');
     } else {
-      ui.canvas.style.cursor = 'crosshair';
+      ui.canvas.setAttribute('data-cursor', 'crosshair');
     }
   };
 
@@ -352,13 +352,11 @@ export default function init(): void | (() => void) {
     isStreamingFreehand = false;
     panStartPointer = null;
     if (mode === 'pan') {
-      ui.canvas.style.cursor = 'grab';
+      ui.canvas.setAttribute('data-cursor', 'grab');
     } else if (mode === 'select') {
-      ui.canvas.style.cursor = 'pointer';
-    } else if (mode === 'text') {
-      ui.canvas.style.cursor = 'text';
+      ui.canvas.setAttribute('data-cursor', 'pointer');
     } else {
-      ui.canvas.style.cursor = 'crosshair';
+      ui.canvas.setAttribute('data-cursor', 'crosshair');
     }
   };
 
@@ -458,7 +456,7 @@ export default function init(): void | (() => void) {
     if (mode === 'pan') {
       panStartPointer = { x: event.clientX, y: event.clientY };
       panStartViewport = { ...viewport };
-      ui.canvas.style.cursor = 'grabbing';
+      ui.canvas.setAttribute('data-cursor', 'grabbing');
       return;
     }
 
@@ -498,7 +496,7 @@ export default function init(): void | (() => void) {
           ui.fontItalic.classList.remove('btn-primary');
         }
         ui.deleteText.classList.remove('hidden');
-        ui.canvas.style.cursor = 'move';
+        ui.canvas.setAttribute('data-cursor', 'move');
       } else {
         selectedElementId = null;
         isDraggingText = false;
@@ -516,7 +514,7 @@ export default function init(): void | (() => void) {
       textInputActive = true;
       textInputPosition = point;
       textInputValue = '';
-      ui.canvas.style.cursor = 'text';
+      ui.canvas.setAttribute('data-cursor', 'text');
       showTextInputOverlay(point);
       event.preventDefault();
       return;
@@ -647,7 +645,7 @@ export default function init(): void | (() => void) {
       isDraggingText = false;
       dragStartPos = null;
       if (selectedElementId) {
-        ui.canvas.style.cursor = 'pointer';
+        ui.canvas.setAttribute('data-cursor', 'pointer');
       }
       resetPointerState();
       return;
@@ -737,7 +735,7 @@ export default function init(): void | (() => void) {
     }
     textInputPosition = null;
     textInputValue = '';
-    ui.canvas.style.cursor = mode === 'text' ? 'text' : 'crosshair';
+    ui.canvas.setAttribute('data-cursor', mode === 'text' ? 'text' : 'crosshair');
     requestDrawImmediate();
   };
 
@@ -747,7 +745,7 @@ export default function init(): void | (() => void) {
     textInputActive = false;
     textInputPosition = null;
     textInputValue = '';
-    ui.canvas.style.cursor = mode === 'text' ? 'text' : 'crosshair';
+    ui.canvas.setAttribute('data-cursor', mode === 'text' ? 'text' : 'crosshair');
     requestDrawImmediate();
   };
 

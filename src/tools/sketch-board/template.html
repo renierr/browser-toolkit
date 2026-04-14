@@ -322,3 +322,48 @@
     </article>
   </template>
 </div>
+
+<style>
+  #sketch-canvas[data-cursor='pan'] {
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><path d=%22M18 11V6a2 2 0 00-2-2 2 2 0 00-2 2v0M14 10V4a2 2 0 00-2-2 2 2 0 00-2 2v6M10 10.5V6a2 2 0 00-2-2 2 2 0 00-2 2v8%22/><path d=%22M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 012.83-2.82L7 15%22/></svg>')
+        12 12,
+      grab;
+  }
+  #sketch-canvas[data-cursor='grabbing'] {
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><circle cx=%2212%22 cy=%2212%22 r=%2210%22/><path d=%22M12 8v8M8 12l4 4 4-4%22/></svg>')
+        12 12,
+      grabbing;
+  }
+  #sketch-canvas[data-cursor='crosshair'] {
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><path d=%22M5 12h14M12 5v14%22/></svg>')
+        12 12,
+      crosshair;
+  }
+  #sketch-canvas[data-cursor='pointer'] {
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><path d=%22M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z%22/></svg>')
+        2 2,
+      pointer;
+  }
+  #sketch-canvas[data-cursor='move'] {
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><circle cx=%2212%22 cy=%2212%22 r=%2210%22/><path d=%22M12 8v8M8 12l4 4 4-4%22/></svg>')
+        12 12,
+      move;
+  }
+  #sketch-canvas[data-cursor='text'] {
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2224%22 viewBox=%220 0 16 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><path d=%22M8 2v20M4 6h8M3 10h10M5 14h6M4 18h8%22/></svg>')
+        8 12,
+      text;
+  }
+  #sketch-canvas {
+    cursor:
+      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><circle cx=%2212%22 cy=%2212%22 r=%2210%22/></svg>')
+        12 12,
+      grab;
+  }
+</style>
