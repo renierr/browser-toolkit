@@ -226,12 +226,17 @@ export class ElementEditor {
     this.history.push(elements);
   }
 
-  /** Update color of any selected element */
-  updateSelectedColor(elements: SketchElement[]): void {
+  /** Live-update color of selected element (no history push) */
+  applySelectedColor(elements: SketchElement[]): void {
     if (!this.selectedElementId) return;
     const el = elements.find((e) => e.id === this.selectedElementId);
     if (!el) return;
     el.color = this.dom.colorInput.value;
+  }
+
+  /** Commit color change to history (call on input release) */
+  commitSelectedColor(elements: SketchElement[]): void {
+    if (!this.selectedElementId) return;
     this.history.push(elements);
   }
 

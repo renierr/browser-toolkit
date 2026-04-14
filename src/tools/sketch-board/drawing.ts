@@ -260,6 +260,15 @@ export function buildMeta(elements: SketchElement[], lastTool: ToolMode): Drawin
   };
 }
 
+/** Lazily created context for text measurement (avoids DOM thrash) */
+let measureCtx: CanvasRenderingContext2D | null = null;
+function getMeasureCtx(): CanvasRenderingContext2D {
+  if (!measureCtx) {
+    measureCtx = document.createElement('canvas').getContext('2d')!;
+  }
+  return measureCtx;
+}
+
 function computeSceneBounds(elements: SketchElement[]): {
   minX: number;
   minY: number;
@@ -285,14 +294,11 @@ function computeSceneBounds(elements: SketchElement[]): {
     }
 
     if (el.type === 'text') {
-      const ctx = document.createElement('canvas').getContext('2d');
-      if (ctx) {
-        const bounds = getTextBounds(ctx, el);
-        minX = Math.min(minX, bounds.x);
-        minY = Math.min(minY, bounds.y);
-        maxX = Math.max(maxX, bounds.x + bounds.w);
-        maxY = Math.max(maxY, bounds.y + bounds.h);
-      }
+      const bounds = getTextBounds(getMeasureCtx(), el);
+      minX = Math.min(minX, bounds.x);
+      minY = Math.min(minY, bounds.y);
+      maxX = Math.max(maxX, bounds.x + bounds.w);
+      maxY = Math.max(maxY, bounds.y + bounds.h);
       continue;
     }
 

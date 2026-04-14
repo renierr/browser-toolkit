@@ -190,7 +190,7 @@ export class PointerInputHandler {
       const point = this.viewport.toWorld(e.clientX, e.clientY);
       if (this.elementEditor.handleSelectPointerMove(point, elements)) {
         this.renderer.markDirty();
-        this.renderer.requestDrawImmediate();
+        this.renderer.requestDraw();
       }
       return;
     }

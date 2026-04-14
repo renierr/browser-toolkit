@@ -189,7 +189,8 @@ export default function init(): void | (() => void) {
     dom.colorPopup.removeAttribute('open');
     // Also apply to selected element if in select mode
     if (elementEditor.getSelectedId()) {
-      elementEditor.updateSelectedColor(elements);
+      elementEditor.applySelectedColor(elements);
+      elementEditor.commitSelectedColor(elements);
       applySelectedChange();
     }
   };
@@ -284,11 +285,19 @@ export default function init(): void | (() => void) {
   dom.fontFamily.addEventListener('change', applyTextChange);
   dom.fontSize.addEventListener('input', applyTextChange);
 
-  // Color change applies to selected element in select mode
+  // Color: live visual update on input, history commit on change
   dom.colorInput.addEventListener('input', () => {
     if (elementEditor.getSelectedId()) {
-      elementEditor.updateSelectedColor(elements);
-      applySelectedChange();
+      elementEditor.applySelectedColor(elements);
+      renderer.markDirty();
+      renderer.requestDraw();
+    }
+  });
+  dom.colorInput.addEventListener('change', () => {
+    if (elementEditor.getSelectedId()) {
+      elementEditor.commitSelectedColor(elements);
+      hasUnsavedChanges = true;
+      updateUndoRedoButtons();
     }
   });
 
