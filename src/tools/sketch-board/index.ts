@@ -690,7 +690,7 @@ export default function init(): void | (() => void) {
     input.style.left = `${x}px`;
     input.style.top = `${y}px`;
     const fontSize = parseInt(ui.fontSize.value, 10);
-    input.style.fontSize = `${fontSize * viewport.scale}px`;
+    input.style.fontSize = `${fontSize}px`;
     input.style.fontFamily = ui.fontFamily.value;
     input.style.fontWeight = ui.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal';
     input.style.fontStyle = ui.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal';
@@ -730,6 +730,8 @@ export default function init(): void | (() => void) {
       drawStart = textInputPosition;
       drawEnd = textInputPosition;
       commitCurrentDraft();
+      drawStart = null;
+      drawEnd = null;
     }
     textInputPosition = null;
     textInputValue = '';
