@@ -302,6 +302,74 @@ export class ElementEditor {
     input.focus();
   }
 
+  editSelectedText(
+    elements: SketchElement[],
+    viewport: { x: number; y: number; scale: number },
+    onFinish: () => void
+  ): void {
+    if (!this.selectedElementId) return;
+    const el = elements.find((e) => e.id === this.selectedElementId);
+    if (!el || el.type !== 'text') return;
+
+    this.textInputActive = true;
+    const rect = this.dom.canvas.getBoundingClientRect();
+    const x = rect.left + viewport.x + el.position.x * viewport.scale - 5;
+    const y = rect.top + viewport.y + el.position.y * viewport.scale - 5;
+
+    const existingInput = document.getElementById('text-input-overlay');
+    if (existingInput) existingInput.remove();
+
+    const input = document.createElement('input');
+    input.id = 'text-input-overlay';
+    input.type = 'text';
+    input.value = el.text;
+    input.className =
+      'absolute bg-base-300 border border-blue-500 rounded text-base-content outline-none z-50';
+    input.style.left = `${x}px`;
+    input.style.top = `${y}px`;
+    input.style.fontSize = `${el.fontSize * viewport.scale}px`;
+    input.style.fontFamily = el.fontFamily;
+    input.style.fontWeight = el.fontWeight;
+    input.style.fontStyle = el.fontStyle;
+    input.style.color = el.color;
+    input.style.minWidth = '200px';
+
+    const finish = (): void => {
+      const value = input.value;
+      input.remove();
+      this.textInputActive = false;
+      if (value.trim() && value !== el.text) {
+        el.text = value;
+        onFinish();
+      } else {
+        this.renderer.requestDraw();
+      }
+    };
+
+    const cancel = (): void => {
+      input.remove();
+      this.textInputActive = false;
+      this.renderer.requestDraw();
+    };
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        finish();
+      } else if (e.key === 'Escape') {
+        cancel();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      finish();
+    });
+
+    document.body.appendChild(input);
+    input.focus();
+    input.select();
+  }
+
   updateSelectedText(elements: SketchElement[]): void {
     if (!this.selectedElementId) return;
     const el = elements.find((e) => e.id === this.selectedElementId);

@@ -426,6 +426,21 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     applyTextChange();
   });
 
+  const btnEditText = document.getElementById('edit-text') as HTMLButtonElement | null;
+  if (btnEditText) {
+    btnEditText.addEventListener('click', () => {
+      if (elementEditor.getSelectedId()) {
+        history.push(elements);
+        elementEditor.editSelectedText(elements, viewport.state, () => {
+          hasUnsavedChanges = true;
+          renderer.markDirty();
+          updateUndoRedoButtons();
+          renderer.requestDrawImmediate();
+        });
+      }
+    });
+  }
+
   dom.deleteElement.addEventListener('click', () => {
     if (elementEditor.getSelectedId()) {
       history.push(elements);
