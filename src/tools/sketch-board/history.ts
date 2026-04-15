@@ -1,6 +1,6 @@
 import type { SketchElement } from './types.ts';
 
-const MAX_HISTORY = 100;
+const MAX_HISTORY = 50;
 
 export class HistoryManager {
   private undoStack: SketchElement[][] = [];
@@ -16,6 +16,14 @@ export class HistoryManager {
 
   push(elements: SketchElement[]): void {
     this.undoStack.push(cloneElements(elements));
+    if (this.undoStack.length > MAX_HISTORY) {
+      this.undoStack.shift();
+    }
+    this.redoStack = [];
+  }
+
+  pushSnapshot(snapshot: SketchElement[]): void {
+    this.undoStack.push(snapshot);
     if (this.undoStack.length > MAX_HISTORY) {
       this.undoStack.shift();
     }

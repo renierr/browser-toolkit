@@ -219,35 +219,40 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     dom.colorPopup.removeAttribute('open');
     // Also apply to selected element if in select mode
     if (elementEditor.getSelectedId()) {
+      history.push(elements);
       elementEditor.applySelectedColor(elements);
-      elementEditor.commitSelectedColor(elements);
       applySelectedChange();
     }
   };
 
-  // --- Filled toggle handler for selected elements ---
   toolbar.setFilledToggleHandler(() => {
     if (elementEditor.getSelectedId()) {
+      history.push(elements);
       elementEditor.updateSelectedFilled(elements, toolbar.isFilled());
       applySelectedChange();
     }
   });
 
-  // --- Z-order handlers ---
   toolbar.setMoveToFrontHandler(() => {
-    elements = elementEditor.moveElementToFront(elements);
-    hasUnsavedChanges = true;
-    renderer.markDirty();
-    updateUndoRedoButtons();
-    renderer.requestDrawImmediate();
+    if (elementEditor.getSelectedId()) {
+      history.push(elements);
+      elements = elementEditor.moveElementToFront(elements);
+      hasUnsavedChanges = true;
+      renderer.markDirty();
+      updateUndoRedoButtons();
+      renderer.requestDrawImmediate();
+    }
   });
 
   toolbar.setMoveToBelowHandler(() => {
-    elements = elementEditor.moveElementToBelow(elements);
-    hasUnsavedChanges = true;
-    renderer.markDirty();
-    updateUndoRedoButtons();
-    renderer.requestDrawImmediate();
+    if (elementEditor.getSelectedId()) {
+      history.push(elements);
+      elements = elementEditor.moveElementToBelow(elements);
+      hasUnsavedChanges = true;
+      renderer.markDirty();
+      updateUndoRedoButtons();
+      renderer.requestDrawImmediate();
+    }
   });
 
   // --- Event listeners ---
@@ -355,8 +360,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   // --- Text property changes (apply to selected text element) ---
   const applyTextChange = (): void => {
-    elementEditor.updateSelectedText(elements);
     if (elementEditor.getSelectedId()) {
+      history.push(elements);
+      elementEditor.updateSelectedText(elements);
       hasUnsavedChanges = true;
       renderer.markDirty();
       updateUndoRedoButtons();
@@ -368,8 +374,12 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   dom.fontSize.addEventListener('input', applyTextChange);
 
   // Color: live visual update on input, history commit on change
+  let preColorSnapshot: SketchElement[] | null = null;
   dom.colorInput.addEventListener('input', () => {
     if (elementEditor.getSelectedId()) {
+      if (!preColorSnapshot) {
+        preColorSnapshot = JSON.parse(JSON.stringify(elements));
+      }
       elementEditor.applySelectedColor(elements);
       renderer.markDirty();
       renderer.requestDraw();
@@ -377,7 +387,10 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   });
   dom.colorInput.addEventListener('change', () => {
     if (elementEditor.getSelectedId()) {
-      elementEditor.commitSelectedColor(elements);
+      if (preColorSnapshot) {
+        history.pushSnapshot(preColorSnapshot);
+        preColorSnapshot = null;
+      }
       hasUnsavedChanges = true;
       updateUndoRedoButtons();
     }
@@ -394,16 +407,20 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   });
 
   dom.deleteElement.addEventListener('click', () => {
-    elements = elementEditor.deleteSelected(elements);
-    hasUnsavedChanges = true;
-    renderer.markDirty();
-    updateUndoRedoButtons();
-    renderer.requestDrawImmediate();
+    if (elementEditor.getSelectedId()) {
+      history.push(elements);
+      elements = elementEditor.deleteSelected(elements);
+      hasUnsavedChanges = true;
+      renderer.markDirty();
+      updateUndoRedoButtons();
+      renderer.requestDrawImmediate();
+    }
   });
 
   const onKeyDown = (e: KeyboardEvent): void => {
     if (elementEditor.getSelectedId() && (e.key === 'Delete' || e.key === 'Backspace')) {
       e.preventDefault();
+      history.push(elements);
       elements = elementEditor.deleteSelected(elements);
       hasUnsavedChanges = true;
       renderer.markDirty();

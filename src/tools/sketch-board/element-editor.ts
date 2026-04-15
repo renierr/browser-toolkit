@@ -28,6 +28,7 @@ export class ElementEditor {
   private resizeStartBounds: { x: number; y: number; w: number; h: number } | null = null;
   private textInputActive = false;
   private pointerDownHitSelected = false;
+  private dragStartSnapshot: SketchElement[] | null = null;
 
   constructor(
     dom: SketchDom,
@@ -76,11 +77,10 @@ export class ElementEditor {
           this.dragStartPos = point;
           this.resizeStartBounds = getElementBounds(this.ctx, el);
           this.setCursorForHandle(handle);
-          this.history.push(elements);
+          this.dragStartSnapshot = JSON.parse(JSON.stringify(elements));
           return { found: true, elementId: el.id };
         }
 
-        // Check if点击中了目前选中的元素
         const bounds = getElementBounds(this.ctx, el);
         const padding = Math.max(4, el.width / 2);
         if (
@@ -93,6 +93,7 @@ export class ElementEditor {
           this.isDragging = true;
           this.hasMovedBeyondThreshold = false;
           this.dragStartPos = point;
+          this.dragStartSnapshot = JSON.parse(JSON.stringify(elements));
           return { found: true, elementId: el.id };
         }
       }
@@ -118,7 +119,7 @@ export class ElementEditor {
         this.syncToolbarForElement(el);
 
         this.dom.canvas.setAttribute('data-cursor', 'move');
-        this.history.push(elements);
+        this.dragStartSnapshot = JSON.parse(JSON.stringify(elements));
         return { found: true, elementId: el.id };
       }
     }
@@ -178,6 +179,11 @@ export class ElementEditor {
       hasUnsaved = true;
     }
 
+    if (didMove && this.dragStartSnapshot) {
+      this.history.pushSnapshot(this.dragStartSnapshot);
+      hasUnsaved = true;
+    }
+
     this.isDragging = false;
     this.isResizing = false;
     this.hasMovedBeyondThreshold = false;
@@ -185,11 +191,12 @@ export class ElementEditor {
     this.dragStartPos = null;
     this.resizeStartBounds = null;
     this.pointerDownHitSelected = false;
+    this.dragStartSnapshot = null;
 
     if (this.selectedElementId) {
       this.dom.canvas.setAttribute('data-cursor', 'pointer');
     }
-    return { pushed: didMove || hitSelected, hasUnsavedChanges: hasUnsaved };
+    return { pushed: didMove, hasUnsavedChanges: hasUnsaved };
   }
 
   private getNextElementBehind(
@@ -304,7 +311,6 @@ export class ElementEditor {
     el.fontSize = parseInt(this.dom.fontSize.value, 10);
     el.fontWeight = this.dom.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal';
     el.fontStyle = this.dom.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal';
-    this.history.push(elements);
   }
 
   /** Live-update color of selected element (no history push) */
@@ -315,11 +321,6 @@ export class ElementEditor {
     el.color = this.dom.colorInput.value;
   }
 
-  /** Commit color change to history (call on input release) */
-  commitSelectedColor(elements: SketchElement[]): void {
-    if (!this.selectedElementId) return;
-    this.history.push(elements);
-  }
 
   /** Toggle filled state of the selected shape element */
   updateSelectedFilled(elements: SketchElement[], filled: boolean): void {
@@ -328,7 +329,6 @@ export class ElementEditor {
     if (!el) return;
     if ('filled' in el) {
       (el as { filled?: boolean }).filled = filled;
-      this.history.push(elements);
     }
   }
 
@@ -337,7 +337,6 @@ export class ElementEditor {
     const filtered = elements.filter((e) => e.id !== this.selectedElementId);
     this.selectedElementId = null;
     this.toolbar?.hideSelectionOptions();
-    this.history.push(filtered);
     return filtered;
   }
 
@@ -347,7 +346,6 @@ export class ElementEditor {
     if (!el) return elements;
     const filtered = elements.filter((e) => e.id !== this.selectedElementId);
     filtered.push(el);
-    this.history.push(filtered);
     return filtered;
   }
 
@@ -357,7 +355,6 @@ export class ElementEditor {
     if (!el) return elements;
     const filtered = elements.filter((e) => e.id !== this.selectedElementId);
     filtered.unshift(el);
-    this.history.push(filtered);
     return filtered;
   }
 
@@ -377,6 +374,7 @@ export class ElementEditor {
     this.dragStartPos = null;
     this.resizeStartBounds = null;
     this.textInputActive = false;
+    this.dragStartSnapshot = null;
     this.toolbar?.hideSelectionOptions();
     const existingInput = document.getElementById('text-input-overlay');
     if (existingInput) existingInput.remove();
