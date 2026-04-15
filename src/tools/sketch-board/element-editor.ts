@@ -498,6 +498,7 @@ export class ElementEditor {
       const newSize = Math.max(8, Math.min(200, el.fontSize + dy * 0.5));
       el.fontSize = Math.round(newSize);
       el.width = el.fontSize;
+      this.dom.fontSize.value = String(el.fontSize);
       this.dragStartPos = point;
       return true;
     }
