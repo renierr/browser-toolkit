@@ -52,6 +52,13 @@ export default function init(): void | (() => void) {
   toolRegistry.set('text', new TextTool());
   const imageTool = new ImageTool();
   toolRegistry.set('image', imageTool);
+  imageTool.setGetCanvasCenter(() => {
+    const vp = viewport.state;
+    return {
+      x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
+      y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
+    };
+  });
 
   // Register each tool's declared options with the toolbar
   for (const [mode, tool] of toolRegistry) {
@@ -118,6 +125,7 @@ export default function init(): void | (() => void) {
     history.push(elements);
     elements = [...elements, el];
     hasUnsavedChanges = true;
+    renderer.markDirty();
     updateUndoRedoButtons();
     renderer.requestDraw();
   });
@@ -241,10 +249,26 @@ export default function init(): void | (() => void) {
   }
 
   dom.btnImportImage.addEventListener('click', () => {
+    imageTool.setGetCanvasCenter(() => {
+      const vp = viewport.state;
+      return {
+        x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
+        y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
+      };
+    });
+    (document.activeElement as HTMLElement)?.blur();
     imageTool.triggerFileInput();
   });
 
   dom.btnPasteImage.addEventListener('click', async () => {
+    imageTool.setGetCanvasCenter(() => {
+      const vp = viewport.state;
+      return {
+        x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
+        y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
+      };
+    });
+    (document.activeElement as HTMLElement)?.blur();
     const pasted = await imageTool.pasteFromClipboard();
     if (!pasted) {
       showMessage('No image in clipboard or permission denied.', {

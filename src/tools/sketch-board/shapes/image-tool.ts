@@ -10,6 +10,7 @@ export class ImageTool implements DrawTool {
   private fileInput: HTMLInputElement | null = null;
   private onInsert: ((el: ImageElement) => void) | null = null;
   private getCanvasCenter: (() => Point) | null = null;
+  private isInserting = false;
 
   setOnInsert(callback: (el: ImageElement) => void): void {
     this.onInsert = callback;
@@ -17,6 +18,10 @@ export class ImageTool implements DrawTool {
 
   setGetCanvasCenter(callback: () => Point): void {
     this.getCanvasCenter = callback;
+  }
+
+  isInsertingImage(): boolean {
+    return this.isInserting;
   }
 
   onPointerDown(_point: Point, _ctx: DrawToolContext): void {}
@@ -50,6 +55,8 @@ export class ImageTool implements DrawTool {
   };
 
   private loadImageFromFile(file: File): void {
+    if (this.isInserting) return;
+    this.isInserting = true;
     const reader = new FileReader();
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
@@ -57,11 +64,15 @@ export class ImageTool implements DrawTool {
         this.createImageElement(dataUrl);
       }
     };
+    reader.onloadend = (): void => {
+      this.isInserting = false;
+    };
     reader.readAsDataURL(file);
   }
 
   async pasteFromClipboard(): Promise<boolean> {
-    if (!navigator.clipboard) return false;
+    if (!navigator.clipboard || this.isInserting) return false;
+    this.isInserting = true;
     try {
       const items = await navigator.clipboard.read();
       for (const item of items) {
@@ -79,13 +90,18 @@ export class ImageTool implements DrawTool {
                   resolve(false);
                 }
               };
+              reader.onloadend = (): void => {
+                this.isInserting = false;
+              };
               reader.readAsDataURL(blob);
             });
           }
         }
       }
+      this.isInserting = false;
       return false;
     } catch {
+      this.isInserting = false;
       console.error('[ImageTool] Clipboard read failed');
       return false;
     }
