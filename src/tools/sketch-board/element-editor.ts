@@ -73,6 +73,7 @@ export class ElementEditor {
           this.dragStartPos = point;
           this.resizeStartBounds = getElementBounds(this.ctx, el);
           this.setCursorForHandle(handle);
+          this.history.push(elements);
           return { found: true, elementId: el.id };
         }
       }
@@ -98,6 +99,7 @@ export class ElementEditor {
         this.syncToolbarForElement(el);
 
         this.dom.canvas.setAttribute('data-cursor', 'move');
+        this.history.push(elements);
         return { found: true, elementId: el.id };
       }
     }
@@ -132,17 +134,13 @@ export class ElementEditor {
   }
 
   handleSelectPointerUp(
-    elements: SketchElement[],
+    _elements: SketchElement[],
     hasUnsaved: boolean
   ): { pushed: boolean; hasUnsavedChanges: boolean } {
-    let pushed = false;
-    if (
-      (this.isDragging || this.isResizing) &&
-      this.selectedElementId &&
-      this.hasMovedBeyondThreshold
-    ) {
-      this.history.push(elements);
-      pushed = true;
+    const pushed = Boolean(
+      (this.isDragging || this.isResizing) && this.selectedElementId && this.hasMovedBeyondThreshold
+    );
+    if (pushed) {
       hasUnsaved = true;
     }
     this.isDragging = false;
