@@ -4,7 +4,7 @@ import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getCropBounds, setImageGetter } from './drawing.ts';
 import { getDom } from './dom.ts';
 import { ElementEditor } from './element-editor.ts';
-import { copyToClipboard, exportDrawing, renderGallery, saveDrawing } from './gallery.ts';
+import { copyToClipboard, exportDrawing, renderGallery, saveDrawing, shareDrawing } from './gallery.ts';
 import { HistoryManager } from './history.ts';
 import { PointerInputHandler } from './input-handler.ts';
 import { SceneRenderer } from './renderer.ts';
@@ -342,6 +342,11 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   dom.btnExport.addEventListener('click', async () => {
     const format = (dom.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
     await exportDrawing(renderer.renderTempCanvas(elements), format);
+  });
+
+  dom.btnShare.addEventListener('click', async () => {
+    const format = (dom.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
+    await shareDrawing(renderer.renderTempCanvas(elements), format);
   });
 
   dom.btnClipboard.addEventListener('click', async () => {

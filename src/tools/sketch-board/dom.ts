@@ -18,6 +18,7 @@ export type SketchDom = {
   btnSave: HTMLButtonElement;
   btnGallery: HTMLButtonElement;
   btnExport: HTMLButtonElement;
+  btnShare: HTMLButtonElement;
   btnClipboard: HTMLButtonElement;
   btnZoomOut: HTMLButtonElement;
   btnZoomIn: HTMLButtonElement;
@@ -68,6 +69,7 @@ export function getDom(doc: Document): SketchDom | null {
   const btnSave = doc.getElementById('save-drawing') as HTMLButtonElement | null;
   const btnGallery = doc.getElementById('open-gallery') as HTMLButtonElement | null;
   const btnExport = doc.getElementById('export-file') as HTMLButtonElement | null;
+  const btnShare = doc.getElementById('share-drawing') as HTMLButtonElement | null;
   const btnClipboard = doc.getElementById('copy-image') as HTMLButtonElement | null;
   const btnZoomOut = doc.getElementById('zoom-out') as HTMLButtonElement | null;
   const btnZoomIn = doc.getElementById('zoom-in') as HTMLButtonElement | null;
@@ -123,6 +125,7 @@ export function getDom(doc: Document): SketchDom | null {
     !btnSave ||
     !btnGallery ||
     !btnExport ||
+    !btnShare ||
     !btnClipboard ||
     !btnZoomOut ||
     !btnZoomIn ||
@@ -178,6 +181,7 @@ export function getDom(doc: Document): SketchDom | null {
     btnSave,
     btnGallery,
     btnExport,
+    btnShare,
     btnClipboard,
     btnZoomOut,
     btnZoomIn,

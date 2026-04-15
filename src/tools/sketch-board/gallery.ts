@@ -105,6 +105,23 @@ export async function exportDrawing(
   }
 }
 
+export async function shareDrawing(
+  tempCanvas: HTMLCanvasElement | null,
+  format: 'png' | 'jpg' | 'webp'
+): Promise<void> {
+  if (!tempCanvas) {
+    showMessage('Nothing to share.', { type: 'warning', timeoutMs: 2500 });
+    return;
+  }
+
+  try {
+    await CanvasExporter.share(tempCanvas, `sketch-${Date.now()}`, format, 0.92);
+  } catch (error) {
+    console.error('[SketchBoard] Share failed', error);
+    showMessage('Share failed.', { type: 'alert', timeoutMs: 3000 });
+  }
+}
+
 export async function copyToClipboard(tempCanvas: HTMLCanvasElement | null): Promise<void> {
   if (!tempCanvas) {
     showMessage('Nothing to copy.', { type: 'warning', timeoutMs: 2500 });
