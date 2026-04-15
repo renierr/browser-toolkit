@@ -253,16 +253,16 @@
         </button>
       </div>
 
-      <button id="clear-canvas" class="btn btn-sm btn-outline toolbar-inner" title="Clear canvas">
-        <i data-lucide="trash-2" class="w-4 h-4"></i>
-      </button>
-
       <button id="undo-action" class="btn btn-sm btn-outline toolbar-inner" title="Undo" disabled>
         <i data-lucide="corner-left-up" class="w-4 h-4"></i>
       </button>
 
       <button id="redo-action" class="btn btn-sm btn-outline toolbar-inner" title="Redo" disabled>
         <i data-lucide="corner-right-up" class="w-4 h-4"></i>
+      </button>
+
+      <button id="clear-canvas" class="btn btn-sm btn-outline toolbar-inner" title="Clear canvas">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
       </button>
 
       <button id="save-drawing" class="btn btn-sm toolbar-inner" title="Save drawing">
@@ -332,8 +332,8 @@
         <div class="gallery-meta text-xs opacity-70"></div>
       </div>
       <div class="mt-2 flex gap-1 justify-end">
-        <button class="btn btn-xs load-drawing" type="button">Load</button>
-        <button class="btn btn-xs btn-outline delete-drawing" type="button">Delete</button>
+        <button class="btn btn-xs btn-error delete-drawing" type="button">Delete</button>
+        <button class="btn btn-xs btn-outline load-drawing" type="button">Load</button>
       </div>
     </article>
   </template>
