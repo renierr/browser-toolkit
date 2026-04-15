@@ -11,6 +11,7 @@ export class ImageTool implements DrawTool {
   private onInsert: ((el: ImageElement) => void) | null = null;
   private getCanvasCenter: (() => Point) | null = null;
   private isInserting = false;
+  private maxSize: number | undefined = 300;
 
   setOnInsert(callback: (el: ImageElement) => void): void {
     this.onInsert = callback;
@@ -18,6 +19,26 @@ export class ImageTool implements DrawTool {
 
   setGetCanvasCenter(callback: () => Point): void {
     this.getCanvasCenter = callback;
+  }
+
+  setMaxSize(size: number | undefined): void {
+    this.maxSize = size;
+  }
+
+  loadImageFromFile(file: File): void {
+    if (this.isInserting) return;
+    this.isInserting = true;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl && this.onInsert) {
+        this.createImageElement(dataUrl);
+      }
+    };
+    reader.onloadend = (): void => {
+      this.isInserting = false;
+    };
+    reader.readAsDataURL(file);
   }
 
   isInsertingImage(): boolean {
@@ -53,22 +74,6 @@ export class ImageTool implements DrawTool {
     if (!file) return;
     this.loadImageFromFile(file);
   };
-
-  private loadImageFromFile(file: File): void {
-    if (this.isInserting) return;
-    this.isInserting = true;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      if (dataUrl && this.onInsert) {
-        this.createImageElement(dataUrl);
-      }
-    };
-    reader.onloadend = (): void => {
-      this.isInserting = false;
-    };
-    reader.readAsDataURL(file);
-  }
 
   async pasteFromClipboard(): Promise<boolean> {
     if (!navigator.clipboard || this.isInserting) return false;
@@ -112,17 +117,19 @@ export class ImageTool implements DrawTool {
     img.onload = (): void => {
       if (!this.onInsert) return;
       const center = this.getCanvasCenter?.() ?? { x: 0, y: 0 };
-      const maxSize = 300;
       let w = img.naturalWidth;
       let h = img.naturalHeight;
-      const aspect = w / h;
-      if (w > maxSize || h > maxSize) {
-        if (w > h) {
-          w = maxSize;
-          h = Math.round(maxSize / aspect);
-        } else {
-          h = maxSize;
-          w = Math.round(maxSize * aspect);
+      if (this.maxSize) {
+        const maxSize = this.maxSize;
+        const aspect = w / h;
+        if (w > maxSize || h > maxSize) {
+          if (w > h) {
+            w = maxSize;
+            h = Math.round(maxSize / aspect);
+          } else {
+            h = maxSize;
+            w = Math.round(maxSize * aspect);
+          }
         }
       }
       const element: ImageElement = {

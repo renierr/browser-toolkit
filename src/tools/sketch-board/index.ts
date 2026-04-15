@@ -1,5 +1,6 @@
 import router from '@js/router.ts';
 import { showMessage } from '@js/ui.ts';
+import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getCropBounds, setImageGetter } from './drawing.ts';
 import { getDom } from './dom.ts';
 import { ElementEditor } from './element-editor.ts';
@@ -21,7 +22,7 @@ import type { DrawMode, DrawToolContext, SketchElement, ToolMode } from './types
 import { ViewportController } from './viewport.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(): void | (() => void) {
+export default function init(payload?: SharedFilesPayload): void | (() => void) {
   const dom = getDom(document);
   if (!dom) return;
   const ctx = dom.canvas.getContext('2d');
@@ -404,6 +405,18 @@ export default function init(): void | (() => void) {
   setMode('pan');
   renderer.resizeCanvas();
   renderer.requestDraw();
+
+  if (payload?.sharedFiles?.length) {
+    imageTool.setMaxSize(undefined);
+    imageTool.setGetCanvasCenter(() => {
+      const vp = viewport.state;
+      return {
+        x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
+        y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
+      };
+    });
+    imageTool.loadImageFromFile(payload.sharedFiles[0]);
+  }
 
   // --- Cleanup ---
   return () => {
