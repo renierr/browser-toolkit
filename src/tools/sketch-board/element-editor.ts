@@ -8,6 +8,7 @@ import type { ToolbarController } from './toolbar.ts';
 import type { DrawToolContext, Point, SketchElement } from './types.ts';
 
 const HANDLE_SIZE = 8;
+const MOVE_THRESHOLD = 5;
 
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'start' | 'end';
 
@@ -21,6 +22,7 @@ export class ElementEditor {
   private selectedElementId: string | null = null;
   private isDragging = false;
   private isResizing = false;
+  private hasMovedBeyondThreshold = false;
   private activeHandle: ResizeHandle | null = null;
   private dragStartPos: Point | null = null;
   private resizeStartBounds: { x: number; y: number; w: number; h: number } | null = null;
@@ -66,6 +68,7 @@ export class ElementEditor {
         const handle = this.hitTestHandle(point, el);
         if (handle) {
           this.isResizing = true;
+          this.hasMovedBeyondThreshold = false;
           this.activeHandle = handle;
           this.dragStartPos = point;
           this.resizeStartBounds = getElementBounds(this.ctx, el);
@@ -88,6 +91,7 @@ export class ElementEditor {
       ) {
         this.selectedElementId = el.id;
         this.isDragging = true;
+        this.hasMovedBeyondThreshold = false;
         this.dragStartPos = point;
 
         // Sync toolbar options for selected element type
@@ -109,10 +113,21 @@ export class ElementEditor {
 
   handleSelectPointerMove(point: Point, elements: SketchElement[]): boolean {
     if (this.isResizing && this.selectedElementId && this.dragStartPos && this.activeHandle) {
-      return this.doResize(point, elements);
+      const moved = this.doResize(point, elements);
+      if (moved) this.hasMovedBeyondThreshold = true;
+      return moved;
     }
 
     if (!this.isDragging || !this.selectedElementId || !this.dragStartPos) return false;
+
+    const dx = Math.abs(point.x - this.dragStartPos.x);
+    const dy = Math.abs(point.y - this.dragStartPos.y);
+
+    if (!this.hasMovedBeyondThreshold && dx < MOVE_THRESHOLD && dy < MOVE_THRESHOLD) {
+      return false;
+    }
+
+    this.hasMovedBeyondThreshold = true;
     return this.doMove(point, elements);
   }
 
@@ -121,13 +136,18 @@ export class ElementEditor {
     hasUnsaved: boolean
   ): { pushed: boolean; hasUnsavedChanges: boolean } {
     let pushed = false;
-    if ((this.isDragging || this.isResizing) && this.selectedElementId) {
+    if (
+      (this.isDragging || this.isResizing) &&
+      this.selectedElementId &&
+      this.hasMovedBeyondThreshold
+    ) {
       this.history.push(elements);
       pushed = true;
       hasUnsaved = true;
     }
     this.isDragging = false;
     this.isResizing = false;
+    this.hasMovedBeyondThreshold = false;
     this.activeHandle = null;
     this.dragStartPos = null;
     this.resizeStartBounds = null;
@@ -271,6 +291,7 @@ export class ElementEditor {
     this.selectedElementId = null;
     this.isDragging = false;
     this.isResizing = false;
+    this.hasMovedBeyondThreshold = false;
     this.activeHandle = null;
     this.dragStartPos = null;
     this.resizeStartBounds = null;
