@@ -9,11 +9,26 @@ export class SceneRenderer {
   private readonly dpr: number;
   private readonly baseLayerCanvas: HTMLCanvasElement;
   private readonly baseLayerCtx: CanvasRenderingContext2D;
+  private readonly imageCache = new Map<string, HTMLImageElement>();
 
   private renderRaf: number | null = null;
   private renderQueued = false;
   private baseLayerDirty = true;
   private drawSceneFn: (() => void) | null = null;
+
+  getCachedImage(imageData: string): HTMLImageElement {
+    let img = this.imageCache.get(imageData);
+    if (!img) {
+      img = new Image();
+      img.onload = (): void => {
+        this.markDirty();
+        this.requestDraw();
+      };
+      img.src = imageData;
+      this.imageCache.set(imageData, img);
+    }
+    return img;
+  }
 
   constructor(canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D) {
     this.canvas = canvas;

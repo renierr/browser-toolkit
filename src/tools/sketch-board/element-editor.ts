@@ -421,44 +421,34 @@ export class ElementEditor {
       return true;
     }
 
-    // Image: resize proportionally from center/corner handles
-    if (el.type === 'image' && this.resizeStartBounds) {
-      const startBounds = this.resizeStartBounds;
-      const dx = point.x - this.dragStartPos.x;
-      const dy = point.y - this.dragStartPos.y;
-      let newW = startBounds.w;
-      let newH = startBounds.h;
+    // Image: use same resizing logic as shapes (rect-based with start/end)
+    if (el.type === 'image') {
+      const start: Point = { x: el.position.x, y: el.position.y };
+      const end: Point = { x: el.position.x + el.imageWidth, y: el.position.y + el.imageHeight };
+      const rect = normalizeRect(start, end);
       const handle = this.activeHandle;
+      let x = rect.x;
+      let y = rect.y;
+      let w = rect.w;
+      let h = rect.h;
 
-      if (handle === 'e' || handle === 'se' || handle === 'ne') {
-        newW = Math.max(20, startBounds.w + dx);
-      } else if (handle === 'w' || handle === 'sw' || handle === 'nw') {
-        newW = Math.max(20, startBounds.w - dx);
-      }
-      if (handle === 's' || handle === 'se' || handle === 'sw') {
-        newH = Math.max(20, startBounds.h + dy);
-      } else if (handle === 'n' || handle === 'ne' || handle === 'nw') {
-        newH = Math.max(20, startBounds.h - dy);
-      }
+      if (handle === 'nw' || handle === 'w' || handle === 'sw') x = point.x;
+      if (handle === 'ne' || handle === 'e' || handle === 'se') w = point.x - x;
+      if (handle === 'nw' || handle === 'n' || handle === 'ne') y = point.y;
+      if (handle === 'sw' || handle === 's' || handle === 'se') h = point.y - y;
 
-      if (
-        handle === 'nw' ||
-        handle === 'n' ||
-        handle === 'w' ||
-        handle === 'ne' ||
-        handle === 'sw'
-      ) {
-        el.imageWidth = newW;
-        el.imageHeight = newH;
-        el.position.x = startBounds.x + startBounds.w - newW;
-        el.position.y = startBounds.y + startBounds.h - newH;
-      } else {
-        el.imageWidth = newW;
-        el.imageHeight = newH;
-      }
+      if (handle === 'w' || handle === 'nw' || handle === 'sw') w = rect.x + rect.w - point.x;
+      if (handle === 'n' || handle === 'nw' || handle === 'ne') h = rect.y + rect.h - point.y;
 
-      this.dragStartPos = point;
-      return true;
+      if (w >= 20 && h >= 20) {
+        el.position.x = x;
+        el.position.y = y;
+        el.imageWidth = w;
+        el.imageHeight = h;
+        this.dragStartPos = point;
+        return true;
+      }
+      return false;
     }
 
     return false;

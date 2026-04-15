@@ -1,6 +1,6 @@
 import router from '@js/router.ts';
 import { showMessage } from '@js/ui.ts';
-import { getCropBounds } from './drawing.ts';
+import { getCropBounds, setImageGetter } from './drawing.ts';
 import { getDom } from './dom.ts';
 import { ElementEditor } from './element-editor.ts';
 import { copyToClipboard, exportDrawing, renderGallery, saveDrawing } from './gallery.ts';
@@ -36,6 +36,7 @@ export default function init(): void | (() => void) {
   const history = new HistoryManager();
   const viewport = new ViewportController(dom.canvas);
   const renderer = new SceneRenderer(dom.canvas, ctx);
+  setImageGetter((data) => renderer.getCachedImage(data));
   const elementEditor = new ElementEditor(dom, ctx, history, renderer);
   const toolbar = new ToolbarController(dom);
   elementEditor.setToolbar(toolbar);
@@ -125,10 +126,13 @@ export default function init(): void | (() => void) {
   const setMode = (next: ToolMode): void => {
     elementEditor.clearSelection();
     mode = next;
-    const vp = viewport.state;
-    const centerX = (dom.canvas.width / 2 - vp.x) / vp.scale;
-    const centerY = (dom.canvas.height / 2 - vp.y) / vp.scale;
-    imageTool.setCanvasCenter(centerX, centerY);
+    imageTool.setGetCanvasCenter(() => {
+      const vp = viewport.state;
+      return {
+        x: (dom.canvas.width / 2 - vp.x) / vp.scale,
+        y: (dom.canvas.height / 2 - vp.y) / vp.scale,
+      };
+    });
     toolbar.setMode(next);
     renderer.requestDrawImmediate(inputHandler.getStreamingState());
   };

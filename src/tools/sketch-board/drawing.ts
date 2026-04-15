@@ -7,6 +7,13 @@ import type {
   ToolMode,
 } from './types.ts';
 
+type ImageGetter = (imageData: string) => HTMLImageElement;
+let imageGetter: ImageGetter | null = null;
+
+export function setImageGetter(fn: ImageGetter): void {
+  imageGetter = fn;
+}
+
 export function normalizeRect(
   start: Point,
   end: Point
@@ -197,16 +204,10 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement): void {
   ctx.fillText(el.text, el.position.x, el.position.y);
 }
 
-const imageCache = new Map<string, HTMLImageElement>();
-
 function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement): void {
-  let img = imageCache.get(el.imageData);
-  if (!img) {
-    img = new Image();
-    img.src = el.imageData;
-    imageCache.set(el.imageData, img);
-  }
-  if (img.complete) {
+  if (!imageGetter) return;
+  const img = imageGetter(el.imageData);
+  if (img?.complete) {
     ctx.drawImage(img, el.position.x, el.position.y, el.imageWidth, el.imageHeight);
   }
 }

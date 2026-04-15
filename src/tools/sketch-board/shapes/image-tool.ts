@@ -8,15 +8,15 @@ export class ImageTool implements DrawTool {
   readonly toolOptions: ReadonlySet<ToolOptionId> = new Set();
 
   private fileInput: HTMLInputElement | null = null;
-  private canvasCenter: Point = { x: 0, y: 0 };
   private onInsert: ((el: ImageElement) => void) | null = null;
+  private getCanvasCenter: (() => Point) | null = null;
 
   setOnInsert(callback: (el: ImageElement) => void): void {
     this.onInsert = callback;
   }
 
-  setCanvasCenter(x: number, y: number): void {
-    this.canvasCenter = { x, y };
+  setGetCanvasCenter(callback: () => Point): void {
+    this.getCanvasCenter = callback;
   }
 
   onPointerDown(_point: Point, _ctx: DrawToolContext): void {}
@@ -95,6 +95,7 @@ export class ImageTool implements DrawTool {
     const img = new Image();
     img.onload = (): void => {
       if (!this.onInsert) return;
+      const center = this.getCanvasCenter?.() ?? { x: 0, y: 0 };
       const maxSize = 300;
       let w = img.naturalWidth;
       let h = img.naturalHeight;
@@ -114,8 +115,8 @@ export class ImageTool implements DrawTool {
         color: '#000000',
         width: 1,
         position: {
-          x: this.canvasCenter.x - w / 2,
-          y: this.canvasCenter.y - h / 2,
+          x: center.x - w / 2,
+          y: center.y - h / 2,
         },
         imageWidth: w,
         imageHeight: h,
