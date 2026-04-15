@@ -134,6 +134,8 @@ export class ToolbarController {
   /** Show tool options matching the given option set + delete button (used by ElementEditor) */
   showSelectionOptions(options: ReadonlySet<ToolOptionId>): void {
     this.applyToolOptions(options);
+    // Always show tool-options container for selection (z-order buttons need it visible)
+    this.dom.toolOptions.classList.remove('hidden');
     this.dom.deleteElement.classList.remove('hidden');
     this.dom.moveToFront.classList.remove('hidden');
     this.dom.moveToBelow.classList.remove('hidden');
