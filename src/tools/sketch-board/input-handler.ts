@@ -42,6 +42,8 @@ export class PointerInputHandler {
     opts?: AddEventListenerOptions;
   }> = [];
 
+  private onHistoryChange: () => void;
+
   constructor(
     dom: SketchDom,
     viewport: ViewportController,
@@ -51,7 +53,8 @@ export class PointerInputHandler {
     history: HistoryManager,
     getState: () => { mode: ToolMode; elements: SketchElement[]; hasUnsavedChanges: boolean },
     setState: (patch: { elements?: SketchElement[]; hasUnsavedChanges?: boolean }) => void,
-    getToolContext: () => DrawToolContext
+    getToolContext: () => DrawToolContext,
+    onHistoryChange: () => void
   ) {
     this.dom = dom;
     this.viewport = viewport;
@@ -62,6 +65,7 @@ export class PointerInputHandler {
     this.getState = getState;
     this.setState = setState;
     this.getToolContext = getToolContext;
+    this.onHistoryChange = onHistoryChange;
   }
 
   attach(): void {
@@ -131,6 +135,7 @@ export class PointerInputHandler {
           if (el) {
             const state = this.getState();
             this.history.push(state.elements);
+            this.onHistoryChange();
             state.elements.push(el);
             this.setState({ hasUnsavedChanges: true });
             this.renderer.markDirty();
@@ -190,7 +195,7 @@ export class PointerInputHandler {
       const point = this.viewport.toWorld(e.clientX, e.clientY);
       if (this.elementEditor.handleSelectPointerMove(point, elements)) {
         this.renderer.markDirty();
-        this.renderer.requestDraw();
+        this.renderer.requestDrawImmediate();
       }
       return;
     }
@@ -239,6 +244,7 @@ export class PointerInputHandler {
     if (mode === 'select') {
       const result = this.elementEditor.handleSelectPointerUp(elements, hasUnsavedChanges);
       if (result.pushed) {
+        this.onHistoryChange();
         this.setState({ hasUnsavedChanges: result.hasUnsavedChanges });
         this.renderer.markDirty();
       }
@@ -260,6 +266,7 @@ export class PointerInputHandler {
         const element = tool.onPointerUp(point, ctx);
         if (element) {
           this.history.push(elements);
+          this.onHistoryChange();
           elements.push(element);
           this.setState({ hasUnsavedChanges: true });
           this.renderer.markDirty();

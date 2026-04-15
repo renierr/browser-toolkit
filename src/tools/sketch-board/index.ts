@@ -72,6 +72,11 @@ export default function init(): void | (() => void) {
     viewport: viewport.state,
   });
 
+  const updateUndoRedoButtons = (): void => {
+    dom.btnUndo.disabled = !history.canUndo;
+    dom.btnRedo.disabled = !history.canRedo;
+  };
+
   // --- Input handler ---
   const inputHandler = new PointerInputHandler(
     dom,
@@ -82,7 +87,8 @@ export default function init(): void | (() => void) {
     history,
     getState,
     setState,
-    getToolContext
+    getToolContext,
+    updateUndoRedoButtons
   );
 
   // --- Draw scene ---
@@ -114,11 +120,6 @@ export default function init(): void | (() => void) {
   toolbar.setModeChangeHandler(setMode);
 
   // --- Undo / Redo ---
-  const updateUndoRedoButtons = (): void => {
-    dom.btnUndo.disabled = !history.canUndo;
-    dom.btnRedo.disabled = !history.canRedo;
-  };
-
   const onUndo = (): void => {
     const prev = history.undo(elements);
     if (!prev) return;
