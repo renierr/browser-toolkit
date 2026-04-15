@@ -14,6 +14,14 @@ export class HistoryManager {
     return this.redoStack.length > 0;
   }
 
+  get undoLength(): number {
+    return this.undoStack.length;
+  }
+
+  get redoLength(): number {
+    return this.redoStack.length;
+  }
+
   push(elements: SketchElement[]): void {
     this.undoStack.push(cloneElements(elements));
     if (this.undoStack.length > MAX_HISTORY) {

@@ -87,6 +87,26 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   const updateUndoRedoButtons = (): void => {
     dom.btnUndo.disabled = !history.canUndo;
     dom.btnRedo.disabled = !history.canRedo;
+    
+    const undoBadge = dom.btnUndo.querySelector('#undo-badge') as HTMLElement | null;
+    if (undoBadge) {
+      if (history.undoLength > 0) {
+        undoBadge.textContent = String(history.undoLength);
+        undoBadge.classList.remove('hidden');
+      } else {
+        undoBadge.classList.add('hidden');
+      }
+    }
+
+    const redoBadge = dom.btnRedo.querySelector('#redo-badge') as HTMLElement | null;
+    if (redoBadge) {
+      if (history.redoLength > 0) {
+        redoBadge.textContent = String(history.redoLength);
+        redoBadge.classList.remove('hidden');
+      } else {
+        redoBadge.classList.add('hidden');
+      }
+    }
   };
 
   // --- Input handler ---

@@ -281,12 +281,14 @@
         </button>
       </div>
 
-      <button id="undo-action" class="btn btn-sm btn-outline toolbar-inner" title="Undo" disabled>
+      <button id="undo-action" class="btn btn-sm btn-outline toolbar-inner relative" title="Undo" disabled>
         <i data-lucide="undo" class="w-4 h-4"></i>
+        <span id="undo-badge" class="absolute top-0 right-0 text-[10px] font-mono leading-none opacity-70 p-0.5 hidden">0</span>
       </button>
 
-      <button id="redo-action" class="btn btn-sm btn-outline toolbar-inner" title="Redo" disabled>
+      <button id="redo-action" class="btn btn-sm btn-outline toolbar-inner relative" title="Redo" disabled>
         <i data-lucide="redo" class="w-4 h-4"></i>
+        <span id="redo-badge" class="absolute top-0 right-0 text-[10px] font-mono leading-none opacity-70 p-0.5 hidden">0</span>
       </button>
 
       <button id="clear-canvas" class="btn btn-sm btn-outline toolbar-inner" title="Clear canvas">
