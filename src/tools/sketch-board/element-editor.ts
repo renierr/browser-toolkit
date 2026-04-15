@@ -629,6 +629,14 @@ export class ElementEditor {
       return null;
     }
 
+    // Text: bottom-right (se) handle only, since it always scales proportionally
+    if (el.type === 'text') {
+      const pad = 4;
+      const positions = this.getCornerHandlePositions(bounds, pad);
+      if (this.isNearPoint(point, positions[4])) return 'se';
+      return null;
+    }
+
     const pad = 4;
     const positions = this.getCornerHandlePositions(bounds, pad);
     const handleNames: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
@@ -647,8 +655,9 @@ export class ElementEditor {
     if (el.type === 'line' || el.type === 'arrow') {
       return [{ ...el.start }, { ...el.end }];
     }
-    if (el.type === 'image') {
-      return this.getCornerHandlePositions(bounds, 4);
+    if (el.type === 'text') {
+      const positions = this.getCornerHandlePositions(bounds, 4);
+      return [positions[4]]; // only returning 'se' (bottom-right) handle for text
     }
     return this.getCornerHandlePositions(bounds, 4);
   }
