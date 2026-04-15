@@ -34,6 +34,8 @@ export class ToolbarController {
   private isCollapsed = false;
   private onModeChange: ((mode: ToolMode) => void) | null = null;
   private onFilledToggle: (() => void) | null = null;
+  private onMoveToFront: (() => void) | null = null;
+  private onMoveToBelow: (() => void) | null = null;
   private readonly listeners: Array<{ el: EventTarget; type: string; fn: EventListener }> = [];
   private toolOptionsMap = new Map<DrawMode, ReadonlySet<ToolOptionId>>();
 
@@ -47,6 +49,14 @@ export class ToolbarController {
 
   setFilledToggleHandler(handler: () => void): void {
     this.onFilledToggle = handler;
+  }
+
+  setMoveToFrontHandler(handler: () => void): void {
+    this.onMoveToFront = handler;
+  }
+
+  setMoveToBelowHandler(handler: () => void): void {
+    this.onMoveToBelow = handler;
   }
 
   /** Register tool options from the tool registry */
@@ -125,12 +135,16 @@ export class ToolbarController {
   showSelectionOptions(options: ReadonlySet<ToolOptionId>): void {
     this.applyToolOptions(options);
     this.dom.deleteElement.classList.remove('hidden');
+    this.dom.moveToFront.classList.remove('hidden');
+    this.dom.moveToBelow.classList.remove('hidden');
   }
 
   /** Hide all selection/tool options (used by ElementEditor on deselect) */
   hideSelectionOptions(): void {
     this.applyToolOptions(new Set());
     this.dom.deleteElement.classList.add('hidden');
+    this.dom.moveToFront.classList.add('hidden');
+    this.dom.moveToBelow.classList.add('hidden');
     // Also hide color controls that are outside #tool-options
     for (const el of this.dom.toolOptColors) el.classList.add('hidden');
   }
@@ -172,6 +186,14 @@ export class ToolbarController {
     this.on(dom.filledToggle, 'click', () => {
       dom.filledToggle.classList.toggle('btn-primary');
       this.onFilledToggle?.();
+    });
+
+    this.on(dom.moveToFront, 'click', () => {
+      this.onMoveToFront?.();
+    });
+
+    this.on(dom.moveToBelow, 'click', () => {
+      this.onMoveToBelow?.();
     });
   }
 

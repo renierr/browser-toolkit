@@ -27,6 +27,7 @@ export class ElementEditor {
   private dragStartPos: Point | null = null;
   private resizeStartBounds: { x: number; y: number; w: number; h: number } | null = null;
   private textInputActive = false;
+  private pointerDownHitSelected = false;
 
   constructor(
     dom: SketchDom,
@@ -61,6 +62,8 @@ export class ElementEditor {
     point: Point,
     elements: SketchElement[]
   ): { found: boolean; elementId: string | null } {
+    this.pointerDownHitSelected = false;
+
     // Check resize handles first
     if (this.selectedElementId) {
       const el = elements.find((e) => e.id === this.selectedElementId);
@@ -74,6 +77,22 @@ export class ElementEditor {
           this.resizeStartBounds = getElementBounds(this.ctx, el);
           this.setCursorForHandle(handle);
           this.history.push(elements);
+          return { found: true, elementId: el.id };
+        }
+
+        // Check if点击中了目前选中的元素
+        const bounds = getElementBounds(this.ctx, el);
+        const padding = Math.max(4, el.width / 2);
+        if (
+          point.x >= bounds.x - padding &&
+          point.x <= bounds.x + bounds.w + padding &&
+          point.y >= bounds.y - padding &&
+          point.y <= bounds.y + bounds.h + padding
+        ) {
+          this.pointerDownHitSelected = true;
+          this.isDragging = true;
+          this.hasMovedBeyondThreshold = false;
+          this.dragStartPos = point;
           return { found: true, elementId: el.id };
         }
       }
@@ -134,25 +153,69 @@ export class ElementEditor {
   }
 
   handleSelectPointerUp(
-    _elements: SketchElement[],
+    elements: SketchElement[],
     hasUnsaved: boolean
   ): { pushed: boolean; hasUnsavedChanges: boolean } {
-    const pushed = Boolean(
+    const didMove = Boolean(
       (this.isDragging || this.isResizing) && this.selectedElementId && this.hasMovedBeyondThreshold
     );
-    if (pushed) {
+    const hitSelected = Boolean(
+      this.pointerDownHitSelected && this.selectedElementId && !this.hasMovedBeyondThreshold
+    );
+
+    // Click on selected element without moving - select element behind it
+    if (hitSelected && this.dragStartPos && this.selectedElementId) {
+      const nextEl = this.getNextElementBehind(this.selectedElementId, this.dragStartPos, elements);
+      if (nextEl) {
+        this.selectedElementId = nextEl.id;
+        this.syncToolbarForElement(nextEl);
+        hasUnsaved = true;
+      } else {
+        // No element behind - keep selected
+        this.dom.canvas.setAttribute('data-cursor', 'pointer');
+      }
+    } else if (didMove) {
       hasUnsaved = true;
     }
+
     this.isDragging = false;
     this.isResizing = false;
     this.hasMovedBeyondThreshold = false;
     this.activeHandle = null;
     this.dragStartPos = null;
     this.resizeStartBounds = null;
+    this.pointerDownHitSelected = false;
+
     if (this.selectedElementId) {
       this.dom.canvas.setAttribute('data-cursor', 'pointer');
     }
-    return { pushed, hasUnsavedChanges: hasUnsaved };
+    return { pushed: didMove || hitSelected, hasUnsavedChanges: hasUnsaved };
+  }
+
+  private getNextElementBehind(
+    currentId: string,
+    point: Point,
+    elements: SketchElement[]
+  ): SketchElement | null {
+    // Find index of current element
+    const currentIdx = elements.findIndex((e) => e.id === currentId);
+    if (currentIdx === -1) return null;
+
+    // Iterate through elements below current (lower indices render behind)
+    for (let i = currentIdx - 1; i >= 0; i--) {
+      const el = elements[i];
+      const bounds = getElementBounds(this.ctx, el);
+      const padding = Math.max(4, el.width / 2);
+      if (
+        point.x >= bounds.x - padding &&
+        point.x <= bounds.x + bounds.w + padding &&
+        point.y >= bounds.y - padding &&
+        point.y <= bounds.y + bounds.h + padding
+      ) {
+        return el;
+      }
+    }
+    return null;
   }
 
   showTextInputOverlay(
@@ -274,6 +337,26 @@ export class ElementEditor {
     const filtered = elements.filter((e) => e.id !== this.selectedElementId);
     this.selectedElementId = null;
     this.toolbar?.hideSelectionOptions();
+    this.history.push(filtered);
+    return filtered;
+  }
+
+  moveElementToFront(elements: SketchElement[]): SketchElement[] {
+    if (!this.selectedElementId) return elements;
+    const el = elements.find((e) => e.id === this.selectedElementId);
+    if (!el) return elements;
+    const filtered = elements.filter((e) => e.id !== this.selectedElementId);
+    filtered.push(el);
+    this.history.push(filtered);
+    return filtered;
+  }
+
+  moveElementToBelow(elements: SketchElement[]): SketchElement[] {
+    if (!this.selectedElementId) return elements;
+    const el = elements.find((e) => e.id === this.selectedElementId);
+    if (!el) return elements;
+    const filtered = elements.filter((e) => e.id !== this.selectedElementId);
+    filtered.unshift(el);
     this.history.push(filtered);
     return filtered;
   }

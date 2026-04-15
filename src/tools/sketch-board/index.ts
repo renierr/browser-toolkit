@@ -233,6 +233,23 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     }
   });
 
+  // --- Z-order handlers ---
+  toolbar.setMoveToFrontHandler(() => {
+    elements = elementEditor.moveElementToFront(elements);
+    hasUnsavedChanges = true;
+    renderer.markDirty();
+    updateUndoRedoButtons();
+    renderer.requestDrawImmediate();
+  });
+
+  toolbar.setMoveToBelowHandler(() => {
+    elements = elementEditor.moveElementToBelow(elements);
+    hasUnsavedChanges = true;
+    renderer.markDirty();
+    updateUndoRedoButtons();
+    renderer.requestDrawImmediate();
+  });
+
   // --- Event listeners ---
   dom.btnBackOverview.addEventListener('click', () => {
     if (!confirmDiscardIfNeeded()) return;

@@ -44,6 +44,8 @@ export type SketchDom = {
   fontSize: HTMLInputElement;
   fontBold: HTMLButtonElement;
   fontItalic: HTMLButtonElement;
+  moveToFront: HTMLButtonElement;
+  moveToBelow: HTMLButtonElement;
   deleteElement: HTMLButtonElement;
   textInputOverlay: HTMLDivElement | null;
 };
@@ -94,6 +96,8 @@ export function getDom(doc: Document): SketchDom | null {
   const fontSize = doc.getElementById('font-size') as HTMLInputElement | null;
   const fontBold = doc.getElementById('font-bold') as HTMLButtonElement | null;
   const fontItalic = doc.getElementById('font-italic') as HTMLButtonElement | null;
+  const moveToFront = doc.getElementById('element-to-front') as HTMLButtonElement | null;
+  const moveToBelow = doc.getElementById('element-to-below') as HTMLButtonElement | null;
   const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
   const btnCollapse = doc.getElementById('collapse-toolbar') as HTMLButtonElement | null;
@@ -147,6 +151,8 @@ export function getDom(doc: Document): SketchDom | null {
     !fontSize ||
     !fontBold ||
     !fontItalic ||
+    !moveToFront ||
+    !moveToBelow ||
     !deleteElement ||
     !btnCollapse ||
     toolbarInners.length === 0
@@ -209,6 +215,8 @@ export function getDom(doc: Document): SketchDom | null {
     fontSize,
     fontBold,
     fontItalic,
+    moveToFront,
+    moveToBelow,
     deleteElement,
     textInputOverlay: null,
   };
