@@ -22,6 +22,8 @@ export function optionsForElementType(type: string): ReadonlySet<ToolOptionId> {
   switch (type) {
     case 'text':
       return new Set(['color', 'font']);
+    case 'image':
+      return new Set();
     case 'rect':
     case 'ellipse':
     case 'triangle':

@@ -13,6 +13,7 @@ const TOOL_ICONS: Record<ToolMode, string> = {
   triangle: 'triangle',
   arrow: 'arrow-up-right',
   text: 'type',
+  image: 'image',
 };
 
 const TOOL_LABELS: Record<ToolMode, string> = {
@@ -25,6 +26,7 @@ const TOOL_LABELS: Record<ToolMode, string> = {
   triangle: 'Triangle',
   arrow: 'Arrow',
   text: 'Text',
+  image: 'Image',
 };
 
 export class ToolbarController {

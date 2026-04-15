@@ -41,6 +41,31 @@
             </button>
           </li>
           <li>
+            <div class="dropdown dropdown-right">
+              <button class="btn btn-sm btn-ghost justify-between w-full">
+                Image
+                <i data-lucide="image" class="w-4 h-4"></i>
+              </button>
+              <ul
+                tabindex="0"
+                class="dropdown-content menu z-50 ml-1 w-40 rounded-box border border-base-300 bg-base-100 p-1 shadow-xl"
+              >
+                <li>
+                  <button id="import-image" class="btn btn-sm btn-ghost justify-between">
+                    Import
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                  </button>
+                </li>
+                <li>
+                  <button id="paste-image" class="btn btn-sm btn-ghost justify-between">
+                    Paste
+                    <i data-lucide="clipboard" class="w-4 h-4"></i>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </li>
+          <li>
             <button id="mode-text" class="btn btn-sm btn-ghost justify-between">
               Text
               <i data-lucide="type" class="w-4 h-4"></i>

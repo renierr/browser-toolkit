@@ -346,6 +346,9 @@ export class ElementEditor {
     if (el.type === 'text') {
       el.position.x += dx;
       el.position.y += dy;
+    } else if (el.type === 'image') {
+      el.position.x += dx;
+      el.position.y += dy;
     } else if (el.type === 'freehand') {
       for (const p of el.points) {
         p.x += dx;
@@ -418,12 +421,64 @@ export class ElementEditor {
       return true;
     }
 
+    // Image: resize proportionally from center/corner handles
+    if (el.type === 'image' && this.resizeStartBounds) {
+      const startBounds = this.resizeStartBounds;
+      const dx = point.x - this.dragStartPos.x;
+      const dy = point.y - this.dragStartPos.y;
+      let newW = startBounds.w;
+      let newH = startBounds.h;
+      const handle = this.activeHandle;
+
+      if (handle === 'e' || handle === 'se' || handle === 'ne') {
+        newW = Math.max(20, startBounds.w + dx);
+      } else if (handle === 'w' || handle === 'sw' || handle === 'nw') {
+        newW = Math.max(20, startBounds.w - dx);
+      }
+      if (handle === 's' || handle === 'se' || handle === 'sw') {
+        newH = Math.max(20, startBounds.h + dy);
+      } else if (handle === 'n' || handle === 'ne' || handle === 'nw') {
+        newH = Math.max(20, startBounds.h - dy);
+      }
+
+      if (
+        handle === 'nw' ||
+        handle === 'n' ||
+        handle === 'w' ||
+        handle === 'ne' ||
+        handle === 'sw'
+      ) {
+        el.imageWidth = newW;
+        el.imageHeight = newH;
+        el.position.x = startBounds.x + startBounds.w - newW;
+        el.position.y = startBounds.y + startBounds.h - newH;
+      } else {
+        el.imageWidth = newW;
+        el.imageHeight = newH;
+      }
+
+      this.dragStartPos = point;
+      return true;
+    }
+
     return false;
   }
 
   private hitTestHandle(point: Point, el: SketchElement): ResizeHandle | null {
     // Freehand: no resize handles
     if (el.type === 'freehand') return null;
+
+    // Image: has all corner/edge handles
+    if (el.type === 'image') {
+      const bounds = getElementBounds(this.ctx, el);
+      const pad = 4;
+      const positions = this.getCornerHandlePositions(bounds, pad);
+      const handleNames: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+      for (let i = 0; i < positions.length; i++) {
+        if (this.isNearPoint(point, positions[i])) return handleNames[i];
+      }
+      return null;
+    }
 
     const bounds = getElementBounds(this.ctx, el);
 
@@ -451,6 +506,9 @@ export class ElementEditor {
     if (el.type === 'freehand') return [];
     if (el.type === 'line' || el.type === 'arrow') {
       return [{ ...el.start }, { ...el.end }];
+    }
+    if (el.type === 'image') {
+      return this.getCornerHandlePositions(bounds, 4);
     }
     return this.getCornerHandlePositions(bounds, 4);
   }

@@ -25,6 +25,8 @@ export type SketchDom = {
   btnModeDraw: HTMLButtonElement;
   btnModePan: HTMLButtonElement;
   btnCollapse: HTMLButtonElement;
+  btnImportImage: HTMLButtonElement;
+  btnPasteImage: HTMLButtonElement;
   toolbarInners: HTMLElement[];
   drawTools: HTMLElement;
   drawToolsBtn: HTMLLabelElement;
@@ -70,6 +72,8 @@ export function getDom(doc: Document): SketchDom | null {
   const btnZoomReset = doc.getElementById('zoom-reset') as HTMLButtonElement | null;
   const btnModeDraw = doc.getElementById('mode-draw') as HTMLButtonElement | null;
   const btnModePan = doc.getElementById('mode-pan') as HTMLButtonElement | null;
+  const btnImportImage = doc.getElementById('import-image') as HTMLButtonElement | null;
+  const btnPasteImage = doc.getElementById('paste-image') as HTMLButtonElement | null;
   const modePan = doc.getElementById('mode-pan') as HTMLButtonElement | null;
   const modeFreehand = doc.getElementById('mode-freehand') as HTMLButtonElement | null;
   const modeLine = doc.getElementById('mode-line') as HTMLButtonElement | null;
@@ -121,6 +125,8 @@ export function getDom(doc: Document): SketchDom | null {
     !btnZoomReset ||
     !btnModeDraw ||
     !btnModePan ||
+    !btnImportImage ||
+    !btnPasteImage ||
     !modePan ||
     !modeFreehand ||
     !modeLine ||
@@ -173,6 +179,8 @@ export function getDom(doc: Document): SketchDom | null {
     btnModeDraw,
     btnModePan,
     btnCollapse,
+    btnImportImage,
+    btnPasteImage,
     toolbarInners,
     drawTools,
     drawToolsBtn,
@@ -190,6 +198,7 @@ export function getDom(doc: Document): SketchDom | null {
       triangle: modeTriangle,
       arrow: modeArrow,
       text: modeText,
+      image: modeFreehand,
     },
     toolOptions,
     toolOptShapes,

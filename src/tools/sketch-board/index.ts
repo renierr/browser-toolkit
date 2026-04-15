@@ -11,6 +11,7 @@ import type { DrawTool } from './shapes/base-tool.ts';
 import { ArrowTool } from './shapes/arrow-tool.ts';
 import { EllipseTool } from './shapes/ellipse-tool.ts';
 import { FreehandTool } from './shapes/freehand-tool.ts';
+import { ImageTool } from './shapes/image-tool.ts';
 import { LineTool } from './shapes/line-tool.ts';
 import { RectTool } from './shapes/rect-tool.ts';
 import { TextTool } from './shapes/text-tool.ts';
@@ -48,6 +49,8 @@ export default function init(): void | (() => void) {
   toolRegistry.set('triangle', new TriangleTool());
   toolRegistry.set('arrow', new ArrowTool());
   toolRegistry.set('text', new TextTool());
+  const imageTool = new ImageTool();
+  toolRegistry.set('image', imageTool);
 
   // Register each tool's declared options with the toolbar
   for (const [mode, tool] of toolRegistry) {
@@ -109,10 +112,23 @@ export default function init(): void | (() => void) {
 
   renderer.setDrawScene(drawScene);
 
+  // --- Image tool setup ---
+  imageTool.setOnInsert((el) => {
+    history.push(elements);
+    elements = [...elements, el];
+    hasUnsavedChanges = true;
+    updateUndoRedoButtons();
+    renderer.requestDraw();
+  });
+
   // --- Toolbar mode changes ---
   const setMode = (next: ToolMode): void => {
     elementEditor.clearSelection();
     mode = next;
+    const vp = viewport.state;
+    const centerX = (dom.canvas.width / 2 - vp.x) / vp.scale;
+    const centerY = (dom.canvas.height / 2 - vp.y) / vp.scale;
+    imageTool.setCanvasCenter(centerX, centerY);
     toolbar.setMode(next);
     renderer.requestDrawImmediate(inputHandler.getStreamingState());
   };
@@ -219,6 +235,20 @@ export default function init(): void | (() => void) {
   for (const button of dom.quickColorButtons) {
     button.addEventListener('click', onQuickColorClick);
   }
+
+  dom.btnImportImage.addEventListener('click', () => {
+    imageTool.triggerFileInput();
+  });
+
+  dom.btnPasteImage.addEventListener('click', async () => {
+    const pasted = await imageTool.pasteFromClipboard();
+    if (!pasted) {
+      showMessage('No image in clipboard or permission denied.', {
+        type: 'alert',
+        timeoutMs: 2000,
+      });
+    }
+  });
 
   dom.btnClear.addEventListener('click', () => {
     if (elements.length === 0 || !hasUnsavedChanges) {

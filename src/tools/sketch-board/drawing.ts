@@ -1,4 +1,11 @@
-import type { DrawingMeta, Point, SketchElement, TextElement, ToolMode } from './types.ts';
+import type {
+  DrawingMeta,
+  ImageElement,
+  Point,
+  SketchElement,
+  TextElement,
+  ToolMode,
+} from './types.ts';
 
 export function normalizeRect(
   start: Point,
@@ -47,6 +54,11 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
 
   if (el.type === 'text') {
     drawText(ctx, el);
+    return;
+  }
+
+  if (el.type === 'image') {
+    drawImage(ctx, el);
     return;
   }
 }
@@ -185,6 +197,32 @@ function drawText(ctx: CanvasRenderingContext2D, el: TextElement): void {
   ctx.fillText(el.text, el.position.x, el.position.y);
 }
 
+const imageCache = new Map<string, HTMLImageElement>();
+
+function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement): void {
+  let img = imageCache.get(el.imageData);
+  if (!img) {
+    img = new Image();
+    img.src = el.imageData;
+    imageCache.set(el.imageData, img);
+  }
+  if (img.complete) {
+    ctx.drawImage(img, el.position.x, el.position.y, el.imageWidth, el.imageHeight);
+  }
+}
+
+function getImageBounds(
+  _ctx: CanvasRenderingContext2D,
+  el: ImageElement
+): { x: number; y: number; w: number; h: number } {
+  return {
+    x: el.position.x,
+    y: el.position.y,
+    w: el.imageWidth,
+    h: el.imageHeight,
+  };
+}
+
 export function getTextBounds(
   ctx: CanvasRenderingContext2D,
   el: TextElement
@@ -207,6 +245,9 @@ export function getElementBounds(
 ): { x: number; y: number; w: number; h: number } {
   if (el.type === 'text') {
     return getTextBounds(ctx, el);
+  }
+  if (el.type === 'image') {
+    return getImageBounds(ctx, el);
   }
   if (el.type === 'freehand') {
     if (el.points.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
@@ -299,6 +340,14 @@ function computeSceneBounds(elements: SketchElement[]): {
       minY = Math.min(minY, bounds.y);
       maxX = Math.max(maxX, bounds.x + bounds.w);
       maxY = Math.max(maxY, bounds.y + bounds.h);
+      continue;
+    }
+
+    if (el.type === 'image') {
+      minX = Math.min(minX, el.position.x);
+      minY = Math.min(minY, el.position.y);
+      maxX = Math.max(maxX, el.position.x + el.imageWidth);
+      maxY = Math.max(maxY, el.position.y + el.imageHeight);
       continue;
     }
 

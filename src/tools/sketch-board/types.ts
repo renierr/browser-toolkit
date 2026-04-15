@@ -7,7 +7,8 @@ export type ToolMode =
   | 'ellipse'
   | 'triangle'
   | 'arrow'
-  | 'text';
+  | 'text'
+  | 'image';
 export type DrawMode = Exclude<ToolMode, 'pan' | 'select'>;
 
 export type Point = {
@@ -69,6 +70,14 @@ export type TextElement = BaseElement & {
   fontStyle: 'normal' | 'italic';
 };
 
+export type ImageElement = BaseElement & {
+  type: 'image';
+  position: Point;
+  imageWidth: number;
+  imageHeight: number;
+  imageData: string;
+};
+
 export type SketchElement =
   | FreehandElement
   | LineElement
@@ -76,7 +85,8 @@ export type SketchElement =
   | EllipseElement
   | TriangleElement
   | ArrowElement
-  | TextElement;
+  | TextElement
+  | ImageElement;
 
 export type ViewportState = {
   x: number;
