@@ -96,6 +96,14 @@ body.no-scroll {
   background-color: #fbf5ec;
 }
 
+.solid-black-bg {
+  background-color: #111827;
+}
+
+.warm-white-bg {
+  background-color: #fbf5ec;
+}
+
 /* Scan-line animation (reusable across tools: OCR, QR scanner, etc.) */
 @keyframes scan-line {
   0% {

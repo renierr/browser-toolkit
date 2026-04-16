@@ -123,6 +123,7 @@ export class SceneRenderer {
     if (!tempCtx) return null;
 
     tempCtx.translate(-bounds.x, -bounds.y);
+
     for (const el of elements) {
       drawElement(tempCtx, el);
     }

@@ -23,6 +23,8 @@ export type SketchDom = {
   btnZoomOut: HTMLButtonElement;
   btnZoomIn: HTMLButtonElement;
   btnZoomReset: HTMLButtonElement;
+  canvasBg: HTMLSelectElement;
+  appContainer: HTMLDivElement;
   btnModeDraw: HTMLButtonElement;
   btnModePan: HTMLButtonElement;
   btnCollapse: HTMLButtonElement;
@@ -74,6 +76,8 @@ export function getDom(doc: Document): SketchDom | null {
   const btnZoomOut = doc.getElementById('zoom-out') as HTMLButtonElement | null;
   const btnZoomIn = doc.getElementById('zoom-in') as HTMLButtonElement | null;
   const btnZoomReset = doc.getElementById('zoom-reset') as HTMLButtonElement | null;
+  const canvasBg = doc.getElementById('canvas-bg') as HTMLSelectElement | null;
+  const appContainer = doc.getElementById('sketch-app-container') as HTMLDivElement | null;
   const btnModeDraw = doc.getElementById('mode-draw') as HTMLButtonElement | null;
   const btnModePan = doc.getElementById('mode-pan') as HTMLButtonElement | null;
   const btnImportImage = doc.getElementById('import-image') as HTMLButtonElement | null;
@@ -130,6 +134,8 @@ export function getDom(doc: Document): SketchDom | null {
     !btnZoomOut ||
     !btnZoomIn ||
     !btnZoomReset ||
+    !canvasBg ||
+    !appContainer ||
     !btnModeDraw ||
     !btnModePan ||
     !btnImportImage ||
@@ -186,6 +192,8 @@ export function getDom(doc: Document): SketchDom | null {
     btnZoomOut,
     btnZoomIn,
     btnZoomReset,
+    canvasBg,
+    appContainer,
     btnModeDraw,
     btnModePan,
     btnCollapse,

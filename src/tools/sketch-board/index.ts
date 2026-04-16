@@ -4,7 +4,13 @@ import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getCropBounds, setImageGetter } from './drawing.ts';
 import { getDom } from './dom.ts';
 import { ElementEditor } from './element-editor.ts';
-import { copyToClipboard, exportDrawing, renderGallery, saveDrawing, shareDrawing } from './gallery.ts';
+import {
+  copyToClipboard,
+  exportDrawing,
+  renderGallery,
+  saveDrawing,
+  shareDrawing,
+} from './gallery.ts';
 import { HistoryManager } from './history.ts';
 import { PointerInputHandler } from './input-handler.ts';
 import { SceneRenderer } from './renderer.ts';
@@ -32,6 +38,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   let mode: ToolMode = 'pan';
   let elements: SketchElement[] = [];
   let hasUnsavedChanges = false;
+  let currentBgClass = 'checkerboard-bg';
 
   // --- Module instances ---
   const history = new HistoryManager();
@@ -87,7 +94,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   const updateUndoRedoButtons = (): void => {
     dom.btnUndo.disabled = !history.canUndo;
     dom.btnRedo.disabled = !history.canRedo;
-    
+
     const undoBadge = dom.btnUndo.querySelector('#undo-badge') as HTMLElement | null;
     if (undoBadge) {
       if (history.undoLength > 0) {
@@ -276,6 +283,17 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   });
 
   // --- Event listeners ---
+  const setBackground = (bgClass: string): void => {
+    dom.appContainer.classList.remove('checkerboard-bg', 'solid-black-bg', 'warm-white-bg');
+    dom.appContainer.classList.add(bgClass);
+    currentBgClass = bgClass;
+    dom.canvasBg.value = bgClass;
+  };
+
+  dom.canvasBg.addEventListener('change', () => {
+    setBackground(dom.canvasBg.value);
+  });
+
   dom.btnBackOverview.addEventListener('click', () => {
     if (!confirmDiscardIfNeeded()) return;
     router.goOverview();
@@ -477,6 +495,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   dom.canvas.style.touchAction = 'none';
   updateUndoRedoButtons();
   setMode('pan');
+  setBackground('checkerboard-bg');
   renderer.resizeCanvas();
   renderer.requestDraw();
 

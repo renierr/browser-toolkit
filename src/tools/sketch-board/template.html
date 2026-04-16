@@ -1,4 +1,5 @@
 <div
+  id="sketch-app-container"
   class="fixed inset-0 w-dvw h-dvh max-w-dvw max-h-dvh overflow-hidden overscroll-none checkerboard-bg"
 >
   <canvas id="sketch-canvas" tabindex="0" class="absolute inset-0 w-full h-full"></canvas>
@@ -229,7 +230,11 @@
         </button>
 
         <!-- Text options -->
-        <button id="edit-text" class="tool-opt-text btn btn-sm btn-outline hidden" title="Edit text">
+        <button
+          id="edit-text"
+          class="tool-opt-text btn btn-sm btn-outline hidden"
+          title="Edit text"
+        >
           <i data-lucide="edit-2" class="w-4 h-4"></i>
         </button>
         <select
@@ -283,19 +288,47 @@
         </button>
       </div>
 
-      <button id="undo-action" class="btn btn-sm btn-outline toolbar-inner relative" title="Undo" disabled>
+      <button
+        id="undo-action"
+        class="btn btn-sm btn-outline toolbar-inner relative"
+        title="Undo"
+        disabled
+      >
         <i data-lucide="undo" class="w-4 h-4"></i>
-        <span id="undo-badge" class="absolute top-0 right-0 text-[10px] font-mono leading-none opacity-70 p-0.5 hidden">0</span>
+        <span
+          id="undo-badge"
+          class="absolute top-0 right-0 text-[10px] font-mono leading-none opacity-70 p-0.5 hidden"
+          >0</span
+        >
       </button>
 
-      <button id="redo-action" class="btn btn-sm btn-outline toolbar-inner relative" title="Redo" disabled>
+      <button
+        id="redo-action"
+        class="btn btn-sm btn-outline toolbar-inner relative"
+        title="Redo"
+        disabled
+      >
         <i data-lucide="redo" class="w-4 h-4"></i>
-        <span id="redo-badge" class="absolute top-0 right-0 text-[10px] font-mono leading-none opacity-70 p-0.5 hidden">0</span>
+        <span
+          id="redo-badge"
+          class="absolute top-0 right-0 text-[10px] font-mono leading-none opacity-70 p-0.5 hidden"
+          >0</span
+        >
       </button>
 
       <button id="clear-canvas" class="btn btn-sm btn-outline toolbar-inner" title="Clear canvas">
         <i data-lucide="trash" class="w-4 h-4"></i>
       </button>
+
+      <select
+        id="canvas-bg"
+        class="select select-sm w-28 toolbar-inner font-normal border-base-300"
+        title="Canvas background"
+      >
+        <option value="checkerboard-bg">Checker</option>
+        <option value="solid-black-bg">Black</option>
+        <option value="warm-white-bg">White</option>
+      </select>
 
       <button id="save-drawing" class="btn btn-sm toolbar-inner" title="Save drawing">
         <i data-lucide="save" class="w-4 h-4 mr-1"></i>Save
@@ -324,11 +357,7 @@
         <i data-lucide="download" class="w-4 h-4"></i>
       </button>
 
-      <button
-        id="share-drawing"
-        class="btn btn-sm toolbar-inner"
-        title="Share to other tools"
-      >
+      <button id="share-drawing" class="btn btn-sm toolbar-inner" title="Share to other tools">
         <i data-lucide="share-2" class="w-4 h-4"></i>
       </button>
 
