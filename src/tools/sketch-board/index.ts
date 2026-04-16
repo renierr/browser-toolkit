@@ -307,6 +307,10 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   dom.btnZoomOut.addEventListener('click', onZoomOut);
   dom.btnZoomReset.addEventListener('click', onZoomReset);
 
+  dom.btnZoomInMobile.addEventListener('click', onZoomIn);
+  dom.btnZoomOutMobile.addEventListener('click', onZoomOut);
+  dom.btnZoomResetMobile.addEventListener('click', onZoomReset);
+
   for (const button of dom.quickColorButtons) {
     button.addEventListener('click', onQuickColorClick);
   }
@@ -366,7 +370,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   });
 
   dom.btnSave.addEventListener('click', async () => {
-    const saved = await saveDrawing(elements, viewport.state, mode);
+    const saved = await saveDrawing(elements, viewport.state, mode, currentBgClass);
     if (saved) hasUnsavedChanges = false;
   });
 

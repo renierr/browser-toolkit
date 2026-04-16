@@ -31,7 +31,6 @@ const TOOL_LABELS: Record<ToolMode, string> = {
 
 export class ToolbarController {
   private readonly dom: SketchDom;
-  private isCollapsed = false;
   private onModeChange: ((mode: ToolMode) => void) | null = null;
   private onFilledToggle: (() => void) | null = null;
   private onMoveToFront: (() => void) | null = null;
@@ -151,22 +150,6 @@ export class ToolbarController {
     for (const el of this.dom.toolOptColors) el.classList.add('hidden');
   }
 
-  toggleCollapse(): void {
-    this.isCollapsed = !this.isCollapsed;
-    const dom = this.dom;
-    if (this.isCollapsed) {
-      dom.btnOverviewLabel.classList.add('hidden');
-      for (const el of dom.toolbarInners) el.classList.add('hidden');
-      dom.btnCollapse.classList.add('rotate-180');
-      dom.btnCollapse.title = 'Expand toolbar';
-    } else {
-      dom.btnOverviewLabel.classList.remove('hidden');
-      for (const el of dom.toolbarInners) el.classList.remove('hidden');
-      dom.btnCollapse.classList.remove('rotate-180');
-      dom.btnCollapse.title = 'Collapse toolbar';
-    }
-  }
-
   attach(): void {
     const dom = this.dom;
     const setMode = (m: ToolMode): void => {
@@ -184,7 +167,7 @@ export class ToolbarController {
     this.on(dom.modeButtons.triangle, 'click', () => setMode('triangle'));
     this.on(dom.modeButtons.arrow, 'click', () => setMode('arrow'));
     this.on(dom.modeButtons.text, 'click', () => setMode('text'));
-    this.on(dom.btnCollapse, 'click', () => this.toggleCollapse());
+
     this.on(dom.filledToggle, 'click', () => {
       dom.filledToggle.classList.toggle('btn-primary');
       this.onFilledToggle?.();

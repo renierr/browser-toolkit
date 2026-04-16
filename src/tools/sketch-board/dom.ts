@@ -23,14 +23,15 @@ export type SketchDom = {
   btnZoomOut: HTMLButtonElement;
   btnZoomIn: HTMLButtonElement;
   btnZoomReset: HTMLButtonElement;
+  btnZoomOutMobile: HTMLButtonElement;
+  btnZoomInMobile: HTMLButtonElement;
+  btnZoomResetMobile: HTMLButtonElement;
   canvasBg: HTMLSelectElement;
   appContainer: HTMLDivElement;
   btnModeDraw: HTMLButtonElement;
   btnModePan: HTMLButtonElement;
-  btnCollapse: HTMLButtonElement;
   btnImportImage: HTMLButtonElement;
   btnPasteImage: HTMLButtonElement;
-  toolbarInners: HTMLElement[];
   drawTools: HTMLUListElement;
   drawToolsBtn: HTMLButtonElement;
   drawToolsIcon: HTMLSpanElement;
@@ -76,6 +77,9 @@ export function getDom(doc: Document): SketchDom | null {
   const btnZoomOut = doc.getElementById('zoom-out') as HTMLButtonElement | null;
   const btnZoomIn = doc.getElementById('zoom-in') as HTMLButtonElement | null;
   const btnZoomReset = doc.getElementById('zoom-reset') as HTMLButtonElement | null;
+  const btnZoomOutMobile = doc.getElementById('zoom-out-mobile') as HTMLButtonElement | null;
+  const btnZoomInMobile = doc.getElementById('zoom-in-mobile') as HTMLButtonElement | null;
+  const btnZoomResetMobile = doc.getElementById('zoom-reset-mobile') as HTMLButtonElement | null;
   const canvasBg = doc.getElementById('canvas-bg') as HTMLSelectElement | null;
   const appContainer = doc.getElementById('sketch-app-container') as HTMLDivElement | null;
   const btnModeDraw = doc.getElementById('mode-draw') as HTMLButtonElement | null;
@@ -106,8 +110,6 @@ export function getDom(doc: Document): SketchDom | null {
   const moveToBelow = doc.getElementById('element-to-below') as HTMLButtonElement | null;
   const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
-  const btnCollapse = doc.getElementById('collapse-toolbar') as HTMLButtonElement | null;
-  const toolbarInners = Array.from(doc.querySelectorAll('.toolbar-inner')) as HTMLElement[];
   const toolOptShapes = Array.from(doc.querySelectorAll('.tool-opt-shape')) as HTMLElement[];
   const toolOptTexts = Array.from(doc.querySelectorAll('.tool-opt-text')) as HTMLElement[];
   const toolOptColors = Array.from(doc.querySelectorAll('.tool-opt-color')) as HTMLElement[];
@@ -134,6 +136,9 @@ export function getDom(doc: Document): SketchDom | null {
     !btnZoomOut ||
     !btnZoomIn ||
     !btnZoomReset ||
+    !btnZoomOutMobile ||
+    !btnZoomInMobile ||
+    !btnZoomResetMobile ||
     !canvasBg ||
     !appContainer ||
     !btnModeDraw ||
@@ -162,9 +167,7 @@ export function getDom(doc: Document): SketchDom | null {
     !fontItalic ||
     !moveToFront ||
     !moveToBelow ||
-    !deleteElement ||
-    !btnCollapse ||
-    toolbarInners.length === 0
+    !deleteElement
   ) {
     return null;
   }
@@ -192,14 +195,15 @@ export function getDom(doc: Document): SketchDom | null {
     btnZoomOut,
     btnZoomIn,
     btnZoomReset,
+    btnZoomOutMobile,
+    btnZoomInMobile,
+    btnZoomResetMobile,
     canvasBg,
     appContainer,
     btnModeDraw,
     btnModePan,
-    btnCollapse,
     btnImportImage,
     btnPasteImage,
-    toolbarInners,
     drawTools,
     drawToolsBtn,
     drawToolsIcon,

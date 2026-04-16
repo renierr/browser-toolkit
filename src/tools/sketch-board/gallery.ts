@@ -52,7 +52,8 @@ export async function renderGallery(
 export async function saveDrawing(
   elements: SketchElement[],
   viewport: ViewportState,
-  mode: ToolMode
+  mode: ToolMode,
+  background: string = 'checkerboard-bg'
 ): Promise<boolean> {
   if (elements.length === 0) {
     showMessage('Nothing to save yet.', { type: 'warning', timeoutMs: 2500 });
@@ -74,7 +75,7 @@ export async function saveDrawing(
     viewport: { ...viewport },
     elements: elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement),
     thumbnailDataUrl: thumbUrl,
-    meta: buildMeta(elements, mode),
+    meta: buildMeta(elements, mode, background),
   };
 
   try {

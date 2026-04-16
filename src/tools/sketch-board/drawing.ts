@@ -296,7 +296,7 @@ export function drawLiveFreehandSegment(
 export function buildMeta(
   elements: SketchElement[],
   lastTool: ToolMode,
-  background: string
+  background?: string
 ): DrawingMeta {
   const colors = Array.from(new Set(elements.map((el) => el.color))).slice(0, 12);
   return {

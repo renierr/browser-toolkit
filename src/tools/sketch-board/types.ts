@@ -98,6 +98,7 @@ export type DrawingMeta = {
   elementCount: number;
   colors: string[];
   lastTool: ToolMode;
+  background?: string;
 };
 
 export type DrawingRecord = {
