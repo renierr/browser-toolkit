@@ -6,7 +6,7 @@ export type SketchDom = {
   galleryList: HTMLDivElement;
   galleryTemplate: HTMLTemplateElement;
   colorInput: HTMLInputElement;
-  colorPopup: HTMLDetailsElement;
+  colorPopup: HTMLDivElement;
   quickColorButtons: HTMLButtonElement[];
   widthInput: HTMLInputElement;
   exportFormat: HTMLSelectElement;
@@ -31,8 +31,8 @@ export type SketchDom = {
   btnImportImage: HTMLButtonElement;
   btnPasteImage: HTMLButtonElement;
   toolbarInners: HTMLElement[];
-  drawTools: HTMLElement;
-  drawToolsBtn: HTMLLabelElement;
+  drawTools: HTMLUListElement;
+  drawToolsBtn: HTMLButtonElement;
   drawToolsIcon: HTMLSpanElement;
   drawToolsLabel: HTMLSpanElement;
   drawOptions: HTMLElement;
@@ -59,7 +59,7 @@ export function getDom(doc: Document): SketchDom | null {
   const galleryList = doc.getElementById('gallery-list') as HTMLDivElement | null;
   const galleryTemplate = doc.getElementById('gallery-item-template') as HTMLTemplateElement | null;
   const colorInput = doc.getElementById('stroke-color') as HTMLInputElement | null;
-  const colorPopup = doc.getElementById('color-popup') as HTMLDetailsElement | null;
+  const colorPopup = doc.getElementById('color-popup') as HTMLDivElement | null;
   const quickColorButtons = Array.from(doc.querySelectorAll('.quick-color')) as HTMLButtonElement[];
   const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
   const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
@@ -91,8 +91,8 @@ export function getDom(doc: Document): SketchDom | null {
   const modeArrow = doc.getElementById('mode-arrow') as HTMLButtonElement | null;
   const modeText = doc.getElementById('mode-text') as HTMLButtonElement | null;
   const modeSelect = doc.getElementById('mode-select') as HTMLButtonElement | null;
-  const drawTools = doc.getElementById('draw-tools') as HTMLElement | null;
-  const drawToolsBtn = doc.getElementById('draw-tools-btn') as HTMLLabelElement | null;
+  const drawTools = doc.getElementById('draw-tools') as HTMLUListElement | null;
+  const drawToolsBtn = doc.getElementById('draw-tools-btn') as HTMLButtonElement | null;
   const drawToolsIcon = doc.getElementById('draw-tools-icon') as HTMLElement | null;
   const drawToolsLabel = doc.getElementById('draw-tools-label') as HTMLSpanElement | null;
   const drawOptions = doc.getElementById('draw-options') as HTMLElement | null;

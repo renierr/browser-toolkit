@@ -243,7 +243,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     const color = target.getAttribute('data-color');
     if (!color) return;
     dom.colorInput.value = color;
-    dom.colorPopup.removeAttribute('open');
+    if ('hidePopover' in dom.colorPopup && typeof dom.colorPopup.hidePopover === 'function') {
+      dom.colorPopup.hidePopover();
+    }
     // Also apply to selected element if in select mode
     if (elementEditor.getSelectedId()) {
       history.push(elements);
@@ -318,6 +320,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       };
     });
     (document.activeElement as HTMLElement)?.blur();
+    if ('hidePopover' in dom.drawTools && typeof dom.drawTools.hidePopover === 'function') {
+      dom.drawTools.hidePopover();
+    }
     imageTool.triggerFileInput();
   });
 
@@ -330,6 +335,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       };
     });
     (document.activeElement as HTMLElement)?.blur();
+    if ('hidePopover' in dom.drawTools && typeof dom.drawTools.hidePopover === 'function') {
+      dom.drawTools.hidePopover();
+    }
     const pasted = await imageTool.pasteFromClipboard();
     if (!pasted) {
       showMessage('No image in clipboard or permission denied.', {

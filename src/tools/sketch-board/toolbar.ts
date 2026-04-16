@@ -79,7 +79,7 @@ export class ToolbarController {
     if (isDrawMode) {
       dom.btnModeDraw.classList.add('btn-primary');
       dom.btnModePan.classList.remove('btn-primary');
-      dom.drawTools.classList.remove('hidden');
+      dom.drawToolsBtn.classList.remove('hidden');
       dom.drawOptions.classList.remove('hidden');
       dom.drawOptions.classList.add('h-7', 'w-px', 'bg-base-300');
       for (const el of dom.drawOpts) el.classList.remove('hidden');
@@ -92,7 +92,7 @@ export class ToolbarController {
         dom.btnModePan.classList.add('btn-primary');
         dom.btnModeDraw.classList.remove('btn-primary');
       }
-      dom.drawTools.classList.add('hidden');
+      dom.drawToolsBtn.classList.add('hidden');
       dom.drawOptions.classList.add('hidden');
       dom.drawOptions.classList.remove('h-7', 'w-px', 'bg-base-300');
       for (const el of dom.drawOpts) el.classList.add('hidden');
@@ -249,4 +249,8 @@ export class ToolbarController {
 
 function closeDrawToolsDropdown(): void {
   (document.activeElement as HTMLElement)?.blur();
+  const popover = document.getElementById('draw-tools');
+  if (popover && 'hidePopover' in popover && typeof popover.hidePopover === 'function') {
+    popover.hidePopover();
+  }
 }

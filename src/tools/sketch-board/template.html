@@ -25,16 +25,22 @@
         </button>
       </div>
 
-      <div id="draw-tools" class="dropdown dropdown-bottom toolbar-inner hidden">
-        <label id="draw-tools-btn" tabindex="0" class="btn btn-sm gap-1">
-          <span id="draw-tools-icon" class="w-4 h-4"></span>
-          <span id="draw-tools-label" class="text-xs">Freehand</span>
-          <i data-lucide="chevron-down" class="w-3 h-3"></i>
-        </label>
-        <ul
-          tabindex="0"
-          class="dropdown-content menu z-50 mt-1 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl max-h-[80dvh] overflow-y-auto"
-        >
+      <button
+        id="draw-tools-btn"
+        class="btn btn-sm gap-1 toolbar-inner hidden"
+        popovertarget="draw-tools"
+        style="anchor-name:--draw-tools-anchor"
+      >
+        <span id="draw-tools-icon" class="w-4 h-4"></span>
+        <span id="draw-tools-label" class="text-xs">Freehand</span>
+        <i data-lucide="chevron-down" class="w-3 h-3"></i>
+      </button>
+      <ul
+        id="draw-tools"
+        popover="auto"
+        style="position-anchor:--draw-tools-anchor"
+        class="dropdown menu z-50 mt-1 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl max-h-[80dvh] overflow-y-auto"
+      >
           <li>
             <button id="mode-freehand" class="btn btn-sm btn-ghost justify-between">
               Freehand
@@ -92,8 +98,7 @@
               <i data-lucide="triangle" class="w-4 h-4"></i>
             </button>
           </li>
-        </ul>
-      </div>
+      </ul>
 
       <div class="join toolbar-inner">
         <button id="zoom-out" class="btn btn-sm join-item" title="Zoom out">
@@ -119,17 +124,23 @@
         />
       </label>
 
-      <details
-        id="color-popup"
-        class="draw-opt tool-opt-color toolbar-inner dropdown dropdown-bottom"
+      <button
+        id="color-popup-btn"
+        class="draw-opt tool-opt-color toolbar-inner btn btn-sm"
+        title="Quick colors"
+        popovertarget="color-popup"
+        style="anchor-name:--color-popup-anchor"
       >
-        <summary class="btn btn-sm" title="Quick colors">
-          <i data-lucide="palette" class="w-4 h-4"></i>
-        </summary>
-        <div
-          class="dropdown-content z-40 mt-2 min-w-44 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl"
-        >
-          <div class="grid grid-cols-5 gap-2 place-items-center">
+        <i data-lucide="palette" class="w-4 h-4"></i>
+      </button>
+
+      <div
+        id="color-popup"
+        popover="auto"
+        style="position-anchor:--color-popup-anchor"
+        class="dropdown z-40 mt-2 min-w-44 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl"
+      >
+        <div class="grid grid-cols-5 gap-2 place-items-center">
             <button
               class="quick-color h-8 w-8 rounded border border-base-300"
               type="button"
@@ -201,8 +212,7 @@
               title="Brown"
             ></button>
           </div>
-        </div>
-      </details>
+      </div>
 
       <label class="draw-opt toolbar-inner flex items-center gap-2 text-xs min-w-44">
         <span>Width</span>
