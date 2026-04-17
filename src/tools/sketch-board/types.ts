@@ -76,6 +76,8 @@ export type ImageElement = BaseElement & {
   imageWidth: number;
   imageHeight: number;
   imageData: string;
+  originalWidth?: number;
+  originalHeight?: number;
 };
 
 export type SketchElement =

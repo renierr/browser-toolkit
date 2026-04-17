@@ -49,6 +49,7 @@ export type SketchDom = {
   toolOptions: HTMLElement;
   toolOptShapes: HTMLElement[];
   toolOptTexts: HTMLElement[];
+  toolOptImages: HTMLElement[];
   toolOptColors: HTMLElement[];
   filledToggle: HTMLButtonElement;
   fontFamily: HTMLSelectElement;
@@ -57,6 +58,7 @@ export type SketchDom = {
   fontItalic: HTMLButtonElement;
   moveToFront: HTMLButtonElement;
   moveToBelow: HTMLButtonElement;
+  btnResizeImageOriginal: HTMLButtonElement;
   deleteElement: HTMLButtonElement;
   textInputOverlay: HTMLDivElement | null;
   zoomToast: HTMLDivElement | null;
@@ -123,11 +125,13 @@ export function getDom(doc: Document): SketchDom | null {
   const fontItalic = doc.getElementById('font-italic') as HTMLButtonElement | null;
   const moveToFront = doc.getElementById('element-to-front') as HTMLButtonElement | null;
   const moveToBelow = doc.getElementById('element-to-below') as HTMLButtonElement | null;
+  const btnResizeImageOriginal = doc.getElementById('resize-image-original') as HTMLButtonElement | null;
   const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
   const zoomToast = doc.getElementById('zoom-toast') as HTMLDivElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
   const toolOptShapes = Array.from(doc.querySelectorAll('.tool-opt-shape')) as HTMLElement[];
   const toolOptTexts = Array.from(doc.querySelectorAll('.tool-opt-text')) as HTMLElement[];
+  const toolOptImages = Array.from(doc.querySelectorAll('.tool-opt-image')) as HTMLElement[];
   const toolOptColors = Array.from(doc.querySelectorAll('.tool-opt-color')) as HTMLElement[];
 
   if (
@@ -190,6 +194,7 @@ export function getDom(doc: Document): SketchDom | null {
     !fontItalic ||
     !moveToFront ||
     !moveToBelow ||
+    !btnResizeImageOriginal ||
     !deleteElement
   ) {
     return null;
@@ -255,6 +260,7 @@ export function getDom(doc: Document): SketchDom | null {
     toolOptions,
     toolOptShapes,
     toolOptTexts,
+    toolOptImages,
     toolOptColors,
     filledToggle,
     fontFamily,
@@ -263,6 +269,7 @@ export function getDom(doc: Document): SketchDom | null {
     fontItalic,
     moveToFront,
     moveToBelow,
+    btnResizeImageOriginal,
     deleteElement,
     textInputOverlay: null,
     zoomToast,

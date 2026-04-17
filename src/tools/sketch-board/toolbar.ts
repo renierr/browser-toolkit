@@ -35,6 +35,7 @@ export class ToolbarController {
   private onFilledToggle: (() => void) | null = null;
   private onMoveToFront: (() => void) | null = null;
   private onMoveToBelow: (() => void) | null = null;
+  private onResizeImage: (() => void) | null = null;
   private readonly listeners: Array<{ el: EventTarget; type: string; fn: EventListener }> = [];
   private toolOptionsMap = new Map<DrawMode, ReadonlySet<ToolOptionId>>();
 
@@ -56,6 +57,9 @@ export class ToolbarController {
 
   setMoveToBelowHandler(handler: () => void): void {
     this.onMoveToBelow = handler;
+  }
+  setResizeImageHandler(handler: () => void): void {
+    this.onResizeImage = handler;
   }
 
   /** Register tool options from the tool registry */
@@ -180,6 +184,10 @@ export class ToolbarController {
     this.on(dom.moveToBelow, 'click', () => {
       this.onMoveToBelow?.();
     });
+
+    this.on(dom.btnResizeImageOriginal, 'click', () => {
+      this.onResizeImage?.();
+    });
   }
 
   detach(): void {
@@ -225,6 +233,12 @@ export class ToolbarController {
     // Font options
     for (const el of dom.toolOptTexts) {
       if (options.has('font')) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
+
+    // Image options
+    for (const el of dom.toolOptImages) {
+      if (options.has('image')) el.classList.remove('hidden');
       else el.classList.add('hidden');
     }
   }

@@ -294,6 +294,45 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     }
   });
 
+  toolbar.setResizeImageHandler(async () => {
+    const el = elementEditor.getSelectedElement(elements);
+    if (!el || el.type !== 'image') return;
+
+    let origW = el.originalWidth;
+    let origH = el.originalHeight;
+
+    // Fallback for older drawings if metadata is missing: load current image data
+    if (!origW || !origH) {
+      try {
+        const img = new Image();
+        img.src = el.imageData;
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        origW = img.naturalWidth;
+        origH = img.naturalHeight;
+      } catch (err) {
+        console.error('[SketchBoard] Failed to resolve original image size', err);
+        return;
+      }
+    }
+
+    if (origW && origH) {
+      history.push(elements);
+      const cx = el.position.x + el.imageWidth / 2;
+      const cy = el.position.y + el.imageHeight / 2;
+      el.imageWidth = origW;
+      el.imageHeight = origH;
+      el.position.x = cx - origW / 2;
+      el.position.y = cy - origH / 2;
+      hasUnsavedChanges = true;
+      renderer.markDirty();
+      updateUndoRedoButtons();
+      renderer.requestDrawImmediate();
+    }
+  });
+
   // --- Event listeners ---
   const setBackground = (bgClass: string): void => {
     dom.appContainer.classList.remove('checkerboard-bg', 'solid-black-bg', 'warm-white-bg');

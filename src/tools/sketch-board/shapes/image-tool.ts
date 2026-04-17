@@ -144,6 +144,8 @@ export class ImageTool implements DrawTool {
         imageWidth: w,
         imageHeight: h,
         imageData,
+        originalWidth: img.naturalWidth,
+        originalHeight: img.naturalHeight,
       };
       this.onInsert(element);
     };
