@@ -10,6 +10,7 @@ export type SketchDom = {
   quickColorButtons: HTMLButtonElement[];
   widthInput: HTMLInputElement;
   exportFormat: HTMLSelectElement;
+  exportHighDpi: HTMLInputElement;
   btnBackOverview: HTMLButtonElement;
   btnOverviewLabel: HTMLSpanElement;
   btnClear: HTMLButtonElement;
@@ -74,6 +75,7 @@ export function getDom(doc: Document): SketchDom | null {
   const quickColorButtons = Array.from(doc.querySelectorAll('.quick-color')) as HTMLButtonElement[];
   const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
   const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
+  const exportHighDpi = doc.getElementById('export-high-dpi') as HTMLInputElement | null;
   const btnBackOverview = doc.getElementById('back-overview') as HTMLButtonElement | null;
   const btnOverviewLabel = doc.getElementById('overview-label') as HTMLSpanElement | null;
   const btnClear = doc.getElementById('clear-canvas') as HTMLButtonElement | null;
@@ -145,6 +147,7 @@ export function getDom(doc: Document): SketchDom | null {
     !colorPopup ||
     !widthInput ||
     !exportFormat ||
+    !exportHighDpi ||
     !btnBackOverview ||
     !btnOverviewLabel ||
     !btnClear ||
@@ -212,6 +215,7 @@ export function getDom(doc: Document): SketchDom | null {
     quickColorButtons,
     widthInput,
     exportFormat,
+    exportHighDpi,
     btnBackOverview,
     btnOverviewLabel,
     btnClear,

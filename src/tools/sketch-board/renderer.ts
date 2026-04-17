@@ -112,17 +112,31 @@ export class SceneRenderer {
     this.ctx.restore();
   }
 
-  renderTempCanvas(elements: SketchElement[]): HTMLCanvasElement | null {
+  renderTempCanvas(
+    elements: SketchElement[],
+    options: { scale?: number; background?: string } = {}
+  ): HTMLCanvasElement | null {
+    const { scale = 1, background } = options;
     const bounds = getCropBounds(elements);
     if (!bounds) return null;
 
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = bounds.w;
-    tempCanvas.height = bounds.h;
+    tempCanvas.width = bounds.w * scale;
+    tempCanvas.height = bounds.h * scale;
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return null;
 
+    // Fill background if provided
+    if (background && background !== 'checkerboard-bg') {
+      tempCtx.fillStyle = background === 'solid-black-bg' ? '#000000' : '#ffffff';
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    }
+
+    tempCtx.scale(scale, scale);
     tempCtx.translate(-bounds.x, -bounds.y);
+
+    // Disable smoothing if requested (optional future improvement, for now default to high quality)
+    tempCtx.imageSmoothingEnabled = true;
 
     for (const el of elements) {
       drawElement(tempCtx, el);

@@ -21,7 +21,19 @@ export function showInfoModal(
   const bounds = getCropBounds(elements);
   const colors = Array.from(new Set(elements.map((el) => el.color)));
 
-  dom.infoDimensions.textContent = bounds ? `${bounds.w} × ${bounds.h} px` : '0 × 0 px';
+  if (bounds) {
+    const dpr = window.devicePixelRatio || 1;
+    const physW = Math.round(bounds.w * dpr);
+    const physH = Math.round(bounds.h * dpr);
+    dom.infoDimensions.innerHTML = `
+      <div class="flex flex-col">
+        <span>${bounds.w} &times; ${bounds.h} <span class="text-[10px] opacity-50">LOGICAL PX</span></span>
+        <span class="text-xs opacity-70">${physW} &times; ${physH} <span class="text-[10px] opacity-50">EXPORT PX (DPI)</span></span>
+      </div>
+    `;
+  } else {
+    dom.infoDimensions.textContent = '0 &times; 0 px';
+  }
 
   dom.infoLocation.textContent = bounds
     ? `X: ${Math.round(bounds.x)}, Y: ${Math.round(bounds.y)}`

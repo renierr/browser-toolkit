@@ -393,16 +393,36 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
     dom.btnExport.addEventListener('click', async () => {
       const format = (dom.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
-      await exportDrawing(renderer.renderTempCanvas(elements), format);
+      const scale = dom.exportHighDpi.checked ? window.devicePixelRatio || 1 : 1;
+      const bg =
+        format === 'jpg'
+          ? currentBgClass === 'checkerboard-bg'
+            ? 'warm-white-bg'
+            : currentBgClass
+          : currentBgClass === 'checkerboard-bg'
+            ? undefined
+            : currentBgClass;
+      await exportDrawing(renderer.renderTempCanvas(elements, { scale, background: bg }), format);
     });
 
     dom.btnShare.addEventListener('click', async () => {
       const format = (dom.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
-      await shareDrawing(renderer.renderTempCanvas(elements), format);
+      const scale = dom.exportHighDpi.checked ? window.devicePixelRatio || 1 : 1;
+      const bg =
+        format === 'jpg'
+          ? currentBgClass === 'checkerboard-bg'
+            ? 'warm-white-bg'
+            : currentBgClass
+          : currentBgClass === 'checkerboard-bg'
+            ? undefined
+            : currentBgClass;
+      await shareDrawing(renderer.renderTempCanvas(elements, { scale, background: bg }), format);
     });
 
     dom.btnClipboard.addEventListener('click', async () => {
-      await copyToClipboard(renderer.renderTempCanvas(elements));
+      const scale = dom.exportHighDpi.checked ? window.devicePixelRatio || 1 : 1;
+      const bg = currentBgClass === 'checkerboard-bg' ? undefined : currentBgClass;
+      await copyToClipboard(renderer.renderTempCanvas(elements, { scale, background: bg }));
     });
   };
 

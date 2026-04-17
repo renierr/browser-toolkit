@@ -109,7 +109,7 @@
               class="select select-xs w-24 pointer-events-auto font-normal"
               title="Canvas background"
             >
-              <option value="checkerboard-bg">Checker</option>
+              <option value="checkerboard-bg">Transparent</option>
               <option value="solid-black-bg">Black</option>
               <option value="warm-white-bg">White</option>
             </select>
@@ -134,12 +134,12 @@
         <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
 
         <li>
-          <div class="flex items-center justify-between px-2 py-0 pointer-events-none">
+          <div class="flex items-start flex-col gap-2 px-2 py-0 pointer-events-none">
             <span class="text-xs opacity-70">Export</span>
-            <div class="flex gap-1 pointer-events-auto">
+            <div class="flex justify-between w-full gap-1 pointer-events-auto">
               <select
                 id="export-format"
-                class="select select-xs w-16"
+                class="select select-xs w-auto"
                 title="Export format"
                 data-setting="exportFormat"
               >
@@ -151,6 +151,19 @@
                 <i data-lucide="download" class="w-3 h-3"></i>
               </button>
             </div>
+            <label
+              class="flex self-center items-center gap-2 cursor-pointer pointer-events-auto group"
+            >
+              <input
+                id="export-high-dpi"
+                type="checkbox"
+                class="checkbox checkbox-xs checkbox-primary"
+                checked
+              />
+              <span class="text-[10px] opacity-70 group-hover:opacity-100 transition-opacity"
+                >High Quality (DPI)</span
+              >
+            </label>
           </div>
         </li>
 
