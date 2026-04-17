@@ -115,8 +115,11 @@
             </select>
           </div>
         </li>
-        <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
-
+        <li>
+          <button id="show-info" class="btn btn-sm btn-ghost justify-start">
+            <i data-lucide="info" class="w-4 h-4 mr-2"></i>Information
+          </button>
+        </li>
         <li>
           <button id="save-drawing" class="btn btn-sm btn-ghost justify-start">
             <i data-lucide="save" class="w-4 h-4 mr-2"></i>Save
@@ -476,6 +479,43 @@
       <p class="text-sm opacity-70 mb-4">Manual versions from local IndexedDB store.</p>
 
       <div id="gallery-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
+
+  <dialog id="info-modal" class="modal">
+    <div class="modal-box max-w-sm">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+      </form>
+      <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+        <i data-lucide="info" class="w-5 h-5"></i> Drawing Information
+      </h3>
+
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between border-b border-base-200 pb-2">
+          <span class="opacity-70">Dimensions:</span>
+          <span id="info-dimensions" class="font-mono">0 &times; 0 px</span>
+        </div>
+        <div class="flex justify-between border-b border-base-200 pb-2">
+          <span class="opacity-70">Location:</span>
+          <span id="info-location" class="font-mono text-xs">X0, Y0</span>
+        </div>
+        <div class="flex justify-between border-b border-base-200 pb-2">
+          <span class="opacity-70">Total Elements:</span>
+          <span id="info-elements" class="font-mono">0</span>
+        </div>
+        <div class="flex justify-between border-b border-base-200 pb-2">
+          <span class="opacity-70">Background:</span>
+          <span id="info-background" class="font-mono"></span>
+        </div>
+        <div>
+          <span class="opacity-70 block mb-2">Colors Used:</span>
+          <div id="info-colors" class="flex flex-wrap gap-1"></div>
+        </div>
+      </div>
     </div>
     <form method="dialog" class="modal-backdrop">
       <button>close</button>

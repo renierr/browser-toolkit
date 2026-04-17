@@ -20,6 +20,13 @@ export type SketchDom = {
   btnExport: HTMLButtonElement;
   btnShare: HTMLButtonElement;
   btnClipboard: HTMLButtonElement;
+  btnInfo: HTMLButtonElement;
+  infoModal: HTMLDialogElement;
+  infoDimensions: HTMLSpanElement;
+  infoLocation: HTMLSpanElement;
+  infoElements: HTMLSpanElement;
+  infoBackground: HTMLSpanElement;
+  infoColors: HTMLDivElement;
   btnZoomOut: HTMLButtonElement;
   btnZoomIn: HTMLButtonElement;
   btnZoomReset: HTMLButtonElement;
@@ -75,6 +82,13 @@ export function getDom(doc: Document): SketchDom | null {
   const btnExport = doc.getElementById('export-file') as HTMLButtonElement | null;
   const btnShare = doc.getElementById('share-drawing') as HTMLButtonElement | null;
   const btnClipboard = doc.getElementById('copy-image') as HTMLButtonElement | null;
+  const btnInfo = doc.getElementById('show-info') as HTMLButtonElement | null;
+  const infoModal = doc.getElementById('info-modal') as HTMLDialogElement | null;
+  const infoDimensions = doc.getElementById('info-dimensions') as HTMLSpanElement | null;
+  const infoLocation = doc.getElementById('info-location') as HTMLSpanElement | null;
+  const infoElements = doc.getElementById('info-elements') as HTMLSpanElement | null;
+  const infoBackground = doc.getElementById('info-background') as HTMLSpanElement | null;
+  const infoColors = doc.getElementById('info-colors') as HTMLDivElement | null;
   const btnZoomOut = doc.getElementById('zoom-out') as HTMLButtonElement | null;
   const btnZoomIn = doc.getElementById('zoom-in') as HTMLButtonElement | null;
   const btnZoomReset = doc.getElementById('zoom-reset') as HTMLButtonElement | null;
@@ -135,6 +149,13 @@ export function getDom(doc: Document): SketchDom | null {
     !btnExport ||
     !btnShare ||
     !btnClipboard ||
+    !btnInfo ||
+    !infoModal ||
+    !infoDimensions ||
+    !infoLocation ||
+    !infoElements ||
+    !infoBackground ||
+    !infoColors ||
     !btnZoomOut ||
     !btnZoomIn ||
     !btnZoomReset ||
@@ -194,6 +215,13 @@ export function getDom(doc: Document): SketchDom | null {
     btnExport,
     btnShare,
     btnClipboard,
+    btnInfo,
+    infoModal,
+    infoDimensions,
+    infoLocation,
+    infoElements,
+    infoBackground,
+    infoColors,
     btnZoomOut,
     btnZoomIn,
     btnZoomReset,

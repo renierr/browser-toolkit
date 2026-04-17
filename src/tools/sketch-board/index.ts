@@ -384,6 +384,39 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     if (saved) hasUnsavedChanges = false;
   });
 
+  dom.btnInfo.addEventListener('click', () => {
+    const bounds = getCropBounds(elements);
+    const colors = Array.from(new Set(elements.map((el) => el.color)));
+
+    dom.infoDimensions.textContent = bounds ? `${bounds.w} × ${bounds.h} px` : '0 × 0 px';
+
+    dom.infoLocation.textContent = bounds
+      ? `X: ${Math.round(bounds.x)}, Y: ${Math.round(bounds.y)}`
+      : 'X: 0, Y: 0';
+
+    dom.infoElements.textContent = String(elements.length);
+
+    // Clean-up background name for display
+    const bgDisplay = currentBgClass
+      .replace('-bg', '')
+      .split('-')
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(' ');
+    dom.infoBackground.textContent = bgDisplay;
+
+    // Render color swatches
+    dom.infoColors.innerHTML = '';
+    colors.forEach((color) => {
+      const swatch = document.createElement('div');
+      swatch.className = 'w-6 h-6 rounded border border-base-300 shadow-sm';
+      swatch.style.backgroundColor = color;
+      swatch.title = color;
+      dom.infoColors.appendChild(swatch);
+    });
+
+    dom.infoModal.showModal();
+  });
+
   dom.btnGallery.addEventListener('click', async () => {
     try {
       await renderGallery(dom, (record) => {
