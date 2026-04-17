@@ -3,6 +3,7 @@ import { showMessage } from '@js/ui.ts';
 import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getCropBounds, setImageGetter } from './drawing.ts';
 import { getDom } from './dom.ts';
+import { confirmDiscardIfNeeded, showInfoModal } from './ui-helpers.ts';
 import { ElementEditor } from './element-editor.ts';
 import {
   copyToClipboard,
@@ -91,30 +92,15 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     viewport: viewport.state,
   });
 
-  const updateUndoRedoButtons = (): void => {
-    dom.btnUndo.disabled = !history.canUndo;
-    dom.btnRedo.disabled = !history.canRedo;
-
-    const undoBadge = dom.btnUndo.querySelector('#undo-badge') as HTMLElement | null;
-    if (undoBadge) {
-      if (history.undoLength > 0) {
-        undoBadge.textContent = String(history.undoLength);
-        undoBadge.classList.remove('hidden');
-      } else {
-        undoBadge.classList.add('hidden');
-      }
-    }
-
-    const redoBadge = dom.btnRedo.querySelector('#redo-badge') as HTMLElement | null;
-    if (redoBadge) {
-      if (history.redoLength > 0) {
-        redoBadge.textContent = String(history.redoLength);
-        redoBadge.classList.remove('hidden');
-      } else {
-        redoBadge.classList.add('hidden');
-      }
-    }
+  const getCanvasCenter = () => {
+    const vp = viewport.state;
+    return {
+      x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
+      y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
+    };
   };
+
+  const updateUndoRedo = () => toolbar.updateUndoRedo(history);
 
   // --- Input handler ---
   const inputHandler = new PointerInputHandler(
@@ -127,7 +113,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     getState,
     setState,
     getToolContext,
-    updateUndoRedoButtons
+    updateUndoRedo
   );
 
   // --- Draw scene ---
@@ -154,7 +140,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     elements = [...elements, el];
     hasUnsavedChanges = true;
     renderer.markDirty();
-    updateUndoRedoButtons();
+    updateUndoRedo();
     renderer.requestDraw();
   });
 
@@ -162,13 +148,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   const setMode = (next: ToolMode): void => {
     elementEditor.clearSelection();
     mode = next;
-    imageTool.setGetCanvasCenter(() => {
-      const vp = viewport.state;
-      return {
-        x: (dom.canvas.width / 2 - vp.x) / vp.scale,
-        y: (dom.canvas.height / 2 - vp.y) / vp.scale,
-      };
-    });
+    imageTool.setGetCanvasCenter(getCanvasCenter);
     toolbar.setMode(next);
     renderer.requestDrawImmediate(inputHandler.getStreamingState());
   };
@@ -182,7 +162,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     elements = prev;
     hasUnsavedChanges = true;
     renderer.markDirty();
-    updateUndoRedoButtons();
+    updateUndoRedo();
     renderer.requestDraw();
   };
 
@@ -192,7 +172,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     elements = next;
     hasUnsavedChanges = true;
     renderer.markDirty();
-    updateUndoRedoButtons();
+    updateUndoRedo();
     renderer.requestDraw();
   };
 
@@ -231,18 +211,12 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     renderer.requestDrawImmediate();
   };
 
-  // --- Confirm discard ---
-  const confirmDiscardIfNeeded = (): boolean => {
-    if (!hasUnsavedChanges) return true;
-    return window.confirm('Discard current unsaved changes?');
-  };
-
   // --- Quick color ---
   const applySelectedChange = (): void => {
     if (elementEditor.getSelectedId()) {
       hasUnsavedChanges = true;
       renderer.markDirty();
-      updateUndoRedoButtons();
+      updateUndoRedo();
       renderer.requestDrawImmediate();
     }
   };
@@ -278,7 +252,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       elements = elementEditor.moveElementToFront(elements);
       hasUnsavedChanges = true;
       renderer.markDirty();
-      updateUndoRedoButtons();
+      updateUndoRedo();
       renderer.requestDrawImmediate();
     }
   });
@@ -289,7 +263,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       elements = elementEditor.moveElementToBelow(elements);
       hasUnsavedChanges = true;
       renderer.markDirty();
-      updateUndoRedoButtons();
+      updateUndoRedo();
       renderer.requestDrawImmediate();
     }
   });
@@ -328,12 +302,11 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       el.position.y = cy - origH / 2;
       hasUnsavedChanges = true;
       renderer.markDirty();
-      updateUndoRedoButtons();
+      updateUndoRedo();
       renderer.requestDrawImmediate();
     }
   });
 
-  // --- Event listeners ---
   const setBackground = (bgClass: string): void => {
     dom.appContainer.classList.remove('checkerboard-bg', 'solid-black-bg', 'warm-white-bg');
     dom.appContainer.classList.add(bgClass);
@@ -341,244 +314,211 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     dom.canvasBg.value = bgClass;
   };
 
-  dom.canvasBg.addEventListener('change', () => {
-    setBackground(dom.canvasBg.value);
-  });
-
-  dom.btnBackOverview.addEventListener('click', () => {
-    if (!confirmDiscardIfNeeded()) return;
-    router.goOverview();
-  });
-
-  dom.btnUndo.addEventListener('click', onUndo);
-  dom.btnRedo.addEventListener('click', onRedo);
-  dom.btnZoomIn.addEventListener('click', onZoomIn);
-  dom.btnZoomOut.addEventListener('click', onZoomOut);
-  dom.btnZoomReset.addEventListener('click', onZoomReset);
-
-  dom.btnZoomInMobile.addEventListener('click', onZoomIn);
-  dom.btnZoomOutMobile.addEventListener('click', onZoomOut);
-  dom.btnZoomResetMobile.addEventListener('click', onZoomReset);
-
-  for (const button of dom.quickColorButtons) {
-    button.addEventListener('click', onQuickColorClick);
-  }
-
-  dom.btnImportImage.addEventListener('click', () => {
-    imageTool.setGetCanvasCenter(() => {
-      const vp = viewport.state;
-      return {
-        x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
-        y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
-      };
-    });
-    (document.activeElement as HTMLElement)?.blur();
-    if ('hidePopover' in dom.drawTools && typeof dom.drawTools.hidePopover === 'function') {
-      dom.drawTools.hidePopover();
-    }
-    imageTool.triggerFileInput();
-  });
-
-  dom.btnPasteImage.addEventListener('click', async () => {
-    imageTool.setGetCanvasCenter(() => {
-      const vp = viewport.state;
-      return {
-        x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
-        y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
-      };
-    });
-    (document.activeElement as HTMLElement)?.blur();
-    if ('hidePopover' in dom.drawTools && typeof dom.drawTools.hidePopover === 'function') {
-      dom.drawTools.hidePopover();
-    }
-    const pasted = await imageTool.pasteFromClipboard();
-    if (!pasted) {
-      showMessage('No image in clipboard or permission denied.', {
-        type: 'alert',
-        timeoutMs: 2000,
-      });
-    }
-  });
-
-  dom.btnClear.addEventListener('click', () => {
-    if (elements.length === 0 || !hasUnsavedChanges) {
-      elements = [];
-      history.clear();
-      renderer.markDirty();
-      updateUndoRedoButtons();
-      renderer.requestDraw();
-      return;
-    }
-    if (!window.confirm('Discard current unsaved changes and clear canvas?')) return;
-    elements = [];
-    hasUnsavedChanges = false;
-    history.clear();
-    renderer.markDirty();
-    updateUndoRedoButtons();
-    renderer.requestDraw();
-  });
-
-  dom.btnSave.addEventListener('click', async () => {
-    const saved = await saveDrawing(elements, viewport.state, mode, currentBgClass);
-    if (saved) hasUnsavedChanges = false;
-  });
-
-  dom.btnInfo.addEventListener('click', () => {
-    const bounds = getCropBounds(elements);
-    const colors = Array.from(new Set(elements.map((el) => el.color)));
-
-    dom.infoDimensions.textContent = bounds ? `${bounds.w} × ${bounds.h} px` : '0 × 0 px';
-
-    dom.infoLocation.textContent = bounds
-      ? `X: ${Math.round(bounds.x)}, Y: ${Math.round(bounds.y)}`
-      : 'X: 0, Y: 0';
-
-    dom.infoElements.textContent = String(elements.length);
-
-    // Clean-up background name for display
-    const bgDisplay = currentBgClass
-      .replace('-bg', '')
-      .split('-')
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
-    dom.infoBackground.textContent = bgDisplay;
-
-    // Render color swatches
-    dom.infoColors.innerHTML = '';
-    colors.forEach((color) => {
-      const swatch = document.createElement('div');
-      swatch.className = 'w-6 h-6 rounded border border-base-300 shadow-sm';
-      swatch.style.backgroundColor = color;
-      swatch.title = color;
-      dom.infoColors.appendChild(swatch);
-    });
-
-    dom.infoModal.showModal();
-  });
-
-  dom.btnGallery.addEventListener('click', async () => {
-    try {
-      await renderGallery(dom, (record) => {
-        if (!confirmDiscardIfNeeded()) return;
-        elements = record.elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
-        viewport.restore({ ...record.viewport, scale: record.viewport.scale || 1 });
-        hasUnsavedChanges = false;
-        history.clear();
-        renderer.markDirty();
-        updateUndoRedoButtons();
-        renderer.requestDraw();
-        showMessage(`Loaded "${record.name}".`, { timeoutMs: 2000 });
-      });
-      dom.galleryModal.showModal();
-    } catch (error) {
-      console.error('[SketchBoard] Failed to open gallery', error);
-      showMessage('Failed to load saved drawings.', { type: 'alert', timeoutMs: 3000 });
-    }
-  });
-
-  dom.btnExport.addEventListener('click', async () => {
-    const format = (dom.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
-    await exportDrawing(renderer.renderTempCanvas(elements), format);
-  });
-
-  dom.btnShare.addEventListener('click', async () => {
-    const format = (dom.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
-    await shareDrawing(renderer.renderTempCanvas(elements), format);
-  });
-
-  dom.btnClipboard.addEventListener('click', async () => {
-    await copyToClipboard(renderer.renderTempCanvas(elements));
-  });
-
-  // --- Text property changes (apply to selected text element) ---
   const applyTextChange = (): void => {
     if (elementEditor.getSelectedId()) {
       history.push(elements);
       elementEditor.updateSelectedText(elements);
       hasUnsavedChanges = true;
       renderer.markDirty();
-      updateUndoRedoButtons();
+      updateUndoRedo();
       renderer.requestDrawImmediate();
     }
   };
 
-  dom.fontFamily.addEventListener('change', applyTextChange);
-  dom.fontSize.addEventListener('input', applyTextChange);
-
-  // Color: live visual update on input, history commit on change
-  let preColorSnapshot: SketchElement[] | null = null;
-  dom.colorInput.addEventListener('input', () => {
-    if (elementEditor.getSelectedId()) {
-      if (!preColorSnapshot) {
-        preColorSnapshot = JSON.parse(JSON.stringify(elements));
+  // --- Event setup ---
+  const setupHistoryEvents = () => {
+    dom.btnUndo.addEventListener('click', onUndo);
+    dom.btnRedo.addEventListener('click', onRedo);
+    dom.btnClear.addEventListener('click', () => {
+      if (elements.length === 0 || !hasUnsavedChanges) {
+        elements = [];
+        history.clear();
+        renderer.markDirty();
+        updateUndoRedo();
+        renderer.requestDraw();
+        return;
       }
-      elementEditor.applySelectedColor(elements);
+      if (!window.confirm('Discard current unsaved changes and clear canvas?')) return;
+      elements = [];
+      hasUnsavedChanges = false;
+      history.clear();
       renderer.markDirty();
+      updateUndoRedo();
       renderer.requestDraw();
-    }
-  });
-  dom.colorInput.addEventListener('change', () => {
-    if (elementEditor.getSelectedId()) {
-      if (preColorSnapshot) {
-        history.pushSnapshot(preColorSnapshot);
-        preColorSnapshot = null;
+    });
+  };
+
+  const setupViewportEvents = () => {
+    dom.btnZoomIn.addEventListener('click', onZoomIn);
+    dom.btnZoomOut.addEventListener('click', onZoomOut);
+    dom.btnZoomReset.addEventListener('click', onZoomReset);
+    dom.btnZoomInMobile.addEventListener('click', onZoomIn);
+    dom.btnZoomOutMobile.addEventListener('click', onZoomOut);
+    dom.btnZoomResetMobile.addEventListener('click', onZoomReset);
+    dom.canvasBg.addEventListener('change', () => setBackground(dom.canvasBg.value));
+  };
+
+  const setupActionEvents = () => {
+    dom.btnBackOverview.addEventListener('click', () => {
+      if (!confirmDiscardIfNeeded(hasUnsavedChanges)) return;
+      router.goOverview();
+    });
+
+    dom.btnSave.addEventListener('click', async () => {
+      const saved = await saveDrawing(elements, viewport.state, mode, currentBgClass);
+      if (saved) hasUnsavedChanges = false;
+    });
+
+    dom.btnInfo.addEventListener('click', () => showInfoModal(dom, elements, currentBgClass));
+
+    dom.btnGallery.addEventListener('click', async () => {
+      try {
+        await renderGallery(dom, (record) => {
+          if (!confirmDiscardIfNeeded(hasUnsavedChanges)) return;
+          elements = record.elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
+          viewport.restore({ ...record.viewport, scale: record.viewport.scale || 1 });
+          hasUnsavedChanges = false;
+          history.clear();
+          renderer.markDirty();
+          updateUndoRedo();
+          renderer.requestDraw();
+          showMessage(`Loaded "${record.name}".`, { timeoutMs: 2000 });
+        });
+        dom.galleryModal.showModal();
+      } catch (error) {
+        console.error('[SketchBoard] Failed to open gallery', error);
+        showMessage('Failed to load saved drawings.', { type: 'alert', timeoutMs: 3000 });
       }
-      hasUnsavedChanges = true;
-      updateUndoRedoButtons();
+    });
+
+    dom.btnExport.addEventListener('click', async () => {
+      const format = (dom.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
+      await exportDrawing(renderer.renderTempCanvas(elements), format);
+    });
+
+    dom.btnShare.addEventListener('click', async () => {
+      const format = (dom.exportFormat.value as 'png' | 'jpg' | 'webp') || 'png';
+      await shareDrawing(renderer.renderTempCanvas(elements), format);
+    });
+
+    dom.btnClipboard.addEventListener('click', async () => {
+      await copyToClipboard(renderer.renderTempCanvas(elements));
+    });
+  };
+
+  const setupPropertyEvents = () => {
+    for (const button of dom.quickColorButtons) {
+      button.addEventListener('click', onQuickColorClick);
     }
-  });
+    dom.fontFamily.addEventListener('change', applyTextChange);
+    dom.fontSize.addEventListener('input', applyTextChange);
 
-  dom.fontBold.addEventListener('click', () => {
-    dom.fontBold.classList.toggle('btn-primary');
-    applyTextChange();
-  });
+    let preColorSnapshot: SketchElement[] | null = null;
+    dom.colorInput.addEventListener('input', () => {
+      if (elementEditor.getSelectedId()) {
+        if (!preColorSnapshot) preColorSnapshot = JSON.parse(JSON.stringify(elements));
+        elementEditor.applySelectedColor(elements);
+        renderer.markDirty();
+        renderer.requestDraw();
+      }
+    });
 
-  dom.fontItalic.addEventListener('click', () => {
-    dom.fontItalic.classList.toggle('btn-primary');
-    applyTextChange();
-  });
+    dom.colorInput.addEventListener('change', () => {
+      if (elementEditor.getSelectedId()) {
+        if (preColorSnapshot) {
+          history.pushSnapshot(preColorSnapshot);
+          preColorSnapshot = null;
+        }
+        hasUnsavedChanges = true;
+        updateUndoRedo();
+      }
+    });
 
-  const btnEditText = document.getElementById('edit-text') as HTMLButtonElement | null;
-  if (btnEditText) {
-    btnEditText.addEventListener('click', () => {
+    dom.fontBold.addEventListener('click', () => {
+      dom.fontBold.classList.toggle('btn-primary');
+      applyTextChange();
+    });
+
+    dom.fontItalic.addEventListener('click', () => {
+      dom.fontItalic.classList.toggle('btn-primary');
+      applyTextChange();
+    });
+  };
+
+  const setupElementEvents = () => {
+    const btnEditText = document.getElementById('edit-text') as HTMLButtonElement | null;
+    if (btnEditText) {
+      btnEditText.addEventListener('click', () => {
+        if (elementEditor.getSelectedId()) {
+          history.push(elements);
+          elementEditor.editSelectedText(elements, viewport.state, () => {
+            hasUnsavedChanges = true;
+            renderer.markDirty();
+            updateUndoRedo();
+            renderer.requestDrawImmediate();
+          });
+        }
+      });
+    }
+
+    dom.deleteElement.addEventListener('click', () => {
       if (elementEditor.getSelectedId()) {
         history.push(elements);
-        elementEditor.editSelectedText(elements, viewport.state, () => {
-          hasUnsavedChanges = true;
-          renderer.markDirty();
-          updateUndoRedoButtons();
-          renderer.requestDrawImmediate();
+        elements = elementEditor.deleteSelected(elements);
+        hasUnsavedChanges = true;
+        renderer.markDirty();
+        updateUndoRedo();
+        renderer.requestDrawImmediate();
+      }
+    });
+
+    dom.canvas.addEventListener('keydown', (e) => {
+      if (elementEditor.getSelectedId() && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        history.push(elements);
+        elements = elementEditor.deleteSelected(elements);
+        hasUnsavedChanges = true;
+        renderer.markDirty();
+        updateUndoRedo();
+        renderer.requestDrawImmediate();
+      }
+    }, { passive: false });
+  };
+
+  const setupImageEvents = () => {
+    dom.btnImportImage.addEventListener('click', () => {
+      imageTool.setGetCanvasCenter(getCanvasCenter);
+      (document.activeElement as HTMLElement)?.blur();
+      if ('hidePopover' in dom.drawTools && typeof dom.drawTools.hidePopover === 'function') {
+        dom.drawTools.hidePopover();
+      }
+      imageTool.triggerFileInput();
+    });
+
+    dom.btnPasteImage.addEventListener('click', async () => {
+      imageTool.setGetCanvasCenter(getCanvasCenter);
+      (document.activeElement as HTMLElement)?.blur();
+      if ('hidePopover' in dom.drawTools && typeof dom.drawTools.hidePopover === 'function') {
+        dom.drawTools.hidePopover();
+      }
+      const pasted = await imageTool.pasteFromClipboard();
+      if (!pasted) {
+        showMessage('No image in clipboard or permission denied.', {
+          type: 'alert',
+          timeoutMs: 2000,
         });
       }
     });
-  }
-
-  dom.deleteElement.addEventListener('click', () => {
-    if (elementEditor.getSelectedId()) {
-      history.push(elements);
-      elements = elementEditor.deleteSelected(elements);
-      hasUnsavedChanges = true;
-      renderer.markDirty();
-      updateUndoRedoButtons();
-      renderer.requestDrawImmediate();
-    }
-  });
-
-  const onKeyDown = (e: KeyboardEvent): void => {
-    if (elementEditor.getSelectedId() && (e.key === 'Delete' || e.key === 'Backspace')) {
-      e.preventDefault();
-      history.push(elements);
-      elements = elementEditor.deleteSelected(elements);
-      hasUnsavedChanges = true;
-      renderer.markDirty();
-      updateUndoRedoButtons();
-      renderer.requestDrawImmediate();
-    }
   };
 
-  dom.canvas.addEventListener('keydown', onKeyDown, { passive: false });
-
   // --- Attach modules ---
+  setupHistoryEvents();
+  setupViewportEvents();
+  setupActionEvents();
+  setupPropertyEvents();
+  setupElementEvents();
+  setupImageEvents();
+
   toolbar.attach();
   inputHandler.attach();
 
@@ -587,7 +527,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   // --- Initial setup ---
   dom.canvas.style.touchAction = 'none';
-  updateUndoRedoButtons();
+  updateUndoRedo();
   setMode('pan');
   setBackground('checkerboard-bg');
   renderer.resizeCanvas();
@@ -595,13 +535,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   if (payload?.sharedFiles?.length) {
     imageTool.setMaxSize(undefined);
-    imageTool.setGetCanvasCenter(() => {
-      const vp = viewport.state;
-      return {
-        x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
-        y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
-      };
-    });
+    imageTool.setGetCanvasCenter(getCanvasCenter);
     imageTool.loadImageFromFile(payload.sharedFiles[0]);
   }
 
@@ -611,7 +545,6 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     resizeObserver.disconnect();
     toolbar.detach();
     inputHandler.detach();
-    dom.canvas.removeEventListener('keydown', onKeyDown);
     for (const button of dom.quickColorButtons) {
       button.removeEventListener('click', onQuickColorClick);
     }

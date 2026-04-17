@@ -1,6 +1,7 @@
 import { renderToolIconSvg } from '@js/tool-icons.ts';
 import type { ToolOptionId } from './shapes/base-tool.ts';
 import type { SketchDom } from './dom.ts';
+import type { HistoryManager } from './history.ts';
 import type { DrawMode, ToolMode } from './types.ts';
 
 const TOOL_ICONS: Record<ToolMode, string> = {
@@ -60,6 +61,32 @@ export class ToolbarController {
   }
   setResizeImageHandler(handler: () => void): void {
     this.onResizeImage = handler;
+  }
+
+  updateUndoRedo(history: HistoryManager): void {
+    const dom = this.dom;
+    dom.btnUndo.disabled = !history.canUndo;
+    dom.btnRedo.disabled = !history.canRedo;
+
+    const undoBadge = dom.btnUndo.querySelector('#undo-badge') as HTMLElement | null;
+    if (undoBadge) {
+      if (history.undoLength > 0) {
+        undoBadge.textContent = String(history.undoLength);
+        undoBadge.classList.remove('hidden');
+      } else {
+        undoBadge.classList.add('hidden');
+      }
+    }
+
+    const redoBadge = dom.btnRedo.querySelector('#redo-badge') as HTMLElement | null;
+    if (redoBadge) {
+      if (history.redoLength > 0) {
+        redoBadge.textContent = String(history.redoLength);
+        redoBadge.classList.remove('hidden');
+      } else {
+        redoBadge.classList.add('hidden');
+      }
+    }
   }
 
   /** Register tool options from the tool registry */
