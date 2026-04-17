@@ -125,7 +125,9 @@ export function getDom(doc: Document): SketchDom | null {
   const fontItalic = doc.getElementById('font-italic') as HTMLButtonElement | null;
   const moveToFront = doc.getElementById('element-to-front') as HTMLButtonElement | null;
   const moveToBelow = doc.getElementById('element-to-below') as HTMLButtonElement | null;
-  const btnResizeImageOriginal = doc.getElementById('resize-image-original') as HTMLButtonElement | null;
+  const btnResizeImageOriginal = doc.getElementById(
+    'resize-image-original'
+  ) as HTMLButtonElement | null;
   const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
   const zoomToast = doc.getElementById('zoom-toast') as HTMLDivElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];

@@ -389,7 +389,6 @@ export class ElementEditor {
     el.color = this.dom.colorInput.value;
   }
 
-
   /** Toggle filled state of the selected shape element */
   updateSelectedFilled(elements: SketchElement[], filled: boolean): void {
     if (!this.selectedElementId) return;

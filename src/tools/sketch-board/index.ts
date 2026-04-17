@@ -472,17 +472,21 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       }
     });
 
-    dom.canvas.addEventListener('keydown', (e) => {
-      if (elementEditor.getSelectedId() && (e.key === 'Delete' || e.key === 'Backspace')) {
-        e.preventDefault();
-        history.push(elements);
-        elements = elementEditor.deleteSelected(elements);
-        hasUnsavedChanges = true;
-        renderer.markDirty();
-        updateUndoRedo();
-        renderer.requestDrawImmediate();
-      }
-    }, { passive: false });
+    dom.canvas.addEventListener(
+      'keydown',
+      (e) => {
+        if (elementEditor.getSelectedId() && (e.key === 'Delete' || e.key === 'Backspace')) {
+          e.preventDefault();
+          history.push(elements);
+          elements = elementEditor.deleteSelected(elements);
+          hasUnsavedChanges = true;
+          renderer.markDirty();
+          updateUndoRedo();
+          renderer.requestDrawImmediate();
+        }
+      },
+      { passive: false }
+    );
   };
 
   const setupImageEvents = () => {
