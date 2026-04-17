@@ -52,6 +52,7 @@ export type SketchDom = {
   moveToBelow: HTMLButtonElement;
   deleteElement: HTMLButtonElement;
   textInputOverlay: HTMLDivElement | null;
+  zoomToast: HTMLDivElement | null;
 };
 
 export function getDom(doc: Document): SketchDom | null {
@@ -109,6 +110,7 @@ export function getDom(doc: Document): SketchDom | null {
   const moveToFront = doc.getElementById('element-to-front') as HTMLButtonElement | null;
   const moveToBelow = doc.getElementById('element-to-below') as HTMLButtonElement | null;
   const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
+  const zoomToast = doc.getElementById('zoom-toast') as HTMLDivElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
   const toolOptShapes = Array.from(doc.querySelectorAll('.tool-opt-shape')) as HTMLElement[];
   const toolOptTexts = Array.from(doc.querySelectorAll('.tool-opt-text')) as HTMLElement[];
@@ -235,5 +237,6 @@ export function getDom(doc: Document): SketchDom | null {
     moveToBelow,
     deleteElement,
     textInputOverlay: null,
+    zoomToast,
   };
 }

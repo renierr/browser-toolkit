@@ -197,28 +197,37 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   };
 
   // --- Zoom ---
+  let zoomToastTimeout: ReturnType<typeof setTimeout> | null = null;
+  viewport.onZoomChange = () => {
+    const toast = dom.zoomToast;
+    if (!toast) return;
+    toast.textContent = `${Math.round(viewport.scale * 100)}%`;
+    toast.classList.remove('opacity-0');
+    toast.classList.add('opacity-100');
+    if (zoomToastTimeout) clearTimeout(zoomToastTimeout);
+    zoomToastTimeout = setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0');
+    }, 1500);
+  };
+
   const onZoomIn = (): void => {
     viewport.applyZoom(1);
-    const bounds = getCropBounds(elements);
-    if (bounds) viewport.centerOnContent(bounds);
     renderer.markDirty();
     renderer.requestDrawImmediate();
   };
 
   const onZoomOut = (): void => {
     viewport.applyZoom(-1);
-    const bounds = getCropBounds(elements);
-    if (bounds) viewport.centerOnContent(bounds);
     renderer.markDirty();
     renderer.requestDrawImmediate();
   };
 
   const onZoomReset = (): void => {
     viewport.resetScale();
-    renderer.markDirty();
-    drawScene();
     const bounds = getCropBounds(elements);
     if (bounds) viewport.centerOnContent(bounds);
+    renderer.markDirty();
     renderer.requestDrawImmediate();
   };
 

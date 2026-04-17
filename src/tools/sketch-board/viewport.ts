@@ -7,6 +7,7 @@ const ZOOM_STEP = 1.25;
 export class ViewportController {
   private readonly canvas: HTMLCanvasElement;
   readonly state: ViewportState;
+  onZoomChange?: () => void;
 
   constructor(canvas: HTMLCanvasElement, initial?: ViewportState) {
     this.canvas = canvas;
@@ -50,24 +51,31 @@ export class ViewportController {
     newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, newScale));
     if (newScale === oldScale) return false;
 
+    const rect = this.canvas.getBoundingClientRect();
+    let cx: number;
+    let cy: number;
     if (focusX !== undefined && focusY !== undefined) {
-      const rect = this.canvas.getBoundingClientRect();
-      const canvasX = focusX - rect.left;
-      const canvasY = focusY - rect.top;
-      const worldX = (canvasX - this.state.x) / oldScale;
-      const worldY = (canvasY - this.state.y) / oldScale;
-      this.state.x = canvasX - worldX * newScale;
-      this.state.y = canvasY - worldY * newScale;
+      cx = focusX - rect.left;
+      cy = focusY - rect.top;
+    } else {
+      cx = rect.width / 2;
+      cy = rect.height / 2;
     }
 
+    const worldX = (cx - this.state.x) / oldScale;
+    const worldY = (cy - this.state.y) / oldScale;
+    this.state.x = cx - worldX * newScale;
+    this.state.y = cy - worldY * newScale;
+
     this.state.scale = newScale;
+    this.onZoomChange?.();
     return true;
   }
 
   centerOnContent(bounds: { x: number; y: number; w: number; h: number }): void {
     const rect = this.canvas.getBoundingClientRect();
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
     const worldCenterX = bounds.x + bounds.w / 2;
     const worldCenterY = bounds.y + bounds.h / 2;
     this.state.x = centerX - worldCenterX * this.state.scale;
@@ -75,7 +83,10 @@ export class ViewportController {
   }
 
   resetScale(): void {
-    this.state.scale = 1;
+    if (this.state.scale !== 1) {
+      this.state.scale = 1;
+      this.onZoomChange?.();
+    }
   }
 
   restore(saved: ViewportState): void {

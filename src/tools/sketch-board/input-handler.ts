@@ -282,7 +282,7 @@ export class PointerInputHandler {
   private onWheel(e: WheelEvent): void {
     e.preventDefault();
     const delta = -Math.sign(e.deltaY);
-    this.viewport.applyZoom(delta, e.clientX, e.clientY);
+    this.viewport.applyZoom(delta);
     this.renderer.markDirty();
     this.renderer.requestDrawImmediate();
   }
@@ -303,7 +303,7 @@ export class PointerInputHandler {
       const scaleRatio = currentDist / this.pinchStartDist;
       if (Math.abs(scaleRatio - 1) > 0.05) {
         const delta = scaleRatio > 1 ? 1 : -1;
-        this.viewport.applyZoom(delta, currentCenter.x, currentCenter.y);
+        this.viewport.applyZoom(delta);
         this.renderer.markDirty();
         this.renderer.requestDrawImmediate();
         this.pinchStartDist = currentDist;
