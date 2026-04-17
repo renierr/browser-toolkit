@@ -243,6 +243,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     const color = target.getAttribute('data-color');
     if (!color) return;
     dom.colorInput.value = color;
+    dom.colorInput.dispatchEvent(new Event('change', { bubbles: true }));
     if ('hidePopover' in dom.colorPopup && typeof dom.colorPopup.hidePopover === 'function') {
       dom.colorPopup.hidePopover();
     }
