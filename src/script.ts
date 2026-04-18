@@ -653,7 +653,9 @@ async function boot() {
     setupLaunchHandler(async (launchFiles) => {
       if (launchFiles.length > 0) {
         const mimeTypes = launchFiles.map((f) => getMimeTypeFromFileName(f.type || '', f.name));
-        await routeFilesToTool(launchFiles, mimeTypes);
+        if (await routeFilesToTool(launchFiles, mimeTypes)) {
+          handledByLaunchOrShare = true;
+        }
       }
     });
   } catch (e) {
