@@ -1,0 +1,162 @@
+<!-- Full Preview Modal -->
+<dialog id="preview-modal" class="modal">
+  <div
+    class="modal-box max-w-6xl w-full h-full max-h-[95vh] p-0 flex flex-col md:flex-row overflow-hidden border border-base-300 shadow-2xl"
+  >
+    <!-- Image Side -->
+    <div class="flex-1 flex flex-col min-w-0 min-h-0 bg-base-300">
+      <div
+        class="flex justify-between items-center p-3 sm:p-4 border-b border-base-200 bg-base-100 z-10 gap-2"
+      >
+        <h3 id="modal-filename" class="font-bold truncate text-sm sm:text-base min-w-0">Preview</h3>
+        <!-- View Mode Toggle -->
+        <div id="modal-view-toggle" class="join shadow-sm shrink-0">
+          <button
+            class="btn btn-xs join-item btn-primary modal-view-processed"
+            title="Processed image"
+          >
+            Processed
+          </button>
+          <button class="btn btn-xs join-item modal-view-original" title="Original image">
+            Original
+          </button>
+          <button
+            class="btn btn-xs join-item modal-view-outline"
+            title="Show detected mask outline"
+          >
+            <i data-lucide="scan-line" class="w-3 h-3 sm:mr-1"></i>
+            <span class="hidden sm:inline">Outline</span>
+          </button>
+        </div>
+        <form method="dialog" class="md:hidden shrink-0">
+          <button class="btn btn-sm btn-circle btn-ghost">✕</button>
+        </form>
+      </div>
+      <div
+        class="flex-1 overflow-auto p-4 checkerboard-bg flex items-center justify-center relative min-h-0"
+      >
+        <img
+          id="modal-img"
+          class="max-w-full max-h-full object-contain relative z-10 drop-shadow-2xl"
+          alt="Full-size preview"
+        />
+        <canvas
+          id="modal-outline-canvas"
+          class="absolute z-15 pointer-events-none hidden"
+          aria-hidden="true"
+        ></canvas>
+        <!-- Modal Status Overlay -->
+        <div
+          id="modal-status-overlay"
+          class="absolute inset-x-0 bottom-0 bg-base-100/70 backdrop-blur-md p-4 flex flex-col items-center hidden z-20"
+        >
+          <span class="loading loading-spinner loading-sm text-primary mb-2"></span>
+          <span class="text-xs font-bold opacity-70">RE-PROCESSING...</span>
+        </div>
+      </div>
+      <div
+        class="p-3 sm:p-4 border-t border-base-200 flex justify-end gap-2 flex-wrap bg-base-100 mt-auto"
+      >
+        <button id="modal-copy" class="btn btn-ghost btn-sm gap-2">
+          <i data-lucide="clipboard-copy" class="w-4 h-4"></i>
+          Copy
+        </button>
+        <button id="modal-share" class="btn btn-ghost btn-sm gap-2">
+          <i data-lucide="share2" class="w-4 h-4"></i>
+          Share
+        </button>
+        <button id="modal-download" class="btn btn-primary btn-sm gap-2 font-bold">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Download
+        </button>
+      </div>
+    </div>
+
+    <!-- Adjustment Panel Side -->
+    <div
+      class="w-full md:w-80 bg-base-100 border-l border-base-200 flex flex-col min-h-0 max-h-[40vh] md:max-h-none shrink-0 md:shrink"
+    >
+      <div
+        class="hidden md:flex justify-between items-center p-4 border-b border-base-200 shrink-0"
+      >
+        <span class="font-bold text-xs uppercase opacity-50 tracking-widest">Adjustment Panel</span>
+        <form method="dialog">
+          <button class="btn btn-xs btn-circle btn-ghost">✕</button>
+        </form>
+      </div>
+      <div class="p-4 sm:p-6 space-y-4 sm:space-y-6 overflow-y-auto min-h-0 flex-1">
+        <div class="form-control">
+          <div class="flex justify-between items-center mb-2">
+            <span class="label-text font-bold text-xs uppercase opacity-70">Threshold</span>
+            <span class="modal-threshold-val text-primary font-mono font-bold text-sm">128</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="255"
+            value="128"
+            class="range range-sm range-primary modal-threshold-slider"
+            aria-label="Threshold"
+          />
+          <p class="text-[10px] opacity-40 mt-1">Adjust subject sensitivity</p>
+        </div>
+
+        <div class="form-control">
+          <div class="flex justify-between items-center mb-2">
+            <span class="label-text font-bold text-xs uppercase opacity-70">Smoothing</span>
+            <span class="modal-smooth-val text-primary font-mono font-bold text-sm">4</span>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max="10"
+            value="4"
+            class="range range-sm range-primary modal-smooth-slider"
+            aria-label="Smoothing"
+          />
+          <p class="text-[10px] opacity-40 mt-1">Softness of the mask edges</p>
+        </div>
+
+        <div class="form-control">
+          <div class="flex justify-between items-center mb-2">
+            <span class="label-text font-bold text-xs uppercase opacity-70">Contrast</span>
+            <span class="modal-contrast-val text-primary font-mono font-bold text-sm">1.0</span>
+          </div>
+          <input
+            type="range"
+            min="0.5"
+            max="2.0"
+            step="0.1"
+            value="1.0"
+            class="range range-sm range-primary modal-contrast-slider"
+            aria-label="Contrast"
+          />
+          <p class="text-[10px] opacity-40 mt-1">Hardness of mask transitions</p>
+        </div>
+
+        <div class="form-control pt-2">
+          <label
+            class="label cursor-pointer bg-base-200/50 p-4 rounded-xl border border-base-300 transition-colors hover:bg-base-200"
+          >
+            <span class="flex flex-col">
+              <span class="label-text font-bold text-xs uppercase">Edge Refinement</span>
+              <span class="text-[10px] opacity-50">Best for hair and fur</span>
+            </span>
+            <input type="checkbox" class="toggle toggle-primary modal-refine-toggle" />
+          </label>
+        </div>
+
+        <div class="divider text-[10px] opacity-40 uppercase">Performance</div>
+        <div class="alert bg-base-200 border-none rounded-xl p-3 flex items-start gap-3">
+          <i data-lucide="zap" class="w-4 h-4 text-warning mt-0.5"></i>
+          <span class="text-[10px] opacity-70 leading-relaxed font-medium"
+            >Changes apply instantly to this image using cached AI results.</span
+          >
+        </div>
+      </div>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

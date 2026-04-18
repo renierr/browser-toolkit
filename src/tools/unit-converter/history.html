@@ -1,0 +1,48 @@
+    <div
+      id="uc-history-panel"
+      class="fixed inset-y-0 right-0 z-40 w-full max-w-sm bg-base-100 shadow-xl transform translate-x-full transition-transform duration-300 lg:relative lg:transform-none lg:translate-x-0 lg:shadow-none lg:z-auto lg:max-w-none lg:mt-4"
+    >
+      <div class="card bg-base-200 shadow-sm h-full lg:h-auto">
+        <div class="card-body p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-bold flex items-center gap-2">
+              <i data-lucide="history" class="w-5 h-5"></i>
+              History
+            </h2>
+            <div class="flex gap-1">
+              <button id="uc-history-close" class="btn btn-xs btn-ghost lg:hidden">
+                <i data-lucide="x" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- History Controls -->
+          <div class="flex gap-2 mb-3">
+            <input
+              type="text"
+              id="uc-history-search"
+              placeholder="Search history..."
+              class="input input-bordered input-sm flex-1"
+            />
+            <button id="uc-history-export-json" class="btn btn-sm btn-ghost" title="Export JSON">
+              <i data-lucide="download" class="w-4 h-4"></i>
+            </button>
+            <button id="uc-history-export/csv" class="btn btn-sm btn-ghost" title="Export CSV">
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            </button>
+            <button
+              id="uc-history-clear"
+              class="btn btn-sm btn-ghost btn-error"
+              title="Clear history"
+            >
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- History List -->
+          <div id="uc-history-list" class="space-y-2 max-h-64 lg:max-h-96 overflow-y-auto">
+            <div class="text-center text-base-content/40 py-8">No conversions yet</div>
+          </div>
+        </div>
+      </div>
+    </div>

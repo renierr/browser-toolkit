@@ -1,0 +1,157 @@
+<!-- Item Template (hidden) -->
+<template id="result-item-template">
+  <div class="card bg-base-100 shadow-xl border border-base-200 overflow-hidden group">
+    <div
+      class="relative aspect-square bg-base-200 overflow-hidden flex items-center justify-center"
+    >
+      <!-- Previews -->
+      <img
+        class="checkerboard-bg original-preview absolute inset-0 w-full h-full object-contain transition-opacity duration-300 pointer-events-none"
+        alt="Original image"
+      />
+      <img
+        class="checkerboard-bg result-preview absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300 pointer-events-none"
+        alt="Processed image with background removed"
+      />
+      <canvas
+        class="outline-canvas absolute inset-0 w-full h-full object-contain opacity-0 transition-opacity duration-300 pointer-events-none"
+        aria-hidden="true"
+      ></canvas>
+
+      <!-- Status / Progress Overlay -->
+      <div
+        class="status-overlay absolute inset-0 bg-base-300/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center"
+      >
+        <span class="loading loading-spinner loading-lg text-primary mb-2"></span>
+        <span class="status-text font-medium text-sm">Pending...</span>
+        <progress
+          class="progress progress-primary w-48 mt-2 item-progress"
+          value="0"
+          max="100"
+        ></progress>
+      </div>
+
+      <!-- Item Controls (top row) -->
+      <div class="absolute top-2 left-2 right-2 flex justify-between items-start z-26">
+        <!-- Done badge -->
+        <div class="done-badge hidden flex items-center gap-1">
+          <span class="badge badge-success badge-sm gap-1 shadow-lg">
+            <i data-lucide="check" class="w-3 h-3"></i>
+            Done
+          </span>
+        </div>
+
+        <!-- Preview Toggle (Processed/Original) -->
+        <div class="preview-toggle hidden">
+          <div class="join shadow-lg bg-base-100/50">
+            <button class="btn btn-xs join-item btn-compare-processed">Processed</button>
+            <button class="btn btn-xs join-item btn-compare-original">Original</button>
+            <button class="btn btn-xs join-item btn-compare-outline" title="Outline">
+              <i data-lucide="scan-line" class="w-3 h-3"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Adjust Overlay (Direct on button toggle) -->
+      <div
+        class="absolute inset-x-0 bottom-0 p-3 bg-base-100/90 backdrop-blur-md border-t border-base-200 translate-y-full transition-transform duration-300 [&.force-show]:translate-y-0 z-25 hidden btn-settings-item"
+      >
+        <h4 class="text-[10px] font-bold uppercase opacity-50 mb-2 tracking-wider">Quick Adjust</h4>
+        <div class="grid grid-cols-2 gap-x-4 gap-y-2">
+          <div class="form-control">
+            <label class="label p-0">
+              <span class="label-text-alt font-medium">Threshold</span>
+              <span class="label-text-alt item-threshold-val text-[10px]">128</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value="128"
+              class="range range-xs range-primary item-threshold-slider"
+              aria-label="Threshold"
+            />
+          </div>
+          <div class="form-control">
+            <label class="label p-0">
+              <span class="label-text-alt font-medium">Smoothing</span>
+              <span class="label-text-alt item-smooth-val text-[10px]">4</span>
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="10"
+              value="4"
+              class="range range-xs range-primary item-smooth-slider"
+              aria-label="Smoothing"
+            />
+          </div>
+          <div class="form-control">
+            <label class="label p-0">
+              <span class="label-text-alt font-medium">Contrast</span>
+              <span class="label-text-alt item-contrast-val text-[10px]">1.0</span>
+            </label>
+            <input
+              type="range"
+              min="0.5"
+              max="2.0"
+              step="0.1"
+              value="1.0"
+              class="range range-xs range-primary item-contrast-slider"
+              aria-label="Contrast"
+            />
+          </div>
+          <div class="form-control">
+            <label
+              class="label cursor-pointer p-0 h-full flex flex-col justify-end items-start mt-1"
+            >
+              <span class="label-text-alt font-medium mb-1">Edge Refine</span>
+              <input type="checkbox" class="toggle toggle-xs toggle-primary item-refine-toggle" />
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4 flex flex-col gap-2 relative">
+      <div class="flex justify-between items-start gap-2">
+        <div class="min-w-0 flex-1">
+          <p class="filename truncate text-sm font-bold"></p>
+          <p class="filesize text-xs opacity-60"></p>
+        </div>
+
+        <button
+          class="btn btn-ghost btn-xs btn-circle btn-toggle-adjust hidden"
+          title="Quick Adjust Settings"
+        >
+          <i data-lucide="sliders-horizontal" class="w-4 h-4"></i>
+        </button>
+
+        <button class="btn btn-ghost btn-xs btn-circle btn-remove-item" title="Remove">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mt-2">
+        <button class="btn btn-outline btn-sm flex-1 btn-preview-full hidden" title="Full Preview">
+          <i data-lucide="maximize" class="w-4 h-4"></i>
+          Preview
+        </button>
+        <button
+          class="btn btn-primary btn-sm flex-1 btn-download-item hidden"
+          title="Download as selected format"
+        >
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Download
+        </button>
+        <button class="btn btn-outline btn-sm btn-copy-item hidden" title="Copy to clipboard">
+          <i data-lucide="clipboard-copy" class="w-4 h-4"></i>
+        </button>
+        <button class="btn btn-outline btn-sm btn-share-item hidden" title="Share">
+          <i data-lucide="share2" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</template>

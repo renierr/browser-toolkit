@@ -1,0 +1,151 @@
+    <!-- Options -->
+    <div class="collapse collapse-arrow bg-base-200/50 rounded-xl mb-4">
+      <input type="checkbox" id="options-toggle" aria-label="Option toggle" />
+      <div class="collapse-title font-medium flex items-center gap-2">
+        <i data-lucide="settings-2" class="w-4 h-4"></i>
+        Processing Options
+      </div>
+      <div class="collapse-content">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div class="form-control">
+            <label class="label" for="opt-model">
+              <span class="label-text font-medium">AI Model</span>
+            </label>
+            <select
+              id="opt-model"
+              class="select select-sm select-bordered w-full"
+              data-setting="model"
+            >
+              <option value="silueta" selected>Silueta (Default)</option>
+              <option value="u2netp">U2NetP</option>
+            </select>
+            <p class="text-xs text-base-content/50 mt-1">Choose model variant</p>
+          </div>
+          <div class="form-control">
+            <label class="label" for="opt-threshold">
+              <span class="label-text font-medium">Mask Threshold</span>
+              <span class="label-text-alt" id="opt-threshold-value">128</span>
+            </label>
+            <input
+              type="range"
+              id="opt-threshold"
+              min="0"
+              max="255"
+              value="128"
+              class="range range-sm range-primary"
+              data-setting="threshold"
+            />
+            <p class="text-xs text-base-content/50 mt-1">Higher = tighter mask around subject</p>
+          </div>
+          <div class="form-control">
+            <label class="label" for="opt-smooth">
+              <span class="label-text font-medium">Edge Smoothing</span>
+              <span class="label-text-alt" id="opt-smooth-value">4</span>
+            </label>
+            <input
+              type="range"
+              id="opt-smooth"
+              min="0"
+              max="10"
+              value="4"
+              step="1"
+              class="range range-sm range-primary"
+              data-setting="smoothing"
+            />
+            <p class="text-xs text-base-content/50 mt-1">Apply Gaussian blur to mask edges</p>
+          </div>
+          <div class="form-control">
+            <label class="label" for="opt-contrast">
+              <span class="label-text font-medium">Mask Contrast</span>
+              <span class="label-text-alt" id="opt-contrast-value">1.0</span>
+            </label>
+            <input
+              type="range"
+              id="opt-contrast"
+              min="0.5"
+              max="2.0"
+              step="0.1"
+              value="1.0"
+              class="range range-sm range-primary"
+              data-setting="contrast"
+            />
+            <p class="text-xs text-base-content/50 mt-1">
+              Sharpen transitions between subject and background
+            </p>
+          </div>
+          <div class="form-control">
+            <label class="label cursor-pointer" for="opt-refine">
+              <span class="flex flex-col">
+                <span class="label-text font-medium">Edge Refinement</span>
+                <span class="text-xs text-base-content/50"
+                  >Guided filter for hair/fine details</span
+                >
+              </span>
+              <input
+                type="checkbox"
+                id="opt-refine"
+                class="toggle toggle-primary"
+                data-setting="refine"
+              />
+            </label>
+          </div>
+          <div class="form-control">
+            <label class="label cursor-pointer" for="opt-force-wasm">
+              <span class="flex flex-col">
+                <span class="label-text font-medium">Force WASM</span>
+                <span class="text-xs text-base-content/50">Bypass WebGPU execution</span>
+              </span>
+              <input
+                type="checkbox"
+                id="opt-force-wasm"
+                class="toggle toggle-primary"
+                data-setting="forceWasm"
+              />
+            </label>
+          </div>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Download Format</span>
+            </label>
+            <div class="flex gap-2">
+              <label class="label cursor-pointer gap-2">
+                <input
+                  type="radio"
+                  name="download-format"
+                  value="png"
+                  class="radio radio-sm radio-primary"
+                  checked
+                  data-setting="format"
+                />
+                <span class="label-text">PNG</span>
+              </label>
+              <label class="label cursor-pointer gap-2">
+                <input
+                  type="radio"
+                  name="download-format"
+                  value="webp"
+                  class="radio radio-sm radio-primary"
+                  data-setting="format"
+                />
+                <span class="label-text">WebP</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-control">
+            <label class="label" for="opt-quality">
+              <span class="label-text font-medium">WebP Quality</span>
+              <span class="label-text-alt" id="opt-quality-value">92%</span>
+            </label>
+            <input
+              type="range"
+              id="opt-quality"
+              min="50"
+              max="100"
+              value="92"
+              class="range range-sm range-primary"
+              data-setting="quality"
+            />
+          </div>
+        </div>
+      </div>
+    </div>

@@ -1,0 +1,31 @@
+<div
+  id="calc-history-panel"
+  popover
+  class="text-base-content p-0 m-0 w-full sm:w-80 h-full sm:h-auto sm:max-h-[80vh] bg-base-100 shadow-2xl border border-base-300 sm:rounded-3xl sm:top-20 sm:right-4 left-auto overflow-hidden"
+>
+  <div class="flex flex-col h-full max-h-[80vh]">
+    <div class="p-4 border-b border-base-300 flex justify-between items-center bg-base-200">
+      <h3 class="font-bold text-lg">History</h3>
+      <button
+        popovertarget="calc-history-panel"
+        popovertargetaction="hide"
+        class="btn btn-ghost btn-sm btn-circle"
+      >
+        ✕
+      </button>
+    </div>
+    <div id="calc-history-list" class="grow overflow-y-auto p-4 flex flex-col gap-3 min-h-50">
+      <div class="text-center text-base-content/40 mt-10">No calculations yet</div>
+    </div>
+    <div class="p-4 border-t border-base-300 flex gap-2 bg-base-200/50 mt-auto">
+      <button id="calc-clear-history" class="btn btn-outline btn-sm grow">Clear</button>
+      <button
+        popovertarget="calc-history-panel"
+        popovertargetaction="hide"
+        class="btn btn-neutral btn-sm"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+</div>
