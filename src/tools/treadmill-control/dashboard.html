@@ -1,14 +1,14 @@
-  <div id="dashboard" class="grid grid-cols-1 gap-6 opacity-50 pointer-events-none">
+  <div id="dashboard" class="grid grid-cols-1 gap-6 opacity-50 pointer-events-none landscape:grid-cols-3 landscape:gap-4">
     <!-- Main Metric: Speed -->
-    <div class="card bg-base-100 shadow-xl border border-base-300 md:col-span-2">
-      <div class="card-body items-center text-center">
+    <div class="card bg-base-100 shadow-xl border border-base-300 md:col-span-2 landscape:col-span-1">
+      <div class="card-body items-center text-center landscape:p-4">
         <h3 class="text-xl font-semibold opacity-70 uppercase tracking-widest">Speed</h3>
-        <div class="flex items-baseline gap-2">
-          <span id="speed-display" class="text-8xl font-black text-primary tabular-nums">0.0</span>
-          <span class="text-2xl font-bold opacity-50">km/h</span>
+        <div class="flex items-baseline gap-2 landscape:gap-1">
+          <span id="speed-display" class="text-8xl font-black text-primary tabular-nums landscape:text-5xl">0.0</span>
+          <span class="text-2xl font-bold opacity-50 landscape:text-lg">km/h</span>
         </div>
 
-        <div class="divider">Controls</div>
+        <div id="controls-divider" class="divider">Controls</div>
 
         <div class="flex flex-wrap justify-center gap-4">
           <div class="flex flex-wrap gap-2">
@@ -40,7 +40,7 @@
     </div>
 
     <!-- Secondary Metrics -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 landscape:col-span-2 landscape:grid-cols-2">
       <!-- Distance -->
       <div class="card bg-base-100 shadow-xl">
         <div class="card-body p-4 items-center gap-1">

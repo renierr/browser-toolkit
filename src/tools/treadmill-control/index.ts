@@ -25,6 +25,7 @@ export function init() {
   const distanceDisplay = document.getElementById('distance-display')!;
   const timeDisplay = document.getElementById('time-display')!;
   const caloriesDisplay = document.getElementById('calories-display')!;
+  const controlsDivider = document.getElementById('controls-divider')!;
 
   // Optional Metrics
   const optionalMetrics = {
@@ -198,9 +199,45 @@ export function init() {
     }
   };
 
+  const startRecording = () => {
+    if (isRecording) return;
+    isRecording = true;
+    currentSession = {
+      uid: generateShortId(),
+      startTime: Date.now(),
+      dataPoints: [],
+    };
+    releaseWakeLock = acquireWakeLock();
+    showMessage('Recording session...', { type: 'info', timeoutMs: 3000 });
+  };
+
+  const stopRecording = async () => {
+    if (!isRecording || !currentSession) return;
+    isRecording = false;
+    currentSession.endTime = Date.now();
+    if (currentSession.dataPoints.length > 2) {
+      await saveSession(currentSession);
+      updateStatus('Session saved', 'success');
+      loadSessions();
+    } else {
+      updateStatus('Session discarded (no data)', 'info');
+    }
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+    }
+    currentSession = null;
+  };
+
   // Collector wrapper that records data when a session is active
   const collectorOnUpdate = (data: TreadmillData) => {
     onUpdate(data);
+
+    // Auto-start recording if moving
+    if (!isRecording && data.speed !== undefined && data.speed > 0) {
+      startRecording();
+    }
+
     if (isRecording && currentSession) {
       currentSession.dataPoints.push({ timestamp: Date.now(), data });
     }
@@ -271,6 +308,7 @@ export function init() {
   };
 
   const handleDisconnect = async () => {
+    await stopRecording();
     device = null;
     resetControlState();
     dashboard.classList.add('opacity-50', 'pointer-events-none');
@@ -298,6 +336,7 @@ export function init() {
       // Ensure any buttons hidden due to lack of support are shown again
       btn.classList.remove('hidden');
     });
+    controlsDivider.classList.remove('hidden');
   };
 
   connectBtn.addEventListener('click', async () => {
@@ -332,6 +371,7 @@ export function init() {
 
       // Check Support and Disable Controls
       if (!support.controlSupported) {
+        controlsDivider.classList.add('hidden');
         controlButtons.forEach((btn) => {
           // hide unsupported controls to avoid confusion
           btn.disabled = true;
@@ -343,6 +383,7 @@ export function init() {
           timeoutMs: 7000,
         });
       } else {
+        controlsDivider.classList.remove('hidden');
         if (!support.speedControlSupported) {
           [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach((btn) => {
             // hide speed related controls if treadmill doesn't support them
@@ -428,16 +469,6 @@ export function init() {
       if (simulatorRef) {
         simulatorRef.start();
         showMessage('Simulated start command sent');
-        // also start recording
-        if (!isRecording) {
-          isRecording = true;
-          currentSession = {
-            uid: generateShortId(),
-            startTime: Date.now(),
-            dataPoints: [],
-          };
-          releaseWakeLock = acquireWakeLock();
-        }
         return;
       }
       if (deviceType === 'PITPAT') {
@@ -451,17 +482,6 @@ export function init() {
         await sendControlCommand(device, 0x07);
       }
       showMessage('Start command sent');
-      // Start session recording
-      if (!isRecording) {
-        isRecording = true;
-        currentSession = {
-          uid: generateShortId(),
-          startTime: Date.now(),
-          dataPoints: [],
-        };
-        releaseWakeLock = acquireWakeLock();
-        showMessage('Recording session...', { type: 'info', timeoutMs: 3000 });
-      }
     } catch (err: any) {
       showMessage(err.message || 'Failed to start', { type: 'alert' });
     }
@@ -473,23 +493,7 @@ export function init() {
       if (simulatorRef) {
         simulatorRef.stop();
         showMessage('Simulated stop command sent');
-        // Stop session recording and save
-        if (isRecording && currentSession) {
-          isRecording = false;
-          currentSession.endTime = Date.now();
-          if (currentSession.dataPoints.length > 0) {
-            await saveSession(currentSession);
-            updateStatus('Session saved', 'success');
-            loadSessions();
-          } else {
-            updateStatus('Session discarded (no data)', 'info');
-          }
-          if (releaseWakeLock) {
-            releaseWakeLock();
-            releaseWakeLock = null;
-          }
-          currentSession = null;
-        }
+        await stopRecording();
         return;
       }
 
@@ -501,24 +505,7 @@ export function init() {
         await sendControlCommand(device, 0x08);
       }
       showMessage('Stop command sent');
-
-      // Stop session recording and save
-      if (isRecording && currentSession) {
-        isRecording = false;
-        currentSession.endTime = Date.now();
-        if (currentSession.dataPoints.length > 0) {
-          await saveSession(currentSession);
-          updateStatus('Session saved', 'success');
-          loadSessions();
-        } else {
-          updateStatus('Session discarded (no data)', 'info');
-        }
-        if (releaseWakeLock) {
-          releaseWakeLock();
-          releaseWakeLock = null;
-        }
-        currentSession = null;
-      }
+      await stopRecording();
     } catch (err: any) {
       showMessage(err.message || 'Failed to stop', { type: 'alert' });
     }
@@ -602,6 +589,7 @@ export function init() {
 
       // Check Support and Disable Controls
       if (!support.controlSupported) {
+        controlsDivider.classList.add('hidden');
         controlButtons.forEach((btn) => {
           // hide unsupported controls to avoid confusion
           btn.disabled = true;
@@ -613,6 +601,7 @@ export function init() {
           timeoutMs: 7000,
         });
       } else {
+        controlsDivider.classList.remove('hidden');
         if (!support.speedControlSupported) {
           [speedUpBtn, speedDownBtn, startBtn, stopBtn].forEach((btn) => {
             // hide speed related controls if treadmill doesn't support them
