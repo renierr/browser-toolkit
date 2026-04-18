@@ -564,6 +564,9 @@ Example Template:
 {{ style "style.css" }}
 ```
 
+> [!NOTE]
+> This project uses `prettier-plugin-go-template` to ensure that `{{ ... }}` placeholders are correctly handled by the formatter.
+
 {% endraw %}
 
 ---

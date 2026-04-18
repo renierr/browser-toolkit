@@ -10,5 +10,14 @@
   "endOfLine": "lf",
   "htmlWhitespaceSensitivity": "css",
   "quoteProps": "as-needed",
-  "embeddedLanguageFormatting": "auto"
+  "embeddedLanguageFormatting": "auto",
+  "plugins": ["prettier-plugin-go-template"],
+  "overrides": [
+    {
+      "files": "*.html",
+      "options": {
+        "parser": "go-template"
+      }
+    }
+  ]
 }

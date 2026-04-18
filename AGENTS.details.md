@@ -139,6 +139,9 @@ Example `template.html`:
 {{ style "style.css" }}
 ```
 
+> [!NOTE]
+> This project uses `prettier-plugin-go-template` to ensure that `{{ ... }}` placeholders are respected by the formatter and not collapsed or split.
+
 ## State and Listener Safety
 
 Avoid:
