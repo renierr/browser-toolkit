@@ -118,7 +118,7 @@ export default function init(): void | (() => void) {
 - `src/main.ts` is an optional one-time startup hook (project-level setup).
 - Tool-specific dependencies are supported via `pnpm-workspace.yaml` and per-tool `package.json`.
 - Share-target tools can receive `SharedFilesPayload` in `init(payload?)`.
-- Template placeholders use `{{ key.path }}` and are resolved from site context.
+- Template placeholders use `{{ key.path }}` and are resolved from site context. Special syntax exists to include separated files: `{{ include "file.html" }}`, also for CSS.
 - Site config overrides use `src/config/site.config.ts` (copied from template).
 - Advanced WASM usage patterns live in `docs/index.md`.
 

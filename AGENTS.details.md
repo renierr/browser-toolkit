@@ -118,6 +118,29 @@ Notes:
 - `draft: true` hides tool from overview.
 - `shareTarget.accept` supports wildcards.
 
+## Template Includes
+
+For larger tools, you can split the `template.html` into multiple files (partials).
+All `.html` and `.css` files in the tool folder are automatically discovered and can be included.
+
+- Use name of the file (e.g. `dialog.html`).
+- Recursive includes are supported (one partial including another).
+- CSS files should be included within a `<style>` tag to ensure they are cleaned up when the tool is unmounted.
+
+Example `template.html`:
+
+```html
+<div id="tool-root">
+  {{ include "header.html" }}
+  <main>...</main>
+  {{ include "footer.html" }}
+</div>
+
+<style>
+  {{ include "style.css" }}
+</style>
+```
+
 ## State and Listener Safety
 
 Avoid:

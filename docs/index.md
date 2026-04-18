@@ -546,23 +546,24 @@ Common utility functions are available in `src/js/` for tasks like file handling
 Brief and practical:
 {% raw %}
 
-- Syntax: Use `{{ key.path }}` inside your HTML templates, e.g. `{{ config.title }}`.
-- When they are replaced: Placeholders are replaced by the central function `replacePlaceholders()` (see `src/js/utils.ts`). In this codebase the header and footer templates are processed before being inserted into the DOM (`src/js/render.ts`).
-- Where the values come from: Values are read from the exported `siteContext` in `src/config/index.ts`. `siteContext` merges the defaults from `site.config.template.ts` with an optional `src/config/site.config.ts` file.
-- How it works: `replacePlaceholders()` uses the regex `/\{\{(.+?)\}\}/g`, trims the path and resolves the value using dot-notation with `getValueByDotNotation()`.
-- Missing values: If a placeholder cannot be resolved, a console warning is emitted and the placeholder is replaced with a visible marker such as `[{{...} NOT FOUND]` to make the issue obvious. 
-{% endraw %}
+- syntax: use `{{ key.path }}` inside your HTML templates, e.g. `{{ config.title }}`. 
+- specialized syntax: use `{{ include "filename.html" }}` to include other `.html` or `.css` files from the tool's directory.
+- recursive includes: partials can include other partials (up to a depth of 8).
+- CSS support: include `.css` files inside a `<style>` tag to ensure they are cleaned up on unmount.
+- site context: global values are read from the exported `siteContext` in `src/config/index.ts`.
+- replacement process: placeholders are replaced by `replacePlaceholders()` in `src/js/utils.ts`. 
 
-Example (Template → Result):
-
-{% raw %}
+Example Template:
 
 ```html
-<!-- Template -->
-<h1>{{ config.title }}</h1>
+<div id="app">
+  <h1>{{ config.title }}</h1>
+  {{ include "dialog.html" }}
+</div>
 
-<!-- After replacement -->
-<h1>Vanilla Toolkit</h1>
+<style>
+  {{ include "style.css" }}
+</style>
 ```
 
 {% endraw %}
