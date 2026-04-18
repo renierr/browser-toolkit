@@ -210,13 +210,43 @@ export function buildMeta(
   lastTool: ToolMode,
   background?: string
 ): DrawingMeta {
-  const colors = Array.from(new Set(elements.map((el) => el.color))).slice(0, 12);
+  const stats = getRecursiveStats(elements);
   return {
-    elementCount: elements.length,
-    colors,
+    elementCount: stats.totalCount,
+    colors: Array.from(stats.colorSet).slice(0, 12),
     lastTool,
     background,
   };
+}
+
+/**
+ * Recursively traverses elements to count leaf nodes, groups, and collect colors.
+ */
+export function getRecursiveStats(elements: SketchElement[]): {
+  totalCount: number;
+  inGroupsCount: number;
+  groupCount: number;
+  colorSet: Set<string>;
+} {
+  let totalCount = 0;
+  let inGroupsCount = 0;
+  let groupCount = 0;
+  const colorSet = new Set<string>();
+
+  function process(el: SketchElement, isGrouped: boolean) {
+    if (el.type === 'group') {
+      groupCount++;
+      el.elements.forEach((sub) => process(sub, true));
+    } else {
+      totalCount++;
+      if (isGrouped) inGroupsCount++;
+      if (el.color) colorSet.add(el.color);
+    }
+  }
+
+  elements.forEach((el) => process(el, false));
+
+  return { totalCount, inGroupsCount, groupCount, colorSet };
 }
 
 /** Lazily created context for text measurement (avoids DOM thrash) */

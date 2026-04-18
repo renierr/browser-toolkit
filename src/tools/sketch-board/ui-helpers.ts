@@ -1,6 +1,6 @@
 import type { SketchDom } from './dom.ts';
 import type { SketchElement } from './types.ts';
-import { getCropBounds } from './drawing.ts';
+import { getCropBounds, getRecursiveStats } from './drawing.ts';
 
 /**
  * Confirm if user wants to discard unsaved changes.
@@ -19,7 +19,7 @@ export function showInfoModal(
   currentBgClass: string
 ): void {
   const bounds = getCropBounds(elements);
-  const colors = Array.from(new Set(elements.map((el) => el.color)));
+  const stats = getRecursiveStats(elements);
 
   if (bounds) {
     const dpr = window.devicePixelRatio || 1;
@@ -39,7 +39,14 @@ export function showInfoModal(
     ? `X: ${Math.round(bounds.x)}, Y: ${Math.round(bounds.y)}`
     : 'X: 0, Y: 0';
 
-  dom.infoElements.textContent = String(elements.length);
+  // Element breakdown
+  const topLevelCount = elements.length;
+  if (stats.groupCount > 0) {
+    const gLabel = stats.groupCount === 1 ? 'group' : 'groups';
+    dom.infoElements.textContent = `${topLevelCount} (${stats.groupCount} ${gLabel}, ${stats.totalCount} elements)`;
+  } else {
+    dom.infoElements.textContent = String(topLevelCount);
+  }
 
   // Clean-up background name for display
   const bgDisplay = currentBgClass
@@ -51,7 +58,7 @@ export function showInfoModal(
 
   // Render color swatches
   dom.infoColors.innerHTML = '';
-  colors.forEach((color) => {
+  Array.from(stats.colorSet).forEach((color) => {
     const swatch = document.createElement('div');
     swatch.className = 'w-6 h-6 rounded border border-base-300 shadow-sm';
     swatch.style.backgroundColor = color;
@@ -61,3 +68,4 @@ export function showInfoModal(
 
   dom.infoModal.showModal();
 }
+
