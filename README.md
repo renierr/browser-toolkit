@@ -31,6 +31,8 @@ A growing, searchable collection of focused tools that run entirely in your brow
 - QR code generator/reader
 - … (see live demo for newest)
 
+or [TOOLS.md](TOOLS.md) file
+
 ## ✨ Features
 
 - **Instant Search:** Live filtering to find the exact tool you need.
