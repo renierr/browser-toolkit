@@ -85,6 +85,18 @@ export const replacePlaceholders = (
         return `[INCLUDE NOT FOUND: ${fileName}]`;
       }
 
+      // Handle {{ style "filename" }}
+      if (trimmedPath.startsWith('style ')) {
+        const fileName = trimmedPath.substring(6).replace(/["']/g, '').trim();
+        if (partials && typeof partials[fileName] === 'string') {
+          // Wrap included content in style tags and recursively process
+          const content = process(partials[fileName], depth + 1);
+          return `<style>\n${content}\n</style>`;
+        }
+        console.warn(`[utils] Style include not found: ${fileName}`);
+        return `[STYLE NOT FOUND: ${fileName}]`;
+      }
+
       // Handle normal context placeholders
       const value = getValueByDotNotation(context, trimmedPath);
       if (value !== undefined) {

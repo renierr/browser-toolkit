@@ -546,12 +546,12 @@ Common utility functions are available in `src/js/` for tasks like file handling
 Brief and practical:
 {% raw %}
 
-- syntax: use `{{ key.path }}` inside your HTML templates, e.g. `{{ config.title }}`. 
-- specialized syntax: use `{{ include "filename.html" }}` to include other `.html` or `.css` files from the tool's directory.
+- syntax: use `{{ key.path }}` inside your HTML templates, e.g. `{{ config.title }}`.
+- specialized syntax: use `{{ include "filename.html" }}` to include other `.html` or `.css` files.
+- style syntax: use `{{ style "style.css" }}` to include CSS files; this automatically wraps the content in a `<style>` tag.
 - recursive includes: partials can include other partials (up to a depth of 8).
-- CSS support: include `.css` files inside a `<style>` tag to ensure they are cleaned up on unmount.
 - site context: global values are read from the exported `siteContext` in `src/config/index.ts`.
-- replacement process: placeholders are replaced by `replacePlaceholders()` in `src/js/utils.ts`. 
+- replacement process: placeholders are replaced by `replacePlaceholders()` in `src/js/utils.ts`.
 
 Example Template:
 
@@ -561,9 +561,7 @@ Example Template:
   {{ include "dialog.html" }}
 </div>
 
-<style>
-  {{ include "style.css" }}
-</style>
+{{ style "style.css" }}
 ```
 
 {% endraw %}

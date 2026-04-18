@@ -125,7 +125,7 @@ All `.html` and `.css` files in the tool folder are automatically discovered and
 
 - Use name of the file (e.g. `dialog.html`).
 - Recursive includes are supported (one partial including another).
-- CSS files should be included within a `<style>` tag to ensure they are cleaned up when the tool is unmounted.
+- CSS files should be included using `{{ style "filename.css" }}` which automatically wraps the content in a `<style>` tag and ensures cleanup when the tool is unmounted.
 
 Example `template.html`:
 
@@ -136,9 +136,7 @@ Example `template.html`:
   {{ include "footer.html" }}
 </div>
 
-<style>
-  {{ include "style.css" }}
-</style>
+{{ style "style.css" }}
 ```
 
 ## State and Listener Safety
