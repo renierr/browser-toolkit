@@ -147,8 +147,9 @@
 
   <!-- Buttons Area -->
   <div class="flex flex-col landscape:flex-row grow overflow-hidden">
-    {{ include "keyboard.html" }}
+    <include src="keyboard.html" />
   </div>
 </div>
 
-{{ include "history.html" }} {{ style "style.css" }}
+<include src="history.html" />
+<include src="style.css" type="style" />

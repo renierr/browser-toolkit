@@ -125,22 +125,22 @@ All `.html` and `.css` files in the tool folder are automatically discovered and
 
 - Use name of the file (e.g. `dialog.html`).
 - Recursive includes are supported (one partial including another).
-- CSS files should be included using `{{ style "filename.css" }}` which automatically wraps the content in a `<style>` tag and ensures cleanup when the tool is unmounted.
+- CSS files should be included using `<include src="filename.css" type="style" />` which automatically wraps the content in a `<style>` tag and ensures cleanup when the tool is unmounted.
 
 Example `template.html`:
 
 ```html
 <div id="tool-root">
-  {{ include "header.html" }}
+  <include src="header.html" />
   <main>...</main>
-  {{ include "footer.html" }}
+  <include src="footer.html" />
 </div>
 
-{{ style "style.css" }}
+<include src="style.css" type="style" />
 ```
 
 > [!NOTE]
-> This project uses `prettier-plugin-go-template` to ensure that `{{ ... }}` placeholders are respected by the formatter and not collapsed or split.
+> The `<include />` syntax is preferred as it allows Prettier to format the template correctly by treating includes as standard HTML elements.
 
 ## State and Listener Safety
 

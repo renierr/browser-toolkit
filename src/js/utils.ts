@@ -71,25 +71,43 @@ export const replacePlaceholders = (
       return text;
     }
 
-    return text.replace(placeholderRegex, (match, keyPath) => {
+    // 1. Handle <include src="..." type="style" />
+    const tagRegex = /<include\s+([^>]+?)\s*\/?>/g;
+    let result = text.replace(tagRegex, (match, attrString) => {
+      const srcMatch = attrString.match(/src=["']([^"']+)["']/);
+      const typeMatch = attrString.match(/type=["']([^"']+)["']/);
+      const fileName = srcMatch ? srcMatch[1] : '';
+      const isStyle = typeMatch ? typeMatch[1] === 'style' : false;
+
+      if (!fileName) return match;
+
+      if (partials && typeof partials[fileName] === 'string') {
+        const content = process(partials[fileName], depth + 1);
+        return isStyle ? `<style>\n${content}\n</style>` : content;
+      }
+
+      console.warn(`[utils] Tag include not found: ${fileName}`);
+      return `[INCLUDE NOT FOUND: ${fileName}]`;
+    });
+
+    // 2. Handle {{ ... }} placeholders (including legacy include/style)
+    return result.replace(placeholderRegex, (match, keyPath) => {
       const trimmedPath = keyPath.trim();
 
-      // Handle {{ include "filename" }}
+      // Legacy Handle {{ include "filename" }}
       if (trimmedPath.startsWith('include ')) {
         const fileName = trimmedPath.substring(8).replace(/["']/g, '').trim();
         if (partials && typeof partials[fileName] === 'string') {
-          // Recursively process the included content
           return process(partials[fileName], depth + 1);
         }
         console.warn(`[utils] Include not found: ${fileName}`);
         return `[INCLUDE NOT FOUND: ${fileName}]`;
       }
 
-      // Handle {{ style "filename" }}
+      // Legacy Handle {{ style "filename" }}
       if (trimmedPath.startsWith('style ')) {
         const fileName = trimmedPath.substring(6).replace(/["']/g, '').trim();
         if (partials && typeof partials[fileName] === 'string') {
-          // Wrap included content in style tags and recursively process
           const content = process(partials[fileName], depth + 1);
           return `<style>\n${content}\n</style>`;
         }

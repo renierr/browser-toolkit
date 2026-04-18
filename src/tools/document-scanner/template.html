@@ -1,8 +1,7 @@
 <!--suppress CssUnusedSymbol -->
 <!--suppress CssSameProperties -->
 
-{{ include "camera.html" }}
-
+<include src="camera.html" />
 
 <div class="card bg-base-100 shadow-xl">
   <div class="card-body p-2 md:p-4">
@@ -14,10 +13,10 @@
       Capture or upload a document to crop, fix perspective, and enhance.
     </p>
 
-    {{ include "controls.html" }}
-    {{ include "editor.html" }}
-    {{ include "gallery.html" }}
+    <include src="controls.html" />
+    <include src="editor.html" />
+    <include src="gallery.html" />
   </div>
 </div>
 
-{{ style "style.css" }}
+<include src="style.css" type="style" />

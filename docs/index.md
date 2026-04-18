@@ -547,8 +547,8 @@ Brief and practical:
 {% raw %}
 
 - syntax: use `{{ key.path }}` inside your HTML templates, e.g. `{{ config.title }}`.
-- specialized syntax: use `{{ include "filename.html" }}` to include other `.html` or `.css` files.
-- style syntax: use `{{ style "style.css" }}` to include CSS files; this automatically wraps the content in a `<style>` tag.
+- specialized syntax: use `<include src="filename.html" />` to include other HTML partials.
+- style syntax: use `<include src="style.css" type="style" />` to include CSS files; this automatically wraps the content in a `<style>` tag.
 - recursive includes: partials can include other partials (up to a depth of 8).
 - site context: global values are read from the exported `siteContext` in `src/config/index.ts`.
 - replacement process: placeholders are replaced by `replacePlaceholders()` in `src/js/utils.ts`.
@@ -558,14 +558,14 @@ Example Template:
 ```html
 <div id="app">
   <h1>{{ config.title }}</h1>
-  {{ include "dialog.html" }}
+  <include src="dialog.html" />
 </div>
 
-{{ style "style.css" }}
+<include src="style.css" type="style" />
 ```
 
 > [!NOTE]
-> This project uses `prettier-plugin-go-template` to ensure that `{{ ... }}` placeholders are correctly handled by the formatter.
+> The `<include />` syntax is native-friendly for formatters like Prettier. The old `{{ include "..." }}` syntax is supported for backwards compatibility but deprecated.
 
 {% endraw %}
 

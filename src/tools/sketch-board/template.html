@@ -11,9 +11,10 @@
     100%
   </div>
 
-  {{ include "top-bar.html" }} {{ include "bottom-bar.html" }}
-  {{ include "gallery.html" }}
-  {{ include "info-modal.html" }}
+  <include src="top-bar.html" />
+  <include src="bottom-bar.html" />
+  <include src="gallery.html" />
+  <include src="info-modal.html" />
 </div>
 
-{{ style "style.css" }}
+<include src="style.css" type="style" />
