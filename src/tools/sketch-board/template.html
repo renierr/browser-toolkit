@@ -265,75 +265,97 @@
           <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
 
           <li>
-            <details open>
-              <summary class="text-xs font-semibold py-1">Annotations</summary>
-              <ul class="before:hidden ml-0 pl-0">
-                <li>
-                  <button id="mode-arrow" class="btn btn-sm btn-ghost justify-between">
-                    Arrow
-                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
-                  </button>
-                </li>
-                <li>
-                  <button id="mode-double-arrow" class="btn btn-sm btn-ghost justify-between">
-                    Double Arrow
-                    <i data-lucide="move-horizontal" class="w-4 h-4"></i>
-                  </button>
-                </li>
-                <li>
-                  <button id="mode-speech-bubble" class="btn btn-sm btn-ghost justify-between">
-                    Speech Bubble
-                    <i data-lucide="message-square" class="w-4 h-4"></i>
-                  </button>
-                </li>
-                <li>
-                  <button id="mode-checkmark" class="btn btn-sm btn-ghost justify-between">
-                    Checkmark
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                  </button>
-                </li>
-              </ul>
-            </details>
+            <button
+              id="annotations-menu-btn"
+              popovertarget="annotations-menu"
+              style="anchor-name: --annotations-anchor"
+              class="btn btn-sm btn-ghost justify-between w-full"
+            >
+              Annotations
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+            <ul
+              id="annotations-menu"
+              popover="auto"
+              style="position-anchor: --annotations-anchor; position-area: right span-bottom"
+              class="dropdown menu z-[60] ml-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+            >
+              <li>
+                <button id="mode-arrow" class="btn btn-sm btn-ghost justify-between">
+                  Arrow
+                  <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                </button>
+              </li>
+              <li>
+                <button id="mode-double-arrow" class="btn btn-sm btn-ghost justify-between">
+                  Double Arrow
+                  <i data-lucide="move-horizontal" class="w-4 h-4"></i>
+                </button>
+              </li>
+              <li>
+                <button id="mode-speech-bubble" class="btn btn-sm btn-ghost justify-between">
+                  Speech Bubble
+                  <i data-lucide="message-square" class="w-4 h-4"></i>
+                </button>
+              </li>
+              <li>
+                <button id="mode-checkmark" class="btn btn-sm btn-ghost justify-between">
+                  Checkmark
+                  <i data-lucide="check" class="w-4 h-4"></i>
+                </button>
+              </li>
+            </ul>
           </li>
 
           <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
 
           <li>
-            <details>
-              <summary class="text-xs font-semibold py-1">Geometric Shapes</summary>
-              <ul class="before:hidden ml-0 pl-0">
-                <li>
-                  <button id="mode-rect" class="btn btn-sm btn-ghost justify-between">
-                    Rectangle
-                    <i data-lucide="square" class="w-4 h-4"></i>
-                  </button>
-                </li>
-                <li>
-                  <button id="mode-ellipse" class="btn btn-sm btn-ghost justify-between">
-                    Ellipse
-                    <i data-lucide="circle" class="w-4 h-4"></i>
-                  </button>
-                </li>
-                <li>
-                  <button id="mode-triangle" class="btn btn-sm btn-ghost justify-between">
-                    Triangle
-                    <i data-lucide="triangle" class="w-4 h-4"></i>
-                  </button>
-                </li>
-                <li>
-                  <button id="mode-diamond" class="btn btn-sm btn-ghost justify-between">
-                    Diamond
-                    <i data-lucide="diamond" class="w-4 h-4"></i>
-                  </button>
-                </li>
-                <li>
-                  <button id="mode-hexagon" class="btn btn-sm btn-ghost justify-between">
-                    Hexagon
-                    <i data-lucide="hexagon" class="w-4 h-4"></i>
-                  </button>
-                </li>
-              </ul>
-            </details>
+            <button
+              id="shapes-menu-btn"
+              popovertarget="shapes-menu"
+              style="anchor-name: --shapes-anchor"
+              class="btn btn-sm btn-ghost justify-between w-full"
+            >
+              Geometric Shapes
+              <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+            <ul
+              id="shapes-menu"
+              popover="auto"
+              style="position-anchor: --shapes-anchor; position-area: right span-bottom"
+              class="dropdown menu z-[60] ml-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+            >
+              <li>
+                <button id="mode-rect" class="btn btn-sm btn-ghost justify-between">
+                  Rectangle
+                  <i data-lucide="square" class="w-4 h-4"></i>
+                </button>
+              </li>
+              <li>
+                <button id="mode-ellipse" class="btn btn-sm btn-ghost justify-between">
+                  Ellipse
+                  <i data-lucide="circle" class="w-4 h-4"></i>
+                </button>
+              </li>
+              <li>
+                <button id="mode-triangle" class="btn btn-sm btn-ghost justify-between">
+                  Triangle
+                  <i data-lucide="triangle" class="w-4 h-4"></i>
+                </button>
+              </li>
+              <li>
+                <button id="mode-diamond" class="btn btn-sm btn-ghost justify-between">
+                  Diamond
+                  <i data-lucide="diamond" class="w-4 h-4"></i>
+                </button>
+              </li>
+              <li>
+                <button id="mode-hexagon" class="btn btn-sm btn-ghost justify-between">
+                  Hexagon
+                  <i data-lucide="hexagon" class="w-4 h-4"></i>
+                </button>
+              </li>
+            </ul>
           </li>
         </ul>
 

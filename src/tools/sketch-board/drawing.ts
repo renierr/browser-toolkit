@@ -375,9 +375,9 @@ function drawCheckmark(ctx: CanvasRenderingContext2D, start: Point, end: Point):
   const h = rect.h;
 
   ctx.beginPath();
-  ctx.moveTo(x, y + h * 0.5);
-  ctx.lineTo(x + w * 0.4, y + h * 0.9);
-  ctx.lineTo(x + w, y + h * 0.1);
+  ctx.moveTo(x + w * 0.1, y + h * 0.55);
+  ctx.lineTo(x + w * 0.35, y + h * 0.95);
+  ctx.lineTo(x + w * 0.9, y + h * 0.1);
   ctx.stroke();
 }
 

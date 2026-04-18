@@ -53,9 +53,9 @@ export class CheckmarkTool implements DrawTool {
     const h = rect.h;
 
     canvasCtx.beginPath();
-    canvasCtx.moveTo(x, y + h * 0.5);
-    canvasCtx.lineTo(x + w * 0.4, y + h * 0.9);
-    canvasCtx.lineTo(x + w, y + h * 0.1);
+    canvasCtx.moveTo(x + w * 0.1, y + h * 0.55);
+    canvasCtx.lineTo(x + w * 0.35, y + h * 0.95);
+    canvasCtx.lineTo(x + w * 0.9, y + h * 0.1);
     canvasCtx.stroke();
     
     canvasCtx.globalAlpha = 1;

@@ -303,8 +303,11 @@ export class ToolbarController {
 
 function closeDrawToolsDropdown(): void {
   (document.activeElement as HTMLElement)?.blur();
-  const popover = document.getElementById('draw-tools');
-  if (popover && 'hidePopover' in popover && typeof popover.hidePopover === 'function') {
-    popover.hidePopover();
+  const ids = ['draw-tools', 'annotations-menu', 'shapes-menu'];
+  for (const id of ids) {
+    const popover = document.getElementById(id);
+    if (popover && 'hidePopover' in popover && typeof popover.hidePopover === 'function') {
+      popover.hidePopover();
+    }
   }
 }
