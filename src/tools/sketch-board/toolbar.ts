@@ -12,7 +12,12 @@ const TOOL_ICONS: Record<ToolMode, string> = {
   rect: 'square',
   ellipse: 'circle',
   triangle: 'triangle',
+  diamond: 'diamond',
+  hexagon: 'hexagon',
   arrow: 'arrow-up-right',
+  'double-arrow': 'move-horizontal',
+  'speech-bubble': 'message-square',
+  checkmark: 'check',
   text: 'type',
   image: 'image',
 };
@@ -25,7 +30,12 @@ const TOOL_LABELS: Record<ToolMode, string> = {
   rect: 'Rectangle',
   ellipse: 'Ellipse',
   triangle: 'Triangle',
+  diamond: 'Diamond',
+  hexagon: 'Hexagon',
   arrow: 'Arrow',
+  'double-arrow': 'Double Arrow',
+  'speech-bubble': 'Speech Bubble',
+  checkmark: 'Checkmark',
   text: 'Text',
   image: 'Image',
 };
@@ -150,6 +160,7 @@ export class ToolbarController {
 
     // Mode button highlight
     for (const [key, btn] of Object.entries(dom.modeButtons)) {
+      if (!btn) continue;
       if (key === next) {
         btn.classList.add('btn-primary');
       } else {
@@ -199,15 +210,11 @@ export class ToolbarController {
 
     this.on(dom.btnModePan, 'click', () => setMode('pan'));
     this.on(dom.btnModeDraw, 'click', () => setMode('freehand'));
-    this.on(dom.modeButtons.pan, 'click', () => setMode('pan'));
-    this.on(dom.modeButtons.select, 'click', () => setMode('select'));
-    this.on(dom.modeButtons.freehand, 'click', () => setMode('freehand'));
-    this.on(dom.modeButtons.line, 'click', () => setMode('line'));
-    this.on(dom.modeButtons.rect, 'click', () => setMode('rect'));
-    this.on(dom.modeButtons.ellipse, 'click', () => setMode('ellipse'));
-    this.on(dom.modeButtons.triangle, 'click', () => setMode('triangle'));
-    this.on(dom.modeButtons.arrow, 'click', () => setMode('arrow'));
-    this.on(dom.modeButtons.text, 'click', () => setMode('text'));
+
+    for (const [mode, btn] of Object.entries(dom.modeButtons)) {
+      if (!btn) continue;
+      this.on(btn, 'click', () => setMode(mode as ToolMode));
+    }
 
     this.on(dom.filledToggle, 'click', () => {
       dom.filledToggle.classList.toggle('btn-primary');

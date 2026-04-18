@@ -700,7 +700,7 @@ export class ElementEditor {
 
     // Line/arrow: drag start or end point directly
     if (
-      (el.type === 'line' || el.type === 'arrow') &&
+      (el.type === 'line' || el.type === 'arrow' || el.type === 'double-arrow') &&
       (this.activeHandle === 'start' || this.activeHandle === 'end')
     ) {
       if (this.activeHandle === 'start') {
@@ -798,7 +798,7 @@ export class ElementEditor {
     const bounds = getElementBounds(this.ctx, el);
 
     // Line/arrow: start and end handles only
-    if (el.type === 'line' || el.type === 'arrow') {
+    if (el.type === 'line' || el.type === 'arrow' || el.type === 'double-arrow') {
       if (this.isNearPoint(point, el.start)) return 'start';
       if (this.isNearPoint(point, el.end)) return 'end';
       return null;
@@ -827,7 +827,7 @@ export class ElementEditor {
     bounds: { x: number; y: number; w: number; h: number }
   ): Point[] {
     if (el.type === 'freehand' || el.type === 'group') return [];
-    if (el.type === 'line' || el.type === 'arrow') {
+    if (el.type === 'line' || el.type === 'arrow' || el.type === 'double-arrow') {
       return [{ ...el.start }, { ...el.end }];
     }
     if (el.type === 'text') {

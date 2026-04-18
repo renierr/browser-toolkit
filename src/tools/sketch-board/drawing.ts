@@ -54,8 +54,33 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
     return;
   }
 
+  if (el.type === 'diamond') {
+    drawDiamond(ctx, el.start, el.end, el.filled);
+    return;
+  }
+
+  if (el.type === 'hexagon') {
+    drawHexagon(ctx, el.start, el.end, el.filled);
+    return;
+  }
+
   if (el.type === 'arrow') {
     drawArrow(ctx, el.start, el.end);
+    return;
+  }
+
+  if (el.type === 'double-arrow') {
+    drawDoubleArrow(ctx, el.start, el.end);
+    return;
+  }
+
+  if (el.type === 'speech-bubble') {
+    drawSpeechBubble(ctx, el.start, el.end, el.filled);
+    return;
+  }
+
+  if (el.type === 'checkmark') {
+    drawCheckmark(ctx, el.start, el.end);
     return;
   }
 
@@ -204,6 +229,158 @@ function drawArrow(ctx: CanvasRenderingContext2D, start: Point, end: Point): voi
   ctx.fill();
 }
 
+function drawDoubleArrow(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return;
+
+  const strokeW = ctx.lineWidth;
+  const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
+  const angle = Math.atan2(dy, dx);
+  const spread = Math.PI / 6;
+
+  // Shaft — stop at the base of both arrowheads
+  const shaftStartX = start.x + headLen * Math.cos(angle);
+  const shaftStartY = start.y + headLen * Math.sin(angle);
+  const shaftEndX = end.x - headLen * Math.cos(angle);
+  const shaftEndY = end.y - headLen * Math.sin(angle);
+
+  ctx.beginPath();
+  ctx.moveTo(shaftStartX, shaftStartY);
+  ctx.lineTo(shaftEndX, shaftEndY);
+  ctx.stroke();
+
+  const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
+  const perpX = -Math.sin(angle);
+  const perpY = Math.cos(angle);
+
+  // Head at end
+  const baseX_end = end.x - headLen * Math.cos(angle);
+  const baseY_end = end.y - headLen * Math.sin(angle);
+  ctx.beginPath();
+  ctx.moveTo(end.x, end.y);
+  ctx.lineTo(baseX_end + perpX * halfBase, baseY_end + perpY * halfBase);
+  ctx.lineTo(baseX_end - perpX * halfBase, baseY_end - perpY * halfBase);
+  ctx.closePath();
+  ctx.fillStyle = ctx.strokeStyle as string;
+  ctx.fill();
+
+  // Head at start
+  const baseX_start = start.x + headLen * Math.cos(angle);
+  const baseY_start = start.y + headLen * Math.sin(angle);
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(baseX_start + perpX * halfBase, baseY_start + perpY * halfBase);
+  ctx.lineTo(baseX_start - perpX * halfBase, baseY_start - perpY * halfBase);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawDiamond(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+  filled?: boolean
+): void {
+  const rect = normalizeRect(start, end);
+  if (rect.w < 1 || rect.h < 1) return;
+  ctx.beginPath();
+  ctx.moveTo(rect.x + rect.w / 2, rect.y);
+  ctx.lineTo(rect.x + rect.w, rect.y + rect.h / 2);
+  ctx.lineTo(rect.x + rect.w / 2, rect.y + rect.h);
+  ctx.lineTo(rect.x, rect.y + rect.h / 2);
+  ctx.closePath();
+  if (filled) {
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
+  } else {
+    ctx.stroke();
+  }
+}
+
+function drawHexagon(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+  filled?: boolean
+): void {
+  const rect = normalizeRect(start, end);
+  if (rect.w < 1 || rect.h < 1) return;
+  const w = rect.w;
+  const h = rect.h;
+  const x = rect.x;
+  const y = rect.y;
+  ctx.beginPath();
+  ctx.moveTo(x + w * 0.25, y);
+  ctx.lineTo(x + w * 0.75, y);
+  ctx.lineTo(x + w, y + h * 0.5);
+  ctx.lineTo(x + w * 0.75, y + h);
+  ctx.lineTo(x + w * 0.25, y + h);
+  ctx.lineTo(x, y + h * 0.5);
+  ctx.closePath();
+  if (filled) {
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
+  } else {
+    ctx.stroke();
+  }
+}
+
+function drawSpeechBubble(
+  ctx: CanvasRenderingContext2D,
+  start: Point,
+  end: Point,
+  filled?: boolean
+): void {
+  const rect = normalizeRect(start, end);
+  if (rect.w < 1 || rect.h < 1) return;
+  const x = rect.x;
+  const y = rect.y;
+  const w = rect.w;
+  const h = rect.h;
+  const r = Math.min(w, h) * 0.15;
+  const tailSide = Math.min(w, h) * 0.2;
+
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  // Tail at bottom-left
+  ctx.lineTo(x + r + tailSide * 1.5, y + h);
+  ctx.lineTo(x + r * 0.5, y + h + tailSide);
+  ctx.lineTo(x + r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+
+  if (filled) {
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
+  } else {
+    ctx.stroke();
+  }
+}
+
+function drawCheckmark(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  const rect = normalizeRect(start, end);
+  if (rect.w < 1 || rect.h < 1) return;
+  const x = rect.x;
+  const y = rect.y;
+  const w = rect.w;
+  const h = rect.h;
+
+  ctx.beginPath();
+  ctx.moveTo(x, y + h * 0.5);
+  ctx.lineTo(x + w * 0.4, y + h * 0.9);
+  ctx.lineTo(x + w, y + h * 0.1);
+  ctx.stroke();
+}
+
 function drawText(ctx: CanvasRenderingContext2D, el: TextElement): void {
   ctx.font = `${el.fontStyle} ${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
   ctx.fillStyle = el.color;
@@ -292,7 +469,7 @@ export function getElementBounds(
     return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
   }
 
-  // line, rect, ellipse, triangle, arrow — all have start/end
+  // line, rect, ellipse, triangle, arrow, double-arrow, diamond, hexagon, speech-bubble, checkmark — all have start/end
   const rect = normalizeRect(el.start, el.end);
   return {
     x: rect.x - el.width / 2,

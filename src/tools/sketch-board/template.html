@@ -238,18 +238,6 @@
             </button>
           </li>
           <li>
-            <button id="import-image" class="btn btn-sm btn-ghost justify-between">
-              Import Image
-              <i data-lucide="upload" class="w-4 h-4"></i>
-            </button>
-          </li>
-          <li>
-            <button id="paste-image" class="btn btn-sm btn-ghost justify-between">
-              Paste Image
-              <i data-lucide="clipboard" class="w-4 h-4"></i>
-            </button>
-          </li>
-          <li>
             <button id="mode-text" class="btn btn-sm btn-ghost justify-between">
               Text
               <i data-lucide="type" class="w-4 h-4"></i>
@@ -262,31 +250,90 @@
             </button>
           </li>
           <li>
-            <button id="mode-arrow" class="btn btn-sm btn-ghost justify-between">
-              Arrow
-              <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
-            </button>
-          </li>
-          <li class="menu-title px-2 py-1">
-            <span class="text-xs opacity-70">Shapes</span>
-          </li>
-          <li>
-            <button id="mode-rect" class="btn btn-sm btn-ghost justify-between">
-              Rectangle
-              <i data-lucide="square" class="w-4 h-4"></i>
+            <button id="import-image" class="btn btn-sm btn-ghost justify-between">
+              Import Image
+              <i data-lucide="upload" class="w-4 h-4"></i>
             </button>
           </li>
           <li>
-            <button id="mode-ellipse" class="btn btn-sm btn-ghost justify-between">
-              Ellipse
-              <i data-lucide="circle" class="w-4 h-4"></i>
+            <button id="paste-image" class="btn btn-sm btn-ghost justify-between">
+              Paste Image
+              <i data-lucide="clipboard" class="w-4 h-4"></i>
             </button>
           </li>
+
+          <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
           <li>
-            <button id="mode-triangle" class="btn btn-sm btn-ghost justify-between">
-              Triangle
-              <i data-lucide="triangle" class="w-4 h-4"></i>
-            </button>
+            <details open>
+              <summary class="text-xs font-semibold py-1">Annotations</summary>
+              <ul class="before:hidden ml-0 pl-0">
+                <li>
+                  <button id="mode-arrow" class="btn btn-sm btn-ghost justify-between">
+                    Arrow
+                    <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+                  </button>
+                </li>
+                <li>
+                  <button id="mode-double-arrow" class="btn btn-sm btn-ghost justify-between">
+                    Double Arrow
+                    <i data-lucide="move-horizontal" class="w-4 h-4"></i>
+                  </button>
+                </li>
+                <li>
+                  <button id="mode-speech-bubble" class="btn btn-sm btn-ghost justify-between">
+                    Speech Bubble
+                    <i data-lucide="message-square" class="w-4 h-4"></i>
+                  </button>
+                </li>
+                <li>
+                  <button id="mode-checkmark" class="btn btn-sm btn-ghost justify-between">
+                    Checkmark
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                  </button>
+                </li>
+              </ul>
+            </details>
+          </li>
+
+          <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
+          <li>
+            <details>
+              <summary class="text-xs font-semibold py-1">Geometric Shapes</summary>
+              <ul class="before:hidden ml-0 pl-0">
+                <li>
+                  <button id="mode-rect" class="btn btn-sm btn-ghost justify-between">
+                    Rectangle
+                    <i data-lucide="square" class="w-4 h-4"></i>
+                  </button>
+                </li>
+                <li>
+                  <button id="mode-ellipse" class="btn btn-sm btn-ghost justify-between">
+                    Ellipse
+                    <i data-lucide="circle" class="w-4 h-4"></i>
+                  </button>
+                </li>
+                <li>
+                  <button id="mode-triangle" class="btn btn-sm btn-ghost justify-between">
+                    Triangle
+                    <i data-lucide="triangle" class="w-4 h-4"></i>
+                  </button>
+                </li>
+                <li>
+                  <button id="mode-diamond" class="btn btn-sm btn-ghost justify-between">
+                    Diamond
+                    <i data-lucide="diamond" class="w-4 h-4"></i>
+                  </button>
+                </li>
+                <li>
+                  <button id="mode-hexagon" class="btn btn-sm btn-ghost justify-between">
+                    Hexagon
+                    <i data-lucide="hexagon" class="w-4 h-4"></i>
+                  </button>
+                </li>
+              </ul>
+            </details>
           </li>
         </ul>
 

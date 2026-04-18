@@ -46,7 +46,7 @@ export type SketchDom = {
   drawToolsLabel: HTMLSpanElement;
   drawOptions: HTMLElement;
   drawOpts: HTMLElement[];
-  modeButtons: Record<ToolMode, HTMLButtonElement>;
+  modeButtons: Partial<Record<ToolMode, HTMLButtonElement>>;
   toolOptions: HTMLElement;
   toolOptShapes: HTMLElement[];
   toolOptTexts: HTMLElement[];
@@ -113,7 +113,12 @@ export function getDom(doc: Document): SketchDom | null {
   const modeRect = doc.getElementById('mode-rect') as HTMLButtonElement | null;
   const modeEllipse = doc.getElementById('mode-ellipse') as HTMLButtonElement | null;
   const modeTriangle = doc.getElementById('mode-triangle') as HTMLButtonElement | null;
+  const modeDiamond = doc.getElementById('mode-diamond') as HTMLButtonElement | null;
+  const modeHexagon = doc.getElementById('mode-hexagon') as HTMLButtonElement | null;
   const modeArrow = doc.getElementById('mode-arrow') as HTMLButtonElement | null;
+  const modeDoubleArrow = doc.getElementById('mode-double-arrow') as HTMLButtonElement | null;
+  const modeSpeechBubble = doc.getElementById('mode-speech-bubble') as HTMLButtonElement | null;
+  const modeCheckmark = doc.getElementById('mode-checkmark') as HTMLButtonElement | null;
   const modeText = doc.getElementById('mode-text') as HTMLButtonElement | null;
   const modeSelect = doc.getElementById('mode-select') as HTMLButtonElement | null;
   const drawTools = doc.getElementById('draw-tools') as HTMLUListElement | null;
@@ -187,7 +192,12 @@ export function getDom(doc: Document): SketchDom | null {
     !modeRect ||
     !modeEllipse ||
     !modeTriangle ||
+    !modeDiamond ||
+    !modeHexagon ||
     !modeArrow ||
+    !modeDoubleArrow ||
+    !modeSpeechBubble ||
+    !modeCheckmark ||
     !modeText ||
     !modeSelect ||
     !drawTools ||
@@ -265,9 +275,13 @@ export function getDom(doc: Document): SketchDom | null {
       rect: modeRect,
       ellipse: modeEllipse,
       triangle: modeTriangle,
+      diamond: modeDiamond!,
+      hexagon: modeHexagon!,
       arrow: modeArrow,
+      'double-arrow': modeDoubleArrow!,
+      'speech-bubble': modeSpeechBubble!,
+      checkmark: modeCheckmark!,
       text: modeText,
-      image: modeFreehand,
     },
     toolOptions,
     toolOptShapes,

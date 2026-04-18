@@ -27,6 +27,9 @@ export function optionsForElementType(type: string): ReadonlySet<ToolOptionId> {
     case 'rect':
     case 'ellipse':
     case 'triangle':
+    case 'diamond':
+    case 'hexagon':
+    case 'speech-bubble':
       return new Set(['color', 'fill']);
     default:
       return new Set(['color']);

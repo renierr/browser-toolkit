@@ -6,7 +6,12 @@ export type ToolMode =
   | 'rect'
   | 'ellipse'
   | 'triangle'
+  | 'diamond'
+  | 'hexagon'
   | 'arrow'
+  | 'double-arrow'
+  | 'speech-bubble'
+  | 'checkmark'
   | 'text'
   | 'image';
 export type DrawMode = Exclude<ToolMode, 'pan' | 'select'>;
@@ -60,6 +65,39 @@ export type ArrowElement = BaseElement & {
   end: Point;
 };
 
+export type DoubleArrowElement = BaseElement & {
+  type: 'double-arrow';
+  start: Point;
+  end: Point;
+};
+
+export type DiamondElement = BaseElement & {
+  type: 'diamond';
+  start: Point;
+  end: Point;
+  filled?: boolean;
+};
+
+export type HexagonElement = BaseElement & {
+  type: 'hexagon';
+  start: Point;
+  end: Point;
+  filled?: boolean;
+};
+
+export type SpeechBubbleElement = BaseElement & {
+  type: 'speech-bubble';
+  start: Point;
+  end: Point;
+  filled?: boolean;
+};
+
+export type CheckmarkElement = BaseElement & {
+  type: 'checkmark';
+  start: Point;
+  end: Point;
+};
+
 export type TextElement = BaseElement & {
   type: 'text';
   position: Point;
@@ -91,7 +129,12 @@ export type SketchElement =
   | RectElement
   | EllipseElement
   | TriangleElement
+  | DiamondElement
+  | HexagonElement
   | ArrowElement
+  | DoubleArrowElement
+  | SpeechBubbleElement
+  | CheckmarkElement
   | TextElement
   | ImageElement
   | GroupElement;
