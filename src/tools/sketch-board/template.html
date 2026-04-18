@@ -590,42 +590,7 @@
     </form>
   </dialog>
 
-  <dialog id="info-modal" class="modal">
-    <div class="modal-box max-w-sm">
-      <form method="dialog">
-        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-      </form>
-      <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-        <i data-lucide="info" class="w-5 h-5"></i> Drawing Information
-      </h3>
-
-      <div class="space-y-3 text-sm">
-        <div class="flex justify-between border-b border-base-200 pb-2">
-          <span class="opacity-70">Dimensions:</span>
-          <span id="info-dimensions" class="font-mono">0 &times; 0 px</span>
-        </div>
-        <div class="flex justify-between border-b border-base-200 pb-2">
-          <span class="opacity-70">Location:</span>
-          <span id="info-location" class="font-mono text-xs">X0, Y0</span>
-        </div>
-        <div class="flex justify-between border-b border-base-200 pb-2">
-          <span class="opacity-70">Elements:</span>
-          <span id="info-elements" class="font-mono">0</span>
-        </div>
-        <div class="flex justify-between border-b border-base-200 pb-2">
-          <span class="opacity-70">Background:</span>
-          <span id="info-background" class="font-mono"></span>
-        </div>
-        <div>
-          <span class="opacity-70 block mb-2">Colors Used:</span>
-          <div id="info-colors" class="flex flex-wrap gap-1"></div>
-        </div>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button>close</button>
-    </form>
-  </dialog>
+  {{ include "info-modal.html" }}
 
   <template id="gallery-item-template">
     <article class="rounded-box border border-base-300 p-2 bg-base-100">
@@ -645,46 +610,5 @@
 </div>
 
 <style>
-  #sketch-canvas[data-cursor='pan'] {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M18 11V6a2 2 0 00-2-2 2 2 0 00-2 2M14 10V4a2 2 0 00-2-2 2 2 0 00-2 2v6M10 10.5V6a2 2 0 00-2-2 2 2 0 00-2 2v8%22/><path d=%22M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 012.83-2.82L7 15%22/></svg>')
-        12 12,
-      grab;
-  }
-  #sketch-canvas[data-cursor='grabbing'] {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 012.83-2.82L7 15%22/><path d=%22M10 12v2M14 12v2M18 11v2%22/></svg>')
-        12 12,
-      grabbing;
-  }
-  #sketch-canvas[data-cursor='crosshair'] {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><path d=%22M5 12h14M12 5v14%22/></svg>')
-        12 12,
-      crosshair;
-  }
-  #sketch-canvas[data-cursor='pointer'] {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><path d=%22M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z%22/></svg>')
-        2 2,
-      pointer;
-  }
-  #sketch-canvas[data-cursor='move'] {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M12 5v14M5 12h14%22/></svg>')
-        12 12,
-      move;
-  }
-  #sketch-canvas[data-cursor='text'] {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2216%22 height=%2224%22 viewBox=%220 0 16 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22><path d=%22M8 2v20M4 6h8M3 10h10M5 14h6M4 18h8%22/></svg>')
-        8 12,
-      text;
-  }
-  #sketch-canvas {
-    cursor:
-      url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2224%22 height=%2224%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%221.5%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M18 11V6a2 2 0 00-2-2 2 2 0 00-2 2M14 10V4a2 2 0 00-2-2 2 2 0 00-2 2v6M10 10.5V6a2 2 0 00-2-2 2 2 0 00-2 2v8%22/><path d=%22M18 8a2 2 0 114 0v6a8 8 0 01-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 012.83-2.82L7 15%22/></svg>')
-        12 12,
-      grab;
-  }
+  {{ include "style.css" }}
 </style>

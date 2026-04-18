@@ -26,7 +26,7 @@ export type ToolConfig = {
 type BuildToolParams = {
   folder: string;
   html: string;
-  loadHtml?: () => Promise<string>;
+  loadHtml?: () => Promise<string | { template: string; partials: Record<string, string> }>;
   loadScript?: () => Promise<ToolModule>;
   config: ToolConfig;
 };

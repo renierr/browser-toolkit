@@ -54,9 +54,15 @@ export interface Tool {
   shareTarget?: ShareTargetConfig;
 
   /**
-   * Optional lazy loading function for the tool HTML template.
+   * Optional partial templates/resources (e.g. nested HTML, CSS).
    */
-  loadHtml?: () => Promise<string>;
+  partials?: Record<string, string>;
+
+  /**
+   * Optional lazy loading function for the tool template assets.
+   * Can return a single HTML string or an object with multiple files.
+   */
+  loadHtml?: () => Promise<string | { template: string; partials: Record<string, string> }>;
 
   /**
    * Optional lazy loading function for the tool script.

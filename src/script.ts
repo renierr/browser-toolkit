@@ -28,7 +28,7 @@ const metaDesc = document.querySelector('meta[name="description"]');
 if (metaDesc) metaDesc.setAttribute('content', siteContext.config.description || '');
 
 const descModules = import.meta.glob('@tools/**/config.json', { eager: true });
-const htmlModules = import.meta.glob('@tools/**/template.html', {
+const assetModules = import.meta.glob(['@tools/**/*.html', '@tools/**/*.css'], {
   query: '?raw',
   import: 'default',
 });
@@ -54,14 +54,30 @@ async function buildToolsList(): Promise<Tool[]> {
     if (toolConfig.draft && !isDev) continue;
 
     // only now load the heavier assets if present
-    const htmlKey = Object.keys(htmlModules).find((k) => k === `${prefix}/${folder}/template.html`);
-    let loadHtml: (() => Promise<string>) | undefined;
-    if (htmlKey) {
-      const importerOrValue = (htmlModules as any)[htmlKey];
+    const toolFolderPrefix = `${prefix}/${folder}/`;
+    const assetKeys = Object.keys(assetModules).filter((k) => k.startsWith(toolFolderPrefix));
+
+    let loadHtml:
+      | (() => Promise<string | { template: string; partials: Record<string, string> }>)
+      | undefined;
+
+    if (assetKeys.length > 0) {
       loadHtml = async () => {
-        const loaded =
-          typeof importerOrValue === 'function' ? await importerOrValue() : importerOrValue;
-        return (loaded as any).default ?? (loaded as any);
+        const results: Record<string, string> = {};
+        await Promise.all(
+          assetKeys.map(async (key) => {
+            const importerOrValue = (assetModules as any)[key];
+            const content =
+              typeof importerOrValue === 'function' ? await importerOrValue() : importerOrValue;
+            const fileName = key.substring(toolFolderPrefix.length);
+            results[fileName] = (content as any).default ?? (content as any);
+          })
+        );
+
+        return {
+          template: results['template.html'] || '',
+          partials: results,
+        };
       };
     }
 

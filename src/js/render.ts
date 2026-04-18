@@ -44,7 +44,13 @@ export async function renderTool(tool: Tool | undefined, payload?: any) {
   // Lazy load HTML if we have a loader
   if (tool?.loadHtml) {
     try {
-      tool.html = await tool.loadHtml();
+      const result = await tool.loadHtml();
+      if (typeof result === 'string') {
+        tool.html = result;
+      } else {
+        tool.html = result.template;
+        tool.partials = result.partials;
+      }
       delete tool.loadHtml; // Clean up after loading
     } catch (err) {
       console.error('[render] Failed to load tool HTML:', err);
@@ -58,7 +64,9 @@ export async function renderTool(tool: Tool | undefined, payload?: any) {
     <h2 class="text-2xl text-heading">Tool not found</h2>
     `;
   const contentDiv = document.getElementById('tool-content')!;
-  contentDiv.innerHTML = tool ? replacePlaceholders(tool.html, siteContext) : noToolHtml;
+  contentDiv.innerHTML = tool
+    ? replacePlaceholders(tool.html, siteContext, tool.partials)
+    : noToolHtml;
 
   if (tool) {
     // Automatically bind settings for this tool

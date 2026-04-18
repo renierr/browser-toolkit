@@ -58,23 +58,45 @@ function getValueByDotNotation(obj: any, path: string): string | undefined {
   return String(current);
 }
 
-export const replacePlaceholders = (templateHtml: string, context: any): string => {
+export const replacePlaceholders = (
+  templateHtml: string,
+  context: any,
+  partials?: Record<string, string>
+): string => {
   const placeholderRegex = /{{(.+?)}}/g;
 
-  let output = templateHtml;
-
-  output = output.replace(placeholderRegex, (match, keyPath) => {
-    const trimmedPath = keyPath.trim();
-    const value = getValueByDotNotation(context, trimmedPath);
-
-    if (value !== undefined) {
-      return value;
-    } else {
-      console.warn(`Placeholder not found in context: ${match}`);
-      return `[${match} NOT FOUND]`;
+  const process = (text: string, depth: number): string => {
+    if (depth > 8) {
+      console.warn('[utils] Maximum template include depth reached.');
+      return text;
     }
-  });
-  return output;
+
+    return text.replace(placeholderRegex, (match, keyPath) => {
+      const trimmedPath = keyPath.trim();
+
+      // Handle {{ include "filename" }}
+      if (trimmedPath.startsWith('include ')) {
+        const fileName = trimmedPath.substring(8).replace(/["']/g, '').trim();
+        if (partials && typeof partials[fileName] === 'string') {
+          // Recursively process the included content
+          return process(partials[fileName], depth + 1);
+        }
+        console.warn(`[utils] Include not found: ${fileName}`);
+        return `[INCLUDE NOT FOUND: ${fileName}]`;
+      }
+
+      // Handle normal context placeholders
+      const value = getValueByDotNotation(context, trimmedPath);
+      if (value !== undefined) {
+        return value;
+      }
+
+      console.warn(`[utils] Placeholder not found in context: ${match}`);
+      return `[${match} NOT FOUND]`;
+    });
+  };
+
+  return process(templateHtml, 0);
 };
 
 export const html = (strings: TemplateStringsArray, ...values: any[]) => {
