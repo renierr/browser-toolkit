@@ -80,6 +80,11 @@ export type ImageElement = BaseElement & {
   originalHeight?: number;
 };
 
+export type GroupElement = BaseElement & {
+  type: 'group';
+  elements: SketchElement[];
+};
+
 export type SketchElement =
   | FreehandElement
   | LineElement
@@ -88,7 +93,8 @@ export type SketchElement =
   | TriangleElement
   | ArrowElement
   | TextElement
-  | ImageElement;
+  | ImageElement
+  | GroupElement;
 
 export type ViewportState = {
   x: number;

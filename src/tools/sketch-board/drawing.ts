@@ -68,6 +68,13 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
     drawImage(ctx, el);
     return;
   }
+
+  if (el.type === 'group') {
+    for (const subEl of el.elements) {
+      drawElement(ctx, subEl);
+    }
+    return;
+  }
 }
 
 function applyStrokeStyle(ctx: CanvasRenderingContext2D, color: string, width: number): void {
@@ -269,6 +276,22 @@ export function getElementBounds(
       h: maxY - minY + el.width,
     };
   }
+  if (el.type === 'group') {
+    if (el.elements.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const subEl of el.elements) {
+      const b = getElementBounds(ctx, subEl);
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w);
+      maxY = Math.max(maxY, b.y + b.h);
+    }
+    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+  }
+
   // line, rect, ellipse, triangle, arrow — all have start/end
   const rect = normalizeRect(el.start, el.end);
   return {
@@ -354,6 +377,15 @@ function computeSceneBounds(elements: SketchElement[]): {
       minY = Math.min(minY, el.position.y);
       maxX = Math.max(maxX, el.position.x + el.imageWidth);
       maxY = Math.max(maxY, el.position.y + el.imageHeight);
+      continue;
+    }
+
+    if (el.type === 'group') {
+      const b = getElementBounds(getMeasureCtx(), el);
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.w);
+      maxY = Math.max(maxY, b.y + b.h);
       continue;
     }
 

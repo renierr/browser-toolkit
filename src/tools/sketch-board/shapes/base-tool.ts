@@ -1,7 +1,7 @@
 import type { DrawMode, DrawToolContext, Point, SketchElement } from '../types.ts';
 
 /** Option groups a tool can declare for the toolbar */
-export type ToolOptionId = 'color' | 'fill' | 'font' | 'image';
+export type ToolOptionId = 'color' | 'fill' | 'font' | 'image' | 'group' | 'ungroup';
 
 /** Contract for draw tool implementations. Each shape tool implements this. */
 export type DrawTool = {

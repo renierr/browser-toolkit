@@ -19,7 +19,8 @@ export class ElementEditor {
   private readonly renderer: SceneRenderer;
   private toolbar: ToolbarController | null = null;
 
-  private selectedElementId: string | null = null;
+  private selectedElementIds = new Set<string>();
+  private selectionBox: { start: Point; end: Point } | null = null;
   private isDragging = false;
   private isResizing = false;
   private hasMovedBeyondThreshold = false;
@@ -46,8 +47,12 @@ export class ElementEditor {
     this.toolbar = toolbar;
   }
 
-  getSelectedId(): string | null {
-    return this.selectedElementId;
+  getSelectedIds(): string[] {
+    return Array.from(this.selectedElementIds);
+  }
+
+  getSelectionBox(): { start: Point; end: Point } | null {
+    return this.selectionBox;
   }
 
   isTextInputActive(): boolean {
@@ -55,19 +60,23 @@ export class ElementEditor {
   }
 
   getSelectedElement(elements: SketchElement[]): SketchElement | null {
-    if (!this.selectedElementId) return null;
-    return elements.find((e) => e.id === this.selectedElementId) ?? null;
+    if (this.selectedElementIds.size !== 1) return null;
+    const id = this.selectedElementIds.values().next().value;
+    return elements.find((e) => e.id === id) ?? null;
   }
 
   handleSelectPointerDown(
     point: Point,
-    elements: SketchElement[]
+    elements: SketchElement[],
+    shiftKey = false
   ): { found: boolean; elementId: string | null } {
     this.pointerDownHitSelected = false;
+    this.selectionBox = null;
 
-    // Check resize handles first
-    if (this.selectedElementId) {
-      const el = elements.find((e) => e.id === this.selectedElementId);
+    // Check resize handles first (only if single element selected for now)
+    if (this.selectedElementIds.size === 1) {
+      const id = this.selectedElementIds.values().next().value;
+      const el = elements.find((e) => e.id === id);
       if (el) {
         const handle = this.hitTestHandle(point, el);
         if (handle) {
@@ -80,22 +89,27 @@ export class ElementEditor {
           this.dragStartSnapshot = JSON.parse(JSON.stringify(elements));
           return { found: true, elementId: el.id };
         }
+      }
+    }
 
-        const bounds = getElementBounds(this.ctx, el);
-        const padding = Math.max(4, el.width / 2);
-        if (
-          point.x >= bounds.x - padding &&
-          point.x <= bounds.x + bounds.w + padding &&
-          point.y >= bounds.y - padding &&
-          point.y <= bounds.y + bounds.h + padding
-        ) {
-          this.pointerDownHitSelected = true;
-          this.isDragging = true;
-          this.hasMovedBeyondThreshold = false;
-          this.dragStartPos = point;
-          this.dragStartSnapshot = JSON.parse(JSON.stringify(elements));
-          return { found: true, elementId: el.id };
-        }
+    // Check if clicking on an already selected element (to drag)
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (!el) continue;
+      const bounds = getElementBounds(this.ctx, el);
+      const padding = Math.max(4, el.width / 2);
+      if (
+        point.x >= bounds.x - padding &&
+        point.x <= bounds.x + bounds.w + padding &&
+        point.y >= bounds.y - padding &&
+        point.y <= bounds.y + bounds.h + padding
+      ) {
+        this.pointerDownHitSelected = true;
+        this.isDragging = true;
+        this.hasMovedBeyondThreshold = false;
+        this.dragStartPos = point;
+        this.dragStartSnapshot = JSON.parse(JSON.stringify(elements));
+        return { found: true, elementId: el.id };
       }
     }
 
@@ -110,13 +124,20 @@ export class ElementEditor {
         point.y >= bounds.y - padding &&
         point.y <= bounds.y + bounds.h + padding
       ) {
-        this.selectedElementId = el.id;
+        if (!shiftKey) {
+          this.selectedElementIds.clear();
+        }
+        this.selectedElementIds.add(el.id);
         this.isDragging = true;
         this.hasMovedBeyondThreshold = false;
         this.dragStartPos = point;
 
-        // Sync toolbar options for selected element type
-        this.syncToolbarForElement(el);
+        // Sync toolbar options for selected element type (if single selected)
+        if (this.selectedElementIds.size === 1) {
+          this.syncToolbarForElement(el);
+        } else {
+          this.toolbar?.showSelectionOptions(new Set(['group']));
+        }
 
         this.dom.canvas.setAttribute('data-cursor', 'move');
         this.dragStartSnapshot = JSON.parse(JSON.stringify(elements));
@@ -124,23 +145,36 @@ export class ElementEditor {
       }
     }
 
-    this.selectedElementId = null;
+    // No element hit - start selection box
+    if (!shiftKey) {
+      this.selectedElementIds.clear();
+    }
+    this.selectionBox = { start: { ...point }, end: { ...point } };
     this.isDragging = false;
     this.isResizing = false;
     this.activeHandle = null;
-    this.dragStartPos = null;
+    this.dragStartPos = point;
     this.toolbar?.hideSelectionOptions();
     return { found: false, elementId: null };
   }
 
   handleSelectPointerMove(point: Point, elements: SketchElement[]): boolean {
-    if (this.isResizing && this.selectedElementId && this.dragStartPos && this.activeHandle) {
-      const moved = this.doResize(point, elements);
-      if (moved) this.hasMovedBeyondThreshold = true;
-      return moved;
+    if (this.selectionBox) {
+      this.selectionBox.end = { ...point };
+      return true;
     }
 
-    if (!this.isDragging || !this.selectedElementId || !this.dragStartPos) return false;
+    if (this.isResizing && this.selectedElementIds.size === 1 && this.dragStartPos && this.activeHandle) {
+      const id = this.selectedElementIds.values().next().value;
+      const el = elements.find((e) => e.id === id);
+      if (el) {
+        const moved = this.doResize(point, el);
+        if (moved) this.hasMovedBeyondThreshold = true;
+        return moved;
+      }
+    }
+
+    if (!this.isDragging || this.selectedElementIds.size === 0 || !this.dragStartPos) return false;
 
     const dx = Math.abs(point.x - this.dragStartPos.x);
     const dy = Math.abs(point.y - this.dragStartPos.y);
@@ -157,18 +191,51 @@ export class ElementEditor {
     elements: SketchElement[],
     hasUnsaved: boolean
   ): { pushed: boolean; hasUnsavedChanges: boolean } {
+    if (this.selectionBox) {
+      const rect = normalizeRect(this.selectionBox.start, this.selectionBox.end);
+      if (rect.w > 2 || rect.h > 2) {
+        for (const el of elements) {
+          const bounds = getElementBounds(this.ctx, el);
+          if (
+            bounds.x >= rect.x &&
+            bounds.y >= rect.y &&
+            bounds.x + bounds.w <= rect.x + rect.w &&
+            bounds.y + bounds.h <= rect.y + rect.h
+          ) {
+            this.selectedElementIds.add(el.id);
+          }
+        }
+      }
+      this.selectionBox = null;
+      if (this.selectedElementIds.size > 0) {
+        if (this.selectedElementIds.size === 1) {
+          const id = this.selectedElementIds.values().next().value;
+          const el = elements.find((e) => e.id === id);
+          if (el) this.syncToolbarForElement(el);
+        } else {
+          this.toolbar?.showSelectionOptions(new Set(['group']));
+        }
+      }
+      return { pushed: false, hasUnsavedChanges: hasUnsaved };
+    }
+
     const didMove = Boolean(
-      (this.isDragging || this.isResizing) && this.selectedElementId && this.hasMovedBeyondThreshold
+      (this.isDragging || this.isResizing) &&
+        this.selectedElementIds.size > 0 &&
+        this.hasMovedBeyondThreshold
     );
     const hitSelected = Boolean(
-      this.pointerDownHitSelected && this.selectedElementId && !this.hasMovedBeyondThreshold
+      this.pointerDownHitSelected && this.selectedElementIds.size === 1 && !this.hasMovedBeyondThreshold
     );
 
     // Click on selected element without moving - select element behind it
-    if (hitSelected && this.dragStartPos && this.selectedElementId) {
-      const nextEl = this.getNextElementBehind(this.selectedElementId, this.dragStartPos, elements);
+    if (hitSelected && this.dragStartPos && this.selectedElementIds.size === 1) {
+      const currentId = this.selectedElementIds.values().next().value;
+      if (!currentId) return { pushed: false, hasUnsavedChanges: hasUnsaved };
+      const nextEl = this.getNextElementBehind(currentId, this.dragStartPos, elements);
       if (nextEl) {
-        this.selectedElementId = nextEl.id;
+        this.selectedElementIds.clear();
+        this.selectedElementIds.add(nextEl.id);
         this.syncToolbarForElement(nextEl);
         hasUnsaved = true;
       } else {
@@ -193,7 +260,7 @@ export class ElementEditor {
     this.pointerDownHitSelected = false;
     this.dragStartSnapshot = null;
 
-    if (this.selectedElementId) {
+    if (this.selectedElementIds.size > 0) {
       this.dom.canvas.setAttribute('data-cursor', 'pointer');
     }
     return { pushed: didMove, hasUnsavedChanges: hasUnsaved };
@@ -307,8 +374,9 @@ export class ElementEditor {
     viewport: { x: number; y: number; scale: number },
     onFinish: () => void
   ): void {
-    if (!this.selectedElementId) return;
-    const el = elements.find((e) => e.id === this.selectedElementId);
+    if (this.selectedElementIds.size !== 1) return;
+    const id = this.selectedElementIds.values().next().value;
+    const el = elements.find((e) => e.id === id);
     if (!el || el.type !== 'text') return;
 
     this.textInputActive = true;
@@ -371,8 +439,9 @@ export class ElementEditor {
   }
 
   updateSelectedText(elements: SketchElement[]): void {
-    if (!this.selectedElementId) return;
-    const el = elements.find((e) => e.id === this.selectedElementId);
+    if (this.selectedElementIds.size !== 1) return;
+    const id = this.selectedElementIds.values().next().value;
+    const el = elements.find((e) => e.id === id);
     if (!el || el.type !== 'text') return;
     el.color = this.dom.colorInput.value;
     el.fontFamily = this.dom.fontFamily.value;
@@ -383,57 +452,121 @@ export class ElementEditor {
 
   /** Live-update color of selected element (no history push) */
   applySelectedColor(elements: SketchElement[]): void {
-    if (!this.selectedElementId) return;
-    const el = elements.find((e) => e.id === this.selectedElementId);
-    if (!el) return;
-    el.color = this.dom.colorInput.value;
+    if (this.selectedElementIds.size === 0) return;
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (el) {
+        el.color = this.dom.colorInput.value;
+      }
+    }
   }
 
   /** Toggle filled state of the selected shape element */
   updateSelectedFilled(elements: SketchElement[], filled: boolean): void {
-    if (!this.selectedElementId) return;
-    const el = elements.find((e) => e.id === this.selectedElementId);
-    if (!el) return;
-    if ('filled' in el) {
-      (el as { filled?: boolean }).filled = filled;
+    if (this.selectedElementIds.size === 0) return;
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (el && 'filled' in el) {
+        (el as { filled?: boolean }).filled = filled;
+      }
     }
   }
 
   deleteSelected(elements: SketchElement[]): SketchElement[] {
-    if (!this.selectedElementId) return elements;
-    const filtered = elements.filter((e) => e.id !== this.selectedElementId);
-    this.selectedElementId = null;
+    if (this.selectedElementIds.size === 0) return elements;
+    const filtered = elements.filter((e) => !this.selectedElementIds.has(e.id));
+    this.selectedElementIds.clear();
     this.toolbar?.hideSelectionOptions();
     return filtered;
   }
 
   moveElementToFront(elements: SketchElement[]): SketchElement[] {
-    if (!this.selectedElementId) return elements;
-    const el = elements.find((e) => e.id === this.selectedElementId);
-    if (!el) return elements;
-    const filtered = elements.filter((e) => e.id !== this.selectedElementId);
-    filtered.push(el);
-    return filtered;
+    if (this.selectedElementIds.size === 0) return elements;
+    const selected: SketchElement[] = [];
+    const remaining: SketchElement[] = [];
+
+    for (const el of elements) {
+      if (this.selectedElementIds.has(el.id)) {
+        selected.push(el);
+      } else {
+        remaining.push(el);
+      }
+    }
+    return [...remaining, ...selected];
   }
 
   moveElementToBelow(elements: SketchElement[]): SketchElement[] {
-    if (!this.selectedElementId) return elements;
-    const el = elements.find((e) => e.id === this.selectedElementId);
-    if (!el) return elements;
-    const filtered = elements.filter((e) => e.id !== this.selectedElementId);
-    filtered.unshift(el);
-    return filtered;
+    if (this.selectedElementIds.size === 0) return elements;
+    const selected: SketchElement[] = [];
+    const remaining: SketchElement[] = [];
+
+    for (const el of elements) {
+      if (this.selectedElementIds.size > 0 && this.selectedElementIds.has(el.id)) {
+        selected.push(el);
+      } else {
+        remaining.push(el);
+      }
+    }
+    return [...selected, ...remaining];
+  }
+
+  groupSelected(elements: SketchElement[]): SketchElement[] {
+    if (this.selectedElementIds.size < 2) return elements;
+
+    const groupElements: SketchElement[] = [];
+    const remainingElements: SketchElement[] = [];
+
+    for (const el of elements) {
+      if (this.selectedElementIds.has(el.id)) {
+        groupElements.push(el);
+      } else {
+        remainingElements.push(el);
+      }
+    }
+
+    const group: SketchElement = {
+      id: `group-${Date.now()}`,
+      type: 'group',
+      elements: groupElements,
+      color: groupElements[0].color,
+      width: groupElements[0].width,
+    };
+
+    remainingElements.push(group);
+    this.selectedElementIds.clear();
+    this.selectedElementIds.add(group.id);
+    this.syncToolbarForElement(group);
+    return remainingElements;
+  }
+
+  ungroupSelected(elements: SketchElement[]): SketchElement[] {
+    if (this.selectedElementIds.size !== 1) return elements;
+    const id = this.selectedElementIds.values().next().value;
+    const el = elements.find((e) => e.id === id);
+    if (!el || el.type !== 'group') return elements;
+
+    const remainingElements = elements.filter((e) => e.id !== id);
+    this.selectedElementIds.clear();
+
+    for (const subEl of el.elements) {
+      remainingElements.push(subEl);
+      this.selectedElementIds.add(subEl.id);
+    }
+
+    this.toolbar?.showSelectionOptions(new Set(['group']));
+    return remainingElements;
   }
 
   clearSelection(): void {
-    if (this.selectedElementId) {
-      this.selectedElementId = null;
+    if (this.selectedElementIds.size > 0) {
+      this.selectedElementIds.clear();
       this.toolbar?.hideSelectionOptions();
     }
   }
 
   reset(): void {
-    this.selectedElementId = null;
+    this.selectedElementIds.clear();
+    this.selectionBox = null;
     this.isDragging = false;
     this.isResizing = false;
     this.hasMovedBeyondThreshold = false;
@@ -449,58 +582,83 @@ export class ElementEditor {
 
   /** Draw selection highlight and resize handles */
   drawSelection(canvasCtx: CanvasRenderingContext2D, elements: SketchElement[]): void {
-    if (!this.selectedElementId) return;
-    const el = elements.find((e) => e.id === this.selectedElementId);
-    if (!el) return;
+    // Draw selection box if active
+    if (this.selectionBox) {
+      const rect = normalizeRect(this.selectionBox.start, this.selectionBox.end);
+      canvasCtx.fillStyle = 'rgba(37, 99, 235, 0.1)';
+      canvasCtx.strokeStyle = '#2563eb';
+      canvasCtx.lineWidth = 1;
+      canvasCtx.fillRect(rect.x, rect.y, rect.w, rect.h);
+      canvasCtx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    }
 
-    const bounds = getElementBounds(canvasCtx, el);
-    const pad = 4;
+    if (this.selectedElementIds.size === 0) return;
 
-    // Dashed bounding box
-    canvasCtx.setLineDash([4, 4]);
-    canvasCtx.strokeStyle = '#2563eb';
-    canvasCtx.lineWidth = 2;
-    canvasCtx.strokeRect(bounds.x - pad, bounds.y - pad, bounds.w + pad * 2, bounds.h + pad * 2);
-    canvasCtx.setLineDash([]);
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (!el) continue;
 
-    // Resize handles
-    const handles = this.getHandlePositions(el, bounds);
-    canvasCtx.fillStyle = '#2563eb';
-    canvasCtx.strokeStyle = '#ffffff';
-    canvasCtx.lineWidth = 1;
-    for (const pos of handles) {
-      canvasCtx.fillRect(
-        pos.x - HANDLE_SIZE / 2,
-        pos.y - HANDLE_SIZE / 2,
-        HANDLE_SIZE,
-        HANDLE_SIZE
-      );
-      canvasCtx.strokeRect(
-        pos.x - HANDLE_SIZE / 2,
-        pos.y - HANDLE_SIZE / 2,
-        HANDLE_SIZE,
-        HANDLE_SIZE
-      );
+      const bounds = getElementBounds(canvasCtx, el);
+      const pad = 4;
+
+      // Dashed bounding box
+      canvasCtx.setLineDash([4, 4]);
+      canvasCtx.strokeStyle = '#2563eb';
+      canvasCtx.lineWidth = 2;
+      canvasCtx.strokeRect(bounds.x - pad, bounds.y - pad, bounds.w + pad * 2, bounds.h + pad * 2);
+      canvasCtx.setLineDash([]);
+
+      // Resize handles (only for single selection)
+      if (this.selectedElementIds.size === 1) {
+        const handles = this.getHandlePositions(el, bounds);
+        canvasCtx.fillStyle = '#2563eb';
+        canvasCtx.strokeStyle = '#ffffff';
+        canvasCtx.lineWidth = 1;
+        for (const pos of handles) {
+          canvasCtx.fillRect(
+            pos.x - HANDLE_SIZE / 2,
+            pos.y - HANDLE_SIZE / 2,
+            HANDLE_SIZE,
+            HANDLE_SIZE
+          );
+          canvasCtx.strokeRect(
+            pos.x - HANDLE_SIZE / 2,
+            pos.y - HANDLE_SIZE / 2,
+            HANDLE_SIZE,
+            HANDLE_SIZE
+          );
+        }
+      }
     }
   }
 
   private doMove(point: Point, elements: SketchElement[]): boolean {
-    if (!this.dragStartPos || !this.selectedElementId) return false;
+    if (!this.dragStartPos || this.selectedElementIds.size === 0) return false;
     const dx = point.x - this.dragStartPos.x;
     const dy = point.y - this.dragStartPos.y;
-    const el = elements.find((e) => e.id === this.selectedElementId);
-    if (!el) return false;
 
-    if (el.type === 'text') {
-      el.position.x += dx;
-      el.position.y += dy;
-    } else if (el.type === 'image') {
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (!el) continue;
+      this.moveElement(el, dx, dy);
+    }
+
+    this.dragStartPos = point;
+    return true;
+  }
+
+  private moveElement(el: SketchElement, dx: number, dy: number): void {
+    if (el.type === 'text' || el.type === 'image') {
       el.position.x += dx;
       el.position.y += dy;
     } else if (el.type === 'freehand') {
       for (const p of el.points) {
         p.x += dx;
         p.y += dy;
+      }
+    } else if (el.type === 'group') {
+      for (const subEl of el.elements) {
+        this.moveElement(subEl, dx, dy);
       }
     } else {
       // line, rect, ellipse, triangle, arrow
@@ -509,17 +667,13 @@ export class ElementEditor {
       el.end.x += dx;
       el.end.y += dy;
     }
-    this.dragStartPos = point;
-    return true;
   }
 
-  private doResize(point: Point, elements: SketchElement[]): boolean {
-    if (!this.dragStartPos || !this.selectedElementId || !this.activeHandle) return false;
-    const el = elements.find((e) => e.id === this.selectedElementId);
-    if (!el) return false;
+  private doResize(point: Point, el: SketchElement): boolean {
+    if (!this.dragStartPos || !this.activeHandle) return false;
 
-    // Freehand doesn't resize
-    if (el.type === 'freehand') return false;
+    // Freehand and Group don't resize via handles currently
+    if (el.type === 'freehand' || el.type === 'group') return false;
 
     // Line/arrow: drag start or end point directly
     if (
@@ -564,7 +718,6 @@ export class ElementEditor {
       const dy = point.y - this.dragStartPos.y;
       const newSize = Math.max(8, Math.min(200, el.fontSize + dy * 0.5));
       el.fontSize = Math.round(newSize);
-      el.width = el.fontSize;
       this.dom.fontSize.value = String(el.fontSize);
       this.dragStartPos = point;
       return true;
@@ -721,7 +874,10 @@ export class ElementEditor {
     this.dom.colorInput.value = el.color;
 
     // Show context-appropriate options via generic option set
-    const options = optionsForElementType(el.type);
+    const options = new Set(optionsForElementType(el.type));
+    if (el.type === 'group') {
+      options.add('ungroup');
+    }
     this.toolbar?.showSelectionOptions(options);
 
     // Populate text-specific fields

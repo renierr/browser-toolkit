@@ -213,7 +213,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   // --- Quick color ---
   const applySelectedChange = (): void => {
-    if (elementEditor.getSelectedId()) {
+    if (elementEditor.getSelectedIds().length > 0) {
       hasUnsavedChanges = true;
       renderer.markDirty();
       updateUndoRedo();
@@ -231,7 +231,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       dom.colorPopup.hidePopover();
     }
     // Also apply to selected element if in select mode
-    if (elementEditor.getSelectedId()) {
+    if (elementEditor.getSelectedIds().length > 0) {
       history.push(elements);
       elementEditor.applySelectedColor(elements);
       applySelectedChange();
@@ -239,7 +239,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   };
 
   toolbar.setFilledToggleHandler(() => {
-    if (elementEditor.getSelectedId()) {
+    if (elementEditor.getSelectedIds().length > 0) {
       history.push(elements);
       elementEditor.updateSelectedFilled(elements, toolbar.isFilled());
       applySelectedChange();
@@ -247,7 +247,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   });
 
   toolbar.setMoveToFrontHandler(() => {
-    if (elementEditor.getSelectedId()) {
+    if (elementEditor.getSelectedIds().length > 0) {
       history.push(elements);
       elements = elementEditor.moveElementToFront(elements);
       hasUnsavedChanges = true;
@@ -258,7 +258,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   });
 
   toolbar.setMoveToBelowHandler(() => {
-    if (elementEditor.getSelectedId()) {
+    if (elementEditor.getSelectedIds().length > 0) {
       history.push(elements);
       elements = elementEditor.moveElementToBelow(elements);
       hasUnsavedChanges = true;
@@ -307,6 +307,28 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     }
   });
 
+  toolbar.setGroupHandler(() => {
+    if (elementEditor.getSelectedIds().length > 1) {
+      history.push(elements);
+      elements = elementEditor.groupSelected(elements);
+      hasUnsavedChanges = true;
+      renderer.markDirty();
+      updateUndoRedo();
+      renderer.requestDrawImmediate();
+    }
+  });
+
+  toolbar.setUngroupHandler(() => {
+    if (elementEditor.getSelectedIds().length === 1) {
+      history.push(elements);
+      elements = elementEditor.ungroupSelected(elements);
+      hasUnsavedChanges = true;
+      renderer.markDirty();
+      updateUndoRedo();
+      renderer.requestDrawImmediate();
+    }
+  });
+
   const setBackground = (bgClass: string): void => {
     dom.appContainer.classList.remove('checkerboard-bg', 'solid-black-bg', 'warm-white-bg');
     dom.appContainer.classList.add(bgClass);
@@ -315,7 +337,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   };
 
   const applyTextChange = (): void => {
-    if (elementEditor.getSelectedId()) {
+    if (elementEditor.getSelectedIds().length > 0) {
       history.push(elements);
       elementEditor.updateSelectedText(elements);
       hasUnsavedChanges = true;
@@ -435,7 +457,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
     let preColorSnapshot: SketchElement[] | null = null;
     dom.colorInput.addEventListener('input', () => {
-      if (elementEditor.getSelectedId()) {
+      if (elementEditor.getSelectedIds().length > 0) {
         if (!preColorSnapshot) preColorSnapshot = JSON.parse(JSON.stringify(elements));
         elementEditor.applySelectedColor(elements);
         renderer.markDirty();
@@ -444,7 +466,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     });
 
     dom.colorInput.addEventListener('change', () => {
-      if (elementEditor.getSelectedId()) {
+      if (elementEditor.getSelectedIds().length > 0) {
         if (preColorSnapshot) {
           history.pushSnapshot(preColorSnapshot);
           preColorSnapshot = null;
@@ -469,7 +491,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     const btnEditText = document.getElementById('edit-text') as HTMLButtonElement | null;
     if (btnEditText) {
       btnEditText.addEventListener('click', () => {
-        if (elementEditor.getSelectedId()) {
+        if (elementEditor.getSelectedIds().length === 1) {
           history.push(elements);
           elementEditor.editSelectedText(elements, viewport.state, () => {
             hasUnsavedChanges = true;
@@ -482,7 +504,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     }
 
     dom.deleteElement.addEventListener('click', () => {
-      if (elementEditor.getSelectedId()) {
+      if (elementEditor.getSelectedIds().length > 0) {
         history.push(elements);
         elements = elementEditor.deleteSelected(elements);
         hasUnsavedChanges = true;
@@ -495,7 +517,10 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     dom.canvas.addEventListener(
       'keydown',
       (e) => {
-        if (elementEditor.getSelectedId() && (e.key === 'Delete' || e.key === 'Backspace')) {
+        if (
+          elementEditor.getSelectedIds().length > 0 &&
+          (e.key === 'Delete' || e.key === 'Backspace')
+        ) {
           e.preventDefault();
           history.push(elements);
           elements = elementEditor.deleteSelected(elements);

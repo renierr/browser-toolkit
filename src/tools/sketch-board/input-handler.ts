@@ -117,7 +117,7 @@ export class PointerInputHandler {
 
     if (mode === 'select') {
       const point = this.viewport.toWorld(e.clientX, e.clientY);
-      this.elementEditor.handleSelectPointerDown(point, elements);
+      this.elementEditor.handleSelectPointerDown(point, elements, e.shiftKey);
       this.renderer.requestDrawImmediate();
       return;
     }

@@ -60,6 +60,8 @@ export type SketchDom = {
   moveToFront: HTMLButtonElement;
   moveToBelow: HTMLButtonElement;
   btnResizeImageOriginal: HTMLButtonElement;
+  groupElements: HTMLButtonElement;
+  ungroupElements: HTMLButtonElement;
   deleteElement: HTMLButtonElement;
   textInputOverlay: HTMLDivElement | null;
   zoomToast: HTMLDivElement | null;
@@ -130,6 +132,8 @@ export function getDom(doc: Document): SketchDom | null {
   const btnResizeImageOriginal = doc.getElementById(
     'resize-image-original'
   ) as HTMLButtonElement | null;
+  const groupElements = doc.getElementById('group-elements') as HTMLButtonElement | null;
+  const ungroupElements = doc.getElementById('ungroup-elements') as HTMLButtonElement | null;
   const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
   const zoomToast = doc.getElementById('zoom-toast') as HTMLDivElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
@@ -200,6 +204,8 @@ export function getDom(doc: Document): SketchDom | null {
     !moveToFront ||
     !moveToBelow ||
     !btnResizeImageOriginal ||
+    !groupElements ||
+    !ungroupElements ||
     !deleteElement
   ) {
     return null;
@@ -276,6 +282,8 @@ export function getDom(doc: Document): SketchDom | null {
     moveToFront,
     moveToBelow,
     btnResizeImageOriginal,
+    groupElements,
+    ungroupElements,
     deleteElement,
     textInputOverlay: null,
     zoomToast,

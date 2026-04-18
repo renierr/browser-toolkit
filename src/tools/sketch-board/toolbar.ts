@@ -37,6 +37,8 @@ export class ToolbarController {
   private onMoveToFront: (() => void) | null = null;
   private onMoveToBelow: (() => void) | null = null;
   private onResizeImage: (() => void) | null = null;
+  private onGroup: (() => void) | null = null;
+  private onUngroup: (() => void) | null = null;
   private readonly listeners: Array<{ el: EventTarget; type: string; fn: EventListener }> = [];
   private toolOptionsMap = new Map<DrawMode, ReadonlySet<ToolOptionId>>();
 
@@ -61,6 +63,12 @@ export class ToolbarController {
   }
   setResizeImageHandler(handler: () => void): void {
     this.onResizeImage = handler;
+  }
+  setGroupHandler(handler: () => void): void {
+    this.onGroup = handler;
+  }
+  setUngroupHandler(handler: () => void): void {
+    this.onUngroup = handler;
   }
 
   updateUndoRedo(history: HistoryManager): void {
@@ -177,6 +185,8 @@ export class ToolbarController {
     this.dom.deleteElement.classList.add('hidden');
     this.dom.moveToFront.classList.add('hidden');
     this.dom.moveToBelow.classList.add('hidden');
+    this.dom.groupElements.classList.add('hidden');
+    this.dom.ungroupElements.classList.add('hidden');
     // Also hide color controls that are outside #tool-options
     for (const el of this.dom.toolOptColors) el.classList.add('hidden');
   }
@@ -214,6 +224,12 @@ export class ToolbarController {
 
     this.on(dom.btnResizeImageOriginal, 'click', () => {
       this.onResizeImage?.();
+    });
+    this.on(dom.groupElements, 'click', () => {
+      this.onGroup?.();
+    });
+    this.on(dom.ungroupElements, 'click', () => {
+      this.onUngroup?.();
     });
   }
 
@@ -268,6 +284,13 @@ export class ToolbarController {
       if (options.has('image')) el.classList.remove('hidden');
       else el.classList.add('hidden');
     }
+
+    // Grouping
+    if (options.has('group')) dom.groupElements.classList.remove('hidden');
+    else dom.groupElements.classList.add('hidden');
+
+    if (options.has('ungroup')) dom.ungroupElements.classList.remove('hidden');
+    else dom.ungroupElements.classList.add('hidden');
   }
 }
 
