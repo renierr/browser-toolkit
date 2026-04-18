@@ -136,7 +136,7 @@ export class ElementEditor {
         if (this.selectedElementIds.size === 1) {
           this.syncToolbarForElement(el);
         } else {
-          this.toolbar?.showSelectionOptions(new Set(['group']));
+          this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill']));
         }
 
         this.dom.canvas.setAttribute('data-cursor', 'move');
@@ -215,7 +215,7 @@ export class ElementEditor {
           const el = elements.find((e) => e.id === id);
           if (el) this.syncToolbarForElement(el);
         } else {
-          this.toolbar?.showSelectionOptions(new Set(['group']));
+          this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill']));
         }
       }
       return { pushed: false, hasUnsavedChanges: hasUnsaved };
@@ -455,10 +455,20 @@ export class ElementEditor {
   /** Live-update color of selected element (no history push) */
   applySelectedColor(elements: SketchElement[]): void {
     if (this.selectedElementIds.size === 0) return;
+    const color = this.dom.colorInput.value;
     for (const id of this.selectedElementIds) {
       const el = elements.find((e) => e.id === id);
       if (el) {
-        el.color = this.dom.colorInput.value;
+        this.applyColorToElement(el, color);
+      }
+    }
+  }
+
+  private applyColorToElement(el: SketchElement, color: string): void {
+    el.color = color;
+    if (el.type === 'group') {
+      for (const subEl of el.elements) {
+        this.applyColorToElement(subEl, color);
       }
     }
   }
@@ -468,8 +478,19 @@ export class ElementEditor {
     if (this.selectedElementIds.size === 0) return;
     for (const id of this.selectedElementIds) {
       const el = elements.find((e) => e.id === id);
-      if (el && 'filled' in el) {
-        (el as { filled?: boolean }).filled = filled;
+      if (el) {
+        this.applyFilledToElement(el, filled);
+      }
+    }
+  }
+
+  private applyFilledToElement(el: SketchElement, filled: boolean): void {
+    if ('filled' in el) {
+      (el as any).filled = filled;
+    }
+    if (el.type === 'group') {
+      for (const subEl of el.elements) {
+        this.applyFilledToElement(subEl, filled);
       }
     }
   }
@@ -555,7 +576,7 @@ export class ElementEditor {
       this.selectedElementIds.add(subEl.id);
     }
 
-    this.toolbar?.showSelectionOptions(new Set(['group']));
+    this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill']));
     return remainingElements;
   }
 
@@ -759,8 +780,8 @@ export class ElementEditor {
   }
 
   private hitTestHandle(point: Point, el: SketchElement): ResizeHandle | null {
-    // Freehand: no resize handles
-    if (el.type === 'freehand') return null;
+    // Freehand and Group: no resize handles
+    if (el.type === 'freehand' || el.type === 'group') return null;
 
     // Image: has all corner/edge handles
     if (el.type === 'image') {
@@ -805,7 +826,7 @@ export class ElementEditor {
     el: SketchElement,
     bounds: { x: number; y: number; w: number; h: number }
   ): Point[] {
-    if (el.type === 'freehand') return [];
+    if (el.type === 'freehand' || el.type === 'group') return [];
     if (el.type === 'line' || el.type === 'arrow') {
       return [{ ...el.start }, { ...el.end }];
     }
