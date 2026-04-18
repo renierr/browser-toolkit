@@ -36,9 +36,15 @@ import { ViewportController } from './viewport.ts';
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload): void | (() => void) {
   const dom = getDom(document);
-  if (!dom) return;
+  if (!dom) {
+    console.error('[SketchBoard] Failed to get DOM');
+    return;
+  }
   const ctx = dom.canvas.getContext('2d');
-  if (!ctx) return;
+  if (!ctx) {
+    console.error('[SketchBoard] Failed to get canvas context');
+    return;
+  }
 
   // --- Mutable state (scoped to init) ---
   let mode: ToolMode = 'pan';
