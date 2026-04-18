@@ -63,7 +63,7 @@ export const replacePlaceholders = (
   context: any,
   partials?: Record<string, string>
 ): string => {
-  const placeholderRegex = /{{(.+?)}}/g;
+  const placeholderRegex = /{{([\s\S]+?)}}/g;
 
   const process = (text: string, depth: number): string => {
     if (depth > 8) {

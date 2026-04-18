@@ -1,151 +1,150 @@
-    <div id="editor-container" class="hidden flex flex-col gap-4">
-      <div class="flex flex-wrap gap-2 justify-between items-center">
-        <div class="flex gap-2">
-          <button id="btn-reset" class="btn btn-sm btn-ghost text-error">
-            <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Start Over
-          </button>
-        </div>
-        <div class="flex gap-2 flex-wrap">
-          <button id="btn-add-page" class="btn btn-sm btn-outline btn-primary">
-            <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Add Page
-          </button>
-          <button id="btn-clipboard" class="btn btn-sm btn-ghost">
-            <i data-lucide="download" class="w-4 h-4 mr-1"></i> Copy Image
-          </button>
-          <button id="btn-download" class="btn btn-sm btn-ghost">
-            <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download Image
-          </button>
-          <button id="btn-share-pdf" class="btn btn-sm btn-primary text-white">
-            <i data-lucide="share-2" class="w-4 h-4 mr-1"></i> Share
-          </button>
-          <button id="btn-download-pdf" class="btn btn-sm btn-success text-white">
-            <i data-lucide="file-text" class="w-4 h-4 mr-1"></i> Export PDF
-          </button>
-        </div>
-      </div>
+<div id="editor-container" class="hidden flex flex-col gap-4">
+  <div class="flex flex-wrap gap-2 justify-between items-center">
+    <div class="flex gap-2">
+      <button id="btn-reset" class="btn btn-sm btn-ghost text-error">
+        <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Start Over
+      </button>
+    </div>
+    <div class="flex gap-2 flex-wrap">
+      <button id="btn-add-page" class="btn btn-sm btn-outline btn-primary">
+        <i data-lucide="plus" class="w-4 h-4 mr-1"></i> Add Page
+      </button>
+      <button id="btn-clipboard" class="btn btn-sm btn-ghost">
+        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Copy Image
+      </button>
+      <button id="btn-download" class="btn btn-sm btn-ghost">
+        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Download Image
+      </button>
+      <button id="btn-share-pdf" class="btn btn-sm btn-primary text-white">
+        <i data-lucide="share-2" class="w-4 h-4 mr-1"></i> Share
+      </button>
+      <button id="btn-download-pdf" class="btn btn-sm btn-success text-white">
+        <i data-lucide="file-text" class="w-4 h-4 mr-1"></i> Export PDF
+      </button>
+    </div>
+  </div>
 
-      <div
-        class="sticky top-0 z-20 bg-base-200/95 backdrop-blur p-2 rounded-box shadow-md flex flex-wrap gap-2 items-center justify-center border border-base-300"
+  <div
+    class="sticky top-0 z-20 bg-base-200/95 backdrop-blur p-2 rounded-box shadow-md flex flex-wrap gap-2 items-center justify-center border border-base-300"
+  >
+    <div class="join">
+      <button
+        class="btn btn-sm join-item btn-active"
+        id="btn-mode-perspective"
+        title="Fix Perspective"
       >
-        <div class="join">
-          <button
-            class="btn btn-sm join-item btn-active"
-            id="btn-mode-perspective"
-            title="Fix Perspective"
-          >
-            <i data-lucide="box" class="w-4 h-4 mr-1"></i> Perspective
-          </button>
-          <button class="btn btn-sm join-item" id="btn-mode-filter" title="Enhance Colors">
-            <i data-lucide="wand-2" class="w-4 h-4 mr-1"></i> Enhance
-          </button>
-        </div>
+        <i data-lucide="box" class="w-4 h-4 mr-1"></i> Perspective
+      </button>
+      <button class="btn btn-sm join-item" id="btn-mode-filter" title="Enhance Colors">
+        <i data-lucide="wand-2" class="w-4 h-4 mr-1"></i> Enhance
+      </button>
+    </div>
 
-        <div id="filter-controls" class="hidden flex items-center gap-4 px-2">
-          <div class="flex gap-1">
-            <button id="btn-rotate-left" class="btn btn-sm btn-ghost" title="Rotate Left">
-              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
-            </button>
-            <button id="btn-rotate-right" class="btn btn-sm btn-ghost" title="Rotate Right">
-              <i data-lucide="rotate-cw" class="w-4 h-4"></i>
-            </button>
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-xs font-bold uppercase opacity-50" for="filter-select"
-              >Filter:</label
-            >
-            <select id="filter-select" class="select select-bordered select-xs">
-              <option value="none">Original</option>
-              <option value="grayscale">Grayscale</option>
-              <option value="b&w">High Contrast B&W</option>
-              <option value="clean">Clean White</option>
-            </select>
-          </div>
-        </div>
+    <div id="filter-controls" class="hidden flex items-center gap-4 px-2">
+      <div class="flex gap-1">
+        <button id="btn-rotate-left" class="btn btn-sm btn-ghost" title="Rotate Left">
+          <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+        </button>
+        <button id="btn-rotate-right" class="btn btn-sm btn-ghost" title="Rotate Right">
+          <i data-lucide="rotate-cw" class="w-4 h-4"></i>
+        </button>
       </div>
+      <div class="flex items-center gap-2">
+        <label class="text-xs font-bold uppercase opacity-50" for="filter-select">Filter:</label>
+        <select id="filter-select" class="select select-bordered select-xs">
+          <option value="none">Original</option>
+          <option value="grayscale">Grayscale</option>
+          <option value="b&w">High Contrast B&W</option>
+          <option value="clean">Clean White</option>
+        </select>
+      </div>
+    </div>
+  </div>
 
+  <div
+    class="checkerboard-bg relative bg-base-300 rounded-xl flex items-center justify-center border border-base-300 shadow-inner min-h-75 p-8"
+    id="canvas-wrapper"
+  >
+    <div class="grid place-items-center relative">
+      <canvas
+        id="editor-canvas"
+        class="max-w-full max-h-[85vh] shadow-2xl block"
+        style="grid-area: 1/1"
+      ></canvas>
       <div
-        class="checkerboard-bg relative bg-base-300 rounded-xl flex items-center justify-center border border-base-300 shadow-inner min-h-75 p-8"
-        id="canvas-wrapper"
+        id="corner-handles"
+        class="relative pointer-events-none w-full h-full"
+        style="grid-area: 1/1"
       >
-        <div class="grid place-items-center relative">
-          <canvas
-            id="editor-canvas"
-            class="max-w-full max-h-[85vh] shadow-2xl block"
-            style="grid-area: 1/1"
-          ></canvas>
-          <div
-            id="corner-handles"
-            class="relative pointer-events-none w-full h-full"
-            style="grid-area: 1/1"
-          >
-            <!-- TS will inject handles here -->
-          </div>
-          <!-- Magnifier -->
-          <div
-            id="magnifier"
-            class="absolute w-32 h-32 rounded-full border-4 border-primary shadow-2xl overflow-hidden pointer-events-none hidden z-50 bg-white"
-          >
-            <canvas id="magnifier-canvas" class="w-full h-full"></canvas>
-          </div>
-        </div>
+        <!-- TS will inject handles here -->
       </div>
-
-      <div id="perspective-actions" class="flex flex-col items-center gap-4 p-2">
-        <div class="flex gap-2 items-center">
-          <button
-            id="btn-undo-corners"
-            class="btn btn-sm btn-outline btn-disabled"
-            disabled
-            title="Undo corner change"
-          >
-            <i data-lucide="undo-2" class="w-4 h-4 mr-1"></i> Undo
-          </button>
-          <button id="btn-reset-corners" class="btn btn-sm btn-outline" title="Reset corners">
-            <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Reset Corners
-          </button>
-          <button id="btn-apply-perspective" class="btn btn-sm btn-success text-white gap-2 px-8">
-            <i data-lucide="check" class="w-4 h-4"></i> Apply
-          </button>
-        </div>
-
-        <div id="nudge-controls" class="hidden flex flex-col items-center gap-2">
-          <span class="text-[10px] uppercase font-bold opacity-50">Fine Tune Selected Corner</span>
-          <div class="grid grid-cols-3 gap-1">
-            <div class="w-8"></div>
-            <button
-              id="btn-nudge-up"
-              class="btn btn-sm btn-square btn-outline"
-              aria-label="Nudge corner up"
-            >
-              <i data-lucide="chevron-up" class="w-4 h-4"></i>
-            </button>
-            <div class="w-8"></div>
-
-            <button
-              id="btn-nudge-left"
-              class="btn btn-sm btn-square btn-outline"
-              aria-label="Nudge corner left"
-            >
-              <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            </button>
-            <button
-              id="btn-nudge-down"
-              class="btn btn-sm btn-square btn-outline"
-              aria-label="Nudge corner down"
-            >
-              <i data-lucide="chevron-down" class="w-4 h-4"></i>
-            </button>
-            <button
-              id="btn-nudge-right"
-              class="btn btn-sm btn-square btn-outline"
-              aria-label="Nudge corner right"
-            >
-              <i data-lucide="chevron-right" class="w-4 h-4"></i>
-            </button>
-          </div>
-        </div>
+      <!-- Magnifier -->
+      <div
+        id="magnifier"
+        class="absolute w-32 h-32 rounded-full border-4 border-primary shadow-2xl overflow-hidden pointer-events-none hidden z-50 bg-white"
+      >
+        <canvas id="magnifier-canvas" class="w-full h-full"></canvas>
       </div>
+    </div>
+  </div>
 
-      <div class="text-center text-xs opacity-50 pb-2" id="hint-text">
-        Drag the corners to match the document boundaries.
+  <div id="perspective-actions" class="flex flex-col items-center gap-4 p-2">
+    <div class="flex gap-2 items-center">
+      <button
+        id="btn-undo-corners"
+        class="btn btn-sm btn-outline btn-disabled"
+        disabled
+        title="Undo corner change"
+      >
+        <i data-lucide="undo-2" class="w-4 h-4 mr-1"></i> Undo
+      </button>
+      <button id="btn-reset-corners" class="btn btn-sm btn-outline" title="Reset corners">
+        <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Reset Corners
+      </button>
+      <button id="btn-apply-perspective" class="btn btn-sm btn-success text-white gap-2 px-8">
+        <i data-lucide="check" class="w-4 h-4"></i> Apply
+      </button>
+    </div>
+
+    <div id="nudge-controls" class="hidden flex flex-col items-center gap-2">
+      <span class="text-[10px] uppercase font-bold opacity-50">Fine Tune Selected Corner</span>
+      <div class="grid grid-cols-3 gap-1">
+        <div class="w-8"></div>
+        <button
+          id="btn-nudge-up"
+          class="btn btn-sm btn-square btn-outline"
+          aria-label="Nudge corner up"
+        >
+          <i data-lucide="chevron-up" class="w-4 h-4"></i>
+        </button>
+        <div class="w-8"></div>
+
+        <button
+          id="btn-nudge-left"
+          class="btn btn-sm btn-square btn-outline"
+          aria-label="Nudge corner left"
+        >
+          <i data-lucide="chevron-left" class="w-4 h-4"></i>
+        </button>
+        <button
+          id="btn-nudge-down"
+          class="btn btn-sm btn-square btn-outline"
+          aria-label="Nudge corner down"
+        >
+          <i data-lucide="chevron-down" class="w-4 h-4"></i>
+        </button>
+        <button
+          id="btn-nudge-right"
+          class="btn btn-sm btn-square btn-outline"
+          aria-label="Nudge corner right"
+        >
+          <i data-lucide="chevron-right" class="w-4 h-4"></i>
+        </button>
       </div>
+    </div>
+  </div>
+
+  <div class="text-center text-xs opacity-50 pb-2" id="hint-text">
+    Drag the corners to match the document boundaries.
+  </div>
+</div>

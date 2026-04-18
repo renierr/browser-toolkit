@@ -1,189 +1,192 @@
-  <div id="dashboard" class="grid grid-cols-1 gap-6 opacity-50 pointer-events-none landscape:grid-cols-3 landscape:gap-4">
-    <!-- Main Metric: Speed -->
-    <div class="card bg-base-100 shadow-xl border border-base-300 md:col-span-2 landscape:col-span-1">
-      <div class="card-body items-center text-center landscape:p-4">
-        <h3 class="text-xl font-semibold opacity-70 uppercase tracking-widest">Speed</h3>
-        <div class="flex items-baseline gap-2 landscape:gap-1">
-          <span id="speed-display" class="text-8xl font-black text-primary tabular-nums landscape:text-5xl">0.0</span>
-          <span class="text-2xl font-bold opacity-50 landscape:text-lg">km/h</span>
-        </div>
-
-        <div id="controls-divider" class="divider">Controls</div>
-
-        <div class="flex flex-wrap justify-center gap-4">
-          <div class="flex flex-wrap gap-2">
-            <button id="start-btn" class="btn btn-success gap-2">
-              <i data-lucide="play" class="fill-current"></i> Start
-            </button>
-            <button id="stop-btn" class="btn btn-error gap-2">
-              <i data-lucide="square" class="fill-current"></i> Stop
-            </button>
-          </div>
-          <div class="flex flex-wrap gap-2">
-            <button
-              id="speed-down-btn"
-              class="btn btn-circle btn-outline btn-md"
-              aria-label="Decrease Speed"
-            >
-              <i data-lucide="minus"></i>
-            </button>
-            <button
-              id="speed-up-btn"
-              class="btn btn-circle btn-outline btn-md"
-              aria-label="Increase Speed"
-            >
-              <i data-lucide="plus"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Secondary Metrics -->
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 landscape:col-span-2 landscape:grid-cols-2">
-      <!-- Distance -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Distance</span>
-          <span id="distance-display" class="text-3xl font-bold tabular-nums">0.00</span>
-          <span class="text-xs font-semibold opacity-40">km</span>
-        </div>
+<div
+  id="dashboard"
+  class="grid grid-cols-1 gap-6 opacity-50 pointer-events-none landscape:grid-cols-3 landscape:gap-4"
+>
+  <!-- Main Metric: Speed -->
+  <div class="card bg-base-100 shadow-xl border border-base-300 md:col-span-2 landscape:col-span-1">
+    <div class="card-body items-center text-center landscape:p-4">
+      <h3 class="text-xl font-semibold opacity-70 uppercase tracking-widest">Speed</h3>
+      <div class="flex items-baseline gap-2 landscape:gap-1">
+        <span
+          id="speed-display"
+          class="text-8xl font-black text-primary tabular-nums landscape:text-5xl"
+          >0.0</span
+        >
+        <span class="text-2xl font-bold opacity-50 landscape:text-lg">km/h</span>
       </div>
 
-      <!-- Time -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Time</span>
-          <span id="time-display" class="text-3xl font-bold tabular-nums">00:00</span>
-          <span class="text-xs font-semibold opacity-40">elapsed</span>
-        </div>
-      </div>
+      <div id="controls-divider" class="divider">Controls</div>
 
-      <!-- Steps (Optional / PitPat) -->
-      <div id="steps-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Steps</span>
-          <span id="steps-display" class="text-3xl font-bold tabular-nums">0</span>
-          <span class="text-xs font-semibold opacity-40">steps</span>
+      <div class="flex flex-wrap justify-center gap-4">
+        <div class="flex flex-wrap gap-2">
+          <button id="start-btn" class="btn btn-success gap-2">
+            <i data-lucide="play" class="fill-current"></i> Start
+          </button>
+          <button id="stop-btn" class="btn btn-error gap-2">
+            <i data-lucide="square" class="fill-current"></i> Stop
+          </button>
         </div>
-      </div>
-
-      <!-- Cadence (Optional, from RSC) -->
-      <div id="cadence-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Cadence</span>
-          <span id="cadence-display" class="text-3xl font-bold tabular-nums">--</span>
-          <span class="text-xs font-semibold opacity-40">spm</span>
-        </div>
-      </div>
-
-      <!-- Remaining Time (Optional) -->
-      <div
-        id="remaining-time-container"
-        class="card bg-base-100 shadow-xl border border-base-300 hidden"
-      >
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Remaining</span>
-          <span id="remaining-time-display" class="text-3xl font-bold tabular-nums">--:--</span>
-          <span class="text-xs font-semibold opacity-40">time</span>
-        </div>
-      </div>
-
-      <!-- Average Speed (Optional) -->
-      <div
-        id="avg-speed-container"
-        class="card bg-base-100 shadow-xl border border-base-300 hidden"
-      >
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Avg Speed</span>
-          <span id="avg-speed-display" class="text-3xl font-bold tabular-nums">0.0</span>
-          <span class="text-xs font-semibold opacity-40">km/h</span>
-        </div>
-      </div>
-
-      <!-- Heart Rate (Optional) -->
-      <div id="hr-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Heart Rate</span>
-          <div class="flex items-center gap-2">
-            <i data-lucide="heart" class="text-error size-4 animate-pulse"></i>
-            <span id="hr-display" class="text-3xl font-bold tabular-nums">--</span>
-          </div>
-          <span class="text-xs font-semibold opacity-40">bpm</span>
-        </div>
-      </div>
-
-      <!-- Pace (Optional) -->
-      <div id="pace-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Pace</span>
-          <span id="pace-display" class="text-3xl font-bold tabular-nums">--:--</span>
-          <span class="text-xs font-semibold opacity-40">min/km</span>
-        </div>
-      </div>
-
-      <!-- Avg Pace (Optional) -->
-      <div id="avg-pace-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Avg Pace</span>
-          <span id="avg-pace-display" class="text-3xl font-bold tabular-nums">--:--</span>
-          <span class="text-xs font-semibold opacity-40">min/km</span>
-        </div>
-      </div>
-
-      <!-- Elevation Gain (Optional) -->
-      <div
-        id="elevation-container"
-        class="card bg-base-100 shadow-xl border border-base-300 hidden"
-      >
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Elevation</span>
-          <span id="elevation-display" class="text-3xl font-bold tabular-nums">0.0</span>
-          <span class="text-xs font-semibold opacity-40">m</span>
-        </div>
-      </div>
-
-      <!-- METs (Optional) -->
-      <div id="mets-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">METs</span>
-          <span id="mets-display" class="text-3xl font-bold tabular-nums">0.0</span>
-          <span class="text-xs font-semibold opacity-40">index</span>
-        </div>
-      </div>
-
-      <!-- Calories -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Calories</span>
-          <span id="calories-display" class="text-3xl font-bold tabular-nums">0</span>
-          <span class="text-xs font-semibold opacity-40">kcal</span>
-        </div>
-      </div>
-
-      <!-- Incline -->
-      <div class="card bg-base-100 shadow-xl">
-        <div class="card-body p-4 items-center gap-1">
-          <span class="text-xs font-bold opacity-50 uppercase">Incline</span>
-          <div class="flex items-center gap-4">
-            <button
-              id="incline-down-btn"
-              class="btn btn-xs btn-circle btn-ghost border border-base-300"
-              aria-label="Decrease Incline"
-            >
-              <i data-lucide="chevron-down" class="size-3"></i>
-            </button>
-            <span id="incline-display" class="text-3xl font-bold tabular-nums">0.0</span>
-            <button
-              id="incline-up-btn"
-              class="btn btn-xs btn-circle btn-ghost border border-base-300"
-              aria-label="Increase Incline"
-            >
-              <i data-lucide="chevron-up" class="size-3"></i>
-            </button>
-          </div>
-          <span class="text-xs font-semibold opacity-40">%</span>
+        <div class="flex flex-wrap gap-2">
+          <button
+            id="speed-down-btn"
+            class="btn btn-circle btn-outline btn-md"
+            aria-label="Decrease Speed"
+          >
+            <i data-lucide="minus"></i>
+          </button>
+          <button
+            id="speed-up-btn"
+            class="btn btn-circle btn-outline btn-md"
+            aria-label="Increase Speed"
+          >
+            <i data-lucide="plus"></i>
+          </button>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Secondary Metrics -->
+  <div
+    class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 landscape:col-span-2 landscape:grid-cols-2"
+  >
+    <!-- Distance -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Distance</span>
+        <span id="distance-display" class="text-3xl font-bold tabular-nums">0.00</span>
+        <span class="text-xs font-semibold opacity-40">km</span>
+      </div>
+    </div>
+
+    <!-- Time -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Time</span>
+        <span id="time-display" class="text-3xl font-bold tabular-nums">00:00</span>
+        <span class="text-xs font-semibold opacity-40">elapsed</span>
+      </div>
+    </div>
+
+    <!-- Steps (Optional / PitPat) -->
+    <div id="steps-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Steps</span>
+        <span id="steps-display" class="text-3xl font-bold tabular-nums">0</span>
+        <span class="text-xs font-semibold opacity-40">steps</span>
+      </div>
+    </div>
+
+    <!-- Cadence (Optional, from RSC) -->
+    <div id="cadence-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Cadence</span>
+        <span id="cadence-display" class="text-3xl font-bold tabular-nums">--</span>
+        <span class="text-xs font-semibold opacity-40">spm</span>
+      </div>
+    </div>
+
+    <!-- Remaining Time (Optional) -->
+    <div
+      id="remaining-time-container"
+      class="card bg-base-100 shadow-xl border border-base-300 hidden"
+    >
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Remaining</span>
+        <span id="remaining-time-display" class="text-3xl font-bold tabular-nums">--:--</span>
+        <span class="text-xs font-semibold opacity-40">time</span>
+      </div>
+    </div>
+
+    <!-- Average Speed (Optional) -->
+    <div id="avg-speed-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Avg Speed</span>
+        <span id="avg-speed-display" class="text-3xl font-bold tabular-nums">0.0</span>
+        <span class="text-xs font-semibold opacity-40">km/h</span>
+      </div>
+    </div>
+
+    <!-- Heart Rate (Optional) -->
+    <div id="hr-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Heart Rate</span>
+        <div class="flex items-center gap-2">
+          <i data-lucide="heart" class="text-error size-4 animate-pulse"></i>
+          <span id="hr-display" class="text-3xl font-bold tabular-nums">--</span>
+        </div>
+        <span class="text-xs font-semibold opacity-40">bpm</span>
+      </div>
+    </div>
+
+    <!-- Pace (Optional) -->
+    <div id="pace-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Pace</span>
+        <span id="pace-display" class="text-3xl font-bold tabular-nums">--:--</span>
+        <span class="text-xs font-semibold opacity-40">min/km</span>
+      </div>
+    </div>
+
+    <!-- Avg Pace (Optional) -->
+    <div id="avg-pace-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Avg Pace</span>
+        <span id="avg-pace-display" class="text-3xl font-bold tabular-nums">--:--</span>
+        <span class="text-xs font-semibold opacity-40">min/km</span>
+      </div>
+    </div>
+
+    <!-- Elevation Gain (Optional) -->
+    <div id="elevation-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Elevation</span>
+        <span id="elevation-display" class="text-3xl font-bold tabular-nums">0.0</span>
+        <span class="text-xs font-semibold opacity-40">m</span>
+      </div>
+    </div>
+
+    <!-- METs (Optional) -->
+    <div id="mets-container" class="card bg-base-100 shadow-xl border border-base-300 hidden">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">METs</span>
+        <span id="mets-display" class="text-3xl font-bold tabular-nums">0.0</span>
+        <span class="text-xs font-semibold opacity-40">index</span>
+      </div>
+    </div>
+
+    <!-- Calories -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Calories</span>
+        <span id="calories-display" class="text-3xl font-bold tabular-nums">0</span>
+        <span class="text-xs font-semibold opacity-40">kcal</span>
+      </div>
+    </div>
+
+    <!-- Incline -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body p-4 items-center gap-1">
+        <span class="text-xs font-bold opacity-50 uppercase">Incline</span>
+        <div class="flex items-center gap-4">
+          <button
+            id="incline-down-btn"
+            class="btn btn-xs btn-circle btn-ghost border border-base-300"
+            aria-label="Decrease Incline"
+          >
+            <i data-lucide="chevron-down" class="size-3"></i>
+          </button>
+          <span id="incline-display" class="text-3xl font-bold tabular-nums">0.0</span>
+          <button
+            id="incline-up-btn"
+            class="btn btn-xs btn-circle btn-ghost border border-base-300"
+            aria-label="Increase Incline"
+          >
+            <i data-lucide="chevron-up" class="size-3"></i>
+          </button>
+        </div>
+        <span class="text-xs font-semibold opacity-40">%</span>
+      </div>
+    </div>
+  </div>
+</div>

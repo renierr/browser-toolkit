@@ -1,27 +1,26 @@
-  <div id="saved-signatures-container" class="card bg-base-100 shadow-md p-6 hidden">
-    <h2 class="text-xl font-bold mb-4">Saved Signatures</h2>
+<div id="saved-signatures-container" class="card bg-base-100 shadow-md p-6 hidden">
+  <h2 class="text-xl font-bold mb-4">Saved Signatures</h2>
 
-    <div>
-      <button
-        id="export-signatures-btn"
-        class="btn btn-ghost btn-sm"
-        title="Export saved signatures as JSON"
-      >
-        <i data-lucide="download" class="w-4 h-4 mr-1"></i> Export
-      </button>
-      <button
-        id="import-signatures-btn"
-        class="btn btn-ghost btn-sm"
-        title="Import signatures from JSON"
-      >
-        <i data-lucide="upload" class="w-4 h-4 mr-1"></i> Import
-      </button>
-      <input id="import-file-input" type="file" accept=".json,application/json" class="hidden" />
-    </div>
+  <div>
+    <button
+      id="export-signatures-btn"
+      class="btn btn-ghost btn-sm"
+      title="Export saved signatures as JSON"
+    >
+      <i data-lucide="download" class="w-4 h-4 mr-1"></i> Export
+    </button>
+    <button
+      id="import-signatures-btn"
+      class="btn btn-ghost btn-sm"
+      title="Import signatures from JSON"
+    >
+      <i data-lucide="upload" class="w-4 h-4 mr-1"></i> Import
+    </button>
+    <input id="import-file-input" type="file" accept=".json,application/json" class="hidden" />
+  </div>
 
-    <div id="signatures-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Signatures will be injected here -->
-    </div>
+  <div id="signatures-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Signatures will be injected here -->
   </div>
 </div>
 

@@ -1,143 +1,139 @@
-    <div id="capture-container" class="flex flex-col gap-4">
-      <div
-        id="camera-controls-sticky"
-        class="hidden fixed bottom-0 left-0 right-0 p-4 pb-8 z-50 pointer-events-none flex flex-col items-center gap-4 bg-linear-to-t from-black/20 to-transparent"
-      >
-        <!-- Debug Outputs -->
-        <div
-          id="debug-view"
-          class="hidden pointer-events-auto flex flex-wrap gap-2 bg-black/80 p-2 rounded-lg border border-white/20 mb-2 max-w-full overflow-x-auto shadow-2xl"
-        >
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-[8px] text-white uppercase font-bold">Grayscale</span>
-            <canvas
-              id="debug-grayscale"
-              class="max-h-24 bg-gray-800 border border-white/10 rounded"
-            ></canvas>
-          </div>
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-[8px] text-white uppercase font-bold">Blur</span>
-            <canvas
-              id="debug-blur"
-              class="max-h-24 bg-gray-800 border border-white/10 rounded"
-            ></canvas>
-          </div>
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-[8px] text-white uppercase font-bold">Edges</span>
-            <canvas
-              id="debug-edges"
-              class="max-h-24 bg-gray-800 border border-white/10 rounded"
-            ></canvas>
-          </div>
-          <div class="flex flex-col items-center gap-1">
-            <span class="text-[8px] text-white uppercase font-bold">Closed</span>
-            <canvas
-              id="debug-morph"
-              class="max-h-24 bg-gray-800 border border-white/10 rounded"
-            ></canvas>
-          </div>
-        </div>
-
-        <div class="pointer-events-auto">
-          <div
-            class="form-control bg-base-100/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-lg"
-          >
-            <label class="label cursor-pointer gap-2 p-0">
-              <span class="label-text text-[10px] font-bold uppercase opacity-70"
-                >Live Detection / auto capture</span
-              >
-              <input
-                type="checkbox"
-                id="check-live-detection"
-                class="toggle toggle-primary toggle-xs"
-              />
-            </label>
-            <label class="ml-2 label cursor-pointer gap-2 p-0">
-              <span class="label-text text-[10px] font-bold uppercase opacity-70">Debug</span>
-              <input
-                type="checkbox"
-                id="check-live-debug"
-                class="toggle toggle-primary toggle-xs"
-              />
-            </label>
-          </div>
-        </div>
-
-        <div
-          class="flex items-center gap-4 pointer-events-auto bg-base-100/60 backdrop-blur-md p-1 rounded-full shadow-2xl border border-white/20"
-        >
-          <div class="flex gap-2 w-24 justify-end">
-            <button
-              id="btn-flash"
-              class="btn btn-ghost btn-circle hidden"
-              title="Toggle Flash"
-              aria-label="Toggle Flash"
-            >
-              <i data-lucide="zap" class="w-6 h-6"></i>
-            </button>
-            <button
-              id="btn-switch-camera"
-              class="btn btn-ghost btn-circle"
-              title="Switch Camera"
-              aria-label="Switch Camera"
-            >
-              <i data-lucide="switch-camera" class="w-6 h-6"></i>
-            </button>
-          </div>
-          <div class="relative">
-            <button
-              id="btn-capture"
-              class="btn btn-primary btn-circle btn-lg shadow-lg"
-              title="Capture"
-              aria-label="Capture photo"
-            >
-              <i data-lucide="camera" class="w-8 h-8"></i>
-            </button>
-            <div
-              id="auto-snap-countdown"
-              class="hidden absolute inset-0 flex items-center justify-center pointer-events-none"
-            >
-              <div class="absolute inset-0 rounded-full bg-black/50 animate-ping opacity-40"></div>
-              <div class="absolute inset-0 rounded-full bg-black/40"></div>
-              <span
-                id="auto-snap-number"
-                class="text-3xl font-black text-white z-10"
-                style="
-                  text-shadow:
-                    0 0 8px rgba(0, 0, 0, 0.9),
-                    0 2px 6px rgba(0, 0, 0, 0.7),
-                    0 0 20px rgba(59, 130, 246, 0.5);
-                "
-              ></span>
-            </div>
-          </div>
-          <div class="flex gap-2 w-24 justify-start">
-            <button
-              id="btn-stop-scan"
-              class="btn btn-ghost btn-circle"
-              title="Stop Scanning"
-              aria-label="Stop Scanning"
-            >
-              <i data-lucide="x" class="w-6 h-6"></i>
-            </button>
-          </div>
-        </div>
+<div id="capture-container" class="flex flex-col gap-4">
+  <div
+    id="camera-controls-sticky"
+    class="hidden fixed bottom-0 left-0 right-0 p-4 pb-8 z-50 pointer-events-none flex flex-col items-center gap-4 bg-linear-to-t from-black/20 to-transparent"
+  >
+    <!-- Debug Outputs -->
+    <div
+      id="debug-view"
+      class="hidden pointer-events-auto flex flex-wrap gap-2 bg-black/80 p-2 rounded-lg border border-white/20 mb-2 max-w-full overflow-x-auto shadow-2xl"
+    >
+      <div class="flex flex-col items-center gap-1">
+        <span class="text-[8px] text-white uppercase font-bold">Grayscale</span>
+        <canvas
+          id="debug-grayscale"
+          class="max-h-24 bg-gray-800 border border-white/10 rounded"
+        ></canvas>
       </div>
-
-      <button id="btn-start-scan" class="w-full btn btn-primary">Start Scan</button>
-
-      <div id="dropzone-container">
-        <div class="divider">OR</div>
-        <div
-          id="dropzone"
-          class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 transition-colors p-6 hover:bg-base-300"
-        >
-          <div class="flex flex-col items-center gap-2 text-center">
-            <i data-lucide="upload-cloud" class="w-10 h-10 opacity-30"></i>
-            <p class="text-lg font-medium">Upload Image</p>
-            <p class="text-sm opacity-50">Click or drag images here</p>
-          </div>
-          <input type="file" id="image-input" class="hidden" accept="image/*" multiple />
-        </div>
+      <div class="flex flex-col items-center gap-1">
+        <span class="text-[8px] text-white uppercase font-bold">Blur</span>
+        <canvas
+          id="debug-blur"
+          class="max-h-24 bg-gray-800 border border-white/10 rounded"
+        ></canvas>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <span class="text-[8px] text-white uppercase font-bold">Edges</span>
+        <canvas
+          id="debug-edges"
+          class="max-h-24 bg-gray-800 border border-white/10 rounded"
+        ></canvas>
+      </div>
+      <div class="flex flex-col items-center gap-1">
+        <span class="text-[8px] text-white uppercase font-bold">Closed</span>
+        <canvas
+          id="debug-morph"
+          class="max-h-24 bg-gray-800 border border-white/10 rounded"
+        ></canvas>
       </div>
     </div>
+
+    <div class="pointer-events-auto">
+      <div
+        class="form-control bg-base-100/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/20 shadow-lg"
+      >
+        <label class="label cursor-pointer gap-2 p-0">
+          <span class="label-text text-[10px] font-bold uppercase opacity-70"
+            >Live Detection / auto capture</span
+          >
+          <input
+            type="checkbox"
+            id="check-live-detection"
+            class="toggle toggle-primary toggle-xs"
+          />
+        </label>
+        <label class="ml-2 label cursor-pointer gap-2 p-0">
+          <span class="label-text text-[10px] font-bold uppercase opacity-70">Debug</span>
+          <input type="checkbox" id="check-live-debug" class="toggle toggle-primary toggle-xs" />
+        </label>
+      </div>
+    </div>
+
+    <div
+      class="flex items-center gap-4 pointer-events-auto bg-base-100/60 backdrop-blur-md p-1 rounded-full shadow-2xl border border-white/20"
+    >
+      <div class="flex gap-2 w-24 justify-end">
+        <button
+          id="btn-flash"
+          class="btn btn-ghost btn-circle hidden"
+          title="Toggle Flash"
+          aria-label="Toggle Flash"
+        >
+          <i data-lucide="zap" class="w-6 h-6"></i>
+        </button>
+        <button
+          id="btn-switch-camera"
+          class="btn btn-ghost btn-circle"
+          title="Switch Camera"
+          aria-label="Switch Camera"
+        >
+          <i data-lucide="switch-camera" class="w-6 h-6"></i>
+        </button>
+      </div>
+      <div class="relative">
+        <button
+          id="btn-capture"
+          class="btn btn-primary btn-circle btn-lg shadow-lg"
+          title="Capture"
+          aria-label="Capture photo"
+        >
+          <i data-lucide="camera" class="w-8 h-8"></i>
+        </button>
+        <div
+          id="auto-snap-countdown"
+          class="hidden absolute inset-0 flex items-center justify-center pointer-events-none"
+        >
+          <div class="absolute inset-0 rounded-full bg-black/50 animate-ping opacity-40"></div>
+          <div class="absolute inset-0 rounded-full bg-black/40"></div>
+          <span
+            id="auto-snap-number"
+            class="text-3xl font-black text-white z-10"
+            style="
+              text-shadow:
+                0 0 8px rgba(0, 0, 0, 0.9),
+                0 2px 6px rgba(0, 0, 0, 0.7),
+                0 0 20px rgba(59, 130, 246, 0.5);
+            "
+          ></span>
+        </div>
+      </div>
+      <div class="flex gap-2 w-24 justify-start">
+        <button
+          id="btn-stop-scan"
+          class="btn btn-ghost btn-circle"
+          title="Stop Scanning"
+          aria-label="Stop Scanning"
+        >
+          <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <button id="btn-start-scan" class="w-full btn btn-primary">Start Scan</button>
+
+  <div id="dropzone-container">
+    <div class="divider">OR</div>
+    <div
+      id="dropzone"
+      class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 transition-colors p-6 hover:bg-base-300"
+    >
+      <div class="flex flex-col items-center gap-2 text-center">
+        <i data-lucide="upload-cloud" class="w-10 h-10 opacity-30"></i>
+        <p class="text-lg font-medium">Upload Image</p>
+        <p class="text-sm opacity-50">Click or drag images here</p>
+      </div>
+      <input type="file" id="image-input" class="hidden" accept="image/*" multiple />
+    </div>
+  </div>
+</div>

@@ -147,88 +147,13 @@ export function getDom(doc: Document): SketchDom | null {
   const toolOptImages = Array.from(doc.querySelectorAll('.tool-opt-image')) as HTMLElement[];
   const toolOptColors = Array.from(doc.querySelectorAll('.tool-opt-color')) as HTMLElement[];
 
-  if (
-    !canvas ||
-    !galleryModal ||
-    !galleryList ||
-    !galleryTemplate ||
-    !colorInput ||
-    !colorPopup ||
-    !widthInput ||
-    !exportFormat ||
-    !exportHighDpi ||
-    !btnBackOverview ||
-    !btnOverviewLabel ||
-    !btnClear ||
-    !btnUndo ||
-    !btnRedo ||
-    !btnSave ||
-    !btnGallery ||
-    !btnExport ||
-    !btnShare ||
-    !btnClipboard ||
-    !btnInfo ||
-    !infoModal ||
-    !infoDimensions ||
-    !infoLocation ||
-    !infoElements ||
-    !infoBackground ||
-    !infoColors ||
-    !btnZoomOut ||
-    !btnZoomIn ||
-    !btnZoomReset ||
-    !btnZoomOutMobile ||
-    !btnZoomInMobile ||
-    !btnZoomResetMobile ||
-    !canvasBg ||
-    !appContainer ||
-    !btnModeDraw ||
-    !btnModePan ||
-    !btnImportImage ||
-    !btnPasteImage ||
-    !modePan ||
-    !modeFreehand ||
-    !modeLine ||
-    !modeRect ||
-    !modeEllipse ||
-    !modeTriangle ||
-    !modeDiamond ||
-    !modeHexagon ||
-    !modeArrow ||
-    !modeDoubleArrow ||
-    !modeSpeechBubble ||
-    !modeCheckmark ||
-    !modeText ||
-    !modeSelect ||
-    !drawTools ||
-    !drawToolsBtn ||
-    !drawToolsIcon ||
-    !drawToolsLabel ||
-    !drawOptions ||
-    !toolOptions ||
-    !filledToggle ||
-    !fontFamily ||
-    !fontSize ||
-    !fontBold ||
-    !fontItalic ||
-    !moveToFront ||
-    !moveToBelow ||
-    !btnResizeImageOriginal ||
-    !groupElements ||
-    !ungroupElements ||
-    !deleteElement
-  ) {
-    return null;
-  }
-
-  return {
+  const requiredElements: Record<string, HTMLElement | null> = {
     canvas,
     galleryModal,
     galleryList,
     galleryTemplate,
     colorInput,
     colorPopup,
-    quickColorButtons,
     widthInput,
     exportFormat,
     exportHighDpi,
@@ -261,33 +186,26 @@ export function getDom(doc: Document): SketchDom | null {
     btnModePan,
     btnImportImage,
     btnPasteImage,
+    modePan,
+    modeFreehand,
+    modeLine,
+    modeRect,
+    modeEllipse,
+    modeTriangle,
+    modeDiamond,
+    modeHexagon,
+    modeArrow,
+    modeDoubleArrow,
+    modeSpeechBubble,
+    modeCheckmark,
+    modeText,
+    modeSelect,
     drawTools,
     drawToolsBtn,
-    drawToolsIcon,
+    drawToolsIcon: drawToolsIcon as HTMLElement,
     drawToolsLabel,
     drawOptions,
-    drawOpts,
-    modeButtons: {
-      pan: modePan,
-      select: modeSelect,
-      freehand: modeFreehand,
-      line: modeLine,
-      rect: modeRect,
-      ellipse: modeEllipse,
-      triangle: modeTriangle,
-      diamond: modeDiamond!,
-      hexagon: modeHexagon!,
-      arrow: modeArrow,
-      'double-arrow': modeDoubleArrow!,
-      'speech-bubble': modeSpeechBubble!,
-      checkmark: modeCheckmark!,
-      text: modeText,
-    },
     toolOptions,
-    toolOptShapes,
-    toolOptTexts,
-    toolOptImages,
-    toolOptColors,
     filledToggle,
     fontFamily,
     fontSize,
@@ -299,6 +217,93 @@ export function getDom(doc: Document): SketchDom | null {
     groupElements,
     ungroupElements,
     deleteElement,
+  };
+
+  for (const [name, el] of Object.entries(requiredElements)) {
+    if (!el) {
+      console.error(`[SketchBoard] Required DOM element "${name}" is missing.`);
+      return null;
+    }
+  }
+
+  return {
+    canvas: canvas!,
+    galleryModal: galleryModal!,
+    galleryList: galleryList!,
+    galleryTemplate: galleryTemplate!,
+    colorInput: colorInput!,
+    colorPopup: colorPopup!,
+    quickColorButtons,
+    widthInput: widthInput!,
+    exportFormat: exportFormat!,
+    exportHighDpi: exportHighDpi!,
+    btnBackOverview: btnBackOverview!,
+    btnOverviewLabel: btnOverviewLabel!,
+    btnClear: btnClear!,
+    btnUndo: btnUndo!,
+    btnRedo: btnRedo!,
+    btnSave: btnSave!,
+    btnGallery: btnGallery!,
+    btnExport: btnExport!,
+    btnShare: btnShare!,
+    btnClipboard: btnClipboard!,
+    btnInfo: btnInfo!,
+    infoModal: infoModal!,
+    infoDimensions: infoDimensions!,
+    infoLocation: infoLocation!,
+    infoElements: infoElements!,
+    infoBackground: infoBackground!,
+    infoColors: infoColors!,
+    btnZoomOut: btnZoomOut!,
+    btnZoomIn: btnZoomIn!,
+    btnZoomReset: btnZoomReset!,
+    btnZoomOutMobile: btnZoomOutMobile!,
+    btnZoomInMobile: btnZoomInMobile!,
+    btnZoomResetMobile: btnZoomResetMobile!,
+    canvasBg: canvasBg!,
+    appContainer: appContainer!,
+    btnModeDraw: btnModeDraw!,
+    btnModePan: btnModePan!,
+    btnImportImage: btnImportImage!,
+    btnPasteImage: btnPasteImage!,
+    drawTools: drawTools!,
+    drawToolsBtn: drawToolsBtn!,
+    drawToolsIcon: drawToolsIcon as HTMLSpanElement,
+    drawToolsLabel: drawToolsLabel!,
+    drawOptions: drawOptions!,
+    drawOpts,
+    modeButtons: {
+      pan: modePan!,
+      select: modeSelect!,
+      freehand: modeFreehand!,
+      line: modeLine!,
+      rect: modeRect!,
+      ellipse: modeEllipse!,
+      triangle: modeTriangle!,
+      diamond: modeDiamond!,
+      hexagon: modeHexagon!,
+      arrow: modeArrow!,
+      'double-arrow': modeDoubleArrow!,
+      'speech-bubble': modeSpeechBubble!,
+      checkmark: modeCheckmark!,
+      text: modeText!,
+    },
+    toolOptions: toolOptions!,
+    toolOptShapes,
+    toolOptTexts,
+    toolOptImages,
+    toolOptColors,
+    filledToggle: filledToggle!,
+    fontFamily: fontFamily!,
+    fontSize: fontSize!,
+    fontBold: fontBold!,
+    fontItalic: fontItalic!,
+    moveToFront: moveToFront!,
+    moveToBelow: moveToBelow!,
+    btnResizeImageOriginal: btnResizeImageOriginal!,
+    groupElements: groupElements!,
+    ungroupElements: ungroupElements!,
+    deleteElement: deleteElement!,
     textInputOverlay: null,
     zoomToast,
   };

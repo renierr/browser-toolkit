@@ -1,206 +1,203 @@
-    <div
-      id="calc-scientific-buttons"
-      class="hidden landscape:grid grid-cols-3 gap-3 p-4 bg-base-200/20 border-r border-base-300 overflow-y-auto flex-1 place-items-stretch w-full"
-    >
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="sin("
-      >
-        sin
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="cos("
-      >
-        cos
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="tan("
-      >
-        tan
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="^"
-      >
-        xⁿ
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="sqrt("
-      >
-        √
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="log("
-      >
-        log
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="ln("
-      >
-        ln
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="PI"
-      >
-        π
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="E"
-      >
-        e
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="exp("
-      >
-        exp
-      </button>
-      <button
-        class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
-        data-val="abs("
-      >
-        abs
-      </button>
-    </div>
+<div
+  id="calc-scientific-buttons"
+  class="hidden landscape:grid grid-cols-3 gap-3 p-4 bg-base-200/20 border-r border-base-300 overflow-y-auto flex-1 place-items-stretch w-full"
+>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="sin("
+  >
+    sin
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="cos("
+  >
+    cos
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="tan("
+  >
+    tan
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="^"
+  >
+    xⁿ
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="sqrt("
+  >
+    √
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="log("
+  >
+    log
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="ln("
+  >
+    ln
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="PI"
+  >
+    π
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="E"
+  >
+    e
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="exp("
+  >
+    exp
+  </button>
+  <button
+    class="btn btn-neutral btn-sm rounded-xl text-xs font-bold landscape:aspect-square landscape:text-sm"
+    data-val="abs("
+  >
+    abs
+  </button>
+</div>
 
-    <!-- Main Buttons Grid -->
-    <div
-      class="grow p-4 grid grid-cols-4 gap-3 bg-base-100 overflow-y-auto landscape:flex-2 place-items-stretch w-full"
-    >
-      <!-- Main Buttons Row 1 -->
-      <button
-        class="btn btn-error btn-outline btn-md rounded-2xl text-lg font-bold landscape:aspect-square"
-        id="calc-clear"
-      >
-        AC
-      </button>
-      <button
-        class="btn btn-neutral btn-md rounded-2xl text-lg landscape:aspect-square"
-        id="calc-bracket"
-      >
-        ()
-      </button>
-      <button
-        class="btn btn-neutral btn-md rounded-2xl text-lg landscape:aspect-square"
-        data-val="%"
-      >
-        %
-      </button>
-      <button
-        class="btn btn-primary btn-md rounded-2xl text-2xl font-bold landscape:aspect-square"
-        data-op="/"
-      >
-        ÷
-      </button>
+<!-- Main Buttons Grid -->
+<div
+  class="grow p-4 grid grid-cols-4 gap-3 bg-base-100 overflow-y-auto landscape:flex-2 place-items-stretch w-full"
+>
+  <!-- Main Buttons Row 1 -->
+  <button
+    class="btn btn-error btn-outline btn-md rounded-2xl text-lg font-bold landscape:aspect-square"
+    id="calc-clear"
+  >
+    AC
+  </button>
+  <button
+    class="btn btn-neutral btn-md rounded-2xl text-lg landscape:aspect-square"
+    id="calc-bracket"
+  >
+    ()
+  </button>
+  <button class="btn btn-neutral btn-md rounded-2xl text-lg landscape:aspect-square" data-val="%">
+    %
+  </button>
+  <button
+    class="btn btn-primary btn-md rounded-2xl text-2xl font-bold landscape:aspect-square"
+    data-op="/"
+  >
+    ÷
+  </button>
 
-      <!-- Main Buttons Row 2 -->
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="7"
-      >
-        7
-      </button>
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="8"
-      >
-        8
-      </button>
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="9"
-      >
-        9
-      </button>
-      <button
-        class="btn btn-primary btn-md rounded-2xl text-2xl font-bold landscape:aspect-square"
-        data-op="*"
-      >
-        ×
-      </button>
+  <!-- Main Buttons Row 2 -->
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="7"
+  >
+    7
+  </button>
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="8"
+  >
+    8
+  </button>
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="9"
+  >
+    9
+  </button>
+  <button
+    class="btn btn-primary btn-md rounded-2xl text-2xl font-bold landscape:aspect-square"
+    data-op="*"
+  >
+    ×
+  </button>
 
-      <!-- Main Buttons Row 3 -->
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="4"
-      >
-        4
-      </button>
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="5"
-      >
-        5
-      </button>
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="6"
-      >
-        6
-      </button>
-      <button
-        class="btn btn-primary btn-md rounded-2xl text-2xl font-bold landscape:aspect-square"
-        data-op="-"
-      >
-        -
-      </button>
+  <!-- Main Buttons Row 3 -->
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="4"
+  >
+    4
+  </button>
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="5"
+  >
+    5
+  </button>
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="6"
+  >
+    6
+  </button>
+  <button
+    class="btn btn-primary btn-md rounded-2xl text-2xl font-bold landscape:aspect-square"
+    data-op="-"
+  >
+    -
+  </button>
 
-      <!-- Main Buttons Row 4 -->
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="1"
-      >
-        1
-      </button>
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="2"
-      >
-        2
-      </button>
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="3"
-      >
-        3
-      </button>
-      <button
-        class="btn btn-primary btn-md rounded-2xl text-2xl font-bold landscape:aspect-square"
-        data-op="+"
-      >
-        +
-      </button>
+  <!-- Main Buttons Row 4 -->
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="1"
+  >
+    1
+  </button>
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="2"
+  >
+    2
+  </button>
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="3"
+  >
+    3
+  </button>
+  <button
+    class="btn btn-primary btn-md rounded-2xl text-2xl font-bold landscape:aspect-square"
+    data-op="+"
+  >
+    +
+  </button>
 
-      <!-- Main Buttons Row 5 -->
-      <button
-        class="btn btn-neutral btn-md rounded-2xl text-lg landscape:aspect-square"
-        id="calc-negate"
-      >
-        ±
-      </button>
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="0"
-      >
-        0
-      </button>
-      <button
-        class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
-        data-val="."
-      >
-        .
-      </button>
-      <button
-        class="btn btn-success btn-md rounded-2xl text-3xl font-bold text-success-content shadow-lg shadow-success/20 landscape:aspect-square"
-        id="calc-equals"
-      >
-        =
-      </button>
-    </div>
+  <!-- Main Buttons Row 5 -->
+  <button
+    class="btn btn-neutral btn-md rounded-2xl text-lg landscape:aspect-square"
+    id="calc-negate"
+  >
+    ±
+  </button>
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="0"
+  >
+    0
+  </button>
+  <button
+    class="btn btn-base-300 btn-md rounded-2xl text-2xl font-medium landscape:aspect-square"
+    data-val="."
+  >
+    .
+  </button>
+  <button
+    class="btn btn-success btn-md rounded-2xl text-3xl font-bold text-success-content shadow-lg shadow-success/20 landscape:aspect-square"
+    id="calc-equals"
+  >
+    =
+  </button>
+</div>
