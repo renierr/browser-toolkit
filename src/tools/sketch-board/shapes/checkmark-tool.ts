@@ -1,4 +1,4 @@
-import { normalizeRect } from '../drawing.ts';
+import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -38,27 +38,21 @@ export class CheckmarkTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const rect = normalizeRect(this.start, this.end);
-    if (rect.w < 1 || rect.h < 1) return;
-
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
-    const x = rect.x;
-    const y = rect.y;
-    const w = rect.w;
-    const h = rect.h;
-
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(x + w * 0.1, y + h * 0.55);
-    canvasCtx.lineTo(x + w * 0.35, y + h * 0.95);
-    canvasCtx.lineTo(x + w * 0.9, y + h * 0.1);
-    canvasCtx.stroke();
-    
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    CheckmarkTool.draw(canvasCtx, this.start, this.end);
     canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+    const rect = normalizeRect(start, end);
+    if (rect.w < 1 || rect.h < 1) return;
+    const { x, y, w, h } = rect;
+
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.1, y + h * 0.55);
+    ctx.lineTo(x + w * 0.35, y + h * 0.95);
+    ctx.lineTo(x + w * 0.9, y + h * 0.1);
+    ctx.stroke();
   }
 
   reset(): void {

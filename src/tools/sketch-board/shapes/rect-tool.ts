@@ -1,4 +1,4 @@
-import { normalizeRect } from '../drawing.ts';
+import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -39,22 +39,20 @@ export class RectTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const rect = normalizeRect(this.start, this.end);
-    if (rect.w < 1 || rect.h < 1) return;
-
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
-    if (ctx.filled) {
-      canvasCtx.fillStyle = ctx.color;
-      canvasCtx.fillRect(rect.x, rect.y, rect.w, rect.h);
-    } else {
-      canvasCtx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-    }
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    RectTool.draw(canvasCtx, this.start, this.end, ctx.filled);
     canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+    const rect = normalizeRect(start, end);
+    if (rect.w < 1 || rect.h < 1) return;
+    if (filled) {
+      ctx.fillStyle = ctx.strokeStyle as string;
+      ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+    } else {
+      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+    }
   }
 
   reset(): void {

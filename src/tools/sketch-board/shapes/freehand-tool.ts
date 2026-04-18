@@ -1,4 +1,4 @@
-import { drawLiveFreehandSegment } from '../drawing.ts';
+import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -44,25 +44,45 @@ export class FreehandTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (this.points.length === 0) return;
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(this.points[0].x, this.points[0].y);
-    for (let i = 1; i < this.points.length; i++) {
-      canvasCtx.lineTo(this.points[i].x, this.points[i].y);
-    }
-    canvasCtx.stroke();
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    FreehandTool.draw(canvasCtx, this.points);
     canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, points: Point[]): void {
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      const p = points[0];
+      const radius = Math.max(0.5, (ctx.lineWidth as number) / 2);
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = ctx.strokeStyle as string;
+      ctx.fill();
+      return;
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.stroke();
   }
 
   drawSegment(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (this.points.length < 2) return;
     const from = this.points[this.points.length - 2];
     const to = this.points[this.points.length - 1];
-    drawLiveFreehandSegment(canvasCtx, from, to, ctx.color, ctx.strokeWidth);
+
+    // Simple segment drawing for live feedback
+    canvasCtx.beginPath();
+    canvasCtx.strokeStyle = ctx.color;
+    canvasCtx.lineWidth = ctx.strokeWidth;
+    canvasCtx.lineJoin = 'round';
+    canvasCtx.lineCap = 'round';
+    canvasCtx.moveTo(from.x, from.y);
+    canvasCtx.lineTo(to.x, to.y);
+    canvasCtx.stroke();
   }
 
   getPoints(): Point[] {

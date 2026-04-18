@@ -1,4 +1,5 @@
-import { getElementBounds, normalizeRect } from './drawing.ts';
+import { getElementBounds } from './drawing.ts';
+import { normalizeRect } from './utils/drawing-shared.ts';
 import type { SketchDom } from './dom.ts';
 import type { HistoryManager } from './history.ts';
 import type { SceneRenderer } from './renderer.ts';
@@ -164,7 +165,12 @@ export class ElementEditor {
       return true;
     }
 
-    if (this.isResizing && this.selectedElementIds.size === 1 && this.dragStartPos && this.activeHandle) {
+    if (
+      this.isResizing &&
+      this.selectedElementIds.size === 1 &&
+      this.dragStartPos &&
+      this.activeHandle
+    ) {
       const id = this.selectedElementIds.values().next().value;
       const el = elements.find((e) => e.id === id);
       if (el) {
@@ -223,11 +229,13 @@ export class ElementEditor {
 
     const didMove = Boolean(
       (this.isDragging || this.isResizing) &&
-        this.selectedElementIds.size > 0 &&
-        this.hasMovedBeyondThreshold
+      this.selectedElementIds.size > 0 &&
+      this.hasMovedBeyondThreshold
     );
     const hitSelected = Boolean(
-      this.pointerDownHitSelected && this.selectedElementIds.size === 1 && !this.hasMovedBeyondThreshold
+      this.pointerDownHitSelected &&
+      this.selectedElementIds.size === 1 &&
+      !this.hasMovedBeyondThreshold
     );
 
     // Click on selected element without moving - select element behind it

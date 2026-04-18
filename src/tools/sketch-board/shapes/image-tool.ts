@@ -1,6 +1,6 @@
+import { getImageGetter } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, Point, SketchElement } from '../types.ts';
-import type { ImageElement } from '../types.ts';
+import type { DrawToolContext, ImageElement, Point, SketchElement } from '../types.ts';
 
 export class ImageTool implements DrawTool {
   readonly mode = 'image' as const;
@@ -56,6 +56,15 @@ export class ImageTool implements DrawTool {
   drawPreview(_canvasCtx: CanvasRenderingContext2D, _ctx: DrawToolContext): void {}
 
   drawSegment(_canvasCtx: CanvasRenderingContext2D, _ctx: DrawToolContext): void {}
+
+  static draw(ctx: CanvasRenderingContext2D, el: ImageElement): void {
+    const getter = getImageGetter();
+    if (!getter) return;
+    const img = getter(el.imageData);
+    if (img?.complete) {
+      ctx.drawImage(img, el.position.x, el.position.y, el.imageWidth, el.imageHeight);
+    }
+  }
 
   triggerFileInput(): void {
     if (!this.fileInput) {

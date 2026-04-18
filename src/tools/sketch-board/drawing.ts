@@ -6,91 +6,97 @@ import type {
   TextElement,
   ToolMode,
 } from './types.ts';
+import {
+  normalizeRect,
+  applyStrokeStyle,
+  setImageGetter as setSharedImageGetter,
+} from './utils/drawing-shared.ts';
+
+import { FreehandTool } from './shapes/freehand-tool.ts';
+import { LineTool } from './shapes/line-tool.ts';
+import { RectTool } from './shapes/rect-tool.ts';
+import { EllipseTool } from './shapes/ellipse-tool.ts';
+import { TriangleTool } from './shapes/triangle-tool.ts';
+import { DiamondTool } from './shapes/diamond-tool.ts';
+import { HexagonTool } from './shapes/hexagon-tool.ts';
+import { ArrowTool } from './shapes/arrow-tool.ts';
+import { DoubleArrowTool } from './shapes/double-arrow-tool.ts';
+import { SpeechBubbleTool } from './shapes/speech-bubble-tool.ts';
+import { CheckmarkTool } from './shapes/checkmark-tool.ts';
+import { TextTool } from './shapes/text-tool.ts';
+import { ImageTool } from './shapes/image-tool.ts';
 
 type ImageGetter = (imageData: string) => HTMLImageElement;
-let imageGetter: ImageGetter | null = null;
 
 export function setImageGetter(fn: ImageGetter): void {
-  imageGetter = fn;
-}
-
-export function normalizeRect(
-  start: Point,
-  end: Point
-): { x: number; y: number; w: number; h: number } {
-  return {
-    x: Math.min(start.x, end.x),
-    y: Math.min(start.y, end.y),
-    w: Math.abs(end.x - start.x),
-    h: Math.abs(end.y - start.y),
-  };
+  setSharedImageGetter(fn);
 }
 
 export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): void {
   applyStrokeStyle(ctx, el.color, el.width);
 
   if (el.type === 'freehand') {
-    drawFreehand(ctx, el.points);
+    FreehandTool.draw(ctx, el.points);
     return;
   }
 
   if (el.type === 'line') {
-    drawLine(ctx, el.start, el.end);
+    LineTool.draw(ctx, el.start, el.end);
     return;
   }
 
   if (el.type === 'rect') {
-    drawRect(ctx, el.start, el.end, el.filled);
+    RectTool.draw(ctx, el.start, el.end, el.filled);
     return;
   }
 
   if (el.type === 'ellipse') {
-    drawEllipse(ctx, el.start, el.end, el.filled);
+    EllipseTool.draw(ctx, el.start, el.end, el.filled);
     return;
   }
 
   if (el.type === 'triangle') {
-    drawTriangle(ctx, el.start, el.end, el.filled);
+    TriangleTool.draw(ctx, el.start, el.end, el.filled);
     return;
   }
 
   if (el.type === 'diamond') {
-    drawDiamond(ctx, el.start, el.end, el.filled);
+    DiamondTool.draw(ctx, el.start, el.end, el.filled);
     return;
   }
 
   if (el.type === 'hexagon') {
-    drawHexagon(ctx, el.start, el.end, el.filled);
+    HexagonTool.draw(ctx, el.start, el.end, el.filled);
     return;
   }
 
   if (el.type === 'arrow') {
-    drawArrow(ctx, el.start, el.end);
+    ArrowTool.draw(ctx, el.start, el.end);
     return;
   }
 
   if (el.type === 'double-arrow') {
-    drawDoubleArrow(ctx, el.start, el.end);
+    DoubleArrowTool.draw(ctx, el.start, el.end);
     return;
   }
 
   if (el.type === 'speech-bubble') {
-    drawSpeechBubble(ctx, el.start, el.end, el.filled);
+    SpeechBubbleTool.draw(ctx, el.start, el.end, el.filled);
     return;
   }
 
   if (el.type === 'checkmark') {
-    drawCheckmark(ctx, el.start, el.end);
+    CheckmarkTool.draw(ctx, el.start, el.end);
     return;
   }
 
   if (el.type === 'text') {
-    drawText(ctx, el);
+    TextTool.draw(ctx, el);
     return;
   }
 
   if (el.type === 'image') {
-    drawImage(ctx, el);
+    ImageTool.draw(ctx, el);
     return;
   }
 
@@ -99,300 +105,6 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
       drawElement(ctx, subEl);
     }
     return;
-  }
-}
-
-function applyStrokeStyle(ctx: CanvasRenderingContext2D, color: string, width: number): void {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-}
-
-function drawFreehand(ctx: CanvasRenderingContext2D, points: Point[]): void {
-  if (points.length === 0) return;
-  if (points.length === 1) {
-    const p = points[0];
-    const radius = Math.max(0.5, (ctx.lineWidth as number) / 2);
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, radius, 0, Math.PI * 2);
-    ctx.fillStyle = ctx.strokeStyle as string;
-    ctx.fill();
-    return;
-  }
-
-  ctx.beginPath();
-  ctx.moveTo(points[0].x, points[0].y);
-  for (let i = 1; i < points.length; i++) {
-    ctx.lineTo(points[i].x, points[i].y);
-  }
-  ctx.stroke();
-}
-
-function drawLine(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.lineTo(end.x, end.y);
-  ctx.stroke();
-}
-
-function drawRect(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
-  const rect = normalizeRect(start, end);
-  if (rect.w < 1 || rect.h < 1) return;
-  if (filled) {
-    ctx.fillStyle = ctx.strokeStyle as string;
-    ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-  } else {
-    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-  }
-}
-
-function drawEllipse(
-  ctx: CanvasRenderingContext2D,
-  start: Point,
-  end: Point,
-  filled?: boolean
-): void {
-  const rect = normalizeRect(start, end);
-  if (rect.w < 1 || rect.h < 1) return;
-  ctx.beginPath();
-  ctx.ellipse(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, rect.h / 2, 0, 0, Math.PI * 2);
-  if (filled) {
-    ctx.fillStyle = ctx.strokeStyle as string;
-    ctx.fill();
-  } else {
-    ctx.stroke();
-  }
-}
-
-function drawTriangle(
-  ctx: CanvasRenderingContext2D,
-  start: Point,
-  end: Point,
-  filled?: boolean
-): void {
-  const rect = normalizeRect(start, end);
-  if (rect.w < 1 || rect.h < 1) return;
-  const topX = rect.x + rect.w / 2;
-  const topY = rect.y;
-  const bottomLeftX = rect.x;
-  const bottomLeftY = rect.y + rect.h;
-  const bottomRightX = rect.x + rect.w;
-  const bottomRightY = rect.y + rect.h;
-
-  ctx.beginPath();
-  ctx.moveTo(topX, topY);
-  ctx.lineTo(bottomRightX, bottomRightY);
-  ctx.lineTo(bottomLeftX, bottomLeftY);
-  ctx.closePath();
-
-  if (filled) {
-    ctx.fillStyle = ctx.strokeStyle as string;
-    ctx.fill();
-  } else {
-    ctx.stroke();
-  }
-}
-
-function drawArrow(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1) return;
-
-  const strokeW = ctx.lineWidth;
-  const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
-  const angle = Math.atan2(dy, dx);
-  const spread = Math.PI / 6;
-
-  // Shaft — stop at the base of the arrowhead
-  const shaftEndX = end.x - headLen * Math.cos(angle);
-  const shaftEndY = end.y - headLen * Math.sin(angle);
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.lineTo(shaftEndX, shaftEndY);
-  ctx.stroke();
-
-  // Arrowhead — width scales with stroke
-  const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
-  const baseX = end.x - headLen * Math.cos(angle);
-  const baseY = end.y - headLen * Math.sin(angle);
-  const perpX = -Math.sin(angle);
-  const perpY = Math.cos(angle);
-
-  ctx.beginPath();
-  ctx.moveTo(end.x, end.y);
-  ctx.lineTo(baseX + perpX * halfBase, baseY + perpY * halfBase);
-  ctx.lineTo(baseX - perpX * halfBase, baseY - perpY * halfBase);
-  ctx.closePath();
-  ctx.fillStyle = ctx.strokeStyle as string;
-  ctx.fill();
-}
-
-function drawDoubleArrow(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const len = Math.hypot(dx, dy);
-  if (len < 1) return;
-
-  const strokeW = ctx.lineWidth;
-  const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
-  const angle = Math.atan2(dy, dx);
-  const spread = Math.PI / 6;
-
-  // Shaft — stop at the base of both arrowheads
-  const shaftStartX = start.x + headLen * Math.cos(angle);
-  const shaftStartY = start.y + headLen * Math.sin(angle);
-  const shaftEndX = end.x - headLen * Math.cos(angle);
-  const shaftEndY = end.y - headLen * Math.sin(angle);
-
-  ctx.beginPath();
-  ctx.moveTo(shaftStartX, shaftStartY);
-  ctx.lineTo(shaftEndX, shaftEndY);
-  ctx.stroke();
-
-  const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
-  const perpX = -Math.sin(angle);
-  const perpY = Math.cos(angle);
-
-  // Head at end
-  const baseX_end = end.x - headLen * Math.cos(angle);
-  const baseY_end = end.y - headLen * Math.sin(angle);
-  ctx.beginPath();
-  ctx.moveTo(end.x, end.y);
-  ctx.lineTo(baseX_end + perpX * halfBase, baseY_end + perpY * halfBase);
-  ctx.lineTo(baseX_end - perpX * halfBase, baseY_end - perpY * halfBase);
-  ctx.closePath();
-  ctx.fillStyle = ctx.strokeStyle as string;
-  ctx.fill();
-
-  // Head at start
-  const baseX_start = start.x + headLen * Math.cos(angle);
-  const baseY_start = start.y + headLen * Math.sin(angle);
-  ctx.beginPath();
-  ctx.moveTo(start.x, start.y);
-  ctx.lineTo(baseX_start + perpX * halfBase, baseY_start + perpY * halfBase);
-  ctx.lineTo(baseX_start - perpX * halfBase, baseY_start - perpY * halfBase);
-  ctx.closePath();
-  ctx.fill();
-}
-
-function drawDiamond(
-  ctx: CanvasRenderingContext2D,
-  start: Point,
-  end: Point,
-  filled?: boolean
-): void {
-  const rect = normalizeRect(start, end);
-  if (rect.w < 1 || rect.h < 1) return;
-  ctx.beginPath();
-  ctx.moveTo(rect.x + rect.w / 2, rect.y);
-  ctx.lineTo(rect.x + rect.w, rect.y + rect.h / 2);
-  ctx.lineTo(rect.x + rect.w / 2, rect.y + rect.h);
-  ctx.lineTo(rect.x, rect.y + rect.h / 2);
-  ctx.closePath();
-  if (filled) {
-    ctx.fillStyle = ctx.strokeStyle as string;
-    ctx.fill();
-  } else {
-    ctx.stroke();
-  }
-}
-
-function drawHexagon(
-  ctx: CanvasRenderingContext2D,
-  start: Point,
-  end: Point,
-  filled?: boolean
-): void {
-  const rect = normalizeRect(start, end);
-  if (rect.w < 1 || rect.h < 1) return;
-  const w = rect.w;
-  const h = rect.h;
-  const x = rect.x;
-  const y = rect.y;
-  ctx.beginPath();
-  ctx.moveTo(x + w * 0.25, y);
-  ctx.lineTo(x + w * 0.75, y);
-  ctx.lineTo(x + w, y + h * 0.5);
-  ctx.lineTo(x + w * 0.75, y + h);
-  ctx.lineTo(x + w * 0.25, y + h);
-  ctx.lineTo(x, y + h * 0.5);
-  ctx.closePath();
-  if (filled) {
-    ctx.fillStyle = ctx.strokeStyle as string;
-    ctx.fill();
-  } else {
-    ctx.stroke();
-  }
-}
-
-function drawSpeechBubble(
-  ctx: CanvasRenderingContext2D,
-  start: Point,
-  end: Point,
-  filled?: boolean
-): void {
-  const rect = normalizeRect(start, end);
-  if (rect.w < 1 || rect.h < 1) return;
-  const x = rect.x;
-  const y = rect.y;
-  const w = rect.w;
-  const h = rect.h;
-  const r = Math.min(w, h) * 0.15;
-  const tailSide = Math.min(w, h) * 0.2;
-
-  ctx.beginPath();
-  ctx.moveTo(x + r, y);
-  ctx.lineTo(x + w - r, y);
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-  ctx.lineTo(x + w, y + h - r);
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  // Tail at bottom-left
-  ctx.lineTo(x + r + tailSide * 1.5, y + h);
-  ctx.lineTo(x + r * 0.5, y + h + tailSide);
-  ctx.lineTo(x + r, y + h);
-  ctx.lineTo(x + r, y + h);
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-  ctx.lineTo(x, y + r);
-  ctx.quadraticCurveTo(x, y, x + r, y);
-  ctx.closePath();
-
-  if (filled) {
-    ctx.fillStyle = ctx.strokeStyle as string;
-    ctx.fill();
-  } else {
-    ctx.stroke();
-  }
-}
-
-function drawCheckmark(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
-  const rect = normalizeRect(start, end);
-  if (rect.w < 1 || rect.h < 1) return;
-  const x = rect.x;
-  const y = rect.y;
-  const w = rect.w;
-  const h = rect.h;
-
-  ctx.beginPath();
-  ctx.moveTo(x + w * 0.1, y + h * 0.55);
-  ctx.lineTo(x + w * 0.35, y + h * 0.95);
-  ctx.lineTo(x + w * 0.9, y + h * 0.1);
-  ctx.stroke();
-}
-
-function drawText(ctx: CanvasRenderingContext2D, el: TextElement): void {
-  ctx.font = `${el.fontStyle} ${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
-  ctx.fillStyle = el.color;
-  ctx.textBaseline = 'top';
-  ctx.fillText(el.text, el.position.x, el.position.y);
-}
-
-function drawImage(ctx: CanvasRenderingContext2D, el: ImageElement): void {
-  if (!imageGetter) return;
-  const img = imageGetter(el.imageData);
-  if (img?.complete) {
-    ctx.drawImage(img, el.position.x, el.position.y, el.imageWidth, el.imageHeight);
   }
 }
 

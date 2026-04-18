@@ -1,3 +1,4 @@
+import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -37,16 +38,16 @@ export class LineTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(this.start.x, this.start.y);
-    canvasCtx.lineTo(this.end.x, this.end.y);
-    canvasCtx.stroke();
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    LineTool.draw(canvasCtx, this.start, this.end);
     canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
   }
 
   reset(): void {

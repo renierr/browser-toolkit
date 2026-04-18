@@ -1,4 +1,4 @@
-import { normalizeRect } from '../drawing.ts';
+import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -39,29 +39,26 @@ export class DiamondTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const rect = normalizeRect(this.start, this.end);
-    if (rect.w < 1 || rect.h < 1) return;
-
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(rect.x + rect.w / 2, rect.y);
-    canvasCtx.lineTo(rect.x + rect.w, rect.y + rect.h / 2);
-    canvasCtx.lineTo(rect.x + rect.w / 2, rect.y + rect.h);
-    canvasCtx.lineTo(rect.x, rect.y + rect.h / 2);
-    canvasCtx.closePath();
-
-    if (ctx.filled) {
-      canvasCtx.fillStyle = ctx.color;
-      canvasCtx.fill();
-    } else {
-      canvasCtx.stroke();
-    }
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    DiamondTool.draw(canvasCtx, this.start, this.end, ctx.filled);
     canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+    const rect = normalizeRect(start, end);
+    if (rect.w < 1 || rect.h < 1) return;
+    ctx.beginPath();
+    ctx.moveTo(rect.x + rect.w / 2, rect.y);
+    ctx.lineTo(rect.x + rect.w, rect.y + rect.h / 2);
+    ctx.lineTo(rect.x + rect.w / 2, rect.y + rect.h);
+    ctx.lineTo(rect.x, rect.y + rect.h / 2);
+    ctx.closePath();
+    if (filled) {
+      ctx.fillStyle = ctx.strokeStyle as string;
+      ctx.fill();
+    } else {
+      ctx.stroke();
+    }
   }
 
   reset(): void {

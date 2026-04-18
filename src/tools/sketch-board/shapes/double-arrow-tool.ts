@@ -1,3 +1,4 @@
+import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -37,59 +38,57 @@ export class DoubleArrowTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    DoubleArrowTool.draw(canvasCtx, this.start, this.end);
+    canvasCtx.globalAlpha = 1;
+  }
 
-    const dx = this.end.x - this.start.x;
-    const dy = this.end.y - this.start.y;
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
     const len = Math.hypot(dx, dy);
     if (len < 1) return;
 
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
-    const headLen = Math.min(len * 0.3, Math.max(ctx.strokeWidth * 3, 10));
+    const strokeW = ctx.lineWidth;
+    const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
     const angle = Math.atan2(dy, dx);
     const spread = Math.PI / 6;
 
-    // Shaft
-    const shaftStartX = this.start.x + headLen * Math.cos(angle);
-    const shaftStartY = this.start.y + headLen * Math.sin(angle);
-    const shaftEndX = this.end.x - headLen * Math.cos(angle);
-    const shaftEndY = this.end.y - headLen * Math.sin(angle);
+    // Shaft — stop at the base of both arrowheads
+    const shaftStartX = start.x + headLen * Math.cos(angle);
+    const shaftStartY = start.y + headLen * Math.sin(angle);
+    const shaftEndX = end.x - headLen * Math.cos(angle);
+    const shaftEndY = end.y - headLen * Math.sin(angle);
 
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(shaftStartX, shaftStartY);
-    canvasCtx.lineTo(shaftEndX, shaftEndY);
-    canvasCtx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(shaftStartX, shaftStartY);
+    ctx.lineTo(shaftEndX, shaftEndY);
+    ctx.stroke();
 
-    const halfBase = Math.max(ctx.strokeWidth * 1.5, headLen * Math.sin(spread));
+    const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
     const perpX = -Math.sin(angle);
     const perpY = Math.cos(angle);
 
     // Head at end
-    const baseX_end = this.end.x - headLen * Math.cos(angle);
-    const baseY_end = this.end.y - headLen * Math.sin(angle);
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(this.end.x, this.end.y);
-    canvasCtx.lineTo(baseX_end + perpX * halfBase, baseY_end + perpY * halfBase);
-    canvasCtx.lineTo(baseX_end - perpX * halfBase, baseY_end - perpY * halfBase);
-    canvasCtx.closePath();
-    canvasCtx.fillStyle = ctx.color;
-    canvasCtx.fill();
+    const baseX_end = end.x - headLen * Math.cos(angle);
+    const baseY_end = end.y - headLen * Math.sin(angle);
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(baseX_end + perpX * halfBase, baseY_end + perpY * halfBase);
+    ctx.lineTo(baseX_end - perpX * halfBase, baseY_end - perpY * halfBase);
+    ctx.closePath();
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
 
     // Head at start
-    const baseX_start = this.start.x + headLen * Math.cos(angle);
-    const baseY_start = this.start.y + headLen * Math.sin(angle);
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(this.start.x, this.start.y);
-    canvasCtx.lineTo(baseX_start + perpX * halfBase, baseY_start + perpY * halfBase);
-    canvasCtx.lineTo(baseX_start - perpX * halfBase, baseY_start - perpY * halfBase);
-    canvasCtx.closePath();
-    canvasCtx.fill();
-
-    canvasCtx.globalAlpha = 1;
+    const baseX_start = start.x + headLen * Math.cos(angle);
+    const baseY_start = start.y + headLen * Math.sin(angle);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(baseX_start + perpX * halfBase, baseY_start + perpY * halfBase);
+    ctx.lineTo(baseX_start - perpX * halfBase, baseY_start - perpY * halfBase);
+    ctx.closePath();
+    ctx.fill();
   }
 
   reset(): void {

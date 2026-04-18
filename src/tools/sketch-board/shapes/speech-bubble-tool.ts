@@ -1,4 +1,4 @@
-import { normalizeRect } from '../drawing.ts';
+import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -39,47 +39,39 @@ export class SpeechBubbleTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const rect = normalizeRect(this.start, this.end);
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    SpeechBubbleTool.draw(canvasCtx, this.start, this.end, ctx.filled);
+    canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+    const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
-
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
-    const x = rect.x;
-    const y = rect.y;
-    const w = rect.w;
-    const h = rect.h;
+    const { x, y, w, h } = rect;
     const r = Math.min(w, h) * 0.15;
     const tailSide = Math.min(w, h) * 0.2;
 
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(x + r, y);
-    canvasCtx.lineTo(x + w - r, y);
-    canvasCtx.quadraticCurveTo(x + w, y, x + w, y + r);
-    canvasCtx.lineTo(x + w, y + h - r);
-    canvasCtx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
     // Tail at bottom-left
-    canvasCtx.lineTo(x + r + tailSide * 1.5, y + h);
-    canvasCtx.lineTo(x + r * 0.5, y + h + tailSide);
-    canvasCtx.lineTo(x + r, y + h);
-    
-    canvasCtx.lineTo(x + r, y + h);
-    canvasCtx.quadraticCurveTo(x, y + h, x, y + h - r);
-    canvasCtx.lineTo(x, y + r);
-    canvasCtx.quadraticCurveTo(x, y, x + r, y);
-    canvasCtx.closePath();
+    ctx.lineTo(x + r + tailSide * 1.5, y + h);
+    ctx.lineTo(x + r * 0.5, y + h + tailSide);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
 
-    if (ctx.filled) {
-      canvasCtx.fillStyle = ctx.color;
-      canvasCtx.fill();
+    if (filled) {
+      ctx.fillStyle = ctx.strokeStyle as string;
+      ctx.fill();
     } else {
-      canvasCtx.stroke();
+      ctx.stroke();
     }
-    canvasCtx.globalAlpha = 1;
   }
 
   reset(): void {

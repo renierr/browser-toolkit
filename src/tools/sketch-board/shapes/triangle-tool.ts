@@ -1,4 +1,4 @@
-import { normalizeRect } from '../drawing.ts';
+import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -39,31 +39,33 @@ export class TriangleTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const rect = normalizeRect(this.start, this.end);
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    TriangleTool.draw(canvasCtx, this.start, this.end, ctx.filled);
+    canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+    const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
-
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
     const topX = rect.x + rect.w / 2;
     const topY = rect.y;
+    const bottomLeftX = rect.x;
+    const bottomLeftY = rect.y + rect.h;
+    const bottomRightX = rect.x + rect.w;
+    const bottomRightY = rect.y + rect.h;
 
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(topX, topY);
-    canvasCtx.lineTo(rect.x + rect.w, rect.y + rect.h);
-    canvasCtx.lineTo(rect.x, rect.y + rect.h);
-    canvasCtx.closePath();
+    ctx.beginPath();
+    ctx.moveTo(topX, topY);
+    ctx.lineTo(bottomRightX, bottomRightY);
+    ctx.lineTo(bottomLeftX, bottomLeftY);
+    ctx.closePath();
 
-    if (ctx.filled) {
-      canvasCtx.fillStyle = ctx.color;
-      canvasCtx.fill();
+    if (filled) {
+      ctx.fillStyle = ctx.strokeStyle as string;
+      ctx.fill();
     } else {
-      canvasCtx.stroke();
+      ctx.stroke();
     }
-    canvasCtx.globalAlpha = 1;
   }
 
   reset(): void {

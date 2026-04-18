@@ -1,4 +1,4 @@
-import { normalizeRect } from '../drawing.ts';
+import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -39,36 +39,29 @@ export class HexagonTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const rect = normalizeRect(this.start, this.end);
-    if (rect.w < 1 || rect.h < 1) return;
-
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
-    const w = rect.w;
-    const h = rect.h;
-    const x = rect.x;
-    const y = rect.y;
-
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(x + w * 0.25, y);
-    canvasCtx.lineTo(x + w * 0.75, y);
-    canvasCtx.lineTo(x + w, y + h * 0.5);
-    canvasCtx.lineTo(x + w * 0.75, y + h);
-    canvasCtx.lineTo(x + w * 0.25, y + h);
-    canvasCtx.lineTo(x, y + h * 0.5);
-    canvasCtx.closePath();
-
-    if (ctx.filled) {
-      canvasCtx.fillStyle = ctx.color;
-      canvasCtx.fill();
-    } else {
-      canvasCtx.stroke();
-    }
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    HexagonTool.draw(canvasCtx, this.start, this.end, ctx.filled);
     canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+    const rect = normalizeRect(start, end);
+    if (rect.w < 1 || rect.h < 1) return;
+    const { x, y, w, h } = rect;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.25, y);
+    ctx.lineTo(x + w * 0.75, y);
+    ctx.lineTo(x + w, y + h * 0.5);
+    ctx.lineTo(x + w * 0.75, y + h);
+    ctx.lineTo(x + w * 0.25, y + h);
+    ctx.lineTo(x, y + h * 0.5);
+    ctx.closePath();
+    if (filled) {
+      ctx.fillStyle = ctx.strokeStyle as string;
+      ctx.fill();
+    } else {
+      ctx.stroke();
+    }
   }
 
   reset(): void {

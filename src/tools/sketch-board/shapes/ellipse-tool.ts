@@ -1,4 +1,4 @@
-import { normalizeRect } from '../drawing.ts';
+import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -39,17 +39,16 @@ export class EllipseTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const rect = normalizeRect(this.start, this.end);
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    EllipseTool.draw(canvasCtx, this.start, this.end, ctx.filled);
+    canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+    const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
-
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
-    canvasCtx.beginPath();
-    canvasCtx.ellipse(
+    ctx.beginPath();
+    ctx.ellipse(
       rect.x + rect.w / 2,
       rect.y + rect.h / 2,
       rect.w / 2,
@@ -58,14 +57,12 @@ export class EllipseTool implements DrawTool {
       0,
       Math.PI * 2
     );
-
-    if (ctx.filled) {
-      canvasCtx.fillStyle = ctx.color;
-      canvasCtx.fill();
+    if (filled) {
+      ctx.fillStyle = ctx.strokeStyle as string;
+      ctx.fill();
     } else {
-      canvasCtx.stroke();
+      ctx.stroke();
     }
-    canvasCtx.globalAlpha = 1;
   }
 
   reset(): void {

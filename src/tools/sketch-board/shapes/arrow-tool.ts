@@ -1,3 +1,4 @@
+import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -37,46 +38,44 @@ export class ArrowTool implements DrawTool {
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
-    const dx = this.end.x - this.start.x;
-    const dy = this.end.y - this.start.y;
+    applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
+    ArrowTool.draw(canvasCtx, this.start, this.end);
+    canvasCtx.globalAlpha = 1;
+  }
+
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
     const len = Math.hypot(dx, dy);
     if (len < 1) return;
 
-    canvasCtx.strokeStyle = ctx.color;
-    canvasCtx.lineWidth = ctx.strokeWidth;
-    canvasCtx.lineJoin = 'round';
-    canvasCtx.lineCap = 'round';
-    canvasCtx.globalAlpha = 0.8;
-
-    const strokeW = ctx.strokeWidth;
+    const strokeW = ctx.lineWidth;
     const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
     const angle = Math.atan2(dy, dx);
     const spread = Math.PI / 6;
 
-    // Shaft — stop at base of arrowhead
-    const shaftEndX = this.end.x - headLen * Math.cos(angle);
-    const shaftEndY = this.end.y - headLen * Math.sin(angle);
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(this.start.x, this.start.y);
-    canvasCtx.lineTo(shaftEndX, shaftEndY);
-    canvasCtx.stroke();
+    // Shaft — stop at the base of the arrowhead
+    const shaftEndX = end.x - headLen * Math.cos(angle);
+    const shaftEndY = end.y - headLen * Math.sin(angle);
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(shaftEndX, shaftEndY);
+    ctx.stroke();
 
     // Arrowhead — width scales with stroke
     const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
-    const baseX = this.end.x - headLen * Math.cos(angle);
-    const baseY = this.end.y - headLen * Math.sin(angle);
+    const baseX = end.x - headLen * Math.cos(angle);
+    const baseY = end.y - headLen * Math.sin(angle);
     const perpX = -Math.sin(angle);
     const perpY = Math.cos(angle);
 
-    canvasCtx.beginPath();
-    canvasCtx.moveTo(this.end.x, this.end.y);
-    canvasCtx.lineTo(baseX + perpX * halfBase, baseY + perpY * halfBase);
-    canvasCtx.lineTo(baseX - perpX * halfBase, baseY - perpY * halfBase);
-    canvasCtx.closePath();
-    canvasCtx.fillStyle = ctx.color;
-    canvasCtx.fill();
-
-    canvasCtx.globalAlpha = 1;
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(baseX + perpX * halfBase, baseY + perpY * halfBase);
+    ctx.lineTo(baseX - perpX * halfBase, baseY - perpY * halfBase);
+    ctx.closePath();
+    ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.fill();
   }
 
   reset(): void {
