@@ -197,10 +197,12 @@ export class ElementEditor {
         for (const el of elements) {
           const bounds = getElementBounds(this.ctx, el);
           if (
-            bounds.x >= rect.x &&
-            bounds.y >= rect.y &&
-            bounds.x + bounds.w <= rect.x + rect.w &&
-            bounds.y + bounds.h <= rect.y + rect.h
+            !(
+              bounds.x > rect.x + rect.w ||
+              bounds.x + bounds.w < rect.x ||
+              bounds.y > rect.y + rect.h ||
+              bounds.y + bounds.h < rect.y
+            )
           ) {
             this.selectedElementIds.add(el.id);
           }

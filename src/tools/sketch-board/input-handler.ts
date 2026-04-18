@@ -249,6 +249,7 @@ export class PointerInputHandler {
         this.renderer.markDirty();
       }
       this.resetPointerState();
+      this.renderer.requestDrawImmediate();
       return;
     }
 
