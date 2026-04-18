@@ -391,31 +391,5 @@
 </div>
 
 <style>
-  /* Custom styles for high usability and Android-like feel */
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  /* Ensure display doesn't have weird outlines */
-  #calc-display:empty:before {
-    content: attr(data-placeholder);
-    color: #888;
-  }
-  #calc-display:focus {
-    outline: none;
-  }
-  /* Popover styles */
-  #calc-history-panel::backdrop {
-    background-color: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(2px);
-  }
-  #calc-history-panel:not(:popover-open) {
-    display: none;
-  }
-  #calc-history-panel:popover-open {
-    display: block;
-  }
+  {{ include "style.css" }}
 </style>

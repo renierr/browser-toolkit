@@ -68,4 +68,3 @@ export function showInfoModal(
 
   dom.infoModal.showModal();
 }
-

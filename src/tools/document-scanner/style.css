@@ -1,0 +1,102 @@
+.corner-handle,
+.edge-handle {
+  background: transparent;
+  border: 2px solid #3b82f6; /* primary color */
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: move;
+  z-index: 30;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.corner-handle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+}
+
+.edge-handle {
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 5px rgba(59, 130, 246, 0.3);
+}
+
+/* Top/bottom edges: vertical movement only */
+.edge-handle[data-axis='y'] {
+  cursor: ns-resize;
+  width: 44px;
+  height: 22px;
+}
+
+/* Left/right edges: horizontal movement only */
+.edge-handle[data-axis='x'] {
+  cursor: ew-resize;
+  width: 22px;
+  height: 44px;
+}
+
+.corner-handle::before,
+.corner-handle::after {
+  content: '';
+  position: absolute;
+  background: #3b82f6;
+  transition: background-color 0.2s;
+}
+
+.corner-handle::before {
+  width: 100%;
+  height: 1px;
+}
+
+.corner-handle::after {
+  width: 1px;
+  height: 100%;
+}
+
+.corner-handle:active,
+.corner-handle.selected,
+.edge-handle:active {
+  border-color: white;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.8);
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.corner-handle:active::before,
+.corner-handle:active::after,
+.corner-handle.selected::before,
+.corner-handle.selected::after {
+  background: white;
+}
+
+.page-card.active {
+  @apply ring-4 ring-primary border-primary;
+}
+
+@keyframes focus-ring-anim {
+  0% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}

@@ -1,36 +1,6 @@
 <!--suppress CssUnusedSymbol -->
 <style>
-  .tree-line {
-    position: relative;
-  }
-  .tree-line::before {
-    content: '';
-    position: absolute;
-    left: -12px;
-    top: 0;
-    bottom: 0;
-    width: 1px;
-    background: var(--color-base-300);
-  }
-  .tree-line::after {
-    content: '';
-    position: absolute;
-    left: -12px;
-    top: 14px;
-    width: 10px;
-    height: 1px;
-    background: var(--color-base-300);
-  }
-  .file-row:hover {
-    background: var(--color-base-200);
-  }
-  .file-row.selected {
-    background: var(--color-primary) / 10;
-  }
-  .entry-icon {
-    width: 16px;
-    height: 16px;
-  }
+  {{ include "style.css" }}
 </style>
 
 <div class="flex flex-col gap-4 p-4">

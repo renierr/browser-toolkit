@@ -65,14 +65,7 @@
         >
           <!-- Keep SVG at its intrinsic size so overflow produces scrollbars instead of scaling it down -->
           <style>
-            #diagram-container svg {
-              display: block;
-              max-width: none;
-              height: auto;
-            }
-            #diagram-container svg * {
-              vector-effect: non-scaling-stroke;
-            }
+            {{ include "style.css" }}
           </style>
           <!-- Diagram will be injected here -->
         </div>

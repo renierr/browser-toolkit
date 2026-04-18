@@ -1,0 +1,179 @@
+<!-- Top tools (Navigation, Actions) -->
+<div
+  class="absolute top-0 left-0 right-0 z-30 p-2 sm:p-3 pointer-events-none flex justify-between items-start gap-2 max-w-full"
+>
+  <!-- Top Left -->
+  <div
+    class="pointer-events-auto flex items-center gap-1 sm:gap-2 rounded-box border border-base-300 bg-base-100/90 px-2 py-1.5 shadow-lg backdrop-blur shrink-0 max-w-full overflow-hidden"
+  >
+    <!-- Back to overview -->
+    <button id="back-overview" class="btn btn-sm btn-ghost" title="Back to overview">
+      <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      <span id="overview-label" class="ml-1 hidden sm:inline">Overview</span>
+    </button>
+
+    <div class="w-px h-5 bg-base-300 mx-0.5 sm:mx-1 shrink-0"></div>
+
+    <!-- Undo / Redo -->
+    <button id="undo-action" class="btn btn-sm btn-ghost relative px-2" title="Undo" disabled>
+      <i data-lucide="undo" class="w-4 h-4"></i>
+      <span
+        id="undo-badge"
+        class="absolute top-0 right-0 text-[10px] font-mono leading-none opacity-70 p-0.5 hidden"
+        >0</span
+      >
+    </button>
+
+    <button id="redo-action" class="btn btn-sm btn-ghost relative px-2" title="Redo" disabled>
+      <i data-lucide="redo" class="w-4 h-4"></i>
+      <span
+        id="redo-badge"
+        class="absolute top-0 right-0 text-[10px] font-mono leading-none opacity-70 p-0.5 hidden"
+        >0</span
+      >
+    </button>
+  </div>
+
+  <!-- Top Right: Zoom & More actions -->
+  <div
+    class="pointer-events-auto flex items-center gap-1 sm:gap-2 rounded-box border border-base-300 bg-base-100/90 px-1 py-1.5 shadow-lg backdrop-blur shrink-0"
+  >
+    <!-- Zoom controls joined -->
+    <div class="join hidden sm:flex">
+      <button id="zoom-out" class="btn btn-sm btn-ghost join-item px-2" title="Zoom out">
+        <i data-lucide="zoom-out" class="w-4 h-4"></i>
+      </button>
+      <button id="zoom-reset" class="btn btn-sm btn-ghost join-item px-2" title="Reset zoom">
+        <i data-lucide="maximize-2" class="w-4 h-4"></i>
+      </button>
+      <button id="zoom-in" class="btn btn-sm btn-ghost join-item px-2" title="Zoom in">
+        <i data-lucide="zoom-in" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <div class="w-px h-5 bg-base-300 mx-0.5 shrink-0 hidden sm:block"></div>
+
+    <!-- More Actions Dropdown (Popover) -->
+    <button
+      id="more-actions-btn"
+      class="btn btn-sm btn-ghost px-2"
+      title="More actions"
+      popovertarget="more-actions-menu"
+      style="anchor-name: --more-actions-anchor"
+    >
+      <i data-lucide="more-vertical" class="w-4 h-4"></i>
+    </button>
+
+    <ul
+      id="more-actions-menu"
+      popover="auto"
+      style="position-anchor: --more-actions-anchor; position-area: bottom span-left"
+      class="dropdown menu z-50 mt-1 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+    >
+      <!-- Mobile zoom (visible only on small) -->
+      <li class="sm:hidden mb-2">
+        <div class="flex items-center justify-between pointer-events-none p-0 px-2 py-1">
+          <span class="text-xs opacity-70">Zoom</span>
+          <div class="join pointer-events-auto">
+            <button id="zoom-out-mobile" class="btn btn-xs btn-ghost join-item">
+              <i data-lucide="zoom-out" class="w-3 h-3"></i>
+            </button>
+            <button id="zoom-reset-mobile" class="btn btn-xs btn-ghost join-item">
+              <i data-lucide="maximize-2" class="w-3 h-3"></i>
+            </button>
+            <button id="zoom-in-mobile" class="btn btn-xs btn-ghost join-item">
+              <i data-lucide="zoom-in" class="w-3 h-3"></i>
+            </button>
+          </div>
+        </div>
+      </li>
+
+      <li>
+        <div class="flex items-center justify-between px-2 py-1 pointer-events-none">
+          <span class="text-xs opacity-70">Background</span>
+          <select
+            id="canvas-bg"
+            class="select select-xs w-24 pointer-events-auto font-normal"
+            title="Canvas background"
+          >
+            <option value="checkerboard-bg">Transparent</option>
+            <option value="solid-black-bg">Black</option>
+            <option value="warm-white-bg">White</option>
+          </select>
+        </div>
+      </li>
+      <li>
+        <button id="show-info" class="btn btn-sm btn-ghost justify-start">
+          <i data-lucide="info" class="w-4 h-4 mr-2"></i>Information
+        </button>
+      </li>
+      <li>
+        <button id="save-drawing" class="btn btn-sm btn-ghost justify-start">
+          <i data-lucide="save" class="w-4 h-4 mr-2"></i>Save
+        </button>
+      </li>
+      <li>
+        <button id="open-gallery" class="btn btn-sm btn-ghost justify-start">
+          <i data-lucide="images" class="w-4 h-4 mr-2"></i>Gallery
+        </button>
+      </li>
+
+      <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
+      <li>
+        <div class="flex items-start flex-col gap-2 px-2 py-0 pointer-events-none">
+          <span class="text-xs opacity-70">Export</span>
+          <div class="flex justify-between w-full gap-1 pointer-events-auto">
+            <select
+              id="export-format"
+              class="select select-xs w-auto"
+              title="Export format"
+              data-setting="exportFormat"
+            >
+              <option value="webp">WEBP</option>
+              <option value="png">PNG</option>
+              <option value="jpg">JPG</option>
+            </select>
+            <button id="export-file" class="btn btn-xs btn-secondary px-2" title="Export file">
+              <i data-lucide="download" class="w-3 h-3"></i>
+            </button>
+          </div>
+          <label
+            class="flex self-center items-center gap-2 cursor-pointer pointer-events-auto group"
+          >
+            <input
+              id="export-high-dpi"
+              type="checkbox"
+              class="checkbox checkbox-xs checkbox-primary"
+              data-setting="highDPI"
+            />
+            <span class="text-[10px] opacity-70 group-hover:opacity-100 transition-opacity"
+              >High Quality (DPI)</span
+            >
+          </label>
+        </div>
+      </li>
+
+      <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
+      <li>
+        <button id="share-drawing" class="btn btn-sm btn-ghost justify-start">
+          <i data-lucide="share-2" class="w-4 h-4 mr-2"></i>Share
+        </button>
+      </li>
+      <li>
+        <button id="copy-image" class="btn btn-sm btn-ghost justify-start">
+          <i data-lucide="clipboard" class="w-4 h-4 mr-2"></i>Copy Image
+        </button>
+      </li>
+
+      <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
+      <li>
+        <button id="clear-canvas" class="btn btn-sm btn-ghost text-error justify-start">
+          <i data-lucide="trash" class="w-4 h-4 mr-2"></i>Clear Canvas
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>

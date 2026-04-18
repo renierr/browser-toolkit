@@ -1,0 +1,30 @@
+<dialog id="gallery-modal" class="modal">
+  <div class="modal-box max-w-4xl">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+    </form>
+    <h3 class="font-bold text-lg mb-2">Saved drawings</h3>
+    <p class="text-sm opacity-70 mb-4">Manual versions from local IndexedDB store.</p>
+
+    <div id="gallery-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<template id="gallery-item-template">
+  <article class="rounded-box border border-base-300 p-2 bg-base-100">
+    <div class="checkerboard-bg rounded">
+      <img class="gallery-thumb w-full h-28 object-contain rounded" alt="Preview" />
+    </div>
+    <div class="mt-2">
+      <div class="gallery-name text-sm font-medium truncate"></div>
+      <div class="gallery-meta text-xs opacity-70"></div>
+    </div>
+    <div class="mt-2 flex gap-1 justify-end">
+      <button class="btn btn-xs btn-error delete-drawing" type="button">Delete</button>
+      <button class="btn btn-xs btn-outline load-drawing" type="button">Load</button>
+    </div>
+  </article>
+</template>

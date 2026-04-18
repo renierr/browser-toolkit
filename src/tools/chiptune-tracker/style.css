@@ -1,0 +1,166 @@
+.tracker-table th,
+.tracker-table td {
+  padding: 0 2px;
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+  white-space: nowrap;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+.tracker-table td {
+  cursor: pointer;
+  user-select: none;
+}
+
+.tracker-table td:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.tracker-table td.selected {
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+.tracker-table td.selected:hover {
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+.tracker-table td.note-cell {
+  font-weight: 500;
+}
+
+.tracker-table td.has-note {
+  color: color-mix(in srgb, var(--color-primary) 80%, var(--color-base-content));
+}
+
+.tracker-table td.has-off {
+  color: color-mix(in srgb, var(--color-secondary) 80%, var(--color-base-content));
+}
+
+.tracker-table td.empty-cell {
+  color: color-mix(in srgb, var(--color-base-content) 25%, transparent);
+}
+
+.tracker-table td.effect-cell {
+  color: color-mix(in srgb, var(--color-accent) 70%, var(--color-base-content));
+}
+
+.tracker-table tr.beat-row td {
+  border-top: 1px solid color-mix(in srgb, var(--color-base-content) 15%, transparent);
+}
+
+.tracker-table tr.active-row td {
+  background-color: color-mix(in srgb, var(--color-primary) 10%, transparent);
+}
+
+.tracker-table tr.active-row td.selected {
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+.tracker-table tr.current-row td {
+  background-color: color-mix(in srgb, var(--color-secondary) 8%, transparent);
+}
+
+.tracker-table tr.current-row td.selected {
+  background-color: var(--color-secondary);
+  color: var(--color-secondary-content);
+}
+
+.row-num {
+  color: color-mix(in srgb, var(--color-base-content) 40%, transparent);
+  width: 24px;
+  text-align: right;
+  padding-right: 4px !important;
+}
+
+.ch-sep {
+  width: 2px;
+  background: color-mix(in srgb, var(--color-base-content) 10%, transparent);
+}
+
+.inst-row {
+  cursor: pointer;
+  transition: background-color 0.1s;
+}
+
+.inst-row:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.inst-row.selected {
+  background-color: color-mix(in srgb, var(--color-primary) 25%, transparent);
+}
+
+.order-item {
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.order-item:hover {
+  background-color: color-mix(in srgb, var(--color-primary) 15%, transparent);
+}
+
+.order-item.active {
+  background-color: var(--color-primary);
+  color: var(--color-primary-content);
+}
+
+.order-item.dragging {
+  opacity: 0.5;
+}
+
+.order-item.drag-over {
+  border-top: 2px solid var(--color-primary);
+}
+
+.piano-key {
+  flex: 1;
+  border-radius: 0 0 2px 2px;
+  cursor: pointer;
+  transition: all 0.1s;
+  position: relative;
+  border: 1px solid color-mix(in srgb, var(--color-base-content) 20%, transparent);
+}
+
+.piano-key.white {
+  background: color-mix(in srgb, var(--color-base-100) 90%, var(--color-base-content));
+  z-index: 1;
+}
+
+.piano-key.white:hover {
+  background: color-mix(in srgb, var(--color-primary) 30%, var(--color-base-100));
+}
+
+.piano-key.black {
+  background: color-mix(in srgb, var(--color-base-content) 70%, transparent);
+  margin: 0 -3px;
+  z-index: 2;
+  height: 60%;
+  position: relative;
+  top: 0;
+}
+
+.piano-key.black:hover {
+  background: color-mix(in srgb, var(--color-primary) 50%, var(--color-base-content));
+}
+
+.piano-key.active {
+  background: var(--color-primary) !important;
+  color: var(--color-primary-content);
+}
+
+#tracker-viewport {
+  scrollbar-width: thin;
+}
+
+#pattern-order {
+  scrollbar-width: thin;
+}
+
+#instrument-list {
+  scrollbar-width: thin;
+}

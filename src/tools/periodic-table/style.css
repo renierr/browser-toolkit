@@ -1,0 +1,37 @@
+.element-card {
+  aspect-ratio: 1/1;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.element-card:hover {
+  transform: scale(1.1);
+  z-index: 10;
+  box-shadow:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.element-card.active {
+  box-shadow: 0 0 0 3px var(--color-primary);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+@media (min-width: 1024px) {
+  .overflow-x-auto.custom-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .overflow-x-auto.custom-scrollbar {
+    scrollbar-width: none;
+  }
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--color-base-300);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-base-content), transparent 80%);
+  border-radius: 4px;
+}

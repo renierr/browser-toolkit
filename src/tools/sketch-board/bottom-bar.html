@@ -1,0 +1,375 @@
+<!-- Bottom tools (Drawing modes, properties) -->
+<div
+  class="absolute bottom-4 left-0 right-0 z-30 p-2 sm:p-4 pointer-events-none flex justify-center items-end pb-[env(safe-area-inset-bottom)]"
+>
+  <div
+    class="pointer-events-auto flex flex-col sm:flex-row items-center gap-2 rounded-box border border-base-300 bg-base-100/90 p-2 shadow-lg backdrop-blur max-w-[calc(100vw-1rem)] overflow-visible"
+  >
+    <div
+      class="flex items-center justify-start gap-2 max-w-full overflow-x-auto hide-scrollbar pb-1 sm:pb-0"
+    >
+      <!-- Modes -->
+      <div class="join shrink-0">
+        <button id="mode-pan" class="btn btn-sm join-item" title="Scroll / Pan">
+          <i data-lucide="hand" class="w-4 h-4"></i>
+        </button>
+        <button id="mode-select" class="btn btn-sm join-item" title="Select / Move / Resize">
+          <i data-lucide="mouse-pointer-2" class="w-4 h-4"></i>
+        </button>
+        <button id="mode-draw" class="btn btn-sm join-item btn-primary" title="Draw">
+          <i data-lucide="pen" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <button
+        id="draw-tools-btn"
+        class="btn btn-sm gap-1 shrink-0 hidden"
+        popovertarget="draw-tools"
+        style="anchor-name: --draw-tools-anchor"
+      >
+        <span id="draw-tools-icon" class="w-4 h-4"></span>
+        <span id="draw-tools-label" class="text-xs hidden sm:inline">Freehand</span>
+        <i data-lucide="chevron-up" class="w-3 h-3"></i>
+      </button>
+
+      <ul
+        id="draw-tools"
+        popover="auto"
+        style="position-anchor: --draw-tools-anchor; position-area: top"
+        class="dropdown menu z-50 mb-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl max-h-[80dvh] overflow-y-auto"
+      >
+        <li>
+          <button id="mode-freehand" class="btn btn-sm btn-ghost justify-between">
+            Freehand
+            <i data-lucide="pen-tool" class="w-4 h-4"></i>
+          </button>
+        </li>
+        <li>
+          <button id="mode-text" class="btn btn-sm btn-ghost justify-between">
+            Text
+            <i data-lucide="type" class="w-4 h-4"></i>
+          </button>
+        </li>
+        <li>
+          <button id="mode-line" class="btn btn-sm btn-ghost justify-between">
+            Line
+            <i data-lucide="slash" class="w-4 h-4"></i>
+          </button>
+        </li>
+        <li>
+          <button id="import-image" class="btn btn-sm btn-ghost justify-between">
+            Import Image
+            <i data-lucide="upload" class="w-4 h-4"></i>
+          </button>
+        </li>
+        <li>
+          <button id="paste-image" class="btn btn-sm btn-ghost justify-between">
+            Paste Image
+            <i data-lucide="clipboard" class="w-4 h-4"></i>
+          </button>
+        </li>
+
+        <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
+        <li>
+          <button
+            id="annotations-menu-btn"
+            popovertarget="annotations-menu"
+            style="anchor-name: --annotations-anchor"
+            class="btn btn-sm btn-ghost justify-between w-full"
+          >
+            Annotations
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <ul
+            id="annotations-menu"
+            popover="auto"
+            style="position-anchor: --annotations-anchor; position-area: right span-bottom"
+            class="dropdown menu z-[60] ml-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+          >
+            <li>
+              <button id="mode-arrow" class="btn btn-sm btn-ghost justify-between">
+                Arrow
+                <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+              </button>
+            </li>
+            <li>
+              <button id="mode-double-arrow" class="btn btn-sm btn-ghost justify-between">
+                Double Arrow
+                <i data-lucide="move-horizontal" class="w-4 h-4"></i>
+              </button>
+            </li>
+            <li>
+              <button id="mode-speech-bubble" class="btn btn-sm btn-ghost justify-between">
+                Speech Bubble
+                <i data-lucide="message-square" class="w-4 h-4"></i>
+              </button>
+            </li>
+            <li>
+              <button id="mode-checkmark" class="btn btn-sm btn-ghost justify-between">
+                Checkmark
+                <i data-lucide="check" class="w-4 h-4"></i>
+              </button>
+            </li>
+          </ul>
+        </li>
+
+        <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
+        <li>
+          <button
+            id="shapes-menu-btn"
+            popovertarget="shapes-menu"
+            style="anchor-name: --shapes-anchor"
+            class="btn btn-sm btn-ghost justify-between w-full"
+          >
+            Geometric Shapes
+            <i data-lucide="chevron-right" class="w-4 h-4"></i>
+          </button>
+          <ul
+            id="shapes-menu"
+            popover="auto"
+            style="position-anchor: --shapes-anchor; position-area: right span-bottom"
+            class="dropdown menu z-[60] ml-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+          >
+            <li>
+              <button id="mode-rect" class="btn btn-sm btn-ghost justify-between">
+                Rectangle
+                <i data-lucide="square" class="w-4 h-4"></i>
+              </button>
+            </li>
+            <li>
+              <button id="mode-ellipse" class="btn btn-sm btn-ghost justify-between">
+                Ellipse
+                <i data-lucide="circle" class="w-4 h-4"></i>
+              </button>
+            </li>
+            <li>
+              <button id="mode-triangle" class="btn btn-sm btn-ghost justify-between">
+                Triangle
+                <i data-lucide="triangle" class="w-4 h-4"></i>
+              </button>
+            </li>
+            <li>
+              <button id="mode-diamond" class="btn btn-sm btn-ghost justify-between">
+                Diamond
+                <i data-lucide="diamond" class="w-4 h-4"></i>
+              </button>
+            </li>
+            <li>
+              <button id="mode-hexagon" class="btn btn-sm btn-ghost justify-between">
+                Hexagon
+                <i data-lucide="hexagon" class="w-4 h-4"></i>
+              </button>
+            </li>
+          </ul>
+        </li>
+      </ul>
+
+      <div id="draw-options" class="w-px h-6 bg-base-300 shrink-0 mx-1"></div>
+
+      <!-- Properties -->
+      <label
+        class="draw-opt tool-opt-color flex items-center gap-1 text-xs shrink-0 cursor-pointer"
+      >
+        <input
+          id="stroke-color"
+          type="color"
+          class="h-8 w-8 rounded border border-base-300 cursor-pointer p-0"
+          data-setting="strokeColor"
+        />
+      </label>
+
+      <button
+        id="color-popup-btn"
+        class="draw-opt tool-opt-color btn btn-sm px-2 shrink-0"
+        title="Quick colors"
+        popovertarget="color-popup"
+        style="anchor-name: --color-popup-anchor"
+      >
+        <i data-lucide="palette" class="w-4 h-4"></i>
+      </button>
+
+      <div
+        id="color-popup"
+        popover="auto"
+        style="position-anchor: --color-popup-anchor; position-area: top"
+        class="dropdown z-40 mb-2 min-w-44 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl"
+      >
+        <div class="grid grid-cols-5 gap-2 place-items-center">
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#111827"
+            style="background-color: #111827"
+            title="Ink black"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#f8fafc"
+            style="background-color: #f8fafc"
+            title="Paper white"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#2563eb"
+            style="background-color: #2563eb"
+            title="Blue"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#16a34a"
+            style="background-color: #16a34a"
+            title="Green"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#dc2626"
+            style="background-color: #dc2626"
+            title="Red"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#f59e0b"
+            style="background-color: #f59e0b"
+            title="Amber"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#7c3aed"
+            style="background-color: #7c3aed"
+            title="Violet"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#0891b2"
+            style="background-color: #0891b2"
+            title="Cyan"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#ec4899"
+            style="background-color: #ec4899"
+            title="Pink"
+          ></button>
+          <button
+            class="quick-color h-8 w-8 rounded border border-base-300"
+            type="button"
+            data-color="#92400e"
+            style="background-color: #92400e"
+            title="Brown"
+          ></button>
+        </div>
+      </div>
+
+      <label class="draw-opt flex items-center gap-2 text-xs shrink-0 w-24 sm:w-32 mx-1">
+        <input
+          id="stroke-width"
+          type="range"
+          min="1"
+          max="24"
+          value="3"
+          class="range range-xs"
+          data-setting="strokeWidth"
+        />
+      </label>
+    </div>
+    <!-- end row 1 inside bottom bar -->
+
+    <!-- Per-tool options area (wraps with toolbar), shown below if active -->
+    <div
+      id="tool-options"
+      class="flex flex-wrap items-center justify-center gap-1 sm:gap-2 shrink-0 hidden w-full sm:w-auto border-t sm:border-t-0 sm:border-l border-base-300 pt-1 sm:pt-0 sm:pl-2"
+    >
+      <!-- Shape filled toggle (rect/ellipse/triangle) -->
+      <button
+        id="filled-toggle"
+        class="tool-opt-shape btn btn-sm btn-outline hidden"
+        title="Toggle filled / outline"
+      >
+        <i data-lucide="paint-bucket" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Text options -->
+      <button id="edit-text" class="tool-opt-text btn btn-sm btn-outline hidden" title="Edit text">
+        <i data-lucide="edit-2" class="w-4 h-4"></i>
+      </button>
+      <select
+        id="font-family"
+        class="tool-opt-text select select-sm w-28 hidden font-normal"
+        title="Font family"
+      >
+        <option value="sans-serif">Sans-serif</option>
+        <option value="serif">Serif</option>
+        <option value="monospace">Monospace</option>
+      </select>
+      <input
+        id="font-size"
+        type="number"
+        min="8"
+        max="72"
+        value="24"
+        class="tool-opt-text input input-sm w-16 hidden"
+        title="Font size"
+      />
+      <button id="font-bold" class="tool-opt-text btn btn-sm btn-outline hidden" title="Bold">
+        <i data-lucide="bold" class="w-4 h-4"></i>
+      </button>
+      <button id="font-italic" class="tool-opt-text btn btn-sm btn-outline hidden" title="Italic">
+        <i data-lucide="italic" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Z-order buttons (select mode) -->
+      <button
+        id="element-to-front"
+        class="btn btn-sm btn-outline hidden"
+        title="Move element to front"
+      >
+        <i data-lucide="arrow-up" class="w-4 h-4"></i>
+      </button>
+      <button
+        id="element-to-below"
+        class="btn btn-sm btn-outline hidden"
+        title="Move element to back"
+      >
+        <i data-lucide="arrow-down" class="w-4 h-4"></i>
+      </button>
+
+      <div class="divider divider-horizontal mx-0 hidden sm:flex"></div>
+
+      <!-- Grouping buttons -->
+      <button id="group-elements" class="btn btn-sm btn-outline hidden" title="Group elements">
+        <i data-lucide="layers" class="w-4 h-4"></i>
+      </button>
+      <button id="ungroup-elements" class="btn btn-sm btn-outline hidden" title="Ungroup elements">
+        <i data-lucide="layout-template" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Image options -->
+      <button
+        id="resize-image-original"
+        class="tool-opt-image btn btn-sm btn-outline hidden"
+        title="Resize to original size"
+      >
+        <i data-lucide="maximize" class="w-4 h-4"></i>
+      </button>
+
+      <!-- Delete selected element (any type in select mode) -->
+      <button
+        id="delete-element"
+        class="btn btn-sm btn-outline btn-error hidden ml-auto sm:ml-0"
+        title="Delete selected element"
+      >
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+</div>

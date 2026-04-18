@@ -1,0 +1,8 @@
+#diagram-container svg {
+  display: block;
+  max-width: none;
+  height: auto;
+}
+#diagram-container svg * {
+  vector-effect: non-scaling-stroke;
+}
