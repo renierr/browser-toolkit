@@ -78,6 +78,15 @@ export class ElementEditor {
     return this.textOverlay.isActive();
   }
 
+  isInteracting(): boolean {
+    return this.isDragging || this.isResizing || this.isRotating;
+  }
+
+  getActiveInteractionIds(): Set<string> {
+    if (!this.isInteracting()) return new Set();
+    return new Set(this.selectedElementIds);
+  }
+
   getSelectedElement(elements: SketchElement[]): SketchElement | null {
     if (this.selectedElementIds.size !== 1) return null;
     const id = this.selectedElementIds.values().next().value;

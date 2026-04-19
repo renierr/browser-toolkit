@@ -118,6 +118,9 @@ export class PointerInputHandler {
     if (mode === 'select') {
       const point = this.viewport.toWorld(e.clientX, e.clientY);
       this.elementEditor.handleSelectPointerDown(point, elements, e.shiftKey);
+      if (this.elementEditor.isInteracting()) {
+        this.renderer.setGhostIds(this.elementEditor.getActiveInteractionIds());
+      }
       this.renderer.requestDrawImmediate();
       return;
     }
@@ -198,8 +201,11 @@ export class PointerInputHandler {
     if (mode === 'select') {
       const point = this.viewport.toWorld(e.clientX, e.clientY);
       if (this.elementEditor.handleSelectPointerMove(point, elements)) {
-        this.renderer.markDirty();
-        this.renderer.requestDrawImmediate();
+        // If we were not already ghosting but now we are interacting (threshold passed)
+        if (this.elementEditor.isInteracting()) {
+          this.renderer.setGhostIds(this.elementEditor.getActiveInteractionIds());
+        }
+        this.renderer.requestDraw();
       }
       return;
     }
@@ -246,6 +252,7 @@ export class PointerInputHandler {
     const { mode, elements, hasUnsavedChanges } = this.getState();
 
     if (mode === 'select') {
+      this.renderer.clearGhostIds();
       const result = this.elementEditor.handleSelectPointerUp(elements, hasUnsavedChanges);
       if (result.pushed) {
         this.onHistoryChange();

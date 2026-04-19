@@ -92,7 +92,7 @@ export class LineTool implements DrawTool {
     }
 
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    LineTool.draw(canvasCtx, this.start, this.end, ctx.brushStyle);
+    LineTool.draw(canvasCtx, this.start!, this.end!, ctx.brushStyle, true);
     canvasCtx.globalAlpha = 1;
   }
 
@@ -100,8 +100,10 @@ export class LineTool implements DrawTool {
     ctx: CanvasRenderingContext2D,
     start: Point,
     end: Point,
-    brushStyle?: BrushStyle
+    brushStyle?: BrushStyle,
+    isInteracting?: boolean
   ): void {
+    if (isInteracting) brushStyle = 'normal';
     if (brushStyle === 'shaky') {
       drawShakyPath(ctx, [start, end], false);
       return;

@@ -47,11 +47,17 @@ export class FreehandTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (this.points.length === 0) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    FreehandTool.draw(canvasCtx, this.points, ctx.brushStyle);
+    FreehandTool.draw(canvasCtx, this.points, ctx.brushStyle, true);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, points: Point[], brushStyle?: BrushStyle): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    points: Point[],
+    brushStyle?: BrushStyle,
+    isInteracting?: boolean
+  ): void {
+    if (isInteracting) brushStyle = 'normal';
     if (points.length === 0) return;
 
     if (brushStyle === 'shaky') {

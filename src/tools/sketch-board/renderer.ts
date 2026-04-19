@@ -15,6 +15,7 @@ export class SceneRenderer {
   private renderQueued = false;
   private baseLayerDirty = true;
   private drawSceneFn: (() => void) | null = null;
+  private ghostIds = new Set<string>();
 
   getCachedImage(imageData: string): HTMLImageElement {
     let img = this.imageCache.get(imageData);
@@ -42,6 +43,16 @@ export class SceneRenderer {
 
   setDrawScene(fn: () => void): void {
     this.drawSceneFn = fn;
+  }
+
+  setGhostIds(ids: Set<string>): void {
+    this.ghostIds = new Set(ids);
+    this.markDirty();
+  }
+
+  clearGhostIds(): void {
+    this.ghostIds.clear();
+    this.markDirty();
   }
 
   markDirty(): void {
@@ -104,6 +115,16 @@ export class SceneRenderer {
 
     // Selection highlight + resize handles
     elementEditor.drawSelection(this.ctx, elements);
+
+    // Draw ghosted elements independently (actively edited)
+    if (this.ghostIds.size > 0) {
+      for (const id of this.ghostIds) {
+        const el = elements.find((e) => e.id === id);
+        if (el) {
+          drawElement(this.ctx, el, true); // true = isInteracting
+        }
+      }
+    }
 
     if (activeTool && toolCtx && drawStart && drawEnd) {
       activeTool.drawPreview(this.ctx, toolCtx);
@@ -169,6 +190,7 @@ export class SceneRenderer {
     this.baseLayerCtx.translate(viewport.x, viewport.y);
     this.baseLayerCtx.scale(viewport.scale, viewport.scale);
     for (const el of elements) {
+      if (this.ghostIds.has(el.id)) continue;
       drawElement(this.baseLayerCtx, el);
     }
     this.baseLayerCtx.restore();

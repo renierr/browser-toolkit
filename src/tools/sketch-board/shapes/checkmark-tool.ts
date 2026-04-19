@@ -41,7 +41,7 @@ export class CheckmarkTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    CheckmarkTool.draw(canvasCtx, this.start, this.end, ctx.brushStyle);
+    CheckmarkTool.draw(canvasCtx, this.start, this.end, ctx.brushStyle, true);
     canvasCtx.globalAlpha = 1;
   }
 
@@ -49,8 +49,10 @@ export class CheckmarkTool implements DrawTool {
     ctx: CanvasRenderingContext2D,
     start: Point,
     end: Point,
-    brushStyle?: BrushStyle
+    brushStyle?: BrushStyle,
+    isInteracting?: boolean
   ): void {
+    if (isInteracting) brushStyle = 'normal';
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
     const { x, y, w, h } = rect;

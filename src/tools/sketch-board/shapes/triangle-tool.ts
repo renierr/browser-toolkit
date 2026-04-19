@@ -42,7 +42,7 @@ export class TriangleTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    TriangleTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined, ctx.brushStyle);
+    TriangleTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined, ctx.brushStyle, true);
     canvasCtx.globalAlpha = 1;
   }
 
@@ -51,8 +51,10 @@ export class TriangleTool implements DrawTool {
     start: Point,
     end: Point,
     fillColor?: string,
-    brushStyle?: BrushStyle
+    brushStyle?: BrushStyle,
+    isInteracting?: boolean
   ): void {
+    if (isInteracting) brushStyle = 'normal';
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
 

@@ -47,7 +47,9 @@ export class SpeechBubbleTool implements DrawTool {
       this.start,
       this.end,
       ctx.fillColor ?? undefined,
-      ctx.brushStyle
+      ctx.brushStyle,
+      undefined,
+      true
     );
     canvasCtx.globalAlpha = 1;
   }
@@ -58,8 +60,10 @@ export class SpeechBubbleTool implements DrawTool {
     end: Point,
     fillColor?: string,
     brushStyle?: BrushStyle,
-    tailTip?: Point
+    tailTip?: Point,
+    isInteracting?: boolean
   ): void {
+    if (isInteracting) brushStyle = 'normal';
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
 

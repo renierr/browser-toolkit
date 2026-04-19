@@ -92,7 +92,7 @@ export class ArrowTool implements DrawTool {
     }
 
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    ArrowTool.draw(canvasCtx, this.start, this.end, ctx.brushStyle);
+    ArrowTool.draw(canvasCtx, this.start!, this.end!, ctx.brushStyle, true);
     canvasCtx.globalAlpha = 1;
   }
 
@@ -100,8 +100,10 @@ export class ArrowTool implements DrawTool {
     ctx: CanvasRenderingContext2D,
     start: Point,
     end: Point,
-    brushStyle?: BrushStyle
+    brushStyle?: BrushStyle,
+    isInteracting?: boolean
   ): void {
+    if (isInteracting) brushStyle = 'normal';
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const len = Math.hypot(dx, dy);
