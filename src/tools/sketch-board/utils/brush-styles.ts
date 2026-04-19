@@ -60,7 +60,8 @@ function getCacheKey(points: Point[], width: number, closed: boolean, suffix = '
   if (points.length === 0) return '';
   const first = points[0];
   const last = points[points.length - 1];
-  return `${width}-${closed}-${points.length}-${first.x},${first.y}-${last.x},${last.y}${suffix}`;
+  const mid = points[Math.floor(points.length / 2)];
+  return `${width}-${closed}-${points.length}-${first.x.toFixed(1)},${first.y.toFixed(1)}-${mid.x.toFixed(1)},${mid.y.toFixed(1)}-${last.x.toFixed(1)},${last.y.toFixed(1)}${suffix}`;
 }
 
 /**
