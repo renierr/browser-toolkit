@@ -25,7 +25,7 @@ function getDistance(p1: Point, p2: Point): number {
  */
 function getShakyPoints(p1: Point, p2: Point, jitterAmount: number, rng: SeededRandom): Point[] {
   const dist = getDistance(p1, p2);
-  const segments = Math.max(2, Math.floor(dist / 10));
+  const segments = Math.max(2, Math.floor(dist / 16)); // Slightly larger segments for smoother look
   const points: Point[] = [p1];
 
   for (let i = 1; i < segments; i++) {
@@ -101,7 +101,8 @@ export function drawCachedPath(
 }
 
 /**
- * Draws a shaky path by jittering segments and drawing multiple passes.
+ * Draws a shaky path by creating a variable-width outline and filling it.
+ * This simulates true "thick and thin" line variation with smooth transitions.
  */
 export function drawShakyPath(
   ctx: CanvasRenderingContext2D,
@@ -111,45 +112,114 @@ export function drawShakyPath(
 ): void {
   if (points.length < 2) return;
 
-  const width = ctx.lineWidth;
-  const jitterAmount = Math.max(1, width * 0.5);
-  const cacheKey = getCacheKey(points, width, closed, '-shaky');
+  // 1. Simplify points to avoid over-density (especially when drawing slowly)
+  const simplified: Point[] = [points[0]];
+  const minSqDist = 4 * 4; // 4px minimum distance
+  for (let i = 1; i < points.length; i++) {
+    const p1 = simplified[simplified.length - 1];
+    const p2 = points[i];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    if (dx * dx + dy * dy >= minSqDist || i === points.length - 1) {
+      simplified.push(p2);
+    }
+  }
+  
+  if (simplified.length < 2) return;
+
+  const baseWidth = ctx.lineWidth;
+  const jitterAmount = Math.max(1.0, 0.5 + baseWidth * 0.08);
+  const cacheKey = getCacheKey(simplified, baseWidth, closed, '-shaky-outline');
   
   let shakyPaths = sharedPathCache?.get(cacheKey);
 
   if (!shakyPaths) {
-    // Clear cache if it gets too large
     if (sharedPathCache && sharedPathCache.size > CACHE_SIZE_LIMIT) {
       sharedPathCache.clear();
     }
 
-    // Use a stable seed based on the coordinates to ensure the path is consistent
-    const seed = Math.floor(points[0].x + points[0].y + points.length + width);
+    const seed = Math.floor(simplified[0].x + simplified[0].y + simplified.length + baseWidth);
     const rng = new SeededRandom(seed);
-    const passes = 2;
+    const passes = 2; 
     shakyPaths = [];
 
     for (let p = 0; p < passes; p++) {
       const path = new Path2D();
-      path.moveTo(
-        points[0].x + (rng.next() - 0.5) * jitterAmount, 
-        points[0].y + (rng.next() - 0.5) * jitterAmount
-      );
-
-      for (let i = 0; i < points.length - 1; i++) {
-        const shaky = getShakyPoints(points[i], points[i + 1], jitterAmount, rng);
-        for (let j = 1; j < shaky.length; j++) {
-          path.lineTo(shaky[j].x, shaky[j].y);
-        }
+      
+      const pJitter = jitterAmount * (1 + p * 0.3);
+      let centerPoints: Point[] = [];
+      for (let i = 0; i < simplified.length - 1; i++) {
+        const shaky = getShakyPoints(simplified[i], simplified[i + 1], pJitter, rng);
+        if (i === 0) centerPoints.push(...shaky);
+        else centerPoints.push(...shaky.slice(1));
+      }
+      if (closed) {
+        const shaky = getShakyPoints(simplified[simplified.length - 1], simplified[0], pJitter, rng);
+        centerPoints.push(...shaky.slice(1));
       }
 
-      if (closed) {
-        const shaky = getShakyPoints(points[points.length - 1], points[0], jitterAmount, rng);
-        for (let j = 1; j < shaky.length; j++) {
-          path.lineTo(shaky[j].x, shaky[j].y);
+      const leftPoints: Point[] = [];
+      const rightPoints: Point[] = [];
+      
+      let widthMod = 0.8 + rng.next() * 0.4;
+
+      for (let i = 0; i < centerPoints.length; i++) {
+        const pPrev = centerPoints[i - 1] || (closed ? centerPoints[centerPoints.length - 1] : centerPoints[0]);
+        const pCurr = centerPoints[i];
+        const pNext = centerPoints[i + 1] || (closed ? centerPoints[0] : centerPoints[i]);
+        
+        // Calculate average normal to prevent sharp "arrow" corners
+        const d1x = pCurr.x - pPrev.x;
+        const d1y = pCurr.y - pPrev.y;
+        const d2x = pNext.x - pCurr.x;
+        const d2y = pNext.y - pCurr.y;
+        
+        const len1 = Math.sqrt(d1x * d1x + d1y * d1y) || 1;
+        const len2 = Math.sqrt(d2x * d2x + d2y * d2y) || 1;
+        
+        // Normals
+        const n1x = -d1y / len1;
+        const n1y = d1x / len1;
+        const n2x = -d2y / len2;
+        const n2y = d2x / len2;
+        
+        // Average normal
+        let nx = (n1x + n2x) / 2;
+        let ny = (n1y + n2y) / 2;
+        const nLen = Math.sqrt(nx * nx + ny * ny) || 1;
+        nx /= nLen;
+        ny /= nLen;
+
+        widthMod += (rng.next() - 0.5) * 0.12;
+        widthMod = Math.max(0.65, Math.min(1.1, widthMod));
+        
+        // Prevent too much thinning at points that were originally vertices
+        const isVertex = i === 0 || i === centerPoints.length - 1;
+        const finalWidth = isVertex ? baseWidth * 0.9 : baseWidth * widthMod;
+        
+        const halfW = finalWidth / 2;
+        leftPoints.push({ x: pCurr.x + nx * halfW, y: pCurr.y + ny * halfW });
+        rightPoints.push({ x: pCurr.x - nx * halfW, y: pCurr.y - ny * halfW });
+      }
+
+      if (leftPoints.length > 0) {
+        path.moveTo(leftPoints[0].x, leftPoints[0].y);
+        for (let i = 1; i < leftPoints.length - 1; i++) {
+          const xc = (leftPoints[i].x + leftPoints[i + 1].x) / 2;
+          const yc = (leftPoints[i].y + leftPoints[i + 1].y) / 2;
+          path.quadraticCurveTo(leftPoints[i].x, leftPoints[i].y, xc, yc);
         }
+        path.lineTo(leftPoints[leftPoints.length - 1].x, leftPoints[leftPoints.length - 1].y);
+        path.lineTo(rightPoints[rightPoints.length - 1].x, rightPoints[rightPoints.length - 1].y);
+        for (let i = rightPoints.length - 2; i > 0; i--) {
+          const xc = (rightPoints[i].x + rightPoints[i - 1].x) / 2;
+          const yc = (rightPoints[i].y + rightPoints[i - 1].y) / 2;
+          path.quadraticCurveTo(rightPoints[i].x, rightPoints[i].y, xc, yc);
+        }
+        path.lineTo(rightPoints[0].x, rightPoints[0].y);
         path.closePath();
       }
+
       shakyPaths.push(path);
     }
     
@@ -158,24 +228,28 @@ export function drawShakyPath(
     }
   }
 
-  // Fill first if needed
+  // Draw fill color
   if (fillColor && fillColor !== 'transparent') {
     ctx.save();
     ctx.fillStyle = fillColor;
     ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
+    ctx.moveTo(simplified[0].x, simplified[0].y);
+    for (let i = 1; i < simplified.length; i++) {
+      ctx.lineTo(simplified[i].x, simplified[i].y);
     }
     if (closed) ctx.closePath();
     ctx.fill();
     ctx.restore();
   }
 
-  // Draw shaky passes
-  for (const path of shakyPaths) {
-    ctx.stroke(path);
+  ctx.save();
+  ctx.fillStyle = ctx.strokeStyle;
+  const originalAlpha = ctx.globalAlpha;
+  for (let i = 0; i < shakyPaths.length; i++) {
+    if (i > 0) ctx.globalAlpha = originalAlpha * 0.5;
+    ctx.fill(shakyPaths[i]);
   }
+  ctx.restore();
 }
 
 /**
