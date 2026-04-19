@@ -11,18 +11,7 @@ import type { DrawToolContext, Point, SketchElement } from './types.ts';
 const HANDLE_SIZE = 8;
 const MOVE_THRESHOLD = 5;
 
-type ResizeHandle =
-  | 'nw'
-  | 'n'
-  | 'ne'
-  | 'e'
-  | 'se'
-  | 's'
-  | 'sw'
-  | 'w'
-  | 'start'
-  | 'end'
-  | 'rotate';
+type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'start' | 'end' | 'rotate';
 
 export class ElementEditor {
   private readonly dom: SketchDom;
@@ -208,11 +197,7 @@ export class ElementEditor {
       return true;
     }
 
-    if (
-      this.isRotating &&
-      this.selectedElementIds.size === 1 &&
-      this.activeHandle === 'rotate'
-    ) {
+    if (this.isRotating && this.selectedElementIds.size === 1 && this.activeHandle === 'rotate') {
       const id = this.selectedElementIds.values().next().value;
       const el = elements.find((e) => e.id === id);
       if (el) {
@@ -648,8 +633,6 @@ export class ElementEditor {
     }
   }
 
-
-
   deleteSelected(elements: SketchElement[]): SketchElement[] {
     if (this.selectedElementIds.size === 0) return elements;
     const filtered = elements.filter((e) => !this.selectedElementIds.has(e.id));
@@ -835,12 +818,7 @@ export class ElementEditor {
     }
   }
 
-  private getRotationHandlePosition(bounds: {
-    x: number;
-    y: number;
-    w: number;
-    h: number;
-  }): Point {
+  private getRotationHandlePosition(bounds: { x: number; y: number; w: number; h: number }): Point {
     return { x: bounds.x + bounds.w / 2, y: bounds.y - 30 };
   }
 
@@ -882,7 +860,12 @@ export class ElementEditor {
   }
 
   private doResize(point: Point, el: SketchElement): boolean {
-    if (!this.dragStartPos || !this.activeHandle || !this.resizeStartBounds || !this.dragStartSnapshot)
+    if (
+      !this.dragStartPos ||
+      !this.activeHandle ||
+      !this.resizeStartBounds ||
+      !this.dragStartSnapshot
+    )
       return false;
 
     const snapshotEl = this.dragStartSnapshot.find((e) => e.id === el.id);
