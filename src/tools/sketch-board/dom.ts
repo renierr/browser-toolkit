@@ -6,6 +6,7 @@ export type SketchDom = {
   galleryList: HTMLDivElement;
   galleryTemplate: HTMLTemplateElement;
   colorInput: HTMLInputElement;
+  colorIndicator: HTMLDivElement;
   colorPopup: HTMLDivElement;
   quickColorButtons: HTMLButtonElement[];
   widthInput: HTMLInputElement;
@@ -73,6 +74,7 @@ export function getDom(doc: Document): SketchDom | null {
   const galleryList = doc.getElementById('gallery-list') as HTMLDivElement | null;
   const galleryTemplate = doc.getElementById('gallery-item-template') as HTMLTemplateElement | null;
   const colorInput = doc.getElementById('stroke-color') as HTMLInputElement | null;
+  const colorIndicator = doc.getElementById('color-indicator') as HTMLDivElement | null;
   const colorPopup = doc.getElementById('color-popup') as HTMLDivElement | null;
   const quickColorButtons = Array.from(doc.querySelectorAll('.quick-color')) as HTMLButtonElement[];
   const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
@@ -153,6 +155,7 @@ export function getDom(doc: Document): SketchDom | null {
     galleryList,
     galleryTemplate,
     colorInput,
+    colorIndicator,
     colorPopup,
     widthInput,
     exportFormat,
@@ -232,6 +235,7 @@ export function getDom(doc: Document): SketchDom | null {
     galleryList: galleryList!,
     galleryTemplate: galleryTemplate!,
     colorInput: colorInput!,
+    colorIndicator: colorIndicator!,
     colorPopup: colorPopup!,
     quickColorButtons,
     widthInput: widthInput!,

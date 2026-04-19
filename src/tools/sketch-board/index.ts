@@ -237,11 +237,16 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     }
   };
 
+  const updateColorIndicator = (): void => {
+    dom.colorIndicator.style.backgroundColor = dom.colorInput.value;
+  };
+
   const onQuickColorClick = (event: Event): void => {
     const target = event.currentTarget as HTMLButtonElement;
     const color = target.getAttribute('data-color');
     if (!color) return;
     dom.colorInput.value = color;
+    updateColorIndicator();
     dom.colorInput.dispatchEvent(new Event('change', { bubbles: true }));
     if ('hidePopover' in dom.colorPopup && typeof dom.colorPopup.hidePopover === 'function') {
       dom.colorPopup.hidePopover();
@@ -476,8 +481,11 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       if (elementEditor.getSelectedIds().length > 0) {
         if (!preColorSnapshot) preColorSnapshot = JSON.parse(JSON.stringify(elements));
         elementEditor.applySelectedColor(elements);
+        updateColorIndicator();
         renderer.markDirty();
         renderer.requestDraw();
+      } else {
+        updateColorIndicator();
       }
     });
 
@@ -595,6 +603,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   updateUndoRedo();
   setMode('pan');
   setBackground('checkerboard-bg');
+  updateColorIndicator();
   renderer.resizeCanvas();
   renderer.requestDraw();
 
