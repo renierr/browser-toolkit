@@ -397,13 +397,14 @@ export class ElementEditor {
     input.style.whiteSpace = 'pre-wrap';
 
     const finish = (): void => {
-      if (!this.activeTextOverlay) return;
       const state = this.activeTextOverlay;
+      if (!state) return;
+      this.activeTextOverlay = null;
+      this.textInputActive = false;
+
       const { input } = state;
       const value = input.value;
       if (input.parentNode) input.remove();
-      this.textInputActive = false;
-      this.activeTextOverlay = null;
 
       if (state.type === 'creation') {
         const { textTool, onFinish, position, toolCtx } = state;
@@ -424,12 +425,13 @@ export class ElementEditor {
     };
 
     const cancel = (): void => {
-      if (!this.activeTextOverlay) return;
       const state = this.activeTextOverlay;
+      if (!state) return;
+      this.activeTextOverlay = null;
+      this.textInputActive = false;
+
       const { input } = state;
       if (input.parentNode) input.remove();
-      this.textInputActive = false;
-      this.activeTextOverlay = null;
 
       if (state.type === 'creation') {
         state.textTool.reset();
@@ -531,11 +533,14 @@ export class ElementEditor {
     input.addEventListener('input', updateHeight);
 
     const finish = (): void => {
-      if (!this.activeTextOverlay) return;
+      const state = this.activeTextOverlay;
+      if (!state || state.type !== 'edit') return;
+      this.activeTextOverlay = null;
+      this.textInputActive = false;
+
       const value = input.value;
       if (input.parentNode) input.remove();
-      this.textInputActive = false;
-      this.activeTextOverlay = null;
+
       if (value.trim() && value !== el.text) {
         el.text = value;
         onFinish();
@@ -545,11 +550,12 @@ export class ElementEditor {
     };
 
     const cancel = (): void => {
-      if (!this.activeTextOverlay) return;
-      const { input } = this.activeTextOverlay;
-      if (input.parentNode) input.remove();
-      this.textInputActive = false;
+      const state = this.activeTextOverlay;
+      if (!state || state.type !== 'edit') return;
       this.activeTextOverlay = null;
+      this.textInputActive = false;
+
+      if (input.parentNode) input.remove();
       this.renderer.requestDraw();
     };
 
