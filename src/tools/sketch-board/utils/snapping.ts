@@ -45,8 +45,13 @@ export function getSnapTarget(
         // Calculate offset in local space (unrotated)
         const dx = p.x - center.x;
         const dy = p.y - center.y;
-        const offsetX = dx * Math.cos(-rad) - dy * Math.sin(-rad);
-        const offsetY = dx * Math.sin(-rad) + dy * Math.cos(-rad);
+        const absX = dx * Math.cos(-rad) - dy * Math.sin(-rad);
+        const absY = dx * Math.sin(-rad) + dy * Math.cos(-rad);
+
+        // Normalize by current element dimensions
+        const bounds = getElementBounds(ctx, el, true);
+        const offsetX = bounds.w > 0 ? absX / bounds.w : 0;
+        const offsetY = bounds.h > 0 ? absY / bounds.h : 0;
 
         bestTarget = {
           elementId: el.id,
@@ -155,9 +160,15 @@ export function applySnapOffset(
   offsetY: number
 ): Point {
   const center = getElementCenter(ctx, el);
+  const bounds = getElementBounds(ctx, el, true);
   const rad = el.rotation || 0;
+
+  // Denormalize by current dimensions
+  const absX = offsetX * bounds.w;
+  const absY = offsetY * bounds.h;
+
   return {
-    x: center.x + offsetX * Math.cos(rad) - offsetY * Math.sin(rad),
-    y: center.y + offsetX * Math.sin(rad) + offsetY * Math.cos(rad),
+    x: center.x + absX * Math.cos(rad) - absY * Math.sin(rad),
+    y: center.y + absX * Math.sin(rad) + absY * Math.cos(rad),
   };
 }

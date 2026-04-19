@@ -25,7 +25,9 @@ export type Point = {
 
 export type SnapInfo = {
   elementId: string;
+  /** Normalized X offset from center (-0.5 to 0.5) relative to element width */
   offsetX: number;
+  /** Normalized Y offset from center (-0.5 to 0.5) relative to element height */
   offsetY: number;
 };
 
