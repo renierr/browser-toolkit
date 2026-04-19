@@ -1,8 +1,8 @@
 import { getImageGetter } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, ImageElement, Point, SketchElement } from '../types.ts';
+import type { DrawParams, DrawToolContext, ImageElement, Point, SketchElement } from '../types.ts';
 
-export class ImageTool implements DrawTool {
+export class ImageTool implements DrawTool<ImageElement> {
   readonly mode = 'image' as const;
   readonly streamsLive = false;
   readonly toolOptions: ReadonlySet<ToolOptionId> = new Set();
@@ -56,6 +56,10 @@ export class ImageTool implements DrawTool {
   drawPreview(_canvasCtx: CanvasRenderingContext2D, _ctx: DrawToolContext): void {}
 
   drawSegment(_canvasCtx: CanvasRenderingContext2D, _ctx: DrawToolContext): void {}
+
+  draw(params: DrawParams<ImageElement>): void {
+    ImageTool.draw(params.canvasCtx, params.element);
+  }
 
   static draw(ctx: CanvasRenderingContext2D, el: ImageElement): void {
     const getter = getImageGetter();

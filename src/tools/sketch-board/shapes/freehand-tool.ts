@@ -1,9 +1,16 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath, drawCachedPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
+import type {
+  BrushStyle,
+  DrawParams,
+  DrawToolContext,
+  FreehandElement,
+  Point,
+  SketchElement,
+} from '../types.ts';
 
-export class FreehandTool implements DrawTool {
+export class FreehandTool implements DrawTool<FreehandElement> {
   readonly mode = 'freehand' as const;
   readonly streamsLive = true;
   readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
@@ -44,19 +51,41 @@ export class FreehandTool implements DrawTool {
     };
   }
 
+  draw(params: DrawParams<FreehandElement>): void {
+    const { canvasCtx, element, isInteracting } = params;
+    FreehandTool.draw({
+      ctx: canvasCtx,
+      points: element.points,
+      brushStyle: element.brushStyle,
+      isInteracting,
+    });
+  }
+
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (this.points.length === 0) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    FreehandTool.draw(canvasCtx, this.points, ctx.brushStyle, true);
+    this.draw({
+      canvasCtx,
+      element: {
+        id: 'preview',
+        type: 'freehand',
+        color: ctx.color,
+        width: ctx.strokeWidth,
+        brushStyle: ctx.brushStyle,
+        points: this.points,
+      },
+      isInteracting: true,
+    });
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(
-    ctx: CanvasRenderingContext2D,
-    points: Point[],
-    brushStyle?: BrushStyle,
-    isInteracting?: boolean
-  ): void {
+  static draw(params: {
+    ctx: CanvasRenderingContext2D;
+    points: Point[];
+    brushStyle?: BrushStyle;
+    isInteracting?: boolean;
+  }): void {
+    let { ctx, points, brushStyle, isInteracting } = params;
     if (isInteracting) brushStyle = 'normal';
     if (points.length === 0) return;
 

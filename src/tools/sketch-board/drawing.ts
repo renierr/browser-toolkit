@@ -26,6 +26,22 @@ export function setImageGetter(fn: ImageGetter): void {
   setSharedImageGetter(fn);
 }
 
+const TOOL_INSTANCES = {
+  freehand: new FreehandTool(),
+  line: new LineTool(),
+  rect: new RectTool(),
+  ellipse: new EllipseTool(),
+  triangle: new TriangleTool(),
+  diamond: new DiamondTool(),
+  hexagon: new HexagonTool(),
+  arrow: new ArrowTool(),
+  'double-arrow': new DoubleArrowTool(),
+  'speech-bubble': new SpeechBubbleTool(),
+  checkmark: new CheckmarkTool(),
+  text: new TextTool(),
+  image: new ImageTool(),
+};
+
 export function drawElement(
   ctx: CanvasRenderingContext2D,
   el: SketchElement,
@@ -45,35 +61,18 @@ export function drawElement(
 
   applyStrokeStyle(ctx, el.color, el.width);
 
-  if (el.type === 'freehand') {
-    FreehandTool.draw(ctx, el.points, el.brushStyle, isInteracting);
-  } else if (el.type === 'line') {
-    LineTool.draw(ctx, el.start, el.end, el.brushStyle, isInteracting);
-  } else if (el.type === 'rect') {
-    RectTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle, isInteracting);
-  } else if (el.type === 'ellipse') {
-    EllipseTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle, isInteracting);
-  } else if (el.type === 'triangle') {
-    TriangleTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle, isInteracting);
-  } else if (el.type === 'diamond') {
-    DiamondTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle, isInteracting);
-  } else if (el.type === 'hexagon') {
-    HexagonTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle, isInteracting);
-  } else if (el.type === 'arrow') {
-    ArrowTool.draw(ctx, el.start, el.end, el.brushStyle, isInteracting);
-  } else if (el.type === 'double-arrow') {
-    DoubleArrowTool.draw(ctx, el.start, el.end, el.brushStyle, isInteracting);
-  } else if (el.type === 'speech-bubble') {
-    SpeechBubbleTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle, el.tailTip, isInteracting);
-  } else if (el.type === 'checkmark') {
-    CheckmarkTool.draw(ctx, el.start, el.end, el.brushStyle, isInteracting);
-  } else if (el.type === 'text') {
-    TextTool.draw(ctx, el);
-  } else if (el.type === 'image') {
-    ImageTool.draw(ctx, el);
-  } else if (el.type === 'group') {
+  if (el.type === 'group') {
     for (const subEl of el.elements) {
       drawElement(ctx, subEl, isInteracting);
+    }
+  } else {
+    const tool = (TOOL_INSTANCES as any)[el.type];
+    if (tool) {
+      tool.draw({
+        canvasCtx: ctx,
+        element: el,
+        isInteracting,
+      });
     }
   }
 

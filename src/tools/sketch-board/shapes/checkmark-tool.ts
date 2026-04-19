@@ -1,9 +1,16 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
+import type {
+  BrushStyle,
+  CheckmarkElement,
+  DrawParams,
+  DrawToolContext,
+  Point,
+  SketchElement,
+} from '../types.ts';
 
-export class CheckmarkTool implements DrawTool {
+export class CheckmarkTool implements DrawTool<CheckmarkElement> {
   readonly mode = 'checkmark' as const;
   readonly streamsLive = false;
   readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
@@ -38,20 +45,44 @@ export class CheckmarkTool implements DrawTool {
     };
   }
 
+  draw(params: DrawParams<CheckmarkElement>): void {
+    const { canvasCtx, element, isInteracting } = params;
+    CheckmarkTool.draw({
+      ctx: canvasCtx,
+      start: element.start,
+      end: element.end,
+      brushStyle: element.brushStyle,
+      isInteracting,
+    });
+  }
+
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    CheckmarkTool.draw(canvasCtx, this.start, this.end, ctx.brushStyle, true);
+    this.draw({
+      canvasCtx,
+      element: {
+        id: 'preview',
+        type: 'checkmark',
+        color: ctx.color,
+        width: ctx.strokeWidth,
+        brushStyle: ctx.brushStyle,
+        start: this.start,
+        end: this.end,
+      },
+      isInteracting: true,
+    });
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(
-    ctx: CanvasRenderingContext2D,
-    start: Point,
-    end: Point,
-    brushStyle?: BrushStyle,
-    isInteracting?: boolean
-  ): void {
+  static draw(params: {
+    ctx: CanvasRenderingContext2D;
+    start: Point;
+    end: Point;
+    brushStyle?: BrushStyle;
+    isInteracting?: boolean;
+  }): void {
+    let { ctx, start, end, brushStyle, isInteracting } = params;
     if (isInteracting) brushStyle = 'normal';
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;

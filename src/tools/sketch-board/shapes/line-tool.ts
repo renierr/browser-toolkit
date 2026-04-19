@@ -1,10 +1,18 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { BrushStyle, DrawToolContext, Point, SketchElement, SnapInfo } from '../types.ts';
+import type {
+  BrushStyle,
+  DrawParams,
+  DrawToolContext,
+  LineElement,
+  Point,
+  SketchElement,
+  SnapInfo,
+} from '../types.ts';
 import { getSnapTarget } from '../utils/snapping.ts';
 
-export class LineTool implements DrawTool {
+export class LineTool implements DrawTool<LineElement> {
   readonly mode = 'line' as const;
   readonly streamsLive = false;
   readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
@@ -68,6 +76,17 @@ export class LineTool implements DrawTool {
     };
   }
 
+  draw(params: DrawParams<LineElement>): void {
+    const { canvasCtx, element, isInteracting } = params;
+    LineTool.draw({
+      ctx: canvasCtx,
+      start: element.start,
+      end: element.end,
+      brushStyle: element.brushStyle,
+      isInteracting,
+    });
+  }
+
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     this.lastCtx = canvasCtx;
     if (!this.start || !this.end) return;
@@ -92,17 +111,30 @@ export class LineTool implements DrawTool {
     }
 
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    LineTool.draw(canvasCtx, this.start!, this.end!, ctx.brushStyle, true);
+    this.draw({
+      canvasCtx,
+      element: {
+        id: 'preview',
+        type: 'line',
+        color: ctx.color,
+        width: ctx.strokeWidth,
+        brushStyle: ctx.brushStyle,
+        start: this.start,
+        end: this.end,
+      },
+      isInteracting: true,
+    });
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(
-    ctx: CanvasRenderingContext2D,
-    start: Point,
-    end: Point,
-    brushStyle?: BrushStyle,
-    isInteracting?: boolean
-  ): void {
+  static draw(params: {
+    ctx: CanvasRenderingContext2D;
+    start: Point;
+    end: Point;
+    brushStyle?: BrushStyle;
+    isInteracting?: boolean;
+  }): void {
+    let { ctx, start, end, brushStyle, isInteracting } = params;
     if (isInteracting) brushStyle = 'normal';
     if (brushStyle === 'shaky') {
       drawShakyPath(ctx, [start, end], false);

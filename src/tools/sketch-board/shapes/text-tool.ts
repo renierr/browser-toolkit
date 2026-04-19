@@ -1,8 +1,8 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, Point, SketchElement, TextElement } from '../types.ts';
+import type { DrawParams, DrawToolContext, Point, SketchElement, TextElement } from '../types.ts';
 
-export class TextTool implements DrawTool {
+export class TextTool implements DrawTool<TextElement> {
   readonly mode = 'text' as const;
   readonly streamsLive = false;
   readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'font']);
@@ -45,20 +45,30 @@ export class TextTool implements DrawTool {
     this.text = text;
   }
 
+  draw(params: DrawParams<TextElement>): void {
+    TextTool.draw(params.canvasCtx, params.element);
+  }
+
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.position) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
 
     if (this.text) {
-      canvasCtx.font = `${ctx.fontStyle} ${ctx.fontWeight} ${ctx.fontSize}px ${ctx.fontFamily}`;
-      canvasCtx.fillStyle = ctx.color;
-      canvasCtx.textBaseline = 'top';
-
-      const lines = this.text.split('\n');
-      const lineHeight = ctx.fontSize * 1.2;
-      for (let i = 0; i < lines.length; i++) {
-        canvasCtx.fillText(lines[i], this.position.x, this.position.y + i * lineHeight);
-      }
+      this.draw({
+        canvasCtx,
+        element: {
+          id: 'preview',
+          type: 'text',
+          color: ctx.color,
+          width: ctx.strokeWidth,
+          text: this.text,
+          position: this.position,
+          fontSize: ctx.fontSize,
+          fontFamily: ctx.fontFamily,
+          fontWeight: ctx.fontWeight,
+          fontStyle: ctx.fontStyle,
+        },
+      });
     } else {
       // Draw cursor or placeholder – simple crosshair
       canvasCtx.beginPath();

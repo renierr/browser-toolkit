@@ -78,11 +78,7 @@ export function scaleElement(params: ScaleParams): void {
     el.end.x = newOrigin.x + (snapshotEl.end.x - oldBounds.x) * scaleX;
     el.end.y = newOrigin.y + (snapshotEl.end.y - oldBounds.y) * scaleY;
     // Scale speech bubble tail tip
-    if (
-      el.type === 'speech-bubble' &&
-      snapshotEl.type === 'speech-bubble' &&
-      snapshotEl.tailTip
-    ) {
+    if (el.type === 'speech-bubble' && snapshotEl.type === 'speech-bubble' && snapshotEl.tailTip) {
       if (!el.tailTip) el.tailTip = { x: 0, y: 0 };
       el.tailTip.x = newOrigin.x + (snapshotEl.tailTip.x - oldBounds.x) * scaleX;
       el.tailTip.y = newOrigin.y + (snapshotEl.tailTip.y - oldBounds.y) * scaleY;

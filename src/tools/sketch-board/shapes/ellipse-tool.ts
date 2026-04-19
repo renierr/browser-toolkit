@@ -1,9 +1,16 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyEllipse } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
+import type {
+  BrushStyle,
+  DrawParams,
+  DrawToolContext,
+  EllipseElement,
+  Point,
+  SketchElement,
+} from '../types.ts';
 
-export class EllipseTool implements DrawTool {
+export class EllipseTool implements DrawTool<EllipseElement> {
   readonly mode = 'ellipse' as const;
   readonly streamsLive = false;
   readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'fill', 'brush']);
@@ -39,21 +46,47 @@ export class EllipseTool implements DrawTool {
     };
   }
 
+  draw(params: DrawParams<EllipseElement>): void {
+    const { canvasCtx, element, isInteracting } = params;
+    EllipseTool.draw({
+      ctx: canvasCtx,
+      start: element.start,
+      end: element.end,
+      fillColor: element.fillColor,
+      brushStyle: element.brushStyle,
+      isInteracting,
+    });
+  }
+
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    EllipseTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined, ctx.brushStyle, true);
+    this.draw({
+      canvasCtx,
+      element: {
+        id: 'preview',
+        type: 'ellipse',
+        color: ctx.color,
+        fillColor: ctx.fillColor ?? undefined,
+        width: ctx.strokeWidth,
+        brushStyle: ctx.brushStyle,
+        start: this.start,
+        end: this.end,
+      },
+      isInteracting: true,
+    });
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(
-    ctx: CanvasRenderingContext2D,
-    start: Point,
-    end: Point,
-    fillColor?: string,
-    brushStyle?: BrushStyle,
-    isInteracting?: boolean
-  ): void {
+  static draw(params: {
+    ctx: CanvasRenderingContext2D;
+    start: Point;
+    end: Point;
+    fillColor?: string;
+    brushStyle?: BrushStyle;
+    isInteracting?: boolean;
+  }): void {
+    let { ctx, start, end, fillColor, brushStyle, isInteracting } = params;
     if (isInteracting) brushStyle = 'normal';
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;

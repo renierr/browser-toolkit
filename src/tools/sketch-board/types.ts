@@ -188,3 +188,9 @@ export type DrawToolContext = {
   readonly viewport: ViewportState;
   readonly elements: SketchElement[];
 };
+
+export type DrawParams<T extends SketchElement = SketchElement> = {
+  readonly canvasCtx: CanvasRenderingContext2D;
+  readonly element: T;
+  readonly isInteracting?: boolean;
+};

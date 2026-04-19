@@ -1,9 +1,16 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
+import type {
+  BrushStyle,
+  DrawParams,
+  DrawToolContext,
+  Point,
+  SketchElement,
+  SpeechBubbleElement,
+} from '../types.ts';
 
-export class SpeechBubbleTool implements DrawTool {
+export class SpeechBubbleTool implements DrawTool<SpeechBubbleElement> {
   readonly mode = 'speech-bubble' as const;
   readonly streamsLive = false;
   readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'fill', 'brush']);
@@ -39,30 +46,49 @@ export class SpeechBubbleTool implements DrawTool {
     };
   }
 
+  draw(params: DrawParams<SpeechBubbleElement>): void {
+    const { canvasCtx, element, isInteracting } = params;
+    SpeechBubbleTool.draw({
+      ctx: canvasCtx,
+      start: element.start,
+      end: element.end,
+      fillColor: element.fillColor,
+      brushStyle: element.brushStyle,
+      tailTip: element.tailTip,
+      isInteracting,
+    });
+  }
+
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    SpeechBubbleTool.draw(
+    this.draw({
       canvasCtx,
-      this.start,
-      this.end,
-      ctx.fillColor ?? undefined,
-      ctx.brushStyle,
-      undefined,
-      true
-    );
+      element: {
+        id: 'preview',
+        type: 'speech-bubble',
+        color: ctx.color,
+        fillColor: ctx.fillColor ?? undefined,
+        width: ctx.strokeWidth,
+        brushStyle: ctx.brushStyle,
+        start: this.start,
+        end: this.end,
+      },
+      isInteracting: true,
+    });
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(
-    ctx: CanvasRenderingContext2D,
-    start: Point,
-    end: Point,
-    fillColor?: string,
-    brushStyle?: BrushStyle,
-    tailTip?: Point,
-    isInteracting?: boolean
-  ): void {
+  static draw(params: {
+    ctx: CanvasRenderingContext2D;
+    start: Point;
+    end: Point;
+    fillColor?: string;
+    brushStyle?: BrushStyle;
+    tailTip?: Point;
+    isInteracting?: boolean;
+  }): void {
+    let { ctx, start, end, fillColor, brushStyle, tailTip, isInteracting } = params;
     if (isInteracting) brushStyle = 'normal';
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
@@ -80,9 +106,9 @@ export class SpeechBubbleTool implements DrawTool {
     // The gap gets wider as the tail tip moves further from the body
     const outX = Math.max(0, rect.x - tip.x, tip.x - (rect.x + rect.w));
     const outY = Math.max(0, tip.y - bodyBottom);
-    
+
     const baseTailWidth = Math.min(rect.w * 0.1, 12);
-    const tailHalfWidth = Math.min(rect.w * 0.3, baseTailWidth + (outY * 0.1) + (outX * 0.7));
+    const tailHalfWidth = Math.min(rect.w * 0.3, baseTailWidth + outY * 0.1 + outX * 0.7);
     const rootLeftX = Math.max(rect.x + r, rootCenterX - tailHalfWidth);
     const rootRightX = Math.min(rect.x + rect.w - r, rootCenterX + tailHalfWidth);
 
