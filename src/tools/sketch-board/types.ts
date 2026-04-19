@@ -101,6 +101,8 @@ export type SpeechBubbleElement = BaseElement & {
   type: 'speech-bubble';
   start: Point;
   end: Point;
+  /** Absolute position of the tail tip. When absent, defaults to bottom-left. */
+  tailTip?: Point;
 };
 
 export type CheckmarkElement = BaseElement & {

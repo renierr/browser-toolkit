@@ -14,6 +14,7 @@ import {
   getCursorForHandle,
   getRotationHandlePosition,
   getHandlePositions,
+  getDefaultTailTip,
   hitTestHandle,
   worldToLocalPoint,
 } from './utils/handles.ts';
@@ -621,6 +622,17 @@ export class ElementEditor {
         canvasCtx.arc(rotHandle.x, rotHandle.y, handleSize / 2, 0, Math.PI * 2);
         canvasCtx.fill();
         canvasCtx.stroke();
+
+        // Draw tail handle for speech bubbles
+        if (el.type === 'speech-bubble') {
+          const tailPos = el.tailTip ?? getDefaultTailTip(el);
+          canvasCtx.fillStyle = '#f59e0b';
+          canvasCtx.strokeStyle = '#ffffff';
+          canvasCtx.beginPath();
+          canvasCtx.arc(tailPos.x, tailPos.y, handleSize / 2 + 1, 0, Math.PI * 2);
+          canvasCtx.fill();
+          canvasCtx.stroke();
+        }
       }
       canvasCtx.restore();
     }
@@ -707,6 +719,12 @@ export class ElementEditor {
           el.endSnap = undefined;
         }
       }
+      return true;
+    }
+
+    // Speech bubble tail handle: free drag
+    if (el.type === 'speech-bubble' && this.activeHandle === 'tail') {
+      el.tailTip = { x: point.x, y: point.y };
       return true;
     }
 

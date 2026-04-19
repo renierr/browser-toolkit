@@ -1,5 +1,6 @@
 import type { Point, SketchElement } from '../types.ts';
 import { getElementBounds } from './bounds.ts';
+import { normalizeRect } from './drawing-shared.ts';
 
 const HANDLE_SIZE = 8;
 
@@ -14,6 +15,7 @@ export type ResizeHandle =
   | 'w'
   | 'start'
   | 'end'
+  | 'tail'
   | 'rotate';
 
 type Bounds = { x: number; y: number; w: number; h: number };
@@ -29,6 +31,7 @@ const CURSOR_MAP: Record<ResizeHandle, string> = {
   w: 'ew-resize',
   start: 'crosshair',
   end: 'crosshair',
+  tail: 'move',
   rotate: 'grab',
 };
 
@@ -59,6 +62,12 @@ export function getCornerHandlePositions(bounds: Bounds, pad: number): Point[] {
     { x, y: y + h }, // sw
     { x, y: y + h / 2 }, // w
   ];
+}
+
+/** Compute the default tail tip for a speech bubble when none is stored */
+export function getDefaultTailTip(el: { start: Point; end: Point }): Point {
+  const rect = normalizeRect(el.start, el.end);
+  return { x: rect.x + rect.w * 0.15, y: rect.y + rect.h };
 }
 
 /** Visible handle positions for rendering */
@@ -101,6 +110,12 @@ export function hitTestHandle(
   const cy = bounds.y + bounds.h / 2;
 
   const localPoint = toLocalPoint(point, { x: cx, y: cy }, rotation);
+
+  // Speech bubble tail handle (check first — it may overlap corner handles)
+  if (el.type === 'speech-bubble') {
+    const tailTip = el.tailTip ?? getDefaultTailTip(el);
+    if (isNearPoint(localPoint, tailTip)) return 'tail';
+  }
 
   // Rotation handle
   const rotHandle = getRotationHandlePosition(bounds);

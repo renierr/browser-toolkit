@@ -120,8 +120,9 @@ export function getElementSnapPoints(ctx: CanvasRenderingContext2D, el: SketchEl
     points.push({ x: bounds.x + bounds.w, y: bounds.y + bubbleH / 2 });
     points.push({ x: bounds.x + bounds.w / 2, y: bounds.y + bubbleH });
     points.push({ x: bounds.x, y: bounds.y + bubbleH / 2 });
-    // Tail tip (roughly 15% from left, at full height)
-    points.push({ x: bounds.x + bounds.w * 0.15, y: bounds.y + bounds.h });
+    // Tail tip (use stored position or default)
+    const tailTip = el.tailTip ?? { x: bounds.x + bounds.w * 0.15, y: bounds.y + bounds.h };
+    points.push(tailTip);
   } else if (el.type === 'arrow' || el.type === 'double-arrow' || el.type === 'line') {
     // Snap to start, end, and midpoint
     points.push(el.start);

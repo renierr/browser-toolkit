@@ -57,44 +57,55 @@ export class SpeechBubbleTool implements DrawTool {
     start: Point,
     end: Point,
     fillColor?: string,
-    brushStyle?: BrushStyle
+    brushStyle?: BrushStyle,
+    tailTip?: Point
   ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
 
+    // Compute bubble body height (leave room for default tail)
+    const bodyBottom = rect.y + rect.h * 0.8;
+    const r = Math.min(rect.w, rect.h * 0.8) * 0.2;
+
+    // Tail tip: use provided position or default
+    const tip = tailTip ?? { x: rect.x + rect.w * 0.15, y: rect.y + rect.h };
+
+    // Compute where the tail exits the body bottom edge
+    // The tail root straddles around the X that is closest to the tip on the body bottom
+    const rootCenterX = Math.max(rect.x + r, Math.min(rect.x + rect.w - r, tip.x));
+    const tailHalfWidth = Math.min(rect.w * 0.1, 12);
+    const rootLeftX = Math.max(rect.x + r, rootCenterX - tailHalfWidth);
+    const rootRightX = Math.min(rect.x + rect.w - r, rootCenterX + tailHalfWidth);
+
     if (brushStyle === 'shaky') {
-      const tailX = rect.x + rect.w * 0.2;
-      const tailY = rect.y + rect.h;
       const points = [
         { x: rect.x, y: rect.y },
         { x: rect.x + rect.w, y: rect.y },
-        { x: rect.x + rect.w, y: rect.y + rect.h * 0.8 },
-        { x: rect.x + rect.w * 0.4, y: rect.y + rect.h * 0.8 },
-        { x: tailX, y: tailY },
-        { x: rect.x + rect.w * 0.2, y: rect.y + rect.h * 0.8 },
-        { x: rect.x, y: rect.y + rect.h * 0.8 },
+        { x: rect.x + rect.w, y: bodyBottom },
+        { x: rootRightX, y: bodyBottom },
+        tip,
+        { x: rootLeftX, y: bodyBottom },
+        { x: rect.x, y: bodyBottom },
       ];
       drawShakyPath(ctx, points, true, fillColor);
       return;
     }
 
-    const r = Math.min(rect.w, rect.h) * 0.2;
     const x = rect.x;
     const y = rect.y;
     const w = rect.w;
-    const h = rect.h;
 
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     ctx.lineTo(x + w - r, y);
     ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r * 2);
-    ctx.quadraticCurveTo(x + w, y + h - r, x + w - r, y + h - r);
-    ctx.lineTo(x + w * 0.3, y + h - r);
-    ctx.lineTo(x + w * 0.15, y + h);
-    ctx.lineTo(x + w * 0.15, y + h - r);
-    ctx.lineTo(x + r, y + h - r);
-    ctx.quadraticCurveTo(x, y + h - r, x, y + h - r * 2);
+    ctx.lineTo(x + w, bodyBottom - r);
+    ctx.quadraticCurveTo(x + w, bodyBottom, x + w - r, bodyBottom);
+    ctx.lineTo(rootRightX, bodyBottom);
+    ctx.lineTo(tip.x, tip.y);
+    ctx.lineTo(rootLeftX, bodyBottom);
+    ctx.lineTo(x + r, bodyBottom);
+    ctx.quadraticCurveTo(x, bodyBottom, x, bodyBottom - r);
     ctx.lineTo(x, y + r);
     ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();

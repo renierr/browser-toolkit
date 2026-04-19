@@ -32,6 +32,11 @@ export function moveElement(el: SketchElement, dx: number, dy: number): void {
     el.start.y += dy;
     el.end.x += dx;
     el.end.y += dy;
+    // Move speech bubble tail tip if present
+    if (el.type === 'speech-bubble' && el.tailTip) {
+      el.tailTip.x += dx;
+      el.tailTip.y += dy;
+    }
   }
 }
 
@@ -72,6 +77,16 @@ export function scaleElement(params: ScaleParams): void {
     el.start.y = newOrigin.y + (snapshotEl.start.y - oldBounds.y) * scaleY;
     el.end.x = newOrigin.x + (snapshotEl.end.x - oldBounds.x) * scaleX;
     el.end.y = newOrigin.y + (snapshotEl.end.y - oldBounds.y) * scaleY;
+    // Scale speech bubble tail tip
+    if (
+      el.type === 'speech-bubble' &&
+      snapshotEl.type === 'speech-bubble' &&
+      snapshotEl.tailTip
+    ) {
+      if (!el.tailTip) el.tailTip = { x: 0, y: 0 };
+      el.tailTip.x = newOrigin.x + (snapshotEl.tailTip.x - oldBounds.x) * scaleX;
+      el.tailTip.y = newOrigin.y + (snapshotEl.tailTip.y - oldBounds.y) * scaleY;
+    }
   }
 }
 

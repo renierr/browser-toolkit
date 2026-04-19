@@ -60,7 +60,7 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
   } else if (el.type === 'double-arrow') {
     DoubleArrowTool.draw(ctx, el.start, el.end, el.brushStyle);
   } else if (el.type === 'speech-bubble') {
-    SpeechBubbleTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle);
+    SpeechBubbleTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle, el.tailTip);
   } else if (el.type === 'checkmark') {
     CheckmarkTool.draw(ctx, el.start, el.end, el.brushStyle);
   } else if (el.type === 'text') {
