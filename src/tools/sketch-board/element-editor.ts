@@ -1133,7 +1133,7 @@ export class ElementEditor {
     if (el.type === 'group') {
       options.add('ungroup');
     }
-    if (el.rotation && Math.abs(el.rotation) > 0.0001) {
+    if (typeof el.rotation === 'number' && Math.abs(el.rotation) > 0.001) {
       options.add('rotation');
     }
     this.toolbar?.showSelectionOptions(options);
