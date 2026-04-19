@@ -31,9 +31,6 @@ export function getSnapTarget(
 
   for (const el of elements) {
     if (excludeSet.has(el.id)) continue;
-    
-    // Don't snap to other arrows/lines/double-arrows
-    if (el.type === 'arrow' || el.type === 'double-arrow' || el.type === 'line') continue;
 
     const snapPoints = getElementSnapPoints(ctx, el);
     const center = getElementCenter(ctx, el);
@@ -111,6 +108,25 @@ export function getElementSnapPoints(ctx: CanvasRenderingContext2D, el: SketchEl
         points.push(el.points[i]);
       }
     }
+  } else if (el.type === 'speech-bubble') {
+    // Bubble part (top 80%)
+    const bubbleH = bounds.h * 0.8;
+    points.push({ x: bounds.x, y: bounds.y });
+    points.push({ x: bounds.x + bounds.w, y: bounds.y });
+    points.push({ x: bounds.x + bounds.w, y: bounds.y + bubbleH });
+    points.push({ x: bounds.x, y: bounds.y + bubbleH });
+    // Midpoints
+    points.push({ x: bounds.x + bounds.w / 2, y: bounds.y });
+    points.push({ x: bounds.x + bounds.w, y: bounds.y + bubbleH / 2 });
+    points.push({ x: bounds.x + bounds.w / 2, y: bounds.y + bubbleH });
+    points.push({ x: bounds.x, y: bounds.y + bubbleH / 2 });
+    // Tail tip (roughly 15% from left, at full height)
+    points.push({ x: bounds.x + bounds.w * 0.15, y: bounds.y + bounds.h });
+  } else if (el.type === 'arrow' || el.type === 'double-arrow' || el.type === 'line') {
+    // Snap to start, end, and midpoint
+    points.push(el.start);
+    points.push(el.end);
+    points.push({ x: (el.start.x + el.end.x) / 2, y: (el.start.y + el.end.y) / 2 });
   }
 
   // Apply rotation to points

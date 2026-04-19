@@ -1010,18 +1010,49 @@ export class ElementEditor {
   }
 
   private updateSnappedElements(elements: SketchElement[], movedElementIds: Set<string>): void {
-    for (const el of elements) {
-      if (el.type === 'arrow' || el.type === 'double-arrow' || el.type === 'line') {
-        if (el.startSnap && movedElementIds.has(el.startSnap.elementId)) {
-          const target = elements.find((e) => e.id === el.startSnap!.elementId);
-          if (target) {
-            el.start = applySnapOffset(this.ctx, target, el.startSnap!.offsetX, el.startSnap!.offsetY);
+    let changed = true;
+    let passes = 0;
+    const allMoved = new Set(movedElementIds);
+
+    while (changed && passes < 10) {
+      changed = false;
+      passes++;
+      for (const el of elements) {
+        if (el.type === 'arrow' || el.type === 'double-arrow' || el.type === 'line') {
+          let elChanged = false;
+          if (el.startSnap && allMoved.has(el.startSnap.elementId)) {
+            const target = elements.find((e) => e.id === el.startSnap!.elementId);
+            if (target) {
+              const newPos = applySnapOffset(
+                this.ctx,
+                target,
+                el.startSnap!.offsetX,
+                el.startSnap!.offsetY
+              );
+              if (Math.abs(newPos.x - el.start.x) > 0.01 || Math.abs(newPos.y - el.start.y) > 0.01) {
+                el.start = newPos;
+                elChanged = true;
+              }
+            }
           }
-        }
-        if (el.endSnap && movedElementIds.has(el.endSnap.elementId)) {
-          const target = elements.find((e) => e.id === el.endSnap!.elementId);
-          if (target) {
-            el.end = applySnapOffset(this.ctx, target, el.endSnap!.offsetX, el.endSnap!.offsetY);
+          if (el.endSnap && allMoved.has(el.endSnap.elementId)) {
+            const target = elements.find((e) => e.id === el.endSnap!.elementId);
+            if (target) {
+              const newPos = applySnapOffset(
+                this.ctx,
+                target,
+                el.endSnap!.offsetX,
+                el.endSnap!.offsetY
+              );
+              if (Math.abs(newPos.x - el.end.x) > 0.01 || Math.abs(newPos.y - el.end.y) > 0.01) {
+                el.end = newPos;
+                elChanged = true;
+              }
+            }
+          }
+          if (elChanged && !allMoved.has(el.id)) {
+            allMoved.add(el.id);
+            changed = true;
           }
         }
       }
