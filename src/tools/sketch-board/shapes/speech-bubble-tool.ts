@@ -73,7 +73,10 @@ export class SpeechBubbleTool implements DrawTool {
     // Compute where the tail exits the body bottom edge
     // The tail root straddles around the X that is closest to the tip on the body bottom
     const rootCenterX = Math.max(rect.x + r, Math.min(rect.x + rect.w - r, tip.x));
-    const tailHalfWidth = Math.min(rect.w * 0.1, 12);
+    // The gap gets wider as the tail tip moves further from the body
+    const verticalDist = Math.abs(tip.y - bodyBottom);
+    const baseTailWidth = Math.min(rect.w * 0.1, 12);
+    const tailHalfWidth = Math.min(rect.w * 0.3, baseTailWidth + verticalDist * 0.1);
     const rootLeftX = Math.max(rect.x + r, rootCenterX - tailHalfWidth);
     const rootRightX = Math.min(rect.x + rect.w - r, rootCenterX + tailHalfWidth);
 
