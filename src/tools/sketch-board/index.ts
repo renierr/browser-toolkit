@@ -2,6 +2,7 @@ import router from '@js/router.ts';
 import { showMessage } from '@js/ui.ts';
 import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getCropBounds, setImageGetter } from './drawing.ts';
+import { setShakyCache } from './utils/brush-styles.ts';
 import { getDom } from './dom.ts';
 import { confirmDiscardIfNeeded, showInfoModal } from './ui-helpers.ts';
 import { ElementEditor } from './element-editor.ts';
@@ -57,6 +58,8 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   const viewport = new ViewportController(dom.canvas);
   const renderer = new SceneRenderer(dom.canvas, ctx);
   setImageGetter((data) => renderer.getCachedImage(data));
+  const shakyCache = new Map<string, Path2D[]>();
+  setShakyCache(shakyCache);
   const elementEditor = new ElementEditor(dom, ctx, history, renderer);
   const toolbar = new ToolbarController(dom);
   elementEditor.setToolbar(toolbar);
@@ -714,6 +717,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     resizeObserver.disconnect();
     toolbar.detach();
     inputHandler.detach();
+    setShakyCache(null);
     for (const button of dom.quickColorButtons) {
       button.removeEventListener('click', onQuickColorClick);
     }

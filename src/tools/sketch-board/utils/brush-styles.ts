@@ -4,8 +4,16 @@ import type { Point } from '../types.ts';
  * Hand-drawn brush style utilities.
  */
 
-function jitter(val: number, amount: number): number {
-  return val + (Math.random() - 0.5) * amount;
+// Simple seeded random generator for stability
+class SeededRandom {
+  private state: number;
+  constructor(seed: number) {
+    this.state = seed || 1;
+  }
+  next(): number {
+    this.state = (this.state * 16807) % 2147483647;
+    return (this.state - 1) / 2147483646;
+  }
 }
 
 function getDistance(p1: Point, p2: Point): number {
@@ -15,9 +23,9 @@ function getDistance(p1: Point, p2: Point): number {
 /**
  * Subdivides a segment into smaller parts and jitters them.
  */
-function getShakyPoints(p1: Point, p2: Point, jitterAmount: number): Point[] {
+function getShakyPoints(p1: Point, p2: Point, jitterAmount: number, rng: SeededRandom): Point[] {
   const dist = getDistance(p1, p2);
-  const segments = Math.max(2, Math.floor(dist / 10)); // One segment every 10px approx
+  const segments = Math.max(2, Math.floor(dist / 10));
   const points: Point[] = [p1];
 
   for (let i = 1; i < segments; i++) {
@@ -25,13 +33,35 @@ function getShakyPoints(p1: Point, p2: Point, jitterAmount: number): Point[] {
     const x = p1.x + (p2.x - p1.x) * t;
     const y = p1.y + (p2.y - p1.y) * t;
     points.push({
-      x: jitter(x, jitterAmount),
-      y: jitter(y, jitterAmount),
+      x: x + (rng.next() - 0.5) * jitterAmount,
+      y: y + (rng.next() - 0.5) * jitterAmount,
     });
   }
 
   points.push(p2);
   return points;
+}
+
+// Cache type for Path2D objects to avoid re-calculation
+export type ShakyCache = Map<string, Path2D[]>;
+const CACHE_SIZE_LIMIT = 500;
+
+let sharedCache: ShakyCache | null = null;
+
+/**
+ * Sets the shared cache for shaky paths. 
+ * This should be called from the tool's init() to manage lifetime.
+ */
+export function setShakyCache(cache: ShakyCache | null): void {
+  sharedCache = cache;
+}
+
+function getCacheKey(points: Point[], width: number, closed: boolean): string {
+  // For performance, we only use a few points and properties for the key
+  if (points.length === 0) return '';
+  const first = points[0];
+  const last = points[points.length - 1];
+  return `${width}-${closed}-${points.length}-${first.x},${first.y}-${last.x},${last.y}`;
 }
 
 /**
@@ -45,11 +75,54 @@ export function drawShakyPath(
 ): void {
   if (points.length < 2) return;
 
-  const jitterAmount = Math.max(1, ctx.lineWidth * 0.5);
+  const width = ctx.lineWidth;
+  const jitterAmount = Math.max(1, width * 0.5);
+  const cacheKey = getCacheKey(points, width, closed);
   
-  // Create two versions of the path for a sketchy look
-  const passes = 2;
-  
+  let shakyPaths = sharedCache?.get(cacheKey);
+
+  if (!shakyPaths) {
+    // Clear cache if it gets too large
+    if (sharedCache && sharedCache.size > CACHE_SIZE_LIMIT) {
+      sharedCache.clear();
+    }
+
+    // Use a stable seed based on the coordinates to ensure the path is consistent
+    const seed = Math.floor(points[0].x + points[0].y + points.length + width);
+    const rng = new SeededRandom(seed);
+    const passes = 2;
+    shakyPaths = [];
+
+    for (let p = 0; p < passes; p++) {
+      const path = new Path2D();
+      path.moveTo(
+        points[0].x + (rng.next() - 0.5) * jitterAmount, 
+        points[0].y + (rng.next() - 0.5) * jitterAmount
+      );
+
+      for (let i = 0; i < points.length - 1; i++) {
+        const shaky = getShakyPoints(points[i], points[i + 1], jitterAmount, rng);
+        for (let j = 1; j < shaky.length; j++) {
+          path.lineTo(shaky[j].x, shaky[j].y);
+        }
+      }
+
+      if (closed) {
+        const shaky = getShakyPoints(points[points.length - 1], points[0], jitterAmount, rng);
+        for (let j = 1; j < shaky.length; j++) {
+          path.lineTo(shaky[j].x, shaky[j].y);
+        }
+        path.closePath();
+      }
+      shakyPaths.push(path);
+    }
+    
+    if (sharedCache) {
+      sharedCache.set(cacheKey, shakyPaths);
+    }
+  }
+
+  // Fill first if needed
   if (fillColor && fillColor !== 'transparent') {
     ctx.save();
     ctx.fillStyle = fillColor;
@@ -63,31 +136,9 @@ export function drawShakyPath(
     ctx.restore();
   }
 
-  for (let p = 0; p < passes; p++) {
-    ctx.beginPath();
-    ctx.moveTo(jitter(points[0].x, jitterAmount), jitter(points[0].y, jitterAmount));
-
-    for (let i = 0; i < points.length - 1; i++) {
-      const pStart = points[i];
-      const pEnd = points[i + 1];
-      const shaky = getShakyPoints(pStart, pEnd, jitterAmount);
-      
-      for (let j = 1; j < shaky.length; j++) {
-        ctx.lineTo(shaky[j].x, shaky[j].y);
-      }
-    }
-
-    if (closed) {
-      const pStart = points[points.length - 1];
-      const pEnd = points[0];
-      const shaky = getShakyPoints(pStart, pEnd, jitterAmount);
-      for (let j = 1; j < shaky.length; j++) {
-        ctx.lineTo(shaky[j].x, shaky[j].y);
-      }
-      ctx.closePath();
-    }
-    
-    ctx.stroke();
+  // Draw shaky passes
+  for (const path of shakyPaths) {
+    ctx.stroke(path);
   }
 }
 
@@ -123,7 +174,7 @@ export function drawShakyEllipse(
   fillColor?: string
 ): void {
   const points: Point[] = [];
-  const segments = 32;
+  const segments = Math.max(12, Math.floor(Math.max(rx, ry) / 5)); // Responsive segments
   for (let i = 0; i < segments; i++) {
     const angle = (i / segments) * Math.PI * 2;
     points.push({
