@@ -139,3 +139,17 @@ export function getElementCenter(ctx: CanvasRenderingContext2D, el: SketchElemen
     y: bounds.y + bounds.h / 2,
   };
 }
+
+/** Check if a point is within bounds (with optional padding) */
+export function isPointInBounds(
+  point: Point,
+  bounds: { x: number; y: number; w: number; h: number },
+  padding = 0
+): boolean {
+  return (
+    point.x >= bounds.x - padding &&
+    point.x <= bounds.x + bounds.w + padding &&
+    point.y >= bounds.y - padding &&
+    point.y <= bounds.y + bounds.h + padding
+  );
+}
