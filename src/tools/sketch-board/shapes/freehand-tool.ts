@@ -1,5 +1,5 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
-import { drawShakyPath } from '../utils/brush-styles.ts';
+import { drawShakyPath, drawCachedPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
 
@@ -69,12 +69,7 @@ export class FreehandTool implements DrawTool {
       return;
     }
 
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    for (let i = 1; i < points.length; i++) {
-      ctx.lineTo(points[i].x, points[i].y);
-    }
-    ctx.stroke();
+    drawCachedPath(ctx, points, false);
   }
 
   drawSegment(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {

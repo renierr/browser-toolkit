@@ -43,25 +43,61 @@ function getShakyPoints(p1: Point, p2: Point, jitterAmount: number, rng: SeededR
 }
 
 // Cache type for Path2D objects to avoid re-calculation
-export type ShakyCache = Map<string, Path2D[]>;
+export type PathCache = Map<string, Path2D[]>;
 const CACHE_SIZE_LIMIT = 500;
 
-let sharedCache: ShakyCache | null = null;
+let sharedPathCache: PathCache | null = null;
 
 /**
- * Sets the shared cache for shaky paths. 
+ * Sets the shared cache for paths. 
  * This should be called from the tool's init() to manage lifetime.
  */
-export function setShakyCache(cache: ShakyCache | null): void {
-  sharedCache = cache;
+export function setPathCache(cache: PathCache | null): void {
+  sharedPathCache = cache;
 }
 
-function getCacheKey(points: Point[], width: number, closed: boolean): string {
-  // For performance, we only use a few points and properties for the key
+function getCacheKey(points: Point[], width: number, closed: boolean, suffix = ''): string {
   if (points.length === 0) return '';
   const first = points[0];
   const last = points[points.length - 1];
-  return `${width}-${closed}-${points.length}-${first.x},${first.y}-${last.x},${last.y}`;
+  return `${width}-${closed}-${points.length}-${first.x},${first.y}-${last.x},${last.y}${suffix}`;
+}
+
+/**
+ * Draws a standard path but uses Path2D caching to optimize complex freehand drawings.
+ */
+export function drawCachedPath(
+  ctx: CanvasRenderingContext2D,
+  points: Point[],
+  closed = false
+): void {
+  if (points.length < 2) return;
+
+  const width = ctx.lineWidth;
+  const cacheKey = getCacheKey(points, width, closed, '-normal');
+  let paths = sharedPathCache?.get(cacheKey);
+
+  if (!paths) {
+    if (sharedPathCache && sharedPathCache.size > CACHE_SIZE_LIMIT) {
+      sharedPathCache.clear();
+    }
+
+    const path = new Path2D();
+    path.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      path.lineTo(points[i].x, points[i].y);
+    }
+    if (closed) path.closePath();
+    
+    paths = [path];
+    if (sharedPathCache) {
+      sharedPathCache.set(cacheKey, paths);
+    }
+  }
+
+  for (const path of paths) {
+    ctx.stroke(path);
+  }
 }
 
 /**
@@ -77,14 +113,14 @@ export function drawShakyPath(
 
   const width = ctx.lineWidth;
   const jitterAmount = Math.max(1, width * 0.5);
-  const cacheKey = getCacheKey(points, width, closed);
+  const cacheKey = getCacheKey(points, width, closed, '-shaky');
   
-  let shakyPaths = sharedCache?.get(cacheKey);
+  let shakyPaths = sharedPathCache?.get(cacheKey);
 
   if (!shakyPaths) {
     // Clear cache if it gets too large
-    if (sharedCache && sharedCache.size > CACHE_SIZE_LIMIT) {
-      sharedCache.clear();
+    if (sharedPathCache && sharedPathCache.size > CACHE_SIZE_LIMIT) {
+      sharedPathCache.clear();
     }
 
     // Use a stable seed based on the coordinates to ensure the path is consistent
@@ -117,8 +153,8 @@ export function drawShakyPath(
       shakyPaths.push(path);
     }
     
-    if (sharedCache) {
-      sharedCache.set(cacheKey, shakyPaths);
+    if (sharedPathCache) {
+      sharedPathCache.set(cacheKey, shakyPaths);
     }
   }
 
