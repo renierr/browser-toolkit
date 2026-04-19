@@ -16,7 +16,12 @@ export class DoubleArrowTool implements DrawTool {
   private lastCtx: CanvasRenderingContext2D | null = null;
 
   onPointerDown(point: Point, ctx: DrawToolContext): void {
-    const snap = getSnapTarget(point, ctx.elements, new Set(), (this.lastCtx as any) || document.createElement('canvas').getContext('2d'));
+    const snap = getSnapTarget(
+      point,
+      ctx.elements,
+      new Set(),
+      (this.lastCtx as any) || document.createElement('canvas').getContext('2d')
+    );
     if (snap) {
       this.start = snap.point;
       this.startSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
@@ -29,7 +34,12 @@ export class DoubleArrowTool implements DrawTool {
   }
 
   onPointerMove(point: Point, ctx: DrawToolContext): void {
-    const snap = getSnapTarget(point, ctx.elements, new Set(), (this.lastCtx as any) || document.createElement('canvas').getContext('2d'));
+    const snap = getSnapTarget(
+      point,
+      ctx.elements,
+      new Set(),
+      (this.lastCtx as any) || document.createElement('canvas').getContext('2d')
+    );
     if (snap) {
       this.end = snap.point;
       this.endSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
@@ -86,7 +96,12 @@ export class DoubleArrowTool implements DrawTool {
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, brushStyle?: BrushStyle): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    brushStyle?: BrushStyle
+  ): void {
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const len = Math.hypot(dx, dy);
@@ -96,19 +111,39 @@ export class DoubleArrowTool implements DrawTool {
       const headLen = 15;
       const angle = Math.atan2(dy, dx);
       // Start arrow
-      drawShakyPath(ctx, [
-        { x: start.x + headLen * Math.cos(angle - Math.PI / 6), y: start.y + headLen * Math.sin(angle - Math.PI / 6) },
-        start,
-        { x: start.x + headLen * Math.cos(angle + Math.PI / 6), y: start.y + headLen * Math.sin(angle + Math.PI / 6) }
-      ], false);
+      drawShakyPath(
+        ctx,
+        [
+          {
+            x: start.x + headLen * Math.cos(angle - Math.PI / 6),
+            y: start.y + headLen * Math.sin(angle - Math.PI / 6),
+          },
+          start,
+          {
+            x: start.x + headLen * Math.cos(angle + Math.PI / 6),
+            y: start.y + headLen * Math.sin(angle + Math.PI / 6),
+          },
+        ],
+        false
+      );
       // Main line
       drawShakyPath(ctx, [start, end], false);
       // End arrow
-      drawShakyPath(ctx, [
-        { x: end.x - headLen * Math.cos(angle - Math.PI / 6), y: end.y - headLen * Math.sin(angle - Math.PI / 6) },
-        end,
-        { x: end.x - headLen * Math.cos(angle + Math.PI / 6), y: end.y - headLen * Math.sin(angle + Math.PI / 6) }
-      ], false);
+      drawShakyPath(
+        ctx,
+        [
+          {
+            x: end.x - headLen * Math.cos(angle - Math.PI / 6),
+            y: end.y - headLen * Math.sin(angle - Math.PI / 6),
+          },
+          end,
+          {
+            x: end.x - headLen * Math.cos(angle + Math.PI / 6),
+            y: end.y - headLen * Math.sin(angle + Math.PI / 6),
+          },
+        ],
+        false
+      );
       return;
     }
 

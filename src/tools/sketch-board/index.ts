@@ -383,7 +383,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       renderer.requestDrawImmediate();
     }
   });
- 
+
   toolbar.setResetRotationHandler(() => {
     if (elementEditor.getSelectedIds().length > 0) {
       history.push(elements);

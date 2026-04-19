@@ -16,7 +16,12 @@ export class LineTool implements DrawTool {
   private lastCtx: CanvasRenderingContext2D | null = null;
 
   onPointerDown(point: Point, ctx: DrawToolContext): void {
-    const snap = getSnapTarget(point, ctx.elements, new Set(), (this.lastCtx as any) || document.createElement('canvas').getContext('2d'));
+    const snap = getSnapTarget(
+      point,
+      ctx.elements,
+      new Set(),
+      (this.lastCtx as any) || document.createElement('canvas').getContext('2d')
+    );
     if (snap) {
       this.start = snap.point;
       this.startSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
@@ -29,7 +34,12 @@ export class LineTool implements DrawTool {
   }
 
   onPointerMove(point: Point, ctx: DrawToolContext): void {
-    const snap = getSnapTarget(point, ctx.elements, new Set(), (this.lastCtx as any) || document.createElement('canvas').getContext('2d'));
+    const snap = getSnapTarget(
+      point,
+      ctx.elements,
+      new Set(),
+      (this.lastCtx as any) || document.createElement('canvas').getContext('2d')
+    );
     if (snap) {
       this.end = snap.point;
       this.endSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
@@ -86,7 +96,12 @@ export class LineTool implements DrawTool {
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, brushStyle?: BrushStyle): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    brushStyle?: BrushStyle
+  ): void {
     if (brushStyle === 'shaky') {
       drawShakyPath(ctx, [start, end], false);
       return;

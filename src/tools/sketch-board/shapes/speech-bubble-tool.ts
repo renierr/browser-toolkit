@@ -42,7 +42,13 @@ export class SpeechBubbleTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    SpeechBubbleTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined, ctx.brushStyle);
+    SpeechBubbleTool.draw(
+      canvasCtx,
+      this.start,
+      this.end,
+      ctx.fillColor ?? undefined,
+      ctx.brushStyle
+    );
     canvasCtx.globalAlpha = 1;
   }
 

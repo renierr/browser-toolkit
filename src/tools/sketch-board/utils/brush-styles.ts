@@ -49,7 +49,7 @@ const CACHE_SIZE_LIMIT = 500;
 let sharedPathCache: PathCache | null = null;
 
 /**
- * Sets the shared cache for paths. 
+ * Sets the shared cache for paths.
  * This should be called from the tool's init() to manage lifetime.
  */
 export function setPathCache(cache: PathCache | null): void {
@@ -88,7 +88,7 @@ export function drawCachedPath(
       path.lineTo(points[i].x, points[i].y);
     }
     if (closed) path.closePath();
-    
+
     paths = [path];
     if (sharedPathCache) {
       sharedPathCache.set(cacheKey, paths);
@@ -124,13 +124,13 @@ export function drawShakyPath(
       simplified.push(p2);
     }
   }
-  
+
   if (simplified.length < 2) return;
 
   const baseWidth = ctx.lineWidth;
   const jitterAmount = Math.max(1.0, 0.5 + baseWidth * 0.08);
   const cacheKey = getCacheKey(simplified, baseWidth, closed, '-shaky-outline');
-  
+
   let shakyPaths = sharedPathCache?.get(cacheKey);
 
   if (!shakyPaths) {
@@ -140,12 +140,12 @@ export function drawShakyPath(
 
     const seed = Math.floor(simplified[0].x + simplified[0].y + simplified.length + baseWidth);
     const rng = new SeededRandom(seed);
-    const passes = 2; 
+    const passes = 2;
     shakyPaths = [];
 
     for (let p = 0; p < passes; p++) {
       const path = new Path2D();
-      
+
       const pJitter = jitterAmount * (1 + p * 0.3);
       let centerPoints: Point[] = [];
       for (let i = 0; i < simplified.length - 1; i++) {
@@ -154,35 +154,41 @@ export function drawShakyPath(
         else centerPoints.push(...shaky.slice(1));
       }
       if (closed) {
-        const shaky = getShakyPoints(simplified[simplified.length - 1], simplified[0], pJitter, rng);
+        const shaky = getShakyPoints(
+          simplified[simplified.length - 1],
+          simplified[0],
+          pJitter,
+          rng
+        );
         centerPoints.push(...shaky.slice(1));
       }
 
       const leftPoints: Point[] = [];
       const rightPoints: Point[] = [];
-      
+
       let widthMod = 0.8 + rng.next() * 0.4;
 
       for (let i = 0; i < centerPoints.length; i++) {
-        const pPrev = centerPoints[i - 1] || (closed ? centerPoints[centerPoints.length - 1] : centerPoints[0]);
+        const pPrev =
+          centerPoints[i - 1] || (closed ? centerPoints[centerPoints.length - 1] : centerPoints[0]);
         const pCurr = centerPoints[i];
         const pNext = centerPoints[i + 1] || (closed ? centerPoints[0] : centerPoints[i]);
-        
+
         // Calculate average normal to prevent sharp "arrow" corners
         const d1x = pCurr.x - pPrev.x;
         const d1y = pCurr.y - pPrev.y;
         const d2x = pNext.x - pCurr.x;
         const d2y = pNext.y - pCurr.y;
-        
+
         const len1 = Math.sqrt(d1x * d1x + d1y * d1y) || 1;
         const len2 = Math.sqrt(d2x * d2x + d2y * d2y) || 1;
-        
+
         // Normals
         const n1x = -d1y / len1;
         const n1y = d1x / len1;
         const n2x = -d2y / len2;
         const n2y = d2x / len2;
-        
+
         // Average normal
         let nx = (n1x + n2x) / 2;
         let ny = (n1y + n2y) / 2;
@@ -192,11 +198,11 @@ export function drawShakyPath(
 
         widthMod += (rng.next() - 0.5) * 0.12;
         widthMod = Math.max(0.65, Math.min(1.1, widthMod));
-        
+
         // Prevent too much thinning at points that were originally vertices
         const isVertex = i === 0 || i === centerPoints.length - 1;
         const finalWidth = isVertex ? baseWidth * 0.9 : baseWidth * widthMod;
-        
+
         const halfW = finalWidth / 2;
         leftPoints.push({ x: pCurr.x + nx * halfW, y: pCurr.y + ny * halfW });
         rightPoints.push({ x: pCurr.x - nx * halfW, y: pCurr.y - ny * halfW });
@@ -222,7 +228,7 @@ export function drawShakyPath(
 
       shakyPaths.push(path);
     }
-    
+
     if (sharedPathCache) {
       sharedPathCache.set(cacheKey, shakyPaths);
     }

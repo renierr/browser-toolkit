@@ -122,7 +122,7 @@ export class ToolbarController {
       this.dom.fillColorIndicator.style.backgroundColor = color;
     }
   }
- 
+
   updateBrushStyleIndicator(style: 'normal' | 'shaky'): void {
     const dom = this.dom;
     if (style === 'shaky') {
@@ -134,7 +134,7 @@ export class ToolbarController {
       dom.brushNormal.classList.add('active');
       dom.brushShaky.classList.remove('active');
     }
-    
+
     // Sync with hidden input for data-setting persistence
     if (dom.brushStyleInput.value !== style) {
       dom.brushStyleInput.value = style;

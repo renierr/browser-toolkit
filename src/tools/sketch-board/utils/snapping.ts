@@ -23,7 +23,7 @@ export function getSnapTarget(
   const excludeSet = new Set<string>();
   for (const item of excludeIds) {
     if (typeof item === 'string') excludeSet.add(item);
-    else item.forEach(id => excludeSet.add(id));
+    else item.forEach((id) => excludeSet.add(id));
   }
 
   let bestDist = SNAP_THRESHOLD;
@@ -41,7 +41,7 @@ export function getSnapTarget(
 
       if (dist < bestDist) {
         bestDist = dist;
-        
+
         // Calculate offset in local space (unrotated)
         const dx = p.x - center.x;
         const dy = p.y - center.y;
@@ -52,7 +52,7 @@ export function getSnapTarget(
           elementId: el.id,
           point: p,
           offsetX,
-          offsetY
+          offsetY,
         };
       }
     }
@@ -133,13 +133,13 @@ export function getElementSnapPoints(ctx: CanvasRenderingContext2D, el: SketchEl
   const rad = el.rotation || 0;
   if (rad === 0) return points;
 
-  return points.map(p => {
+  return points.map((p) => {
     if (p === center) return p;
     const dx = p.x - center.x;
     const dy = p.y - center.y;
     return {
       x: center.x + dx * Math.cos(rad) - dy * Math.sin(rad),
-      y: center.y + dx * Math.sin(rad) + dy * Math.cos(rad)
+      y: center.y + dx * Math.sin(rad) + dy * Math.cos(rad),
     };
   });
 }
@@ -147,11 +147,16 @@ export function getElementSnapPoints(ctx: CanvasRenderingContext2D, el: SketchEl
 /**
  * Calculates world position of a snap offset relative to an element.
  */
-export function applySnapOffset(ctx: CanvasRenderingContext2D, el: SketchElement, offsetX: number, offsetY: number): Point {
+export function applySnapOffset(
+  ctx: CanvasRenderingContext2D,
+  el: SketchElement,
+  offsetX: number,
+  offsetY: number
+): Point {
   const center = getElementCenter(ctx, el);
   const rad = el.rotation || 0;
   return {
     x: center.x + offsetX * Math.cos(rad) - offsetY * Math.sin(rad),
-    y: center.y + offsetX * Math.sin(rad) + offsetY * Math.cos(rad)
+    y: center.y + offsetX * Math.sin(rad) + offsetY * Math.cos(rad),
   };
 }

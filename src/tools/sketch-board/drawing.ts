@@ -1,9 +1,4 @@
-import type {
-  DrawingMeta,
-  Point,
-  SketchElement,
-  ToolMode,
-} from './types.ts';
+import type { DrawingMeta, Point, SketchElement, ToolMode } from './types.ts';
 import {
   normalizeRect,
   applyStrokeStyle,
@@ -80,7 +75,6 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
 
   ctx.restore();
 }
-
 
 export function drawLiveFreehandSegment(
   ctx: CanvasRenderingContext2D,

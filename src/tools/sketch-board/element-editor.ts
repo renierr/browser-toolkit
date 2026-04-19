@@ -739,7 +739,7 @@ export class ElementEditor {
     this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill']));
     return remainingElements;
   }
- 
+
   resetSelectedRotation(elements: SketchElement[]): void {
     if (this.selectedElementIds.size === 0) return;
     for (const id of this.selectedElementIds) {
@@ -780,7 +780,6 @@ export class ElementEditor {
     const existingInput = document.getElementById('text-input-overlay');
     if (existingInput) existingInput.remove();
   }
-
 
   /** Draw selection highlight and resize handles */
   drawSelection(canvasCtx: CanvasRenderingContext2D, elements: SketchElement[]): void {
@@ -884,8 +883,8 @@ export class ElementEditor {
       const el = elements.find((e) => e.id === id);
       if (!el) continue;
       this.moveElement(el, dx, dy);
-      
-      // If we move the whole element, clear its snaps (unless we want to preserve them, 
+
+      // If we move the whole element, clear its snaps (unless we want to preserve them,
       // but usually moving the whole arrow means manual positioning)
       if (el.type === 'arrow' || el.type === 'double-arrow' || el.type === 'line') {
         el.startSnap = undefined;
@@ -944,7 +943,11 @@ export class ElementEditor {
         if (snap) {
           el.start.x = snap.point.x;
           el.start.y = snap.point.y;
-          el.startSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
+          el.startSnap = {
+            elementId: snap.elementId,
+            offsetX: snap.offsetX,
+            offsetY: snap.offsetY,
+          };
         } else {
           el.start.x = point.x;
           el.start.y = point.y;
@@ -1015,10 +1018,10 @@ export class ElementEditor {
     const scaleY = newH / bounds.h;
 
     this.scaleElement(el, snapshotEl, scaleX, scaleY, { x: newX, y: newY }, bounds, elements);
-    this.updateSnappedElements([el], new Set([el.id])); // el itself might have snaps that need updating? 
+    this.updateSnappedElements([el], new Set([el.id])); // el itself might have snaps that need updating?
     // Wait, if we RESIZE an arrow, we might need to update its points if it's snapped.
     // Actually scaleElement will overwrite points.
-    
+
     // After any resize, update anything snapped to the moved/resized elements
     const movedIds = new Set(this.selectedElementIds);
     this.updateSnappedElements(elements, movedIds);
@@ -1046,7 +1049,10 @@ export class ElementEditor {
                 el.startSnap!.offsetX,
                 el.startSnap!.offsetY
               );
-              if (Math.abs(newPos.x - el.start.x) > 0.01 || Math.abs(newPos.y - el.start.y) > 0.01) {
+              if (
+                Math.abs(newPos.x - el.start.x) > 0.01 ||
+                Math.abs(newPos.y - el.start.y) > 0.01
+              ) {
                 el.start = newPos;
                 elChanged = true;
               }

@@ -45,7 +45,12 @@ export class CheckmarkTool implements DrawTool {
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, brushStyle?: BrushStyle): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    brushStyle?: BrushStyle
+  ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
     const { x, y, w, h } = rect;
