@@ -108,7 +108,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     fontWeight: dom.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal',
     fontStyle: dom.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal',
     fillColor: dom.fillColorIndicator.style.backgroundColor || null,
-    brushStyle: dom.brushNormal.classList.contains('active') ? 'normal' : 'shaky',
+    brushStyle: dom.brushStyleInput.value as 'normal' | 'shaky',
     viewport: viewport.state,
   });
 
@@ -701,6 +701,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   setBackground('checkerboard-bg');
   updateColorIndicator();
   updateFillColorIndicator('transparent');
+  updateBrushStyleIndicator(dom.brushStyleInput.value as 'normal' | 'shaky');
   renderer.resizeCanvas();
   viewport.onZoomChange?.();
   renderer.requestDraw();

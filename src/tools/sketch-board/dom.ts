@@ -76,6 +76,7 @@ export type SketchDom = {
   brushNormal: HTMLButtonElement;
   brushShaky: HTMLButtonElement;
   brushStyleLabel: HTMLSpanElement;
+  brushStyleInput: HTMLInputElement;
   textInputOverlay: HTMLDivElement | null;
   zoomToast: HTMLDivElement | null;
 };
@@ -174,6 +175,7 @@ export function getDom(doc: Document): SketchDom | null {
   const brushNormal = doc.getElementById('brush-normal') as HTMLButtonElement | null;
   const brushShaky = doc.getElementById('brush-shaky') as HTMLButtonElement | null;
   const brushStyleLabel = doc.getElementById('brush-style-label') as HTMLSpanElement | null;
+  const brushStyleInput = doc.getElementById('brush-style') as HTMLInputElement | null;
 
   const requiredElements: Record<string, HTMLElement | null> = {
     canvas,
@@ -256,6 +258,7 @@ export function getDom(doc: Document): SketchDom | null {
     brushNormal,
     brushShaky,
     brushStyleLabel,
+    brushStyleInput,
   };
 
   for (const [name, el] of Object.entries(requiredElements)) {
@@ -356,6 +359,7 @@ export function getDom(doc: Document): SketchDom | null {
     brushNormal: brushNormal!,
     brushShaky: brushShaky!,
     brushStyleLabel: brushStyleLabel!,
+    brushStyleInput: brushStyleInput!,
     textInputOverlay: null,
     zoomToast,
   };

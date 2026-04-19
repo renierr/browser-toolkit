@@ -134,6 +134,12 @@ export class ToolbarController {
       dom.brushNormal.classList.add('active');
       dom.brushShaky.classList.remove('active');
     }
+    
+    // Sync with hidden input for data-setting persistence
+    if (dom.brushStyleInput.value !== style) {
+      dom.brushStyleInput.value = style;
+      dom.brushStyleInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   }
 
   setMode(next: ToolMode): void {
