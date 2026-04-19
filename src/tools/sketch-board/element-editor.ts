@@ -301,6 +301,11 @@ export class ElementEditor {
       }
     } else if (didMove) {
       hasUnsaved = true;
+      if (this.selectedElementIds.size === 1) {
+        const id = this.selectedElementIds.values().next().value;
+        const el = elements.find((e) => e.id === id);
+        if (el) this.syncToolbarForElement(el);
+      }
     }
 
     if (didMove && this.dragStartSnapshot) {
@@ -720,6 +725,22 @@ export class ElementEditor {
     this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill']));
     return remainingElements;
   }
+ 
+  resetSelectedRotation(elements: SketchElement[]): void {
+    if (this.selectedElementIds.size === 0) return;
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (el) {
+        el.rotation = 0;
+      }
+    }
+    // Update toolbar for the first selected element (if only one selected)
+    if (this.selectedElementIds.size === 1) {
+      const id = this.selectedElementIds.values().next().value;
+      const el = elements.find((e) => e.id === id);
+      if (el) this.syncToolbarForElement(el);
+    }
+  }
 
   clearSelection(): void {
     if (this.selectedElementIds.size > 0) {
@@ -1111,6 +1132,9 @@ export class ElementEditor {
     const options = new Set(optionsForElementType(el.type));
     if (el.type === 'group') {
       options.add('ungroup');
+    }
+    if (el.rotation && Math.abs(el.rotation) > 0.0001) {
+      options.add('rotation');
     }
     this.toolbar?.showSelectionOptions(options);
 

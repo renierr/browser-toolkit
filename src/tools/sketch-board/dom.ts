@@ -69,6 +69,7 @@ export type SketchDom = {
   groupElements: HTMLButtonElement;
   ungroupElements: HTMLButtonElement;
   deleteElement: HTMLButtonElement;
+  resetRotation: HTMLButtonElement;
   textInputOverlay: HTMLDivElement | null;
   zoomToast: HTMLDivElement | null;
 };
@@ -154,6 +155,7 @@ export function getDom(doc: Document): SketchDom | null {
   const groupElements = doc.getElementById('group-elements') as HTMLButtonElement | null;
   const ungroupElements = doc.getElementById('ungroup-elements') as HTMLButtonElement | null;
   const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
+  const resetRotation = doc.getElementById('reset-rotation') as HTMLButtonElement | null;
   const zoomToast = doc.getElementById('zoom-toast') as HTMLDivElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
   const toolOptShapes = Array.from(doc.querySelectorAll('.tool-opt-shape')) as HTMLElement[];
@@ -236,6 +238,7 @@ export function getDom(doc: Document): SketchDom | null {
     groupElements,
     ungroupElements,
     deleteElement,
+    resetRotation,
   };
 
   for (const [name, el] of Object.entries(requiredElements)) {
@@ -329,6 +332,7 @@ export function getDom(doc: Document): SketchDom | null {
     groupElements: groupElements!,
     ungroupElements: ungroupElements!,
     deleteElement: deleteElement!,
+    resetRotation: resetRotation!,
     textInputOverlay: null,
     zoomToast,
   };

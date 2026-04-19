@@ -48,6 +48,7 @@ export class ToolbarController {
   private onResizeImage: (() => void) | null = null;
   private onGroup: (() => void) | null = null;
   private onUngroup: (() => void) | null = null;
+  private onResetRotation: (() => void) | null = null;
   private readonly listeners: Array<{ el: EventTarget; type: string; fn: EventListener }> = [];
   private toolOptionsMap = new Map<DrawMode, ReadonlySet<ToolOptionId>>();
 
@@ -74,6 +75,9 @@ export class ToolbarController {
   }
   setUngroupHandler(handler: () => void): void {
     this.onUngroup = handler;
+  }
+  setResetRotationHandler(handler: () => void): void {
+    this.onResetRotation = handler;
   }
 
   updateUndoRedo(history: HistoryManager): void {
@@ -160,6 +164,7 @@ export class ToolbarController {
 
     // Delete button hidden — ElementEditor shows it on selection
     dom.deleteElement.classList.add('hidden');
+    dom.resetRotation.classList.add('hidden');
 
     // Mode button highlight
     for (const [key, btn] of Object.entries(dom.modeButtons)) {
@@ -201,6 +206,7 @@ export class ToolbarController {
     this.dom.moveToBelow.classList.add('hidden');
     this.dom.groupElements.classList.add('hidden');
     this.dom.ungroupElements.classList.add('hidden');
+    this.dom.resetRotation.classList.add('hidden');
     // Also hide color controls that are outside #tool-options
     for (const el of this.dom.toolOptColors) el.classList.add('hidden');
   }
@@ -235,6 +241,9 @@ export class ToolbarController {
     });
     this.on(dom.ungroupElements, 'click', () => {
       this.onUngroup?.();
+    });
+    this.on(dom.resetRotation, 'click', () => {
+      this.onResetRotation?.();
     });
   }
 
@@ -296,6 +305,10 @@ export class ToolbarController {
 
     if (options.has('ungroup')) dom.ungroupElements.classList.remove('hidden');
     else dom.ungroupElements.classList.add('hidden');
+
+    // Rotation
+    if (options.has('rotation')) dom.resetRotation.classList.remove('hidden');
+    else dom.resetRotation.classList.add('hidden');
   }
 }
 
