@@ -45,15 +45,24 @@ export class ElementEditor {
   private textInputActive = false;
   private pointerDownHitSelected = false;
   private dragStartSnapshot: SketchElement[] | null = null;
-  private activeTextOverlay: {
-    input: HTMLTextAreaElement;
-    onFinish: (element: SketchElement | null) => void;
-    position: Point;
-    toolCtx: DrawToolContext;
-    textTool: TextTool;
-    finish: () => void;
-    cancel: () => void;
-  } | null = null;
+  private activeTextOverlay:
+    | {
+        type: 'creation';
+        input: HTMLTextAreaElement;
+        onFinish: (element: SketchElement | null) => void;
+        position: Point;
+        toolCtx: DrawToolContext;
+        textTool: TextTool;
+        finish: () => void;
+        cancel: () => void;
+      }
+    | {
+        type: 'edit';
+        input: HTMLTextAreaElement;
+        finish: () => void;
+        cancel: () => void;
+      }
+    | null = null;
 
   constructor(
     dom: SketchDom,
@@ -389,37 +398,47 @@ export class ElementEditor {
 
     const finish = (): void => {
       if (!this.activeTextOverlay) return;
-      const { input, textTool, onFinish, position, toolCtx } = this.activeTextOverlay;
+      const state = this.activeTextOverlay;
+      const { input } = state;
       const value = input.value;
-      input.remove();
+      if (input.parentNode) input.remove();
       this.textInputActive = false;
       this.activeTextOverlay = null;
-      textTool.setText(value);
-      if (value.trim()) {
-        const offsetX = 1;
-        const offsetY = 7;
-        const commitPos: Point = { x: position.x + offsetX, y: position.y + offsetY };
-        textTool.onPointerDown(commitPos, toolCtx);
+
+      if (state.type === 'creation') {
+        const { textTool, onFinish, position, toolCtx } = state;
         textTool.setText(value);
-        const el = textTool.commit(value, toolCtx);
-        onFinish(el);
-      } else {
-        onFinish(null);
+        if (value.trim()) {
+          const offsetX = 1;
+          const offsetY = 7;
+          const commitPos: Point = { x: position.x + offsetX, y: position.y + offsetY };
+          textTool.onPointerDown(commitPos, toolCtx);
+          textTool.setText(value);
+          const el = textTool.commit(value, toolCtx);
+          onFinish(el);
+        } else {
+          onFinish(null);
+        }
+        textTool.reset();
       }
-      textTool.reset();
     };
 
     const cancel = (): void => {
       if (!this.activeTextOverlay) return;
-      const { input, textTool, onFinish } = this.activeTextOverlay;
-      input.remove();
+      const state = this.activeTextOverlay;
+      const { input } = state;
+      if (input.parentNode) input.remove();
       this.textInputActive = false;
       this.activeTextOverlay = null;
-      textTool.reset();
-      onFinish(null);
+
+      if (state.type === 'creation') {
+        state.textTool.reset();
+        state.onFinish(null);
+      }
     };
 
     this.activeTextOverlay = {
+      type: 'creation',
       input,
       onFinish,
       position,
@@ -512,9 +531,11 @@ export class ElementEditor {
     input.addEventListener('input', updateHeight);
 
     const finish = (): void => {
+      if (!this.activeTextOverlay) return;
       const value = input.value;
-      input.remove();
+      if (input.parentNode) input.remove();
       this.textInputActive = false;
+      this.activeTextOverlay = null;
       if (value.trim() && value !== el.text) {
         el.text = value;
         onFinish();
@@ -524,9 +545,19 @@ export class ElementEditor {
     };
 
     const cancel = (): void => {
-      input.remove();
+      if (!this.activeTextOverlay) return;
+      const { input } = this.activeTextOverlay;
+      if (input.parentNode) input.remove();
       this.textInputActive = false;
+      this.activeTextOverlay = null;
       this.renderer.requestDraw();
+    };
+
+    this.activeTextOverlay = {
+      type: 'edit',
+      input,
+      finish,
+      cancel,
     };
 
     input.addEventListener('keydown', (e) => {
