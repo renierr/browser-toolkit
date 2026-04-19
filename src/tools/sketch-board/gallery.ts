@@ -41,6 +41,7 @@ export async function renderGallery(
     });
 
     btnDelete.addEventListener('click', async () => {
+      if (!window.confirm(`Delete drawing "${row.name}"?`)) return;
       await deleteDrawing(row.id);
       await renderGallery(dom, onLoad);
     });
