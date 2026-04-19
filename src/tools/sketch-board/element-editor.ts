@@ -7,8 +7,7 @@ import { optionsForElementType } from './shapes/base-tool.ts';
 import type { TextTool } from './shapes/text-tool.ts';
 import type { ToolbarController } from './toolbar.ts';
 import type { BrushStyle, DrawToolContext, Point, SketchElement } from './types.ts';
-import { getElementCenter } from './utils/bounds.ts';
-import { getSnapTarget } from './utils/snapping.ts';
+import { applySnapOffset, getSnapTarget } from './utils/snapping.ts';
 
 const HANDLE_SIZE = 8;
 const MOVE_THRESHOLD = 5;
@@ -928,7 +927,7 @@ export class ElementEditor {
         if (snap) {
           el.start.x = snap.point.x;
           el.start.y = snap.point.y;
-          el.startSnap = { elementId: snap.elementId };
+          el.startSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
         } else {
           el.start.x = point.x;
           el.start.y = point.y;
@@ -938,7 +937,7 @@ export class ElementEditor {
         if (snap) {
           el.end.x = snap.point.x;
           el.end.y = snap.point.y;
-          el.endSnap = { elementId: snap.elementId };
+          el.endSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
         } else {
           el.end.x = point.x;
           el.end.y = point.y;
@@ -1016,13 +1015,13 @@ export class ElementEditor {
         if (el.startSnap && movedElementIds.has(el.startSnap.elementId)) {
           const target = elements.find((e) => e.id === el.startSnap!.elementId);
           if (target) {
-            el.start = getElementCenter(this.ctx, target);
+            el.start = applySnapOffset(this.ctx, target, el.startSnap!.offsetX, el.startSnap!.offsetY);
           }
         }
         if (el.endSnap && movedElementIds.has(el.endSnap.elementId)) {
           const target = elements.find((e) => e.id === el.endSnap!.elementId);
           if (target) {
-            el.end = getElementCenter(this.ctx, target);
+            el.end = applySnapOffset(this.ctx, target, el.endSnap!.offsetX, el.endSnap!.offsetY);
           }
         }
       }

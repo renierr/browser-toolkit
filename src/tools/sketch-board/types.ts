@@ -25,6 +25,8 @@ export type Point = {
 
 export type SnapInfo = {
   elementId: string;
+  offsetX: number;
+  offsetY: number;
 };
 
 type BaseElement = {

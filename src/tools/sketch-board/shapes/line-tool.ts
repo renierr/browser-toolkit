@@ -19,7 +19,7 @@ export class LineTool implements DrawTool {
     const snap = getSnapTarget(point, ctx.elements, new Set(), (this.lastCtx as any) || document.createElement('canvas').getContext('2d'));
     if (snap) {
       this.start = snap.point;
-      this.startSnap = { elementId: snap.elementId };
+      this.startSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
     } else {
       this.start = point;
       this.startSnap = null;
@@ -32,7 +32,7 @@ export class LineTool implements DrawTool {
     const snap = getSnapTarget(point, ctx.elements, new Set(), (this.lastCtx as any) || document.createElement('canvas').getContext('2d'));
     if (snap) {
       this.end = snap.point;
-      this.endSnap = { elementId: snap.elementId };
+      this.endSnap = { elementId: snap.elementId, offsetX: snap.offsetX, offsetY: snap.offsetY };
     } else {
       this.end = point;
       this.endSnap = null;
