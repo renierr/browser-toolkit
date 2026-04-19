@@ -198,9 +198,13 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   // --- Zoom ---
   let zoomToastTimeout: ReturnType<typeof setTimeout> | null = null;
   viewport.onZoomChange = () => {
+    const zoomText = `${Math.round(viewport.scale * 100)}%`;
+    dom.zoomLevel.textContent = zoomText;
+    dom.zoomLevelMobile.textContent = zoomText;
+
     const toast = dom.zoomToast;
     if (!toast) return;
-    toast.textContent = `${Math.round(viewport.scale * 100)}%`;
+    toast.textContent = zoomText;
     toast.classList.remove('opacity-0');
     toast.classList.add('opacity-100');
     if (zoomToastTimeout) clearTimeout(zoomToastTimeout);
@@ -661,6 +665,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   updateColorIndicator();
   updateFillColorIndicator('transparent');
   renderer.resizeCanvas();
+  viewport.onZoomChange?.();
   renderer.requestDraw();
 
   if (payload?.sharedFiles?.length) {

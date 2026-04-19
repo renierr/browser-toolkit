@@ -43,8 +43,13 @@
       <button id="zoom-out" class="btn btn-sm btn-ghost join-item px-2" title="Zoom out">
         <i data-lucide="zoom-out" class="w-4 h-4"></i>
       </button>
-      <button id="zoom-reset" class="btn btn-sm btn-ghost join-item px-2" title="Reset zoom">
+      <button
+        id="zoom-reset"
+        class="btn btn-sm btn-ghost join-item px-2 flex flex-col items-center justify-center h-8 py-1 gap-0"
+        title="Reset zoom"
+      >
         <i data-lucide="maximize-2" class="w-4 h-4"></i>
+        <span id="zoom-level" class="text-[8px] opacity-70 leading-none">100%</span>
       </button>
       <button id="zoom-in" class="btn btn-sm btn-ghost join-item px-2" title="Zoom in">
         <i data-lucide="zoom-in" class="w-4 h-4"></i>
@@ -78,8 +83,12 @@
             <button id="zoom-out-mobile" class="btn btn-xs btn-ghost join-item">
               <i data-lucide="zoom-out" class="w-3 h-3"></i>
             </button>
-            <button id="zoom-reset-mobile" class="btn btn-xs btn-ghost join-item">
+            <button
+              id="zoom-reset-mobile"
+              class="btn btn-xs btn-ghost join-item flex flex-col items-center justify-center h-8 py-0.5 gap-0"
+            >
               <i data-lucide="maximize-2" class="w-3 h-3"></i>
+              <span id="zoom-level-mobile" class="text-[7px] opacity-70 leading-none">100%</span>
             </button>
             <button id="zoom-in-mobile" class="btn btn-xs btn-ghost join-item">
               <i data-lucide="zoom-in" class="w-3 h-3"></i>

@@ -371,7 +371,7 @@ export class ElementEditor {
       'absolute bg-transparent border border-blue-500 rounded text-base-content outline-none z-50 overflow-hidden resize-none py-0 px-1';
     input.style.left = `${x}px`;
     input.style.top = `${y}px`;
-    input.style.fontSize = `${toolCtx.fontSize}px`;
+    input.style.fontSize = `${toolCtx.fontSize * toolCtx.viewport.scale}px`;
     input.style.fontFamily = toolCtx.fontFamily;
     input.style.fontWeight = toolCtx.fontWeight;
     input.style.fontStyle = toolCtx.fontStyle;
@@ -466,8 +466,11 @@ export class ElementEditor {
   updateActiveTextInputStyle(toolCtx: DrawToolContext): void {
     if (!this.activeTextOverlay) return;
     const { input } = this.activeTextOverlay;
-    this.activeTextOverlay.toolCtx = toolCtx;
-    input.style.fontSize = `${toolCtx.fontSize}px`;
+    if (this.activeTextOverlay.type === 'creation') {
+      this.activeTextOverlay.toolCtx = toolCtx;
+    }
+    const scale = toolCtx.viewport.scale;
+    input.style.fontSize = `${toolCtx.fontSize * scale}px`;
     input.style.fontFamily = toolCtx.fontFamily;
     input.style.fontWeight = toolCtx.fontWeight;
     input.style.fontStyle = toolCtx.fontStyle;

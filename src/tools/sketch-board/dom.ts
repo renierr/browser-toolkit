@@ -39,6 +39,8 @@ export type SketchDom = {
   btnZoomOutMobile: HTMLButtonElement;
   btnZoomInMobile: HTMLButtonElement;
   btnZoomResetMobile: HTMLButtonElement;
+  zoomLevel: HTMLSpanElement;
+  zoomLevelMobile: HTMLSpanElement;
   canvasBg: HTMLSelectElement;
   appContainer: HTMLDivElement;
   btnModeDraw: HTMLButtonElement;
@@ -112,6 +114,8 @@ export function getDom(doc: Document): SketchDom | null {
   const btnZoomOutMobile = doc.getElementById('zoom-out-mobile') as HTMLButtonElement | null;
   const btnZoomInMobile = doc.getElementById('zoom-in-mobile') as HTMLButtonElement | null;
   const btnZoomResetMobile = doc.getElementById('zoom-reset-mobile') as HTMLButtonElement | null;
+  const zoomLevel = doc.getElementById('zoom-level') as HTMLSpanElement | null;
+  const zoomLevelMobile = doc.getElementById('zoom-level-mobile') as HTMLSpanElement | null;
   const canvasBg = doc.getElementById('canvas-bg') as HTMLSelectElement | null;
   const appContainer = doc.getElementById('sketch-app-container') as HTMLDivElement | null;
   const btnModeDraw = doc.getElementById('mode-draw') as HTMLButtonElement | null;
@@ -194,6 +198,8 @@ export function getDom(doc: Document): SketchDom | null {
     btnZoomOutMobile,
     btnZoomInMobile,
     btnZoomResetMobile,
+    zoomLevel,
+    zoomLevelMobile,
     canvasBg,
     appContainer,
     btnModeDraw,
@@ -278,6 +284,8 @@ export function getDom(doc: Document): SketchDom | null {
     btnZoomOutMobile: btnZoomOutMobile!,
     btnZoomInMobile: btnZoomInMobile!,
     btnZoomResetMobile: btnZoomResetMobile!,
+    zoomLevel: zoomLevel!,
+    zoomLevelMobile: zoomLevelMobile!,
     canvasBg: canvasBg!,
     appContainer: appContainer!,
     btnModeDraw: btnModeDraw!,
