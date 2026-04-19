@@ -392,7 +392,7 @@ export class ElementEditor {
     input.style.fontStyle = toolCtx.fontStyle;
     input.style.color = toolCtx.color;
     input.style.width = '400px';
-    input.style.height = `${toolCtx.fontSize * 1.4}px`;
+    input.style.height = `${toolCtx.fontSize * 1.2}px`;
     input.style.lineHeight = '1.2';
     input.style.whiteSpace = 'pre-wrap';
 

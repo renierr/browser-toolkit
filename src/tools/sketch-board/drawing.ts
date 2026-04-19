@@ -106,7 +106,7 @@ export function getTextBounds(
     const metrics = ctx.measureText(line);
     maxW = Math.max(maxW, metrics.width);
   }
-  const h = lines.length * lineHeight;
+  const h = (lines.length - 1) * lineHeight + el.fontSize;
   return {
     x: el.position.x,
     y: el.position.y,
