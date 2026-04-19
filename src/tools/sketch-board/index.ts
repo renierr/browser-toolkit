@@ -110,6 +110,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     fillColor: dom.fillColorIndicator.style.backgroundColor || null,
     brushStyle: dom.brushStyleInput.value as 'normal' | 'shaky',
     viewport: viewport.state,
+    elements,
   });
 
   const getCanvasCenter = () => {

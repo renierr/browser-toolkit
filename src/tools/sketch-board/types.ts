@@ -23,6 +23,10 @@ export type Point = {
   y: number;
 };
 
+export type SnapInfo = {
+  elementId: string;
+};
+
 type BaseElement = {
   id: string;
   color: string;
@@ -41,6 +45,8 @@ export type LineElement = BaseElement & {
   type: 'line';
   start: Point;
   end: Point;
+  startSnap?: SnapInfo;
+  endSnap?: SnapInfo;
 };
 
 export type RectElement = BaseElement & {
@@ -65,12 +71,16 @@ export type ArrowElement = BaseElement & {
   type: 'arrow';
   start: Point;
   end: Point;
+  startSnap?: SnapInfo;
+  endSnap?: SnapInfo;
 };
 
 export type DoubleArrowElement = BaseElement & {
   type: 'double-arrow';
   start: Point;
   end: Point;
+  startSnap?: SnapInfo;
+  endSnap?: SnapInfo;
 };
 
 export type DiamondElement = BaseElement & {
@@ -172,4 +182,5 @@ export type DrawToolContext = {
   readonly fillColor: string | null;
   readonly brushStyle: BrushStyle;
   readonly viewport: ViewportState;
+  readonly elements: SketchElement[];
 };

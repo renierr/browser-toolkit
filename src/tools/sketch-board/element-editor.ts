@@ -1,4 +1,4 @@
-import { getElementBounds } from './drawing.ts';
+import { getElementBounds } from './utils/bounds.ts';
 import { normalizeRect } from './utils/drawing-shared.ts';
 import type { SketchDom } from './dom.ts';
 import type { HistoryManager } from './history.ts';
@@ -7,6 +7,8 @@ import { optionsForElementType } from './shapes/base-tool.ts';
 import type { TextTool } from './shapes/text-tool.ts';
 import type { ToolbarController } from './toolbar.ts';
 import type { BrushStyle, DrawToolContext, Point, SketchElement } from './types.ts';
+import { getElementCenter } from './utils/bounds.ts';
+import { getSnapTarget } from './utils/snapping.ts';
 
 const HANDLE_SIZE = 8;
 const MOVE_THRESHOLD = 5;
@@ -221,7 +223,7 @@ export class ElementEditor {
       const id = this.selectedElementIds.values().next().value;
       const el = elements.find((e) => e.id === id);
       if (el) {
-        const moved = this.doResize(point, el);
+        const moved = this.doResize(point, el, elements);
         if (moved) this.hasMovedBeyondThreshold = true;
         return moved;
       }
@@ -862,11 +864,21 @@ export class ElementEditor {
     const dx = point.x - this.dragStartPos.x;
     const dy = point.y - this.dragStartPos.y;
 
+    const movedIds = new Set(this.selectedElementIds);
     for (const id of this.selectedElementIds) {
       const el = elements.find((e) => e.id === id);
       if (!el) continue;
       this.moveElement(el, dx, dy);
+      
+      // If we move the whole element, clear its snaps (unless we want to preserve them, 
+      // but usually moving the whole arrow means manual positioning)
+      if (el.type === 'arrow' || el.type === 'double-arrow' || el.type === 'line') {
+        el.startSnap = undefined;
+        el.endSnap = undefined;
+      }
     }
+
+    this.updateSnappedElements(elements, movedIds);
 
     this.dragStartPos = point;
     return true;
@@ -894,7 +906,7 @@ export class ElementEditor {
     }
   }
 
-  private doResize(point: Point, el: SketchElement): boolean {
+  private doResize(point: Point, el: SketchElement, elements: SketchElement[]): boolean {
     if (
       !this.dragStartPos ||
       !this.activeHandle ||
@@ -911,12 +923,27 @@ export class ElementEditor {
       (el.type === 'line' || el.type === 'arrow' || el.type === 'double-arrow') &&
       (this.activeHandle === 'start' || this.activeHandle === 'end')
     ) {
+      const snap = getSnapTarget(point, elements, new Set([el.id]), this.ctx);
       if (this.activeHandle === 'start') {
-        el.start.x = point.x;
-        el.start.y = point.y;
+        if (snap) {
+          el.start.x = snap.point.x;
+          el.start.y = snap.point.y;
+          el.startSnap = { elementId: snap.elementId };
+        } else {
+          el.start.x = point.x;
+          el.start.y = point.y;
+          el.startSnap = undefined;
+        }
       } else {
-        el.end.x = point.x;
-        el.end.y = point.y;
+        if (snap) {
+          el.end.x = snap.point.x;
+          el.end.y = snap.point.y;
+          el.endSnap = { elementId: snap.elementId };
+        } else {
+          el.end.x = point.x;
+          el.end.y = point.y;
+          el.endSnap = undefined;
+        }
       }
       return true;
     }
@@ -971,8 +998,35 @@ export class ElementEditor {
     const scaleX = newW / bounds.w;
     const scaleY = newH / bounds.h;
 
-    this.scaleElement(el, snapshotEl, scaleX, scaleY, { x: newX, y: newY }, bounds);
+    this.scaleElement(el, snapshotEl, scaleX, scaleY, { x: newX, y: newY }, bounds, elements);
+    this.updateSnappedElements([el], new Set([el.id])); // el itself might have snaps that need updating? 
+    // Wait, if we RESIZE an arrow, we might need to update its points if it's snapped.
+    // Actually scaleElement will overwrite points.
+    
+    // After any resize, update anything snapped to the moved/resized elements
+    const movedIds = new Set(this.selectedElementIds);
+    this.updateSnappedElements(elements, movedIds);
+
     return true;
+  }
+
+  private updateSnappedElements(elements: SketchElement[], movedElementIds: Set<string>): void {
+    for (const el of elements) {
+      if (el.type === 'arrow' || el.type === 'double-arrow' || el.type === 'line') {
+        if (el.startSnap && movedElementIds.has(el.startSnap.elementId)) {
+          const target = elements.find((e) => e.id === el.startSnap!.elementId);
+          if (target) {
+            el.start = getElementCenter(this.ctx, target);
+          }
+        }
+        if (el.endSnap && movedElementIds.has(el.endSnap.elementId)) {
+          const target = elements.find((e) => e.id === el.endSnap!.elementId);
+          if (target) {
+            el.end = getElementCenter(this.ctx, target);
+          }
+        }
+      }
+    }
   }
 
   private scaleElement(
@@ -981,7 +1035,8 @@ export class ElementEditor {
     scaleX: number,
     scaleY: number,
     newOrigin: Point,
-    oldBounds: { x: number; y: number; w: number; h: number }
+    oldBounds: { x: number; y: number; w: number; h: number },
+    elements: SketchElement[]
   ): void {
     if (el.type === 'freehand' && snapshotEl.type === 'freehand') {
       for (let i = 0; i < el.points.length; i++) {
@@ -999,7 +1054,8 @@ export class ElementEditor {
           scaleX,
           scaleY,
           newOrigin,
-          oldBounds
+          oldBounds,
+          elements
         );
       }
     } else if (el.type === 'image' && snapshotEl.type === 'image') {
