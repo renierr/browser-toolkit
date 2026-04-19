@@ -42,3 +42,37 @@ export function applyPreviewStyle(
   applyStrokeStyle(ctx, color, width);
   ctx.globalAlpha = 0.8;
 }
+
+/**
+ * Calculates distance from point p to line segment ab.
+ */
+export function distToSegment(p: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const l2 = dx * dx + dy * dy;
+  if (l2 === 0) return Math.sqrt((p.x - a.x) * (p.x - a.x) + (p.y - a.y) * (p.y - a.y));
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const px = a.x + t * dx;
+  const py = a.y + t * dy;
+  return Math.sqrt((p.x - px) * (p.x - px) + (p.y - py) * (p.y - py));
+}
+
+/**
+ * Generates points for a rounded corner arc.
+ */
+export function getArcPoints(
+  r: number,
+  cx: number,
+  cy: number,
+  startAngle: number,
+  endAngle: number
+): Point[] {
+  const pts: Point[] = [];
+  const steps = 3;
+  for (let i = 0; i <= steps; i++) {
+    const a = startAngle + (endAngle - startAngle) * (i / steps);
+    pts.push({ x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r });
+  }
+  return pts;
+}
