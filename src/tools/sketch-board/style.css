@@ -40,3 +40,10 @@
       12 12,
     grab;
 }
+
+#text-input-overlay {
+  line-height: 1.2;
+  white-space: pre-wrap;
+  tab-size: 4;
+}
+

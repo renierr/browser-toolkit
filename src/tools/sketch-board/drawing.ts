@@ -99,12 +99,18 @@ export function getTextBounds(
   el: TextElement
 ): { x: number; y: number; w: number; h: number } {
   ctx.font = `${el.fontStyle} ${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
-  const metrics = ctx.measureText(el.text);
-  const h = el.fontSize;
+  const lines = el.text.split('\n');
+  const lineHeight = el.fontSize * 1.2;
+  let maxW = 0;
+  for (const line of lines) {
+    const metrics = ctx.measureText(line);
+    maxW = Math.max(maxW, metrics.width);
+  }
+  const h = lines.length * lineHeight;
   return {
     x: el.position.x,
     y: el.position.y,
-    w: metrics.width,
+    w: maxW,
     h: h,
   };
 }

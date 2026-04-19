@@ -53,7 +53,12 @@ export class TextTool implements DrawTool {
       canvasCtx.font = `${ctx.fontStyle} ${ctx.fontWeight} ${ctx.fontSize}px ${ctx.fontFamily}`;
       canvasCtx.fillStyle = ctx.color;
       canvasCtx.textBaseline = 'top';
-      canvasCtx.fillText(this.text, this.position.x, this.position.y);
+
+      const lines = this.text.split('\n');
+      const lineHeight = ctx.fontSize * 1.2;
+      for (let i = 0; i < lines.length; i++) {
+        canvasCtx.fillText(lines[i], this.position.x, this.position.y + i * lineHeight);
+      }
     } else {
       // Draw cursor or placeholder – simple crosshair
       canvasCtx.beginPath();
@@ -71,7 +76,12 @@ export class TextTool implements DrawTool {
     ctx.font = `${el.fontStyle} ${el.fontWeight} ${el.fontSize}px ${el.fontFamily}`;
     ctx.fillStyle = el.color;
     ctx.textBaseline = 'top';
-    ctx.fillText(el.text, el.position.x, el.position.y);
+
+    const lines = el.text.split('\n');
+    const lineHeight = el.fontSize * 1.2;
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], el.position.x, el.position.y + i * lineHeight);
+    }
   }
 
   reset(): void {

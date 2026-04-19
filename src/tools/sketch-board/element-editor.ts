@@ -362,11 +362,10 @@ export class ElementEditor {
     const existingInput = document.getElementById('text-input-overlay');
     if (existingInput) existingInput.remove();
 
-    const input = document.createElement('input');
+    const input = document.createElement('textarea');
     input.id = 'text-input-overlay';
-    input.type = 'text';
     input.className =
-      'absolute bg-transparent border border-blue-500 rounded text-base-content outline-none z-50';
+      'absolute bg-transparent border border-blue-500 rounded text-base-content outline-none z-50 overflow-hidden resize-none py-0 px-1';
     input.style.left = `${x}px`;
     input.style.top = `${y}px`;
     input.style.fontSize = `${toolCtx.fontSize}px`;
@@ -374,7 +373,10 @@ export class ElementEditor {
     input.style.fontWeight = toolCtx.fontWeight;
     input.style.fontStyle = toolCtx.fontStyle;
     input.style.color = toolCtx.color;
-    input.style.width = '200px';
+    input.style.width = '400px';
+    input.style.height = `${toolCtx.fontSize * 1.4}px`;
+    input.style.lineHeight = '1.2';
+    input.style.whiteSpace = 'pre-wrap';
 
     const finish = (): void => {
       const value = input.value;
@@ -404,11 +406,13 @@ export class ElementEditor {
 
     input.addEventListener('input', () => {
       textTool.setText(input.value);
+      input.style.height = 'auto';
+      input.style.height = `${input.scrollHeight}px`;
       this.renderer.requestDraw();
     });
 
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         finish();
       } else if (e.key === 'Escape') {
@@ -442,12 +446,11 @@ export class ElementEditor {
     const existingInput = document.getElementById('text-input-overlay');
     if (existingInput) existingInput.remove();
 
-    const input = document.createElement('input');
+    const input = document.createElement('textarea');
     input.id = 'text-input-overlay';
-    input.type = 'text';
     input.value = el.text;
     input.className =
-      'absolute bg-base-300 border border-blue-500 rounded text-base-content outline-none z-50';
+      'absolute bg-base-300 border border-blue-500 rounded text-base-content outline-none z-50 overflow-hidden resize-none py-0 px-1';
     input.style.left = `${x}px`;
     input.style.top = `${y}px`;
     input.style.fontSize = `${el.fontSize * viewport.scale}px`;
@@ -455,7 +458,16 @@ export class ElementEditor {
     input.style.fontWeight = el.fontWeight;
     input.style.fontStyle = el.fontStyle;
     input.style.color = el.color;
-    input.style.minWidth = '200px';
+    input.style.minWidth = '400px';
+    input.style.lineHeight = '1.2';
+    input.style.whiteSpace = 'pre-wrap';
+
+    const updateHeight = () => {
+      input.style.height = 'auto';
+      input.style.height = `${input.scrollHeight}px`;
+    };
+
+    input.addEventListener('input', updateHeight);
 
     const finish = (): void => {
       const value = input.value;
@@ -476,7 +488,7 @@ export class ElementEditor {
     };
 
     input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
+      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
         e.preventDefault();
         finish();
       } else if (e.key === 'Escape') {
@@ -489,6 +501,7 @@ export class ElementEditor {
     });
 
     document.body.appendChild(input);
+    updateHeight();
     input.focus();
     input.select();
   }
