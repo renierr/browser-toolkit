@@ -1,11 +1,12 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
+import { drawShakyPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, Point, SketchElement } from '../types.ts';
+import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class DiamondTool implements DrawTool {
   readonly mode = 'diamond' as const;
   readonly streamsLive = false;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'fill']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'fill', 'brush']);
 
   private start: Point | null = null;
   private end: Point | null = null;
@@ -32,6 +33,7 @@ export class DiamondTool implements DrawTool {
       color: ctx.color,
       fillColor: ctx.fillColor ?? undefined,
       width: ctx.strokeWidth,
+      brushStyle: ctx.brushStyle,
       start: { ...this.start },
       end: { ...point },
     };
@@ -40,13 +42,30 @@ export class DiamondTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    DiamondTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined);
+    DiamondTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined, ctx.brushStyle);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, fillColor?: string): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    fillColor?: string,
+    brushStyle?: BrushStyle
+  ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
+
+    if (brushStyle === 'shaky') {
+      const points = [
+        { x: rect.x + rect.w / 2, y: rect.y },
+        { x: rect.x + rect.w, y: rect.y + rect.h / 2 },
+        { x: rect.x + rect.w / 2, y: rect.y + rect.h },
+        { x: rect.x, y: rect.y + rect.h / 2 },
+      ];
+      drawShakyPath(ctx, points, true, fillColor);
+      return;
+    }
 
     ctx.beginPath();
     ctx.moveTo(rect.x + rect.w / 2, rect.y);

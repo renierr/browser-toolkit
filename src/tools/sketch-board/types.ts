@@ -16,6 +16,8 @@ export type ToolMode =
   | 'image';
 export type DrawMode = Exclude<ToolMode, 'pan' | 'select'>;
 
+export type BrushStyle = 'normal' | 'shaky';
+
 export type Point = {
   x: number;
   y: number;
@@ -27,6 +29,7 @@ type BaseElement = {
   fillColor?: string;
   width: number;
   rotation?: number;
+  brushStyle?: BrushStyle;
 };
 
 export type FreehandElement = BaseElement & {
@@ -167,5 +170,6 @@ export type DrawToolContext = {
   readonly fontWeight: 'normal' | 'bold';
   readonly fontStyle: 'normal' | 'italic';
   readonly fillColor: string | null;
+  readonly brushStyle: BrushStyle;
   readonly viewport: ViewportState;
 };

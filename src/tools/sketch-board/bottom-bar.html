@@ -291,6 +291,38 @@
           data-setting="strokeWidth"
         />
       </label>
+
+      <!-- Brush Style (Normal/Shaky) -->
+      <button
+        id="brush-style-btn"
+        class="draw-opt tool-opt-brush btn btn-sm px-2 shrink-0 flex flex-col items-center justify-center h-8 py-1 gap-0"
+        title="Brush Style"
+        popovertarget="brush-style-popup"
+        style="anchor-name: --brush-style-anchor"
+      >
+        <i data-lucide="brush" class="w-4 h-4"></i>
+        <span id="brush-style-label" class="text-[8px] opacity-70 leading-none">Normal</span>
+      </button>
+
+      <ul
+        id="brush-style-popup"
+        popover="auto"
+        style="position-anchor: --brush-style-anchor; position-area: top"
+        class="dropdown menu z-40 mb-2 w-44 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+      >
+        <li>
+          <button id="brush-normal" class="btn btn-sm btn-ghost justify-between active">
+            Normal
+            <i data-lucide="minus" class="w-4 h-4 opacity-70"></i>
+          </button>
+        </li>
+        <li>
+          <button id="brush-shaky" class="btn btn-sm btn-ghost justify-between">
+            Hand-drawn
+            <i data-lucide="wand-sparkles" class="w-4 h-4 opacity-70"></i>
+          </button>
+        </li>
+      </ul>
     </div>
     <!-- end row 1 inside bottom bar -->
 

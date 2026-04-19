@@ -1,11 +1,12 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
+import { drawShakyPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, Point, SketchElement } from '../types.ts';
+import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class FreehandTool implements DrawTool {
   readonly mode = 'freehand' as const;
   readonly streamsLive = true;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
 
   private points: Point[] = [];
 
@@ -38,6 +39,7 @@ export class FreehandTool implements DrawTool {
       type: 'freehand',
       color: ctx.color,
       width: ctx.strokeWidth,
+      brushStyle: ctx.brushStyle,
       points: this.points.map((p) => ({ ...p })),
     };
   }
@@ -45,12 +47,18 @@ export class FreehandTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (this.points.length === 0) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    FreehandTool.draw(canvasCtx, this.points);
+    FreehandTool.draw(canvasCtx, this.points, ctx.brushStyle);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, points: Point[]): void {
+  static draw(ctx: CanvasRenderingContext2D, points: Point[], brushStyle?: BrushStyle): void {
     if (points.length === 0) return;
+
+    if (brushStyle === 'shaky') {
+      drawShakyPath(ctx, points, false);
+      return;
+    }
+
     if (points.length === 1) {
       const p = points[0];
       const radius = Math.max(0.5, (ctx.lineWidth as number) / 2);

@@ -48,27 +48,27 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
   applyStrokeStyle(ctx, el.color, el.width);
 
   if (el.type === 'freehand') {
-    FreehandTool.draw(ctx, el.points);
+    FreehandTool.draw(ctx, el.points, el.brushStyle);
   } else if (el.type === 'line') {
-    LineTool.draw(ctx, el.start, el.end);
+    LineTool.draw(ctx, el.start, el.end, el.brushStyle);
   } else if (el.type === 'rect') {
-    RectTool.draw(ctx, el.start, el.end, el.fillColor);
+    RectTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle);
   } else if (el.type === 'ellipse') {
-    EllipseTool.draw(ctx, el.start, el.end, el.fillColor);
+    EllipseTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle);
   } else if (el.type === 'triangle') {
-    TriangleTool.draw(ctx, el.start, el.end, el.fillColor);
+    TriangleTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle);
   } else if (el.type === 'diamond') {
-    DiamondTool.draw(ctx, el.start, el.end, el.fillColor);
+    DiamondTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle);
   } else if (el.type === 'hexagon') {
-    HexagonTool.draw(ctx, el.start, el.end, el.fillColor);
+    HexagonTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle);
   } else if (el.type === 'arrow') {
-    ArrowTool.draw(ctx, el.start, el.end);
+    ArrowTool.draw(ctx, el.start, el.end, el.brushStyle);
   } else if (el.type === 'double-arrow') {
-    DoubleArrowTool.draw(ctx, el.start, el.end);
+    DoubleArrowTool.draw(ctx, el.start, el.end, el.brushStyle);
   } else if (el.type === 'speech-bubble') {
-    SpeechBubbleTool.draw(ctx, el.start, el.end, el.fillColor);
+    SpeechBubbleTool.draw(ctx, el.start, el.end, el.fillColor, el.brushStyle);
   } else if (el.type === 'checkmark') {
-    CheckmarkTool.draw(ctx, el.start, el.end);
+    CheckmarkTool.draw(ctx, el.start, el.end, el.brushStyle);
   } else if (el.type === 'text') {
     TextTool.draw(ctx, el);
   } else if (el.type === 'image') {

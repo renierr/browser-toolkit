@@ -105,6 +105,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     fontWeight: dom.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal',
     fontStyle: dom.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal',
     fillColor: dom.fillColorIndicator.style.backgroundColor || null,
+    brushStyle: dom.brushNormal.classList.contains('active') ? 'normal' : 'shaky',
     viewport: viewport.state,
   });
 
@@ -254,6 +255,10 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       dom.fillColorInput.value = c;
     }
     toolbar.updateFillColorIndicator(c);
+  };
+
+  const updateBrushStyleIndicator = (style: 'normal' | 'shaky'): void => {
+    toolbar.updateBrushStyleIndicator(style);
   };
 
   const onQuickColorClick = (event: Event): void => {
@@ -578,6 +583,24 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     dom.fontItalic.addEventListener('click', () => {
       dom.fontItalic.classList.toggle('btn-primary');
       applyTextChange();
+    });
+
+    dom.brushNormal.addEventListener('click', () => {
+      updateBrushStyleIndicator('normal');
+      if (elementEditor.getSelectedIds().length > 0) {
+        history.push(elements);
+        elementEditor.applySelectedBrushStyle(elements, 'normal');
+        applySelectedChange();
+      }
+    });
+
+    dom.brushShaky.addEventListener('click', () => {
+      updateBrushStyleIndicator('shaky');
+      if (elementEditor.getSelectedIds().length > 0) {
+        history.push(elements);
+        elementEditor.applySelectedBrushStyle(elements, 'shaky');
+        applySelectedChange();
+      }
     });
   };
 

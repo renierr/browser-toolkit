@@ -122,6 +122,19 @@ export class ToolbarController {
       this.dom.fillColorIndicator.style.backgroundColor = color;
     }
   }
+ 
+  updateBrushStyleIndicator(style: 'normal' | 'shaky'): void {
+    const dom = this.dom;
+    if (style === 'shaky') {
+      dom.brushStyleLabel.textContent = 'Shaky';
+      dom.brushNormal.classList.remove('active');
+      dom.brushShaky.classList.add('active');
+    } else {
+      dom.brushStyleLabel.textContent = 'Normal';
+      dom.brushNormal.classList.add('active');
+      dom.brushShaky.classList.remove('active');
+    }
+  }
 
   setMode(next: ToolMode): void {
     const dom = this.dom;
@@ -296,6 +309,12 @@ export class ToolbarController {
     // Image options
     for (const el of dom.toolOptImages) {
       if (options.has('image')) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
+
+    // Brush style
+    for (const el of dom.toolOptBrushes) {
+      if (options.has('brush')) el.classList.remove('hidden');
       else el.classList.add('hidden');
     }
 

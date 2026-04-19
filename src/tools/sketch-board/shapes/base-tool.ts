@@ -1,7 +1,15 @@
 import type { DrawMode, DrawToolContext, Point, SketchElement } from '../types.ts';
 
 /** Option groups a tool can declare for the toolbar */
-export type ToolOptionId = 'color' | 'fill' | 'font' | 'image' | 'group' | 'ungroup' | 'rotation';
+export type ToolOptionId =
+  | 'color'
+  | 'fill'
+  | 'font'
+  | 'image'
+  | 'group'
+  | 'ungroup'
+  | 'rotation'
+  | 'brush';
 
 /** Contract for draw tool implementations. Each shape tool implements this. */
 export type DrawTool = {
@@ -30,7 +38,13 @@ export function optionsForElementType(type: string): ReadonlySet<ToolOptionId> {
     case 'diamond':
     case 'hexagon':
     case 'speech-bubble':
-      return new Set(['color', 'fill']);
+      return new Set(['color', 'fill', 'brush']);
+    case 'line':
+    case 'arrow':
+    case 'double-arrow':
+    case 'checkmark':
+    case 'freehand':
+      return new Set(['color', 'brush']);
     default:
       return new Set(['color']);
   }

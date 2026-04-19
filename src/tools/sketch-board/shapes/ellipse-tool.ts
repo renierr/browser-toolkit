@@ -1,11 +1,12 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
+import { drawShakyEllipse } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, Point, SketchElement } from '../types.ts';
+import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class EllipseTool implements DrawTool {
   readonly mode = 'ellipse' as const;
   readonly streamsLive = false;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'fill']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'fill', 'brush']);
 
   private start: Point | null = null;
   private end: Point | null = null;
@@ -32,6 +33,7 @@ export class EllipseTool implements DrawTool {
       color: ctx.color,
       fillColor: ctx.fillColor ?? undefined,
       width: ctx.strokeWidth,
+      brushStyle: ctx.brushStyle,
       start: { ...this.start },
       end: { ...point },
     };
@@ -40,11 +42,17 @@ export class EllipseTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    EllipseTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined);
+    EllipseTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined, ctx.brushStyle);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, fillColor?: string): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    fillColor?: string,
+    brushStyle?: BrushStyle
+  ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
 
@@ -52,6 +60,11 @@ export class EllipseTool implements DrawTool {
     const cy = rect.y + rect.h / 2;
     const rx = rect.w / 2;
     const ry = rect.h / 2;
+
+    if (brushStyle === 'shaky') {
+      drawShakyEllipse(ctx, cx, cy, rx, ry, fillColor);
+      return;
+    }
 
     ctx.beginPath();
     ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);

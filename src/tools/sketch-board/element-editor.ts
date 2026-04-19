@@ -6,7 +6,7 @@ import type { SceneRenderer } from './renderer.ts';
 import { optionsForElementType } from './shapes/base-tool.ts';
 import type { TextTool } from './shapes/text-tool.ts';
 import type { ToolbarController } from './toolbar.ts';
-import type { DrawToolContext, Point, SketchElement } from './types.ts';
+import type { BrushStyle, DrawToolContext, Point, SketchElement } from './types.ts';
 
 const HANDLE_SIZE = 8;
 const MOVE_THRESHOLD = 5;
@@ -578,6 +578,17 @@ export class ElementEditor {
     input.select();
   }
 
+  applySelectedBrushStyle(elements: SketchElement[], style: BrushStyle): void {
+    if (this.selectedElementIds.size === 0) return;
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (el) {
+        el.brushStyle = style;
+      }
+    }
+    this.toolbar?.updateBrushStyleIndicator(style);
+  }
+
   updateSelectedText(elements: SketchElement[]): void {
     if (this.selectedElementIds.size !== 1) return;
     const id = this.selectedElementIds.values().next().value;
@@ -1143,6 +1154,21 @@ export class ElementEditor {
       this.dom.fontFamily.value = el.fontFamily;
       this.dom.fontSize.value = String(el.fontSize);
       this.syncBoldItalicButtons(el.fontWeight, el.fontStyle);
+    }
+
+    // Update toolbar indicators
+    if (el.color) {
+      this.toolbar?.updateColorIndicator(el.color);
+    }
+    if (el.fillColor) {
+      this.toolbar?.updateFillColorIndicator(el.fillColor);
+    } else {
+      this.toolbar?.updateFillColorIndicator('transparent');
+    }
+    if (el.brushStyle) {
+      this.toolbar?.updateBrushStyleIndicator(el.brushStyle);
+    } else {
+      this.toolbar?.updateBrushStyleIndicator('normal');
     }
 
     // Sync fill color

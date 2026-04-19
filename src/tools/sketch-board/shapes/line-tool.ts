@@ -1,11 +1,12 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
+import { drawShakyPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, Point, SketchElement } from '../types.ts';
+import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class LineTool implements DrawTool {
   readonly mode = 'line' as const;
   readonly streamsLive = false;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
 
   private start: Point | null = null;
   private end: Point | null = null;
@@ -31,6 +32,7 @@ export class LineTool implements DrawTool {
       type: 'line',
       color: ctx.color,
       width: ctx.strokeWidth,
+      brushStyle: ctx.brushStyle,
       start: { ...this.start },
       end: { ...point },
     };
@@ -39,11 +41,16 @@ export class LineTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    LineTool.draw(canvasCtx, this.start, this.end);
+    LineTool.draw(canvasCtx, this.start, this.end, ctx.brushStyle);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, brushStyle?: BrushStyle): void {
+    if (brushStyle === 'shaky') {
+      drawShakyPath(ctx, [start, end], false);
+      return;
+    }
+
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(end.x, end.y);

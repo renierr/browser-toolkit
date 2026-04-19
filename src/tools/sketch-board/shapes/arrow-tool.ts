@@ -1,11 +1,12 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
+import { drawShakyPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, Point, SketchElement } from '../types.ts';
+import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class ArrowTool implements DrawTool {
   readonly mode = 'arrow' as const;
   readonly streamsLive = false;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
 
   private start: Point | null = null;
   private end: Point | null = null;
@@ -31,6 +32,7 @@ export class ArrowTool implements DrawTool {
       type: 'arrow',
       color: ctx.color,
       width: ctx.strokeWidth,
+      brushStyle: ctx.brushStyle,
       start: { ...this.start },
       end: { ...point },
     };
@@ -39,15 +41,29 @@ export class ArrowTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    ArrowTool.draw(canvasCtx, this.start, this.end);
+    ArrowTool.draw(canvasCtx, this.start, this.end, ctx.brushStyle);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, brushStyle?: BrushStyle): void {
     const dx = end.x - start.x;
     const dy = end.y - start.y;
     const len = Math.hypot(dx, dy);
     if (len < 1) return;
+
+    if (brushStyle === 'shaky') {
+      const headLen = 15;
+      const angle = Math.atan2(dy, dx);
+      const points = [
+        start,
+        end,
+        { x: end.x - headLen * Math.cos(angle - Math.PI / 6), y: end.y - headLen * Math.sin(angle - Math.PI / 6) },
+        end,
+        { x: end.x - headLen * Math.cos(angle + Math.PI / 6), y: end.y - headLen * Math.sin(angle + Math.PI / 6) }
+      ];
+      drawShakyPath(ctx, points, false);
+      return;
+    }
 
     const strokeW = ctx.lineWidth;
     const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));

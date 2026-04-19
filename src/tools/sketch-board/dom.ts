@@ -59,6 +59,7 @@ export type SketchDom = {
   toolOptTexts: HTMLElement[];
   toolOptImages: HTMLElement[];
   toolOptColors: HTMLElement[];
+  toolOptBrushes: HTMLElement[];
   fontFamily: HTMLSelectElement;
   fontSize: HTMLInputElement;
   fontBold: HTMLButtonElement;
@@ -70,6 +71,11 @@ export type SketchDom = {
   ungroupElements: HTMLButtonElement;
   deleteElement: HTMLButtonElement;
   resetRotation: HTMLButtonElement;
+  brushStyleBtn: HTMLButtonElement;
+  brushStylePopup: HTMLDivElement;
+  brushNormal: HTMLButtonElement;
+  brushShaky: HTMLButtonElement;
+  brushStyleLabel: HTMLSpanElement;
   textInputOverlay: HTMLDivElement | null;
   zoomToast: HTMLDivElement | null;
 };
@@ -162,6 +168,12 @@ export function getDom(doc: Document): SketchDom | null {
   const toolOptTexts = Array.from(doc.querySelectorAll('.tool-opt-text')) as HTMLElement[];
   const toolOptImages = Array.from(doc.querySelectorAll('.tool-opt-image')) as HTMLElement[];
   const toolOptColors = Array.from(doc.querySelectorAll('.tool-opt-color')) as HTMLElement[];
+  const toolOptBrushes = Array.from(doc.querySelectorAll('.tool-opt-brush')) as HTMLElement[];
+  const brushStyleBtn = doc.getElementById('brush-style-btn') as HTMLButtonElement | null;
+  const brushStylePopup = doc.getElementById('brush-style-popup') as HTMLDivElement | null;
+  const brushNormal = doc.getElementById('brush-normal') as HTMLButtonElement | null;
+  const brushShaky = doc.getElementById('brush-shaky') as HTMLButtonElement | null;
+  const brushStyleLabel = doc.getElementById('brush-style-label') as HTMLSpanElement | null;
 
   const requiredElements: Record<string, HTMLElement | null> = {
     canvas,
@@ -239,6 +251,11 @@ export function getDom(doc: Document): SketchDom | null {
     ungroupElements,
     deleteElement,
     resetRotation,
+    brushStyleBtn,
+    brushStylePopup,
+    brushNormal,
+    brushShaky,
+    brushStyleLabel,
   };
 
   for (const [name, el] of Object.entries(requiredElements)) {
@@ -322,6 +339,7 @@ export function getDom(doc: Document): SketchDom | null {
     toolOptTexts,
     toolOptImages,
     toolOptColors,
+    toolOptBrushes,
     fontFamily: fontFamily!,
     fontSize: fontSize!,
     fontBold: fontBold!,
@@ -333,6 +351,11 @@ export function getDom(doc: Document): SketchDom | null {
     ungroupElements: ungroupElements!,
     deleteElement: deleteElement!,
     resetRotation: resetRotation!,
+    brushStyleBtn: brushStyleBtn!,
+    brushStylePopup: brushStylePopup!,
+    brushNormal: brushNormal!,
+    brushShaky: brushShaky!,
+    brushStyleLabel: brushStyleLabel!,
     textInputOverlay: null,
     zoomToast,
   };

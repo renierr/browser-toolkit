@@ -1,11 +1,12 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
+import { drawShakyPath } from '../utils/brush-styles.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
-import type { DrawToolContext, Point, SketchElement } from '../types.ts';
+import type { BrushStyle, DrawToolContext, Point, SketchElement } from '../types.ts';
 
 export class CheckmarkTool implements DrawTool {
   readonly mode = 'checkmark' as const;
   readonly streamsLive = false;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
 
   private start: Point | null = null;
   private end: Point | null = null;
@@ -31,6 +32,7 @@ export class CheckmarkTool implements DrawTool {
       type: 'checkmark',
       color: ctx.color,
       width: ctx.strokeWidth,
+      brushStyle: ctx.brushStyle,
       start: { ...this.start },
       end: { ...point },
     };
@@ -39,14 +41,24 @@ export class CheckmarkTool implements DrawTool {
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    CheckmarkTool.draw(canvasCtx, this.start, this.end);
+    CheckmarkTool.draw(canvasCtx, this.start, this.end, ctx.brushStyle);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point): void {
+  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, brushStyle?: BrushStyle): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
     const { x, y, w, h } = rect;
+
+    if (brushStyle === 'shaky') {
+      const points = [
+        { x: x + w * 0.1, y: y + h * 0.55 },
+        { x: x + w * 0.35, y: y + h * 0.95 },
+        { x: x + w * 0.9, y: y + h * 0.1 },
+      ];
+      drawShakyPath(ctx, points, false);
+      return;
+    }
 
     ctx.beginPath();
     ctx.moveTo(x + w * 0.1, y + h * 0.55);
