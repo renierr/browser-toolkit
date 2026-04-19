@@ -33,79 +33,53 @@ export function setImageGetter(fn: ImageGetter): void {
 }
 
 export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): void {
+  const rotation = el.rotation || 0;
+  const bounds = getElementBounds(ctx, el, true); // Get unrotated bounds for center calc
+  const centerX = bounds.x + bounds.w / 2;
+  const centerY = bounds.y + bounds.h / 2;
+
+  ctx.save();
+  if (rotation !== 0) {
+    ctx.translate(centerX, centerY);
+    ctx.rotate(rotation);
+    ctx.translate(-centerX, -centerY);
+  }
+
   applyStrokeStyle(ctx, el.color, el.width);
 
   if (el.type === 'freehand') {
     FreehandTool.draw(ctx, el.points);
-    return;
-  }
-
-  if (el.type === 'line') {
+  } else if (el.type === 'line') {
     LineTool.draw(ctx, el.start, el.end);
-    return;
-  }
-
-  if (el.type === 'rect') {
+  } else if (el.type === 'rect') {
     RectTool.draw(ctx, el.start, el.end, el.filled);
-    return;
-  }
-
-  if (el.type === 'ellipse') {
+  } else if (el.type === 'ellipse') {
     EllipseTool.draw(ctx, el.start, el.end, el.filled);
-    return;
-  }
-
-  if (el.type === 'triangle') {
+  } else if (el.type === 'triangle') {
     TriangleTool.draw(ctx, el.start, el.end, el.filled);
-    return;
-  }
-
-  if (el.type === 'diamond') {
+  } else if (el.type === 'diamond') {
     DiamondTool.draw(ctx, el.start, el.end, el.filled);
-    return;
-  }
-
-  if (el.type === 'hexagon') {
+  } else if (el.type === 'hexagon') {
     HexagonTool.draw(ctx, el.start, el.end, el.filled);
-    return;
-  }
-
-  if (el.type === 'arrow') {
+  } else if (el.type === 'arrow') {
     ArrowTool.draw(ctx, el.start, el.end);
-    return;
-  }
-
-  if (el.type === 'double-arrow') {
+  } else if (el.type === 'double-arrow') {
     DoubleArrowTool.draw(ctx, el.start, el.end);
-    return;
-  }
-
-  if (el.type === 'speech-bubble') {
+  } else if (el.type === 'speech-bubble') {
     SpeechBubbleTool.draw(ctx, el.start, el.end, el.filled);
-    return;
-  }
-
-  if (el.type === 'checkmark') {
+  } else if (el.type === 'checkmark') {
     CheckmarkTool.draw(ctx, el.start, el.end);
-    return;
-  }
-
-  if (el.type === 'text') {
+  } else if (el.type === 'text') {
     TextTool.draw(ctx, el);
-    return;
-  }
-
-  if (el.type === 'image') {
+  } else if (el.type === 'image') {
     ImageTool.draw(ctx, el);
-    return;
-  }
-
-  if (el.type === 'group') {
+  } else if (el.type === 'group') {
     for (const subEl of el.elements) {
       drawElement(ctx, subEl);
     }
-    return;
   }
+
+  ctx.restore();
 }
 
 function getImageBounds(
@@ -138,56 +112,101 @@ export function getTextBounds(
 /** Generic bounds for any element type */
 export function getElementBounds(
   ctx: CanvasRenderingContext2D,
-  el: SketchElement
+  el: SketchElement,
+  ignoreRotation = false
 ): { x: number; y: number; w: number; h: number } {
+  let bounds: { x: number; y: number; w: number; h: number };
+
   if (el.type === 'text') {
-    return getTextBounds(ctx, el);
-  }
-  if (el.type === 'image') {
-    return getImageBounds(ctx, el);
-  }
-  if (el.type === 'freehand') {
-    if (el.points.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const p of el.points) {
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x);
-      maxY = Math.max(maxY, p.y);
+    bounds = getTextBounds(ctx, el);
+  } else if (el.type === 'image') {
+    bounds = getImageBounds(ctx, el);
+  } else if (el.type === 'freehand') {
+    if (el.points.length === 0) {
+      bounds = { x: 0, y: 0, w: 0, h: 0 };
+    } else {
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const p of el.points) {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+      }
+      bounds = {
+        x: minX - el.width / 2,
+        y: minY - el.width / 2,
+        w: maxX - minX + el.width,
+        h: maxY - minY + el.width,
+      };
     }
-    return {
-      x: minX - el.width / 2,
-      y: minY - el.width / 2,
-      w: maxX - minX + el.width,
-      h: maxY - minY + el.width,
+  } else if (el.type === 'group') {
+    if (el.elements.length === 0) {
+      bounds = { x: 0, y: 0, w: 0, h: 0 };
+    } else {
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const subEl of el.elements) {
+        const b = getElementBounds(ctx, subEl);
+        minX = Math.min(minX, b.x);
+        minY = Math.min(minY, b.y);
+        maxX = Math.max(maxX, b.x + b.w);
+        maxY = Math.max(maxY, b.y + b.h);
+      }
+      bounds = { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+    }
+  } else {
+    // line, rect, ellipse, triangle, arrow, double-arrow, diamond, hexagon, speech-bubble, checkmark — all have start/end
+    const rect = normalizeRect(el.start, el.end);
+    bounds = {
+      x: rect.x - el.width / 2,
+      y: rect.y - el.width / 2,
+      w: rect.w + el.width,
+      h: rect.h + el.width,
     };
   }
-  if (el.type === 'group') {
-    if (el.elements.length === 0) return { x: 0, y: 0, w: 0, h: 0 };
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-    for (const subEl of el.elements) {
-      const b = getElementBounds(ctx, subEl);
-      minX = Math.min(minX, b.x);
-      minY = Math.min(minY, b.y);
-      maxX = Math.max(maxX, b.x + b.w);
-      maxY = Math.max(maxY, b.y + b.h);
-    }
-    return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+
+  if (ignoreRotation || !el.rotation) {
+    return bounds;
   }
 
-  // line, rect, ellipse, triangle, arrow, double-arrow, diamond, hexagon, speech-bubble, checkmark — all have start/end
-  const rect = normalizeRect(el.start, el.end);
+  // Calculate AABB of rotated bounds
+  const cx = bounds.x + bounds.w / 2;
+  const cy = bounds.y + bounds.h / 2;
+  const rad = el.rotation;
+
+  const points = [
+    { x: bounds.x, y: bounds.y },
+    { x: bounds.x + bounds.w, y: bounds.y },
+    { x: bounds.x + bounds.w, y: bounds.y + bounds.h },
+    { x: bounds.x, y: bounds.y + bounds.h },
+  ];
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const p of points) {
+    const dx = p.x - cx;
+    const dy = p.y - cy;
+    const rx = cx + dx * Math.cos(rad) - dy * Math.sin(rad);
+    const ry = cy + dx * Math.sin(rad) + dy * Math.cos(rad);
+    minX = Math.min(minX, rx);
+    minY = Math.min(minY, ry);
+    maxX = Math.max(maxX, rx);
+    maxY = Math.max(maxY, ry);
+  }
+
   return {
-    x: rect.x - el.width / 2,
-    y: rect.y - el.width / 2,
-    w: rect.w + el.width,
-    h: rect.h + el.width,
+    x: minX,
+    y: minY,
+    w: maxX - minX,
+    h: maxY - minY,
   };
 }
 

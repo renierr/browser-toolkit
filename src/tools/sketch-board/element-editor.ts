@@ -11,7 +11,18 @@ import type { DrawToolContext, Point, SketchElement } from './types.ts';
 const HANDLE_SIZE = 8;
 const MOVE_THRESHOLD = 5;
 
-type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'start' | 'end';
+type ResizeHandle =
+  | 'nw'
+  | 'n'
+  | 'ne'
+  | 'e'
+  | 'se'
+  | 's'
+  | 'sw'
+  | 'w'
+  | 'start'
+  | 'end'
+  | 'rotate';
 
 export class ElementEditor {
   private readonly dom: SketchDom;
@@ -24,10 +35,13 @@ export class ElementEditor {
   private selectionBox: { start: Point; end: Point } | null = null;
   private isDragging = false;
   private isResizing = false;
+  private isRotating = false;
   private hasMovedBeyondThreshold = false;
   private activeHandle: ResizeHandle | null = null;
   private dragStartPos: Point | null = null;
   private resizeStartBounds: { x: number; y: number; w: number; h: number } | null = null;
+  private rotationStartAngle = 0;
+  private elementStartRotation = 0;
   private textInputActive = false;
   private pointerDownHitSelected = false;
   private dragStartSnapshot: SketchElement[] | null = null;
@@ -74,18 +88,29 @@ export class ElementEditor {
     this.pointerDownHitSelected = false;
     this.selectionBox = null;
 
-    // Check resize handles first (only if single element selected for now)
+    // Check resize/rotate handles first (only if single element selected for now)
     if (this.selectedElementIds.size === 1) {
       const id = this.selectedElementIds.values().next().value;
       const el = elements.find((e) => e.id === id);
       if (el) {
         const handle = this.hitTestHandle(point, el);
         if (handle) {
-          this.isResizing = true;
-          this.hasMovedBeyondThreshold = false;
-          this.activeHandle = handle;
+          if (handle === 'rotate') {
+            this.isRotating = true;
+            this.hasMovedBeyondThreshold = false;
+            const bounds = getElementBounds(this.ctx, el, true);
+            const cx = bounds.x + bounds.w / 2;
+            const cy = bounds.y + bounds.h / 2;
+            this.rotationStartAngle = Math.atan2(point.y - cy, point.x - cx);
+            this.elementStartRotation = el.rotation || 0;
+            this.activeHandle = 'rotate';
+          } else {
+            this.isResizing = true;
+            this.hasMovedBeyondThreshold = false;
+            this.activeHandle = handle;
+            this.resizeStartBounds = getElementBounds(this.ctx, el, true);
+          }
           this.dragStartPos = point;
-          this.resizeStartBounds = getElementBounds(this.ctx, el);
           this.setCursorForHandle(handle);
           this.dragStartSnapshot = JSON.parse(JSON.stringify(elements));
           return { found: true, elementId: el.id };
@@ -166,6 +191,25 @@ export class ElementEditor {
     }
 
     if (
+      this.isRotating &&
+      this.selectedElementIds.size === 1 &&
+      this.activeHandle === 'rotate'
+    ) {
+      const id = this.selectedElementIds.values().next().value;
+      const el = elements.find((e) => e.id === id);
+      if (el) {
+        const bounds = getElementBounds(this.ctx, el, true);
+        const cx = bounds.x + bounds.w / 2;
+        const cy = bounds.y + bounds.h / 2;
+        const currentAngle = Math.atan2(point.y - cy, point.x - cx);
+        const diff = currentAngle - this.rotationStartAngle;
+        el.rotation = this.elementStartRotation + diff;
+        this.hasMovedBeyondThreshold = true;
+        return true;
+      }
+    }
+
+    if (
       this.isResizing &&
       this.selectedElementIds.size === 1 &&
       this.dragStartPos &&
@@ -228,7 +272,7 @@ export class ElementEditor {
     }
 
     const didMove = Boolean(
-      (this.isDragging || this.isResizing) &&
+      (this.isDragging || this.isResizing || this.isRotating) &&
       this.selectedElementIds.size > 0 &&
       this.hasMovedBeyondThreshold
     );
@@ -263,6 +307,7 @@ export class ElementEditor {
 
     this.isDragging = false;
     this.isResizing = false;
+    this.isRotating = false;
     this.hasMovedBeyondThreshold = false;
     this.activeHandle = null;
     this.dragStartPos = null;
@@ -600,6 +645,7 @@ export class ElementEditor {
     this.selectionBox = null;
     this.isDragging = false;
     this.isResizing = false;
+    this.isRotating = false;
     this.hasMovedBeyondThreshold = false;
     this.activeHandle = null;
     this.dragStartPos = null;
@@ -629,7 +675,18 @@ export class ElementEditor {
       const el = elements.find((e) => e.id === id);
       if (!el) continue;
 
-      const bounds = getElementBounds(canvasCtx, el);
+      const bounds = getElementBounds(canvasCtx, el, true); // unrotated
+      const rotation = el.rotation || 0;
+      const centerX = bounds.x + bounds.w / 2;
+      const centerY = bounds.y + bounds.h / 2;
+
+      canvasCtx.save();
+      if (rotation !== 0) {
+        canvasCtx.translate(centerX, centerY);
+        canvasCtx.rotate(rotation);
+        canvasCtx.translate(-centerX, -centerY);
+      }
+
       const pad = 4;
 
       // Dashed bounding box
@@ -659,8 +716,30 @@ export class ElementEditor {
             HANDLE_SIZE
           );
         }
+
+        // Draw rotation handle
+        const rotHandle = this.getRotationHandlePosition(bounds);
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(bounds.x + bounds.w / 2, bounds.y - pad);
+        canvasCtx.lineTo(rotHandle.x, rotHandle.y);
+        canvasCtx.stroke();
+
+        canvasCtx.beginPath();
+        canvasCtx.arc(rotHandle.x, rotHandle.y, HANDLE_SIZE / 2, 0, Math.PI * 2);
+        canvasCtx.fill();
+        canvasCtx.stroke();
       }
+      canvasCtx.restore();
     }
+  }
+
+  private getRotationHandlePosition(bounds: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }): Point {
+    return { x: bounds.x + bounds.w / 2, y: bounds.y - 30 };
   }
 
   private doMove(point: Point, elements: SketchElement[]): boolean {
@@ -701,10 +780,11 @@ export class ElementEditor {
   }
 
   private doResize(point: Point, el: SketchElement): boolean {
-    if (!this.dragStartPos || !this.activeHandle) return false;
+    if (!this.dragStartPos || !this.activeHandle || !this.resizeStartBounds || !this.dragStartSnapshot)
+      return false;
 
-    // Freehand and Group don't resize via handles currently
-    if (el.type === 'freehand' || el.type === 'group') return false;
+    const snapshotEl = this.dragStartSnapshot.find((e) => e.id === el.id);
+    if (!snapshotEl) return false;
 
     // Line/arrow: drag start or end point directly
     if (
@@ -718,105 +798,139 @@ export class ElementEditor {
         el.end.x = point.x;
         el.end.y = point.y;
       }
-      this.dragStartPos = point;
       return true;
     }
 
-    // Shapes with start/end bounding box (rect, ellipse, triangle)
-    if ('start' in el && 'end' in el) {
-      const rect = normalizeRect(el.start, el.end);
-      const handle = this.activeHandle;
-      let { x, y, w, h } = rect;
+    const bounds = this.resizeStartBounds;
+    const handle = this.activeHandle;
+    const rotation = el.rotation || 0;
+    const cx = bounds.x + bounds.w / 2;
+    const cy = bounds.y + bounds.h / 2;
 
-      if (handle === 'nw' || handle === 'w' || handle === 'sw') x = point.x;
-      if (handle === 'ne' || handle === 'e' || handle === 'se') w = point.x - x;
-      if (handle === 'nw' || handle === 'n' || handle === 'ne') y = point.y;
-      if (handle === 'sw' || handle === 's' || handle === 'se') h = point.y - y;
+    // Transform point to local unrotated space
+    const dx = point.x - cx;
+    const dy = point.y - cy;
+    const localPoint = {
+      x: cx + dx * Math.cos(-rotation) - dy * Math.sin(-rotation),
+      y: cy + dx * Math.sin(-rotation) + dy * Math.cos(-rotation),
+    };
 
-      if (handle === 'w' || handle === 'nw' || handle === 'sw') w = rect.x + rect.w - point.x;
-      if (handle === 'n' || handle === 'nw' || handle === 'ne') h = rect.y + rect.h - point.y;
+    let newX = bounds.x;
+    let newY = bounds.y;
+    let newW = bounds.w;
+    let newH = bounds.h;
 
-      el.start.x = x;
-      el.start.y = y;
-      el.end.x = x + w;
-      el.end.y = y + h;
-      this.dragStartPos = point;
-      return true;
+    if (handle === 'nw' || handle === 'w' || handle === 'sw') {
+      newX = localPoint.x;
+      newW = bounds.x + bounds.w - localPoint.x;
+    }
+    if (handle === 'ne' || handle === 'e' || handle === 'se') {
+      newW = localPoint.x - bounds.x;
+    }
+    if (handle === 'nw' || handle === 'n' || handle === 'ne') {
+      newY = localPoint.y;
+      newH = bounds.y + bounds.h - localPoint.y;
+    }
+    if (handle === 'sw' || handle === 's' || handle === 'se') {
+      newH = localPoint.y - bounds.y;
     }
 
-    // Text: resize changes font size proportionally
-    if (el.type === 'text' && this.resizeStartBounds) {
-      const dy = point.y - this.dragStartPos.y;
-      const newSize = Math.max(8, Math.min(200, el.fontSize + dy * 0.5));
+    // Min size
+    if (newW < 2) newW = 2;
+    if (newH < 2) newH = 2;
+
+    // Fixed aspect ratio for text and image corner handles (optional but text needs it)
+    if (el.type === 'text') {
+      const scale = Math.max(newW / bounds.w, newH / bounds.h);
+      const newSize = Math.max(8, Math.min(200, (snapshotEl as any).fontSize * scale));
       el.fontSize = Math.round(newSize);
       this.dom.fontSize.value = String(el.fontSize);
-      this.dragStartPos = point;
       return true;
     }
 
-    // Image: use same resizing logic as shapes (rect-based with start/end)
-    if (el.type === 'image') {
-      const start: Point = { x: el.position.x, y: el.position.y };
-      const end: Point = { x: el.position.x + el.imageWidth, y: el.position.y + el.imageHeight };
-      const rect = normalizeRect(start, end);
-      const handle = this.activeHandle;
-      let x = rect.x;
-      let y = rect.y;
-      let w = rect.w;
-      let h = rect.h;
+    const scaleX = newW / bounds.w;
+    const scaleY = newH / bounds.h;
 
-      if (handle === 'nw' || handle === 'w' || handle === 'sw') x = point.x;
-      if (handle === 'ne' || handle === 'e' || handle === 'se') w = point.x - x;
-      if (handle === 'nw' || handle === 'n' || handle === 'ne') y = point.y;
-      if (handle === 'sw' || handle === 's' || handle === 'se') h = point.y - y;
+    this.scaleElement(el, snapshotEl, scaleX, scaleY, { x: newX, y: newY }, bounds);
+    return true;
+  }
 
-      if (handle === 'w' || handle === 'nw' || handle === 'sw') w = rect.x + rect.w - point.x;
-      if (handle === 'n' || handle === 'nw' || handle === 'ne') h = rect.y + rect.h - point.y;
-
-      if (w >= 20 && h >= 20) {
-        el.position.x = x;
-        el.position.y = y;
-        el.imageWidth = w;
-        el.imageHeight = h;
-        this.dragStartPos = point;
-        return true;
+  private scaleElement(
+    el: SketchElement,
+    snapshotEl: SketchElement,
+    scaleX: number,
+    scaleY: number,
+    newOrigin: Point,
+    oldBounds: { x: number; y: number; w: number; h: number }
+  ): void {
+    if (el.type === 'freehand' && snapshotEl.type === 'freehand') {
+      for (let i = 0; i < el.points.length; i++) {
+        const p = el.points[i];
+        const sp = snapshotEl.points[i];
+        if (!sp) continue;
+        p.x = newOrigin.x + (sp.x - oldBounds.x) * scaleX;
+        p.y = newOrigin.y + (sp.y - oldBounds.y) * scaleY;
       }
-      return false;
+    } else if (el.type === 'group' && snapshotEl.type === 'group') {
+      for (let i = 0; i < el.elements.length; i++) {
+        this.scaleElement(
+          el.elements[i],
+          snapshotEl.elements[i],
+          scaleX,
+          scaleY,
+          newOrigin,
+          oldBounds
+        );
+      }
+    } else if (el.type === 'image' && snapshotEl.type === 'image') {
+      el.position.x = newOrigin.x + (snapshotEl.position.x - oldBounds.x) * scaleX;
+      el.position.y = newOrigin.y + (snapshotEl.position.y - oldBounds.y) * scaleY;
+      el.imageWidth = snapshotEl.imageWidth * scaleX;
+      el.imageHeight = snapshotEl.imageHeight * scaleY;
+    } else if (el.type === 'text' && snapshotEl.type === 'text') {
+      el.position.x = newOrigin.x + (snapshotEl.position.x - oldBounds.x) * scaleX;
+      el.position.y = newOrigin.y + (snapshotEl.position.y - oldBounds.y) * scaleY;
+      // Font size handled in doResize for single selection
+    } else if ('start' in el && 'end' in el && 'start' in snapshotEl && 'end' in snapshotEl) {
+      el.start.x = newOrigin.x + (snapshotEl.start.x - oldBounds.x) * scaleX;
+      el.start.y = newOrigin.y + (snapshotEl.start.y - oldBounds.y) * scaleY;
+      el.end.x = newOrigin.x + (snapshotEl.end.x - oldBounds.x) * scaleX;
+      el.end.y = newOrigin.y + (snapshotEl.end.y - oldBounds.y) * scaleY;
     }
-
-    return false;
   }
 
   private hitTestHandle(point: Point, el: SketchElement): ResizeHandle | null {
-    // Freehand and Group: no resize handles
-    if (el.type === 'freehand' || el.type === 'group') return null;
+    const rotation = el.rotation || 0;
+    const bounds = getElementBounds(this.ctx, el, true);
+    const cx = bounds.x + bounds.w / 2;
+    const cy = bounds.y + bounds.h / 2;
 
-    // Image: has all corner/edge handles
-    if (el.type === 'image') {
-      const bounds = getElementBounds(this.ctx, el);
-      const pad = 4;
-      const positions = this.getCornerHandlePositions(bounds, pad);
-      const handleNames: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-      for (let i = 0; i < positions.length; i++) {
-        if (this.isNearPoint(point, positions[i])) return handleNames[i];
-      }
-      return null;
+    let localPoint = point;
+    if (rotation !== 0) {
+      const dx = point.x - cx;
+      const dy = point.y - cy;
+      localPoint = {
+        x: cx + dx * Math.cos(-rotation) - dy * Math.sin(-rotation),
+        y: cy + dx * Math.sin(-rotation) + dy * Math.cos(-rotation),
+      };
     }
 
-    const bounds = getElementBounds(this.ctx, el);
+    // Check rotation handle
+    const rotHandle = this.getRotationHandlePosition(bounds);
+    if (this.isNearPoint(localPoint, rotHandle)) return 'rotate';
 
     // Line/arrow: start and end handles only
     if (el.type === 'line' || el.type === 'arrow' || el.type === 'double-arrow') {
-      if (this.isNearPoint(point, el.start)) return 'start';
-      if (this.isNearPoint(point, el.end)) return 'end';
+      if (this.isNearPoint(localPoint, el.start)) return 'start';
+      if (this.isNearPoint(localPoint, el.end)) return 'end';
       return null;
     }
 
-    // Text: bottom-right (se) handle only, since it always scales proportionally
+    // Text: bottom-right (se) handle only
     if (el.type === 'text') {
       const pad = 4;
       const positions = this.getCornerHandlePositions(bounds, pad);
-      if (this.isNearPoint(point, positions[4])) return 'se';
+      if (this.isNearPoint(localPoint, positions[4])) return 'se';
       return null;
     }
 
@@ -825,7 +939,7 @@ export class ElementEditor {
     const handleNames: ResizeHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
     for (let i = 0; i < positions.length; i++) {
-      if (this.isNearPoint(point, positions[i])) return handleNames[i];
+      if (this.isNearPoint(localPoint, positions[i])) return handleNames[i];
     }
     return null;
   }
@@ -834,7 +948,6 @@ export class ElementEditor {
     el: SketchElement,
     bounds: { x: number; y: number; w: number; h: number }
   ): Point[] {
-    if (el.type === 'freehand' || el.type === 'group') return [];
     if (el.type === 'line' || el.type === 'arrow' || el.type === 'double-arrow') {
       return [{ ...el.start }, { ...el.end }];
     }
@@ -882,6 +995,7 @@ export class ElementEditor {
       w: 'ew-resize',
       start: 'crosshair',
       end: 'crosshair',
+      rotate: 'grab',
     };
     this.dom.canvas.style.cursor = cursorMap[handle];
   }

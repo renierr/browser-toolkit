@@ -25,6 +25,7 @@ type BaseElement = {
   id: string;
   color: string;
   width: number;
+  rotation?: number;
 };
 
 export type FreehandElement = BaseElement & {
