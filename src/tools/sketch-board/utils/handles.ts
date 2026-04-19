@@ -67,7 +67,7 @@ export function getCornerHandlePositions(bounds: Bounds, pad: number): Point[] {
 /** Compute the default tail tip for a speech bubble when none is stored */
 export function getDefaultTailTip(el: { start: Point; end: Point }): Point {
   const rect = normalizeRect(el.start, el.end);
-  return { x: rect.x + rect.w * 0.15, y: rect.y + rect.h };
+  return { x: rect.x + rect.w * 0.15, y: rect.y + rect.h + 20 };
 }
 
 /** Visible handle positions for rendering */

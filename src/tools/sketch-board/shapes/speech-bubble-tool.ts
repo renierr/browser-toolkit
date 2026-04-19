@@ -93,54 +93,99 @@ export class SpeechBubbleTool implements DrawTool<SpeechBubbleElement> {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
 
-    // Compute bubble body height (leave room for default tail)
-    const bodyBottom = rect.y + rect.h * 0.8;
-    const r = Math.min(rect.w, rect.h * 0.8) * 0.2;
+    const { x, y, w, h } = rect;
+    const r = Math.min(w, h) * 0.2;
 
     // Tail tip: use provided position or default
-    const tip = tailTip ?? { x: rect.x + rect.w * 0.15, y: rect.y + rect.h };
+    const tip = tailTip ?? { x: x + w * 0.15, y: y + h + 20 };
 
-    // Compute where the tail exits the body bottom edge
-    // The tail root straddles around the X that is closest to the tip on the body bottom
-    const rootCenterX = Math.max(rect.x + r, Math.min(rect.x + rect.w - r, tip.x));
-    // The gap gets wider as the tail tip moves further from the body
-    const outX = Math.max(0, rect.x - tip.x, tip.x - (rect.x + rect.w));
-    const outY = Math.max(0, tip.y - bodyBottom);
+    // Determine the closest side
+    const distTop = Math.abs(tip.y - y);
+    const distBottom = Math.abs(tip.y - (y + h));
+    const distLeft = Math.abs(tip.x - x);
+    const distRight = Math.abs(tip.x - (x + w));
 
-    const baseTailWidth = Math.min(rect.w * 0.1, 12);
-    const tailHalfWidth = Math.min(rect.w * 0.3, baseTailWidth + outY * 0.1 + outX * 0.7);
-    const rootLeftX = Math.max(rect.x + r, rootCenterX - tailHalfWidth);
-    const rootRightX = Math.min(rect.x + rect.w - r, rootCenterX + tailHalfWidth);
+    const minDist = Math.min(distTop, distBottom, distLeft, distRight);
+    let side: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
+    if (minDist === distTop) side = 'top';
+    else if (minDist === distBottom) side = 'bottom';
+    else if (minDist === distLeft) side = 'left';
+    else if (minDist === distRight) side = 'right';
+
+    // Tail width logic
+    const baseTailWidth = Math.min(w, h) * 0.1 || 12;
+    const outX = Math.max(0, x - tip.x, tip.x - (x + w));
+    const outY = Math.max(0, y - tip.y, tip.y - (y + h));
+    const tailHalfWidth = Math.min(Math.min(w, h) * 0.3, baseTailWidth + outY * 0.1 + outX * 0.1);
+
+    // Calculate root points on the side
+    let rootL: Point, rootR: Point;
+    if (side === 'top' || side === 'bottom') {
+      const cy = side === 'top' ? y : y + h;
+      const rootCenterX = Math.max(x + r + tailHalfWidth, Math.min(x + w - r - tailHalfWidth, tip.x));
+      rootL = { x: rootCenterX - tailHalfWidth, y: cy };
+      rootR = { x: rootCenterX + tailHalfWidth, y: cy };
+    } else {
+      const cx = side === 'left' ? x : x + w;
+      const rootCenterY = Math.max(y + r + tailHalfWidth, Math.min(y + h - r - tailHalfWidth, tip.y));
+      rootL = { x: cx, y: rootCenterY + tailHalfWidth };
+      rootR = { x: cx, y: rootCenterY - tailHalfWidth };
+    }
 
     if (brushStyle === 'shaky') {
-      const points = [
-        { x: rect.x, y: rect.y },
-        { x: rect.x + rect.w, y: rect.y },
-        { x: rect.x + rect.w, y: bodyBottom },
-        { x: rootRightX, y: bodyBottom },
-        tip,
-        { x: rootLeftX, y: bodyBottom },
-        { x: rect.x, y: bodyBottom },
-      ];
+      const points: Point[] = [];
+      points.push({ x: x + r, y: y });
+      if (side === 'top') points.push(rootL, tip, rootR);
+      points.push({ x: x + w - r, y: y });
+      points.push({ x: x + w, y: y + r });
+      if (side === 'right') points.push(rootR, tip, rootL);
+      points.push({ x: x + w, y: y + h - r });
+      points.push({ x: x + w - r, y: y + h });
+      if (side === 'bottom') points.push(rootR, tip, rootL);
+      points.push({ x: x + r, y: y + h });
+      points.push({ x: x, y: y + h - r });
+      if (side === 'left') points.push(rootL, tip, rootR);
+      points.push({ x: x, y: y + r });
+
       drawShakyPath(ctx, points, true, fillColor);
       return;
     }
 
-    const x = rect.x;
-    const y = rect.y;
-    const w = rect.w;
-
     ctx.beginPath();
+    // Top side
     ctx.moveTo(x + r, y);
+    if (side === 'top') {
+      ctx.lineTo(rootL.x, rootL.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(rootR.x, rootR.y);
+    }
     ctx.lineTo(x + w - r, y);
     ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, bodyBottom - r);
-    ctx.quadraticCurveTo(x + w, bodyBottom, x + w - r, bodyBottom);
-    ctx.lineTo(rootRightX, bodyBottom);
-    ctx.lineTo(tip.x, tip.y);
-    ctx.lineTo(rootLeftX, bodyBottom);
-    ctx.lineTo(x + r, bodyBottom);
-    ctx.quadraticCurveTo(x, bodyBottom, x, bodyBottom - r);
+
+    // Right side
+    if (side === 'right') {
+      ctx.lineTo(rootR.x, rootR.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(rootL.x, rootL.y);
+    }
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+
+    // Bottom side
+    if (side === 'bottom') {
+      ctx.lineTo(rootR.x, rootR.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(rootL.x, rootL.y);
+    }
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+
+    // Left side
+    if (side === 'left') {
+      ctx.lineTo(rootL.x, rootL.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(rootR.x, rootR.y);
+    }
     ctx.lineTo(x, y + r);
     ctx.quadraticCurveTo(x, y, x + r, y);
     ctx.closePath();
