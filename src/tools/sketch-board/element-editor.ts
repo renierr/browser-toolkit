@@ -35,6 +35,7 @@ export class ElementEditor {
   private textInputActive = false;
   private pointerDownHitSelected = false;
   private dragStartSnapshot: SketchElement[] | null = null;
+  private activeSnapPoint: Point | null = null;
   private activeTextOverlay:
     | {
         type: 'creation';
@@ -323,6 +324,7 @@ export class ElementEditor {
     this.resizeStartBounds = null;
     this.pointerDownHitSelected = false;
     this.dragStartSnapshot = null;
+    this.activeSnapPoint = null;
 
     if (this.selectedElementIds.size > 0) {
       this.dom.canvas.setAttribute('data-cursor', 'pointer');
@@ -773,10 +775,12 @@ export class ElementEditor {
     this.resizeStartBounds = null;
     this.textInputActive = false;
     this.dragStartSnapshot = null;
+    this.activeSnapPoint = null;
     this.toolbar?.hideSelectionOptions();
     const existingInput = document.getElementById('text-input-overlay');
     if (existingInput) existingInput.remove();
   }
+
 
   /** Draw selection highlight and resize handles */
   drawSelection(canvasCtx: CanvasRenderingContext2D, elements: SketchElement[]): void {
@@ -852,6 +856,18 @@ export class ElementEditor {
       }
       canvasCtx.restore();
     }
+
+    // Draw active snap indicator if resizing in select mode
+    if (this.activeSnapPoint) {
+      canvasCtx.save();
+      canvasCtx.strokeStyle = '#2563eb';
+      canvasCtx.lineWidth = 2;
+      canvasCtx.setLineDash([4, 4]);
+      canvasCtx.beginPath();
+      canvasCtx.arc(this.activeSnapPoint.x, this.activeSnapPoint.y, 10, 0, Math.PI * 2);
+      canvasCtx.stroke();
+      canvasCtx.restore();
+    }
   }
 
   private getRotationHandlePosition(bounds: { x: number; y: number; w: number; h: number }): Point {
@@ -923,6 +939,7 @@ export class ElementEditor {
       (this.activeHandle === 'start' || this.activeHandle === 'end')
     ) {
       const snap = getSnapTarget(point, elements, new Set([el.id]), this.ctx);
+      this.activeSnapPoint = snap ? snap.point : null;
       if (this.activeHandle === 'start') {
         if (snap) {
           el.start.x = snap.point.x;
