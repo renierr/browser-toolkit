@@ -52,21 +52,21 @@ export function drawElement(ctx: CanvasRenderingContext2D, el: SketchElement): v
   } else if (el.type === 'line') {
     LineTool.draw(ctx, el.start, el.end);
   } else if (el.type === 'rect') {
-    RectTool.draw(ctx, el.start, el.end, el.filled);
+    RectTool.draw(ctx, el.start, el.end, el.fillColor);
   } else if (el.type === 'ellipse') {
-    EllipseTool.draw(ctx, el.start, el.end, el.filled);
+    EllipseTool.draw(ctx, el.start, el.end, el.fillColor);
   } else if (el.type === 'triangle') {
-    TriangleTool.draw(ctx, el.start, el.end, el.filled);
+    TriangleTool.draw(ctx, el.start, el.end, el.fillColor);
   } else if (el.type === 'diamond') {
-    DiamondTool.draw(ctx, el.start, el.end, el.filled);
+    DiamondTool.draw(ctx, el.start, el.end, el.fillColor);
   } else if (el.type === 'hexagon') {
-    HexagonTool.draw(ctx, el.start, el.end, el.filled);
+    HexagonTool.draw(ctx, el.start, el.end, el.fillColor);
   } else if (el.type === 'arrow') {
     ArrowTool.draw(ctx, el.start, el.end);
   } else if (el.type === 'double-arrow') {
     DoubleArrowTool.draw(ctx, el.start, el.end);
   } else if (el.type === 'speech-bubble') {
-    SpeechBubbleTool.draw(ctx, el.start, el.end, el.filled);
+    SpeechBubbleTool.draw(ctx, el.start, el.end, el.fillColor);
   } else if (el.type === 'checkmark') {
     CheckmarkTool.draw(ctx, el.start, el.end);
   } else if (el.type === 'text') {

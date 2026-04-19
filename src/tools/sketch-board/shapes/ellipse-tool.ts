@@ -30,39 +30,42 @@ export class EllipseTool implements DrawTool {
       id: crypto.randomUUID(),
       type: 'ellipse',
       color: ctx.color,
+      fillColor: ctx.fillColor ?? undefined,
       width: ctx.strokeWidth,
       start: { ...this.start },
       end: { ...point },
-      filled: ctx.filled,
     };
   }
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    EllipseTool.draw(canvasCtx, this.start, this.end, ctx.filled);
+    EllipseTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    fillColor?: string
+  ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
+
+    const cx = rect.x + rect.w / 2;
+    const cy = rect.y + rect.h / 2;
+    const rx = rect.w / 2;
+    const ry = rect.h / 2;
+
     ctx.beginPath();
-    ctx.ellipse(
-      rect.x + rect.w / 2,
-      rect.y + rect.h / 2,
-      rect.w / 2,
-      rect.h / 2,
-      0,
-      0,
-      Math.PI * 2
-    );
-    if (filled) {
-      ctx.fillStyle = ctx.strokeStyle as string;
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+
+    if (fillColor && fillColor !== 'transparent') {
+      ctx.fillStyle = fillColor;
       ctx.fill();
-    } else {
-      ctx.stroke();
     }
+    ctx.stroke();
   }
 
   reset(): void {

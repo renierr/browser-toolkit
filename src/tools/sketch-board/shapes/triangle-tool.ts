@@ -30,38 +30,37 @@ export class TriangleTool implements DrawTool {
       id: crypto.randomUUID(),
       type: 'triangle',
       color: ctx.color,
+      fillColor: ctx.fillColor ?? undefined,
       width: ctx.strokeWidth,
       start: { ...this.start },
       end: { ...point },
-      filled: ctx.filled,
     };
   }
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    TriangleTool.draw(canvasCtx, this.start, this.end, ctx.filled);
+    TriangleTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    fillColor?: string
+  ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
-    const topX = rect.x + rect.w / 2;
-    const topY = rect.y;
-    const bottomLeftX = rect.x;
-    const bottomLeftY = rect.y + rect.h;
-    const bottomRightX = rect.x + rect.w;
-    const bottomRightY = rect.y + rect.h;
 
     ctx.beginPath();
-    ctx.moveTo(topX, topY);
-    ctx.lineTo(bottomRightX, bottomRightY);
-    ctx.lineTo(bottomLeftX, bottomLeftY);
+    ctx.moveTo(rect.x + rect.w / 2, rect.y);
+    ctx.lineTo(rect.x + rect.w, rect.y + rect.h);
+    ctx.lineTo(rect.x, rect.y + rect.h);
     ctx.closePath();
 
-    if (filled) {
-      ctx.fillStyle = ctx.strokeStyle as string;
+    if (fillColor && fillColor !== 'transparent') {
+      ctx.fillStyle = fillColor;
       ctx.fill();
     } else {
       ctx.stroke();

@@ -24,6 +24,7 @@ export type Point = {
 type BaseElement = {
   id: string;
   color: string;
+  fillColor?: string;
   width: number;
   rotation?: number;
 };
@@ -43,21 +44,18 @@ export type RectElement = BaseElement & {
   type: 'rect';
   start: Point;
   end: Point;
-  filled?: boolean;
 };
 
 export type EllipseElement = BaseElement & {
   type: 'ellipse';
   start: Point;
   end: Point;
-  filled?: boolean;
 };
 
 export type TriangleElement = BaseElement & {
   type: 'triangle';
   start: Point;
   end: Point;
-  filled?: boolean;
 };
 
 export type ArrowElement = BaseElement & {
@@ -76,21 +74,18 @@ export type DiamondElement = BaseElement & {
   type: 'diamond';
   start: Point;
   end: Point;
-  filled?: boolean;
 };
 
 export type HexagonElement = BaseElement & {
   type: 'hexagon';
   start: Point;
   end: Point;
-  filled?: boolean;
 };
 
 export type SpeechBubbleElement = BaseElement & {
   type: 'speech-bubble';
   start: Point;
   end: Point;
-  filled?: boolean;
 };
 
 export type CheckmarkElement = BaseElement & {
@@ -171,6 +166,6 @@ export type DrawToolContext = {
   readonly fontSize: number;
   readonly fontWeight: 'normal' | 'bold';
   readonly fontStyle: 'normal' | 'italic';
-  readonly filled: boolean;
+  readonly fillColor: string | null;
   readonly viewport: ViewportState;
 };

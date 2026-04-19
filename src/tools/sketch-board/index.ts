@@ -104,7 +104,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     fontSize: parseInt(dom.fontSize.value, 10),
     fontWeight: dom.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal',
     fontStyle: dom.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal',
-    filled: toolbar.isFilled(),
+    fillColor: dom.fillColorIndicator.style.backgroundColor || null,
     viewport: viewport.state,
   });
 
@@ -238,7 +238,15 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   };
 
   const updateColorIndicator = (): void => {
-    dom.colorIndicator.style.backgroundColor = dom.colorInput.value;
+    toolbar.updateColorIndicator(dom.colorInput.value);
+  };
+
+  const updateFillColorIndicator = (color?: string): void => {
+    const c = color || dom.fillColorInput.value;
+    if (c !== 'transparent') {
+      dom.fillColorInput.value = c;
+    }
+    toolbar.updateFillColorIndicator(c);
   };
 
   const onQuickColorClick = (event: Event): void => {
@@ -259,13 +267,23 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     }
   };
 
-  toolbar.setFilledToggleHandler(() => {
+  const onFillQuickColorClick = (event: Event): void => {
+    const target = event.currentTarget as HTMLButtonElement;
+    const color = target.getAttribute('data-color');
+    if (!color) return;
+    updateFillColorIndicator(color);
+    if (
+      'hidePopover' in dom.fillColorPopup &&
+      typeof dom.fillColorPopup.hidePopover === 'function'
+    ) {
+      dom.fillColorPopup.hidePopover();
+    }
     if (elementEditor.getSelectedIds().length > 0) {
       history.push(elements);
-      elementEditor.updateSelectedFilled(elements, toolbar.isFilled());
+      elementEditor.updateSelectedFillColor(elements, color);
       applySelectedChange();
     }
-  });
+  };
 
   toolbar.setMoveToFrontHandler(() => {
     if (elementEditor.getSelectedIds().length > 0) {
@@ -473,6 +491,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     for (const button of dom.quickColorButtons) {
       button.addEventListener('click', onQuickColorClick);
     }
+    for (const button of dom.fillQuickColorButtons) {
+      button.addEventListener('click', onFillQuickColorClick);
+    }
     dom.fontFamily.addEventListener('change', applyTextChange);
     dom.fontSize.addEventListener('input', applyTextChange);
 
@@ -494,6 +515,30 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
         if (preColorSnapshot) {
           history.pushSnapshot(preColorSnapshot);
           preColorSnapshot = null;
+        }
+        hasUnsavedChanges = true;
+        updateUndoRedo();
+      }
+    });
+
+    let preFillColorSnapshot: SketchElement[] | null = null;
+    dom.fillColorInput.addEventListener('input', () => {
+      if (elementEditor.getSelectedIds().length > 0) {
+        if (!preFillColorSnapshot) preFillColorSnapshot = JSON.parse(JSON.stringify(elements));
+        elementEditor.applySelectedFillColor(elements);
+        updateFillColorIndicator();
+        renderer.markDirty();
+        renderer.requestDraw();
+      } else {
+        updateFillColorIndicator();
+      }
+    });
+
+    dom.fillColorInput.addEventListener('change', () => {
+      if (elementEditor.getSelectedIds().length > 0) {
+        if (preFillColorSnapshot) {
+          history.pushSnapshot(preFillColorSnapshot);
+          preFillColorSnapshot = null;
         }
         hasUnsavedChanges = true;
         updateUndoRedo();
@@ -604,6 +649,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   setMode('pan');
   setBackground('checkerboard-bg');
   updateColorIndicator();
+  updateFillColorIndicator('transparent');
   renderer.resizeCanvas();
   renderer.requestDraw();
 
@@ -621,6 +667,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     inputHandler.detach();
     for (const button of dom.quickColorButtons) {
       button.removeEventListener('click', onQuickColorClick);
+    }
+    for (const button of dom.fillQuickColorButtons) {
+      button.removeEventListener('click', onFillQuickColorClick);
     }
     elementEditor.reset();
   };

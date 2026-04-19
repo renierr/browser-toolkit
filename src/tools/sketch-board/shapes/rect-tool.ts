@@ -30,29 +30,34 @@ export class RectTool implements DrawTool {
       id: crypto.randomUUID(),
       type: 'rect',
       color: ctx.color,
+      fillColor: ctx.fillColor ?? undefined,
       width: ctx.strokeWidth,
       start: { ...this.start },
       end: { ...point },
-      filled: ctx.filled,
     };
   }
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    RectTool.draw(canvasCtx, this.start, this.end, ctx.filled);
+    RectTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    fillColor?: string
+  ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
-    if (filled) {
-      ctx.fillStyle = ctx.strokeStyle as string;
+
+    if (fillColor && fillColor !== 'transparent') {
+      ctx.fillStyle = fillColor;
       ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
-    } else {
-      ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
     }
+    ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
   }
 
   reset(): void {

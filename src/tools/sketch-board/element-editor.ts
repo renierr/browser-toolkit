@@ -517,6 +517,27 @@ export class ElementEditor {
     }
   }
 
+  applySelectedFillColor(elements: SketchElement[]): void {
+    if (this.selectedElementIds.size === 0) return;
+    const color = this.dom.fillColorInput.value;
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (el) {
+        this.applyFillColorToElement(el, color);
+      }
+    }
+  }
+
+  updateSelectedFillColor(elements: SketchElement[], color: string | null): void {
+    if (this.selectedElementIds.size === 0) return;
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (el) {
+        this.applyFillColorToElement(el, color ?? undefined);
+      }
+    }
+  }
+
   private applyColorToElement(el: SketchElement, color: string): void {
     el.color = color;
     if (el.type === 'group') {
@@ -526,27 +547,16 @@ export class ElementEditor {
     }
   }
 
-  /** Toggle filled state of the selected shape element */
-  updateSelectedFilled(elements: SketchElement[], filled: boolean): void {
-    if (this.selectedElementIds.size === 0) return;
-    for (const id of this.selectedElementIds) {
-      const el = elements.find((e) => e.id === id);
-      if (el) {
-        this.applyFilledToElement(el, filled);
+  private applyFillColorToElement(el: SketchElement, color: string | undefined): void {
+    el.fillColor = color;
+    if (el.type === 'group') {
+      for (const subEl of el.elements) {
+        this.applyFillColorToElement(subEl, color);
       }
     }
   }
 
-  private applyFilledToElement(el: SketchElement, filled: boolean): void {
-    if ('filled' in el) {
-      (el as any).filled = filled;
-    }
-    if (el.type === 'group') {
-      for (const subEl of el.elements) {
-        this.applyFilledToElement(subEl, filled);
-      }
-    }
-  }
+
 
   deleteSelected(elements: SketchElement[]): SketchElement[] {
     if (this.selectedElementIds.size === 0) return elements;
@@ -1017,6 +1027,7 @@ export class ElementEditor {
   private syncToolbarForElement(el: SketchElement): void {
     // Sync color input to the selected element's color
     this.dom.colorInput.value = el.color;
+    this.toolbar?.updateColorIndicator(el.color);
 
     // Show context-appropriate options via generic option set
     const options = new Set(optionsForElementType(el.type));
@@ -1032,11 +1043,11 @@ export class ElementEditor {
       this.syncBoldItalicButtons(el.fontWeight, el.fontStyle);
     }
 
-    // Sync filled toggle for shapes
-    if ('filled' in el && el.filled) {
-      this.dom.filledToggle.classList.add('btn-primary');
-    } else {
-      this.dom.filledToggle.classList.remove('btn-primary');
+    // Sync fill color
+    const fillColor = el.fillColor || 'transparent';
+    if (fillColor !== 'transparent') {
+      this.dom.fillColorInput.value = fillColor;
     }
+    this.toolbar?.updateFillColorIndicator(fillColor);
   }
 }

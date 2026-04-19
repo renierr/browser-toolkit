@@ -43,7 +43,6 @@ const TOOL_LABELS: Record<ToolMode, string> = {
 export class ToolbarController {
   private readonly dom: SketchDom;
   private onModeChange: ((mode: ToolMode) => void) | null = null;
-  private onFilledToggle: (() => void) | null = null;
   private onMoveToFront: (() => void) | null = null;
   private onMoveToBelow: (() => void) | null = null;
   private onResizeImage: (() => void) | null = null;
@@ -58,10 +57,6 @@ export class ToolbarController {
 
   setModeChangeHandler(handler: (mode: ToolMode) => void): void {
     this.onModeChange = handler;
-  }
-
-  setFilledToggleHandler(handler: () => void): void {
-    this.onFilledToggle = handler;
   }
 
   setMoveToFrontHandler(handler: () => void): void {
@@ -112,8 +107,16 @@ export class ToolbarController {
     this.toolOptionsMap.set(mode, options);
   }
 
-  isFilled(): boolean {
-    return this.dom.filledToggle.classList.contains('btn-primary');
+  updateColorIndicator(color: string): void {
+    this.dom.colorIndicator.style.backgroundColor = color;
+  }
+
+  updateFillColorIndicator(color: string): void {
+    if (color === 'transparent') {
+      this.dom.fillColorIndicator.style.backgroundColor = 'transparent';
+    } else {
+      this.dom.fillColorIndicator.style.backgroundColor = color;
+    }
   }
 
   setMode(next: ToolMode): void {
@@ -215,11 +218,6 @@ export class ToolbarController {
       if (!btn) continue;
       this.on(btn, 'click', () => setMode(mode as ToolMode));
     }
-
-    this.on(dom.filledToggle, 'click', () => {
-      dom.filledToggle.classList.toggle('btn-primary');
-      this.onFilledToggle?.();
-    });
 
     this.on(dom.moveToFront, 'click', () => {
       this.onMoveToFront?.();

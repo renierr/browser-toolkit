@@ -30,35 +30,41 @@ export class DiamondTool implements DrawTool {
       id: crypto.randomUUID(),
       type: 'diamond',
       color: ctx.color,
+      fillColor: ctx.fillColor ?? undefined,
       width: ctx.strokeWidth,
       start: { ...this.start },
       end: { ...point },
-      filled: ctx.filled,
     };
   }
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    DiamondTool.draw(canvasCtx, this.start, this.end, ctx.filled);
+    DiamondTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    fillColor?: string
+  ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
+
     ctx.beginPath();
     ctx.moveTo(rect.x + rect.w / 2, rect.y);
     ctx.lineTo(rect.x + rect.w, rect.y + rect.h / 2);
     ctx.lineTo(rect.x + rect.w / 2, rect.y + rect.h);
     ctx.lineTo(rect.x, rect.y + rect.h / 2);
     ctx.closePath();
-    if (filled) {
-      ctx.fillStyle = ctx.strokeStyle as string;
+
+    if (fillColor && fillColor !== 'transparent') {
+      ctx.fillStyle = fillColor;
       ctx.fill();
-    } else {
-      ctx.stroke();
     }
+    ctx.stroke();
   }
 
   reset(): void {

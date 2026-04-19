@@ -8,7 +8,11 @@ export type SketchDom = {
   colorInput: HTMLInputElement;
   colorIndicator: HTMLDivElement;
   colorPopup: HTMLDivElement;
+  fillColorInput: HTMLInputElement;
+  fillColorIndicator: HTMLDivElement;
+  fillColorPopup: HTMLDivElement;
   quickColorButtons: HTMLButtonElement[];
+  fillQuickColorButtons: HTMLButtonElement[];
   widthInput: HTMLInputElement;
   exportFormat: HTMLSelectElement;
   exportHighDpi: HTMLInputElement;
@@ -53,7 +57,6 @@ export type SketchDom = {
   toolOptTexts: HTMLElement[];
   toolOptImages: HTMLElement[];
   toolOptColors: HTMLElement[];
-  filledToggle: HTMLButtonElement;
   fontFamily: HTMLSelectElement;
   fontSize: HTMLInputElement;
   fontBold: HTMLButtonElement;
@@ -76,7 +79,13 @@ export function getDom(doc: Document): SketchDom | null {
   const colorInput = doc.getElementById('stroke-color') as HTMLInputElement | null;
   const colorIndicator = doc.getElementById('color-indicator') as HTMLDivElement | null;
   const colorPopup = doc.getElementById('color-popup') as HTMLDivElement | null;
+  const fillColorInput = doc.getElementById('fill-color') as HTMLInputElement | null;
+  const fillColorIndicator = doc.getElementById('fill-color-indicator') as HTMLDivElement | null;
+  const fillColorPopup = doc.getElementById('fill-color-popup') as HTMLDivElement | null;
   const quickColorButtons = Array.from(doc.querySelectorAll('.quick-color')) as HTMLButtonElement[];
+  const fillQuickColorButtons = Array.from(
+    doc.querySelectorAll('.fill-quick-color')
+  ) as HTMLButtonElement[];
   const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
   const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
   const exportHighDpi = doc.getElementById('export-high-dpi') as HTMLInputElement | null;
@@ -129,7 +138,6 @@ export function getDom(doc: Document): SketchDom | null {
   const drawToolsLabel = doc.getElementById('draw-tools-label') as HTMLSpanElement | null;
   const drawOptions = doc.getElementById('draw-options') as HTMLElement | null;
   const toolOptions = doc.getElementById('tool-options') as HTMLElement | null;
-  const filledToggle = doc.getElementById('filled-toggle') as HTMLButtonElement | null;
   const fontFamily = doc.getElementById('font-family') as HTMLSelectElement | null;
   const fontSize = doc.getElementById('font-size') as HTMLInputElement | null;
   const fontBold = doc.getElementById('font-bold') as HTMLButtonElement | null;
@@ -157,6 +165,9 @@ export function getDom(doc: Document): SketchDom | null {
     colorInput,
     colorIndicator,
     colorPopup,
+    fillColorInput,
+    fillColorIndicator,
+    fillColorPopup,
     widthInput,
     exportFormat,
     exportHighDpi,
@@ -209,7 +220,6 @@ export function getDom(doc: Document): SketchDom | null {
     drawToolsLabel,
     drawOptions,
     toolOptions,
-    filledToggle,
     fontFamily,
     fontSize,
     fontBold,
@@ -237,7 +247,11 @@ export function getDom(doc: Document): SketchDom | null {
     colorInput: colorInput!,
     colorIndicator: colorIndicator!,
     colorPopup: colorPopup!,
+    fillColorInput: fillColorInput!,
+    fillColorIndicator: fillColorIndicator!,
+    fillColorPopup: fillColorPopup!,
     quickColorButtons,
+    fillQuickColorButtons,
     widthInput: widthInput!,
     exportFormat: exportFormat!,
     exportHighDpi: exportHighDpi!,
@@ -297,7 +311,6 @@ export function getDom(doc: Document): SketchDom | null {
     toolOptTexts,
     toolOptImages,
     toolOptColors,
-    filledToggle: filledToggle!,
     fontFamily: fontFamily!,
     fontSize: fontSize!,
     fontBold: fontBold!,

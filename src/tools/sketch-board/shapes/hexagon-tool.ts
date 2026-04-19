@@ -30,24 +30,34 @@ export class HexagonTool implements DrawTool {
       id: crypto.randomUUID(),
       type: 'hexagon',
       color: ctx.color,
+      fillColor: ctx.fillColor ?? undefined,
       width: ctx.strokeWidth,
       start: { ...this.start },
       end: { ...point },
-      filled: ctx.filled,
     };
   }
 
   drawPreview(canvasCtx: CanvasRenderingContext2D, ctx: DrawToolContext): void {
     if (!this.start || !this.end) return;
     applyPreviewStyle(canvasCtx, ctx.color, ctx.strokeWidth);
-    HexagonTool.draw(canvasCtx, this.start, this.end, ctx.filled);
+    HexagonTool.draw(canvasCtx, this.start, this.end, ctx.fillColor ?? undefined);
     canvasCtx.globalAlpha = 1;
   }
 
-  static draw(ctx: CanvasRenderingContext2D, start: Point, end: Point, filled?: boolean): void {
+  static draw(
+    ctx: CanvasRenderingContext2D,
+    start: Point,
+    end: Point,
+    fillColor?: string
+  ): void {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
-    const { x, y, w, h } = rect;
+
+    const x = rect.x;
+    const y = rect.y;
+    const w = rect.w;
+    const h = rect.h;
+
     ctx.beginPath();
     ctx.moveTo(x + w * 0.25, y);
     ctx.lineTo(x + w * 0.75, y);
@@ -56,12 +66,12 @@ export class HexagonTool implements DrawTool {
     ctx.lineTo(x + w * 0.25, y + h);
     ctx.lineTo(x, y + h * 0.5);
     ctx.closePath();
-    if (filled) {
-      ctx.fillStyle = ctx.strokeStyle as string;
+
+    if (fillColor && fillColor !== 'transparent') {
+      ctx.fillStyle = fillColor;
       ctx.fill();
-    } else {
-      ctx.stroke();
     }
+    ctx.stroke();
   }
 
   reset(): void {
