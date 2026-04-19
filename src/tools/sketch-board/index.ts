@@ -162,6 +162,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   // --- Toolbar mode changes ---
   const setMode = (next: ToolMode): void => {
+    if (elementEditor.isTextInputActive()) {
+      elementEditor.finishTextInput();
+    }
     elementEditor.clearSelection();
     mode = next;
     imageTool.setGetCanvasCenter(getCanvasCenter);
@@ -383,6 +386,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
+    } else if (elementEditor.isTextInputActive()) {
+      elementEditor.updateActiveTextInputStyle(getToolContext());
+      renderer.requestDrawImmediate();
     }
   };
 
@@ -504,6 +510,10 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
         elementEditor.applySelectedColor(elements);
         updateColorIndicator();
         renderer.markDirty();
+        renderer.requestDraw();
+      } else if (elementEditor.isTextInputActive()) {
+        elementEditor.updateActiveTextInputStyle(getToolContext());
+        updateColorIndicator();
         renderer.requestDraw();
       } else {
         updateColorIndicator();

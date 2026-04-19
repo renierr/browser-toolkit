@@ -123,6 +123,10 @@ export class PointerInputHandler {
     }
 
     if (mode === 'text') {
+      if (this.elementEditor.isTextInputActive()) {
+        this.elementEditor.finishTextInput();
+        return;
+      }
       const point = this.viewport.toWorld(e.clientX, e.clientY);
       this.drawStart = point;
       this.drawEnd = point;

@@ -45,6 +45,15 @@ export class ElementEditor {
   private textInputActive = false;
   private pointerDownHitSelected = false;
   private dragStartSnapshot: SketchElement[] | null = null;
+  private activeTextOverlay: {
+    input: HTMLTextAreaElement;
+    onFinish: (element: SketchElement | null) => void;
+    position: Point;
+    toolCtx: DrawToolContext;
+    textTool: TextTool;
+    finish: () => void;
+    cancel: () => void;
+  } | null = null;
 
   constructor(
     dom: SketchDom,
@@ -379,9 +388,12 @@ export class ElementEditor {
     input.style.whiteSpace = 'pre-wrap';
 
     const finish = (): void => {
+      if (!this.activeTextOverlay) return;
+      const { input, textTool, onFinish, position, toolCtx } = this.activeTextOverlay;
       const value = input.value;
       input.remove();
       this.textInputActive = false;
+      this.activeTextOverlay = null;
       textTool.setText(value);
       if (value.trim()) {
         const offsetX = 1;
@@ -398,10 +410,23 @@ export class ElementEditor {
     };
 
     const cancel = (): void => {
+      if (!this.activeTextOverlay) return;
+      const { input, textTool, onFinish } = this.activeTextOverlay;
       input.remove();
       this.textInputActive = false;
+      this.activeTextOverlay = null;
       textTool.reset();
       onFinish(null);
+    };
+
+    this.activeTextOverlay = {
+      input,
+      onFinish,
+      position,
+      toolCtx,
+      textTool,
+      finish,
+      cancel,
     };
 
     input.addEventListener('input', () => {
@@ -420,12 +445,29 @@ export class ElementEditor {
       }
     });
 
-    input.addEventListener('blur', () => {
-      finish();
-    });
-
     document.body.appendChild(input);
     input.focus();
+  }
+
+  finishTextInput(): void {
+    this.activeTextOverlay?.finish();
+  }
+
+  cancelTextInput(): void {
+    this.activeTextOverlay?.cancel();
+  }
+
+  updateActiveTextInputStyle(toolCtx: DrawToolContext): void {
+    if (!this.activeTextOverlay) return;
+    const { input } = this.activeTextOverlay;
+    this.activeTextOverlay.toolCtx = toolCtx;
+    input.style.fontSize = `${toolCtx.fontSize}px`;
+    input.style.fontFamily = toolCtx.fontFamily;
+    input.style.fontWeight = toolCtx.fontWeight;
+    input.style.fontStyle = toolCtx.fontStyle;
+    input.style.color = toolCtx.color;
+    input.style.height = 'auto';
+    input.style.height = `${input.scrollHeight}px`;
   }
 
   editSelectedText(
