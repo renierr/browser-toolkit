@@ -124,7 +124,7 @@ export class SpeechBubbleTool implements DrawTool<SpeechBubbleElement> {
     const outY = Math.max(0, y - tip.y, tip.y - (y + h));
     let gapHalfWidth = Math.min(Math.min(w, h) * 0.3, baseGap + (outX + outY) * 0.1);
 
-    const sideLen = (side === 'top' || side === 'bottom') ? w : h;
+    const sideLen = side === 'top' || side === 'bottom' ? w : h;
     const avail = Math.max(0, sideLen - 2 * r);
     gapHalfWidth = Math.min(gapHalfWidth, (avail / 2) * 0.8);
 
@@ -164,22 +164,30 @@ export class SpeechBubbleTool implements DrawTool<SpeechBubbleElement> {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     if (side === 'top') {
-      ctx.lineTo(pL.x, pL.y); ctx.lineTo(tip.x, tip.y); ctx.lineTo(pR.x, pR.y);
+      ctx.lineTo(pL.x, pL.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(pR.x, pR.y);
     }
     ctx.lineTo(x + w - r, y);
     ctx.quadraticCurveTo(x + w, y, x + w, y + r);
     if (side === 'right') {
-      ctx.lineTo(pR.x, pR.y); ctx.lineTo(tip.x, tip.y); ctx.lineTo(pL.x, pL.y);
+      ctx.lineTo(pR.x, pR.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(pL.x, pL.y);
     }
     ctx.lineTo(x + w, y + h - r);
     ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
     if (side === 'bottom') {
-      ctx.lineTo(pR.x, pR.y); ctx.lineTo(tip.x, tip.y); ctx.lineTo(pL.x, pL.y);
+      ctx.lineTo(pR.x, pR.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(pL.x, pL.y);
     }
     ctx.lineTo(x + r, y + h);
     ctx.quadraticCurveTo(x, y + h, x, y + h - r);
     if (side === 'left') {
-      ctx.lineTo(pL.x, pL.y); ctx.lineTo(tip.x, tip.y); ctx.lineTo(pR.x, pR.y);
+      ctx.lineTo(pL.x, pL.y);
+      ctx.lineTo(tip.x, tip.y);
+      ctx.lineTo(pR.x, pR.y);
     }
     ctx.lineTo(x, y + r);
     ctx.quadraticCurveTo(x, y, x + r, y);
