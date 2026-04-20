@@ -10,11 +10,7 @@ import type { ToolbarController } from './toolbar.ts';
 import type { BrushStyle, DrawToolContext, Point, SketchElement } from './types.ts';
 import {
   type ResizeHandle,
-  getHandleSize,
   getCursorForHandle,
-  getRotationHandlePosition,
-  getHandlePositions,
-  getDefaultTailTip,
   hitTestHandle,
   worldToLocalPoint,
 } from './utils/handles.ts';
@@ -26,6 +22,15 @@ import {
   applyColorRecursive,
   applyWidthRecursive,
 } from './utils/transforms.ts';
+import {
+  deleteElements,
+  duplicateElements,
+  groupElements,
+  ungroupElements,
+  reorderToFront,
+  reorderToBelow,
+} from './utils/element-operations.ts';
+import { drawSelectionDecorations } from './utils/selection-renderer.ts';
 
 const MOVE_THRESHOLD = 5;
 
@@ -447,141 +452,46 @@ export class ElementEditor {
   }
 
   deleteSelected(elements: SketchElement[]): SketchElement[] {
-    if (this.selectedElementIds.size === 0) return elements;
-    const filtered = elements.filter((e) => !this.selectedElementIds.has(e.id));
+    const filtered = deleteElements(elements, this.selectedElementIds);
     this.selectedElementIds.clear();
     this.toolbar?.hideSelectionOptions();
     return filtered;
   }
 
   duplicateSelected(elements: SketchElement[]): { elements: SketchElement[]; newIds: Set<string> } {
-    if (this.selectedElementIds.size === 0) return { elements, newIds: new Set() };
-
-    const idMap = new Map<string, string>();
-
-    const cloneElement = (el: SketchElement): SketchElement => {
-      const clone = JSON.parse(JSON.stringify(el)) as SketchElement;
-      const oldId = clone.id;
-      const newId = `${clone.type}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-      clone.id = newId;
-      idMap.set(oldId, newId);
-
-      if (clone.type === 'group') {
-        clone.elements = clone.elements.map((sub) => cloneElement(sub));
-      }
-      return clone;
-    };
-
-    const newClones: SketchElement[] = [];
-    for (const id of this.selectedElementIds) {
-      const el = elements.find((e) => e.id === id);
-      if (!el) continue;
-      newClones.push(cloneElement(el));
-    }
-
-    // Fix snaps for elements that pointed to other duplicated elements
-    const fixSnaps = (el: SketchElement) => {
-      if ('startSnap' in el && el.startSnap && idMap.has(el.startSnap.elementId)) {
-        el.startSnap.elementId = idMap.get(el.startSnap.elementId)!;
-      }
-      if ('endSnap' in el && el.endSnap && idMap.has(el.endSnap.elementId)) {
-        el.endSnap.elementId = idMap.get(el.endSnap.elementId)!;
-      }
-      if (el.type === 'group') {
-        el.elements.forEach(fixSnaps);
-      }
-    };
-    newClones.forEach(fixSnaps);
-
-    const offset = 20;
-    const resultElements = [...elements];
-    const newIds = new Set<string>();
-
-    for (const clone of newClones) {
-      moveElement(clone, offset, offset);
-      resultElements.push(clone);
-      newIds.add(clone.id);
-    }
-
-    this.selectedElementIds = newIds;
-    return { elements: resultElements, newIds };
+    const res = duplicateElements(elements, this.selectedElementIds);
+    this.selectedElementIds = res.newIds;
+    return res;
   }
 
   moveElementToFront(elements: SketchElement[]): SketchElement[] {
-    if (this.selectedElementIds.size === 0) return elements;
-    const selected: SketchElement[] = [];
-    const remaining: SketchElement[] = [];
-
-    for (const el of elements) {
-      if (this.selectedElementIds.has(el.id)) {
-        selected.push(el);
-      } else {
-        remaining.push(el);
-      }
-    }
-    return [...remaining, ...selected];
+    return reorderToFront(elements, this.selectedElementIds);
   }
 
   moveElementToBelow(elements: SketchElement[]): SketchElement[] {
-    if (this.selectedElementIds.size === 0) return elements;
-    const selected: SketchElement[] = [];
-    const remaining: SketchElement[] = [];
-
-    for (const el of elements) {
-      if (this.selectedElementIds.size > 0 && this.selectedElementIds.has(el.id)) {
-        selected.push(el);
-      } else {
-        remaining.push(el);
-      }
-    }
-    return [...selected, ...remaining];
+    return reorderToBelow(elements, this.selectedElementIds);
   }
 
   groupSelected(elements: SketchElement[]): SketchElement[] {
-    if (this.selectedElementIds.size < 2) return elements;
-
-    const groupElements: SketchElement[] = [];
-    const remainingElements: SketchElement[] = [];
-
-    for (const el of elements) {
-      if (this.selectedElementIds.has(el.id)) {
-        groupElements.push(el);
-      } else {
-        remainingElements.push(el);
-      }
+    const { elements: nextElements, newGroup } = groupElements(elements, this.selectedElementIds);
+    if (newGroup) {
+      this.selectedElementIds.clear();
+      this.selectedElementIds.add(newGroup.id);
+      this.syncToolbarForElement(newGroup);
     }
-
-    const group: SketchElement = {
-      id: `group-${Date.now()}`,
-      type: 'group',
-      elements: groupElements,
-      color: groupElements[0].color,
-      width: groupElements[0].width,
-    };
-
-    remainingElements.push(group);
-    this.selectedElementIds.clear();
-    this.selectedElementIds.add(group.id);
-    this.syncToolbarForElement(group);
-    return remainingElements;
+    return nextElements;
   }
 
   ungroupSelected(elements: SketchElement[]): SketchElement[] {
-    if (this.selectedElementIds.size !== 1) return elements;
-    const id = this.selectedElementIds.values().next().value;
-    const el = elements.find((e) => e.id === id);
-    if (!el || el.type !== 'group') return elements;
-
-    const remainingElements = elements.filter((e) => e.id !== id);
-    this.selectedElementIds.clear();
-
-    for (const subEl of el.elements) {
-      remainingElements.push(subEl);
-      this.selectedElementIds.add(subEl.id);
+    const { elements: nextElements, newSelectedIds } = ungroupElements(
+      elements,
+      this.selectedElementIds
+    );
+    this.selectedElementIds = newSelectedIds;
+    if (this.selectedElementIds.size > 0) {
+      this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill', 'brush', 'width']));
     }
-
-    this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill', 'brush', 'width']));
-    return remainingElements;
+    return nextElements;
   }
 
   resetSelectedRotation(elements: SketchElement[]): void {
@@ -625,103 +535,13 @@ export class ElementEditor {
 
   /** Draw selection highlight and resize handles */
   drawSelection(canvasCtx: CanvasRenderingContext2D, elements: SketchElement[]): void {
-    // Draw selection box if active
-    if (this.selectionBox) {
-      const rect = normalizeRect(this.selectionBox.start, this.selectionBox.end);
-      canvasCtx.fillStyle = 'rgba(37, 99, 235, 0.1)';
-      canvasCtx.strokeStyle = '#2563eb';
-      canvasCtx.lineWidth = 1;
-      canvasCtx.fillRect(rect.x, rect.y, rect.w, rect.h);
-      canvasCtx.strokeRect(rect.x, rect.y, rect.w, rect.h);
-    }
-
-    if (this.selectedElementIds.size === 0) return;
-
-    const handleSize = getHandleSize();
-
-    for (const id of this.selectedElementIds) {
-      const el = elements.find((e) => e.id === id);
-      if (!el) continue;
-
-      const bounds = getElementBounds(canvasCtx, el, true); // unrotated
-      const rotation = el.rotation || 0;
-      const centerX = bounds.x + bounds.w / 2;
-      const centerY = bounds.y + bounds.h / 2;
-
-      canvasCtx.save();
-      if (rotation !== 0) {
-        canvasCtx.translate(centerX, centerY);
-        canvasCtx.rotate(rotation);
-        canvasCtx.translate(-centerX, -centerY);
-      }
-
-      const pad = 4;
-
-      // Dashed bounding box
-      canvasCtx.setLineDash([4, 4]);
-      canvasCtx.strokeStyle = '#2563eb';
-      canvasCtx.lineWidth = 2;
-      canvasCtx.strokeRect(bounds.x - pad, bounds.y - pad, bounds.w + pad * 2, bounds.h + pad * 2);
-      canvasCtx.setLineDash([]);
-
-      // Resize handles (only for single selection)
-      if (this.selectedElementIds.size === 1) {
-        const handles = getHandlePositions(el, bounds);
-        canvasCtx.fillStyle = '#2563eb';
-        canvasCtx.strokeStyle = '#ffffff';
-        canvasCtx.lineWidth = 1;
-        for (const pos of handles) {
-          canvasCtx.fillRect(
-            pos.x - handleSize / 2,
-            pos.y - handleSize / 2,
-            handleSize,
-            handleSize
-          );
-          canvasCtx.strokeRect(
-            pos.x - handleSize / 2,
-            pos.y - handleSize / 2,
-            handleSize,
-            handleSize
-          );
-        }
-
-        // Draw rotation handle
-        const rotHandle = getRotationHandlePosition(bounds);
-        canvasCtx.beginPath();
-        canvasCtx.moveTo(bounds.x + bounds.w / 2, bounds.y - pad);
-        canvasCtx.lineTo(rotHandle.x, rotHandle.y);
-        canvasCtx.stroke();
-
-        canvasCtx.beginPath();
-        canvasCtx.arc(rotHandle.x, rotHandle.y, handleSize / 2, 0, Math.PI * 2);
-        canvasCtx.fill();
-        canvasCtx.stroke();
-
-        // Draw tail handle for speech bubbles
-        if (el.type === 'speech-bubble') {
-          const tailPos = el.tailTip ?? getDefaultTailTip(el);
-          canvasCtx.fillStyle = '#f59e0b';
-          canvasCtx.strokeStyle = '#ffffff';
-          canvasCtx.beginPath();
-          canvasCtx.arc(tailPos.x, tailPos.y, handleSize / 2 + 1, 0, Math.PI * 2);
-          canvasCtx.fill();
-          canvasCtx.stroke();
-        }
-      }
-      canvasCtx.restore();
-    }
-
-    // Draw active snap indicator if resizing in select mode
-    if (this.activeSnapPoint) {
-      canvasCtx.save();
-      canvasCtx.strokeStyle = '#2563eb';
-      canvasCtx.lineWidth = 2;
-      canvasCtx.setLineDash([4, 4]);
-      canvasCtx.beginPath();
-      canvasCtx.arc(this.activeSnapPoint.x, this.activeSnapPoint.y, 10, 0, Math.PI * 2);
-      canvasCtx.stroke();
-      canvasCtx.restore();
-    }
+    drawSelectionDecorations({
+      ctx: canvasCtx,
+      elements,
+      selectedIds: this.selectedElementIds,
+      selectionBox: this.selectionBox,
+      activeSnapPoint: this.activeSnapPoint,
+    });
   }
 
   private doMove(point: Point, elements: SketchElement[]): boolean {
