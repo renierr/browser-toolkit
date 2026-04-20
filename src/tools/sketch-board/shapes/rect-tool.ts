@@ -1,6 +1,6 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyRect } from '../utils/brush-styles.ts';
-import { drawNaturalPath } from '../utils/natural-brush.ts';
+import { drawNaturalPath, sharpenPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -111,7 +111,7 @@ export class RectTool implements DrawTool<RectElement> {
         ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
         ctx.restore();
       }
-      drawNaturalPath(ctx, pts, ctx.lineWidth, ctx.strokeStyle as string);
+      drawNaturalPath(ctx, sharpenPath(pts), ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 

@@ -47,6 +47,36 @@ export function computeSimulatedWidth(
 }
 
 /**
+ * Adds points along straight segments to "sharpen" the Catmull-Rom splines.
+ * This ensures the spline follows the straight lines closely and only curves at the corners.
+ */
+export function sharpenPath(points: Point[], strength: number = 0.95): Point[] {
+  if (points.length < 2) return points;
+  const result: Point[] = [];
+  
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+    
+    result.push(p1);
+    
+    // Add anchor points near the start and end of the segment
+    result.push({
+      x: p1.x + (p2.x - p1.x) * (1 - strength),
+      y: p1.y + (p2.y - p1.y) * (1 - strength),
+    });
+    result.push({
+      x: p1.x + (p2.x - p1.x) * strength,
+      y: p1.y + (p2.y - p1.y) * strength,
+    });
+  }
+  
+  result.push(points[points.length - 1]);
+  return result;
+}
+
+
+/**
  * Draws a path using Catmull-Rom splines and simulated variable width.
  */
 export function drawNaturalPath(
