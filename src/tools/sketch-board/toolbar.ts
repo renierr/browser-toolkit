@@ -146,8 +146,9 @@ export class ToolbarController {
     const dom = this.dom;
     const indicator = dom.strokeWidthIndicator;
     const clampedWidth = Math.min(Math.max(width, 1), 24);
-    const displaySize = clampedWidth;
 
+    // Indicator dot must be visible even for width 1
+    const displaySize = Math.max(clampedWidth, 2);
     indicator.style.width = `${displaySize}px`;
     indicator.style.height = `${displaySize}px`;
 

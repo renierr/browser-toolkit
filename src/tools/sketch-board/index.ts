@@ -264,6 +264,11 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   const updateBrushStyleIndicator = (style: 'normal' | 'shaky'): void => {
     toolbar.updateBrushStyleIndicator(style);
   };
+  
+  const updateStrokeWidthIndicator = () => {
+    const width = parseInt(dom.widthInput.value, 10);
+    toolbar.updateStrokeWidthIndicator(width);
+  };
 
   const onQuickColorClick = (event: Event): void => {
     const target = event.currentTarget as HTMLButtonElement;
@@ -607,10 +612,6 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       }
     });
 
-    const updateStrokeWidthIndicator = () => {
-      const width = parseInt(dom.widthInput.value, 10);
-      toolbar.updateStrokeWidthIndicator(width);
-    };
 
     for (const btn of dom.strokeWidthPresets) {
       btn.addEventListener('click', () => {
@@ -726,6 +727,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   updateColorIndicator();
   updateFillColorIndicator('transparent');
   updateBrushStyleIndicator(dom.brushStyleInput.value as 'normal' | 'shaky');
+  updateStrokeWidthIndicator();
   renderer.resizeCanvas();
   viewport.onZoomChange?.();
   renderer.requestDraw();
