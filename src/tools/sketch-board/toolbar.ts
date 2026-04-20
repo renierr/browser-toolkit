@@ -123,16 +123,23 @@ export class ToolbarController {
     }
   }
 
-  updateBrushStyleIndicator(style: 'normal' | 'shaky'): void {
+  updateBrushStyleIndicator(style: 'normal' | 'shaky' | 'natural'): void {
     const dom = this.dom;
     if (style === 'shaky') {
       dom.brushStyleLabel.textContent = 'Shaky';
       dom.brushNormal.classList.remove('active');
       dom.brushShaky.classList.add('active');
+      dom.brushNatural.classList.remove('active');
+    } else if (style === 'natural') {
+      dom.brushStyleLabel.textContent = 'Natural';
+      dom.brushNormal.classList.remove('active');
+      dom.brushShaky.classList.remove('active');
+      dom.brushNatural.classList.add('active');
     } else {
       dom.brushStyleLabel.textContent = 'Normal';
       dom.brushNormal.classList.add('active');
       dom.brushShaky.classList.remove('active');
+      dom.brushNatural.classList.remove('active');
     }
 
     // Sync with hidden input for data-setting persistence

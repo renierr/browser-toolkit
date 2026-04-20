@@ -1,5 +1,6 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath, drawCachedPath } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -91,6 +92,11 @@ export class FreehandTool implements DrawTool<FreehandElement> {
 
     if (brushStyle === 'shaky') {
       drawShakyPath(ctx, points, false);
+      return;
+    }
+
+    if (brushStyle === 'natural') {
+      drawNaturalPath(ctx, points, ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 

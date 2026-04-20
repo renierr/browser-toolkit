@@ -16,7 +16,7 @@ export type ToolMode =
   | 'image';
 export type DrawMode = Exclude<ToolMode, 'pan' | 'select'>;
 
-export type BrushStyle = 'normal' | 'shaky';
+export type BrushStyle = 'normal' | 'shaky' | 'natural';
 
 export type Point = {
   x: number;

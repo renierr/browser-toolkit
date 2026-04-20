@@ -1,5 +1,6 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   ArrowElement,
@@ -141,45 +142,52 @@ export class ArrowTool implements DrawTool<ArrowElement> {
     const len = Math.hypot(dx, dy);
     if (len < 1) return;
 
+    const headLen = 15;
+    const angle = Math.atan2(dy, dx);
+    const pts = [
+      start,
+      end,
+      {
+        x: end.x - headLen * Math.cos(angle - Math.PI / 6),
+        y: end.y - headLen * Math.sin(angle - Math.PI / 6),
+      },
+      end,
+      {
+        x: end.x - headLen * Math.cos(angle + Math.PI / 6),
+        y: end.y - headLen * Math.sin(angle + Math.PI / 6),
+      },
+    ];
+
     if (brushStyle === 'shaky') {
-      const headLen = 15;
-      const angle = Math.atan2(dy, dx);
-      const points = [
-        start,
-        end,
-        {
-          x: end.x - headLen * Math.cos(angle - Math.PI / 6),
-          y: end.y - headLen * Math.sin(angle - Math.PI / 6),
-        },
-        end,
-        {
-          x: end.x - headLen * Math.cos(angle + Math.PI / 6),
-          y: end.y - headLen * Math.sin(angle + Math.PI / 6),
-        },
-      ];
-      drawShakyPath(ctx, points, false);
+      drawShakyPath(ctx, pts, false);
       return;
     }
 
+    if (brushStyle === 'natural') {
+      drawNaturalPath(ctx, pts, ctx.lineWidth, ctx.strokeStyle as string);
+      return;
+    }
+
+
     const strokeW = ctx.lineWidth;
-    const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
-    const angle = Math.atan2(dy, dx);
+    const strokeHeadLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
+    const strokeAngle = Math.atan2(dy, dx);
     const spread = Math.PI / 6;
 
     // Shaft — stop at the base of the arrowhead
-    const shaftEndX = end.x - headLen * Math.cos(angle);
-    const shaftEndY = end.y - headLen * Math.sin(angle);
+    const shaftEndX = end.x - strokeHeadLen * Math.cos(strokeAngle);
+    const shaftEndY = end.y - strokeHeadLen * Math.sin(strokeAngle);
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(shaftEndX, shaftEndY);
     ctx.stroke();
 
     // Arrowhead — width scales with stroke
-    const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
-    const baseX = end.x - headLen * Math.cos(angle);
-    const baseY = end.y - headLen * Math.sin(angle);
-    const perpX = -Math.sin(angle);
-    const perpY = Math.cos(angle);
+    const halfBase = Math.max(strokeW * 1.5, strokeHeadLen * Math.sin(spread));
+    const baseX = end.x - strokeHeadLen * Math.cos(strokeAngle);
+    const baseY = end.y - strokeHeadLen * Math.sin(strokeAngle);
+    const perpX = -Math.sin(strokeAngle);
+    const perpY = Math.cos(strokeAngle);
 
     ctx.beginPath();
     ctx.moveTo(end.x, end.y);

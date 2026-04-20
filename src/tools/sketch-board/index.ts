@@ -109,7 +109,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     fontWeight: dom.fontBold.classList.contains('btn-primary') ? 'bold' : 'normal',
     fontStyle: dom.fontItalic.classList.contains('btn-primary') ? 'italic' : 'normal',
     fillColor: dom.fillColorIndicator.style.backgroundColor || null,
-    brushStyle: dom.brushStyleInput.value as 'normal' | 'shaky',
+    brushStyle: dom.brushStyleInput.value as 'normal' | 'shaky' | 'natural',
     viewport: viewport.state,
     elements,
   });
@@ -262,7 +262,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     toolbar.updateFillColorIndicator(c);
   };
 
-  const updateBrushStyleIndicator = (style: 'normal' | 'shaky'): void => {
+  const updateBrushStyleIndicator = (style: 'normal' | 'shaky' | 'natural'): void => {
     toolbar.updateBrushStyleIndicator(style);
   };
   
@@ -612,6 +612,15 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
         applySelectedChange();
       }
     });
+    
+    dom.brushNatural.addEventListener('click', () => {
+      updateBrushStyleIndicator('natural');
+      if (elementEditor.getSelectedIds().length > 0) {
+        history.push(elements);
+        elementEditor.applySelectedBrushStyle(elements, 'natural');
+        applySelectedChange();
+      }
+    });
 
 
     for (const btn of dom.strokeWidthPresets) {
@@ -737,7 +746,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   setBackground('checkerboard-bg');
   updateColorIndicator();
   updateFillColorIndicator('transparent');
-  updateBrushStyleIndicator(dom.brushStyleInput.value as 'normal' | 'shaky');
+  updateBrushStyleIndicator(dom.brushStyleInput.value as 'normal' | 'shaky' | 'natural');
   updateStrokeWidthIndicator();
   renderer.resizeCanvas();
   viewport.onZoomChange?.();

@@ -5,6 +5,7 @@ import {
   getArcPoints,
 } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -141,25 +142,41 @@ export class SpeechBubbleTool implements DrawTool<SpeechBubbleElement> {
       pR = { x: cx, y: centerY - gapHalfWidth };
     }
 
-    if (bStyle === 'shaky') {
-      const pts: Point[] = [];
-      pts.push({ x: x + r, y: y });
-      if (side === 'top') pts.push(pL, tip, pR);
-      pts.push({ x: x + w - r, y: y });
-      pts.push(...getArcPoints(r, x + w - r, y + r, -Math.PI / 2, 0));
-      if (side === 'right') pts.push(pR, tip, pL);
-      pts.push({ x: x + w, y: y + h - r });
-      pts.push(...getArcPoints(r, x + w - r, y + h - r, 0, Math.PI / 2));
-      if (side === 'bottom') pts.push(pR, tip, pL);
-      pts.push({ x: x + r, y: y + h });
-      pts.push(...getArcPoints(r, x + r, y + h - r, Math.PI / 2, Math.PI));
-      if (side === 'left') pts.push(pL, tip, pR);
-      pts.push({ x: x, y: y + r });
-      pts.push(...getArcPoints(r, x + r, y + r, Math.PI, 1.5 * Math.PI));
+    const pts: Point[] = [];
+    pts.push({ x: x + r, y: y });
+    if (side === 'top') pts.push(pL, tip, pR);
+    pts.push({ x: x + w - r, y: y });
+    pts.push(...getArcPoints(r, x + w - r, y + r, -Math.PI / 2, 0));
+    if (side === 'right') pts.push(pR, tip, pL);
+    pts.push({ x: x + w, y: y + h - r });
+    pts.push(...getArcPoints(r, x + w - r, y + h - r, 0, Math.PI / 2));
+    if (side === 'bottom') pts.push(pR, tip, pL);
+    pts.push({ x: x + r, y: y + h });
+    pts.push(...getArcPoints(r, x + r, y + h - r, Math.PI / 2, Math.PI));
+    if (side === 'left') pts.push(pL, tip, pR);
+    pts.push({ x: x, y: y + r });
+    pts.push(...getArcPoints(r, x + r, y + r, Math.PI, 1.5 * Math.PI));
 
+    if (bStyle === 'shaky') {
       drawShakyPath(ctx, pts, true, fillColor);
       return;
     }
+
+    if (bStyle === 'natural') {
+      if (fillColor && fillColor !== 'transparent') {
+        ctx.save();
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      drawNaturalPath(ctx, pts, ctx.lineWidth, ctx.strokeStyle as string);
+      return;
+    }
+
 
     ctx.beginPath();
     ctx.moveTo(x + r, y);
