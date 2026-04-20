@@ -14,7 +14,7 @@ import type {
 export class CheckmarkTool implements DrawTool<CheckmarkElement> {
   readonly mode = 'checkmark' as const;
   readonly streamsLive = false;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush', 'width']);
 
   private start: Point | null = null;
   private end: Point | null = null;

@@ -14,7 +14,7 @@ import type {
 export class FreehandTool implements DrawTool<FreehandElement> {
   readonly mode = 'freehand' as const;
   readonly streamsLive = true;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush', 'width']);
 
   private points: Point[] = [];
 

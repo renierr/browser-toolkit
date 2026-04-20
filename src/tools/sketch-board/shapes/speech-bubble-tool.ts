@@ -29,7 +29,7 @@ type StaticDrawParams = {
 export class SpeechBubbleTool implements DrawTool<SpeechBubbleElement> {
   readonly mode = 'speech-bubble' as const;
   readonly streamsLive = false;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'fill', 'brush']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'fill', 'brush', 'width']);
 
   private start: Point | null = null;
   private end: Point | null = null;

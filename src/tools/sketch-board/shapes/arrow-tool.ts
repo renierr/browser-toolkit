@@ -16,7 +16,7 @@ import { getSnapTarget } from '../utils/snapping.ts';
 export class ArrowTool implements DrawTool<ArrowElement> {
   readonly mode = 'arrow' as const;
   readonly streamsLive = false;
-  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush']);
+  readonly toolOptions: ReadonlySet<ToolOptionId> = new Set(['color', 'brush', 'width']);
 
   private start: Point | null = null;
   private end: Point | null = null;
