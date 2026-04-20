@@ -153,3 +153,13 @@ export function applyColorRecursive(
     }
   }
 }
+
+/** Recursively apply a width to an element and its children */
+export function applyWidthRecursive(el: SketchElement, width: number): void {
+  el.width = width;
+  if (el.type === 'group') {
+    for (const subEl of el.elements) {
+      applyWidthRecursive(subEl, width);
+    }
+  }
+}

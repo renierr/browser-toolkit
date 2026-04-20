@@ -9,7 +9,8 @@ export type ToolOptionId =
   | 'group'
   | 'ungroup'
   | 'rotation'
-  | 'brush';
+  | 'brush'
+  | 'width';
 
 /** Contract for draw tool implementations. Each shape tool implements this. */
 export type DrawTool<T extends SketchElement = SketchElement> = {
@@ -39,13 +40,13 @@ export function optionsForElementType(type: string): ReadonlySet<ToolOptionId> {
     case 'diamond':
     case 'hexagon':
     case 'speech-bubble':
-      return new Set(['color', 'fill', 'brush']);
+      return new Set(['color', 'fill', 'brush', 'width']);
     case 'line':
     case 'arrow':
     case 'double-arrow':
     case 'checkmark':
     case 'freehand':
-      return new Set(['color', 'brush']);
+      return new Set(['color', 'brush', 'width']);
     default:
       return new Set(['color']);
   }

@@ -24,6 +24,7 @@ import {
   scaleElement,
   updateSnappedElements,
   applyColorRecursive,
+  applyWidthRecursive,
 } from './utils/transforms.ts';
 
 const MOVE_THRESHOLD = 5;
@@ -393,8 +394,8 @@ export class ElementEditor {
     if (this.selectedElementIds.size === 0) return;
     for (const id of this.selectedElementIds) {
       const el = elements.find((e) => e.id === id);
-      if (el && 'strokeWidth' in el) {
-        (el as SketchElement & { strokeWidth: number }).strokeWidth = width;
+      if (el) {
+        applyWidthRecursive(el, width);
       }
     }
     this.toolbar?.updateStrokeWidthIndicator(width);
@@ -857,6 +858,12 @@ export class ElementEditor {
       this.toolbar?.updateBrushStyleIndicator(el.brushStyle);
     } else {
       this.toolbar?.updateBrushStyleIndicator('normal');
+    }
+
+    // Sync stroke width
+    if (el.width !== undefined && el.type !== 'image' && el.type !== 'text') {
+      this.dom.widthInput.value = String(el.width);
+      this.toolbar?.updateStrokeWidthIndicator(el.width);
     }
 
     // Sync fill color

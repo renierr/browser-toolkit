@@ -345,6 +345,12 @@ export class ToolbarController {
       else el.classList.add('hidden');
     }
 
+    // Stroke width
+    for (const el of dom.toolOptWidths) {
+      if (options.has('width')) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
+
     // Grouping
     if (options.has('group')) dom.groupElements.classList.remove('hidden');
     else dom.groupElements.classList.add('hidden');

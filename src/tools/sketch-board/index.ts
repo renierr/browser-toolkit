@@ -622,7 +622,14 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       });
     }
 
-    dom.widthInput.addEventListener('input', updateStrokeWidthIndicator);
+    dom.widthInput.addEventListener('input', () => {
+      updateStrokeWidthIndicator();
+      if (elementEditor.getSelectedIds().length > 0) {
+        elementEditor.applySelectedStrokeWidth(elements, parseInt(dom.widthInput.value, 10));
+        renderer.markDirty();
+        renderer.requestDraw();
+      }
+    });
     dom.widthInput.addEventListener('change', () => {
       if (elementEditor.getSelectedIds().length > 0) {
         history.push(elements);

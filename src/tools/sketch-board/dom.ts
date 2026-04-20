@@ -64,6 +64,7 @@ export type SketchDom = {
   toolOptImages: HTMLElement[];
   toolOptColors: HTMLElement[];
   toolOptBrushes: HTMLElement[];
+  toolOptWidths: HTMLElement[];
   fontFamily: HTMLSelectElement;
   fontSize: HTMLInputElement;
   fontBold: HTMLButtonElement;
@@ -182,6 +183,7 @@ export function getDom(doc: Document): SketchDom | null {
   const toolOptImages = Array.from(doc.querySelectorAll('.tool-opt-image')) as HTMLElement[];
   const toolOptColors = Array.from(doc.querySelectorAll('.tool-opt-color')) as HTMLElement[];
   const toolOptBrushes = Array.from(doc.querySelectorAll('.tool-opt-brush')) as HTMLElement[];
+  const toolOptWidths = Array.from(doc.querySelectorAll('.tool-opt-width')) as HTMLElement[];
   const brushStyleBtn = doc.getElementById('brush-style-btn') as HTMLButtonElement | null;
   const brushStylePopup = doc.getElementById('brush-style-popup') as HTMLDivElement | null;
   const brushNormal = doc.getElementById('brush-normal') as HTMLButtonElement | null;
@@ -362,6 +364,7 @@ export function getDom(doc: Document): SketchDom | null {
     toolOptImages,
     toolOptColors,
     toolOptBrushes,
+    toolOptWidths,
     fontFamily: fontFamily!,
     fontSize: fontSize!,
     fontBold: fontBold!,
