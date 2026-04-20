@@ -25,23 +25,26 @@ export function computeSimulatedWidth(
   prevWidth: number
 ): number {
   const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-  
+
   // Velocity simulation: scale distance to a reasonable 0-1 range
   // 0px = static, 30px+ = very fast
   const velocity = Math.min(1, dist / 25);
-  
+
   // Natural feels: faster is thinner
   // use exponential decay for thickness
   const velocityFactor = Math.exp(-velocity * 1.5);
-  
+
   // Sensitivity settings
   const minWidthFactor = 0.4;
   const maxWidthFactor = 1.2;
   const velocityInfluence = 0.8;
-  
+
   const targetWidth = baseWidth * (1 - velocityInfluence + velocityFactor * velocityInfluence);
-  const clampedWidth = Math.max(baseWidth * minWidthFactor, Math.min(baseWidth * maxWidthFactor, targetWidth));
-  
+  const clampedWidth = Math.max(
+    baseWidth * minWidthFactor,
+    Math.min(baseWidth * maxWidthFactor, targetWidth)
+  );
+
   // Smoothing: 25% new width, 75% old width
   return prevWidth * 0.75 + clampedWidth * 0.25;
 }
@@ -53,13 +56,13 @@ export function computeSimulatedWidth(
 export function sharpenPath(points: Point[], strength: number = 0.95): Point[] {
   if (points.length < 2) return points;
   const result: Point[] = [];
-  
+
   for (let i = 0; i < points.length - 1; i++) {
     const p1 = points[i];
     const p2 = points[i + 1];
-    
+
     result.push(p1);
-    
+
     // Add anchor points near the start and end of the segment
     result.push({
       x: p1.x + (p2.x - p1.x) * (1 - strength),
@@ -70,11 +73,10 @@ export function sharpenPath(points: Point[], strength: number = 0.95): Point[] {
       y: p1.y + (p2.y - p1.y) * strength,
     });
   }
-  
+
   result.push(points[points.length - 1]);
   return result;
 }
-
 
 /**
  * Draws a path using Catmull-Rom splines and simulated variable width.
@@ -109,7 +111,7 @@ export function drawNaturalPath(
     const p3 = points[Math.min(points.length - 1, i + 2)];
 
     const { c1x, c1y, c2x, c2y } = getCatmullRomControlPoints(p0, p1, p2, p3);
-    
+
     // Simulate width for this segment
     const w = computeSimulatedWidth(p1, p2, baseWidth, prevWidth);
     prevWidth = w;

@@ -169,7 +169,6 @@ export class ArrowTool implements DrawTool<ArrowElement> {
       return;
     }
 
-
     const strokeW = ctx.lineWidth;
     const strokeHeadLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
     const strokeAngle = Math.atan2(dy, dx);

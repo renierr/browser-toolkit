@@ -26,7 +26,11 @@ export type EventSetupParams = {
   imageTool: ImageTool;
 
   getState: () => { mode: ToolMode; elements: SketchElement[]; hasUnsavedChanges: boolean };
-  setState: (patch: { elements?: SketchElement[]; hasUnsavedChanges?: boolean; mode?: ToolMode }) => void;
+  setState: (patch: {
+    elements?: SketchElement[];
+    hasUnsavedChanges?: boolean;
+    mode?: ToolMode;
+  }) => void;
   getToolContext: () => DrawToolContext;
   getCanvasCenter: () => { x: number; y: number };
 

@@ -72,7 +72,10 @@ export function duplicateElements(
 /**
  * Moves selected elements to the front (top) of the stack
  */
-export function reorderToFront(elements: SketchElement[], selectedIds: Set<string>): SketchElement[] {
+export function reorderToFront(
+  elements: SketchElement[],
+  selectedIds: Set<string>
+): SketchElement[] {
   if (selectedIds.size === 0) return elements;
   const selected: SketchElement[] = [];
   const remaining: SketchElement[] = [];
@@ -90,7 +93,10 @@ export function reorderToFront(elements: SketchElement[], selectedIds: Set<strin
 /**
  * Moves selected elements to the back (bottom) of the stack
  */
-export function reorderToBelow(elements: SketchElement[], selectedIds: Set<string>): SketchElement[] {
+export function reorderToBelow(
+  elements: SketchElement[],
+  selectedIds: Set<string>
+): SketchElement[] {
   if (selectedIds.size === 0) return elements;
   const selected: SketchElement[] = [];
   const remaining: SketchElement[] = [];

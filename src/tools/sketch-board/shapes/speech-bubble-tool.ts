@@ -177,7 +177,6 @@ export class SpeechBubbleTool implements DrawTool<SpeechBubbleElement> {
       return;
     }
 
-
     ctx.beginPath();
     ctx.moveTo(x + r, y);
     if (side === 'top') {
