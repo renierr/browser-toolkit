@@ -1,6 +1,6 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
-import { drawNaturalPath } from '../utils/natural-brush.ts';
+import { drawNaturalPath, sharpenPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   ArrowElement,
@@ -142,11 +142,10 @@ export class ArrowTool implements DrawTool<ArrowElement> {
     const len = Math.hypot(dx, dy);
     if (len < 1) return;
 
-    const headLen = 15;
+    const headLen = Math.min(len * 0.3, Math.max(ctx.lineWidth * 3.5, 12));
     const angle = Math.atan2(dy, dx);
-    const pts = [
-      start,
-      end,
+    const shaftPts = [start, end];
+    const headPts = [
       {
         x: end.x - headLen * Math.cos(angle - Math.PI / 6),
         y: end.y - headLen * Math.sin(angle - Math.PI / 6),
@@ -159,12 +158,14 @@ export class ArrowTool implements DrawTool<ArrowElement> {
     ];
 
     if (brushStyle === 'shaky') {
-      drawShakyPath(ctx, pts, false);
+      drawShakyPath(ctx, shaftPts, false);
+      drawShakyPath(ctx, headPts, false);
       return;
     }
 
     if (brushStyle === 'natural') {
-      drawNaturalPath(ctx, pts, ctx.lineWidth, ctx.strokeStyle as string);
+      drawNaturalPath(ctx, shaftPts, ctx.lineWidth, ctx.strokeStyle as string);
+      drawNaturalPath(ctx, sharpenPath(headPts), ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 

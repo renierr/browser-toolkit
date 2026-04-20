@@ -1,6 +1,6 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
-import { drawNaturalPath } from '../utils/natural-brush.ts';
+import { drawNaturalPath, sharpenPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -142,7 +142,7 @@ export class DoubleArrowTool implements DrawTool<DoubleArrowElement> {
     const len = Math.hypot(dx, dy);
     if (len < 1) return;
 
-    const hLen = 15;
+    const hLen = Math.min(len * 0.3, Math.max(ctx.lineWidth * 3.5, 12));
     const ang = Math.atan2(dy, dx);
     const ptsStart = [
       {
@@ -176,9 +176,9 @@ export class DoubleArrowTool implements DrawTool<DoubleArrowElement> {
     }
 
     if (brushStyle === 'natural') {
-      drawNaturalPath(ctx, ptsStart, ctx.lineWidth, ctx.strokeStyle as string);
+      drawNaturalPath(ctx, sharpenPath(ptsStart), ctx.lineWidth, ctx.strokeStyle as string);
       drawNaturalPath(ctx, ptsLine, ctx.lineWidth, ctx.strokeStyle as string);
-      drawNaturalPath(ctx, ptsEnd, ctx.lineWidth, ctx.strokeStyle as string);
+      drawNaturalPath(ctx, sharpenPath(ptsEnd), ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 
