@@ -389,6 +389,17 @@ export class ElementEditor {
     this.toolbar?.updateBrushStyleIndicator(style);
   }
 
+  applySelectedStrokeWidth(elements: SketchElement[], width: number): void {
+    if (this.selectedElementIds.size === 0) return;
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (el && 'strokeWidth' in el) {
+        (el as SketchElement & { strokeWidth: number }).strokeWidth = width;
+      }
+    }
+    this.toolbar?.updateStrokeWidthIndicator(width);
+  }
+
   updateSelectedText(elements: SketchElement[]): void {
     if (this.selectedElementIds.size !== 1) return;
     const id = this.selectedElementIds.values().next().value;

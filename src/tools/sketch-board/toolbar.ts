@@ -142,6 +142,26 @@ export class ToolbarController {
     }
   }
 
+  updateStrokeWidthIndicator(width: number): void {
+    const dom = this.dom;
+    const indicator = dom.strokeWidthIndicator;
+    const clampedWidth = Math.min(Math.max(width, 1), 24);
+    const displaySize = clampedWidth;
+
+    indicator.style.width = `${displaySize}px`;
+    indicator.style.height = `${displaySize}px`;
+
+    // Highlight active preset if it matches
+    for (const btn of dom.strokeWidthPresets) {
+      const presetWidth = parseInt((btn as HTMLButtonElement).dataset.width ?? '0', 10);
+      if (presetWidth === clampedWidth) {
+        btn.classList.add('btn-active', 'border-primary');
+      } else {
+        btn.classList.remove('btn-active', 'border-primary');
+      }
+    }
+  }
+
   setMode(next: ToolMode): void {
     const dom = this.dom;
     closeDrawToolsDropdown();

@@ -14,6 +14,10 @@ export type SketchDom = {
   quickColorButtons: HTMLButtonElement[];
   fillQuickColorButtons: HTMLButtonElement[];
   widthInput: HTMLInputElement;
+  strokeWidthBtn: HTMLButtonElement;
+  strokeWidthIndicator: HTMLDivElement;
+  strokeWidthPopup: HTMLDivElement;
+  strokeWidthPresets: HTMLElement[];
   exportFormat: HTMLSelectElement;
   exportHighDpi: HTMLInputElement;
   btnBackOverview: HTMLButtonElement;
@@ -97,6 +101,14 @@ export function getDom(doc: Document): SketchDom | null {
     doc.querySelectorAll('.fill-quick-color')
   ) as HTMLButtonElement[];
   const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
+  const strokeWidthBtn = doc.getElementById('stroke-width-btn') as HTMLButtonElement | null;
+  const strokeWidthIndicator = doc.getElementById(
+    'stroke-width-indicator'
+  ) as HTMLDivElement | null;
+  const strokeWidthPopup = doc.getElementById('stroke-width-popup') as HTMLDivElement | null;
+  const strokeWidthPresets = Array.from(
+    doc.querySelectorAll('.stroke-width-preset')
+  ) as HTMLElement[];
   const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
   const exportHighDpi = doc.getElementById('export-high-dpi') as HTMLInputElement | null;
   const btnBackOverview = doc.getElementById('back-overview') as HTMLButtonElement | null;
@@ -189,6 +201,9 @@ export function getDom(doc: Document): SketchDom | null {
     fillColorIndicator,
     fillColorPopup,
     widthInput,
+    strokeWidthBtn,
+    strokeWidthIndicator,
+    strokeWidthPopup,
     exportFormat,
     exportHighDpi,
     btnBackOverview,
@@ -282,6 +297,10 @@ export function getDom(doc: Document): SketchDom | null {
     quickColorButtons,
     fillQuickColorButtons,
     widthInput: widthInput!,
+    strokeWidthBtn: strokeWidthBtn!,
+    strokeWidthIndicator: strokeWidthIndicator!,
+    strokeWidthPopup: strokeWidthPopup!,
+    strokeWidthPresets,
     exportFormat: exportFormat!,
     exportHighDpi: exportHighDpi!,
     btnBackOverview: btnBackOverview!,

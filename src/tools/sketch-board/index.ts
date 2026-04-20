@@ -606,6 +606,29 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
         applySelectedChange();
       }
     });
+
+    const updateStrokeWidthIndicator = () => {
+      const width = parseInt(dom.widthInput.value, 10);
+      toolbar.updateStrokeWidthIndicator(width);
+    };
+
+    for (const btn of dom.strokeWidthPresets) {
+      btn.addEventListener('click', () => {
+        const width = parseInt((btn as HTMLButtonElement).dataset.width ?? '3', 10);
+        dom.widthInput.value = width.toString();
+        updateStrokeWidthIndicator();
+        dom.widthInput.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+
+    dom.widthInput.addEventListener('input', updateStrokeWidthIndicator);
+    dom.widthInput.addEventListener('change', () => {
+      if (elementEditor.getSelectedIds().length > 0) {
+        history.push(elements);
+        elementEditor.applySelectedStrokeWidth(elements, parseInt(dom.widthInput.value, 10));
+        applySelectedChange();
+      }
+    });
   };
 
   const setupElementEvents = () => {
