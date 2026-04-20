@@ -40,6 +40,7 @@ export function optionsForElementType(type: string): ReadonlySet<ToolOptionId> {
     case 'diamond':
     case 'hexagon':
     case 'speech-bubble':
+    case 'group':
       return new Set(['color', 'fill', 'brush', 'width']);
     case 'line':
     case 'arrow':

@@ -166,7 +166,7 @@ export class ElementEditor {
         if (this.selectedElementIds.size === 1) {
           this.syncToolbarForElement(el);
         } else {
-          this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill']));
+          this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill', 'brush', 'width']));
         }
 
         this.dom.canvas.setAttribute('data-cursor', 'move');
@@ -265,7 +265,7 @@ export class ElementEditor {
           const el = elements.find((e) => e.id === id);
           if (el) this.syncToolbarForElement(el);
         } else {
-          this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill']));
+          this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill', 'brush', 'width']));
         }
       }
       return { pushed: false, hasUnsavedChanges: hasUnsaved };
@@ -527,7 +527,7 @@ export class ElementEditor {
       this.selectedElementIds.add(subEl.id);
     }
 
-    this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill']));
+    this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill', 'brush', 'width']));
     return remainingElements;
   }
 
