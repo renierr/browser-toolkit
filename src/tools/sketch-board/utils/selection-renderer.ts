@@ -13,6 +13,7 @@ export type SelectionRenderParams = {
   elements: SketchElement[];
   selectedIds: Set<string>;
   selectionBox: { start: Point; end: Point } | null;
+  lassoPath: Point[] | null;
   activeSnapPoint: Point | null;
 };
 
@@ -20,7 +21,7 @@ export type SelectionRenderParams = {
  * Draws selection highlights, bounding boxes, handles, and snap indicators
  */
 export function drawSelectionDecorations(params: SelectionRenderParams): void {
-  const { ctx, elements, selectedIds, selectionBox, activeSnapPoint } = params;
+  const { ctx, elements, selectedIds, selectionBox, lassoPath, activeSnapPoint } = params;
 
   // Draw selection box if active
   if (selectionBox) {
@@ -30,6 +31,23 @@ export function drawSelectionDecorations(params: SelectionRenderParams): void {
     ctx.lineWidth = 1;
     ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
     ctx.strokeRect(rect.x, rect.y, rect.w, rect.h);
+  }
+
+  // Draw lasso path if active
+  if (lassoPath && lassoPath.length > 1) {
+    ctx.beginPath();
+    ctx.moveTo(lassoPath[0].x, lassoPath[0].y);
+    for (let i = 1; i < lassoPath.length; i++) {
+      ctx.lineTo(lassoPath[i].x, lassoPath[i].y);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(37, 99, 235, 0.1)';
+    ctx.strokeStyle = '#2563eb';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
   }
 
   if (selectedIds.size === 0) return;
@@ -68,18 +86,8 @@ export function drawSelectionDecorations(params: SelectionRenderParams): void {
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 1;
       for (const pos of handles) {
-        ctx.fillRect(
-          pos.x - handleSize / 2,
-          pos.y - handleSize / 2,
-          handleSize,
-          handleSize
-        );
-        ctx.strokeRect(
-          pos.x - handleSize / 2,
-          pos.y - handleSize / 2,
-          handleSize,
-          handleSize
-        );
+        ctx.fillRect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize);
+        ctx.strokeRect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize);
       }
 
       // Draw rotation handle

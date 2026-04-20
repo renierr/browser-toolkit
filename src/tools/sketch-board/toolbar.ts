@@ -2,7 +2,7 @@ import { renderToolIconSvg } from '@js/tool-icons.ts';
 import type { ToolOptionId } from './shapes/base-tool.ts';
 import type { SketchDom } from './dom.ts';
 import type { HistoryManager } from './history.ts';
-import type { DrawMode, ToolMode } from './types.ts';
+import type { DrawMode, SelectionType, ToolMode } from './types.ts';
 
 const TOOL_ICONS: Record<ToolMode, string> = {
   pan: 'hand',
@@ -50,6 +50,7 @@ export class ToolbarController {
   private onUngroup: (() => void) | null = null;
   private onDuplicate: (() => void) | null = null;
   private onResetRotation: (() => void) | null = null;
+  private onSelectionTypeChange: ((type: SelectionType) => void) | null = null;
   private readonly listeners: Array<{ el: EventTarget; type: string; fn: EventListener }> = [];
   private toolOptionsMap = new Map<DrawMode, ReadonlySet<ToolOptionId>>();
 
@@ -82,6 +83,9 @@ export class ToolbarController {
   }
   setDuplicateHandler(handler: () => void): void {
     this.onDuplicate = handler;
+  }
+  setSelectionTypeChangeHandler(handler: (type: SelectionType) => void): void {
+    this.onSelectionTypeChange = handler;
   }
 
   updateUndoRedo(history: HistoryManager): void {
@@ -174,6 +178,17 @@ export class ToolbarController {
     }
   }
 
+  updateSelectionTypeIndicator(type: SelectionType): void {
+    const dom = this.dom;
+    if (type === 'lasso') {
+      dom.btnSelectBox.classList.remove('btn-primary');
+      dom.btnSelectLasso.classList.add('btn-primary');
+    } else {
+      dom.btnSelectBox.classList.add('btn-primary');
+      dom.btnSelectLasso.classList.remove('btn-primary');
+    }
+  }
+
   setMode(next: ToolMode): void {
     const dom = this.dom;
     closeDrawToolsDropdown();
@@ -210,7 +225,7 @@ export class ToolbarController {
       this.applyToolOptions(opts);
     } else {
       // Pan/select: hide all tool options (select will be driven by ElementEditor)
-      this.applyToolOptions(new Set());
+      this.applyToolOptions(isSelectMode ? new Set(['select-type']) : new Set());
     }
 
     // Delete button hidden — ElementEditor shows it on selection
@@ -301,6 +316,12 @@ export class ToolbarController {
     this.on(dom.duplicateElement, 'click', () => {
       this.onDuplicate?.();
     });
+    this.on(dom.btnSelectBox, 'click', () => {
+      this.onSelectionTypeChange?.('box');
+    });
+    this.on(dom.btnSelectLasso, 'click', () => {
+      this.onSelectionTypeChange?.('lasso');
+    });
   }
 
   detach(): void {
@@ -364,6 +385,12 @@ export class ToolbarController {
     // Stroke width
     for (const el of dom.toolOptWidths) {
       if (options.has('width')) el.classList.remove('hidden');
+      else el.classList.add('hidden');
+    }
+
+    // Selection type
+    for (const el of dom.toolOptSelectTypes) {
+      if (options.has('select-type')) el.classList.remove('hidden');
       else el.classList.add('hidden');
     }
 

@@ -1,4 +1,5 @@
-import { getElementBounds, isPointInBounds } from './utils/bounds.ts';
+import { getElementBounds, isPointInBounds, getElementCenter } from './utils/bounds.ts';
+import { isPointInPolygon } from './utils/geometry.ts';
 import { normalizeRect } from './utils/drawing-shared.ts';
 import type { SketchDom } from './dom.ts';
 import type { HistoryManager } from './history.ts';
@@ -7,7 +8,7 @@ import { optionsForElementType } from './shapes/base-tool.ts';
 import type { TextTool } from './shapes/text-tool.ts';
 import { TextOverlayManager } from './text-overlay.ts';
 import type { ToolbarController } from './toolbar.ts';
-import type { BrushStyle, DrawToolContext, Point, SketchElement } from './types.ts';
+import type { BrushStyle, DrawToolContext, Point, SelectionType, SketchElement } from './types.ts';
 import {
   type ResizeHandle,
   getCursorForHandle,
@@ -55,6 +56,8 @@ export class ElementEditor {
   private pointerDownHitSelected = false;
   private dragStartSnapshot: SketchElement[] | null = null;
   private activeSnapPoint: Point | null = null;
+  private selectionType: SelectionType = 'box';
+  private lassoPath: Point[] | null = null;
 
   constructor(
     dom: SketchDom,
@@ -106,6 +109,7 @@ export class ElementEditor {
   ): { found: boolean; elementId: string | null } {
     this.pointerDownHitSelected = false;
     this.selectionBox = null;
+    this.lassoPath = null;
 
     // Check resize/rotate handles first (only if single element selected for now)
     if (this.selectedElementIds.size === 1) {
@@ -184,7 +188,11 @@ export class ElementEditor {
     if (!shiftKey) {
       this.selectedElementIds.clear();
     }
-    this.selectionBox = { start: { ...point }, end: { ...point } };
+    if (this.selectionType === 'lasso') {
+      this.lassoPath = [{ ...point }];
+    } else {
+      this.selectionBox = { start: { ...point }, end: { ...point } };
+    }
     this.isDragging = false;
     this.isResizing = false;
     this.activeHandle = null;
@@ -196,6 +204,11 @@ export class ElementEditor {
   handleSelectPointerMove(point: Point, elements: SketchElement[]): boolean {
     if (this.selectionBox) {
       this.selectionBox.end = { ...point };
+      return true;
+    }
+
+    if (this.lassoPath) {
+      this.lassoPath.push({ ...point });
       return true;
     }
 
@@ -265,13 +278,23 @@ export class ElementEditor {
       }
       this.selectionBox = null;
       if (this.selectedElementIds.size > 0) {
-        if (this.selectedElementIds.size === 1) {
-          const id = this.selectedElementIds.values().next().value;
-          const el = elements.find((e) => e.id === id);
-          if (el) this.syncToolbarForElement(el);
-        } else {
-          this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill', 'brush', 'width']));
+        this.updateSelectionToolbar(elements);
+      }
+      return { pushed: false, hasUnsavedChanges: hasUnsaved };
+    }
+
+    if (this.lassoPath) {
+      if (this.lassoPath.length > 2) {
+        for (const el of elements) {
+          const center = getElementCenter(this.ctx, el);
+          if (isPointInPolygon(center, this.lassoPath)) {
+            this.selectedElementIds.add(el.id);
+          }
         }
+      }
+      this.lassoPath = null;
+      if (this.selectedElementIds.size > 0) {
+        this.updateSelectionToolbar(elements);
       }
       return { pushed: false, hasUnsavedChanges: hasUnsaved };
     }
@@ -517,9 +540,24 @@ export class ElementEditor {
     }
   }
 
+  setSelectionType(type: SelectionType): void {
+    this.selectionType = type;
+  }
+
+  private updateSelectionToolbar(elements: SketchElement[]): void {
+    if (this.selectedElementIds.size === 1) {
+      const id = this.selectedElementIds.values().next().value;
+      const el = elements.find((e) => e.id === id);
+      if (el) this.syncToolbarForElement(el);
+    } else {
+      this.toolbar?.showSelectionOptions(new Set(['group', 'color', 'fill', 'brush', 'width']));
+    }
+  }
+
   reset(): void {
     this.selectedElementIds.clear();
     this.selectionBox = null;
+    this.lassoPath = null;
     this.isDragging = false;
     this.isResizing = false;
     this.isRotating = false;
@@ -540,6 +578,7 @@ export class ElementEditor {
       elements,
       selectedIds: this.selectedElementIds,
       selectionBox: this.selectionBox,
+      lassoPath: this.lassoPath,
       activeSnapPoint: this.activeSnapPoint,
     });
   }

@@ -10,7 +10,8 @@ export type ToolOptionId =
   | 'ungroup'
   | 'rotation'
   | 'brush'
-  | 'width';
+  | 'width'
+  | 'select-type';
 
 /** Contract for draw tool implementations. Each shape tool implements this. */
 export type DrawTool<T extends SketchElement = SketchElement> = {

@@ -84,6 +84,9 @@ export type SketchDom = {
   brushNatural: HTMLButtonElement;
   brushStyleLabel: HTMLSpanElement;
   brushStyleInput: HTMLInputElement;
+  btnSelectBox: HTMLButtonElement;
+  btnSelectLasso: HTMLButtonElement;
+  toolOptSelectTypes: HTMLElement[];
   textInputOverlay: HTMLDivElement | null;
   zoomToast: HTMLDivElement | null;
 };
@@ -194,6 +197,11 @@ export function getDom(doc: Document): SketchDom | null {
   const brushNatural = doc.getElementById('brush-natural') as HTMLButtonElement | null;
   const brushStyleLabel = doc.getElementById('brush-style-label') as HTMLSpanElement | null;
   const brushStyleInput = doc.getElementById('brush-style') as HTMLInputElement | null;
+  const btnSelectBox = doc.getElementById('select-box') as HTMLButtonElement | null;
+  const btnSelectLasso = doc.getElementById('select-lasso') as HTMLButtonElement | null;
+  const toolOptSelectTypes = Array.from(
+    doc.querySelectorAll('.tool-opt-select-type')
+  ) as HTMLElement[];
 
   const requiredElements: Record<string, HTMLElement | null> = {
     canvas,
@@ -282,6 +290,8 @@ export function getDom(doc: Document): SketchDom | null {
     brushNatural,
     brushStyleLabel,
     brushStyleInput,
+    btnSelectBox,
+    btnSelectLasso,
   };
 
   for (const [name, el] of Object.entries(requiredElements)) {
@@ -371,6 +381,7 @@ export function getDom(doc: Document): SketchDom | null {
     toolOptColors,
     toolOptBrushes,
     toolOptWidths,
+    toolOptSelectTypes,
     fontFamily: fontFamily!,
     fontSize: fontSize!,
     fontBold: fontBold!,
@@ -390,6 +401,8 @@ export function getDom(doc: Document): SketchDom | null {
     brushNatural: brushNatural!,
     brushStyleLabel: brushStyleLabel!,
     brushStyleInput: brushStyleInput!,
+    btnSelectBox: btnSelectBox!,
+    btnSelectLasso: btnSelectLasso!,
     textInputOverlay: null,
     zoomToast,
   };

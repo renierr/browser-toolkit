@@ -231,6 +231,12 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     toolbar.updateStrokeWidthIndicator(width);
   };
 
+  toolbar.setSelectionTypeChangeHandler((type) => {
+    elementEditor.setSelectionType(type);
+    toolbar.updateSelectionTypeIndicator(type);
+    renderer.requestDrawImmediate();
+  });
+
   const setBackground = (bgClass: string): void => {
     dom.appContainer.classList.remove('checkerboard-bg', 'solid-black-bg', 'warm-white-bg');
     dom.appContainer.classList.add(bgClass);
