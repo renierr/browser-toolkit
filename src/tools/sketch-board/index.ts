@@ -401,6 +401,18 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     }
   });
 
+  toolbar.setDuplicateHandler(() => {
+    if (elementEditor.getSelectedIds().length > 0) {
+      history.push(elements);
+      const res = elementEditor.duplicateSelected(elements);
+      elements = res.elements;
+      hasUnsavedChanges = true;
+      renderer.markDirty();
+      updateUndoRedo();
+      renderer.requestDrawImmediate();
+    }
+  });
+
   const setBackground = (bgClass: string): void => {
     dom.appContainer.classList.remove('checkerboard-bg', 'solid-black-bg', 'warm-white-bg');
     dom.appContainer.classList.add(bgClass);

@@ -48,6 +48,7 @@ export class ToolbarController {
   private onResizeImage: (() => void) | null = null;
   private onGroup: (() => void) | null = null;
   private onUngroup: (() => void) | null = null;
+  private onDuplicate: (() => void) | null = null;
   private onResetRotation: (() => void) | null = null;
   private readonly listeners: Array<{ el: EventTarget; type: string; fn: EventListener }> = [];
   private toolOptionsMap = new Map<DrawMode, ReadonlySet<ToolOptionId>>();
@@ -78,6 +79,9 @@ export class ToolbarController {
   }
   setResetRotationHandler(handler: () => void): void {
     this.onResetRotation = handler;
+  }
+  setDuplicateHandler(handler: () => void): void {
+    this.onDuplicate = handler;
   }
 
   updateUndoRedo(history: HistoryManager): void {
@@ -241,6 +245,7 @@ export class ToolbarController {
     // Always show tool-options container for selection (z-order buttons need it visible)
     this.dom.toolOptions.classList.remove('hidden');
     this.dom.deleteElement.classList.remove('hidden');
+    this.dom.duplicateElement.classList.remove('hidden');
     this.dom.moveToFront.classList.remove('hidden');
     this.dom.moveToBelow.classList.remove('hidden');
   }
@@ -249,6 +254,7 @@ export class ToolbarController {
   hideSelectionOptions(): void {
     this.applyToolOptions(new Set());
     this.dom.deleteElement.classList.add('hidden');
+    this.dom.duplicateElement.classList.add('hidden');
     this.dom.moveToFront.classList.add('hidden');
     this.dom.moveToBelow.classList.add('hidden');
     this.dom.groupElements.classList.add('hidden');
@@ -291,6 +297,9 @@ export class ToolbarController {
     });
     this.on(dom.resetRotation, 'click', () => {
       this.onResetRotation?.();
+    });
+    this.on(dom.duplicateElement, 'click', () => {
+      this.onDuplicate?.();
     });
   }
 

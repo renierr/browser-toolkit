@@ -454,6 +454,59 @@ export class ElementEditor {
     return filtered;
   }
 
+  duplicateSelected(elements: SketchElement[]): { elements: SketchElement[]; newIds: Set<string> } {
+    if (this.selectedElementIds.size === 0) return { elements, newIds: new Set() };
+
+    const idMap = new Map<string, string>();
+
+    const cloneElement = (el: SketchElement): SketchElement => {
+      const clone = JSON.parse(JSON.stringify(el)) as SketchElement;
+      const oldId = clone.id;
+      const newId = `${clone.type}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      clone.id = newId;
+      idMap.set(oldId, newId);
+
+      if (clone.type === 'group') {
+        clone.elements = clone.elements.map((sub) => cloneElement(sub));
+      }
+      return clone;
+    };
+
+    const newClones: SketchElement[] = [];
+    for (const id of this.selectedElementIds) {
+      const el = elements.find((e) => e.id === id);
+      if (!el) continue;
+      newClones.push(cloneElement(el));
+    }
+
+    // Fix snaps for elements that pointed to other duplicated elements
+    const fixSnaps = (el: SketchElement) => {
+      if ('startSnap' in el && el.startSnap && idMap.has(el.startSnap.elementId)) {
+        el.startSnap.elementId = idMap.get(el.startSnap.elementId)!;
+      }
+      if ('endSnap' in el && el.endSnap && idMap.has(el.endSnap.elementId)) {
+        el.endSnap.elementId = idMap.get(el.endSnap.elementId)!;
+      }
+      if (el.type === 'group') {
+        el.elements.forEach(fixSnaps);
+      }
+    };
+    newClones.forEach(fixSnaps);
+
+    const offset = 20;
+    const resultElements = [...elements];
+    const newIds = new Set<string>();
+
+    for (const clone of newClones) {
+      moveElement(clone, offset, offset);
+      resultElements.push(clone);
+      newIds.add(clone.id);
+    }
+
+    this.selectedElementIds = newIds;
+    return { elements: resultElements, newIds };
+  }
+
   moveElementToFront(elements: SketchElement[]): SketchElement[] {
     if (this.selectedElementIds.size === 0) return elements;
     const selected: SketchElement[] = [];

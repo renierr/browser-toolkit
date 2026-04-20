@@ -75,6 +75,7 @@ export type SketchDom = {
   groupElements: HTMLButtonElement;
   ungroupElements: HTMLButtonElement;
   deleteElement: HTMLButtonElement;
+  duplicateElement: HTMLButtonElement;
   resetRotation: HTMLButtonElement;
   brushStyleBtn: HTMLButtonElement;
   brushStylePopup: HTMLDivElement;
@@ -176,6 +177,7 @@ export function getDom(doc: Document): SketchDom | null {
   const groupElements = doc.getElementById('group-elements') as HTMLButtonElement | null;
   const ungroupElements = doc.getElementById('ungroup-elements') as HTMLButtonElement | null;
   const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
+  const duplicateElement = doc.getElementById('duplicate-element') as HTMLButtonElement | null;
   const resetRotation = doc.getElementById('reset-rotation') as HTMLButtonElement | null;
   const zoomToast = doc.getElementById('zoom-toast') as HTMLDivElement | null;
   const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
@@ -271,6 +273,7 @@ export function getDom(doc: Document): SketchDom | null {
     groupElements,
     ungroupElements,
     deleteElement,
+    duplicateElement,
     resetRotation,
     brushStyleBtn,
     brushStylePopup,
@@ -378,6 +381,7 @@ export function getDom(doc: Document): SketchDom | null {
     groupElements: groupElements!,
     ungroupElements: ungroupElements!,
     deleteElement: deleteElement!,
+    duplicateElement: duplicateElement!,
     resetRotation: resetRotation!,
     brushStyleBtn: brushStyleBtn!,
     brushStylePopup: brushStylePopup!,
