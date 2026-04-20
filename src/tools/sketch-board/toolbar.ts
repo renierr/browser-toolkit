@@ -187,6 +187,12 @@ export class ToolbarController {
       dom.btnSelectBox.classList.add('btn-primary');
       dom.btnSelectLasso.classList.remove('btn-primary');
     }
+
+    // Sync with hidden input for data-setting persistence
+    if (dom.selectionTypeInput.value !== type) {
+      dom.selectionTypeInput.value = type;
+      dom.selectionTypeInput.dispatchEvent(new Event('change', { bubbles: true }));
+    }
   }
 
   setMode(next: ToolMode): void {

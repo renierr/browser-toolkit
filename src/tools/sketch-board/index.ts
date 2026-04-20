@@ -21,7 +21,7 @@ import { DoubleArrowTool } from './shapes/double-arrow-tool.ts';
 import { CheckmarkTool } from './shapes/checkmark-tool.ts';
 import { SpeechBubbleTool } from './shapes/speech-bubble-tool.ts';
 import { ToolbarController } from './toolbar.ts';
-import type { DrawMode, DrawToolContext, SketchElement, ToolMode } from './types.ts';
+import type { DrawMode, DrawToolContext, SelectionType, SketchElement, ToolMode } from './types.ts';
 import { ViewportController } from './viewport.ts';
 import { setupAllEvents } from './ui-events.ts';
 
@@ -425,6 +425,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   updateStrokeWidthIndicator();
   renderer.resizeCanvas();
   viewport.onZoomChange?.();
+  const initialSelectionType = (dom.selectionTypeInput.value as SelectionType) || 'box';
+  elementEditor.setSelectionType(initialSelectionType);
+  toolbar.updateSelectionTypeIndicator(initialSelectionType);
   renderer.requestDraw();
 
   if (payload?.sharedFiles?.length) {

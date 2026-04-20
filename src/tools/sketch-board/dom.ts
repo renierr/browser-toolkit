@@ -86,6 +86,7 @@ export type SketchDom = {
   brushStyleInput: HTMLInputElement;
   btnSelectBox: HTMLButtonElement;
   btnSelectLasso: HTMLButtonElement;
+  selectionTypeInput: HTMLInputElement;
   toolOptSelectTypes: HTMLElement[];
   textInputOverlay: HTMLDivElement | null;
   zoomToast: HTMLDivElement | null;
@@ -199,6 +200,7 @@ export function getDom(doc: Document): SketchDom | null {
   const brushStyleInput = doc.getElementById('brush-style') as HTMLInputElement | null;
   const btnSelectBox = doc.getElementById('select-box') as HTMLButtonElement | null;
   const btnSelectLasso = doc.getElementById('select-lasso') as HTMLButtonElement | null;
+  const selectionTypeInput = doc.getElementById('selection-type') as HTMLInputElement | null;
   const toolOptSelectTypes = Array.from(
     doc.querySelectorAll('.tool-opt-select-type')
   ) as HTMLElement[];
@@ -292,6 +294,7 @@ export function getDom(doc: Document): SketchDom | null {
     brushStyleInput,
     btnSelectBox,
     btnSelectLasso,
+    selectionTypeInput,
   };
 
   for (const [name, el] of Object.entries(requiredElements)) {
@@ -403,6 +406,7 @@ export function getDom(doc: Document): SketchDom | null {
     brushStyleInput: brushStyleInput!,
     btnSelectBox: btnSelectBox!,
     btnSelectLasso: btnSelectLasso!,
+    selectionTypeInput: selectionTypeInput!,
     textInputOverlay: null,
     zoomToast,
   };
