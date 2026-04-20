@@ -1,5 +1,6 @@
 import router from '@js/router.ts';
 import { showMessage } from '@js/ui.ts';
+import { debounce } from '@js/utils.ts';
 import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getCropBounds, setImageGetter } from './drawing.ts';
 import { setPathCache } from './utils/brush-styles.ts';
@@ -622,14 +623,17 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       });
     }
 
-    dom.widthInput.addEventListener('input', () => {
-      updateStrokeWidthIndicator();
-      if (elementEditor.getSelectedIds().length > 0) {
-        elementEditor.applySelectedStrokeWidth(elements, parseInt(dom.widthInput.value, 10));
-        renderer.markDirty();
-        renderer.requestDraw();
-      }
-    });
+    dom.widthInput.addEventListener(
+      'input',
+      debounce(() => {
+        updateStrokeWidthIndicator();
+        if (elementEditor.getSelectedIds().length > 0) {
+          elementEditor.applySelectedStrokeWidth(elements, parseInt(dom.widthInput.value, 10));
+          renderer.markDirty();
+          renderer.requestDraw();
+        }
+      }, 50)
+    );
     dom.widthInput.addEventListener('change', () => {
       if (elementEditor.getSelectedIds().length > 0) {
         history.push(elements);
