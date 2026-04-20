@@ -1,5 +1,6 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -88,13 +89,19 @@ export class CheckmarkTool implements DrawTool<CheckmarkElement> {
     if (rect.w < 1 || rect.h < 1) return;
     const { x, y, w, h } = rect;
 
+    const pts = [
+      { x: x + w * 0.1, y: y + h * 0.55 },
+      { x: x + w * 0.35, y: y + h * 0.95 },
+      { x: x + w * 0.9, y: y + h * 0.1 },
+    ];
+
     if (brushStyle === 'shaky') {
-      const points = [
-        { x: x + w * 0.1, y: y + h * 0.55 },
-        { x: x + w * 0.35, y: y + h * 0.95 },
-        { x: x + w * 0.9, y: y + h * 0.1 },
-      ];
-      drawShakyPath(ctx, points, false);
+      drawShakyPath(ctx, pts, false);
+      return;
+    }
+
+    if (brushStyle === 'natural') {
+      drawNaturalPath(ctx, pts, ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 

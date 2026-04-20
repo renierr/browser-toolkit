@@ -1,5 +1,6 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -91,14 +92,30 @@ export class DiamondTool implements DrawTool<DiamondElement> {
     const rect = normalizeRect(start, end);
     if (rect.w < 1 || rect.h < 1) return;
 
+    const pts = [
+      { x: rect.x + rect.w / 2, y: rect.y },
+      { x: rect.x + rect.w, y: rect.y + rect.h / 2 },
+      { x: rect.x + rect.w / 2, y: rect.y + rect.h },
+      { x: rect.x, y: rect.y + rect.h / 2 },
+    ];
+
     if (brushStyle === 'shaky') {
-      const points = [
-        { x: rect.x + rect.w / 2, y: rect.y },
-        { x: rect.x + rect.w, y: rect.y + rect.h / 2 },
-        { x: rect.x + rect.w / 2, y: rect.y + rect.h },
-        { x: rect.x, y: rect.y + rect.h / 2 },
-      ];
-      drawShakyPath(ctx, points, true, fillColor);
+      drawShakyPath(ctx, pts, true, fillColor);
+      return;
+    }
+
+    if (brushStyle === 'natural') {
+      if (fillColor && fillColor !== 'transparent') {
+        ctx.save();
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      drawNaturalPath(ctx, [...pts, pts[0]], ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 

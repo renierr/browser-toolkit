@@ -1,5 +1,6 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -96,16 +97,32 @@ export class HexagonTool implements DrawTool<HexagonElement> {
     const w = rect.w;
     const h = rect.h;
 
+    const pts = [
+      { x: x + w * 0.25, y: y },
+      { x: x + w * 0.75, y: y },
+      { x: x + w, y: y + h * 0.5 },
+      { x: x + w * 0.75, y: y + h },
+      { x: x + w * 0.25, y: y + h },
+      { x: x, y: y + h * 0.5 },
+    ];
+
     if (brushStyle === 'shaky') {
-      const points = [
-        { x: x + w * 0.25, y: y },
-        { x: x + w * 0.75, y: y },
-        { x: x + w, y: y + h * 0.5 },
-        { x: x + w * 0.75, y: y + h },
-        { x: x + w * 0.25, y: y + h },
-        { x: x, y: y + h * 0.5 },
-      ];
-      drawShakyPath(ctx, points, true, fillColor);
+      drawShakyPath(ctx, pts, true, fillColor);
+      return;
+    }
+
+    if (brushStyle === 'natural') {
+      if (fillColor && fillColor !== 'transparent') {
+        ctx.save();
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      drawNaturalPath(ctx, [...pts, pts[0]], ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 

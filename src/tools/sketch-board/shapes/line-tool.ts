@@ -1,5 +1,6 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -138,6 +139,11 @@ export class LineTool implements DrawTool<LineElement> {
     if (isInteracting) brushStyle = 'normal';
     if (brushStyle === 'shaky') {
       drawShakyPath(ctx, [start, end], false);
+      return;
+    }
+
+    if (brushStyle === 'natural') {
+      drawNaturalPath(ctx, [start, end], ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 

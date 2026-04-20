@@ -1,5 +1,6 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyEllipse } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -98,6 +99,28 @@ export class EllipseTool implements DrawTool<EllipseElement> {
 
     if (brushStyle === 'shaky') {
       drawShakyEllipse(ctx, cx, cy, rx, ry, fillColor);
+      return;
+    }
+
+    if (brushStyle === 'natural') {
+      const pts: Point[] = [];
+      const segments = 32;
+      for (let i = 0; i <= segments; i++) {
+        const theta = (i / segments) * Math.PI * 2;
+        pts.push({
+          x: cx + rx * Math.cos(theta),
+          y: cy + ry * Math.sin(theta),
+        });
+      }
+      if (fillColor && fillColor !== 'transparent') {
+        ctx.save();
+        ctx.fillStyle = fillColor;
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      drawNaturalPath(ctx, pts, ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 

@@ -1,5 +1,6 @@
 import { applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyPath } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -141,69 +142,69 @@ export class DoubleArrowTool implements DrawTool<DoubleArrowElement> {
     const len = Math.hypot(dx, dy);
     if (len < 1) return;
 
+    const hLen = 15;
+    const ang = Math.atan2(dy, dx);
+    const ptsStart = [
+      {
+        x: start.x + hLen * Math.cos(ang - Math.PI / 6),
+        y: start.y + hLen * Math.sin(ang - Math.PI / 6),
+      },
+      start,
+      {
+        x: start.x + hLen * Math.cos(ang + Math.PI / 6),
+        y: start.y + hLen * Math.sin(ang + Math.PI / 6),
+      },
+    ];
+    const ptsLine = [start, end];
+    const ptsEnd = [
+      {
+        x: end.x - hLen * Math.cos(ang - Math.PI / 6),
+        y: end.y - hLen * Math.sin(ang - Math.PI / 6),
+      },
+      end,
+      {
+        x: end.x - hLen * Math.cos(ang + Math.PI / 6),
+        y: end.y - hLen * Math.sin(ang + Math.PI / 6),
+      },
+    ];
+
     if (brushStyle === 'shaky') {
-      const headLen = 15;
-      const angle = Math.atan2(dy, dx);
-      // Start arrow
-      drawShakyPath(
-        ctx,
-        [
-          {
-            x: start.x + headLen * Math.cos(angle - Math.PI / 6),
-            y: start.y + headLen * Math.sin(angle - Math.PI / 6),
-          },
-          start,
-          {
-            x: start.x + headLen * Math.cos(angle + Math.PI / 6),
-            y: start.y + headLen * Math.sin(angle + Math.PI / 6),
-          },
-        ],
-        false
-      );
-      // Main line
-      drawShakyPath(ctx, [start, end], false);
-      // End arrow
-      drawShakyPath(
-        ctx,
-        [
-          {
-            x: end.x - headLen * Math.cos(angle - Math.PI / 6),
-            y: end.y - headLen * Math.sin(angle - Math.PI / 6),
-          },
-          end,
-          {
-            x: end.x - headLen * Math.cos(angle + Math.PI / 6),
-            y: end.y - headLen * Math.sin(angle + Math.PI / 6),
-          },
-        ],
-        false
-      );
+      drawShakyPath(ctx, ptsStart, false);
+      drawShakyPath(ctx, ptsLine, false);
+      drawShakyPath(ctx, ptsEnd, false);
+      return;
+    }
+
+    if (brushStyle === 'natural') {
+      drawNaturalPath(ctx, ptsStart, ctx.lineWidth, ctx.strokeStyle as string);
+      drawNaturalPath(ctx, ptsLine, ctx.lineWidth, ctx.strokeStyle as string);
+      drawNaturalPath(ctx, ptsEnd, ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 
     const strokeW = ctx.lineWidth;
-    const headLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
-    const angle = Math.atan2(dy, dx);
+    const strokeHeadLen = Math.min(len * 0.3, Math.max(strokeW * 3, 10));
+    const strokeAngle = Math.atan2(dy, dx);
     const spread = Math.PI / 6;
 
     // Shaft — stop at the base of both arrowheads
-    const shaftStartX = start.x + headLen * Math.cos(angle);
-    const shaftStartY = start.y + headLen * Math.sin(angle);
-    const shaftEndX = end.x - headLen * Math.cos(angle);
-    const shaftEndY = end.y - headLen * Math.sin(angle);
+    const shaftStartX = start.x + strokeHeadLen * Math.cos(strokeAngle);
+    const shaftStartY = start.y + strokeHeadLen * Math.sin(strokeAngle);
+    const shaftEndX = end.x - strokeHeadLen * Math.cos(strokeAngle);
+    const shaftEndY = end.y - strokeHeadLen * Math.sin(strokeAngle);
 
     ctx.beginPath();
     ctx.moveTo(shaftStartX, shaftStartY);
     ctx.lineTo(shaftEndX, shaftEndY);
     ctx.stroke();
 
-    const halfBase = Math.max(strokeW * 1.5, headLen * Math.sin(spread));
-    const perpX = -Math.sin(angle);
-    const perpY = Math.cos(angle);
+    const halfBase = Math.max(strokeW * 1.5, strokeHeadLen * Math.sin(spread));
+    const perpX = -Math.sin(strokeAngle);
+    const perpY = Math.cos(strokeAngle);
 
     // Head at end
-    const baseX_end = end.x - headLen * Math.cos(angle);
-    const baseY_end = end.y - headLen * Math.sin(angle);
+    const baseX_end = end.x - strokeHeadLen * Math.cos(strokeAngle);
+    const baseY_end = end.y - strokeHeadLen * Math.sin(strokeAngle);
     ctx.beginPath();
     ctx.moveTo(end.x, end.y);
     ctx.lineTo(baseX_end + perpX * halfBase, baseY_end + perpY * halfBase);
@@ -213,8 +214,8 @@ export class DoubleArrowTool implements DrawTool<DoubleArrowElement> {
     ctx.fill();
 
     // Head at start
-    const baseX_start = start.x + headLen * Math.cos(angle);
-    const baseY_start = start.y + headLen * Math.sin(angle);
+    const baseX_start = start.x + strokeHeadLen * Math.cos(strokeAngle);
+    const baseY_start = start.y + strokeHeadLen * Math.sin(strokeAngle);
     ctx.beginPath();
     ctx.moveTo(start.x, start.y);
     ctx.lineTo(baseX_start + perpX * halfBase, baseY_start + perpY * halfBase);

@@ -1,5 +1,6 @@
 import { normalizeRect, applyPreviewStyle } from '../utils/drawing-shared.ts';
 import { drawShakyRect } from '../utils/brush-styles.ts';
+import { drawNaturalPath } from '../utils/natural-brush.ts';
 import type { DrawTool, ToolOptionId } from './base-tool.ts';
 import type {
   BrushStyle,
@@ -93,6 +94,24 @@ export class RectTool implements DrawTool<RectElement> {
 
     if (brushStyle === 'shaky') {
       drawShakyRect(ctx, rect.x, rect.y, rect.w, rect.h, fillColor);
+      return;
+    }
+
+    if (brushStyle === 'natural') {
+      const pts = [
+        { x: rect.x, y: rect.y },
+        { x: rect.x + rect.w, y: rect.y },
+        { x: rect.x + rect.w, y: rect.y + rect.h },
+        { x: rect.x, y: rect.y + rect.h },
+        { x: rect.x, y: rect.y }, // Close
+      ];
+      if (fillColor && fillColor !== 'transparent') {
+        ctx.save();
+        ctx.fillStyle = fillColor;
+        ctx.fillRect(rect.x, rect.y, rect.w, rect.h);
+        ctx.restore();
+      }
+      drawNaturalPath(ctx, pts, ctx.lineWidth, ctx.strokeStyle as string);
       return;
     }
 
