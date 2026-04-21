@@ -180,6 +180,12 @@ export type DrawingRecord = {
   meta: DrawingMeta;
 };
 
+export type GalleryExport = {
+  version: number;
+  app: 'sketch-board';
+  drawings: DrawingRecord[];
+};
+
 export type DrawToolContext = {
   readonly color: string;
   readonly strokeWidth: number;

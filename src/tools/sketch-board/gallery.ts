@@ -1,9 +1,16 @@
 import { CanvasExporter } from '@js/canvas-utils.ts';
-import { showMessage } from '@js/ui.ts';
+import { downloadFile } from '@js/file-utils.ts';
+import { showMessage, yieldToUI } from '@js/ui.ts';
 import { buildMeta, getCropBounds, makeThumbnail } from './drawing.ts';
 import type { SketchDom } from './dom.ts';
 import { deleteDrawing, getAllDrawings, putDrawing } from './store.ts';
-import type { DrawingRecord, SketchElement, ToolMode, ViewportState } from './types.ts';
+import type {
+  DrawingRecord,
+  GalleryExport,
+  SketchElement,
+  ToolMode,
+  ViewportState,
+} from './types.ts';
 
 export async function renderGallery(
   dom: SketchDom,
@@ -205,5 +212,59 @@ export async function copyToClipboard(tempCanvas: HTMLCanvasElement | null): Pro
   } catch (error) {
     console.error('[SketchBoard] Clipboard copy failed', error);
     showMessage('Clipboard copy failed.', { type: 'alert', timeoutMs: 3000 });
+  }
+}
+
+export async function exportGallery(): Promise<void> {
+  try {
+    const drawings = await getAllDrawings();
+    if (drawings.length === 0) {
+      showMessage('Gallery is empty.', { type: 'warning', timeoutMs: 2500 });
+      return;
+    }
+
+    const data: GalleryExport = {
+      version: 1,
+      app: 'sketch-board',
+      drawings,
+    };
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const filename = `sketch-board-gallery-${new Date().toISOString().split('T')[0]}.json`;
+    await downloadFile(blob, filename);
+
+    showMessage(`Exported ${drawings.length} drawings.`, { timeoutMs: 2500 });
+  } catch (error) {
+    console.error('[SketchBoard] Gallery export failed', error);
+    showMessage('Failed to export gallery.', { type: 'alert', timeoutMs: 3000 });
+  }
+}
+
+export async function importGallery(
+  file: File,
+  onComplete: () => void | Promise<void>
+): Promise<void> {
+  try {
+    const text = await file.text();
+    const data = JSON.parse(text) as GalleryExport;
+
+    if (data.app !== 'sketch-board' || !Array.isArray(data.drawings)) {
+      throw new Error('Invalid gallery file format');
+    }
+
+    let importedCount = 0;
+    for (const record of data.drawings) {
+      await putDrawing(record);
+      importedCount++;
+      // Yield to UI every 10 records to keep it responsive
+      if (importedCount % 10 === 0) await yieldToUI();
+    }
+
+    showMessage(`Successfully imported ${importedCount} drawings.`, { timeoutMs: 3000 });
+    await onComplete();
+  } catch (error) {
+    console.error('[SketchBoard] Gallery import failed', error);
+    showMessage('Failed to import gallery. Invalid format.', { type: 'alert', timeoutMs: 3000 });
   }
 }

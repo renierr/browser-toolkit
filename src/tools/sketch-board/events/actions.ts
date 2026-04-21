@@ -3,11 +3,13 @@ import { showMessage } from '@js/ui.ts';
 import type { SketchDom } from '../dom.ts';
 import type { ViewportController } from '../viewport.ts';
 import type { SceneRenderer } from '../renderer.ts';
-import type { SketchElement } from '../types.ts';
+import type { DrawingRecord, SketchElement } from '../types.ts';
 import { confirmDiscardIfNeeded, showInfoModal } from '../ui-helpers.ts';
 import {
   copyToClipboard,
   exportDrawing,
+  exportGallery,
+  importGallery,
   renderGallery,
   saveDrawing,
   shareDrawing,
@@ -47,21 +49,21 @@ export function setupActionEvents(
     showInfoModal(dom, getState().elements, getCurrentBgClass())
   );
 
+  const loadRecord = (record: DrawingRecord) => {
+    if (!confirmDiscardIfNeeded(getState().hasUnsavedChanges)) return;
+    const elements = record.elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement);
+    viewport.restore({ ...record.viewport, scale: record.viewport.scale || 1 });
+    setState({ elements, hasUnsavedChanges: false, currentRecord: record });
+    history.clear();
+    renderer.markDirty();
+    updateUndoRedo();
+    renderer.requestDraw();
+    showMessage(`Loaded "${record.name}".`, { timeoutMs: 2000 });
+  };
+
   dom.btnGallery.addEventListener('click', async () => {
     try {
-      await renderGallery(dom, (record) => {
-        if (!confirmDiscardIfNeeded(getState().hasUnsavedChanges)) return;
-        const elements = record.elements.map(
-          (el) => JSON.parse(JSON.stringify(el)) as SketchElement
-        );
-        viewport.restore({ ...record.viewport, scale: record.viewport.scale || 1 });
-        setState({ elements, hasUnsavedChanges: false, currentRecord: record });
-        history.clear();
-        renderer.markDirty();
-        updateUndoRedo();
-        renderer.requestDraw();
-        showMessage(`Loaded "${record.name}".`, { timeoutMs: 2000 });
-      });
+      await renderGallery(dom, loadRecord);
       dom.galleryModal.showModal();
     } catch (error) {
       console.error('[SketchBoard] Failed to open gallery', error);
@@ -105,5 +107,26 @@ export function setupActionEvents(
     await copyToClipboard(
       renderer.renderTempCanvas(getState().elements, { scale, background: bg })
     );
+  });
+
+  dom.btnExportGallery.addEventListener('click', async () => {
+    await exportGallery();
+  });
+
+  dom.btnImportGallery.addEventListener('click', () => {
+    dom.inputImportGallery.click();
+  });
+
+  dom.inputImportGallery.addEventListener('change', async (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+
+    await importGallery(file, async () => {
+      // Re-render gallery after import
+      await renderGallery(dom, loadRecord);
+    });
+
+    // Reset input so the same file can be imported again if needed
+    dom.inputImportGallery.value = '';
   });
 }
