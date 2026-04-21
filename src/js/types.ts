@@ -64,17 +64,5 @@ export interface Tool {
    */
   loadHtml?: () => Promise<string | { template: string; partials: Record<string, string> }>;
 
-  /**
-   * Optional lazy loading function for the tool script.
-   */
   loadScript?: () => Promise<ToolModule>;
 }
-
-export type CustomMainContext = {
-  tools: Tool[];
-};
-
-export type CustomMainModule = {
-  default?: (ctx: CustomMainContext) => void | Promise<void>;
-  init?: (ctx: CustomMainContext) => void | Promise<void>;
-};

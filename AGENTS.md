@@ -115,7 +115,6 @@ export default function init(): void | (() => void) {
 ## Key Concepts Not In Core Rules
 
 - App bootstrap and tool discovery are orchestrated in `src/script.ts`.
-- `src/main.ts` is an optional one-time startup hook (project-level setup).
 - Tool-specific dependencies are supported via `pnpm-workspace.yaml` and per-tool `package.json`.
 - Share-target tools can receive `SharedFilesPayload` in `init(payload?)`.
 - Template placeholders use `{{ key.path }}` and are resolved from site context. Special syntax exists to include separated files: `<include src="file.html" />` and `<include src="file.css" type="style" />`.

@@ -11,7 +11,6 @@ Vite + TypeScript + Tailwind – **no React, no framework**
 - [Features](#features)
 - [Create a new tool (30 seconds)](#create-a-new-tool-30-seconds)
 - [Tool-specific dependencies (`pnpm-workspace.yaml`)](#tool-specific-dependencies-pnpm-workspaceyaml)
-- [Optional: `src/main.ts` (custom startup invocation)](#optional-srcmaints-custom-startup-invocation)
 - [Share Target for Tools (PWA)](#share-target-for-tools-pwa)
 - [Ordering & Section grouping (Overview page)](#ordering--section-grouping-overview-page)
 - [Tool Icons (Lucide)](#tool-icons-lucide)
@@ -215,50 +214,6 @@ _(demo purpose only with a lightweight dependency)_
 > This allows tools to use different libraries or versions as needed,
 > without polluting the main project dependencies.
 
-## Optional: `src/main.ts` (custom startup invocation)
-
-In addition to per-tool scripts, you can add an optional **project-level entry hook**: `src/main.ts`.
-
-If the file exists, it will be auto-imported and executed **once on startup** — **before** the initial route (overview/tool) is rendered.  
-This is useful for global, one-time setup such as:
-
-- registering additional / overriding icons
-- adding global event listeners
-- initializing app-wide utilities
-- debugging/logging (e.g. number of loaded tools)
-
-### Export shape
-
-You can provide either a default export **or** a named `init` export. Both may be `async`:
-
-```ts
-// src/main.ts
-import type { CustomMainContext } from './js/types';
-
-export default function main(ctx: CustomMainContext) {
-  console.log('Loaded tools:', ctx.tools.length);
-  // global setup...
-}
-
-// alternatively:
-export function init(ctx: CustomMainContext) {
-  // ...
-}
-```
-
-### Context (`ctx`)
-
-Currently, the context contains the already-discovered tool list:
-
-- `ctx.tools`: all tools (including metadata), as used later for overview + routing.
-
-### Important note about side effects
-
-This `main.ts` invocation is a **one-time hook** (not a routing lifecycle).  
-If you register global side effects here
-(e.g. `window.addEventListener`, timers, observers),
-you are responsible for managing cleanup yourself — unlike tool `index.ts`,
-which can return a cleanup function.
 
 ## Share Target for Tools (PWA)
 
@@ -403,7 +358,7 @@ If `icon` is missing or unknown, a default icon is used.
 ### Available icon ids
 
 By default, all Lucide icons are included.
-You can register additional icons at startup (see `src/main.ts`).
+You can register additional icons at startup.
 
 ### Register custom icons (derived projects)
 
@@ -413,7 +368,7 @@ This template exposes an icon registry so derived projects can add (or override)
 
 2. Import additional icons from `lucide` (or another compatible source).
 
-3. Register them at once during startup (see `main.ts` hook above).
+3. Register them at once during startup.
 
 ```ts
 import { registerToolIcons } from './js/tool-icons';
