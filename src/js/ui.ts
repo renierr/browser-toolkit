@@ -118,9 +118,26 @@ export function showProgress(message: string, options: ShowProgressOptions = { v
     // undefined → keep existing content as-is
   }
 
-  // Toggle visibility
+  // Toggle visibility and interactivity
   el.classList.toggle('invisible', !visible);
-  el.setAttribute('aria-hidden', visible ? 'false' : 'true');
+  if (visible) {
+    el.removeAttribute('inert');
+  } else {
+    el.setAttribute('inert', '');
+  }
+
+  if (el.hasAttribute('popover') && typeof (el as any).showPopover === 'function') {
+    try {
+      const isOpen = el.matches(':popover-open');
+      if (visible && !isOpen) {
+        (el as any).showPopover();
+      } else if (!visible && isOpen) {
+        (el as any).hidePopover();
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
 
   // Wire close button once
   if (!progressCloseWired && closeEl) {
@@ -162,7 +179,7 @@ export function showProgress(message: string, options: ShowProgressOptions = { v
     options.tooLongMs > 0
   ) {
     progressTooLongTimer = window.setTimeout(() => {
-      const isHidden = el.classList.contains('hidden') || el.getAttribute('aria-hidden') === 'true';
+      const isHidden = el.hasAttribute('inert');
       if (!isHidden) showProgressCloseButton(closeEl);
     }, options.tooLongMs);
   }
@@ -225,6 +242,11 @@ export function showMessage(message: string, opts: MessageOptions = { type: 'inf
     if (pauseTimers) item.removeEventListener('mouseenter', pauseTimers);
     if (resumeTimers) item.removeEventListener('mouseleave', resumeTimers);
     item.remove();
+
+    // If no more messages, make host inert again
+    if (host.children.length === 0) {
+      host.setAttribute('inert', '');
+    }
   };
   closeBtn.addEventListener('click', close);
 
@@ -234,6 +256,18 @@ export function showMessage(message: string, opts: MessageOptions = { type: 'inf
   item.appendChild(closeBtn);
 
   host.appendChild(item);
+  host.removeAttribute('inert');
+
+  // If using popover API (for Top Layer support), ensure the container is shown.
+  if (host.hasAttribute('popover') && typeof (host as any).showPopover === 'function') {
+    try {
+      if (!host.matches(':popover-open')) {
+        (host as any).showPopover();
+      }
+    } catch (e) {
+      // Ignore if showPopover itself fails
+    }
+  }
 
   // Auto-close after timeoutMs (optional)
   if (

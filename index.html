@@ -31,8 +31,8 @@
 <body class="flex flex-col min-h-dvh bg-page text-page transition-colors">
   <!-- Global progress overlay -->
   <div id="ui-progress"
-    class="invisible fixed inset-0 z-[1000] bg-black/40 backdrop-blur-sm flex items-center justify-center p-4"
-    aria-hidden="true">
+    class="fixed inset-0 flex items-center justify-center p-4"
+    popover="manual" inert>
     <div class="relative w-full max-w-md rounded-2xl border border-card bg-card shadow-xl p-6">
       <button id="ui-progress-close" type="button"
         class="hidden absolute top-3 right-3 h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 transition text-heading"
@@ -62,7 +62,7 @@
   </div>
 
   <!-- Global message stack (toasts) -->
-  <div id="ui-messages" class="toast z-[1000]" aria-live="polite" aria-relevant="additions"></div>
+  <div id="ui-messages" class="toast z-[1000]" popover="manual" inert aria-live="polite" aria-relevant="additions"></div>
 
   <!-- Wake lock indicator (hidden by default) -->
   <div id="wake-lock-indicator" class="hidden fixed top-4 left-4.5 z-50 h-8 w-8 rounded-full bg-accent text-accent-content flex items-center justify-center shadow-md"

@@ -64,7 +64,7 @@ export function setupActionEvents(
   dom.btnGallery.addEventListener('click', async () => {
     try {
       await renderGallery(dom, loadRecord);
-      dom.galleryModal.show();
+      dom.galleryModal.showModal();
     } catch (error) {
       console.error('[SketchBoard] Failed to open gallery', error);
       showMessage('Failed to load saved drawings.', { type: 'alert', timeoutMs: 3000 });

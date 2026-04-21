@@ -63,6 +63,63 @@ to minimise merge conflicts add your project stuff below this line
   html[data-theme='dark'] .dropzone-active {
     @apply border border-blue-400 bg-slate-600;
   }
+
+  /* Minimal Popover reset for ui-messages to stay in Top Layer above modals */
+  #ui-messages[popover] {
+    background: none !important;
+    border: none;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    width: auto;
+    height: auto;
+    /* Force bottom-right positioning in Top Layer */
+    inset: auto;
+    top: auto;
+    left: auto;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    display: none;
+    opacity: 1;
+    color: var(--color-base-content);
+  }
+
+  #ui-messages[popover]:popover-open {
+    display: flex;
+    visibility: visible !important;
+  }
+
+  /* Progress overlay reset for Top Layer */
+  #ui-progress[popover] {
+    background: none !important;
+    border: none;
+    padding: 0;
+    margin: 0;
+    overflow: visible;
+    width: 100dvw;
+    height: 100dvh;
+    inset: 0;
+    display: none;
+    opacity: 1;
+    color: var(--color-base-content);
+  }
+
+  #ui-progress[popover]:popover-open {
+    display: flex;
+    visibility: visible !important;
+  }
+
+  /* Ensure inner card is solid and responds to dark mode */
+  #ui-progress .bg-card {
+    background-color: var(--color-base-100) !important;
+    color: var(--color-base-content) !important;
+    opacity: 1 !important;
+  }
+
+  #ui-progress::backdrop {
+    background-color: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+  }
 }
 
 .pdf-maximized {
