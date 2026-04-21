@@ -119,7 +119,7 @@ export default function init(): void | (() => void) {
 - Tool-specific dependencies are supported via `pnpm-workspace.yaml` and per-tool `package.json`.
 - Share-target tools can receive `SharedFilesPayload` in `init(payload?)`.
 - Template placeholders use `{{ key.path }}` and are resolved from site context. Special syntax exists to include separated files: `<include src="file.html" />` and `<include src="file.css" type="style" />`.
-- Site config overrides use `src/config/site.config.ts` (copied from template).
+- Site config is managed in `src/config/site.config.ts`.
 - Advanced WASM usage patterns live in `docs/index.md`.
 
 ## Where To Look

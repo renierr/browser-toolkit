@@ -369,8 +369,8 @@ This means you can keep the list stable and intentional, even when multiple tool
 
 Section titles and descriptions live in the site configuration.
 
-1. Copy the template config:
-   - `src/config/site.config.template.ts` → `src/config/site.config.ts`
+1. Edit the site config:
+   - `src/config/site.config.ts`
 2. Define your sections (keys are the `sectionId`s):
 
 ```ts
@@ -388,8 +388,8 @@ Sections are rendered in the insertion order of `toolSections` first, followed b
 
 ### Site configuration override
 
-The default configuration lives in `src/config/site.config.template.ts`.  
-To customize the configuration for your project, copy it to `src/config/site.config.ts` and change the values you need.
+The configuration lives in `src/config/site.config.ts`.
+To customize the configuration for your project, change the values you need in this file.
 See `src/config/types.ts` for available configuration fields.
 
 ## Tool Icons (Lucide)

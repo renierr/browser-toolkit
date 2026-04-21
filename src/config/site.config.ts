@@ -1,6 +1,6 @@
 import type { SiteConfig } from './types';
 
-/* copy to site.config.ts to customize */
+/* Site Configuration */
 export const siteConfig = {
   title: 'Browser Tools',
   description: 'Collection of useful tools running only in Browser - with offline support',
