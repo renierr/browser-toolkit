@@ -21,31 +21,22 @@ import { DoubleArrowTool } from './shapes/double-arrow-tool.ts';
 import { CheckmarkTool } from './shapes/checkmark-tool.ts';
 import { SpeechBubbleTool } from './shapes/speech-bubble-tool.ts';
 import { ToolbarController } from './toolbar.ts';
-import type { DrawMode, DrawToolContext, SelectionType, SketchElement, ToolMode } from './types.ts';
+import type { DrawMode, DrawToolContext, SelectionType, ToolMode } from './types.ts';
 import { ViewportController } from './viewport.ts';
 import { setupAllEvents } from './ui-events.ts';
+import { StateManager } from './state.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload): void | (() => void) {
   const dom = getDom(document);
-  if (!dom) {
-    console.error('[SketchBoard] Failed to get DOM');
-    return;
-  }
-  const ctx = dom.canvas.getContext('2d');
-  if (!ctx) {
-    console.error('[SketchBoard] Failed to get canvas context');
-    return;
-  }
+  if (!dom) return;
 
-  // --- Mutable state (scoped to init) ---
-  let mode: ToolMode = 'pan';
-  let elements: SketchElement[] = [];
-  let hasUnsavedChanges = false;
-  let currentBgClass = 'checkerboard-bg';
+  const ctx = dom.canvas.getContext('2d');
+  if (!ctx) return;
 
   // --- Module instances ---
   const history = new HistoryManager();
+  const state = new StateManager(history);
   const viewport = new ViewportController(dom.canvas);
   const renderer = new SceneRenderer(dom.canvas, ctx);
   setImageGetter((data) => renderer.getCachedImage(data));
@@ -71,25 +62,20 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   toolRegistry.set('text', new TextTool());
   const imageTool = new ImageTool();
   toolRegistry.set('image', imageTool);
-  imageTool.setGetCanvasCenter(() => {
+
+  const getCanvasCenter = () => {
     const vp = viewport.state;
     return {
       x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
       y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
     };
-  });
+  };
+  imageTool.setGetCanvasCenter(getCanvasCenter);
 
   // Register each tool's declared options with the toolbar
   for (const [mode, tool] of toolRegistry) {
     toolbar.registerToolOptions(mode, tool.toolOptions);
   }
-
-  // --- State accessors for modules ---
-  const getState = () => ({ mode, elements, hasUnsavedChanges });
-  const setState = (patch: { elements?: SketchElement[]; hasUnsavedChanges?: boolean }) => {
-    if (patch.elements !== undefined) elements = patch.elements;
-    if (patch.hasUnsavedChanges !== undefined) hasUnsavedChanges = patch.hasUnsavedChanges;
-  };
 
   const getToolContext = (): DrawToolContext => ({
     color: dom.colorInput.value,
@@ -101,16 +87,8 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     fillColor: dom.fillColorIndicator.style.backgroundColor || null,
     brushStyle: dom.brushStyleInput.value as 'normal' | 'shaky' | 'natural',
     viewport: viewport.state,
-    elements,
+    elements: state.getElements(),
   });
-
-  const getCanvasCenter = () => {
-    const vp = viewport.state;
-    return {
-      x: (dom.canvas.clientWidth / 2 - vp.x) / vp.scale,
-      y: (dom.canvas.clientHeight / 2 - vp.y) / vp.scale,
-    };
-  };
 
   const updateUndoRedo = () => toolbar.updateUndoRedo(history);
 
@@ -122,19 +100,24 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     elementEditor,
     toolRegistry,
     history,
-    getState,
-    setState,
+    () => state.getState(),
+    (patch) => {
+      if (patch.elements !== undefined) state.setElements(patch.elements);
+      if (patch.hasUnsavedChanges !== undefined)
+        state.setHasUnsavedChanges(patch.hasUnsavedChanges);
+    },
     getToolContext,
     updateUndoRedo
   );
 
   // --- Draw scene ---
   const drawScene = (): void => {
+    const mode = state.getMode();
     const activeTool = toolRegistry.get(mode as DrawMode) ?? null;
     const toolCtx = activeTool ? getToolContext() : null;
     const { start, end } = inputHandler.getDrawPoints();
     renderer.drawScene(
-      elements,
+      state.getElements(),
       viewport.state,
       elementEditor,
       mode !== 'pan' && mode !== 'select' ? activeTool : null,
@@ -152,7 +135,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       elementEditor.finishTextInput();
     }
     elementEditor.clearSelection();
-    mode = next;
+    state.setMode(next);
     imageTool.setGetCanvasCenter(getCanvasCenter);
     toolbar.setMode(next);
     renderer.requestDrawImmediate(inputHandler.getStreamingState());
@@ -162,23 +145,19 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   // --- Actions & State Updates ---
   const onUndo = (): void => {
-    const prev = history.undo(elements);
-    if (!prev) return;
-    elements = prev;
-    hasUnsavedChanges = true;
-    renderer.markDirty();
-    updateUndoRedo();
-    renderer.requestDraw();
+    if (state.undo()) {
+      renderer.markDirty();
+      updateUndoRedo();
+      renderer.requestDraw();
+    }
   };
 
   const onRedo = (): void => {
-    const next = history.redo(elements);
-    if (!next) return;
-    elements = next;
-    hasUnsavedChanges = true;
-    renderer.markDirty();
-    updateUndoRedo();
-    renderer.requestDraw();
+    if (state.redo()) {
+      renderer.markDirty();
+      updateUndoRedo();
+      renderer.requestDraw();
+    }
   };
 
   const onZoomIn = (): void => {
@@ -195,7 +174,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   const onZoomReset = (): void => {
     viewport.resetScale();
-    const bounds = getCropBounds(elements);
+    const bounds = getCropBounds(state.getElements());
     if (bounds) viewport.centerOnContent(bounds);
     renderer.markDirty();
     renderer.requestDrawImmediate();
@@ -203,33 +182,26 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   const applySelectedChange = (): void => {
     if (elementEditor.getSelectedIds().length > 0) {
-      hasUnsavedChanges = true;
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
     }
   };
 
-  const updateColorIndicator = (): void => {
-    toolbar.updateColorIndicator(dom.colorInput.value);
-  };
+  const updateColorIndicator = (): void => toolbar.updateColorIndicator(dom.colorInput.value);
 
   const updateFillColorIndicator = (color?: string): void => {
     const c = color || dom.fillColorInput.value;
-    if (c !== 'transparent') {
-      dom.fillColorInput.value = c;
-    }
+    if (c !== 'transparent') dom.fillColorInput.value = c;
     toolbar.updateFillColorIndicator(c);
   };
 
-  const updateBrushStyleIndicator = (style: 'normal' | 'shaky' | 'natural'): void => {
+  const updateBrushStyleIndicator = (style: 'normal' | 'shaky' | 'natural'): void =>
     toolbar.updateBrushStyleIndicator(style);
-  };
 
-  const updateStrokeWidthIndicator = () => {
-    const width = parseInt(dom.widthInput.value, 10);
-    toolbar.updateStrokeWidthIndicator(width);
-  };
+  const updateStrokeWidthIndicator = () =>
+    toolbar.updateStrokeWidthIndicator(parseInt(dom.widthInput.value, 10));
 
   toolbar.setSelectionTypeChangeHandler((type) => {
     elementEditor.setSelectionType(type);
@@ -237,6 +209,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     renderer.requestDrawImmediate();
   });
 
+  let currentBgClass = 'checkerboard-bg';
   const setBackground = (bgClass: string): void => {
     dom.appContainer.classList.remove('checkerboard-bg', 'solid-black-bg', 'warm-white-bg');
     dom.appContainer.classList.add(bgClass);
@@ -245,10 +218,11 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   };
 
   const applyTextChange = (): void => {
+    const elements = state.getElements();
     if (elementEditor.getSelectedIds().length > 0) {
-      history.push(elements);
+      state.pushHistory();
       elementEditor.updateSelectedText(elements);
-      hasUnsavedChanges = true;
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
@@ -280,9 +254,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   // --- Toolbar Handlers ---
   toolbar.setMoveToFrontHandler(() => {
     if (elementEditor.getSelectedIds().length > 0) {
-      history.push(elements);
-      elements = elementEditor.moveElementToFront(elements);
-      hasUnsavedChanges = true;
+      state.pushHistory();
+      state.setElements(elementEditor.moveElementToFront(state.getElements()));
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
@@ -291,9 +265,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   toolbar.setMoveToBelowHandler(() => {
     if (elementEditor.getSelectedIds().length > 0) {
-      history.push(elements);
-      elements = elementEditor.moveElementToBelow(elements);
-      hasUnsavedChanges = true;
+      state.pushHistory();
+      state.setElements(elementEditor.moveElementToBelow(state.getElements()));
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
@@ -301,7 +275,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   });
 
   toolbar.setResizeImageHandler(async () => {
-    const el = elementEditor.getSelectedElement(elements);
+    const el = elementEditor.getSelectedElement(state.getElements());
     if (!el || el.type !== 'image') return;
     let origW = el.originalWidth;
     let origH = el.originalHeight;
@@ -321,14 +295,14 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
       }
     }
     if (origW && origH) {
-      history.push(elements);
+      state.pushHistory();
       const cx = el.position.x + el.imageWidth / 2;
       const cy = el.position.y + el.imageHeight / 2;
       el.imageWidth = origW;
       el.imageHeight = origH;
       el.position.x = cx - origW / 2;
       el.position.y = cy - origH / 2;
-      hasUnsavedChanges = true;
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
@@ -337,9 +311,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   toolbar.setGroupHandler(() => {
     if (elementEditor.getSelectedIds().length > 1) {
-      history.push(elements);
-      elements = elementEditor.groupSelected(elements);
-      hasUnsavedChanges = true;
+      state.pushHistory();
+      state.setElements(elementEditor.groupSelected(state.getElements()));
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
@@ -348,9 +322,9 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   toolbar.setUngroupHandler(() => {
     if (elementEditor.getSelectedIds().length === 1) {
-      history.push(elements);
-      elements = elementEditor.ungroupSelected(elements);
-      hasUnsavedChanges = true;
+      state.pushHistory();
+      state.setElements(elementEditor.ungroupSelected(state.getElements()));
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
@@ -359,9 +333,10 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   toolbar.setResetRotationHandler(() => {
     if (elementEditor.getSelectedIds().length > 0) {
-      history.push(elements);
+      const elements = state.getElements();
+      state.pushHistory();
       elementEditor.resetSelectedRotation(elements);
-      hasUnsavedChanges = true;
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
@@ -370,10 +345,10 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   toolbar.setDuplicateHandler(() => {
     if (elementEditor.getSelectedIds().length > 0) {
-      history.push(elements);
-      const res = elementEditor.duplicateSelected(elements);
-      elements = res.elements;
-      hasUnsavedChanges = true;
+      state.pushHistory();
+      const res = elementEditor.duplicateSelected(state.getElements());
+      state.setElements(res.elements);
+      state.setHasUnsavedChanges(true);
       renderer.markDirty();
       updateUndoRedo();
       renderer.requestDrawImmediate();
@@ -388,8 +363,12 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     renderer,
     elementEditor,
     imageTool,
-    getState,
-    setState,
+    getState: () => state.getState(),
+    setState: (patch) => {
+      if (patch.elements !== undefined) state.setElements(patch.elements);
+      if (patch.hasUnsavedChanges !== undefined)
+        state.setHasUnsavedChanges(patch.hasUnsavedChanges);
+    },
     getToolContext,
     getCanvasCenter,
     updateUndoRedo,
@@ -443,12 +422,6 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     toolbar.detach();
     inputHandler.detach();
     setPathCache(null);
-    for (const button of dom.quickColorButtons) {
-      button.removeEventListener('click', () => {}); // Note: simplified cleanup
-    }
-    for (const button of dom.fillQuickColorButtons) {
-      button.removeEventListener('click', () => {}); // Note: simplified cleanup
-    }
     elementEditor.reset();
   };
 }

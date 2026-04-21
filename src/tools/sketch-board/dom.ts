@@ -93,119 +93,113 @@ export type SketchDom = {
 };
 
 export function getDom(doc: Document): SketchDom | null {
-  const canvas = doc.getElementById('sketch-canvas') as HTMLCanvasElement | null;
-  const galleryModal = doc.getElementById('gallery-modal') as HTMLDialogElement | null;
-  const galleryList = doc.getElementById('gallery-list') as HTMLDivElement | null;
-  const galleryTemplate = doc.getElementById('gallery-item-template') as HTMLTemplateElement | null;
-  const colorInput = doc.getElementById('stroke-color') as HTMLInputElement | null;
-  const colorIndicator = doc.getElementById('color-indicator') as HTMLDivElement | null;
-  const colorPopup = doc.getElementById('color-popup') as HTMLDivElement | null;
-  const fillColorInput = doc.getElementById('fill-color') as HTMLInputElement | null;
-  const fillColorIndicator = doc.getElementById('fill-color-indicator') as HTMLDivElement | null;
-  const fillColorPopup = doc.getElementById('fill-color-popup') as HTMLDivElement | null;
-  const quickColorButtons = Array.from(doc.querySelectorAll('.quick-color')) as HTMLButtonElement[];
-  const fillQuickColorButtons = Array.from(
-    doc.querySelectorAll('.fill-quick-color')
-  ) as HTMLButtonElement[];
-  const widthInput = doc.getElementById('stroke-width') as HTMLInputElement | null;
-  const strokeWidthBtn = doc.getElementById('stroke-width-btn') as HTMLButtonElement | null;
-  const strokeWidthIndicator = doc.getElementById(
-    'stroke-width-indicator'
-  ) as HTMLDivElement | null;
-  const strokeWidthPopup = doc.getElementById('stroke-width-popup') as HTMLDivElement | null;
-  const strokeWidthPresets = Array.from(
-    doc.querySelectorAll('.stroke-width-preset')
-  ) as HTMLElement[];
-  const exportFormat = doc.getElementById('export-format') as HTMLSelectElement | null;
-  const exportHighDpi = doc.getElementById('export-high-dpi') as HTMLInputElement | null;
-  const btnBackOverview = doc.getElementById('back-overview') as HTMLButtonElement | null;
-  const btnOverviewLabel = doc.getElementById('overview-label') as HTMLSpanElement | null;
-  const btnClear = doc.getElementById('clear-canvas') as HTMLButtonElement | null;
-  const btnUndo = doc.getElementById('undo-action') as HTMLButtonElement | null;
-  const btnRedo = doc.getElementById('redo-action') as HTMLButtonElement | null;
-  const btnSave = doc.getElementById('save-drawing') as HTMLButtonElement | null;
-  const btnGallery = doc.getElementById('open-gallery') as HTMLButtonElement | null;
-  const btnExport = doc.getElementById('export-file') as HTMLButtonElement | null;
-  const btnShare = doc.getElementById('share-drawing') as HTMLButtonElement | null;
-  const btnClipboard = doc.getElementById('copy-image') as HTMLButtonElement | null;
-  const btnInfo = doc.getElementById('show-info') as HTMLButtonElement | null;
-  const infoModal = doc.getElementById('info-modal') as HTMLDialogElement | null;
-  const infoDimensions = doc.getElementById('info-dimensions') as HTMLSpanElement | null;
-  const infoLocation = doc.getElementById('info-location') as HTMLSpanElement | null;
-  const infoElements = doc.getElementById('info-elements') as HTMLSpanElement | null;
-  const infoBackground = doc.getElementById('info-background') as HTMLSpanElement | null;
-  const infoColors = doc.getElementById('info-colors') as HTMLDivElement | null;
-  const btnZoomOut = doc.getElementById('zoom-out') as HTMLButtonElement | null;
-  const btnZoomIn = doc.getElementById('zoom-in') as HTMLButtonElement | null;
-  const btnZoomReset = doc.getElementById('zoom-reset') as HTMLButtonElement | null;
-  const btnZoomOutMobile = doc.getElementById('zoom-out-mobile') as HTMLButtonElement | null;
-  const btnZoomInMobile = doc.getElementById('zoom-in-mobile') as HTMLButtonElement | null;
-  const btnZoomResetMobile = doc.getElementById('zoom-reset-mobile') as HTMLButtonElement | null;
-  const zoomLevel = doc.getElementById('zoom-level') as HTMLSpanElement | null;
-  const zoomLevelMobile = doc.getElementById('zoom-level-mobile') as HTMLSpanElement | null;
-  const canvasBg = doc.getElementById('canvas-bg') as HTMLSelectElement | null;
-  const appContainer = doc.getElementById('sketch-app-container') as HTMLDivElement | null;
-  const btnModeDraw = doc.getElementById('mode-draw') as HTMLButtonElement | null;
-  const btnModePan = doc.getElementById('mode-pan') as HTMLButtonElement | null;
-  const btnImportImage = doc.getElementById('import-image') as HTMLButtonElement | null;
-  const btnPasteImage = doc.getElementById('paste-image') as HTMLButtonElement | null;
-  const modePan = doc.getElementById('mode-pan') as HTMLButtonElement | null;
-  const modeFreehand = doc.getElementById('mode-freehand') as HTMLButtonElement | null;
-  const modeLine = doc.getElementById('mode-line') as HTMLButtonElement | null;
-  const modeRect = doc.getElementById('mode-rect') as HTMLButtonElement | null;
-  const modeEllipse = doc.getElementById('mode-ellipse') as HTMLButtonElement | null;
-  const modeTriangle = doc.getElementById('mode-triangle') as HTMLButtonElement | null;
-  const modeDiamond = doc.getElementById('mode-diamond') as HTMLButtonElement | null;
-  const modeHexagon = doc.getElementById('mode-hexagon') as HTMLButtonElement | null;
-  const modeArrow = doc.getElementById('mode-arrow') as HTMLButtonElement | null;
-  const modeDoubleArrow = doc.getElementById('mode-double-arrow') as HTMLButtonElement | null;
-  const modeSpeechBubble = doc.getElementById('mode-speech-bubble') as HTMLButtonElement | null;
-  const modeCheckmark = doc.getElementById('mode-checkmark') as HTMLButtonElement | null;
-  const modeText = doc.getElementById('mode-text') as HTMLButtonElement | null;
-  const modeSelect = doc.getElementById('mode-select') as HTMLButtonElement | null;
-  const drawTools = doc.getElementById('draw-tools') as HTMLUListElement | null;
-  const drawToolsBtn = doc.getElementById('draw-tools-btn') as HTMLButtonElement | null;
-  const drawToolsIcon = doc.getElementById('draw-tools-icon') as HTMLElement | null;
-  const drawToolsLabel = doc.getElementById('draw-tools-label') as HTMLSpanElement | null;
-  const drawOptions = doc.getElementById('draw-options') as HTMLElement | null;
-  const toolOptions = doc.getElementById('tool-options') as HTMLElement | null;
-  const fontFamily = doc.getElementById('font-family') as HTMLSelectElement | null;
-  const fontSize = doc.getElementById('font-size') as HTMLInputElement | null;
-  const fontBold = doc.getElementById('font-bold') as HTMLButtonElement | null;
-  const fontItalic = doc.getElementById('font-italic') as HTMLButtonElement | null;
-  const moveToFront = doc.getElementById('element-to-front') as HTMLButtonElement | null;
-  const moveToBelow = doc.getElementById('element-to-below') as HTMLButtonElement | null;
-  const btnResizeImageOriginal = doc.getElementById(
-    'resize-image-original'
-  ) as HTMLButtonElement | null;
-  const groupElements = doc.getElementById('group-elements') as HTMLButtonElement | null;
-  const ungroupElements = doc.getElementById('ungroup-elements') as HTMLButtonElement | null;
-  const deleteElement = doc.getElementById('delete-element') as HTMLButtonElement | null;
-  const duplicateElement = doc.getElementById('duplicate-element') as HTMLButtonElement | null;
-  const resetRotation = doc.getElementById('reset-rotation') as HTMLButtonElement | null;
-  const zoomToast = doc.getElementById('zoom-toast') as HTMLDivElement | null;
-  const drawOpts = Array.from(doc.querySelectorAll('.draw-opt')) as HTMLElement[];
-  const toolOptShapes = Array.from(doc.querySelectorAll('.tool-opt-shape')) as HTMLElement[];
-  const toolOptTexts = Array.from(doc.querySelectorAll('.tool-opt-text')) as HTMLElement[];
-  const toolOptImages = Array.from(doc.querySelectorAll('.tool-opt-image')) as HTMLElement[];
-  const toolOptColors = Array.from(doc.querySelectorAll('.tool-opt-color')) as HTMLElement[];
-  const toolOptBrushes = Array.from(doc.querySelectorAll('.tool-opt-brush')) as HTMLElement[];
-  const toolOptWidths = Array.from(doc.querySelectorAll('.tool-opt-width')) as HTMLElement[];
-  const brushStyleBtn = doc.getElementById('brush-style-btn') as HTMLButtonElement | null;
-  const brushStylePopup = doc.getElementById('brush-style-popup') as HTMLDivElement | null;
-  const brushNormal = doc.getElementById('brush-normal') as HTMLButtonElement | null;
-  const brushShaky = doc.getElementById('brush-shaky') as HTMLButtonElement | null;
-  const brushNatural = doc.getElementById('brush-natural') as HTMLButtonElement | null;
-  const brushStyleLabel = doc.getElementById('brush-style-label') as HTMLSpanElement | null;
-  const brushStyleInput = doc.getElementById('brush-style') as HTMLInputElement | null;
-  const btnSelectBox = doc.getElementById('select-box') as HTMLButtonElement | null;
-  const btnSelectLasso = doc.getElementById('select-lasso') as HTMLButtonElement | null;
-  const selectionTypeInput = doc.getElementById('selection-type') as HTMLInputElement | null;
-  const toolOptSelectTypes = Array.from(
-    doc.querySelectorAll('.tool-opt-select-type')
-  ) as HTMLElement[];
+  const el = <T extends HTMLElement>(id: string) => doc.getElementById(id) as T | null;
+  const all = <T extends HTMLElement>(selector: string) =>
+    Array.from(doc.querySelectorAll(selector)) as T[];
 
-  const requiredElements: Record<string, HTMLElement | null> = {
+  const canvas = el<HTMLCanvasElement>('sketch-canvas');
+  const galleryModal = el<HTMLDialogElement>('gallery-modal');
+  const galleryList = el<HTMLDivElement>('gallery-list');
+  const galleryTemplate = el<HTMLTemplateElement>('gallery-item-template');
+  const colorInput = el<HTMLInputElement>('stroke-color');
+  const colorIndicator = el<HTMLDivElement>('color-indicator');
+  const colorPopup = el<HTMLDivElement>('color-popup');
+  const fillColorInput = el<HTMLInputElement>('fill-color');
+  const fillColorIndicator = el<HTMLDivElement>('fill-color-indicator');
+  const fillColorPopup = el<HTMLDivElement>('fill-color-popup');
+  const quickColorButtons = all<HTMLButtonElement>('.quick-color');
+  const fillQuickColorButtons = all<HTMLButtonElement>('.fill-quick-color');
+  const widthInput = el<HTMLInputElement>('stroke-width');
+  const strokeWidthBtn = el<HTMLButtonElement>('stroke-width-btn');
+  const strokeWidthIndicator = el<HTMLDivElement>('stroke-width-indicator');
+  const strokeWidthPopup = el<HTMLDivElement>('stroke-width-popup');
+  const strokeWidthPresets = all<HTMLElement>('.stroke-width-preset');
+  const exportFormat = el<HTMLSelectElement>('export-format');
+  const exportHighDpi = el<HTMLInputElement>('export-high-dpi');
+  const btnBackOverview = el<HTMLButtonElement>('back-overview');
+  const btnOverviewLabel = el<HTMLSpanElement>('overview-label');
+  const btnClear = el<HTMLButtonElement>('clear-canvas');
+  const btnUndo = el<HTMLButtonElement>('undo-action');
+  const btnRedo = el<HTMLButtonElement>('redo-action');
+  const btnSave = el<HTMLButtonElement>('save-drawing');
+  const btnGallery = el<HTMLButtonElement>('open-gallery');
+  const btnExport = el<HTMLButtonElement>('export-file');
+  const btnShare = el<HTMLButtonElement>('share-drawing');
+  const btnClipboard = el<HTMLButtonElement>('copy-image');
+  const btnInfo = el<HTMLButtonElement>('show-info');
+  const infoModal = el<HTMLDialogElement>('info-modal');
+  const infoDimensions = el<HTMLSpanElement>('info-dimensions');
+  const infoLocation = el<HTMLSpanElement>('info-location');
+  const infoElements = el<HTMLSpanElement>('info-elements');
+  const infoBackground = el<HTMLSpanElement>('info-background');
+  const infoColors = el<HTMLDivElement>('info-colors');
+  const btnZoomOut = el<HTMLButtonElement>('zoom-out');
+  const btnZoomIn = el<HTMLButtonElement>('zoom-in');
+  const btnZoomReset = el<HTMLButtonElement>('zoom-reset');
+  const btnZoomOutMobile = el<HTMLButtonElement>('zoom-out-mobile');
+  const btnZoomInMobile = el<HTMLButtonElement>('zoom-in-mobile');
+  const btnZoomResetMobile = el<HTMLButtonElement>('zoom-reset-mobile');
+  const zoomLevel = el<HTMLSpanElement>('zoom-level');
+  const zoomLevelMobile = el<HTMLSpanElement>('zoom-level-mobile');
+  const canvasBg = el<HTMLSelectElement>('canvas-bg');
+  const appContainer = el<HTMLDivElement>('sketch-app-container');
+  const btnModeDraw = el<HTMLButtonElement>('mode-draw');
+  const btnModePan = el<HTMLButtonElement>('mode-pan');
+  const btnImportImage = el<HTMLButtonElement>('import-image');
+  const btnPasteImage = el<HTMLButtonElement>('paste-image');
+  const modePan = el<HTMLButtonElement>('mode-pan');
+  const modeFreehand = el<HTMLButtonElement>('mode-freehand');
+  const modeLine = el<HTMLButtonElement>('mode-line');
+  const modeRect = el<HTMLButtonElement>('mode-rect');
+  const modeEllipse = el<HTMLButtonElement>('mode-ellipse');
+  const modeTriangle = el<HTMLButtonElement>('mode-triangle');
+  const modeDiamond = el<HTMLButtonElement>('mode-diamond');
+  const modeHexagon = el<HTMLButtonElement>('mode-hexagon');
+  const modeArrow = el<HTMLButtonElement>('mode-arrow');
+  const modeDoubleArrow = el<HTMLButtonElement>('mode-double-arrow');
+  const modeSpeechBubble = el<HTMLButtonElement>('mode-speech-bubble');
+  const modeCheckmark = el<HTMLButtonElement>('mode-checkmark');
+  const modeText = el<HTMLButtonElement>('mode-text');
+  const modeSelect = el<HTMLButtonElement>('mode-select');
+  const drawTools = el<HTMLUListElement>('draw-tools');
+  const drawToolsBtn = el<HTMLButtonElement>('draw-tools-btn');
+  const drawToolsIcon = el<HTMLElement>('draw-tools-icon');
+  const drawToolsLabel = el<HTMLSpanElement>('draw-tools-label');
+  const drawOptions = el<HTMLElement>('draw-options');
+  const toolOptions = el<HTMLElement>('tool-options');
+  const fontFamily = el<HTMLSelectElement>('font-family');
+  const fontSize = el<HTMLInputElement>('font-size');
+  const fontBold = el<HTMLButtonElement>('font-bold');
+  const fontItalic = el<HTMLButtonElement>('font-italic');
+  const moveToFront = el<HTMLButtonElement>('element-to-front');
+  const moveToBelow = el<HTMLButtonElement>('element-to-below');
+  const btnResizeImageOriginal = el<HTMLButtonElement>('resize-image-original');
+  const groupElements = el<HTMLButtonElement>('group-elements');
+  const ungroupElements = el<HTMLButtonElement>('ungroup-elements');
+  const deleteElement = el<HTMLButtonElement>('delete-element');
+  const duplicateElement = el<HTMLButtonElement>('duplicate-element');
+  const resetRotation = el<HTMLButtonElement>('reset-rotation');
+  const zoomToast = el<HTMLDivElement>('zoom-toast');
+  const drawOpts = all<HTMLElement>('.draw-opt');
+  const toolOptShapes = all<HTMLElement>('.tool-opt-shape');
+  const toolOptTexts = all<HTMLElement>('.tool-opt-text');
+  const toolOptImages = all<HTMLElement>('.tool-opt-image');
+  const toolOptColors = all<HTMLElement>('.tool-opt-color');
+  const toolOptBrushes = all<HTMLElement>('.tool-opt-brush');
+  const toolOptWidths = all<HTMLElement>('.tool-opt-width');
+  const brushStyleBtn = el<HTMLButtonElement>('brush-style-btn');
+  const brushStylePopup = el<HTMLDivElement>('brush-style-popup');
+  const brushNormal = el<HTMLButtonElement>('brush-normal');
+  const brushShaky = el<HTMLButtonElement>('brush-shaky');
+  const brushNatural = el<HTMLButtonElement>('brush-natural');
+  const brushStyleLabel = el<HTMLSpanElement>('brush-style-label');
+  const brushStyleInput = el<HTMLInputElement>('brush-style');
+  const btnSelectBox = el<HTMLButtonElement>('select-box');
+  const btnSelectLasso = el<HTMLButtonElement>('select-lasso');
+  const selectionTypeInput = el<HTMLInputElement>('selection-type');
+  const toolOptSelectTypes = all<HTMLElement>('.tool-opt-select-type');
+
+  const required: Record<string, HTMLElement | null> = {
     canvas,
     galleryModal,
     galleryList,
@@ -269,7 +263,7 @@ export function getDom(doc: Document): SketchDom | null {
     modeSelect,
     drawTools,
     drawToolsBtn,
-    drawToolsIcon: drawToolsIcon as HTMLElement,
+    drawToolsIcon,
     drawToolsLabel,
     drawOptions,
     toolOptions,
@@ -297,8 +291,8 @@ export function getDom(doc: Document): SketchDom | null {
     selectionTypeInput,
   };
 
-  for (const [name, el] of Object.entries(requiredElements)) {
-    if (!el) {
+  for (const [name, element] of Object.entries(required)) {
+    if (!element) {
       console.error(`[SketchBoard] Required DOM element "${name}" is missing.`);
       return null;
     }

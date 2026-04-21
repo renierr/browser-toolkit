@@ -1,0 +1,90 @@
+<!-- Text options -->
+<button id="edit-text" class="tool-opt-text btn btn-sm btn-outline hidden" title="Edit text">
+  <i data-lucide="edit-2" class="w-4 h-4"></i>
+</button>
+<select
+  id="font-family"
+  class="tool-opt-text select select-sm w-28 hidden font-normal"
+  title="Font family"
+>
+  <option value="sans-serif">Sans-serif</option>
+  <option value="serif">Serif</option>
+  <option value="monospace">Monospace</option>
+  <option value="'Comic Sans MS', 'Comic Neue', serif">Comic</option>
+</select>
+<input
+  id="font-size"
+  type="number"
+  min="8"
+  max="72"
+  value="24"
+  class="tool-opt-text input input-sm w-16 hidden"
+  title="Font size"
+/>
+<button id="font-bold" class="tool-opt-text btn btn-sm btn-outline hidden" title="Bold">
+  <i data-lucide="bold" class="w-4 h-4"></i>
+</button>
+<button id="font-italic" class="tool-opt-text btn btn-sm btn-outline hidden" title="Italic">
+  <i data-lucide="italic" class="w-4 h-4"></i>
+</button>
+
+<!-- Selection type toggle -->
+<input type="hidden" id="selection-type" data-setting="selectionType" value="box" />
+<div class="tool-opt-select-type join hidden">
+  <button id="select-box" class="btn btn-sm join-item btn-primary" title="Box Selection">
+    <i data-lucide="square" class="w-4 h-4"></i>
+  </button>
+  <button id="select-lasso" class="btn btn-sm join-item" title="Lasso Selection">
+    <i data-lucide="lasso" class="w-4 h-4"></i>
+  </button>
+</div>
+
+<!-- Z-order -->
+<button id="element-to-front" class="btn btn-sm btn-outline hidden" title="Move element to front">
+  <i data-lucide="arrow-up" class="w-4 h-4"></i>
+</button>
+<button id="element-to-below" class="btn btn-sm btn-outline hidden" title="Move element to back">
+  <i data-lucide="arrow-down" class="w-4 h-4"></i>
+</button>
+
+<div class="divider divider-horizontal mx-0 hidden sm:flex"></div>
+
+<!-- Grouping -->
+<button id="group-elements" class="btn btn-sm btn-outline hidden" title="Group elements">
+  <i data-lucide="layers" class="w-4 h-4"></i>
+</button>
+<button id="ungroup-elements" class="btn btn-sm btn-outline hidden" title="Ungroup elements">
+  <i data-lucide="layout-template" class="w-4 h-4"></i>
+</button>
+
+<!-- Image options -->
+<button
+  id="resize-image-original"
+  class="tool-opt-image btn btn-sm btn-outline hidden"
+  title="Resize to original size"
+>
+  <i data-lucide="maximize" class="w-4 h-4"></i>
+</button>
+
+<!-- Reset rotation -->
+<button id="reset-rotation" class="btn btn-sm btn-outline hidden" title="Reset rotation to 0">
+  <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+</button>
+
+<!-- Duplicate -->
+<button
+  id="duplicate-element"
+  class="btn btn-sm btn-outline hidden ml-auto sm:ml-0"
+  title="Duplicate selected elements"
+>
+  <i data-lucide="copy" class="w-4 h-4"></i>
+</button>
+
+<!-- Delete -->
+<button
+  id="delete-element"
+  class="btn btn-sm btn-outline btn-error hidden"
+  title="Delete selected element"
+>
+  <i data-lucide="trash-2" class="w-4 h-4"></i>
+</button>

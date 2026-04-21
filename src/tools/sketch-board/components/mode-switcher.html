@@ -1,0 +1,157 @@
+<!-- Modes -->
+<div class="join shrink-0">
+  <button id="mode-pan" class="btn btn-sm join-item" title="Scroll / Pan">
+    <i data-lucide="hand" class="w-4 h-4"></i>
+  </button>
+  <button id="mode-select" class="btn btn-sm join-item" title="Select / Move / Resize">
+    <i data-lucide="mouse-pointer-2" class="w-4 h-4"></i>
+  </button>
+  <button id="mode-draw" class="btn btn-sm join-item btn-primary" title="Draw">
+    <i data-lucide="pen" class="w-4 h-4"></i>
+  </button>
+</div>
+
+<button
+  id="draw-tools-btn"
+  class="btn btn-sm gap-1 shrink-0 hidden"
+  popovertarget="draw-tools"
+  style="anchor-name: --draw-tools-anchor"
+>
+  <span id="draw-tools-icon" class="w-4 h-4"></span>
+  <span id="draw-tools-label" class="text-xs hidden sm:inline">Freehand</span>
+  <i data-lucide="chevron-up" class="w-3 h-3"></i>
+</button>
+
+<ul
+  id="draw-tools"
+  popover="auto"
+  style="position-anchor: --draw-tools-anchor; position-area: top"
+  class="dropdown menu z-50 mb-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl max-h-[80dvh] overflow-y-auto"
+>
+  <li>
+    <button id="mode-freehand" class="btn btn-sm btn-ghost justify-between">
+      Freehand
+      <i data-lucide="pen-tool" class="w-4 h-4"></i>
+    </button>
+  </li>
+  <li>
+    <button id="mode-text" class="btn btn-sm btn-ghost justify-between">
+      Text
+      <i data-lucide="type" class="w-4 h-4"></i>
+    </button>
+  </li>
+  <li>
+    <button id="mode-line" class="btn btn-sm btn-ghost justify-between">
+      Line
+      <i data-lucide="slash" class="w-4 h-4"></i>
+    </button>
+  </li>
+  <li>
+    <button id="import-image" class="btn btn-sm btn-ghost justify-between">
+      Import Image
+      <i data-lucide="upload" class="w-4 h-4"></i>
+    </button>
+  </li>
+  <li>
+    <button id="paste-image" class="btn btn-sm btn-ghost justify-between">
+      Paste Image
+      <i data-lucide="clipboard" class="w-4 h-4"></i>
+    </button>
+  </li>
+
+  <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
+  <li>
+    <button
+      id="annotations-menu-btn"
+      popovertarget="annotations-menu"
+      style="anchor-name: --annotations-anchor"
+      class="btn btn-sm btn-ghost justify-between w-full"
+    >
+      Annotations
+      <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    </button>
+    <ul
+      id="annotations-menu"
+      popover="auto"
+      style="position-anchor: --annotations-anchor; position-area: right span-bottom"
+      class="dropdown menu z-[60] ml-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+    >
+      <li>
+        <button id="mode-arrow" class="btn btn-sm btn-ghost justify-between">
+          Arrow
+          <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+        </button>
+      </li>
+      <li>
+        <button id="mode-double-arrow" class="btn btn-sm btn-ghost justify-between">
+          Double Arrow
+          <i data-lucide="move-horizontal" class="w-4 h-4"></i>
+        </button>
+      </li>
+      <li>
+        <button id="mode-speech-bubble" class="btn btn-sm btn-ghost justify-between">
+          Speech Bubble
+          <i data-lucide="message-square" class="w-4 h-4"></i>
+        </button>
+      </li>
+      <li>
+        <button id="mode-checkmark" class="btn btn-sm btn-ghost justify-between">
+          Checkmark
+          <i data-lucide="check" class="w-4 h-4"></i>
+        </button>
+      </li>
+    </ul>
+  </li>
+
+  <li class="my-1 h-px bg-base-300 pointer-events-none"></li>
+
+  <li>
+    <button
+      id="shapes-menu-btn"
+      popovertarget="shapes-menu"
+      style="anchor-name: --shapes-anchor"
+      class="btn btn-sm btn-ghost justify-between w-full"
+    >
+      Geometric Shapes
+      <i data-lucide="chevron-right" class="w-4 h-4"></i>
+    </button>
+    <ul
+      id="shapes-menu"
+      popover="auto"
+      style="position-anchor: --shapes-anchor; position-area: right span-bottom"
+      class="dropdown menu z-[60] ml-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+    >
+      <li>
+        <button id="mode-rect" class="btn btn-sm btn-ghost justify-between">
+          Rectangle
+          <i data-lucide="square" class="w-4 h-4"></i>
+        </button>
+      </li>
+      <li>
+        <button id="mode-ellipse" class="btn btn-sm btn-ghost justify-between">
+          Ellipse
+          <i data-lucide="circle" class="w-4 h-4"></i>
+        </button>
+      </li>
+      <li>
+        <button id="mode-triangle" class="btn btn-sm btn-ghost justify-between">
+          Triangle
+          <i data-lucide="triangle" class="w-4 h-4"></i>
+        </button>
+      </li>
+      <li>
+        <button id="mode-diamond" class="btn btn-sm btn-ghost justify-between">
+          Diamond
+          <i data-lucide="diamond" class="w-4 h-4"></i>
+        </button>
+      </li>
+      <li>
+        <button id="mode-hexagon" class="btn btn-sm btn-ghost justify-between">
+          Hexagon
+          <i data-lucide="hexagon" class="w-4 h-4"></i>
+        </button>
+      </li>
+    </ul>
+  </li>
+</ul>

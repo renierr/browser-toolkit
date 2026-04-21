@@ -276,7 +276,9 @@ export class ToolbarController {
   /** Hide all selection/tool options (used by ElementEditor on deselect) */
   hideSelectionOptions(): void {
     const options =
-      this.currentMode === 'select' ? new Set<ToolOptionId>(['select-type']) : new Set<ToolOptionId>();
+      this.currentMode === 'select'
+        ? new Set<ToolOptionId>(['select-type'])
+        : new Set<ToolOptionId>();
     this.applyToolOptions(options);
     this.dom.deleteElement.classList.add('hidden');
     this.dom.duplicateElement.classList.add('hidden');

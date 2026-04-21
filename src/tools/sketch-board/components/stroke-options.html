@@ -1,0 +1,95 @@
+<!-- Stroke Width -->
+<button
+  id="stroke-width-btn"
+  class="draw-opt tool-opt-width btn btn-sm px-2 shrink-0 flex items-center justify-center h-8 w-8"
+  title="Stroke width"
+  popovertarget="stroke-width-popup"
+  style="anchor-name: --stroke-width-anchor"
+>
+  <div id="stroke-width-indicator" class="rounded-full bg-current"></div>
+</button>
+
+<div
+  id="stroke-width-popup"
+  popover="auto"
+  style="position-anchor: --stroke-width-anchor; position-area: top"
+  class="dropdown z-40 mb-2 w-36 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl"
+>
+  <div class="flex flex-col gap-3">
+    <div class="flex items-center justify-between gap-2">
+      <button
+        class="stroke-width-preset h-8 w-8 flex items-center justify-center rounded border border-base-300 hover:bg-base-200"
+        data-width="2"
+        title="Small"
+      >
+        <div class="rounded-full bg-current" style="width: 4px; height: 4px"></div>
+      </button>
+      <button
+        class="stroke-width-preset h-8 w-8 flex items-center justify-center rounded border border-base-300 hover:bg-base-200"
+        data-width="6"
+        title="Medium"
+      >
+        <div class="rounded-full bg-current" style="width: 8px; height: 8px"></div>
+      </button>
+      <button
+        class="stroke-width-preset h-8 w-8 flex items-center justify-center rounded border border-base-300 hover:bg-base-200"
+        data-width="10"
+        title="Large"
+      >
+        <div class="rounded-full bg-current" style="width: 12px; height: 12px"></div>
+      </button>
+    </div>
+    <div class="divider my-0"></div>
+    <label class="flex items-center justify-between gap-2 cursor-pointer px-1 group">
+      <span
+        class="text-[10px] uppercase opacity-50 font-bold group-hover:opacity-100 transition-opacity"
+        >Custom</span
+      >
+      <input
+        id="stroke-width"
+        type="range"
+        min="1"
+        max="24"
+        value="3"
+        class="range range-xs w-20"
+        data-setting="strokeWidth"
+      />
+    </label>
+  </div>
+</div>
+
+<!-- Brush Style -->
+<input type="hidden" id="brush-style" data-setting="brushStyle" value="normal" />
+<button
+  id="brush-style-btn"
+  class="draw-opt tool-opt-brush btn btn-sm px-2 shrink-0 flex flex-col items-center justify-center h-8 py-1 gap-0"
+  title="Brush Style"
+  popovertarget="brush-style-popup"
+  style="anchor-name: --brush-style-anchor"
+>
+  <i data-lucide="brush" class="w-4 h-4"></i>
+  <span id="brush-style-label" class="text-[8px] opacity-70 leading-none">Normal</span>
+</button>
+
+<ul
+  id="brush-style-popup"
+  popover="auto"
+  style="position-anchor: --brush-style-anchor; position-area: top"
+  class="dropdown menu z-40 mb-2 w-44 rounded-box border border-base-300 bg-base-100 p-2 shadow-xl"
+>
+  <li>
+    <button id="brush-normal" class="btn btn-sm btn-ghost justify-between active">
+      Normal <i data-lucide="minus" class="w-4 h-4 opacity-70"></i>
+    </button>
+  </li>
+  <li>
+    <button id="brush-shaky" class="btn btn-sm btn-ghost justify-between">
+      Hand-drawn <i data-lucide="wand-sparkles" class="w-4 h-4 opacity-70"></i>
+    </button>
+  </li>
+  <li>
+    <button id="brush-natural" class="btn btn-sm btn-ghost justify-between">
+      Natural <i data-lucide="feather" class="w-4 h-4 opacity-70"></i>
+    </button>
+  </li>
+</ul>

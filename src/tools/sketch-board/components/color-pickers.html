@@ -1,0 +1,222 @@
+<!-- Stroke Color -->
+<button
+  id="color-popup-btn"
+  class="draw-opt tool-opt-color btn btn-sm px-2 shrink-0 relative overflow-hidden"
+  title="Quick colors"
+  popovertarget="color-popup"
+  style="anchor-name: --color-popup-anchor"
+>
+  <i data-lucide="palette" class="w-4 h-4"></i>
+  <div
+    id="color-indicator"
+    class="absolute bottom-0 left-0 right-0 h-1 bg-current transition-colors duration-200"
+  ></div>
+</button>
+
+<div
+  id="color-popup"
+  popover="auto"
+  style="position-anchor: --color-popup-anchor; position-area: top"
+  class="dropdown z-40 mb-2 min-w-44 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl"
+>
+  <div class="flex flex-col gap-3">
+    <div class="grid grid-cols-5 gap-2 place-items-center">
+      <!-- Colors injected via JS or static -->
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#111827"
+        style="background-color: #111827"
+        title="Ink black"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#f8fafc"
+        style="background-color: #f8fafc"
+        title="Paper white"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#2563eb"
+        style="background-color: #2563eb"
+        title="Blue"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#16a34a"
+        style="background-color: #16a34a"
+        title="Green"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#dc2626"
+        style="background-color: #dc2626"
+        title="Red"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#f59e0b"
+        style="background-color: #f59e0b"
+        title="Amber"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#7c3aed"
+        style="background-color: #7c3aed"
+        title="Violet"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#0891b2"
+        style="background-color: #0891b2"
+        title="Cyan"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#ec4899"
+        style="background-color: #ec4899"
+        title="Pink"
+      ></button>
+      <button
+        class="quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#92400e"
+        style="background-color: #92400e"
+        title="Brown"
+      ></button>
+    </div>
+    <div class="divider my-0"></div>
+    <label class="flex items-center justify-between gap-2 cursor-pointer px-1 group">
+      <span
+        class="text-[10px] uppercase opacity-50 font-bold group-hover:opacity-100 transition-opacity"
+        >Custom Color</span
+      >
+      <input
+        id="stroke-color"
+        type="color"
+        class="h-6 w-12 rounded border border-base-300 cursor-pointer p-0 bg-transparent"
+        data-setting="strokeColor"
+      />
+    </label>
+  </div>
+</div>
+
+<!-- Fill Color selector -->
+<button
+  id="fill-color-popup-btn"
+  class="tool-opt-shape btn btn-sm px-2 shrink-0 relative overflow-hidden hidden"
+  title="Fill color"
+  popovertarget="fill-color-popup"
+  style="anchor-name: --fill-color-popup-anchor"
+>
+  <i data-lucide="paint-bucket" class="w-4 h-4"></i>
+  <div
+    id="fill-color-indicator"
+    class="absolute bottom-0 left-0 right-0 h-1 bg-transparent transition-colors duration-200"
+  ></div>
+</button>
+
+<div
+  id="fill-color-popup"
+  popover="auto"
+  style="position-anchor: --fill-color-popup-anchor; position-area: top"
+  class="dropdown z-40 mb-2 min-w-44 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl"
+>
+  <div class="flex flex-col gap-3">
+    <div class="grid grid-cols-5 gap-2 place-items-center">
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300 flex items-center justify-center overflow-hidden"
+        type="button"
+        data-color="transparent"
+        title="Transparent (No fill)"
+        style="background: repeating-conic-gradient(#ddd 0% 25%, #fff 0% 50%) 50% / 8px 8px"
+      >
+        <i data-lucide="ban" class="w-4 h-4 text-error opacity-70"></i>
+      </button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#111827"
+        style="background-color: #111827"
+        title="Ink black"
+      ></button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#f8fafc"
+        style="background-color: #f8fafc"
+        title="Paper white"
+      ></button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#2563eb"
+        style="background-color: #2563eb"
+        title="Blue"
+      ></button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#16a34a"
+        style="background-color: #16a34a"
+        title="Green"
+      ></button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#dc2626"
+        style="background-color: #dc2626"
+        title="Red"
+      ></button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#f59e0b"
+        style="background-color: #f59e0b"
+        title="Amber"
+      ></button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#7c3aed"
+        style="background-color: #7c3aed"
+        title="Violet"
+      ></button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#0891b2"
+        style="background-color: #0891b2"
+        title="Cyan"
+      ></button>
+      <button
+        class="fill-quick-color h-8 w-8 rounded border border-base-300"
+        type="button"
+        data-color="#ec4899"
+        style="background-color: #ec4899"
+        title="Pink"
+      ></button>
+    </div>
+    <div class="divider my-0"></div>
+    <label class="flex items-center justify-between gap-2 cursor-pointer px-1 group">
+      <span
+        class="text-[10px] uppercase opacity-50 font-bold group-hover:opacity-100 transition-opacity"
+        >Custom Fill</span
+      >
+      <input
+        id="fill-color"
+        type="color"
+        class="h-6 w-12 rounded border border-base-300 cursor-pointer p-0 bg-transparent"
+        data-setting="fillColor"
+      />
+    </label>
+  </div>
+</div>
