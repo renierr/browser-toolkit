@@ -565,12 +565,10 @@ function handleRoute(path: string | null, payload?: any) {
   }
 }
 
-
 async function boot() {
   const loadedTools = await buildToolsList();
   setTools(loadedTools);
   siteContext.toolCount = loadedTools.length;
-
 
   if (document.readyState === 'loading') {
     await new Promise<void>((resolve) => {
