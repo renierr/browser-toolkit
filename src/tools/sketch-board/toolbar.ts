@@ -42,6 +42,7 @@ const TOOL_LABELS: Record<ToolMode, string> = {
 
 export class ToolbarController {
   private readonly dom: SketchDom;
+  private currentMode: ToolMode = 'pan';
   private onModeChange: ((mode: ToolMode) => void) | null = null;
   private onMoveToFront: (() => void) | null = null;
   private onMoveToBelow: (() => void) | null = null;
@@ -196,6 +197,7 @@ export class ToolbarController {
   }
 
   setMode(next: ToolMode): void {
+    this.currentMode = next;
     const dom = this.dom;
     closeDrawToolsDropdown();
 
@@ -273,7 +275,9 @@ export class ToolbarController {
 
   /** Hide all selection/tool options (used by ElementEditor on deselect) */
   hideSelectionOptions(): void {
-    this.applyToolOptions(new Set());
+    const options =
+      this.currentMode === 'select' ? new Set<ToolOptionId>(['select-type']) : new Set<ToolOptionId>();
+    this.applyToolOptions(options);
     this.dom.deleteElement.classList.add('hidden');
     this.dom.duplicateElement.classList.add('hidden');
     this.dom.moveToFront.classList.add('hidden');
