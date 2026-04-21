@@ -60,6 +60,7 @@ declare global {
 
 export interface SiteContext extends SiteContextCustom {
   config: SiteConfig;
+  toolCount?: number;
 }
 
 export {};
