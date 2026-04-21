@@ -4,14 +4,15 @@ import type { ElementEditor } from '../element-editor.ts';
 import type { HistoryManager } from '../history.ts';
 import type { SceneRenderer } from '../renderer.ts';
 import type { DrawToolContext, SketchElement } from '../types.ts';
+import type { State } from '../state.ts';
 
 export function setupPropertyEvents(
   dom: SketchDom,
   elementEditor: ElementEditor,
   history: HistoryManager,
   renderer: SceneRenderer,
-  getState: () => { elements: SketchElement[] },
-  setState: (patch: { hasUnsavedChanges: boolean }) => void,
+  getState: () => State,
+  setState: (patch: Partial<State>) => void,
   getToolContext: () => DrawToolContext,
   updateColorIndicator: () => void,
   updateFillColorIndicator: (color?: string) => void,

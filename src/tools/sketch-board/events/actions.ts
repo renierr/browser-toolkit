@@ -3,7 +3,7 @@ import { showMessage } from '@js/ui.ts';
 import type { SketchDom } from '../dom.ts';
 import type { ViewportController } from '../viewport.ts';
 import type { SceneRenderer } from '../renderer.ts';
-import type { SketchElement, ToolMode } from '../types.ts';
+import type { SketchElement } from '../types.ts';
 import { confirmDiscardIfNeeded, showInfoModal } from '../ui-helpers.ts';
 import {
   copyToClipboard,
@@ -12,14 +12,15 @@ import {
   saveDrawing,
   shareDrawing,
 } from '../gallery.ts';
+import type { State } from '../state.ts';
 
 export function setupActionEvents(
   dom: SketchDom,
   viewport: ViewportController,
   renderer: SceneRenderer,
   history: { clear: () => void },
-  getState: () => { elements: SketchElement[]; hasUnsavedChanges: boolean; mode: ToolMode },
-  setState: (patch: { elements?: SketchElement[]; hasUnsavedChanges?: boolean }) => void,
+  getState: () => State,
+  setState: (patch: Partial<State>) => void,
   updateUndoRedo: () => void,
   getCurrentBgClass: () => string
 ) {
@@ -29,9 +30,17 @@ export function setupActionEvents(
   });
 
   dom.btnSave.addEventListener('click', async () => {
-    const { elements, mode } = getState();
-    const saved = await saveDrawing(elements, viewport.state, mode, getCurrentBgClass());
-    if (saved) setState({ hasUnsavedChanges: false });
+    const { elements, mode, currentRecord } = getState();
+    const savedRecord = await saveDrawing(
+      elements,
+      viewport.state,
+      mode,
+      getCurrentBgClass(),
+      currentRecord
+    );
+    if (savedRecord) {
+      setState({ hasUnsavedChanges: false, currentRecord: savedRecord });
+    }
   });
 
   dom.btnInfo.addEventListener('click', () =>
@@ -46,7 +55,7 @@ export function setupActionEvents(
           (el) => JSON.parse(JSON.stringify(el)) as SketchElement
         );
         viewport.restore({ ...record.viewport, scale: record.viewport.scale || 1 });
-        setState({ elements, hasUnsavedChanges: false });
+        setState({ elements, hasUnsavedChanges: false, currentRecord: record });
         history.clear();
         renderer.markDirty();
         updateUndoRedo();

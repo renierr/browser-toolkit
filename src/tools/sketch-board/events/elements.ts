@@ -3,7 +3,7 @@ import type { ElementEditor } from '../element-editor.ts';
 import type { HistoryManager } from '../history.ts';
 import type { ViewportController } from '../viewport.ts';
 import type { SceneRenderer } from '../renderer.ts';
-import type { SketchElement } from '../types.ts';
+import type { State } from '../state.ts';
 
 export function setupElementEvents(
   dom: SketchDom,
@@ -11,8 +11,8 @@ export function setupElementEvents(
   history: HistoryManager,
   viewport: ViewportController,
   renderer: SceneRenderer,
-  getState: () => { elements: SketchElement[] },
-  setState: (patch: { elements?: SketchElement[]; hasUnsavedChanges?: boolean }) => void,
+  getState: () => State,
+  setState: (patch: Partial<State>) => void,
   updateUndoRedo: () => void
 ) {
   const btnEditText = document.getElementById('edit-text') as HTMLButtonElement | null;

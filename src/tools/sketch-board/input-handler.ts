@@ -4,8 +4,9 @@ import type { HistoryManager } from './history.ts';
 import type { SceneRenderer } from './renderer.ts';
 import type { DrawTool } from './shapes/base-tool.ts';
 import type { TextTool } from './shapes/text-tool.ts';
-import type { DrawMode, DrawToolContext, Point, SketchElement, ToolMode } from './types.ts';
+import type { DrawMode, DrawToolContext, Point } from './types.ts';
 import { getTouchCenter, getTouchDistance, type ViewportController } from './viewport.ts';
+import type { State } from './state.ts';
 
 export class PointerInputHandler {
   private readonly dom: SketchDom;
@@ -15,12 +16,8 @@ export class PointerInputHandler {
   private readonly toolRegistry: Map<DrawMode, DrawTool>;
   private readonly history: HistoryManager;
 
-  private getState: () => {
-    mode: ToolMode;
-    elements: SketchElement[];
-    hasUnsavedChanges: boolean;
-  };
-  private setState: (patch: { elements?: SketchElement[]; hasUnsavedChanges?: boolean }) => void;
+  private getState: () => State;
+  private setState: (patch: Partial<State>) => void;
   private getToolContext: () => DrawToolContext;
 
   private isPointerActive = false;
@@ -51,8 +48,8 @@ export class PointerInputHandler {
     elementEditor: ElementEditor,
     toolRegistry: Map<DrawMode, DrawTool>,
     history: HistoryManager,
-    getState: () => { mode: ToolMode; elements: SketchElement[]; hasUnsavedChanges: boolean },
-    setState: (patch: { elements?: SketchElement[]; hasUnsavedChanges?: boolean }) => void,
+    getState: () => State,
+    setState: (patch: Partial<State>) => void,
     getToolContext: () => DrawToolContext,
     onHistoryChange: () => void
   ) {

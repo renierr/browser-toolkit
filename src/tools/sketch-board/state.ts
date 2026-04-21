@@ -1,16 +1,18 @@
-import type { SketchElement, ToolMode } from './types.ts';
+import type { DrawingRecord, SketchElement, ToolMode } from './types.ts';
 import type { HistoryManager } from './history.ts';
 
 export type State = {
   mode: ToolMode;
   elements: SketchElement[];
   hasUnsavedChanges: boolean;
+  currentRecord?: DrawingRecord;
 };
 
 export class StateManager {
   private mode: ToolMode = 'pan';
   private elements: SketchElement[] = [];
   private hasUnsavedChanges = false;
+  private currentRecord: DrawingRecord | undefined = undefined;
   private history: HistoryManager;
 
   constructor(history: HistoryManager) {
@@ -22,6 +24,7 @@ export class StateManager {
       mode: this.mode,
       elements: this.elements,
       hasUnsavedChanges: this.hasUnsavedChanges,
+      currentRecord: this.currentRecord,
     };
   }
 
@@ -47,6 +50,14 @@ export class StateManager {
 
   getHasUnsavedChanges(): boolean {
     return this.hasUnsavedChanges;
+  }
+
+  setCurrentRecord(record: DrawingRecord | undefined) {
+    this.currentRecord = record;
+  }
+
+  getCurrentRecord(): DrawingRecord | undefined {
+    return this.currentRecord;
   }
 
   pushHistory() {
@@ -76,6 +87,7 @@ export class StateManager {
   clear() {
     this.elements = [];
     this.hasUnsavedChanges = false;
+    this.currentRecord = undefined;
     this.history.clear();
   }
 }

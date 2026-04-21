@@ -24,7 +24,7 @@ import { ToolbarController } from './toolbar.ts';
 import type { DrawMode, DrawToolContext, SelectionType, ToolMode } from './types.ts';
 import { ViewportController } from './viewport.ts';
 import { setupAllEvents } from './ui-events.ts';
-import { StateManager } from './state.ts';
+import { StateManager, type State } from './state.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload): void | (() => void) {
@@ -101,10 +101,11 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     toolRegistry,
     history,
     () => state.getState(),
-    (patch) => {
+    (patch: Partial<State>) => {
       if (patch.elements !== undefined) state.setElements(patch.elements);
       if (patch.hasUnsavedChanges !== undefined)
         state.setHasUnsavedChanges(patch.hasUnsavedChanges);
+      if (patch.currentRecord !== undefined) state.setCurrentRecord(patch.currentRecord);
     },
     getToolContext,
     updateUndoRedo
@@ -364,10 +365,11 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     elementEditor,
     imageTool,
     getState: () => state.getState(),
-    setState: (patch) => {
+    setState: (patch: Partial<State>) => {
       if (patch.elements !== undefined) state.setElements(patch.elements);
       if (patch.hasUnsavedChanges !== undefined)
         state.setHasUnsavedChanges(patch.hasUnsavedChanges);
+      if (patch.currentRecord !== undefined) state.setCurrentRecord(patch.currentRecord);
     },
     getToolContext,
     getCanvasCenter,

@@ -54,24 +54,28 @@ export async function saveDrawing(
   elements: SketchElement[],
   viewport: ViewportState,
   mode: ToolMode,
-  background: string = 'checkerboard-bg'
-): Promise<boolean> {
+  background: string = 'checkerboard-bg',
+  currentRecord?: DrawingRecord
+): Promise<DrawingRecord | null> {
   if (elements.length === 0) {
     showMessage('Nothing to save yet.', { type: 'warning', timeoutMs: 2500 });
-    return false;
+    return null;
   }
 
-  const nameInput = window.prompt('Version name:', `Drawing ${new Date().toLocaleString()}`);
-  if (!nameInput) return false;
+  const nameInput = window.prompt(
+    'Version name:',
+    currentRecord?.name ?? `Drawing ${new Date().toLocaleString()}`
+  );
+  if (!nameInput) return null;
 
   const bounds = getCropBounds(elements);
   const thumbUrl = bounds ? makeThumbnail(elements) : '';
 
   const now = Date.now();
   const record: DrawingRecord = {
-    id: crypto.randomUUID(),
+    id: currentRecord?.id ?? crypto.randomUUID(),
     name: nameInput.trim(),
-    createdAt: now,
+    createdAt: currentRecord?.createdAt ?? now,
     updatedAt: now,
     viewport: { ...viewport },
     elements: elements.map((el) => JSON.parse(JSON.stringify(el)) as SketchElement),
@@ -82,11 +86,11 @@ export async function saveDrawing(
   try {
     await putDrawing(record);
     showMessage(`Saved version "${record.name}".`, { timeoutMs: 2500 });
-    return true;
+    return record;
   } catch (error) {
     console.error('[SketchBoard] Failed to save drawing', error);
     showMessage('Failed to save drawing.', { type: 'alert', timeoutMs: 3000 });
-    return false;
+    return null;
   }
 }
 

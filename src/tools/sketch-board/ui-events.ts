@@ -4,13 +4,14 @@ import type { ViewportController } from './viewport.ts';
 import type { SceneRenderer } from './renderer.ts';
 import type { ElementEditor } from './element-editor.ts';
 import type { ImageTool } from './shapes/image-tool.ts';
-import type { SketchElement, ToolMode, DrawToolContext } from './types.ts';
 import { setupHistoryEvents } from './events/history.ts';
 import { setupViewportEvents } from './events/viewport.ts';
 import { setupActionEvents } from './events/actions.ts';
 import { setupPropertyEvents } from './events/properties.ts';
 import { setupElementEvents } from './events/elements.ts';
 import { setupImageEvents } from './events/images.ts';
+import type { State } from './state.ts';
+import type { DrawToolContext } from './types.ts';
 
 export type EventSetupParams = {
   dom: SketchDom;
@@ -20,12 +21,8 @@ export type EventSetupParams = {
   elementEditor: ElementEditor;
   imageTool: ImageTool;
 
-  getState: () => { mode: ToolMode; elements: SketchElement[]; hasUnsavedChanges: boolean };
-  setState: (patch: {
-    elements?: SketchElement[];
-    hasUnsavedChanges?: boolean;
-    mode?: ToolMode;
-  }) => void;
+  getState: () => State;
+  setState: (patch: Partial<State>) => void;
   getToolContext: () => DrawToolContext;
   getCanvasCenter: () => { x: number; y: number };
 
