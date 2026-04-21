@@ -148,7 +148,6 @@ self.addEventListener('fetch', (event) => {
   const isShareTarget =
     req.method === 'POST' &&
     (url.pathname.endsWith('/index.html') ||
-      url.pathname.endsWith('/pdf.html') ||
       url.pathname === '/' ||
       url.pathname === '');
 

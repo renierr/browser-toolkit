@@ -281,7 +281,6 @@ interface SharedFilesPayload {
 ### Notes
 
 - Only the first matching tool receives the shared files (based on tool load order)
-- PDFs are handled separately by `pdf.html` for the built-in PDF viewer
 - Shared files are automatically cleaned up from IndexedDB after 1 hour
 - Make sure your tool's dropzone/file input accepts the same file types
 

@@ -253,7 +253,6 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        pdf: path.resolve(__dirname, 'pdf.html'),
       },
     },
     chunkSizeWarningLimit: 3000,
