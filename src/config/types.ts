@@ -5,17 +5,17 @@
  */
 export interface SiteConfig {
   /**
-   * Site title (e.g. "Vanilla Toolkit").
+   * Site title (e.g. "Browser Tools").
    */
   title: string;
 
   /**
-   * Site description (e.g. "A collection of vanilla JS tools").
+   * Site description (e.g. "A collection of browser tools").
    */
   description?: string;
 
   /**
-   * Footer text (e.g. "© 2024 Vanilla Toolkit Made with ❤️").
+   * Footer text (e.g. "© 2025 Browser Tools Made with ❤️").
    */
   footerText?: string;
 

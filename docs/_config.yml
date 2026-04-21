@@ -1,9 +1,9 @@
-title: Vanilla Toolkit Docs
-description: Documentation for the Vanilla Toolkit template
+title: Browser Tools Docs
+description: Documentation for Browser Tools
 theme: jekyll-theme-midnight
 
 url: "https://renierr.github.io"
-baseurl: "/vanilla-toolkit-base"
+baseurl: "/browser-toolkit"
 
 markdown: kramdown
 highlighter: rouge
