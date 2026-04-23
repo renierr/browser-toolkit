@@ -14,6 +14,7 @@ type ActionContext = {
   supports: Supports;
   refreshData: () => Promise<void>;
   getSelectedClearTypes: () => string[];
+  onToggleIdbDetails: (name: string) => void;
 };
 
 export async function handleStorageInspectorButton(
@@ -103,6 +104,13 @@ export async function handleStorageInspectorButton(
         await deleteIndexedDb(name);
         showMessage(`Deleted IndexedDB database: ${name}`, { type: 'info', timeoutMs: 2200 });
         break;
+      }
+      case 'toggle-idb-details': {
+        const name = decodeData(button.dataset.name);
+        if (!name) return true;
+        context.onToggleIdbDetails(name);
+        await context.refreshData();
+        return true;
       }
       case 'clear-cookies': {
         if (!context.supports.cookies) {

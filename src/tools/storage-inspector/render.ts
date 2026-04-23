@@ -50,7 +50,11 @@ export function renderSummary(el: StorageInspectorElements, snapshot: StorageSna
   el.quotaProgress.value = 0;
 }
 
-export function renderTables(el: StorageInspectorElements, snapshot: StorageSnapshot): void {
+export function renderTables(
+  el: StorageInspectorElements,
+  snapshot: StorageSnapshot,
+  expandedIdbNames: Set<string>
+): void {
   renderKvTable(el.localBody, snapshot.localEntries, 'local');
   renderKvTable(el.sessionBody, snapshot.sessionEntries, 'session');
 
@@ -71,35 +75,41 @@ export function renderTables(el: StorageInspectorElements, snapshot: StorageSnap
   el.cacheEmpty.classList.toggle('hidden', snapshot.cacheEntries.length > 0);
 
   el.idbBody.innerHTML = snapshot.idbEntries
-    .map(
-      (db) => `<tr>
+    .map((db) => {
+      const expanded = expandedIdbNames.has(db.name);
+      const details = db.inspectError
+        ? `<div class="text-warning break-all">Inspect error: ${escapeHtml(db.inspectError)}</div>`
+        : db.stores.length > 0
+          ? `<div class="break-all">${escapeHtml(
+              db.stores
+                .map(
+                  (store) =>
+                    `${store.name} (${store.recordCount ?? 0} rows, key: ${store.keyPath}, auto: ${store.autoIncrement ? 'yes' : 'no'})`
+                )
+                .join(' | ')
+            )}</div>`
+          : '<div>-</div>';
+
+      return `<tr>
       <td class="font-mono break-all">${escapeHtml(db.name)}</td>
       <td class="whitespace-nowrap">${db.version ?? '-'}</td>
       <td>
         <div class="flex flex-col gap-1 text-xs">
           <div>Stores: <span class="font-semibold">${db.objectStoreCount}</span></div>
           <div>Total records: <span class="font-semibold">${db.totalRecords ?? '-'}</span></div>
-          ${
-            db.inspectError
-              ? `<div class="text-warning break-all">Inspect error: ${escapeHtml(db.inspectError)}</div>`
-              : db.stores.length > 0
-                ? `<div class="break-all">${escapeHtml(
-                    db.stores
-                      .map(
-                        (store) =>
-                          `${store.name} (${store.recordCount ?? 0} rows, key: ${store.keyPath}, auto: ${store.autoIncrement ? 'yes' : 'no'})`
-                      )
-                      .join(' | ')
-                  )}</div>`
-                : '<div>-</div>'
-          }
         </div>
+      </td>
+      <td class="text-right">
+        <button class="btn btn-outline btn-xs" data-action="toggle-idb-details" data-name="${encodeData(db.name)}">${expanded ? 'Collapse' : 'Expand'}</button>
       </td>
       <td class="text-right">
         <button class="btn btn-error btn-xs" data-action="delete-idb" data-name="${encodeData(db.name)}">Delete</button>
       </td>
-    </tr>`
-    )
+    </tr>
+    <tr class="${expanded ? '' : 'hidden'}">
+      <td colspan="5" class="bg-base-200 text-xs break-all">${details}</td>
+    </tr>`;
+    })
     .join('');
   el.idbEmpty.classList.toggle('hidden', snapshot.idbEntries.length > 0);
 
