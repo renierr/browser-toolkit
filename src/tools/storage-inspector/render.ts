@@ -75,6 +75,26 @@ export function renderTables(el: StorageInspectorElements, snapshot: StorageSnap
       (db) => `<tr>
       <td class="font-mono break-all">${escapeHtml(db.name)}</td>
       <td class="whitespace-nowrap">${db.version ?? '-'}</td>
+      <td>
+        <div class="flex flex-col gap-1 text-xs">
+          <div>Stores: <span class="font-semibold">${db.objectStoreCount}</span></div>
+          <div>Total records: <span class="font-semibold">${db.totalRecords ?? '-'}</span></div>
+          ${
+            db.inspectError
+              ? `<div class="text-warning break-all">Inspect error: ${escapeHtml(db.inspectError)}</div>`
+              : db.stores.length > 0
+                ? `<div class="break-all">${escapeHtml(
+                    db.stores
+                      .map(
+                        (store) =>
+                          `${store.name} (${store.recordCount ?? 0} rows, key: ${store.keyPath}, auto: ${store.autoIncrement ? 'yes' : 'no'})`
+                      )
+                      .join(' | ')
+                  )}</div>`
+                : '<div>-</div>'
+          }
+        </div>
+      </td>
       <td class="text-right">
         <button class="btn btn-error btn-xs" data-action="delete-idb" data-name="${encodeData(db.name)}">Delete</button>
       </td>

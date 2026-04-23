@@ -3,6 +3,7 @@ import type {
   CookieEntry,
   IdDatabaseInfo,
   IdbEntry,
+  IdbStoreEntry,
   KeyValueEntry,
   StorageEstimateData,
   Supports,
@@ -92,10 +93,19 @@ export async function collectIndexedDbData(supports: Supports): Promise<IdbEntry
   if (!supports.indexedDB || !supports.indexedDBList) return [];
 
   const list = await listIndexedDatabases();
-  return list
+  const databases = list
     .filter((item) => typeof item.name === 'string' && item.name.length > 0)
     .map((item) => ({ name: item.name as string, version: item.version }))
     .sort((a, b) => a.name.localeCompare(b.name));
+
+  const details = await Promise.all(
+    databases.map(async (db) => ({
+      ...db,
+      ...(await inspectIndexedDb(db.name)),
+    }))
+  );
+
+  return details;
 }
 
 export async function collectCookieData(supports: Supports): Promise<CookieEntry[]> {
@@ -170,6 +180,81 @@ async function listIndexedDatabases(): Promise<IdDatabaseInfo[]> {
     console.error('[StorageInspector] Failed to list IndexedDB databases:', error);
     return [];
   }
+}
+
+async function inspectIndexedDb(name: string): Promise<{
+  objectStoreCount: number;
+  totalRecords?: number;
+  stores: IdbStoreEntry[];
+  inspectError?: string;
+}> {
+  try {
+    const db = await openIndexedDb(name);
+    const storeNames = Array.from(db.objectStoreNames);
+    const stores = storeNames.map((storeName) => {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      return {
+        name: storeName,
+        keyPath: keyPathToText(store.keyPath),
+        autoIncrement: store.autoIncrement,
+      } satisfies IdbStoreEntry;
+    });
+
+    const counts = await Promise.all(storeNames.map((storeName) => countRecords(db, storeName)));
+    const withCounts = stores.map((store, index) => ({
+      ...store,
+      recordCount: counts[index],
+    }));
+    const totalRecords = counts.reduce((acc, value) => acc + value, 0);
+
+    db.close();
+    return {
+      objectStoreCount: storeNames.length,
+      totalRecords,
+      stores: withCounts,
+    };
+  } catch (error) {
+    console.error('[StorageInspector] Failed to inspect IndexedDB database:', name, error);
+    return {
+      objectStoreCount: 0,
+      stores: [],
+      inspectError: error instanceof Error ? error.message : 'Unknown inspection error',
+    };
+  }
+}
+
+function openIndexedDb(name: string): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(name);
+    request.onerror = () => reject(request.error ?? new Error('IndexedDB open failed'));
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      db.close();
+      reject(new Error('Database inspection blocked by upgrade event'));
+    };
+  });
+}
+
+function countRecords(db: IDBDatabase, storeName: string): Promise<number> {
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const request = store.count();
+      request.onsuccess = () => resolve(typeof request.result === 'number' ? request.result : 0);
+      request.onerror = () => resolve(0);
+    } catch {
+      resolve(0);
+    }
+  });
+}
+
+function keyPathToText(keyPath: IDBObjectStore['keyPath']): string {
+  if (keyPath === null) return '(none)';
+  if (Array.isArray(keyPath)) return keyPath.join(', ');
+  return String(keyPath);
 }
 
 function parseCookieString(cookieString: string): Array<{ name: string; value: string }> {

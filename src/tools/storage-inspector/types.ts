@@ -12,6 +12,17 @@ export type CacheEntry = {
 export type IdbEntry = {
   name: string;
   version?: number;
+  objectStoreCount: number;
+  totalRecords?: number;
+  stores: IdbStoreEntry[];
+  inspectError?: string;
+};
+
+export type IdbStoreEntry = {
+  name: string;
+  keyPath: string;
+  autoIncrement: boolean;
+  recordCount?: number;
 };
 
 export type CookieEntry = {
