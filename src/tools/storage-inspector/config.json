@@ -1,0 +1,7 @@
+{
+  "name": "Storage Inspector",
+  "description": "Inspect browser storage data and clear cache, IndexedDB, localStorage, sessionStorage, and cookies.",
+  "icon": "database",
+  "sectionId": "utilities",
+  "order": 105
+}

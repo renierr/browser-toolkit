@@ -1,0 +1,183 @@
+<div id="storage-inspector-root" class="space-y-4">
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 class="card-title text-2xl font-bold">Storage Inspector</h2>
+          <p class="text-base-content/70">
+            Inspect browser stored data and clear localStorage, sessionStorage, Cache Storage,
+            IndexedDB, and cookies.
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button id="refresh-btn" class="btn btn-outline btn-sm">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            Refresh
+          </button>
+          <button id="clear-selected-btn" class="btn btn-error btn-sm">
+            <i data-lucide="trash-2" class="w-4 h-4"></i>
+            Clear Selected
+          </button>
+        </div>
+      </div>
+
+      <div id="support-alert" class="alert alert-info mt-2">
+        <i data-lucide="info" class="w-5 h-5"></i>
+        <span id="support-alert-text">Checking browser API support...</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h3 class="card-title text-lg">Storage Usage</h3>
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div class="rounded-lg border border-base-300 bg-base-200 p-3">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">Quota</div>
+          <div id="quota-value" class="mt-1 text-lg font-semibold">-</div>
+          <div id="usage-value" class="text-sm text-base-content/70">Used: -</div>
+        </div>
+        <div class="rounded-lg border border-base-300 bg-base-200 p-3">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">localStorage</div>
+          <div id="summary-local-count" class="mt-1 text-lg font-semibold">0 keys</div>
+          <div id="summary-local-size" class="text-sm text-base-content/70">-</div>
+        </div>
+        <div class="rounded-lg border border-base-300 bg-base-200 p-3">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">sessionStorage</div>
+          <div id="summary-session-count" class="mt-1 text-lg font-semibold">0 keys</div>
+          <div id="summary-session-size" class="text-sm text-base-content/70">-</div>
+        </div>
+        <div class="rounded-lg border border-base-300 bg-base-200 p-3">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">Cache Storage</div>
+          <div id="summary-cache-count" class="mt-1 text-lg font-semibold">0 caches</div>
+          <div id="summary-cache-size" class="text-sm text-base-content/70">-</div>
+        </div>
+        <div class="rounded-lg border border-base-300 bg-base-200 p-3">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">IndexedDB</div>
+          <div id="summary-idb-count" class="mt-1 text-lg font-semibold">0 DBs</div>
+          <div id="summary-cookie-size" class="text-sm text-base-content/70">Cookies: -</div>
+        </div>
+      </div>
+
+      <div class="mt-4">
+        <div class="mb-1 flex items-center justify-between text-sm">
+          <span class="font-medium">Estimated quota usage</span>
+          <span id="quota-percent" class="text-base-content/70">-</span>
+        </div>
+        <progress
+          id="quota-progress"
+          class="progress progress-primary w-full"
+          value="0"
+          max="100"
+        ></progress>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <h3 class="card-title text-lg">localStorage</h3>
+          <button class="btn btn-error btn-xs" data-action="clear-local">Clear localStorage</button>
+        </div>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" class="checkbox checkbox-sm" data-clear-type="local" />
+          <span class="label-text">Include in "Clear Selected"</span>
+        </label>
+        <div id="local-empty" class="text-sm text-base-content/60">No localStorage keys.</div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <tbody id="local-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <h3 class="card-title text-lg">sessionStorage</h3>
+          <button class="btn btn-error btn-xs" data-action="clear-session">
+            Clear sessionStorage
+          </button>
+        </div>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" class="checkbox checkbox-sm" data-clear-type="session" />
+          <span class="label-text">Include in "Clear Selected"</span>
+        </label>
+        <div id="session-empty" class="text-sm text-base-content/60">No sessionStorage keys.</div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <tbody id="session-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <h3 class="card-title text-lg">Cache Storage</h3>
+          <button class="btn btn-error btn-xs" data-action="clear-caches">Clear caches</button>
+        </div>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" class="checkbox checkbox-sm" data-clear-type="cache" />
+          <span class="label-text">Include in "Clear Selected"</span>
+        </label>
+        <div id="cache-empty" class="text-sm text-base-content/60">No caches found.</div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <tbody id="cache-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
+          <h3 class="card-title text-lg">IndexedDB</h3>
+          <button class="btn btn-error btn-xs" data-action="clear-idb">Clear listed DBs</button>
+        </div>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" class="checkbox checkbox-sm" data-clear-type="idb" />
+          <span class="label-text">Include in "Clear Selected"</span>
+        </label>
+        <div id="idb-empty" class="text-sm text-base-content/60">No IndexedDB databases found.</div>
+        <div id="idb-unsupported" class="hidden alert alert-warning text-sm">
+          <i data-lucide="triangle-alert" class="w-4 h-4"></i>
+          <span>Database listing unsupported in this browser. Per-DB list unavailable.</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <tbody id="idb-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <div class="flex items-center justify-between">
+        <h3 class="card-title text-lg">Cookies (visible to JavaScript)</h3>
+        <button class="btn btn-error btn-xs" data-action="clear-cookies">
+          Clear visible cookies
+        </button>
+      </div>
+      <label class="label cursor-pointer justify-start gap-2">
+        <input type="checkbox" class="checkbox checkbox-sm" data-clear-type="cookies" />
+        <span class="label-text">Include in "Clear Selected"</span>
+      </label>
+      <div id="cookie-empty" class="text-sm text-base-content/60">
+        No cookies visible to JavaScript.
+      </div>
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <tbody id="cookie-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
