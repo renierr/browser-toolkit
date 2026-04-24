@@ -6,6 +6,18 @@ import { fonts } from './fonts.ts';
 const EMPTY_RESULT_TEXT = 'Result will appear here...';
 const ERROR_RESULT_TEXT = 'Error generating ASCII art';
 
+function normalizeGlyph(glyph: string[], lineHeight: number): string[] {
+  const width = glyph.reduce((max, line) => Math.max(max, line.length), 0);
+  const safeWidth = Math.max(width, 1);
+
+  const normalized: string[] = [];
+  for (let i = 0; i < lineHeight; i++) {
+    normalized.push((glyph[i] ?? '').padEnd(safeWidth, ' '));
+  }
+
+  return normalized;
+}
+
 function generateAsciiArt(text: string, style: string): string {
   const font = fonts[style];
   if (!font) return '';
@@ -13,17 +25,32 @@ function generateAsciiArt(text: string, style: string): string {
   const upperText = text.toUpperCase();
   const sampleChar = font['A'] || Object.values(font)[0];
   const lineHeight = sampleChar.length;
-  const fallbackChar = font['?'] ?? font[' '] ?? Array.from({ length: lineHeight }, () => ' ');
+  const normalizedSample = normalizeGlyph(sampleChar, lineHeight);
+  const sampleWidth = normalizedSample[0]?.length ?? 1;
+  const fallbackSource =
+    font['?'] ?? font[' '] ?? Array.from({ length: lineHeight }, () => ' '.repeat(sampleWidth));
+  const fallbackChar = normalizeGlyph(fallbackSource, lineHeight);
+  const glyphCache = new Map<string, string[]>();
 
   const lines: string[][] = [];
   for (let i = 0; i < lineHeight; i++) {
     lines[i] = [];
   }
 
+  const getGlyph = (char: string): string[] => {
+    const cached = glyphCache.get(char);
+    if (cached) return cached;
+
+    const normalized = normalizeGlyph(font[char] ?? fallbackChar, lineHeight);
+    glyphCache.set(char, normalized);
+
+    return normalized;
+  };
+
   for (const char of upperText) {
-    const charMap = font[char] ?? fallbackChar;
+    const charMap = getGlyph(char);
     for (let i = 0; i < lineHeight; i++) {
-      lines[i].push(charMap[i] ?? '');
+      lines[i].push(charMap[i]);
     }
   }
 

@@ -720,6 +720,50 @@ export const boxFont: FontMap = {
   $: [' ┌─┐ ', '│    ', ' └─┐ ', '    │', '└──┘  '],
 };
 
+function getDominantHeight(font: FontMap): number {
+  const counts = new Map<number, number>();
+
+  for (const glyph of Object.values(font)) {
+    const height = glyph.length;
+    counts.set(height, (counts.get(height) ?? 0) + 1);
+  }
+
+  let dominantHeight = 1;
+  let maxCount = 0;
+
+  for (const [height, count] of counts) {
+    if (count > maxCount) {
+      dominantHeight = height;
+      maxCount = count;
+    }
+  }
+
+  return dominantHeight;
+}
+
+function normalizeGlyph(glyph: string[], targetHeight: number): string[] {
+  const width = glyph.reduce((max, line) => Math.max(max, line.length), 0);
+  const safeWidth = Math.max(width, 1);
+  const normalized: string[] = [];
+
+  for (let lineIndex = 0; lineIndex < targetHeight; lineIndex++) {
+    normalized.push((glyph[lineIndex] ?? '').padEnd(safeWidth, ' '));
+  }
+
+  return normalized;
+}
+
+function normalizeFontMap(font: FontMap): FontMap {
+  const targetHeight = getDominantHeight(font);
+  const normalized: FontMap = {};
+
+  for (const [key, glyph] of Object.entries(font)) {
+    normalized[key] = normalizeGlyph(glyph, targetHeight);
+  }
+
+  return normalized;
+}
+
 function mapFont(
   font: FontMap,
   mapper: (line: string, lineIndex: number, key: string) => string
@@ -764,17 +808,17 @@ export const bevelFont: FontMap = createBevelFont(blockFont);
 export const neonFont: FontMap = createNeonFont(starFont);
 
 export const fonts: Record<string, FontMap> = {
-  block: blockFont,
-  shadow: shadowFont,
-  small: smallFont,
-  bubble: bubbleFont,
-  digital: digitalFont,
-  banner: bannerFont,
-  slant: slantFont,
-  'block-3d': block3DFont,
-  'deep-3d': deep3DFont,
-  bevel: bevelFont,
-  neon: neonFont,
-  star: starFont,
-  box: boxFont,
+  block: normalizeFontMap(blockFont),
+  shadow: normalizeFontMap(shadowFont),
+  small: normalizeFontMap(smallFont),
+  bubble: normalizeFontMap(bubbleFont),
+  digital: normalizeFontMap(digitalFont),
+  banner: normalizeFontMap(bannerFont),
+  slant: normalizeFontMap(slantFont),
+  'block-3d': normalizeFontMap(block3DFont),
+  'deep-3d': normalizeFontMap(deep3DFont),
+  bevel: normalizeFontMap(bevelFont),
+  neon: normalizeFontMap(neonFont),
+  star: normalizeFontMap(starFont),
+  box: normalizeFontMap(boxFont),
 };
