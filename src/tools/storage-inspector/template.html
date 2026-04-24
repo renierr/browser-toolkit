@@ -94,6 +94,25 @@
     <div class="card bg-base-100 shadow-xl">
       <div class="card-body">
         <div class="flex items-center justify-between">
+          <h3 class="card-title text-lg">IndexedDB</h3>
+          <button class="btn btn-error btn-xs" data-action="clear-idb">Clear listed DBs</button>
+        </div>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" class="checkbox checkbox-sm" data-clear-type="idb" />
+          <span class="label-text">Include in "Clear Selected"</span>
+        </label>
+        <div id="idb-empty" class="text-sm text-base-content/60">No IndexedDB databases found.</div>
+        <div id="idb-unsupported" class="hidden alert alert-warning text-sm">
+          <i data-lucide="triangle-alert" class="w-4 h-4"></i>
+          <span>Database listing unsupported in this browser. Per-DB list unavailable.</span>
+        </div>
+        <div id="idb-body" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <div class="flex items-center justify-between">
           <h3 class="card-title text-lg">sessionStorage</h3>
           <button class="btn btn-error btn-xs" data-action="clear-session">
             Clear sessionStorage
@@ -123,24 +142,6 @@
       </div>
     </div>
 
-    <div class="card bg-base-100 shadow-xl">
-      <div class="card-body">
-        <div class="flex items-center justify-between">
-          <h3 class="card-title text-lg">IndexedDB</h3>
-          <button class="btn btn-error btn-xs" data-action="clear-idb">Clear listed DBs</button>
-        </div>
-        <label class="label cursor-pointer justify-start gap-2">
-          <input type="checkbox" class="checkbox checkbox-sm" data-clear-type="idb" />
-          <span class="label-text">Include in "Clear Selected"</span>
-        </label>
-        <div id="idb-empty" class="text-sm text-base-content/60">No IndexedDB databases found.</div>
-        <div id="idb-unsupported" class="hidden alert alert-warning text-sm">
-          <i data-lucide="triangle-alert" class="w-4 h-4"></i>
-          <span>Database listing unsupported in this browser. Per-DB list unavailable.</span>
-        </div>
-        <div id="idb-body" class="space-y-2"></div>
-      </div>
-    </div>
   </div>
 
   <div class="card bg-base-100 shadow-xl">
