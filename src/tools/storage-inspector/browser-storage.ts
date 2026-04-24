@@ -22,17 +22,26 @@ export function getSupports(): Supports {
 }
 
 export async function collectEstimateData(supports: Supports): Promise<StorageEstimateData> {
-  if (!supports.estimate) return { usage: 0, quota: 0 };
+  if (!supports.estimate) return { usage: 0, quota: 0, usageDetails: {} };
 
   try {
     const data = await navigator.storage.estimate();
+    const usageDetailsRaw = data as StorageEstimate & {
+      usageDetails?: Record<string, number | undefined>;
+    };
+    const usageDetails = usageDetailsRaw.usageDetails;
+
     return {
       usage: typeof data.usage === 'number' ? data.usage : 0,
       quota: typeof data.quota === 'number' ? data.quota : 0,
+      usageDetails: {
+        caches: getUsageDetailBytes(usageDetails, ['caches']),
+        indexedDb: getUsageDetailBytes(usageDetails, ['indexeddb', 'indexedDb']),
+      },
     };
   } catch (error) {
     console.error('[StorageInspector] Failed to estimate storage:', error);
-    return { usage: 0, quota: 0 };
+    return { usage: 0, quota: 0, usageDetails: {} };
   }
 }
 
@@ -272,4 +281,20 @@ function parseCookieString(cookieString: string): Array<{ name: string; value: s
       return { name, value };
     })
     .filter((cookie) => cookie.name.length > 0);
+}
+
+function getUsageDetailBytes(
+  usageDetails: Record<string, number | undefined> | undefined,
+  keys: string[]
+): number | undefined {
+  if (!usageDetails) return undefined;
+
+  for (const key of keys) {
+    const value = usageDetails[key];
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+      return value;
+    }
+  }
+
+  return undefined;
 }

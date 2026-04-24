@@ -8,6 +8,7 @@ export function getElements(): StorageInspectorElements {
     usageValue: document.getElementById('usage-value') as HTMLDivElement,
     quotaPercent: document.getElementById('quota-percent') as HTMLSpanElement,
     quotaProgress: document.getElementById('quota-progress') as HTMLProgressElement,
+    estimateBreakdown: document.getElementById('estimate-breakdown') as HTMLDivElement,
     summaryLocalCount: document.getElementById('summary-local-count') as HTMLDivElement,
     summaryLocalSize: document.getElementById('summary-local-size') as HTMLDivElement,
     summarySessionCount: document.getElementById('summary-session-count') as HTMLDivElement,

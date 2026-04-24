@@ -23,7 +23,7 @@ export default function init(): (() => void) | void {
   );
 
   let snapshot: StorageSnapshot = {
-    estimateData: { usage: 0, quota: 0 },
+    estimateData: { usage: 0, quota: 0, usageDetails: {} },
     localEntries: [],
     sessionEntries: [],
     cacheEntries: [],
@@ -73,7 +73,10 @@ export default function init(): (() => void) | void {
     }
 
     snapshot = {
-      estimateData: results[0].status === 'fulfilled' ? results[0].value : { usage: 0, quota: 0 },
+      estimateData:
+        results[0].status === 'fulfilled'
+          ? results[0].value
+          : { usage: 0, quota: 0, usageDetails: {} },
       localEntries: results[1].status === 'fulfilled' ? results[1].value : [],
       sessionEntries: results[2].status === 'fulfilled' ? results[2].value : [],
       cacheEntries: results[3].status === 'fulfilled' ? results[3].value : [],

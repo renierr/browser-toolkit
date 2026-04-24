@@ -34,6 +34,10 @@ export type CookieEntry = {
 export type StorageEstimateData = {
   usage: number;
   quota: number;
+  usageDetails: {
+    caches?: number;
+    indexedDb?: number;
+  };
 };
 
 export type IdDatabaseInfo = {
@@ -67,6 +71,7 @@ export type StorageInspectorElements = {
   usageValue: HTMLDivElement;
   quotaPercent: HTMLSpanElement;
   quotaProgress: HTMLProgressElement;
+  estimateBreakdown: HTMLDivElement;
   summaryLocalCount: HTMLDivElement;
   summaryLocalSize: HTMLDivElement;
   summarySessionCount: HTMLDivElement;

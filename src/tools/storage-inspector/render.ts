@@ -22,13 +22,18 @@ export function renderSummary(el: StorageInspectorElements, snapshot: StorageSna
   const totalSession = sumBytes(snapshot.sessionEntries.map((item) => item.bytes));
   const totalCookies = sumBytes(snapshot.cookieEntries.map((item) => item.bytes));
   const cacheTotalEntries = snapshot.cacheEntries.reduce((acc, item) => acc + item.entryCount, 0);
+  const cacheUsage = snapshot.estimateData.usageDetails.caches;
+  const indexedDbUsage = snapshot.estimateData.usageDetails.indexedDb;
 
   el.summaryLocalCount.textContent = `${snapshot.localEntries.length} keys`;
   el.summaryLocalSize.textContent = formatBytes(totalLocal);
   el.summarySessionCount.textContent = `${snapshot.sessionEntries.length} keys`;
   el.summarySessionSize.textContent = formatBytes(totalSession);
   el.summaryCacheCount.textContent = `${snapshot.cacheEntries.length} caches`;
-  el.summaryCacheSize.textContent = `${cacheTotalEntries} cached requests`;
+  el.summaryCacheSize.textContent =
+    typeof cacheUsage === 'number'
+      ? `${cacheTotalEntries} requests | ${formatBytes(cacheUsage)}`
+      : `${cacheTotalEntries} cached requests`;
   el.summaryIdbCount.textContent = `${snapshot.idbEntries.length} DBs`;
   el.summaryCookieSize.textContent = `Cookies: ${formatBytes(totalCookies)}`;
 
@@ -41,6 +46,7 @@ export function renderSummary(el: StorageInspectorElements, snapshot: StorageSna
     el.usageValue.textContent = `Used: ${formatBytes(snapshot.estimateData.usage)}`;
     el.quotaPercent.textContent = `${percent.toFixed(1)}%`;
     el.quotaProgress.value = percent;
+    el.estimateBreakdown.textContent = formatEstimateBreakdown(cacheUsage, indexedDbUsage);
     return;
   }
 
@@ -48,6 +54,23 @@ export function renderSummary(el: StorageInspectorElements, snapshot: StorageSna
   el.usageValue.textContent = 'Used: -';
   el.quotaPercent.textContent = '-';
   el.quotaProgress.value = 0;
+  el.estimateBreakdown.textContent = 'Estimate breakdown unavailable.';
+}
+
+function formatEstimateBreakdown(
+  cacheUsage: number | undefined,
+  indexedDbUsage: number | undefined
+): string {
+  const parts: string[] = [];
+  if (typeof cacheUsage === 'number') {
+    parts.push(`Cache Storage: ${formatBytes(cacheUsage)}`);
+  }
+  if (typeof indexedDbUsage === 'number') {
+    parts.push(`IndexedDB: ${formatBytes(indexedDbUsage)}`);
+  }
+  return parts.length > 0
+    ? `Browser estimate details - ${parts.join(' | ')}`
+    : 'Browser did not provide per-store usage details.';
 }
 
 export function renderTables(
