@@ -42,6 +42,7 @@ type ShowProgressOptions = {
   timeoutMs?: number;
   /**
    * Show a close button if progress is still visible after N ms (optional).
+   * DEfault: 60000 (1 minute) to cover long-running tasks.
    * Example: 3000
    */
   tooLongMs?: number;
@@ -85,12 +86,15 @@ function showProgressCloseButton(closeEl: HTMLButtonElement | null) {
   closeEl.classList.add('inline-flex');
 }
 
-export function showProgress(message: string, options: ShowProgressOptions = { visible: true }) {
+export function showProgress(message: string, opts: ShowProgressOptions = { visible: true }) {
   const el = document.getElementById('ui-progress');
   const textEl = document.getElementById('ui-progress-text');
   const closeEl = document.getElementById('ui-progress-close') as HTMLButtonElement | null;
   const contentEl = document.getElementById('ui-progress-content');
   if (!el || !textEl) return;
+
+  const options = { visible: true, ...opts };
+  if (options.tooLongMs === undefined) options.tooLongMs = 60000;
 
   const visible = options?.visible ?? true;
   let text = (message ?? 'Working…').toString();

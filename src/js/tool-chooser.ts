@@ -59,7 +59,7 @@ export async function openInTool(
     const mime = options.mimeType || 'application/octet-stream';
     files = [new File([input as any], name, { type: mime })];
   }
-  
+
   hideProgress();
   if (files.length === 0) return;
 
