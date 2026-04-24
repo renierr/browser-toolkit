@@ -52,35 +52,40 @@ export function renderSummary(el: StorageInspectorElements, snapshot: StorageSna
 
 export function renderTables(
   el: StorageInspectorElements,
-  snapshot: StorageSnapshot,
-  expandedIdbNames: Set<string>
+  snapshot: StorageSnapshot
 ): void {
-  renderKvTable(el.localBody, snapshot.localEntries, 'local');
-  renderKvTable(el.sessionBody, snapshot.sessionEntries, 'session');
+  renderKvItems(el.localBody, snapshot.localEntries, 'local');
+  renderKvItems(el.sessionBody, snapshot.sessionEntries, 'session');
 
   el.localEmpty.classList.toggle('hidden', snapshot.localEntries.length > 0);
   el.sessionEmpty.classList.toggle('hidden', snapshot.sessionEntries.length > 0);
 
   el.cacheBody.innerHTML = snapshot.cacheEntries
     .map(
-      (cache) => `<tr>
-      <td class="font-mono break-all">${escapeHtml(cache.name)}</td>
-      <td class="whitespace-nowrap">${cache.entryCount} requests</td>
-      <td class="text-right">
-        <button class="btn btn-error btn-xs" data-action="delete-cache" data-name="${encodeData(cache.name)}">Delete</button>
-      </td>
-    </tr>`
+      (cache) => `<details class="rounded-lg border border-base-300 bg-base-200">
+      <summary class="cursor-pointer list-none px-3 py-2">
+        <div class="flex items-center justify-between gap-3">
+          <span class="font-mono break-all text-sm">${escapeHtml(cache.name)}</span>
+          <span class="text-xs text-base-content/70 whitespace-nowrap">${cache.entryCount} requests</span>
+        </div>
+      </summary>
+      <div class="border-t border-base-300 px-3 py-2 text-sm">
+        <div class="text-base-content/80">Cached requests: <span class="font-semibold">${cache.entryCount}</span></div>
+        <div class="mt-2 flex justify-end">
+          <button class="btn btn-error btn-xs" data-action="delete-cache" data-name="${encodeData(cache.name)}">Delete</button>
+        </div>
+      </div>
+    </details>`
     )
     .join('');
   el.cacheEmpty.classList.toggle('hidden', snapshot.cacheEntries.length > 0);
 
   el.idbBody.innerHTML = snapshot.idbEntries
     .map((db) => {
-      const expanded = expandedIdbNames.has(db.name);
       const details = db.inspectError
         ? `<div class="text-warning break-all">Inspect error: ${escapeHtml(db.inspectError)}</div>`
         : db.stores.length > 0
-          ? `<div class="break-all">${escapeHtml(
+          ? `<div class="break-all text-xs">${escapeHtml(
               db.stores
                 .map(
                   (store) =>
@@ -90,59 +95,73 @@ export function renderTables(
             )}</div>`
           : '<div>-</div>';
 
-      return `<tr>
-      <td class="font-mono break-all">${escapeHtml(db.name)}</td>
-      <td class="whitespace-nowrap">${db.version ?? '-'}</td>
-      <td>
-        <div class="flex flex-col gap-1 text-xs">
-          <div>Stores: <span class="font-semibold">${db.objectStoreCount}</span></div>
-          <div>Total records: <span class="font-semibold">${db.totalRecords ?? '-'}</span></div>
+      return `<details class="rounded-lg border border-base-300 bg-base-200">
+      <summary class="cursor-pointer list-none px-3 py-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span class="font-mono break-all">${escapeHtml(db.name)}</span>
+          <span class="text-xs text-base-content/70">v${db.version ?? '-'}</span>
         </div>
-      </td>
-      <td class="text-right">
-        <button class="btn btn-outline btn-xs" data-action="toggle-idb-details" data-name="${encodeData(db.name)}">${expanded ? 'Collapse' : 'Expand'}</button>
-      </td>
-      <td class="text-right">
-        <button class="btn btn-error btn-xs" data-action="delete-idb" data-name="${encodeData(db.name)}">Delete</button>
-      </td>
-    </tr>
-    <tr class="${expanded ? '' : 'hidden'}">
-      <td colspan="5" class="bg-base-200 text-xs break-all">${details}</td>
-    </tr>`;
+        <div class="mt-1 text-xs text-base-content/70">
+          Stores: <span class="font-semibold">${db.objectStoreCount}</span> | Records: <span class="font-semibold">${db.totalRecords ?? '-'}</span>
+        </div>
+      </summary>
+      <div class="border-t border-base-300 px-3 py-2 text-sm">
+        ${details}
+        <div class="mt-2 flex justify-end">
+          <button class="btn btn-error btn-xs" data-action="delete-idb" data-name="${encodeData(db.name)}">Delete</button>
+        </div>
+      </div>
+    </details>`;
     })
     .join('');
   el.idbEmpty.classList.toggle('hidden', snapshot.idbEntries.length > 0);
 
   el.cookieBody.innerHTML = snapshot.cookieEntries
     .map(
-      (cookie) => `<tr>
-      <td class="font-mono break-all">${escapeHtml(cookie.name)}</td>
-      <td class="break-all">${escapeHtml(truncate(cookie.value, 60))}</td>
-      <td class="whitespace-nowrap">${formatBytes(cookie.bytes)}</td>
-      <td class="text-right">
-        <button class="btn btn-error btn-xs" data-action="delete-cookie" data-name="${encodeData(cookie.name)}">Delete</button>
-      </td>
-    </tr>`
+      (cookie) => `<details class="rounded-lg border border-base-300 bg-base-200">
+      <summary class="cursor-pointer list-none px-3 py-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span class="font-mono break-all">${escapeHtml(cookie.name)}</span>
+          <span class="text-xs text-base-content/70">${formatBytes(cookie.bytes)}</span>
+        </div>
+        <div class="mt-1 break-all text-xs text-base-content/70">${escapeHtml(truncate(cookie.value, 60))}</div>
+      </summary>
+      <div class="border-t border-base-300 px-3 py-2 text-sm">
+        <div class="font-semibold">Value</div>
+        <div class="mt-1 break-all text-xs">${escapeHtml(cookie.value)}</div>
+        <div class="mt-2 flex justify-end">
+          <button class="btn btn-error btn-xs" data-action="delete-cookie" data-name="${encodeData(cookie.name)}">Delete</button>
+        </div>
+      </div>
+    </details>`
     )
     .join('');
   el.cookieEmpty.classList.toggle('hidden', snapshot.cookieEntries.length > 0);
 }
 
-function renderKvTable(
-  bodyEl: HTMLTableSectionElement,
+function renderKvItems(
+  bodyEl: HTMLDivElement,
   entries: KeyValueEntry[],
   type: 'local' | 'session'
 ): void {
   bodyEl.innerHTML = entries
     .map(
-      (entry) => `<tr>
-      <td class="font-mono break-all">${escapeHtml(entry.key)}</td>
-      <td class="break-all">${escapeHtml(truncate(entry.value, 60))}</td>
-      <td class="whitespace-nowrap">${formatBytes(entry.bytes)}</td>
-      <td class="text-right">
-        <button class="btn btn-error btn-xs" data-action="delete-${type}-key" data-key="${encodeData(entry.key)}">Delete</button>
-      </td>
-    </tr>`
+      (entry) => `<details class="rounded-lg border border-base-300 bg-base-200">
+      <summary class="cursor-pointer list-none px-3 py-2">
+        <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+          <span class="font-mono break-all">${escapeHtml(entry.key)}</span>
+          <span class="text-xs text-base-content/70">${formatBytes(entry.bytes)}</span>
+        </div>
+        <div class="mt-1 break-all text-xs text-base-content/70">${escapeHtml(truncate(entry.value, 60))}</div>
+      </summary>
+      <div class="border-t border-base-300 px-3 py-2 text-sm">
+        <div class="font-semibold">Value</div>
+        <div class="mt-1 break-all text-xs">${escapeHtml(entry.value)}</div>
+        <div class="mt-2 flex justify-end">
+          <button class="btn btn-error btn-xs" data-action="delete-${type}-key" data-key="${encodeData(entry.key)}">Delete</button>
+        </div>
+      </div>
+    </details>`
     )
     .join('');
 }

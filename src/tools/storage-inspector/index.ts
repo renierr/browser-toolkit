@@ -30,7 +30,6 @@ export default function init(): (() => void) | void {
     idbEntries: [],
     cookieEntries: [],
   };
-  const expandedIdbNames = new Set<string>();
 
   const onClick = async (event: Event): Promise<void> => {
     const target = event.target as HTMLElement;
@@ -45,13 +44,6 @@ export default function init(): (() => void) | void {
           .filter((checkbox) => checkbox.checked)
           .map((checkbox) => checkbox.dataset.clearType)
           .filter((value): value is string => Boolean(value)),
-      onToggleIdbDetails: (name: string) => {
-        if (expandedIdbNames.has(name)) {
-          expandedIdbNames.delete(name);
-        } else {
-          expandedIdbNames.add(name);
-        }
-      },
     });
   };
 
@@ -92,6 +84,6 @@ export default function init(): (() => void) | void {
     el.idbUnsupported.classList.toggle('hidden', supports.indexedDBList || !supports.indexedDB);
 
     renderSummary(el, snapshot);
-    renderTables(el, snapshot, expandedIdbNames);
+    renderTables(el, snapshot);
   }
 }

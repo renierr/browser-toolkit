@@ -75,11 +75,11 @@ export type StorageInspectorElements = {
   summaryCacheSize: HTMLDivElement;
   summaryIdbCount: HTMLDivElement;
   summaryCookieSize: HTMLDivElement;
-  localBody: HTMLTableSectionElement;
-  sessionBody: HTMLTableSectionElement;
-  cacheBody: HTMLTableSectionElement;
-  idbBody: HTMLTableSectionElement;
-  cookieBody: HTMLTableSectionElement;
+  localBody: HTMLDivElement;
+  sessionBody: HTMLDivElement;
+  cacheBody: HTMLDivElement;
+  idbBody: HTMLDivElement;
+  cookieBody: HTMLDivElement;
   localEmpty: HTMLDivElement;
   sessionEmpty: HTMLDivElement;
   cacheEmpty: HTMLDivElement;
