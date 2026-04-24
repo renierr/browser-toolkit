@@ -3,7 +3,7 @@ import { renderToolIconSvg } from './tool-icons';
 import { tools } from './tools';
 import router from './router';
 import { findAllToolsForMimeTypes, type SharedFilesPayload } from './share-target.ts';
-import { showMessage } from './ui.ts';
+import { hideProgress, showMessage } from './ui.ts';
 import { getSettings } from './settings.ts';
 
 export function getLastUsedMap(): Record<string, number> {
@@ -59,7 +59,8 @@ export async function openInTool(
     const mime = options.mimeType || 'application/octet-stream';
     files = [new File([input as any], name, { type: mime })];
   }
-
+  
+  hideProgress();
   if (files.length === 0) return;
 
   const mimeTypes = files.map((f) => f.type);
