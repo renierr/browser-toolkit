@@ -18,11 +18,14 @@ function normalizeGlyph(glyph: string[], lineHeight: number): string[] {
   return normalized;
 }
 
-function generateAsciiArt(text: string, style: string): string {
+function generateAsciiArt(
+  text: string,
+  style: string,
+  options: { charSpacing: number; lineGap: number }
+): string {
   const font = fonts[style];
   if (!font) return '';
 
-  const upperText = text.toUpperCase();
   const sampleChar = font['A'] || Object.values(font)[0];
   const lineHeight = sampleChar.length;
   const normalizedSample = normalizeGlyph(sampleChar, lineHeight);
@@ -37,6 +40,10 @@ function generateAsciiArt(text: string, style: string): string {
     lines[i] = [];
   }
 
+  const charGap = ' '.repeat(Math.max(0, options.charSpacing));
+  const lineJoin = '\n'.repeat(Math.max(1, options.lineGap + 1));
+  const sourceLines = text.split(/\r?\n/);
+
   const getGlyph = (char: string): string[] => {
     const cached = glyphCache.get(char);
     if (cached) return cached;
@@ -47,14 +54,29 @@ function generateAsciiArt(text: string, style: string): string {
     return normalized;
   };
 
-  for (const char of upperText) {
-    const charMap = getGlyph(char);
-    for (let i = 0; i < lineHeight; i++) {
-      lines[i].push(charMap[i]);
-    }
-  }
+  const renderedBlocks = sourceLines.map((sourceLine) => {
+    const upperText = sourceLine.toUpperCase();
 
-  return lines.map((line) => line.join('')).join('\n');
+    for (let i = 0; i < lineHeight; i++) {
+      lines[i] = [];
+    }
+
+    for (const char of upperText) {
+      const charMap = getGlyph(char);
+      for (let i = 0; i < lineHeight; i++) {
+        lines[i].push(charMap[i]);
+      }
+    }
+
+    return lines
+      .map((line) => {
+        if (line.length === 0) return '';
+        return line.join(charGap);
+      })
+      .join('\n');
+  });
+
+  return renderedBlocks.join(lineJoin);
 }
 
 function setOutputMessage(container: HTMLDivElement, message: string): void {
@@ -65,6 +87,10 @@ export default function init(): (() => void) | void {
   const inputText = document.getElementById('input-text') as HTMLInputElement;
   const styleSelect = document.getElementById('style-select') as HTMLSelectElement;
   const outputContainer = document.getElementById('output-container') as HTMLDivElement;
+  const charSpacingInput = document.getElementById('char-spacing') as HTMLInputElement;
+  const lineGapInput = document.getElementById('line-gap') as HTMLInputElement;
+  const charSpacingValue = document.getElementById('char-spacing-value') as HTMLSpanElement;
+  const lineGapValue = document.getElementById('line-gap-value') as HTMLSpanElement;
   const btnCopy = document.getElementById('btn-copy') as HTMLButtonElement;
   const btnDownload = document.getElementById('btn-download') as HTMLButtonElement;
   const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
@@ -74,6 +100,10 @@ export default function init(): (() => void) | void {
     !inputText ||
     !styleSelect ||
     !outputContainer ||
+    !charSpacingInput ||
+    !lineGapInput ||
+    !charSpacingValue ||
+    !lineGapValue ||
     !btnCopy ||
     !btnDownload ||
     !btnClear ||
@@ -97,13 +127,18 @@ export default function init(): (() => void) | void {
     }
 
     const style = styleSelect.value;
-    currentOutput = generateAsciiArt(text, style);
+    const charSpacing = Number.parseInt(charSpacingInput.value, 10) || 0;
+    const lineGap = Number.parseInt(lineGapInput.value, 10) || 0;
+    currentOutput = generateAsciiArt(text, style, { charSpacing, lineGap });
+    charSpacingValue.textContent = `${charSpacing}`;
+    lineGapValue.textContent = `${lineGap}`;
 
     if (currentOutput) {
       outputContainer.textContent = currentOutput;
       btnCopy.disabled = false;
       btnDownload.disabled = false;
-      status.textContent = `${text.length} characters generated`;
+      const styleName = styleSelect.selectedOptions[0]?.textContent ?? style;
+      status.textContent = `${text.length} characters | ${styleName}`;
     } else {
       setOutputMessage(outputContainer, ERROR_RESULT_TEXT);
       btnCopy.disabled = true;
@@ -156,6 +191,8 @@ export default function init(): (() => void) | void {
   btnClear.addEventListener('click', clearAll);
   inputText.addEventListener('input', debouncedGenerate);
   styleSelect.addEventListener('change', onStyleChange);
+  charSpacingInput.addEventListener('input', debouncedGenerate);
+  lineGapInput.addEventListener('input', debouncedGenerate);
 
   return () => {
     btnCopy.removeEventListener('click', copyToClipboard);
@@ -163,5 +200,7 @@ export default function init(): (() => void) | void {
     btnClear.removeEventListener('click', clearAll);
     inputText.removeEventListener('input', debouncedGenerate);
     styleSelect.removeEventListener('change', onStyleChange);
+    charSpacingInput.removeEventListener('input', debouncedGenerate);
+    lineGapInput.removeEventListener('input', debouncedGenerate);
   };
 }
