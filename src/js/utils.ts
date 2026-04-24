@@ -415,6 +415,65 @@ export function throttleTrailing<T extends (...args: any[]) => any>(fn: T, wait 
 
 let wakeLockSentinel: WakeLockSentinel | null = null;
 let wakeLockCount = 0;
+let wakeLockManualDisabled = false;
+
+function updateWakeLockIndicatorState() {
+  try {
+    const indicator = document.getElementById('wake-lock-indicator');
+    const activeIcon = document.getElementById('wake-lock-icon-active');
+    const disabledIcon = document.getElementById('wake-lock-icon-disabled');
+    const label = document.getElementById('wake-lock-indicator-label');
+
+    if (!indicator) return;
+
+    indicator.classList.toggle('bg-accent', !wakeLockManualDisabled);
+    indicator.classList.toggle('text-accent-content', !wakeLockManualDisabled);
+    indicator.classList.toggle('bg-warning', wakeLockManualDisabled);
+    indicator.classList.toggle('text-warning-content', wakeLockManualDisabled);
+
+    activeIcon?.classList.toggle('hidden', wakeLockManualDisabled);
+    disabledIcon?.classList.toggle('hidden', !wakeLockManualDisabled);
+
+    const indicatorTitle = wakeLockManualDisabled
+      ? 'Wake lock manually disabled'
+      : 'Wake lock active';
+    const indicatorLabel = wakeLockManualDisabled
+      ? 'Screen wake lock manually disabled'
+      : 'Screen wake lock active';
+
+    indicator.setAttribute('title', indicatorTitle);
+    indicator.setAttribute('aria-label', indicatorLabel);
+    indicator.setAttribute('aria-pressed', wakeLockManualDisabled ? 'false' : 'true');
+
+    if (label) {
+      label.textContent = indicatorLabel;
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
+async function setWakeLockManualDisabled(nextDisabled: boolean) {
+  wakeLockManualDisabled = nextDisabled;
+  updateWakeLockIndicatorState();
+
+  if (wakeLockManualDisabled) {
+    if (wakeLockSentinel) {
+      await wakeLockSentinel.release();
+      wakeLockSentinel = null;
+    }
+    return;
+  }
+
+  requestWakeLockInternal();
+}
+
+function handleWakeLockIndicatorClick() {
+  if (wakeLockCount === 0) return;
+  setWakeLockManualDisabled(!wakeLockManualDisabled).catch((error) => {
+    console.error('[Utils] Failed toggling wake lock manual override', error);
+  });
+}
 
 function showWakeLockIndicator() {
   try {
@@ -422,6 +481,8 @@ function showWakeLockIndicator() {
     if (el) {
       el.classList.remove('hidden');
       el.setAttribute('aria-hidden', 'false');
+      el.addEventListener('click', handleWakeLockIndicatorClick);
+      updateWakeLockIndicatorState();
     }
   } catch (_) {
     // ignore
@@ -432,6 +493,7 @@ function hideWakeLockIndicator() {
   try {
     const el = document.getElementById('wake-lock-indicator');
     if (el) {
+      el.removeEventListener('click', handleWakeLockIndicatorClick);
       el.classList.add('hidden');
       el.setAttribute('aria-hidden', 'true');
     }
@@ -441,7 +503,13 @@ function hideWakeLockIndicator() {
 }
 
 async function requestWakeLockInternal() {
-  if (!('wakeLock' in navigator) || wakeLockCount === 0 || wakeLockSentinel) return;
+  if (
+    !('wakeLock' in navigator) ||
+    wakeLockCount === 0 ||
+    wakeLockSentinel ||
+    wakeLockManualDisabled
+  )
+    return;
   try {
     const lock = await navigator.wakeLock.request('screen');
     // Check again after await to prevent race conditions
@@ -460,7 +528,7 @@ async function requestWakeLockInternal() {
 }
 
 const handleVisibilityChange = () => {
-  if (document.visibilityState === 'visible' && wakeLockCount > 0) {
+  if (document.visibilityState === 'visible' && wakeLockCount > 0 && !wakeLockManualDisabled) {
     requestWakeLockInternal();
   }
 };
@@ -487,6 +555,7 @@ export function acquireWakeLock(): () => void {
 
     if (wakeLockCount === 0) {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      wakeLockManualDisabled = false;
       if (wakeLockSentinel) {
         wakeLockSentinel.release();
         wakeLockSentinel = null;
