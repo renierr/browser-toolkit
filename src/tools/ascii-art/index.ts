@@ -3,6 +3,9 @@ import { downloadFile } from '@js/file-utils.ts';
 import { debounce } from '@js/utils.ts';
 import { fonts } from './fonts.ts';
 
+const EMPTY_RESULT_TEXT = 'Result will appear here...';
+const ERROR_RESULT_TEXT = 'Error generating ASCII art';
+
 function generateAsciiArt(text: string, style: string): string {
   const font = fonts[style];
   if (!font) return '';
@@ -10,6 +13,7 @@ function generateAsciiArt(text: string, style: string): string {
   const upperText = text.toUpperCase();
   const sampleChar = font['A'] || Object.values(font)[0];
   const lineHeight = sampleChar.length;
+  const fallbackChar = font['?'] ?? font[' '] ?? Array.from({ length: lineHeight }, () => ' ');
 
   const lines: string[][] = [];
   for (let i = 0; i < lineHeight; i++) {
@@ -17,13 +21,17 @@ function generateAsciiArt(text: string, style: string): string {
   }
 
   for (const char of upperText) {
-    const charMap = font[char] ?? font['?'] ?? font[' '] ?? ['?'];
+    const charMap = font[char] ?? fallbackChar;
     for (let i = 0; i < lineHeight; i++) {
       lines[i].push(charMap[i] ?? '');
     }
   }
 
   return lines.map((line) => line.join('')).join('\n');
+}
+
+function setOutputMessage(container: HTMLDivElement, message: string): void {
+  container.textContent = message;
 }
 
 export default function init(): (() => void) | void {
@@ -35,16 +43,29 @@ export default function init(): (() => void) | void {
   const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
   const status = document.getElementById('status') as HTMLDivElement;
 
+  if (
+    !inputText ||
+    !styleSelect ||
+    !outputContainer ||
+    !btnCopy ||
+    !btnDownload ||
+    !btnClear ||
+    !status
+  ) {
+    console.error('[AsciiArt] Missing required DOM elements');
+    return;
+  }
+
   let currentOutput = '';
 
   const generate = () => {
-    const text = inputText.value.trim();
-    if (!text) {
-      outputContainer.innerHTML =
-        '<span class="italic text-base-content/50">Result will appear here...</span>';
+    const text = inputText.value;
+    if (text.length === 0) {
+      setOutputMessage(outputContainer, EMPTY_RESULT_TEXT);
       btnCopy.disabled = true;
       btnDownload.disabled = true;
       currentOutput = '';
+      status.textContent = '';
       return;
     }
 
@@ -57,11 +78,11 @@ export default function init(): (() => void) | void {
       btnDownload.disabled = false;
       status.textContent = `${text.length} characters generated`;
     } else {
-      outputContainer.innerHTML =
-        '<span class="italic text-base-content/50">Error generating ASCII art</span>';
+      setOutputMessage(outputContainer, ERROR_RESULT_TEXT);
       btnCopy.disabled = true;
       btnDownload.disabled = true;
       currentOutput = '';
+      status.textContent = '';
     }
   };
 
@@ -69,6 +90,11 @@ export default function init(): (() => void) | void {
 
   const copyToClipboard = async () => {
     if (!currentOutput) return;
+    if (!navigator.clipboard) {
+      showMessage('Clipboard API not available', { type: 'alert' });
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(currentOutput);
       showMessage('Copied to clipboard!', { timeoutMs: 2000 });
@@ -86,8 +112,7 @@ export default function init(): (() => void) | void {
 
   const clearAll = () => {
     inputText.value = '';
-    outputContainer.innerHTML =
-      '<span class="italic text-base-content/50">Result will appear here...</span>';
+    setOutputMessage(outputContainer, EMPTY_RESULT_TEXT);
     btnCopy.disabled = true;
     btnDownload.disabled = true;
     currentOutput = '';

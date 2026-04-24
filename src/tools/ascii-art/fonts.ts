@@ -720,6 +720,49 @@ export const boxFont: FontMap = {
   $: [' ┌─┐ ', '│    ', ' └─┐ ', '    │', '└──┘  '],
 };
 
+function mapFont(
+  font: FontMap,
+  mapper: (line: string, lineIndex: number, key: string) => string
+): FontMap {
+  const mapped: FontMap = {};
+
+  for (const [key, glyph] of Object.entries(font)) {
+    mapped[key] = glyph.map((line, lineIndex) => mapper(line, lineIndex, key));
+  }
+
+  return mapped;
+}
+
+function createDeep3DFont(base: FontMap): FontMap {
+  return mapFont(base, (line, lineIndex, key) => {
+    if (key === ' ') return line;
+
+    const depth = lineIndex > 1 ? '▓' : '▒';
+    return `${line}${depth}`;
+  });
+}
+
+function createBevelFont(base: FontMap): FontMap {
+  return mapFont(base, (line, lineIndex, key) => {
+    if (key === ' ') return line;
+
+    if (lineIndex === 0) return line.replaceAll('█', '▀');
+    if (lineIndex === 4) return line.replaceAll('█', '▄');
+    return line;
+  });
+}
+
+function createNeonFont(base: FontMap): FontMap {
+  return mapFont(base, (line, _lineIndex, key) => {
+    if (key === ' ') return line;
+    return line.replaceAll('█', '▓').replaceAll(' ', '·');
+  });
+}
+
+export const deep3DFont: FontMap = createDeep3DFont(block3DFont);
+export const bevelFont: FontMap = createBevelFont(blockFont);
+export const neonFont: FontMap = createNeonFont(starFont);
+
 export const fonts: Record<string, FontMap> = {
   block: blockFont,
   shadow: shadowFont,
@@ -729,6 +772,9 @@ export const fonts: Record<string, FontMap> = {
   banner: bannerFont,
   slant: slantFont,
   'block-3d': block3DFont,
+  'deep-3d': deep3DFont,
+  bevel: bevelFont,
+  neon: neonFont,
   star: starFont,
   box: boxFont,
 };
