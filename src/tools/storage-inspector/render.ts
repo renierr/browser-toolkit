@@ -73,10 +73,7 @@ function formatEstimateBreakdown(
     : 'Browser did not provide per-store usage details.';
 }
 
-export function renderTables(
-  el: StorageInspectorElements,
-  snapshot: StorageSnapshot
-): void {
+export function renderTables(el: StorageInspectorElements, snapshot: StorageSnapshot): void {
   renderKvItems(el.localBody, snapshot.localEntries, 'local');
   renderKvItems(el.sessionBody, snapshot.sessionEntries, 'session');
 

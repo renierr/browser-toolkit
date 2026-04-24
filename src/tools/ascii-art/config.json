@@ -1,0 +1,8 @@
+{
+  "name": "ASCII Art",
+  "description": "Convert text to ASCII art in multiple styles.",
+  "icon": "type",
+  "sectionId": "utilities",
+  "order": 10,
+  "draft": false
+}
