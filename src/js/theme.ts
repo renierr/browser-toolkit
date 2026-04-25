@@ -33,3 +33,10 @@ export function setupThemeToggle() {
     setTheme(themeToggleCheckbox.checked ? 'dark' : 'light');
   }
 }
+
+export function applyThemeColor(color: string) {
+  const meta = document.getElementById('meta-theme-color') as HTMLMetaElement | null;
+  if (meta && color) {
+    meta.setAttribute('content', color);
+  }
+}

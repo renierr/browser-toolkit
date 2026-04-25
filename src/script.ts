@@ -21,11 +21,19 @@ import { setTools, tools } from './js/tools.ts';
 import { getSettings } from './js/settings.ts';
 import { getMimeTypeFromFileName } from './js/mime-types';
 import { showMessage } from './js/ui.ts';
+import { applyThemeColor } from './js/theme.ts';
 
 // apply config values
 document.title = siteContext.config.title;
 const metaDesc = document.querySelector('meta[name="description"]');
 if (metaDesc) metaDesc.setAttribute('content', siteContext.config.description || '');
+
+// apply theme color from settings
+const bootSettings = getSettings('overview');
+const storedThemeColor = bootSettings.get<string>('themeColor');
+if (storedThemeColor) {
+  applyThemeColor(storedThemeColor);
+}
 
 const descModules = import.meta.glob('@tools/**/config.json', { eager: true });
 const assetModules = import.meta.glob(['@tools/**/*.html', '@tools/**/*.css'], {
@@ -119,7 +127,11 @@ function renderOverview() {
   if (settingsContainer) {
     settings.bind(settingsContainer);
     // Re-render when settings change
-    settingsContainer.addEventListener('change', () => {
+    settingsContainer.addEventListener('change', (ev) => {
+      const target = ev.target as HTMLElement;
+      if (target.dataset.setting === 'themeColor') {
+        applyThemeColor((target as HTMLInputElement).value);
+      }
       filterAndRender();
     });
   }
