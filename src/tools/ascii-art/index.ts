@@ -9,7 +9,7 @@ export default function init(): (() => void) | void {
   const EMPTY_RESULT_TEXT = 'Result will appear here...';
   const ERROR_RESULT_TEXT = 'Error generating ASCII art';
 
-  const container = document.getElementById('ascii-art-container') || (document.querySelector('.card') as HTMLElement);
+  const container = document.getElementById('ascii-art-container') as HTMLElement;
   const inputText = document.getElementById('input-text') as HTMLInputElement;
   const styleSelect = document.getElementById('style-select') as HTMLSelectElement;
   const outputContainer = document.getElementById('output-container') as HTMLDivElement;
@@ -24,6 +24,7 @@ export default function init(): (() => void) | void {
   const previewsList = document.getElementById('previews-list') as HTMLDivElement;
 
   if (
+    !container ||
     !inputText ||
     !styleSelect ||
     !outputContainer ||
@@ -43,7 +44,6 @@ export default function init(): (() => void) | void {
 
   const generator = createGenerator();
   const settings = getSettings('ascii-art');
-  const unbind = container ? settings.bind(container) : () => {};
 
   // Populate style-select with fonts from figlet
   styleSelect.innerHTML = '';
@@ -51,9 +51,13 @@ export default function init(): (() => void) | void {
     const option = document.createElement('option');
     option.value = font;
     option.textContent = font;
-    if (font === 'Standard') option.selected = true;
     styleSelect.appendChild(option);
   });
+
+  // Set default before binding
+  styleSelect.value = 'Standard';
+
+  const unbind = settings.bind(container);
 
   let currentOutput = '';
   let isPreviewingAll = false;
