@@ -130,7 +130,10 @@ export default function init(): (() => void) | void {
       const results = await Promise.all(
         batch.map(async (fontName) => {
           try {
-            const art = await generator.generate(text, fontName, { horizontalLayout, verticalLayout });
+            const art = await generator.generate(text, fontName, {
+              horizontalLayout,
+              verticalLayout,
+            });
             return { fontName, art };
           } catch (e) {
             return { fontName, art: 'Error loading font' };
@@ -230,5 +233,3 @@ export default function init(): (() => void) | void {
     verticalLayoutSelect.removeEventListener('change', () => debouncedGenerate());
   };
 }
-
-
