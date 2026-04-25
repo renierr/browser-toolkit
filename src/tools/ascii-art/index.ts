@@ -71,8 +71,11 @@ export default function init(): (() => void) | void {
   const verticalLayoutSelect = document.getElementById('vertical-layout') as HTMLSelectElement;
   const btnCopy = document.getElementById('btn-copy') as HTMLButtonElement;
   const btnDownload = document.getElementById('btn-download') as HTMLButtonElement;
+  const btnPreviewAll = document.getElementById('btn-preview-all') as HTMLButtonElement;
   const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
   const status = document.getElementById('status') as HTMLDivElement;
+  const previewsContainer = document.getElementById('previews-container') as HTMLDivElement;
+  const previewsList = document.getElementById('previews-list') as HTMLDivElement;
 
   if (
     !inputText ||
@@ -82,8 +85,11 @@ export default function init(): (() => void) | void {
     !verticalLayoutSelect ||
     !btnCopy ||
     !btnDownload ||
+    !btnPreviewAll ||
     !btnClear ||
-    !status
+    !status ||
+    !previewsContainer ||
+    !previewsList
   ) {
     console.error('[AsciiArt] Missing required DOM elements');
     return;
@@ -103,6 +109,7 @@ export default function init(): (() => void) | void {
   const unbind = container ? settings.bind(container) : () => {};
 
   let currentOutput = '';
+  let isPreviewingAll = false;
 
   const generate = async () => {
     const text = inputText.value;
@@ -112,6 +119,7 @@ export default function init(): (() => void) | void {
       btnDownload.disabled = true;
       currentOutput = '';
       status.textContent = '';
+      previewsContainer.classList.add('hidden');
       return;
     }
 
@@ -142,6 +150,74 @@ export default function init(): (() => void) | void {
       currentOutput = '';
       status.textContent = '';
     }
+  };
+
+  const previewAllFonts = async () => {
+    const text = inputText.value;
+    if (!text) {
+      showMessage('Please enter some text first');
+      return;
+    }
+
+    if (isPreviewingAll) return;
+    isPreviewingAll = true;
+    btnPreviewAll.disabled = true;
+    btnPreviewAll.textContent = 'Generating...';
+    previewsContainer.classList.remove('hidden');
+    previewsList.innerHTML = '';
+
+    const horizontalLayout = horizontalLayoutSelect.value;
+    const verticalLayout = verticalLayoutSelect.value;
+
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < fontList.length; i += BATCH_SIZE) {
+      const batch = fontList.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(
+        batch.map(async (fontName) => {
+          try {
+            const art = await generateAsciiArt(text, fontName, { horizontalLayout, verticalLayout });
+            return { fontName, art };
+          } catch (e) {
+            return { fontName, art: 'Error loading font' };
+          }
+        })
+      );
+
+      results.forEach(({ fontName, art }) => {
+        const item = document.createElement('div');
+        item.className = 'bg-base-300 p-4 rounded-lg space-y-3';
+        item.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-lg">${fontName}</span>
+            <button class="btn btn-sm btn-outline btn-select-font" data-font="${fontName}">
+              Use this font
+            </button>
+          </div>
+          <pre class="font-mono text-[10px] leading-none whitespace-pre overflow-x-auto p-2 bg-base-100 rounded">${art}</pre>
+        `;
+
+        item.querySelector('.btn-select-font')?.addEventListener('click', () => {
+          styleSelect.value = fontName;
+          // Trigger change event to persist and re-generate
+          styleSelect.dispatchEvent(new Event('change'));
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        previewsList.appendChild(item);
+      });
+
+      // Update button progress
+      btnPreviewAll.textContent = `Generating (${Math.min(i + BATCH_SIZE, fontList.length)}/${fontList.length})...`;
+
+      // Small break to keep UI responsive
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    btnPreviewAll.disabled = false;
+    btnPreviewAll.innerHTML = '<i data-lucide="eye" class="w-4 h-4 mr-2"></i> Preview All';
+    // Re-setup lucide icons for the new buttons
+    (window as any).lucide?.createIcons();
+    isPreviewingAll = false;
   };
 
   const debouncedGenerate = debounce(generate, 300);
@@ -175,7 +251,11 @@ export default function init(): (() => void) | void {
     btnDownload.disabled = true;
     currentOutput = '';
     status.textContent = '';
+    previewsContainer.classList.add('hidden');
+    previewsList.innerHTML = '';
     inputText.focus();
+    // Trigger change event to clear persisted text
+    inputText.dispatchEvent(new Event('change'));
   };
 
   const onStyleChange = () => {
@@ -184,6 +264,7 @@ export default function init(): (() => void) | void {
 
   btnCopy.addEventListener('click', copyToClipboard);
   btnDownload.addEventListener('click', downloadAscii);
+  btnPreviewAll.addEventListener('click', previewAllFonts);
   btnClear.addEventListener('click', clearAll);
   inputText.addEventListener('input', debouncedGenerate);
   styleSelect.addEventListener('change', onStyleChange);
@@ -197,6 +278,7 @@ export default function init(): (() => void) | void {
     unbind();
     btnCopy.removeEventListener('click', copyToClipboard);
     btnDownload.removeEventListener('click', downloadAscii);
+    btnPreviewAll.removeEventListener('click', previewAllFonts);
     btnClear.removeEventListener('click', clearAll);
     inputText.removeEventListener('input', debouncedGenerate);
     styleSelect.removeEventListener('change', onStyleChange);

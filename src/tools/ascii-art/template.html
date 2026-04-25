@@ -77,9 +77,18 @@
         <i data-lucide="download" class="w-4 h-4 mr-2"></i>
         Download
       </button>
+      <button id="btn-preview-all" class="btn btn-primary flex-1 sm:flex-none">
+        <i data-lucide="eye" class="w-4 h-4 mr-2"></i>
+        Preview All
+      </button>
       <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
     </div>
 
     <div id="status" class="mt-4 text-sm text-base-content/60 text-center"></div>
+
+    <div id="previews-container" class="mt-8 space-y-6 hidden">
+      <div class="divider">All Font Previews</div>
+      <div id="previews-list" class="space-y-6"></div>
+    </div>
   </div>
 </div>
