@@ -15,6 +15,7 @@
         class="input input-bordered w-full"
         placeholder="Enter text to convert..."
         maxlength="50"
+        data-setting="inputText"
       />
     </div>
 
@@ -23,43 +24,35 @@
         <span class="label-text font-semibold">Style</span>
       </label>
       <select id="style-select" class="select select-bordered w-full" data-setting="fontStyle">
-        <optgroup label="Classic">
-          <option value="block">Block</option>
-          <option value="shadow">Shadow</option>
-          <option value="small">Small</option>
-          <option value="digital">Digital</option>
-          <option value="slant">Slant</option>
-        </optgroup>
-        <optgroup label="3D & Depth">
-          <option value="block-3d">3D Block</option>
-          <option value="deep-3d">Deep 3D</option>
-          <option value="bevel">Bevel</option>
-        </optgroup>
-        <optgroup label="Fancy">
-          <option value="banner">Banner</option>
-          <option value="bubble">Bubble</option>
-          <option value="star">Star</option>
-          <option value="neon">Neon Dots</option>
-          <option value="box">Box</option>
-        </optgroup>
+        <option value="Standard">Loading fonts...</option>
       </select>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
       <div class="form-control w-full">
-        <label class="label" for="char-spacing">
-          <span class="label-text font-semibold">Character Spacing</span>
-          <span id="char-spacing-value" class="label-text-alt">0</span>
+        <label class="label" for="horizontal-layout">
+          <span class="label-text font-semibold">Horizontal Layout</span>
         </label>
-        <input id="char-spacing" type="range" min="0" max="4" value="0" class="range range-sm" />
+        <select id="horizontal-layout" class="select select-bordered select-sm w-full" data-setting="horizontalLayout">
+          <option value="default" selected>Default</option>
+          <option value="full">Full</option>
+          <option value="fitted">Fitted</option>
+          <option value="controlled horizontal smushing">Controlled Smushing</option>
+          <option value="universal horizontal smushing">Universal Smushing</option>
+        </select>
       </div>
 
       <div class="form-control w-full">
-        <label class="label" for="line-gap">
-          <span class="label-text font-semibold">Line Gap</span>
-          <span id="line-gap-value" class="label-text-alt">0</span>
+        <label class="label" for="vertical-layout">
+          <span class="label-text font-semibold">Vertical Layout</span>
         </label>
-        <input id="line-gap" type="range" min="0" max="2" value="0" class="range range-sm" />
+        <select id="vertical-layout" class="select select-bordered select-sm w-full" data-setting="verticalLayout">
+          <option value="default" selected>Default</option>
+          <option value="full">Full</option>
+          <option value="fitted">Fitted</option>
+          <option value="controlled vertical smushing">Controlled Smushing</option>
+          <option value="universal vertical smushing">Universal Smushing</option>
+        </select>
       </div>
     </div>
 
@@ -69,9 +62,9 @@
       </label>
       <div
         id="output-container"
-        class="w-full min-h-32 p-4 bg-base-200 rounded-lg border border-base-300 font-mono text-xs sm:text-sm whitespace-pre overflow-x-auto"
+        class="w-full min-h-48 p-4 bg-base-200 rounded-lg border border-base-300 font-mono text-[10px] leading-none whitespace-pre overflow-x-auto"
       >
-        <span class="text-base-content/50 italic">Result will appear here...</span>
+        <span class="text-base-content/50 italic text-sm">Result will appear here...</span>
       </div>
     </div>
 

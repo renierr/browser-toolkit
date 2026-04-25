@@ -1,82 +1,61 @@
 import { showMessage } from '@js/ui.ts';
 import { downloadFile } from '@js/file-utils.ts';
 import { debounce } from '@js/utils.ts';
-import { fonts } from './fonts.ts';
+import figlet from 'figlet';
+import { fontList } from './font-list.ts';
+
+import { getSettings } from '@js/settings.ts';
 
 const EMPTY_RESULT_TEXT = 'Result will appear here...';
 const ERROR_RESULT_TEXT = 'Error generating ASCII art';
 
-function normalizeGlyph(glyph: string[], lineHeight: number): string[] {
-  const width = glyph.reduce((max, line) => Math.max(max, line.length), 0);
-  const safeWidth = Math.max(width, 1);
+const loadedFonts = new Set<string>();
+const fontModules = import.meta.glob('./node_modules/figlet/importable-fonts/*.js');
 
-  const normalized: string[] = [];
-  for (let i = 0; i < lineHeight; i++) {
-    normalized.push((glyph[i] ?? '').padEnd(safeWidth, ' '));
+async function ensureFontLoaded(fontName: string): Promise<void> {
+  if (loadedFonts.has(fontName)) return;
+
+  try {
+    const path = `./node_modules/figlet/importable-fonts/${fontName}.js`;
+    const loader = fontModules[path];
+
+    if (!loader) {
+      throw new Error(`Font module not found for: ${fontName}`);
+    }
+
+    const fontData = (await loader()) as { default: string };
+    figlet.parseFont(fontName, fontData.default);
+    loadedFonts.add(fontName);
+  } catch (error) {
+    console.error(`[AsciiArt] Failed to load font: ${fontName}`, error);
+    throw error;
   }
-
-  return normalized;
 }
 
-function generateAsciiArt(
+async function generateAsciiArt(
   text: string,
-  style: string,
-  options: { charSpacing: number; lineGap: number }
-): string {
-  const font = fonts[style];
-  if (!font) return '';
+  fontName: string,
+  options: { horizontalLayout: string; verticalLayout: string }
+): Promise<string> {
+  await ensureFontLoaded(fontName);
 
-  const sampleChar = font['A'] || Object.values(font)[0];
-  const lineHeight = sampleChar.length;
-  const normalizedSample = normalizeGlyph(sampleChar, lineHeight);
-  const sampleWidth = normalizedSample[0]?.length ?? 1;
-  const fallbackSource =
-    font['?'] ?? font[' '] ?? Array.from({ length: lineHeight }, () => ' '.repeat(sampleWidth));
-  const fallbackChar = normalizeGlyph(fallbackSource, lineHeight);
-  const glyphCache = new Map<string, string[]>();
-
-  const lines: string[][] = [];
-  for (let i = 0; i < lineHeight; i++) {
-    lines[i] = [];
-  }
-
-  const charGap = ' '.repeat(Math.max(0, options.charSpacing));
-  const lineJoin = '\n'.repeat(Math.max(1, options.lineGap + 1));
-  const sourceLines = text.split(/\r?\n/);
-
-  const getGlyph = (char: string): string[] => {
-    const cached = glyphCache.get(char);
-    if (cached) return cached;
-
-    const normalized = normalizeGlyph(font[char] ?? fallbackChar, lineHeight);
-    glyphCache.set(char, normalized);
-
-    return normalized;
-  };
-
-  const renderedBlocks = sourceLines.map((sourceLine) => {
-    const upperText = sourceLine.toUpperCase();
-
-    for (let i = 0; i < lineHeight; i++) {
-      lines[i] = [];
-    }
-
-    for (const char of upperText) {
-      const charMap = getGlyph(char);
-      for (let i = 0; i < lineHeight; i++) {
-        lines[i].push(charMap[i]);
+  return new Promise((resolve, reject) => {
+    figlet.text(
+      text,
+      {
+        font: fontName as any,
+        horizontalLayout: options.horizontalLayout as any,
+        verticalLayout: options.verticalLayout as any,
+      },
+      (err, data) => {
+        if (err) {
+          reject(err);
+          return;
+        }
+        resolve(data || '');
       }
-    }
-
-    return lines
-      .map((line) => {
-        if (line.length === 0) return '';
-        return line.join(charGap);
-      })
-      .join('\n');
+    );
   });
-
-  return renderedBlocks.join(lineJoin);
 }
 
 function setOutputMessage(container: HTMLDivElement, message: string): void {
@@ -84,13 +63,12 @@ function setOutputMessage(container: HTMLDivElement, message: string): void {
 }
 
 export default function init(): (() => void) | void {
+  const container = document.getElementById('ascii-art-container') || (document.querySelector('.card') as HTMLElement);
   const inputText = document.getElementById('input-text') as HTMLInputElement;
   const styleSelect = document.getElementById('style-select') as HTMLSelectElement;
   const outputContainer = document.getElementById('output-container') as HTMLDivElement;
-  const charSpacingInput = document.getElementById('char-spacing') as HTMLInputElement;
-  const lineGapInput = document.getElementById('line-gap') as HTMLInputElement;
-  const charSpacingValue = document.getElementById('char-spacing-value') as HTMLSpanElement;
-  const lineGapValue = document.getElementById('line-gap-value') as HTMLSpanElement;
+  const horizontalLayoutSelect = document.getElementById('horizontal-layout') as HTMLSelectElement;
+  const verticalLayoutSelect = document.getElementById('vertical-layout') as HTMLSelectElement;
   const btnCopy = document.getElementById('btn-copy') as HTMLButtonElement;
   const btnDownload = document.getElementById('btn-download') as HTMLButtonElement;
   const btnClear = document.getElementById('btn-clear') as HTMLButtonElement;
@@ -100,10 +78,8 @@ export default function init(): (() => void) | void {
     !inputText ||
     !styleSelect ||
     !outputContainer ||
-    !charSpacingInput ||
-    !lineGapInput ||
-    !charSpacingValue ||
-    !lineGapValue ||
+    !horizontalLayoutSelect ||
+    !verticalLayoutSelect ||
     !btnCopy ||
     !btnDownload ||
     !btnClear ||
@@ -113,9 +89,22 @@ export default function init(): (() => void) | void {
     return;
   }
 
+  // Populate style-select with fonts from figlet
+  styleSelect.innerHTML = '';
+  fontList.forEach((font) => {
+    const option = document.createElement('option');
+    option.value = font;
+    option.textContent = font;
+    if (font === 'Standard') option.selected = true;
+    styleSelect.appendChild(option);
+  });
+
+  const settings = getSettings('ascii-art');
+  const unbind = container ? settings.bind(container) : () => {};
+
   let currentOutput = '';
 
-  const generate = () => {
+  const generate = async () => {
     const text = inputText.value;
     if (text.length === 0) {
       setOutputMessage(outputContainer, EMPTY_RESULT_TEXT);
@@ -127,19 +116,26 @@ export default function init(): (() => void) | void {
     }
 
     const style = styleSelect.value;
-    const charSpacing = Number.parseInt(charSpacingInput.value, 10) || 0;
-    const lineGap = Number.parseInt(lineGapInput.value, 10) || 0;
-    currentOutput = generateAsciiArt(text, style, { charSpacing, lineGap });
-    charSpacingValue.textContent = `${charSpacing}`;
-    lineGapValue.textContent = `${lineGap}`;
+    const horizontalLayout = horizontalLayoutSelect.value;
+    const verticalLayout = verticalLayoutSelect.value;
 
-    if (currentOutput) {
-      outputContainer.textContent = currentOutput;
-      btnCopy.disabled = false;
-      btnDownload.disabled = false;
-      const styleName = styleSelect.selectedOptions[0]?.textContent ?? style;
-      status.textContent = `${text.length} characters | ${styleName}`;
-    } else {
+    try {
+      currentOutput = await generateAsciiArt(text, style, { horizontalLayout, verticalLayout });
+      if (currentOutput) {
+        outputContainer.textContent = currentOutput;
+        btnCopy.disabled = false;
+        btnDownload.disabled = false;
+        const styleName = styleSelect.selectedOptions[0]?.textContent ?? style;
+        status.textContent = `${text.length} characters | ${styleName}`;
+      } else {
+        setOutputMessage(outputContainer, ERROR_RESULT_TEXT);
+        btnCopy.disabled = true;
+        btnDownload.disabled = true;
+        currentOutput = '';
+        status.textContent = '';
+      }
+    } catch (err) {
+      console.error('[AsciiArt] Generation failed:', err);
       setOutputMessage(outputContainer, ERROR_RESULT_TEXT);
       btnCopy.disabled = true;
       btnDownload.disabled = true;
@@ -191,16 +187,21 @@ export default function init(): (() => void) | void {
   btnClear.addEventListener('click', clearAll);
   inputText.addEventListener('input', debouncedGenerate);
   styleSelect.addEventListener('change', onStyleChange);
-  charSpacingInput.addEventListener('input', debouncedGenerate);
-  lineGapInput.addEventListener('input', debouncedGenerate);
+  horizontalLayoutSelect.addEventListener('change', debouncedGenerate);
+  verticalLayoutSelect.addEventListener('change', debouncedGenerate);
+
+  // Initial generation to handle restored settings
+  generate();
 
   return () => {
+    unbind();
     btnCopy.removeEventListener('click', copyToClipboard);
     btnDownload.removeEventListener('click', downloadAscii);
     btnClear.removeEventListener('click', clearAll);
     inputText.removeEventListener('input', debouncedGenerate);
     styleSelect.removeEventListener('change', onStyleChange);
-    charSpacingInput.removeEventListener('input', debouncedGenerate);
-    lineGapInput.removeEventListener('input', debouncedGenerate);
+    horizontalLayoutSelect.removeEventListener('change', debouncedGenerate);
+    verticalLayoutSelect.removeEventListener('change', debouncedGenerate);
   };
 }
+
