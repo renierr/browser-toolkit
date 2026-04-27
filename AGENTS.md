@@ -32,6 +32,7 @@ For extended examples and walkthroughs, see:
 - Keep custom CSS minimal in `src/css/style.css`.
 - Do not add dependencies unless necessary. Ask first if unclear.
 - No Node.js-only APIs in tool code (`fs`, `path`, `os`, `child_process`, Node `crypto`, etc.).
+- Never mention AI agents, co-authorship, or AI generation in commit messages or code.
 
 ## PREFER
 
