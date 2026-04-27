@@ -1,11 +1,13 @@
 import { SpeechEngine } from './speech-engine';
 import type { TTSOptions } from './speech-engine';
+import { getSettings } from '../../js/settings';
 
 export default function init(): void | (() => void) {
   const container = document.getElementById('tool-content');
   if (!container) return;
 
   const engine = new SpeechEngine();
+  const settings = getSettings('text-to-speech');
 
   // Elements
   const textInput = container.querySelector('#tts-text') as HTMLTextAreaElement;
@@ -13,7 +15,7 @@ export default function init(): void | (() => void) {
   const btnRefresh = container.querySelector('#btn-refresh-voices') as HTMLButtonElement;
   const btnInit = container.querySelector('#btn-init-engine') as HTMLButtonElement;
   const btnSpeak = container.querySelector('#btn-speak') as HTMLButtonElement;
-  
+
   const rateRange = container.querySelector('#rate-range') as HTMLInputElement;
   const rateVal = container.querySelector('#rate-val') as HTMLSpanElement;
   const pitchRange = container.querySelector('#pitch-range') as HTMLInputElement;
@@ -39,6 +41,8 @@ export default function init(): void | (() => void) {
     const voices = await engine.loadVoices();
     btnRefresh.classList.remove('animate-spin');
 
+    const savedVoiceValue = settings.get('voice');
+
     voiceSelect.innerHTML = '';
     if (voices.length === 0) {
       const opt = document.createElement('option');
@@ -54,6 +58,11 @@ export default function init(): void | (() => void) {
         opt.textContent = `${v.name} (${v.lang})`;
         voiceSelect.appendChild(opt);
       });
+
+      // Restore saved voice if it exists in the new list
+      if (savedVoiceValue !== undefined && savedVoiceValue !== null) {
+        voiceSelect.value = String(savedVoiceValue);
+      }
     }
   };
 
@@ -61,22 +70,28 @@ export default function init(): void | (() => void) {
     voiceIndex: parseInt(voiceSelect.value),
     rate: parseFloat(rateRange.value),
     pitch: parseFloat(pitchRange.value),
-    volume: parseFloat(volumeRange.value)
+    volume: parseFloat(volumeRange.value),
   });
 
   const onSpeak = () => {
     const text = textInput.value.trim();
     if (!text) return;
     updateStatus(true, 'Speaking...');
-    engine.speak(text, getOptions(), 
-      () => updateStatus(false), 
+    engine.speak(
+      text,
+      getOptions(),
+      () => updateStatus(false),
       (errorMsg) => updateStatus(true, errorMsg, true)
     );
   };
 
   // UI Sync
   const syncRange = (input: HTMLInputElement, display: HTMLSpanElement) => {
-    input.addEventListener('input', () => { display.textContent = input.value; });
+    // Initial value from setting (handled by bind but badge needs manual update)
+    display.textContent = input.value;
+    input.addEventListener('input', () => {
+      display.textContent = input.value;
+    });
   };
 
   syncRange(rateRange, rateVal);

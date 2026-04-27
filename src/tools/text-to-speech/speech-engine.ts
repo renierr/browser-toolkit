@@ -57,23 +57,27 @@ export class SpeechEngine {
     });
   }
 
-  public speak(text: string, options: TTSOptions, onEnd?: () => void, onError?: (msg: string) => void): void {
+  public speak(
+    text: string,
+    options: TTSOptions,
+    onEnd?: () => void,
+    onError?: (msg: string) => void
+  ): void {
     if (!this.synth) return;
-    
-    // 1. Clear any pending speech
+
+    // 1. Clear everything
     this.synth.cancel();
 
-    // 2. Delay slightly to allow the engine to reset (Crucial for Chrome/Linux/Android)
+    // 2. Short wait before starting new synthesis
     setTimeout(() => {
       if (!text.trim()) return;
 
       const utterance = new SpeechSynthesisUtterance(text);
-      
+
       if (options.voiceIndex >= 0 && this.voices[options.voiceIndex]) {
         utterance.voice = this.voices[options.voiceIndex];
         utterance.lang = this.voices[options.voiceIndex].lang;
       } else {
-        // Fallback to browser language
         utterance.lang = navigator.language || 'en-US';
       }
 
@@ -84,9 +88,8 @@ export class SpeechEngine {
       utterance.onend = () => onEnd?.();
       utterance.onerror = (e) => {
         console.error('[SpeechEngine] Error Event:', e);
-        // If we failed, try one last time with absolute defaults
         if (e.error === 'synthesis-failed') {
-          console.warn('[SpeechEngine] Retrying with minimal settings...');
+          console.warn('[SpeechEngine] Retrying with aggressive reset...');
           this.speakMinimal(text, onEnd, onError);
         } else {
           onError?.(`Error: ${e.error || 'Unknown'}`);
@@ -95,25 +98,30 @@ export class SpeechEngine {
 
       try {
         this.synth!.speak(utterance);
-        // 3. Force resume in case the engine is stuck (Common on Linux/Chrome)
-        if (this.synth!.paused) {
-          this.synth!.resume();
-        }
+        // Force state to resume
+        this.synth!.resume();
       } catch (e) {
         console.error('[SpeechEngine] Speak Exception:', e);
         onError?.('Playback exception.');
       }
-    }, 100);
+    }, 150);
   }
 
-  // A "super safe" fallback mode
   private speakMinimal(text: string, onEnd?: () => void, onError?: (msg: string) => void): void {
     if (!this.synth) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.onend = () => onEnd?.();
-    utterance.onerror = () => onError?.('System TTS failed even in Safe Mode.');
-    this.synth.speak(utterance);
-    this.synth.resume();
+
+    this.synth.cancel();
+    setTimeout(() => {
+      const utterance = new SpeechSynthesisUtterance(text);
+      // Absolute defaults, no custom voice/rate/etc
+      utterance.onend = () => onEnd?.();
+      utterance.onerror = (e) => {
+        console.error('[SpeechEngine] Minimal fallback failed:', e);
+        onError?.('System TTS failed. On Linux: check speech-dispatcher.');
+      };
+      this.synth!.speak(utterance);
+      this.synth!.resume();
+    }, 200);
   }
 
   public stop(): void {
