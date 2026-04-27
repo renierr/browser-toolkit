@@ -111,7 +111,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `not set`, icon `image`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/image-vectorizer/config.json`
 
-## Media (5)
+## Media (6)
 
 ### Chiptune (`chiptune`)
 - Description: Play MOD, XM, and IT tracker files with waveform and spectrum visualizations.
@@ -132,6 +132,11 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Description: Record audio, preview the waveform, and save the result as WebM.
 - Metadata: Order `6`, icon `mic`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/audio-recorder/config.json`
+
+### Text to Speech (`text-to-speech`)
+- Description: Convert text to spoken audio using built-in browser voices.
+- Metadata: Order `not set`, icon `volume-2`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/text-to-speech/config.json`
 
 ### Video Transcoder (`video-transcoder`)
 - Description: Convert and compress video files with FFmpeg.wasm.
@@ -175,7 +180,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `info`, share target capable `yes`, share target accepts `application/pdf`.
 - Source: `src/tools/pdf-metadata/config.json`
 
-## Utilities (19)
+## Utilities (18)
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
@@ -266,11 +271,6 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Description: Open SQLite databases, browse schemas, and run SQL queries.
 - Metadata: Order `not set`, icon `database`, share target capable `yes`, share target accepts `application/vnd.sqlite3`, `application/x-sqlite3`, `.sqlite`, `.sqlite3`, `.db`.
 - Source: `src/tools/sqlite-explorer/config.json`
-
-### Text to Speech (`text-to-speech`)
-- Description: Convert text to spoken audio using built-in browser voices.
-- Metadata: Order `not set`, icon `volume-2`, share target capable `no`, share target accepts `none`.
-- Source: `src/tools/text-to-speech/config.json`
 
 ## Devices (5)
 

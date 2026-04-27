@@ -9,7 +9,6 @@ export default function init(): void | (() => void) {
   const engine = new SpeechEngine();
   const settings = getSettings('text-to-speech');
 
-  // Elements
   const textInput = container.querySelector('#tts-text') as HTMLTextAreaElement;
   const voiceSelect = container.querySelector('#voice-select') as HTMLSelectElement;
   const btnRefresh = container.querySelector('#btn-refresh-voices') as HTMLButtonElement;
@@ -59,7 +58,6 @@ export default function init(): void | (() => void) {
         voiceSelect.appendChild(opt);
       });
 
-      // Restore saved voice if it exists in the new list
       if (savedVoiceValue !== undefined && savedVoiceValue !== null) {
         voiceSelect.value = String(savedVoiceValue);
       }
@@ -85,9 +83,7 @@ export default function init(): void | (() => void) {
     );
   };
 
-  // UI Sync
   const syncRange = (input: HTMLInputElement, display: HTMLSpanElement) => {
-    // Initial value from setting (handled by bind but badge needs manual update)
     display.textContent = input.value;
     input.addEventListener('input', () => {
       display.textContent = input.value;
