@@ -46,9 +46,14 @@
         <div class="form-control w-full">
           <label class="label">
             <span class="label-text">Voice</span>
-            <button id="btn-refresh-voices" class="btn btn-ghost btn-xs tooltip tooltip-left" data-tip="Refresh voice list">
-              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
-            </button>
+            <div class="flex gap-1">
+              <button id="btn-init-engine" class="btn btn-ghost btn-xs text-primary tooltip tooltip-left" data-tip="Click if voices don't load">
+                Start Engine
+              </button>
+              <button id="btn-refresh-voices" class="btn btn-ghost btn-xs tooltip tooltip-left" data-tip="Refresh voice list">
+                <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+              </button>
+            </div>
           </label>
           <select id="voice-select" class="select select-bordered w-full">
             <option disabled selected>Loading voices...</option>

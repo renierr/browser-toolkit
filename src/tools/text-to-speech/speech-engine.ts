@@ -18,111 +18,102 @@ export class SpeechEngine {
   }
 
   public async loadVoices(): Promise<SpeechSynthesisVoice[]> {
-    console.log('[SpeechEngine] Initializing voice load...');
-    
     return new Promise((resolve) => {
       if (!this.synth) {
-        console.error('[SpeechEngine] SpeechSynthesis not supported in this browser.');
         resolve([]);
         return;
       }
 
-      let resolved = false;
-      const resolveOnce = (voices: SpeechSynthesisVoice[]) => {
-        if (resolved) return;
-        resolved = true;
-        this.voices = voices;
-        clearInterval(interval);
-        if (this.synth) {
-          this.synth.removeEventListener('voiceschanged', onVoicesChanged);
-        }
-        console.log(`[SpeechEngine] Loaded ${voices.length} voices.`);
-        resolve(voices);
-      };
-
-      const checkVoices = () => {
-        if (!this.synth) return false;
-        const voices = this.synth.getVoices();
+      const getAndResolve = () => {
+        const voices = this.synth!.getVoices();
         if (voices && voices.length > 0) {
-          resolveOnce(voices);
+          this.voices = voices;
+          resolve(voices);
           return true;
         }
         return false;
       };
 
-      const onVoicesChanged = () => {
-        console.log('[SpeechEngine] voiceschanged event received.');
-        checkVoices();
-      };
+      if (getAndResolve()) return;
 
-      // Listen for the event
+      const onVoicesChanged = () => {
+        if (getAndResolve()) {
+          this.synth?.removeEventListener('voiceschanged', onVoicesChanged);
+        }
+      };
       this.synth.addEventListener('voiceschanged', onVoicesChanged);
 
-      // Polling fallback (crucial for Chrome/Linux)
       let attempts = 0;
       const interval = setInterval(() => {
         attempts++;
-        if (checkVoices() || attempts > 30) { // 3 seconds timeout
-          if (attempts > 30 && !resolved) {
-            console.warn('[SpeechEngine] Voice load timed out.');
-            resolveOnce([]);
+        if (getAndResolve() || attempts > 20) {
+          clearInterval(interval);
+          this.synth?.removeEventListener('voiceschanged', onVoicesChanged);
+          if (attempts > 20 && this.voices.length === 0) {
+            resolve([]);
           }
         }
-      }, 100);
-
-      // Kickstart: some browsers need a dummy utterance to wake up the engine
-      try {
-        const dummy = new SpeechSynthesisUtterance('');
-        this.synth.speak(dummy);
-        this.synth.cancel();
-      } catch (e) {
-        console.error('[SpeechEngine] Kickstart failed', e);
-      }
-
-      // Initial check
-      checkVoices();
+      }, 150);
     });
   }
 
-  public getVoices(): SpeechSynthesisVoice[] {
-    return this.voices;
-  }
-
-  public speak(text: string, options: TTSOptions, onEnd?: () => void, onError?: (err: any) => void): void {
+  public speak(text: string, options: TTSOptions, onEnd?: () => void, onError?: (msg: string) => void): void {
     if (!this.synth) return;
-    this.stop();
+    
+    // 1. Clear any pending speech
+    this.synth.cancel();
 
-    if (!text.trim()) return;
+    // 2. Delay slightly to allow the engine to reset (Crucial for Chrome/Linux/Android)
+    setTimeout(() => {
+      if (!text.trim()) return;
 
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      if (options.voiceIndex >= 0 && this.voices[options.voiceIndex]) {
+        utterance.voice = this.voices[options.voiceIndex];
+        utterance.lang = this.voices[options.voiceIndex].lang;
+      } else {
+        // Fallback to browser language
+        utterance.lang = navigator.language || 'en-US';
+      }
+
+      utterance.rate = options.rate;
+      utterance.pitch = options.pitch;
+      utterance.volume = options.volume;
+
+      utterance.onend = () => onEnd?.();
+      utterance.onerror = (e) => {
+        console.error('[SpeechEngine] Error Event:', e);
+        // If we failed, try one last time with absolute defaults
+        if (e.error === 'synthesis-failed') {
+          console.warn('[SpeechEngine] Retrying with minimal settings...');
+          this.speakMinimal(text, onEnd, onError);
+        } else {
+          onError?.(`Error: ${e.error || 'Unknown'}`);
+        }
+      };
+
+      try {
+        this.synth!.speak(utterance);
+        // 3. Force resume in case the engine is stuck (Common on Linux/Chrome)
+        if (this.synth!.paused) {
+          this.synth!.resume();
+        }
+      } catch (e) {
+        console.error('[SpeechEngine] Speak Exception:', e);
+        onError?.('Playback exception.');
+      }
+    }, 100);
+  }
+
+  // A "super safe" fallback mode
+  private speakMinimal(text: string, onEnd?: () => void, onError?: (msg: string) => void): void {
+    if (!this.synth) return;
     const utterance = new SpeechSynthesisUtterance(text);
-    const selectedVoice = this.voices[options.voiceIndex];
-
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-    }
-
-    utterance.rate = options.rate;
-    utterance.pitch = options.pitch;
-    utterance.volume = options.volume;
-
-    utterance.onend = () => {
-      if (onEnd) onEnd();
-    };
-
-    utterance.onerror = (event) => {
-      console.error('[SpeechEngine] Playback error:', event);
-      if (onError) onError(event);
-    };
-
+    utterance.onend = () => onEnd?.();
+    utterance.onerror = () => onError?.('System TTS failed even in Safe Mode.');
     this.synth.speak(utterance);
-  }
-
-  public pause(): void {
-    this.synth?.pause();
-  }
-
-  public resume(): void {
-    this.synth?.resume();
+    this.synth.resume();
   }
 
   public stop(): void {
