@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `pnpm generate:tool-description` after changing tool metadata.
 
-- Total tools: **53**
+- Total tools: **56**
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -78,7 +78,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 
 ### Sketch Board (`sketch-board`)
 - Description: Canvas whiteboard with freehand, shapes, export, and local version storage.
-- Metadata: Order `7`, icon `pen-tool`, share target capable `no`, share target accepts `none`.
+- Metadata: Order `7`, icon `pen-tool`, share target capable `yes`, share target accepts `image/*`.
 - Source: `src/tools/sketch-board/config.json`
 
 ### Document Scanner (`document-scanner`)
@@ -175,7 +175,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `info`, share target capable `yes`, share target accepts `application/pdf`.
 - Source: `src/tools/pdf-metadata/config.json`
 
-## Utilities (16)
+## Utilities (19)
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
@@ -186,6 +186,11 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Description: Convert between 1000+ units across 20+ categories with a built-in scientific calculator.
 - Metadata: Order `6`, icon `ruler`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/unit-converter/config.json`
+
+### ASCII Art (`ascii-art`)
+- Description: Convert text to ASCII art in multiple styles.
+- Metadata: Order `10`, icon `type`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/ascii-art/config.json`
 
 ### Code Formatter (`code-formatter`)
 - Description: Format, minify, and highlight source code and structured data.
@@ -232,6 +237,11 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `share-2`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/webrtc-drop/config.json`
 
+### Storage Inspector (`storage-inspector`)
+- Description: Inspect browser storage data and clear cache, IndexedDB, localStorage, sessionStorage, and cookies.
+- Metadata: Order `105`, icon `database`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/storage-inspector/config.json`
+
 ### Base64 Encoder/Decoder (`base64`)
 - Description: Encode and decode text using Base64 with UTF-8 support.
 - Metadata: Order `not set`, icon `binary`, share target capable `no`, share target accepts `none`.
@@ -256,6 +266,11 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Description: Open SQLite databases, browse schemas, and run SQL queries.
 - Metadata: Order `not set`, icon `database`, share target capable `yes`, share target accepts `application/vnd.sqlite3`, `application/x-sqlite3`, `.sqlite`, `.sqlite3`, `.db`.
 - Source: `src/tools/sqlite-explorer/config.json`
+
+### Text to Speech (`text-to-speech`)
+- Description: Convert text to spoken audio using built-in browser voices.
+- Metadata: Order `not set`, icon `volume-2`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/text-to-speech/config.json`
 
 ## Devices (5)
 
