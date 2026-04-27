@@ -1,0 +1,110 @@
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">Text to Speech</h2>
+    <p class="text-base-content/70 mb-6">
+      Convert your text into spoken audio. Adjust the voice and settings below.
+    </p>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Input Section -->
+      <div class="lg:col-span-2 space-y-4">
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text font-semibold">Text to Speak</span>
+          </label>
+          <textarea
+            id="tts-text"
+            class="textarea textarea-bordered h-64 text-base w-full"
+            placeholder="Enter the text you want the browser to read..."
+          ></textarea>
+        </div>
+
+        <div class="flex flex-wrap gap-2 justify-center">
+          <button id="btn-speak" class="btn btn-primary">
+            <i data-lucide="play" class="w-4 h-4 mr-2"></i>
+            Speak
+          </button>
+          <button id="btn-pause" class="btn btn-outline">
+            <i data-lucide="pause" class="w-4 h-4 mr-2"></i>
+            Pause
+          </button>
+          <button id="btn-resume" class="btn btn-outline">
+            <i data-lucide="play-circle" class="w-4 h-4 mr-2"></i>
+            Resume
+          </button>
+          <button id="btn-stop" class="btn btn-error">
+            <i data-lucide="square" class="w-4 h-4 mr-2"></i>
+            Stop
+          </button>
+        </div>
+      </div>
+
+      <!-- Settings Section -->
+      <div class="space-y-6 bg-base-200 p-6 rounded-xl border border-base-300">
+        <h3 class="font-bold text-lg border-b border-base-300 pb-2">Voice Settings</h3>
+
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text">Voice</span>
+          </label>
+          <select id="voice-select" class="select select-bordered w-full">
+            <option disabled selected>Loading voices...</option>
+          </select>
+        </div>
+
+        <div class="form-control w-full">
+          <div class="flex justify-between items-center mb-2">
+            <label class="label-text">Rate (Speed)</label>
+            <span id="rate-val" class="badge badge-ghost">1.0</span>
+          </div>
+          <input
+            id="rate-range"
+            type="range"
+            min="0.1"
+            max="5"
+            step="0.1"
+            value="1"
+            class="range range-xs range-primary"
+          />
+        </div>
+
+        <div class="form-control w-full">
+          <div class="flex justify-between items-center mb-2">
+            <label class="label-text">Pitch</label>
+            <span id="pitch-val" class="badge badge-ghost">1.0</span>
+          </div>
+          <input
+            id="pitch-range"
+            type="range"
+            min="0"
+            max="2"
+            step="0.1"
+            value="1"
+            class="range range-xs range-secondary"
+          />
+        </div>
+
+        <div class="form-control w-full">
+          <div class="flex justify-between items-center mb-2">
+            <label class="label-text">Volume</label>
+            <span id="volume-val" class="badge badge-ghost">1.0</span>
+          </div>
+          <input
+            id="volume-range"
+            type="range"
+            min="0"
+            max="1"
+            step="0.1"
+            value="1"
+            class="range range-xs range-accent"
+          />
+        </div>
+
+        <div id="status-badge" class="alert alert-info py-2 hidden">
+          <i data-lucide="info" class="w-4 h-4"></i>
+          <span class="text-sm" id="status-text">Speaking...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,7 @@
+{
+  "name": "Text to Speech",
+  "description": "Convert text to spoken audio using built-in browser voices.",
+  "draft": false,
+  "sectionId": "media",
+  "icon": "volume-2"
+}
