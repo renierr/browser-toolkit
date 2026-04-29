@@ -1,10 +1,10 @@
 import { NoiseEngine } from '../noise-engine';
 import { playPassingCar } from './helpers';
 
-export const playNight = (engine: NoiseEngine, checkActive: () => boolean) => {
+export const playNight = async (engine: NoiseEngine, checkActive: () => boolean): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
-  const layer = engine.createNoiseLayer({
+  const layer = await engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'lowpass', freq: 400 },
     gain: 0.1,

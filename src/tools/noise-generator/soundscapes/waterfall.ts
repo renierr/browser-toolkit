@@ -1,9 +1,9 @@
 import { NoiseEngine } from '../noise-engine';
 
-export const playWaterfall = (engine: NoiseEngine) => {
+export const playWaterfall = async (engine: NoiseEngine): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
-  const brown = engine.createNoiseLayer({
+  const brown = await engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 400 },
     gain: 0.4,
@@ -13,7 +13,7 @@ export const playWaterfall = (engine: NoiseEngine) => {
     engine.addMicroLFO(brown.gain.gain, 0.1, 0.1);
   }
 
-  const pink = engine.createNoiseLayer({
+  const pink = await engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 1200, Q: 0.8 },
     gain: 0.15,

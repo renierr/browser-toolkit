@@ -1,15 +1,15 @@
 import { NoiseEngine } from '../noise-engine';
 
-export const playASMR = (engine: NoiseEngine, checkActive: () => boolean) => {
+export const playASMR = async (engine: NoiseEngine, checkActive: () => boolean): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
-  engine.createNoiseLayer({
+  await engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'lowpass', freq: 400 },
     gain: 0.05,
   });
 
-  const sweep = engine.createNoiseLayer({
+  const sweep = await engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 3000, Q: 0.5 },
     pan: 0,

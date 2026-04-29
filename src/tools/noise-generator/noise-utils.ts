@@ -27,11 +27,11 @@ export class NoiseGenerator {
     this.engine = new NoiseEngine(initialVolume);
   }
 
-  private checkActive(type: string) {
+  private checkActive(type: string): () => boolean {
     return () => this.isPlaying && this.currentNoiseType === type;
   }
 
-  play(type: string) {
+  play(type: string): void {
     this.engine.initContext();
     if (this.isPlaying) {
       this.stop();
@@ -40,32 +40,45 @@ export class NoiseGenerator {
     this.isPlaying = true;
     this.currentNoiseType = type;
 
+    void this._playAsync(type);
+  }
+
+  private async _playAsync(type: string): Promise<void> {
+    try {
+      await this.engine.initWorklet();
+    } catch (error) {
+      console.error('[NoiseGenerator] Failed to load noise worklet', error);
+      return;
+    }
+
+    if (!this.isPlaying || this.currentNoiseType !== type) return;
+
     switch (type) {
       case 'white':
       case 'pink':
       case 'brown':
-        this.engine.createNoiseLayer({
+        await this.engine.createNoiseLayer({
           type: type as 'white' | 'pink' | 'brown',
           gain: 1.0,
         });
         break;
       case 'rain':
-        playRain(this.engine, false, this.checkActive('rain'));
+        await playRain(this.engine, false, this.checkActive('rain'));
         break;
       case 'forest':
-        playForest(this.engine, this.checkActive('forest'));
+        await playForest(this.engine, this.checkActive('forest'));
         break;
       case 'waves':
-        playWaves(this.engine);
+        await playWaves(this.engine);
         break;
       case 'fire':
-        playFire(this.engine, this.checkActive('fire'));
+        await playFire(this.engine, this.checkActive('fire'));
         break;
       case 'night':
-        playNight(this.engine, this.checkActive('night'));
+        await playNight(this.engine, this.checkActive('night'));
         break;
       case 'fan':
-        playFan(this.engine);
+        await playFan(this.engine);
         break;
       case 'thunder':
         playThunderstorm(this.engine, this.checkActive('thunder'));
@@ -74,61 +87,61 @@ export class NoiseGenerator {
         playCafe(this.engine, this.checkActive('cafe'));
         break;
       case 'underwater':
-        playUnderwater(this.engine, this.checkActive('underwater'));
+        await playUnderwater(this.engine, this.checkActive('underwater'));
         break;
       case 'train':
-        playTrain(this.engine, this.checkActive('train'));
+        await playTrain(this.engine, this.checkActive('train'));
         break;
       case 'chimes':
         playWindChimes(this.engine, this.checkActive('chimes'));
         break;
       case 'waterfall':
-        playWaterfall(this.engine);
+        await playWaterfall(this.engine);
         break;
       case 'cityRain':
-        playCityRain(this.engine, this.checkActive('cityRain'));
+        await playCityRain(this.engine, this.checkActive('cityRain'));
         break;
       case 'greenNoise':
-        playGreenNoise(this.engine);
+        await playGreenNoise(this.engine);
         break;
       case 'airplane':
-        playAirplane(this.engine, this.checkActive('airplane'));
+        await playAirplane(this.engine, this.checkActive('airplane'));
         break;
       case 'catPurr':
         playCatPurr(this.engine, this.checkActive('catPurr'));
         break;
       case 'asmr':
-        playASMR(this.engine, this.checkActive('asmr'));
+        await playASMR(this.engine, this.checkActive('asmr'));
         break;
       case 'space':
-        playSpace(this.engine);
+        await playSpace(this.engine);
         break;
       default:
-        this.engine.createNoiseLayer({
+        await this.engine.createNoiseLayer({
           type: 'pink',
           gain: 1.0,
         });
     }
   }
 
-  stop() {
+  stop(): void {
     this.engine.stop();
     this.isPlaying = false;
   }
 
-  setVolume(value: number) {
+  setVolume(value: number): void {
     this.engine.setVolume(value);
   }
 
-  getIsPlaying() {
+  getIsPlaying(): boolean {
     return this.isPlaying;
   }
 
-  getCurrentType() {
+  getCurrentType(): string | null {
     return this.currentNoiseType;
   }
 
-  cleanup() {
+  cleanup(): void {
     this.stop();
     if (this.engine.ctx) {
       this.engine.ctx.close();

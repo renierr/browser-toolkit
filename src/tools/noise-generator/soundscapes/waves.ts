@@ -1,15 +1,14 @@
 import { NoiseEngine } from '../noise-engine';
 
-export const playWaves = (engine: NoiseEngine) => {
+export const playWaves = async (engine: NoiseEngine): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
-  [-0.5, 0.5].forEach((pan) => {
-    const layer = engine.createNoiseLayer({
+  for (const pan of [-0.5, 0.5]) {
+    const layer = await engine.createNoiseLayer({
       type: 'brown',
       filter: { type: 'lowpass', freq: 400 },
       pan: pan,
       gain: 0.2,
-      offset: Math.random() * 10,
     });
 
     if (layer) {
@@ -19,9 +18,9 @@ export const playWaves = (engine: NoiseEngine) => {
         engine.addMicroLFO(layer.filter.frequency, rate, 600);
       }
     }
-  });
+  }
 
-  const foam = engine.createNoiseLayer({
+  const foam = await engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 1200, Q: 0.5 },
     gain: 0.03,

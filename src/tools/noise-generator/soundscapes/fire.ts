@@ -1,9 +1,9 @@
 import { NoiseEngine } from '../noise-engine';
 
-export const playFire = (engine: NoiseEngine, checkActive: () => boolean) => {
+export const playFire = async (engine: NoiseEngine, checkActive: () => boolean): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
-  const layer = engine.createNoiseLayer({
+  const layer = await engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 400 },
     gain: 0.5,
@@ -53,7 +53,7 @@ export const playFire = (engine: NoiseEngine, checkActive: () => boolean) => {
     );
   };
 
-  engine.createNoiseLayer({
+  await engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'bandpass', freq: 1500, Q: 0.5 },
     gain: 0.05,

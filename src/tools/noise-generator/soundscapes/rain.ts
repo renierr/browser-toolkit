@@ -1,14 +1,14 @@
 import { NoiseEngine } from '../noise-engine';
 
-export const playRain = (
+export const playRain = async (
   engine: NoiseEngine,
   isCity: boolean = false,
   checkActive: () => boolean
-) => {
+): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
   // Layer 1: Pink noise (Rain hiss)
-  engine.createNoiseLayer({
+  await engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'highpass', freq: isCity ? 1200 : 1600 },
     pan: -0.2,
@@ -16,7 +16,7 @@ export const playRain = (
   });
 
   // Layer 2: Brown noise (Rain rumble)
-  engine.createNoiseLayer({
+  await engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: isCity ? 150 : 200 },
     pan: 0.2,

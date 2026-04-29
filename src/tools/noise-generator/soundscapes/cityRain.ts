@@ -1,10 +1,13 @@
 import { NoiseEngine } from '../noise-engine';
 import { playRain } from './rain';
 
-export const playCityRain = (engine: NoiseEngine, checkActive: () => boolean) => {
+export const playCityRain = async (
+  engine: NoiseEngine,
+  checkActive: () => boolean
+): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
-  playRain(engine, true, checkActive);
+  await playRain(engine, true, checkActive);
 
   // Distant traffic whoosh
   const playWhoosh = () => {

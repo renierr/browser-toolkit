@@ -1,9 +1,12 @@
 import { NoiseEngine } from '../noise-engine';
 
-export const playUnderwater = (engine: NoiseEngine, checkActive: () => boolean) => {
+export const playUnderwater = async (
+  engine: NoiseEngine,
+  checkActive: () => boolean
+): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
-  engine.createNoiseLayer({
+  await engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 150 },
     gain: 0.6,

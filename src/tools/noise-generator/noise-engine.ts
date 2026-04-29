@@ -1,20 +1,36 @@
-export interface NoiseLayerConfig {
+import workletUrl from './noise-worklet?worker&url';
+
+export type NoiseLayerConfig = {
   type: 'white' | 'pink' | 'brown';
   filter?: { type: BiquadFilterType; freq: number; Q?: number };
   pan?: number;
   gain: number;
   startTime?: number;
   offset?: number;
-}
+};
 
-export interface OscillatorLayerConfig {
+export type OscillatorLayerConfig = {
   type: OscillatorType;
   freq: number;
   filter?: { type: BiquadFilterType; freq: number; Q?: number };
   pan?: number;
   gain: number;
   startTime?: number;
-}
+};
+
+export type NoiseLayerResult = {
+  source: AudioWorkletNode;
+  gain: GainNode;
+  filter?: BiquadFilterNode;
+  panner?: StereoPannerNode;
+};
+
+export type OscillatorLayerResult = {
+  source: OscillatorNode;
+  gain: GainNode;
+  filter?: BiquadFilterNode;
+  panner?: StereoPannerNode;
+};
 
 export class NoiseEngine {
   public ctx: AudioContext | null = null;
@@ -23,18 +39,30 @@ export class NoiseEngine {
   public activeNodes: AudioNode[] = [];
   public activeIntervals: number[] = [];
   private volume: number = 0.5;
+  private workletReadyPromise: Promise<void> | null = null;
 
   constructor(initialVolume: number = 0.5) {
     this.volume = initialVolume;
   }
 
-  public initContext() {
+  public initContext(): void {
     if (!this.ctx) {
-      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.ctx = new (
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
+      )();
       this.masterGain = this.ctx.createGain();
       this.masterGain.connect(this.ctx.destination);
       this.masterGain.gain.value = this.volume;
+      this.workletReadyPromise = null;
     }
+  }
+
+  public initWorklet(): Promise<void> {
+    if (!this.ctx) return Promise.reject(new Error('AudioContext not initialized'));
+    if (this.workletReadyPromise) return this.workletReadyPromise;
+    this.workletReadyPromise = this.ctx.audioWorklet.addModule(workletUrl);
+    return this.workletReadyPromise;
   }
 
   public createNoiseBuffer(type: 'white' | 'pink' | 'brown'): AudioBuffer | null {
@@ -89,7 +117,7 @@ export class NoiseEngine {
     return buffer;
   }
 
-  public addMicroLFO(target: AudioParam, baseRate = 0.08, depth = 0.12) {
+  public addMicroLFO(target: AudioParam, baseRate = 0.08, depth = 0.12): void {
     if (!this.ctx) return;
     const lfo = this.ctx.createOscillator();
     lfo.type = 'sine';
@@ -102,16 +130,18 @@ export class NoiseEngine {
     this.activeNodes.push(lfo, lfoGain);
   }
 
-  public createNoiseLayer(config: NoiseLayerConfig) {
+  public async createNoiseLayer(config: NoiseLayerConfig): Promise<NoiseLayerResult | null> {
     if (!this.ctx || !this.masterGain) return null;
-    const buffer = this.createNoiseBuffer(config.type);
-    if (!buffer) return null;
 
-    const source = this.ctx.createBufferSource();
-    source.buffer = buffer;
-    source.loop = true;
+    await this.initWorklet();
+    if (!this.ctx || !this.masterGain) return null;
 
-    let currentNode: AudioNode = source;
+    const workletNode = new AudioWorkletNode(this.ctx, 'noise-worklet', {
+      outputChannelCount: [2],
+    });
+    workletNode.port.postMessage({ type: 'setNoiseType', noiseType: config.type });
+
+    let currentNode: AudioNode = workletNode;
     let filterNode: BiquadFilterNode | undefined;
     let pannerNode: StereoPannerNode | undefined;
 
@@ -138,13 +168,12 @@ export class NoiseEngine {
     currentNode.connect(gainNode);
     gainNode.connect(this.masterGain);
 
-    source.start(config.startTime || 0, config.offset || 0);
-    this.activeNodes.push(source, gainNode);
+    this.activeNodes.push(workletNode, gainNode);
 
-    return { source, gain: gainNode, filter: filterNode, panner: pannerNode };
+    return { source: workletNode, gain: gainNode, filter: filterNode, panner: pannerNode };
   }
 
-  public createOscillatorLayer(config: OscillatorLayerConfig) {
+  public createOscillatorLayer(config: OscillatorLayerConfig): OscillatorLayerResult | null {
     if (!this.ctx || !this.masterGain) return null;
 
     const source = this.ctx.createOscillator();
@@ -184,14 +213,21 @@ export class NoiseEngine {
     return { source, gain: gainNode, filter: filterNode, panner: pannerNode };
   }
 
-  public stop() {
+  public stop(): void {
     this.activeNodes.forEach((node) => {
       try {
-        if ((node as any).stop) {
-          (node as any).stop();
+        const port = (node as unknown as { port?: MessagePort }).port;
+        if (port && typeof port.postMessage === 'function') {
+          port.postMessage({ type: 'stop' });
+        }
+        const stoppable = node as unknown as { stop?: () => void };
+        if (typeof stoppable.stop === 'function') {
+          stoppable.stop();
         }
         node.disconnect();
-      } catch (e) {}
+      } catch {
+        // ignore
+      }
     });
     this.activeNodes = [];
     this.activeIntervals.forEach((id) => {
@@ -201,7 +237,7 @@ export class NoiseEngine {
     this.activeIntervals = [];
   }
 
-  public setVolume(value: number) {
+  public setVolume(value: number): void {
     this.volume = value;
     if (this.masterGain) {
       this.masterGain.gain.value = this.volume;

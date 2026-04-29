@@ -1,9 +1,9 @@
 import { NoiseEngine } from '../noise-engine';
 
-export const playFan = (engine: NoiseEngine) => {
+export const playFan = async (engine: NoiseEngine): Promise<void> => {
   if (!engine.ctx || !engine.masterGain) return;
 
-  const layer = engine.createNoiseLayer({
+  const layer = await engine.createNoiseLayer({
     type: 'brown',
     filter: { type: 'lowpass', freq: 600 },
     pan: 0,
@@ -23,7 +23,7 @@ export const playFan = (engine: NoiseEngine) => {
     });
   });
 
-  engine.createNoiseLayer({
+  await engine.createNoiseLayer({
     type: 'pink',
     filter: { type: 'lowpass', freq: 1500 },
     gain: 0.15,
