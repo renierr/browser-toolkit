@@ -69,7 +69,7 @@ export class NoiseGenerator {
         await playForest(this.engine, this.checkActive('forest'));
         break;
       case 'waves':
-        await playWaves(this.engine);
+        await playWaves(this.engine, this.checkActive('waves'));
         break;
       case 'fire':
         await playFire(this.engine, this.checkActive('fire'));
@@ -81,7 +81,7 @@ export class NoiseGenerator {
         await playFan(this.engine);
         break;
       case 'thunder':
-        playThunderstorm(this.engine, this.checkActive('thunder'));
+        await playThunderstorm(this.engine, this.checkActive('thunder'));
         break;
       case 'cafe':
         playCafe(this.engine, this.checkActive('cafe'));
@@ -114,7 +114,7 @@ export class NoiseGenerator {
         await playASMR(this.engine, this.checkActive('asmr'));
         break;
       case 'space':
-        await playSpace(this.engine);
+        await playSpace(this.engine, this.checkActive('space'));
         break;
       default:
         await this.engine.createNoiseLayer({

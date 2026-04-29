@@ -45,6 +45,7 @@ export const playASMR = async (engine: NoiseEngine, checkActive: () => boolean):
     hp.connect(panner);
     panner.connect(g);
     g.connect(engine.masterGain!);
+    engine.connectToReverb(g, 0.15);
 
     src.start(t, Math.random() * 9);
     src.stop(t + duration);
@@ -83,6 +84,7 @@ export const playASMR = async (engine: NoiseEngine, checkActive: () => boolean):
     bp.connect(panner);
     panner.connect(g);
     g.connect(engine.masterGain!);
+    engine.connectToReverb(g, 0.2);
 
     src.start(t, Math.random() * 9);
     src.stop(t + 0.1);

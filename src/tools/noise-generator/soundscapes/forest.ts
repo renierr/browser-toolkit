@@ -16,6 +16,19 @@ export const playForest = async (
     engine.addMicroLFO(layer.gain.gain, 0.07, 0.1);
   }
 
+  for (const pan of [-0.4, 0.4]) {
+    const rustle = await engine.createNoiseLayer({
+      type: 'pink',
+      filter: { type: 'bandpass', freq: 2500, Q: 0.5 },
+      pan: pan,
+      gain: 0.04,
+    });
+    if (rustle && rustle.filter) {
+      engine.addMicroLFO(rustle.gain.gain, 0.12 + Math.random() * 0.06, 0.6);
+      engine.addMicroLFO(rustle.filter.frequency, 0.09, 800);
+    }
+  }
+
   const playChirp = () => {
     if (!engine.ctx || !engine.masterGain || !checkActive()) return;
 

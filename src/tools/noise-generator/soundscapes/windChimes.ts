@@ -22,6 +22,7 @@ export const playWindChimes = (engine: NoiseEngine, checkActive: () => boolean) 
 
     panner.connect(mainGain);
     mainGain.connect(engine.masterGain!);
+    engine.connectToReverb(mainGain, 0.4);
 
     const partials = [
       { ratio: 1, gain: 1, decayMax: duration },
@@ -62,7 +63,15 @@ export const playWindChimes = (engine: NoiseEngine, checkActive: () => boolean) 
     if (!checkActive()) return;
     const delay = 1000 + Math.random() * 4000;
     const id = window.setTimeout(() => {
-      playChime();
+      const cluster = Math.random() < 0.4 ? 2 + Math.floor(Math.random() * 2) : 1;
+      for (let i = 0; i < cluster; i++) {
+        setTimeout(
+          () => {
+            if (checkActive()) playChime();
+          },
+          i * (60 + Math.random() * 200)
+        );
+      }
       scheduleChime();
     }, delay);
     engine.activeIntervals.push(id);

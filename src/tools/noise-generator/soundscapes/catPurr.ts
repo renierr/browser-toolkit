@@ -42,6 +42,10 @@ export const playCatPurr = (engine: NoiseEngine, checkActive: () => boolean) => 
   throatFilter.connect(masterPurrGain);
   masterPurrGain.connect(engine.masterGain);
 
+  engine.addMicroLFO(oscVoice1.frequency, 0.04, 0.6);
+  engine.addMicroLFO(oscVoice2.frequency, 0.05, 0.6);
+  engine.addMicroLFO(masterPurrGain.gain, 0.06, 0.05);
+
   oscVoice1.start();
   oscVoice2.start();
   breathLfo.start();
@@ -90,7 +94,7 @@ export const playCatPurr = (engine: NoiseEngine, checkActive: () => boolean) => 
     const meowGain = engine.ctx.createGain();
     meowGain.gain.setValueAtTime(0, t);
 
-    const peakVolume = 0.005 + Math.random() * 0.005;
+    const peakVolume = 0.04 + Math.random() * 0.03;
     meowGain.gain.linearRampToValueAtTime(peakVolume, t + duration * 0.2);
     meowGain.gain.exponentialRampToValueAtTime(0.001, t + duration);
 

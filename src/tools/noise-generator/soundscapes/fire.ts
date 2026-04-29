@@ -11,6 +11,16 @@ export const playFire = async (engine: NoiseEngine, checkActive: () => boolean):
 
   if (layer) {
     engine.addMicroLFO(layer.gain.gain, 0.2, 0.15);
+    engine.addMicroLFO(layer.gain.gain, 0.07, 0.08);
+  }
+
+  const hiss = await engine.createNoiseLayer({
+    type: 'pink',
+    filter: { type: 'highpass', freq: 4000 },
+    gain: 0.025,
+  });
+  if (hiss) {
+    engine.addMicroLFO(hiss.gain.gain, 0.4, 0.6);
   }
 
   const playCrackle = () => {
@@ -22,8 +32,9 @@ export const playFire = async (engine: NoiseEngine, checkActive: () => boolean):
 
     const filter = engine.ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.value = 1000 + Math.random() * 3000;
-    filter.Q.value = 0.5 + Math.random();
+    const isPop = Math.random() < 0.25;
+    filter.frequency.value = isPop ? 600 + Math.random() * 800 : 1000 + Math.random() * 3000;
+    filter.Q.value = isPop ? 6 + Math.random() * 4 : 0.5 + Math.random();
 
     const panner = engine.ctx.createStereoPanner();
     panner.pan.value = Math.random() * 0.6 - 0.3;

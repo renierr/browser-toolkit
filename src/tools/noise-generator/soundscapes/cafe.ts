@@ -135,13 +135,107 @@ export const playCafe = (engine: NoiseEngine, checkActive: () => boolean) => {
     );
   };
 
+  const playVoiceEmphasis = () => {
+    if (!engine.ctx || !engine.masterGain || !checkActive()) return;
+    const t = engine.ctx.currentTime;
+    const buffer = engine.createNoiseBuffer('pink');
+    if (!buffer) return;
+
+    const src = engine.ctx.createBufferSource();
+    src.buffer = buffer;
+
+    const formant = engine.ctx.createBiquadFilter();
+    formant.type = 'bandpass';
+    const baseFormant = 600 + Math.random() * 800;
+    formant.frequency.setValueAtTime(baseFormant, t);
+    formant.frequency.exponentialRampToValueAtTime(baseFormant * 1.6, t + 0.3);
+    formant.frequency.exponentialRampToValueAtTime(baseFormant * 0.7, t + 0.8);
+    formant.Q.value = 4;
+
+    const panner = engine.ctx.createStereoPanner();
+    panner.pan.value = (Math.random() - 0.5) * 1.6;
+
+    const g = engine.ctx.createGain();
+    const dur = 0.6 + Math.random() * 0.6;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.06, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+    src.connect(formant);
+    formant.connect(panner);
+    panner.connect(g);
+    g.connect(engine.masterGain);
+
+    src.start(t, Math.random() * 9);
+    src.stop(t + dur + 0.1);
+
+    setTimeout(
+      () => {
+        src.disconnect();
+        formant.disconnect();
+        panner.disconnect();
+        g.disconnect();
+      },
+      (dur + 0.3) * 1000
+    );
+  };
+
+  const playMachine = () => {
+    if (!engine.ctx || !engine.masterGain || !checkActive()) return;
+    const t = engine.ctx.currentTime;
+    const buffer = engine.createNoiseBuffer('white');
+    if (!buffer) return;
+
+    const src = engine.ctx.createBufferSource();
+    src.buffer = buffer;
+
+    const hp = engine.ctx.createBiquadFilter();
+    hp.type = 'highpass';
+    hp.frequency.value = 2000;
+    const lp = engine.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 6000;
+
+    const panner = engine.ctx.createStereoPanner();
+    panner.pan.value = -0.4 + Math.random() * 0.2;
+
+    const g = engine.ctx.createGain();
+    const dur = 2.5 + Math.random() * 3;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.05, t + 0.3);
+    g.gain.setValueAtTime(0.05, t + dur - 0.4);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+
+    src.connect(hp);
+    hp.connect(lp);
+    lp.connect(panner);
+    panner.connect(g);
+    g.connect(engine.masterGain);
+
+    src.start(t, Math.random() * 9);
+    src.stop(t + dur + 0.1);
+
+    setTimeout(
+      () => {
+        src.disconnect();
+        hp.disconnect();
+        lp.disconnect();
+        panner.disconnect();
+        g.disconnect();
+      },
+      (dur + 0.3) * 1000
+    );
+  };
+
   const scheduleCafeEvents = () => {
     if (!checkActive()) return;
     const delay = 1200 + Math.random() * 9000;
     const id = window.setTimeout(() => {
       const roll = Math.random();
-      if (roll < 0.45) playClink();
-      else if (roll < 0.7) playThud();
+      if (roll < 0.35) playClink();
+      else if (roll < 0.55) playThud();
+      else if (roll < 0.75) playVoiceEmphasis();
+      else if (roll < 0.82) playMachine();
       scheduleCafeEvents();
     }, delay);
     engine.activeIntervals.push(id);

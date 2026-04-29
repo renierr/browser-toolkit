@@ -35,6 +35,11 @@ export type OscillatorLayerResult = {
 export class NoiseEngine {
   public ctx: AudioContext | null = null;
   public masterGain: GainNode | null = null;
+  public reverbInput: GainNode | null = null;
+  private masterHighpass: BiquadFilterNode | null = null;
+  private masterCompressor: DynamicsCompressorNode | null = null;
+  private reverbConvolver: ConvolverNode | null = null;
+  private reverbReturn: GainNode | null = null;
   private noiseBuffers: Map<string, AudioBuffer> = new Map();
   public activeNodes: AudioNode[] = [];
   public activeIntervals: number[] = [];
@@ -52,10 +57,59 @@ export class NoiseEngine {
         (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
       )();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.connect(this.ctx.destination);
       this.masterGain.gain.value = this.volume;
+
+      this.masterHighpass = this.ctx.createBiquadFilter();
+      this.masterHighpass.type = 'highpass';
+      this.masterHighpass.frequency.value = 20;
+
+      this.masterCompressor = this.ctx.createDynamicsCompressor();
+      this.masterCompressor.threshold.value = -6;
+      this.masterCompressor.knee.value = 6;
+      this.masterCompressor.ratio.value = 8;
+      this.masterCompressor.attack.value = 0.003;
+      this.masterCompressor.release.value = 0.25;
+
+      this.reverbInput = this.ctx.createGain();
+      this.reverbInput.gain.value = 1.0;
+      this.reverbConvolver = this.ctx.createConvolver();
+      this.reverbConvolver.buffer = this.createReverbIR(2.0, 2.5);
+      this.reverbReturn = this.ctx.createGain();
+      this.reverbReturn.gain.value = 0.6;
+
+      this.reverbInput.connect(this.reverbConvolver);
+      this.reverbConvolver.connect(this.reverbReturn);
+      this.reverbReturn.connect(this.masterGain);
+
+      this.masterGain.connect(this.masterHighpass);
+      this.masterHighpass.connect(this.masterCompressor);
+      this.masterCompressor.connect(this.ctx.destination);
+
       this.workletReadyPromise = null;
     }
+  }
+
+  private createReverbIR(duration: number, decay: number): AudioBuffer {
+    const sampleRate = this.ctx!.sampleRate;
+    const len = Math.floor(sampleRate * duration);
+    const buf = this.ctx!.createBuffer(2, len, sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) {
+        const env = Math.pow(1 - i / len, decay);
+        data[i] = (Math.random() * 2 - 1) * env;
+      }
+    }
+    return buf;
+  }
+
+  public connectToReverb(node: AudioNode, amount: number = 0.3): void {
+    if (!this.ctx || !this.reverbInput) return;
+    const send = this.ctx.createGain();
+    send.gain.value = amount;
+    node.connect(send);
+    send.connect(this.reverbInput);
+    this.activeNodes.push(send);
   }
 
   public initWorklet(): Promise<void> {

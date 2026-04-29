@@ -77,9 +77,17 @@ export const playNight = async (engine: NoiseEngine, checkActive: () => boolean)
 
   const scheduleNextCricket = () => {
     if (!checkActive()) return;
-    const delay = 500 + Math.random() * 2000;
+    const delay = 400 + Math.random() * 1200;
     const id = window.setTimeout(() => {
-      playCricket();
+      const count = 1 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < count; i++) {
+        setTimeout(
+          () => {
+            if (checkActive()) playCricket();
+          },
+          i * 80 * Math.random()
+        );
+      }
       scheduleNextCricket();
     }, delay);
     engine.activeIntervals.push(id);
