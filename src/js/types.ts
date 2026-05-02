@@ -65,4 +65,9 @@ export interface Tool {
   loadHtml?: () => Promise<string | { template: string; partials: Record<string, string> }>;
 
   loadScript?: () => Promise<ToolModule>;
+
+  /**
+   * If true, this tool will only be displayed and loaded when the Bun backend is active.
+   */
+  requiresBackend?: boolean;
 }

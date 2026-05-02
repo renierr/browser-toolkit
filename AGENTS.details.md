@@ -18,9 +18,27 @@ Read order:
 ## PWA Constraints
 
 - No CDN or online runtime loading.
-- No backend services.
+- No backend services by default.
 - Share target can provide files to tools.
 - Service worker handles offline navigation and caching.
+
+## Optional Backend Architecture
+
+While the project is offline-first, it supports an **optional Bun backend** using Hono.
+This is meant for tools that strictly require a server (e.g. database interactions, heavy native computations).
+
+1. **The `requiresBackend` flag:** 
+   When creating a tool that needs the backend, you MUST set `"requiresBackend": true` in the tool's `config.json`.
+2. **Environment Detection:**
+   The frontend automatically checks for the backend on startup by pinging `/api/health`. 
+   - If the backend is NOT detected (e.g., when hosted on GitHub Pages), any tool with `"requiresBackend": true` is **silently hidden** from the UI.
+   - If the backend IS detected, the tools are shown and can safely fetch from `/api/*`.
+3. **Backend Scaffolding:**
+   The backend code lives in the `/backend` directory. It uses Bun, Hono, and `bun:sqlite`. The backend serves both API routes and the statically built frontend from `dist/`.
+4. **Local Development with Backend:**
+   In development, you must start BOTH the frontend and the backend. The Vite dev server (`pnpm run dev`) automatically proxies `/api` requests to the Bun server on port 3000.
+   - Frontend: `pnpm run dev`
+   - Backend: `cd backend && bun run dev`
 
 ## Preferred Validation and Formatting
 

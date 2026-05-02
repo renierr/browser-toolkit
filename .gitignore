@@ -13,6 +13,10 @@ dev-dist
 dist-ssr
 *.local
 
+# Backend Runtime Files
+backend/data/
+backend/*.sqlite
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

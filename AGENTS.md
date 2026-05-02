@@ -108,10 +108,11 @@ export default function init(): void | (() => void) {
 
 ## Project Constraints
 
-- Browser-only toolkit (no backend).
+- Browser-only toolkit by default, but supports an optional Bun backend.
 - Offline-first PWA. Do not fetch runtime assets from CDNs.
 - Tools are routed by hash (for example `/#tool-id`).
 - Lucide icons are rendered by observer using `data-lucide`.
+- Tools that require a backend server must set `"requiresBackend": true` in their `config.json`.
 
 ## Key Concepts Not In Core Rules
 

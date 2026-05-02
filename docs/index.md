@@ -51,6 +51,31 @@ pnpm upgrade:deps    # Update dependencies to latest
 - Search function with live filter
 - Unified design with header & footer
 - 100% offline-capable
+- **Optional Backend**: Support for tools that require a server.
+
+## Optional Backend Server
+
+While this toolkit is designed to be 100% offline-capable and static, it includes an optional backend built with **Bun** and **Hono** to support tools that require server-side functionality (like a SQLite database).
+
+### Two Modes:
+1. **Static/Offline Mode**: The default mode. When served statically (e.g., GitHub Pages) or accessed entirely offline, any tool marked with `"requiresBackend": true` in its `config.json` is silently hidden.
+2. **Backend Mode**: When run with the Bun backend, the backend serves both the `dist/` frontend and API routes. The frontend detects the backend and enables backend-dependent tools.
+
+### How to Start the Backend
+
+Make sure you have [Bun](https://bun.sh/) installed.
+
+1. Build the frontend:
+   ```bash
+   pnpm build
+   ```
+2. Start the backend server:
+   ```bash
+   cd backend
+   bun install
+   bun start
+   ```
+   *The backend will automatically serve the static `dist/` directory on `http://localhost:3000`.*
 
 ## Create a new tool (30 seconds)
 

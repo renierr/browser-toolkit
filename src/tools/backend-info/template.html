@@ -1,0 +1,44 @@
+<div id="backend-info-tool" class="card bg-base-100 shadow-xl max-w-2xl mx-auto">
+  <div class="card-body">
+    <h2 class="card-title mb-4">
+      <i data-lucide="server" class="w-6 h-6 mr-2"></i>
+      Backend Status
+    </h2>
+
+    <div class="flex items-center justify-center py-8" id="info-loading">
+      <span class="loading loading-spinner loading-lg text-primary"></span>
+    </div>
+
+    <div id="info-error" class="hidden alert alert-error">
+      <i data-lucide="alert-circle" class="w-5 h-5"></i>
+      <span>Failed to fetch backend info.</span>
+    </div>
+
+    <div id="info-content" class="hidden">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Status</div>
+          <div class="stat-value text-success text-2xl" id="val-status">-</div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Runtime</div>
+          <div class="stat-value text-2xl"><span id="val-runtime">-</span> <span class="text-sm font-normal text-muted" id="val-version"></span></div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Server Time</div>
+          <div class="stat-value text-xl" id="val-time">-</div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">OS / Arch</div>
+          <div class="stat-value text-xl"><span id="val-os">-</span> / <span id="val-arch">-</span></div>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-end">
+        <button id="refresh-btn" class="btn btn-primary btn-sm">
+          <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

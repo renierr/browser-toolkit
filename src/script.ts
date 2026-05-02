@@ -42,7 +42,7 @@ const assetModules = import.meta.glob(['@tools/**/*.html', '@tools/**/*.css'], {
 });
 const scriptModules = import.meta.glob('@tools/**/index.ts');
 
-async function buildToolsList(): Promise<Tool[]> {
+async function buildToolsList(isBackendAvailable: boolean): Promise<Tool[]> {
   const result: Tool[] = [];
 
   for (const pathKey in descModules) {
@@ -60,6 +60,9 @@ async function buildToolsList(): Promise<Tool[]> {
     // skip example tools early — do not import their template/script
     if (!siteContext.config.showExamples && toolConfig.example) continue;
     if (toolConfig.draft && !isDev) continue;
+    
+    // skip backend tools if no backend is available
+    if (toolConfig.requiresBackend && !isBackendAvailable) continue;
 
     // only now load the heavier assets if present
     const toolFolderPrefix = `${prefix}/${folder}/`;
@@ -578,7 +581,19 @@ function handleRoute(path: string | null, payload?: any) {
 }
 
 async function boot() {
-  const loadedTools = await buildToolsList();
+  let isBackendAvailable = false;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1000);
+    const response = await fetch('/api/health', { signal: controller.signal });
+    clearTimeout(timeoutId);
+    isBackendAvailable = response.ok;
+  } catch (e) {
+    // Backend not available (network error, timeout, etc)
+    console.log('[script] Running in offline/static mode (no backend detected).');
+  }
+
+  const loadedTools = await buildToolsList(isBackendAvailable);
   setTools(loadedTools);
   siteContext.toolCount = loadedTools.length;
 

@@ -21,6 +21,8 @@ export type ToolConfig = {
    * If defined, this tool will receive shared files matching the specified MIME types.
    */
   shareTarget?: ShareTargetConfig;
+
+  requiresBackend?: boolean;
 };
 
 type BuildToolParams = {
@@ -40,6 +42,7 @@ const DEFAULTS: Omit<ToolConfig, 'name'> = {
   order: 0,
   sectionId: undefined,
   shareTarget: undefined,
+  requiresBackend: false,
 };
 
 type ParseOptions = {
@@ -108,6 +111,12 @@ export function parseToolConfig(
   if (raw.example !== undefined && typeof raw.example !== 'boolean') {
     failOrSkip(`${ctx}: Field "example" must be a boolean, got ${typeOf(raw.example)}.`, strict);
   }
+  if (raw.requiresBackend !== undefined && typeof raw.requiresBackend !== 'boolean') {
+    failOrSkip(
+      `${ctx}: Field "requiresBackend" must be a boolean, got ${typeOf(raw.requiresBackend)}.`,
+      strict
+    );
+  }
   if (raw.tags !== undefined && !asStringArray(raw.tags)) {
     failOrSkip(`${ctx}: Field "tags" must be a string[], got ${typeOf(raw.tags)}.`, strict);
   }
@@ -172,6 +181,7 @@ export function parseToolConfig(
     hideHeader: asBool(raw.hideHeader),
     hideFooter: asBool(raw.hideFooter),
     shareTarget,
+    requiresBackend: asBool(raw.requiresBackend) ?? DEFAULTS.requiresBackend,
   };
 }
 
@@ -191,5 +201,6 @@ export function buildTool({ folder, html, loadHtml, loadScript, config }: BuildT
     hideHeader: config.hideHeader,
     hideFooter: config.hideFooter,
     shareTarget: config.shareTarget,
+    requiresBackend: config.requiresBackend,
   };
 }

@@ -43,12 +43,12 @@ or [TOOLS.md](TOOLS.md) file
 - **Workspace Isolation:** Per-tool isolated dependencies using `pnpm` workspaces.
 
 
-## 🚀 Getting Started (Local Development)
+## 🚀 Getting Started
 
-Want to run this locally or add your own tools? Getting started is easy.
+This toolkit can be run in two modes: **Static/Offline Mode** (default) or **Backend Mode** (for tools that require a server, like database interactions).
 
 ### Prerequisites
-Make sure you have [Node.js](https://nodejs.org/) and [pnpm](https://pnpm.io/) installed.
+Make sure you have [Node.js](https://nodejs.org/), [pnpm](https://pnpm.io/), and [Bun](https://bun.sh/) installed.
 
 ### Installation
 
@@ -59,13 +59,47 @@ git clone https://github.com/renierr/browser-toolkit.git
 # Navigate into the directory
 cd browser-toolkit
 
-# Install dependencies
+# Install frontend dependencies
 pnpm install
 
+# Install backend dependencies
+cd backend
+bun install
+cd ..
+```
+
+### 1. Static/Offline Mode (Default)
+If you only want the offline-capable browser tools:
+```bash
 # Start the development server
 pnpm run dev
 ```
 
+### 2. Backend Mode
+If you want to develop or use tools that require a server backend:
+
+**Development:**
+You need two terminal windows to run the frontend and backend simultaneously. The frontend will automatically proxy API requests to the backend.
+```bash
+# Terminal 1 (Frontend): Starts Vite on http://localhost:5173
+pnpm run dev
+
+# Terminal 2 (Backend): Starts Bun on http://localhost:3000
+cd backend
+bun run dev
+```
+
+**Production:**
+In production, the Bun backend efficiently serves both your APIs and the built frontend static files from a single port.
+```bash
+# 1. Build the frontend into the 'dist/' folder
+pnpm run build
+
+# 2. Start the production backend
+cd backend
+bun start
+```
+*Navigate to `http://localhost:3000` to see your deployed app.*
 ## 🏗️ How to add a new tool
 
 Adding a tool takes about 30 seconds thanks to the auto-detection feature.    

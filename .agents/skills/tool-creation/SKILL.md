@@ -41,7 +41,7 @@ Use this skill when user wants to create or add a new tool to browser-toolkit.
 1. Plan first-ask questions only when requirements are unclear
 2. Check src/tools/* for similar tools first to find reusable patterns
 3. Use pnpm (not npm)
-4. Keep tool code browser-only (no Node.js-only APIs)
+4. Keep tool code browser-only and offline-first. We prefer offline mode. Only use the optional Bun backend if the user explicitly requests it.
 5. Ask before adding dependencies when unclear
 6. Create required files: config.json, template.html, index.ts (only if JS needed)
 7. Follow tool entry contract
@@ -72,7 +72,7 @@ return () => {
 
 ## Required Files
 
-- config.json: name, description, icon, sectionId, order, draft, example, hideHeader, hideFooter, shareTarget
+- config.json: name, description, icon, sectionId, order, draft, example, hideHeader, hideFooter, shareTarget, requiresBackend
 - template.html: tool UI markup
 - index.ts: JS behavior (only when needed)
 
@@ -88,6 +88,7 @@ return () => {
 "example": false,
 "hideHeader": false,
 "hideFooter": false,
+"requiresBackend": false,
 "shareTarget": {
 "accept": ["image/*"]
 }
