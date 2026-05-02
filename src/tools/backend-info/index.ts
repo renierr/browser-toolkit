@@ -42,6 +42,7 @@ export default function init(): void | (() => void) {
     setText('val-status', data.status ? data.status.toUpperCase() : 'UNKNOWN');
     setText('val-hostname', data.hostname || 'unknown-host');
     setText('val-uptime', data.uptime !== undefined ? formatUptime(data.uptime) : '-');
+    setText('val-runtime-uptime', data.runtimeUptime !== undefined ? formatUptime(data.runtimeUptime) : '-');
     setText('val-runtime', data.runtime || '-');
     setText('val-version', data.version ? `v${data.version}` : '');
     setText('val-os', data.os || '-');

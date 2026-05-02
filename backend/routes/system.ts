@@ -43,6 +43,7 @@ system.get('/info', (c) => {
     arch: process.arch,
     hostname: os.hostname(),
     uptime: os.uptime(),
+    runtimeUptime: process.uptime(),
     memory: {
       total: totalMem,
       free: freeMem,
