@@ -51,5 +51,8 @@
     "onnxruntime-web": "^1.24.3",
     "overtype": "^2.3.5",
     "sortablejs": "^1.15.7"
-  }
+  },
+  "workspaces": [
+    "src/tools/**"
+  ]
 }

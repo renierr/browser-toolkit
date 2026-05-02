@@ -16,7 +16,7 @@ For extended examples and walkthroughs, see:
 ## ALWAYS
 
 - **Caveman terse style** (caveman.md): REQUIRED. Drop filler, articles, pleasantries.
-- Use `pnpm` only. Never use `npm`.
+- Use `bun` or `pnpm`. Never use `npm`. Prefer `bun` by default.
 - Check existing implementations before adding new code:
   - similar tools in `src/tools/*`
   - shared utilities in `src/js/*`
@@ -26,7 +26,7 @@ For extended examples and walkthroughs, see:
 - Export tools as `export default function init(): void | (() => void)`.
 - Return cleanup from `init()` when adding listeners, timers, observers, or side effects.
 - Prefer listeners on tool-local containers. If global listeners are necessary, always remove them in cleanup.
-- Run `pnpm tsc` for validation unless production behavior must be verified.
+- Run `bun x tsc` or `pnpm tsc` for validation unless production behavior must be verified.
 - Do not run global formatting by default. Format touched files only.
 - Do not manually call `createIcons()` or import `lucide` for icon rendering.
 - Keep custom CSS minimal in `src/css/style.css`.
@@ -76,13 +76,16 @@ While editing:
 
 After editing:
 
-- Run `pnpm tsc`.
+- Run `bun x tsc` or `pnpm tsc`.
 - Optionally run file-scoped formatting on touched files.
 - Report what changed and why.
 
-## Commands
-
 ```bash
+# bun
+bun x tsc
+bun x prettier --write <touched-file-1> <touched-file-2>
+
+# pnpm
 pnpm tsc
 pnpm exec prettier --write <touched-file-1> <touched-file-2>
 ```
@@ -90,6 +93,11 @@ pnpm exec prettier --write <touched-file-1> <touched-file-2>
 Use full build only when needed:
 
 ```bash
+# bun
+bun run build
+bun run preview
+
+# pnpm
 pnpm build
 pnpm preview
 ```
@@ -117,7 +125,7 @@ export default function init(): void | (() => void) {
 ## Key Concepts Not In Core Rules
 
 - App bootstrap and tool discovery are orchestrated in `src/script.ts`.
-- Tool-specific dependencies are supported via `pnpm-workspace.yaml` and per-tool `package.json`.
+- Tool-specific dependencies are supported via `pnpm-workspace.yaml` or root `package.json` workspaces (for Bun) and per-tool `package.json`.
 - Share-target tools can receive `SharedFilesPayload` in `init(payload?)`.
 - Template placeholders use `{{ key.path }}` and are resolved from site context. Special syntax exists to include separated files: `<include src="file.html" />` and `<include src="file.css" type="style" />`.
 - Site config is managed in `src/config/site.config.ts`.
