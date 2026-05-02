@@ -1,9 +1,12 @@
-<div id="backend-info-tool" class="card bg-base-100 shadow-xl max-w-2xl mx-auto">
+<div id="backend-info-tool" class="card bg-base-100 shadow-xl max-w-4xl mx-auto">
   <div class="card-body">
-    <h2 class="card-title mb-4">
-      <i data-lucide="server" class="w-6 h-6 mr-2"></i>
-      Backend Status
-    </h2>
+    <div class="flex justify-between items-start mb-6">
+      <h2 class="card-title">
+        <i data-lucide="server" class="w-6 h-6 mr-2"></i>
+        Backend Status
+      </h2>
+      <div class="badge badge-outline" id="val-hostname">loading...</div>
+    </div>
 
     <div class="flex items-center justify-center py-8" id="info-loading">
       <span class="loading loading-spinner loading-lg text-primary"></span>
@@ -14,19 +17,20 @@
       <span>Failed to fetch backend info.</span>
     </div>
 
-    <div id="info-content" class="hidden">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div id="info-content" class="hidden space-y-6">
+      <!-- Top Row: Core Info -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="stat bg-base-200 rounded-box">
           <div class="stat-title">Status</div>
-          <div class="stat-value text-success text-2xl" id="val-status">-</div>
+          <div class="stat-value text-success text-xl" id="val-status">-</div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Uptime</div>
+          <div class="stat-value text-xl" id="val-uptime">-</div>
         </div>
         <div class="stat bg-base-200 rounded-box">
           <div class="stat-title">Runtime</div>
-          <div class="stat-value text-2xl"><span id="val-runtime">-</span> <span class="text-sm font-normal text-muted" id="val-version"></span></div>
-        </div>
-        <div class="stat bg-base-200 rounded-box">
-          <div class="stat-title">Server Time</div>
-          <div class="stat-value text-xl" id="val-time">-</div>
+          <div class="stat-value text-xl"><span id="val-runtime">-</span> <span class="text-xs font-normal opacity-70" id="val-version"></span></div>
         </div>
         <div class="stat bg-base-200 rounded-box">
           <div class="stat-title">OS / Arch</div>
@@ -34,7 +38,42 @@
         </div>
       </div>
 
-      <div class="mt-6 flex justify-end">
+      <!-- Resource Usage -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Memory -->
+        <div class="p-4 bg-base-200 rounded-box">
+          <div class="flex justify-between items-end mb-2">
+            <span class="text-sm font-bold opacity-70 uppercase tracking-wider">Memory Usage</span>
+            <span class="text-xs opacity-70" id="val-mem-text">- / -</span>
+          </div>
+          <progress class="progress progress-primary w-full h-3" id="val-mem-progress" value="0" max="100"></progress>
+          <div class="mt-1 text-right text-xs font-mono" id="val-mem-percent">0%</div>
+        </div>
+
+        <!-- Disk -->
+        <div class="p-4 bg-base-200 rounded-box">
+          <div class="flex justify-between items-end mb-2">
+            <span class="text-sm font-bold opacity-70 uppercase tracking-wider">Disk Space (/)</span>
+            <span class="text-xs opacity-70" id="val-disk-text">- / -</span>
+          </div>
+          <progress class="progress progress-secondary w-full h-3" id="val-disk-progress" value="0" max="100"></progress>
+          <div class="mt-1 text-right text-xs font-mono" id="val-disk-percent">0%</div>
+        </div>
+      </div>
+
+      <!-- Bottom Row: Load and Time -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Load Average (1, 5, 15 min)</div>
+          <div class="stat-value text-lg font-mono" id="val-load">- / - / -</div>
+        </div>
+        <div class="stat bg-base-200 rounded-box">
+          <div class="stat-title">Server Local Time</div>
+          <div class="stat-value text-lg" id="val-time">-</div>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-2">
         <button id="refresh-btn" class="btn btn-primary btn-sm">
           <i data-lucide="refresh-cw" class="w-4 h-4 mr-1"></i> Refresh
         </button>
