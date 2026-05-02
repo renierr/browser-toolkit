@@ -179,7 +179,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx,md,json}'],
-        navigateFallbackDenylist: [/\.html($|\?)/],
+        navigateFallbackDenylist: [/\.html($|\?)/, /^\/api/],
         skipWaiting: true,
         clientsClaim: true,
         importScripts: ['sw-share-target.js', 'sw-timer.js'],

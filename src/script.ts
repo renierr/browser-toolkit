@@ -584,10 +584,13 @@ async function boot() {
   let isBackendAvailable = false;
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 1000);
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
     const response = await fetch('/api/health', { signal: controller.signal });
     clearTimeout(timeoutId);
     isBackendAvailable = response.ok;
+    if (isBackendAvailable) {
+      console.log('[script] Backend detected! Enabling server-side tools.');
+    }
   } catch (e) {
     // Backend not available (network error, timeout, etc)
     console.log('[script] Running in offline/static mode (no backend detected).');
