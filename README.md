@@ -40,7 +40,7 @@ or [TOOLS.md](TOOLS.md) file
 - **Auto-Detecting Tools:** Simply create a folder to add a new tool—the app handles the rest.
 - **Modern UI:** Consistent, beautiful design powered by daisyUI and Tailwind.
 - **Share Target:** Share files (images, text, PDFs) directly from your OS into the tools.
-- **Workspace Isolation:** Per-tool isolated dependencies using `pnpm` workspaces.
+- **Workspace Isolation:** Per-tool isolated dependencies using `bun` workspaces.
 
 
 ## 🚀 Getting Started
@@ -48,7 +48,7 @@ or [TOOLS.md](TOOLS.md) file
 This toolkit can be run in two modes: **Static/Offline Mode** (default) or **Backend Mode** (for tools that require a server, like database interactions).
 
 ### Prerequisites
-Make sure you have [Node.js](https://nodejs.org/), [pnpm](https://pnpm.io/), and [Bun](https://bun.sh/) installed.
+Make sure you have [Bun](https://bun.sh/) (preferred) or [Node.js](https://nodejs.org/) installed.
 
 ### Installation
 
@@ -59,8 +59,8 @@ git clone https://github.com/renierr/browser-toolkit.git
 # Navigate into the directory
 cd browser-toolkit
 
-# Install frontend dependencies
-pnpm install
+# Install all dependencies (Frontend & Tools)
+bun install
 
 # Install backend dependencies
 cd backend
@@ -72,7 +72,7 @@ cd ..
 If you only want the offline-capable browser tools:
 ```bash
 # Start the development server
-pnpm run dev
+bun run dev
 ```
 
 ### 2. Backend Mode
@@ -82,7 +82,7 @@ If you want to develop or use tools that require a server backend:
 You need two terminal windows to run the frontend and backend simultaneously. The frontend will automatically proxy API requests to the backend.
 ```bash
 # Terminal 1 (Frontend): Starts Vite on http://localhost:5173
-pnpm run dev
+bun run dev
 
 # Terminal 2 (Backend): Starts Bun on http://localhost:3000
 cd backend
@@ -93,7 +93,7 @@ bun run dev
 In production, the Bun backend efficiently serves both your APIs and the built frontend static files from a single port.
 ```bash
 # 1. Build the frontend into the 'dist/' folder
-pnpm run build
+bun run build
 
 # 2. Start the production backend
 cd backend
@@ -109,7 +109,7 @@ See a more detailed instruction inside the repositories 'docs' folder.
 2. Add your `index.ts`, `template.html` and `config.json` logic/styles.
 3. The Vite configuration will automatically detect the new folder and add it to the main dashboard!
 
-> **Note:** If your tool requires specific dependencies, you can manage them within that tool's folder utilizing the `pnpm` workspaces setup.
+> **Note:** If your tool requires specific dependencies, you can manage them within that tool's folder utilizing the `bun` workspaces setup.
 
 ## 💻 Tech Stack
 
@@ -117,7 +117,7 @@ See a more detailed instruction inside the repositories 'docs' folder.
 - **Language:** TypeScript
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [daisyUI](https://daisyui.com/)
 - **Icons:** [Lucide Icons](https://lucide.dev/)
-- **Package Manager:** `pnpm` (with workspaces)
+- **Package Manager:** `bun` (with workspaces)
 
 ## 📄 License
 
