@@ -17,9 +17,14 @@ const port = process.env.PORT || 3000;
 console.log(`\n🚀 Backend Server running at http://localhost:${port}`);
 console.log(`📁 Serving static files from: ../dist`);
 console.log(`\nEndpoints:`);
-console.log(`- http://localhost:${port}/api/health`);
-console.log(`- http://localhost:${port}/api/info`);
-console.log(`- http://localhost:${port}/api/db-test`);
+const routes = app.routes
+  .filter(r => r.path.startsWith('/api'))
+  .map(r => r.path)
+  .filter((value, index, self) => self.indexOf(value) === index); // Unique paths
+
+routes.forEach(path => {
+  console.log(`- http://localhost:${port}${path}`);
+});
 
 export default {
   port,
