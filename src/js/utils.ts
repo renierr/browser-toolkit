@@ -599,3 +599,19 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Checks if the backend server is available and responsive.
+ * @param timeoutMs Timeout in milliseconds for the health check.
+ */
+export async function checkBackend(timeoutMs = 2000): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const response = await fetch('/api/health', { signal: controller.signal });
+    clearTimeout(timeoutId);
+    return response.ok;
+  } catch (e) {
+    return false;
+  }
+}

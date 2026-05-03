@@ -1,3 +1,5 @@
+import { isBackendAvailable } from '@js/tools';
+
 export class DiscoveryManager {
   private topic: string;
   private peerId: string = Math.random().toString(36).substring(2, 10);
@@ -21,7 +23,12 @@ export class DiscoveryManager {
   async broadcast(data: any) {
     if (!this.isEnabled) return;
     console.debug('[Discovery] broadcasting', this.topic, data);
-    const res = await fetch(`https://ntfy.sh/${this.topic}`, {
+
+    const url = isBackendAvailable
+      ? `/api/discovery/${this.topic}`
+      : `https://ntfy.sh/${this.topic}`;
+
+    const res = await fetch(url, {
       method: 'POST',
       body: JSON.stringify({ ...data, sender: this.peerId }),
     });
@@ -35,9 +42,13 @@ export class DiscoveryManager {
   start(onMessage: (data: any) => void, onStatus?: (s: 'listening' | 'error') => void) {
     this.isEnabled = true;
     try {
-      this.eventSource = new EventSource(`https://ntfy.sh/${this.topic}/sse`);
+      const sseUrl = isBackendAvailable
+        ? `/api/discovery/${this.topic}/sse`
+        : `https://ntfy.sh/${this.topic}/sse`;
+
+      this.eventSource = new EventSource(sseUrl);
       this.eventSource.onopen = () => {
-        console.debug('[Discovery] SSE open', this.topic);
+        console.debug('[Discovery] SSE open', this.topic, isBackendAvailable ? '(local)' : '(ntfy)');
         onStatus?.('listening');
       };
       this.eventSource.onerror = (e) => {
@@ -46,9 +57,9 @@ export class DiscoveryManager {
       };
       this.eventSource.onmessage = (e) => {
         try {
-          // ntfy sends a JSON envelope; message field contains our payload JSON
+          // ntfy and our local backend send a JSON envelope; message field contains our payload JSON
           const parsed = JSON.parse(e.data);
-          const msg = JSON.parse(parsed.message);
+          const msg = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed.message;
           console.debug('[Discovery] SSE message', this.topic, msg);
           if (msg.sender !== this.peerId) onMessage(msg);
         } catch (err) {

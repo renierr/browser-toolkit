@@ -1,5 +1,5 @@
 import overviewHtml from './pages/overview.html?raw';
-import { fuzzyScore, html, isDev } from './js/utils.ts';
+import { fuzzyScore, html, isDev, checkBackend } from './js/utils.ts';
 import type { Tool, ToolModule } from './js/types';
 import { siteContext } from './config';
 import { renderLayout, renderTool, renderToolCard } from './js/render.ts';
@@ -17,7 +17,7 @@ import {
   type SharedFilesPayload,
 } from './js/share-target.ts';
 import { showToolChooser, getLastUsedMap, setLastUsed } from './js/tool-chooser.ts';
-import { setTools, tools } from './js/tools.ts';
+import { setTools, tools, setBackendAvailable } from './js/tools.ts';
 import { getSettings } from './js/settings.ts';
 import { getMimeTypeFromFileName } from './js/mime-types';
 import { showMessage } from './js/ui.ts';
@@ -581,18 +581,12 @@ function handleRoute(path: string | null, payload?: any) {
 }
 
 async function boot() {
-  let isBackendAvailable = false;
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-    const response = await fetch('/api/health', { signal: controller.signal });
-    clearTimeout(timeoutId);
-    isBackendAvailable = response.ok;
-    if (isBackendAvailable) {
-      console.log('[script] Backend detected! Enabling server-side tools.');
-    }
-  } catch (e) {
-    // Backend not available (network error, timeout, etc)
+  const isBackendAvailable = await checkBackend();
+  setBackendAvailable(isBackendAvailable);
+  
+  if (isBackendAvailable) {
+    console.log('[script] Backend detected! Enabling server-side tools.');
+  } else {
     console.log('[script] Running in offline/static mode (no backend detected).');
   }
 
