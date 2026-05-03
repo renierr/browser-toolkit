@@ -55,5 +55,8 @@
   },
   "workspaces": [
     "src/tools/**"
+  ],
+  "trustedDependencies": [
+    "esbuild"
   ]
 }
