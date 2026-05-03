@@ -3,6 +3,7 @@ import { serveStatic } from 'hono/bun';
 import systemRoutes from './routes/system';
 import testRoutes from './routes/test';
 import discoveryRoutes from './routes/discovery';
+import networkRoutes from './routes/network';
 
 const app = new Hono();
 
@@ -10,6 +11,7 @@ const app = new Hono();
 app.route('/api', systemRoutes);
 app.route('/api', testRoutes);
 app.route('/api', discoveryRoutes);
+app.route('/api/network', networkRoutes);
 
 // Serve the static frontend (dist folder)
 // It serves everything from ../dist for any unmatched routes

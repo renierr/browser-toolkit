@@ -1,0 +1,83 @@
+<div id="lan-explorer" class="p-4 flex flex-col gap-6 h-full overflow-hidden">
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div>
+      <h2 class="text-2xl font-bold flex items-center gap-2">
+        <i data-lucide="network" class="w-6 h-6"></i>
+        LAN Explorer
+      </h2>
+      <p class="text-base-content/70">Scan local network for active devices and services.</p>
+    </div>
+    <div class="flex gap-2 w-full sm:w-auto">
+      <button id="scan-btn" class="btn btn-primary flex-1 sm:flex-none">
+        <i data-lucide="search" class="w-4 h-4"></i>
+        Scan Network
+      </button>
+      <button id="stop-btn" class="btn btn-error btn-outline hidden">
+        <i data-lucide="square" class="w-4 h-4"></i>
+        Stop
+      </button>
+      <button id="refresh-btn" class="btn btn-ghost btn-square" title="Refresh list">
+        <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </div>
+
+  <div id="scan-progress-container" class="hidden flex flex-col gap-2">
+    <div class="flex justify-between text-xs font-semibold uppercase tracking-wider text-base-content/60">
+      <div class="flex gap-2">
+        <span>Scanning network...</span>
+        <span id="current-scan-ip" class="text-primary animate-pulse"></span>
+      </div>
+      <span id="scan-percentage">0%</span>
+    </div>
+    <progress id="scan-progress" class="progress progress-primary w-full" value="0" max="100"></progress>
+  </div>
+
+  <div id="status-alert" class="alert alert-info hidden">
+    <i data-lucide="info" class="w-4 h-4"></i>
+    <span>Scanning network... This may take a moment.</span>
+  </div>
+
+  <div class="flex-1 overflow-auto">
+    <div id="device-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- Devices will be injected here -->
+      <div class="col-span-full flex flex-col items-center justify-center py-20 text-base-content/40 bg-base-200/50 rounded-xl border-2 border-dashed border-base-300">
+        <i data-lucide="monitor" class="w-12 h-12 mb-4 opacity-20"></i>
+        <p>No devices discovered yet. Click Scan to begin.</p>
+      </div>
+    </div>
+  </div>
+  
+  <div class="text-xs text-base-content/50 flex justify-between items-center px-2 py-2 border-t border-base-300">
+    <span id="device-count">0 devices found</span>
+    <span id="last-update">Last updated: Never</span>
+  </div>
+
+  <template id="device-card-template">
+  <div class="card bg-base-100 shadow-sm border border-base-300 hover:shadow-md transition-shadow">
+    <div class="card-body p-4">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-primary/10 text-primary rounded-lg">
+            <i data-lucide="monitor" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg leading-tight device-ip">192.168.1.1</h3>
+            <p class="text-xs text-base-content/60 device-hostname">Unknown Hostname</p>
+          </div>
+        </div>
+        <div class="badge badge-success badge-sm device-status">online</div>
+      </div>
+      
+      <div class="mt-4 flex flex-wrap gap-1 device-services">
+        <!-- Services badges -->
+      </div>
+      
+      <div class="mt-4 pt-3 border-t border-base-200 flex justify-between items-center text-[10px] uppercase tracking-wider font-semibold text-base-content/40">
+        <span class="device-mac">MAC: Unknown</span>
+        <span class="device-last-seen">Seen: Just now</span>
+      </div>
+    </div>
+  </div>
+</template>
+</div>

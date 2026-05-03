@@ -182,6 +182,10 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         runtimeCaching: [
           {
+            urlPattern: ({ url }) => url.pathname.startsWith('/api'),
+            handler: 'NetworkOnly',
+          },
+          {
             // Never cache cross-origin requests in the app SW.
             urlPattern: ({ url }) => url.origin !== self.location.origin,
             handler: 'NetworkOnly',
@@ -212,6 +216,15 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+        configure: (proxy) => {
+          proxy.on('proxyRes', (proxyRes, req) => {
+            if (req.url?.includes('/events')) {
+              proxyRes.headers['content-type'] = 'text/event-stream';
+              proxyRes.headers['cache-control'] = 'no-cache';
+              proxyRes.headers['connection'] = 'keep-alive';
+            }
+          });
+        },
       },
     },
   },

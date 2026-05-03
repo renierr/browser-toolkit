@@ -1,0 +1,8 @@
+{
+  "id": "lan-explorer",
+  "name": "LAN Explorer",
+  "description": "Discover devices and services on your local network.",
+  "icon": "network",
+  "category": "Network",
+  "requiresBackend": true
+}
