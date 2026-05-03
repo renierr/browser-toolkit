@@ -3,7 +3,6 @@ import { fileURLToPath } from 'url';
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
-import wasm from 'vite-plugin-wasm';
 import { onnxStaticPlugin } from './src/plugins/onnx-static-plugin';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,7 +12,6 @@ export default defineConfig({
   base: './',
   plugins: [
     onnxStaticPlugin(),
-    wasm(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -219,7 +217,7 @@ export default defineConfig({
   },
   worker: {
     format: 'es',
-    plugins: () => [wasm()],
+    plugins: () => [],
   },
   resolve: {
     alias: [
