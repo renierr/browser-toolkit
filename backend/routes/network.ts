@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import * as os from 'node:os';
 import * as dgram from 'node:dgram';
+import * as dns from 'node:dns/promises';
 
 const network = new Hono();
 
@@ -67,27 +68,56 @@ async function getArpTable(): Promise<Map<string, string>> {
   return arpMap;
 }
 
-// mDNS Discovery (finds smart devices)
-function startMdnsDiscovery() {
-  try {
-    const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
-    
-    socket.on('message', (msg, rinfo) => {
-      // Basic detection that something is alive and talking mDNS
-      updateDevice(rinfo.address, { services: ['mDNS'] });
+// mDNS & SSDP Discovery (finds smart devices, routers, etc.)
+function startServiceDiscovery() {
+  const mdnsSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+  const ssdpSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+  
+  // mDNS Discovery
+  mdnsSocket.on('message', (msg, rinfo) => {
+    updateDevice(rinfo.address, { services: ['mDNS'] });
+    broadcast('device', discoveredDevices.get(rinfo.address));
+  });
+
+  // SSDP Discovery
+  ssdpSocket.on('message', (msg, rinfo) => {
+    const s = msg.toString();
+    if (s.includes('HTTP/1.1 200 OK') || s.includes('NOTIFY * HTTP/1.1')) {
+      updateDevice(rinfo.address, { services: ['UPnP'] });
       broadcast('device', discoveredDevices.get(rinfo.address));
+    }
+  });
+
+  try {
+    mdnsSocket.bind(5353, () => {
+      mdnsSocket.addMembership('224.0.0.251');
+      // Send a "discovery" query to nudge devices to respond
+      const query = Buffer.from([
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x09, 0x5f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x07, 0x5f, 0x64, 0x6e, 0x73, 0x2d, 0x73, 0x64, 0x04, 0x5f, 0x75, 0x64, 0x70, 0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x00,
+        0x00, 0x0c, 0x00, 0x01
+      ]);
+      mdnsSocket.send(query, 5353, '224.0.0.251');
     });
 
-    socket.bind(5353, () => {
-      socket.addMembership('224.0.0.251');
+    ssdpSocket.bind(0, () => {
+      const query = Buffer.from(
+        'M-SEARCH * HTTP/1.1\r\n' +
+        'HOST: 239.255.255.250:1900\r\n' +
+        'MAN: "ssdp:discover"\r\n' +
+        'MX: 1\r\n' +
+        'ST: ssdp:all\r\n' +
+        '\r\n'
+      );
+      ssdpSocket.send(query, 1900, '239.255.255.250');
     });
 
-    // Stop after 10 seconds
     setTimeout(() => {
-      socket.close();
-    }, 10000);
+      mdnsSocket.close();
+      ssdpSocket.close();
+    }, 15000);
   } catch (e) {
-    console.error('[Network] mDNS Discovery failed:', e);
+    console.error('[Network] Service Discovery failed:', e);
   }
 }
 
@@ -98,8 +128,8 @@ async function scanSubnet(ip: string, netmask: string) {
   scanProgress = 0;
   broadcast('status', { scanning: true, progress: 0, currentIp: 'Initializing...' });
 
-  // Start mDNS in parallel
-  startMdnsDiscovery();
+  // Start mDNS/SSDP in parallel
+  startServiceDiscovery();
 
   const parts = ip.split('.').map(Number);
   const maskParts = netmask.split('.').map(Number);
@@ -191,6 +221,21 @@ function updateDevice(ip: string, data: Partial<Device>) {
   };
   
   discoveredDevices.set(ip, updated);
+
+  // Try to resolve hostname in background if not already known
+  if (!updated.hostname) {
+    dns.reverse(ip)
+      .then(hostnames => {
+        if (hostnames && hostnames.length > 0) {
+          updated.hostname = hostnames[0];
+          broadcast('device', updated);
+        }
+      })
+      .catch(() => {
+        // Many local IPs won't have reverse DNS, ignore errors
+      });
+  }
+
   return updated;
 }
 
