@@ -172,8 +172,12 @@ async function scanSubnet(ip: string, netmask: string) {
               
               if (socket) {
                 const mac = arpTable.get(targetIp);
-                const service = port === 22 ? 'SSH' : port === 443 ? 'HTTPS' : 'HTTP';
-                const device = updateDevice(targetIp, { status: 'online', services: [service], mac });
+                let serviceName = 'HTTP';
+                if (port === 22) serviceName = 'SSH';
+                else if (port === 443) serviceName = 'HTTPS';
+                
+                const serviceWithPort = `${serviceName} (${port})`;
+                const device = updateDevice(targetIp, { status: 'online', services: [serviceWithPort], mac });
                 broadcast('device', device);
                 break; 
               }
