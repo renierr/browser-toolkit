@@ -5,8 +5,10 @@ const ROOT_DIR = process.cwd();
 const TOOLS_DIR = join(ROOT_DIR, 'src', 'tools');
 const OUTPUT_FILE = join(ROOT_DIR, 'TOOLS.md');
 
-const SECTION_ORDER = ['general', 'images', 'media', 'pdf', 'utilities', 'devices'];
-const SECTION_TITLE = {
+const SECTION_ORDER = ['general', 'images', 'media', 'pdf', 'utilities', 'devices'] as const;
+type SectionId = (typeof SECTION_ORDER)[number];
+
+const SECTION_TITLE: Record<SectionId, string> = {
   general: 'General',
   images: 'Images',
   media: 'Media',
@@ -15,35 +17,44 @@ const SECTION_TITLE = {
   devices: 'Devices',
 };
 
-/** @typedef {{name?: string, description?: string, icon?: string, order?: number, sectionId?: string, shareTarget?: {accept?: string[]}}} ToolConfig */
+type ToolConfig = {
+  name?: string;
+  description?: string;
+  icon?: string;
+  order?: number;
+  sectionId?: string;
+  shareTarget?: {
+    accept?: string[];
+  };
+};
+
+type ToolMetadata = {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  order: number | null;
+  sectionId: string;
+  shareTargetAccept: string[];
+};
 
 /**
  * Read all tool config files and normalize the metadata.
- * @returns {Array<{
- * id: string;
- * name: string;
- * description: string;
- * icon: string;
- * order: number | null;
- * sectionId: string;
- * shareTargetAccept: string[];
- * }>}
  */
-function readTools() {
+function readTools(): ToolMetadata[] {
   const toolFolders = readdirSync(TOOLS_DIR, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 
-  const tools = [];
+  const tools: ToolMetadata[] = [];
 
   for (const toolId of toolFolders) {
     const configPath = join(TOOLS_DIR, toolId, 'config.json');
     if (!existsSync(configPath)) {
       continue;
     }
-    /** @type {ToolConfig} */
-    const raw = JSON.parse(readFileSync(configPath, 'utf-8'));
+    const raw: ToolConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
 
     tools.push({
       id: toolId,
@@ -53,7 +64,7 @@ function readTools() {
       order: typeof raw.order === 'number' ? raw.order : null,
       sectionId: raw.sectionId?.trim() || 'utilities',
       shareTargetAccept: Array.isArray(raw.shareTarget?.accept)
-        ? raw.shareTarget.accept.filter((value) => typeof value === 'string' && value.trim().length > 0)
+        ? raw.shareTarget.accept.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
         : [],
     });
   }
@@ -63,10 +74,8 @@ function readTools() {
 
 /**
  * Keep output deterministic to avoid noisy diffs.
- * @param {ReturnType<typeof readTools>[number]} a
- * @param {ReturnType<typeof readTools>[number]} b
  */
-function sortTools(a, b) {
+function sortTools(a: ToolMetadata, b: ToolMetadata): number {
   const orderA = a.order ?? Number.MAX_SAFE_INTEGER;
   const orderB = b.order ?? Number.MAX_SAFE_INTEGER;
 
@@ -75,16 +84,15 @@ function sortTools(a, b) {
 }
 
 /**
- * @param {ReturnType<typeof readTools>} tools
- * @returns {string}
+ * Render tools inventory to markdown.
  */
-function renderMarkdown(tools) {
-  const lines = [];
+function renderMarkdown(tools: ToolMetadata[]): string {
+  const lines: string[] = [];
 
   lines.push('# Tools Inventory');
   lines.push('');
   lines.push('This file is generated from `src/tools/*/config.json`.');
-  lines.push('Run `pnpm generate:tool-description` after changing tool metadata.');
+  lines.push('Run `bun run generate:tool-description` after changing tool metadata.');
   lines.push('');
   lines.push(`- Total tools: **${tools.length}**`);
   lines.push('- Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`');
@@ -120,7 +128,7 @@ function renderMarkdown(tools) {
   lines.push('');
   lines.push('- `Order` uses the value from each config; `not set` means the field is missing.');
   lines.push('- `Share target capable` is `yes` when `shareTarget.accept` has at least one entry.');
-  lines.push('- Re-run `pnpm generate:tool-description` whenever tool metadata changes.');
+  lines.push('- Re-run `bun run generate:tool-description` whenever tool metadata changes.');
 
   return `${lines.join('\n')}\n`;
 }
@@ -130,4 +138,3 @@ const markdown = renderMarkdown(tools);
 writeFileSync(OUTPUT_FILE, markdown, 'utf-8');
 
 console.log(`Generated TOOLS.md for ${tools.length} tools.`);
-

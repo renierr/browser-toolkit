@@ -1,7 +1,7 @@
 # Tools Inventory
 
 This file is generated from `src/tools/*/config.json`.
-Run `pnpm generate:tool-description` after changing tool metadata.
+Run `bun run generate:tool-description` after changing tool metadata.
 
 - Total tools: **57**
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
@@ -308,4 +308,4 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 
 - `Order` uses the value from each config; `not set` means the field is missing.
 - `Share target capable` is `yes` when `shareTarget.accept` has at least one entry.
-- Re-run `pnpm generate:tool-description` whenever tool metadata changes.
+- Re-run `bun run generate:tool-description` whenever tool metadata changes.

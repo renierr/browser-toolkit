@@ -15,7 +15,7 @@
     "format:check": "prettier --check \"src/**/*.{js,ts,html,css,json,md}\"",
     "upgrade:check": "bun outdated",
     "upgrade:deps": "bun update",
-    "generate:tool-description": "bun scripts/generate-tool-description.mjs"
+    "generate:tool-description": "bun scripts/generate-tool-description.ts"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",
