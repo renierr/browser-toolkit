@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `pnpm generate:tool-description` after changing tool metadata.
 
-- Total tools: **56**
+- Total tools: **57**
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -180,7 +180,7 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `info`, share target capable `yes`, share target accepts `application/pdf`.
 - Source: `src/tools/pdf-metadata/config.json`
 
-## Utilities (18)
+## Utilities (19)
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
@@ -231,6 +231,11 @@ Run `pnpm generate:tool-description` after changing tool metadata.
 - Description: Optimize and minify SVG files from pasted code or uploaded files.
 - Metadata: Order `11`, icon `image`, share target capable `yes`, share target accepts `image/svg+xml`.
 - Source: `src/tools/svg-optimizer/config.json`
+
+### Backend Info (`backend-info`)
+- Description: Displays system information from the connected backend server
+- Metadata: Order `100`, icon `server`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/backend-info/config.json`
 
 ### Share Debug (`share-debug`)
 - Description: Inspect shared files and MIME types for share-target debugging.
