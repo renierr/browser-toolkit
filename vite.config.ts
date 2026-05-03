@@ -238,7 +238,7 @@ export default defineConfig({
       },
       {
         find: 'lucide',
-        replacement: path.resolve(__dirname, 'node_modules/lucide/dist/esm/lucide.js'),
+        replacement: path.resolve(__dirname, 'node_modules/lucide/dist/esm/lucide.mjs'),
       },
       {
         find: '@tools',
