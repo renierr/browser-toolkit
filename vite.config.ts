@@ -4,7 +4,6 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import wasm from 'vite-plugin-wasm';
-import topLevelAwait from 'vite-plugin-top-level-await';
 import { onnxStaticPlugin } from './src/plugins/onnx-static-plugin';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -15,7 +14,6 @@ export default defineConfig({
   plugins: [
     onnxStaticPlugin(),
     wasm(),
-    topLevelAwait(),
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -221,7 +219,7 @@ export default defineConfig({
   },
   worker: {
     format: 'es',
-    plugins: () => [wasm(), topLevelAwait()],
+    plugins: () => [wasm()],
   },
   resolve: {
     alias: [
@@ -264,6 +262,7 @@ export default defineConfig({
       },
     },
     chunkSizeWarningLimit: 3000,
+    target: 'esnext',
   },
   optimizeDeps: {
     include: ['lucide'],

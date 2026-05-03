@@ -19,7 +19,6 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",
-    "esbuild": "^0.28.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.6.0",
     "@types/sortablejs": "^1.15.9",
@@ -32,7 +31,6 @@
     "typescript": "~6.0.3",
     "vite": "^8.0.10",
     "vite-plugin-pwa": "^1.2.0",
-    "vite-plugin-top-level-await": "^1.6.0",
     "vite-plugin-wasm": "^3.6.0"
   },
   "license": "MIT",
@@ -55,8 +53,5 @@
   },
   "workspaces": [
     "src/tools/**"
-  ],
-  "trustedDependencies": [
-    "esbuild"
   ]
 }
