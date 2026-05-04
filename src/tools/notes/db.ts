@@ -1,8 +1,9 @@
 import type { Note } from './types.ts';
+import { SyncManager } from '@js/sync.ts';
 
 const DB_NAME = 'NotesDB';
-const STORE_NAME = 'notes';
-const DB_VERSION = 1;
+export const STORE_NAME = 'notes';
+const DB_VERSION = 2;
 
 export function generateShortId(): string {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -18,6 +19,7 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
       }
+      SyncManager.ensureSyncMetadataStore(db);
     };
   });
 }
@@ -65,10 +67,12 @@ export async function saveNote(
         }
       };
     } else {
+      const now = Date.now();
       const note: Note = {
         shortId: generateShortId(),
         content,
-        createdAt: Date.now(),
+        createdAt: now,
+        updatedAt: now,
       };
       store.add(note);
     }
@@ -79,6 +83,12 @@ export async function saveNote(
 }
 
 export async function deleteNote(db: IDBDatabase, id: number): Promise<void> {
+  // Find shortId for sync before deleting
+  const note = await getNoteById(db, id);
+  if (note?.shortId) {
+    await SyncManager.trackDeletion(db, 'notes', note.shortId);
+  }
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);

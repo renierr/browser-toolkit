@@ -2,9 +2,10 @@ import OverType from 'overtype';
 import { MarkdownParser } from 'overtype/parser';
 import { isDarkMode } from '@js/theme.ts';
 import { showMessage } from '@js/ui.ts';
-import { openDB, getAllNotes, saveNote, deleteNote, getNoteById, importNotes } from './db.ts';
+import { openDB, getAllNotes, saveNote, deleteNote, getNoteById, importNotes, STORE_NAME } from './db.ts';
 import { removeMarkdownSyntax, exportNoteToPdf } from './pdf-utils.ts';
 import { downloadFile } from '@js/file-utils.ts';
+import { SyncManager } from '@js/sync.ts';
 import type { Note } from './types.ts';
 
 // noinspection JSUnusedGlobalSymbols
@@ -27,6 +28,7 @@ export default async function init() {
   const exportInputBtn = document.getElementById('export-input-btn') as HTMLButtonElement;
   const importMdBtn = document.getElementById('import-md-btn') as HTMLButtonElement;
   const importMdInput = document.getElementById('import-md-input') as HTMLInputElement;
+  const syncBtn = document.getElementById('sync-btn') as HTMLButtonElement;
 
   let editingId: number | null = null;
 
@@ -44,6 +46,24 @@ export default async function init() {
     } catch (e) {
       console.error('Failed to load notes:', e);
       showMessage('Failed to load notes.', { type: 'alert' });
+    }
+  }
+
+  async function handleSync() {
+    syncBtn.classList.add('syncing');
+    syncBtn.disabled = true;
+    try {
+      const result = await SyncManager.sync(db, STORE_NAME, 'notes', 'shortId');
+      if (result.pulled > 0 || result.deleted > 0) {
+        await loadNotes(searchInput.value);
+      }
+      showMessage(`Sync complete! Pulled: ${result.pulled}, Pushed: ${result.pushed}`, { type: 'info', timeoutMs: 2000 });
+    } catch (e) {
+      console.warn('Sync failed (likely offline):', e);
+      // Don't show alert if it's just a connectivity issue
+    } finally {
+      syncBtn.classList.remove('syncing');
+      syncBtn.disabled = false;
     }
   }
 
@@ -110,7 +130,8 @@ export default async function init() {
       await saveNote(db, content, editingId);
       showMessage('Note saved successfully!', { type: 'info', timeoutMs: 3000 });
       resetForm();
-      loadNotes(searchInput.value);
+      await loadNotes(searchInput.value);
+      handleSync(); // Sync in background
     } catch (e) {
       console.error('Failed to save note:', e);
       showMessage('Failed to save note.', { type: 'alert' });
@@ -145,7 +166,8 @@ export default async function init() {
     try {
       await deleteNote(db, id);
       if (editingId === id) resetForm();
-      loadNotes(searchInput.value);
+      await loadNotes(searchInput.value);
+      handleSync(); // Sync in background
     } catch (e) {
       console.error('Failed to delete note:', e);
       showMessage('Failed to delete note.', { type: 'alert' });
@@ -279,6 +301,7 @@ export default async function init() {
   importInput.addEventListener('change', handleGlobalImport);
   importMdBtn.addEventListener('click', () => importMdInput.click());
   importMdInput.addEventListener('change', handleImportMarkdown);
+  syncBtn.addEventListener('click', handleSync);
 
   container.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
@@ -320,7 +343,8 @@ export default async function init() {
     }
   });
 
-  loadNotes();
+  await loadNotes();
+  handleSync(); // Initial sync
 
   return () => {
     db.close();

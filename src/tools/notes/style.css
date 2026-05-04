@@ -63,13 +63,20 @@
   position: relative;
 }
 .note-content-collapsed {
-  max-height: 6rem;
+  max-height: 4.5rem;
   overflow: hidden;
-  mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
 }
+
 .note-content-expanded {
   max-height: none;
-  mask-image: none;
-  -webkit-mask-image: none;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.syncing .sync-icon {
+  animation: spin 1s linear infinite;
 }
