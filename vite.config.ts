@@ -176,6 +176,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx,md,json,webmanifest}'],
+        cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
         importScripts: ['sw-share-target.js', 'sw-timer.js'],

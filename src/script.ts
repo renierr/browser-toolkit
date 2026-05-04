@@ -161,9 +161,9 @@ function renderOverview() {
           await Promise.all(
             registrations.map((registration) =>
               registration
-                .update()
+                .unregister()
                 .catch((error) =>
-                  console.error('[Overview] Failed to update service worker registration', error)
+                  console.error('[Overview] Failed to unregister service worker', error)
                 )
             )
           );
