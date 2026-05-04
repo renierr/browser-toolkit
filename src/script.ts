@@ -692,6 +692,9 @@ async function boot() {
     const notifyReady = () => showMessage('App is ready for offline use!', { type: 'info', timeoutMs: 4000 });
 
     const monitorRegistration = (reg: ServiceWorkerRegistration) => {
+      // Force a background check for updates on every boot
+      reg.update().catch(() => {});
+
       const checkState = (sw: ServiceWorker) => {
         if (sw.state === 'activated') notifyReady();
       };
@@ -704,11 +707,10 @@ async function boot() {
     };
 
     // 1. Check existing registration
-    navigator.serviceWorker.getRegistration().then(reg => reg && monitorRegistration(reg));
+    navigator.serviceWorker.getRegistration().then((reg) => reg && monitorRegistration(reg));
 
     // 2. Watch for new registrations (important after a refresh/unregister)
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      // If we just got a new controller, we are ready
       notifyReady();
     });
   }
