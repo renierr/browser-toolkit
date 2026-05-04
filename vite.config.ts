@@ -15,7 +15,8 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'script',
+      injectRegister: 'inline',
+      includeAssets: ['favicon.svg', 'favicon-192.png', 'favicon-512.png', 'sw-share-target.js', 'sw-timer.js'],
       manifest: {
         name: 'Browser-Tools',
         short_name: 'B-Tools',
@@ -174,8 +175,7 @@ export default defineConfig({
         enabled: true,
       },
       workbox: {
-        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx,md,json}'],
-        navigateFallbackDenylist: [/^\/api/],
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx,md,json,webmanifest}'],
         skipWaiting: true,
         clientsClaim: true,
         importScripts: ['sw-share-target.js', 'sw-timer.js'],
