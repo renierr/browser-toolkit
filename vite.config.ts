@@ -21,7 +21,7 @@ export default defineConfig({
         short_name: 'B-Tools',
         description: 'Collection of useful Browser based Tools',
         start_url: './',
-        id: '/',
+        id: './',
         display: 'standalone',
         background_color: '#ffffff',
         theme_color: '#000000',
