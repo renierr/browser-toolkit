@@ -182,10 +182,6 @@ export default defineConfig({
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         runtimeCaching: [
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api'),
-            handler: 'NetworkOnly',
-          },
-          {
             // Never cache cross-origin requests in the app SW.
             urlPattern: ({ url }) => url.origin !== self.location.origin,
             handler: 'NetworkOnly',
