@@ -177,7 +177,7 @@ function renderOverview() {
           hideTypeText: false,
           timeoutMs: 2500,
         });
-        window.setTimeout(() => window.location.reload(), 300);
+        window.setTimeout(() => window.location.reload(), 2000);
       } catch (error) {
         console.error('[Overview] Failed to refresh cached app files', error);
         showMessage('Failed to refresh cached app files. Please try again.', { type: 'alert' });
@@ -685,6 +685,32 @@ async function boot() {
   // Always render the initial route if not handled by launch/share
   if (!handledByLaunchOrShare) {
     handleRoute(router.getCurrentPath());
+  }
+
+  // Notify when offline-ready
+  if ('serviceWorker' in navigator) {
+    const notifyReady = () => showMessage('App is ready for offline use!', { type: 'info', timeoutMs: 4000 });
+
+    const monitorRegistration = (reg: ServiceWorkerRegistration) => {
+      const checkState = (sw: ServiceWorker) => {
+        if (sw.state === 'activated') notifyReady();
+      };
+
+      if (reg.installing) {
+        reg.installing.addEventListener('statechange', (e) => checkState(e.target as ServiceWorker));
+      } else if (reg.waiting) {
+        reg.waiting.addEventListener('statechange', (e) => checkState(e.target as ServiceWorker));
+      }
+    };
+
+    // 1. Check existing registration
+    navigator.serviceWorker.getRegistration().then(reg => reg && monitorRegistration(reg));
+
+    // 2. Watch for new registrations (important after a refresh/unregister)
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // If we just got a new controller, we are ready
+      notifyReady();
+    });
   }
 }
 
