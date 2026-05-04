@@ -15,7 +15,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: 'script',
       manifest: {
         name: 'Browser-Tools',
         short_name: 'B-Tools',
@@ -175,7 +175,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx,md,json}'],
-        navigateFallbackDenylist: [/\.html($|\?)/, /^\/api/],
+        navigateFallbackDenylist: [/^\/api/],
         skipWaiting: true,
         clientsClaim: true,
         importScripts: ['sw-share-target.js', 'sw-timer.js'],
