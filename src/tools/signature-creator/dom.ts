@@ -45,6 +45,7 @@ interface DomElements {
   exportSignaturesBtn: HTMLElement;
   importSignaturesBtn: HTMLElement;
   importFileInput: HTMLInputElement;
+  syncBtn: HTMLButtonElement;
 }
 
 let cached: DomElements | null = null;
@@ -132,6 +133,7 @@ export function getDomElements(root: Document | Element = document): DomElements
     exportSignaturesBtn: getElement(root, 'export-signatures-btn'),
     importSignaturesBtn: getElement(root, 'import-signatures-btn'),
     importFileInput: getInput(root, 'import-file-input'),
+    syncBtn: getById<HTMLButtonElement>(root, 'signatures-sync-btn'),
   };
 
   return cached;

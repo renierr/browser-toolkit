@@ -17,14 +17,16 @@ import type {
   SignatureSettings,
 } from './signature-types.ts';
 import { buildNormalizedFromPaths, computeSegmentWidth, simplifyRDP } from './calculation.ts';
-import { deleteSignature, getAllSignatures, putSignature } from './signature-store.ts';
+import { DB_STORE, deleteSignature, getAllSignatures, openDb, putSignature } from './signature-store.ts';
 import { drawSignaturePath } from './drawing.ts';
 import { generatePng, generateSvg, generateWebMAnimation } from './export.ts';
 import { debounce } from '@js/utils.ts';
+import { SyncManager } from '@js/sync.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
   const dom = getDomElements(document);
+  let hasBackend = false;
 
   const ctx = dom.canvas.getContext('2d');
   if (!ctx) return;
@@ -405,12 +407,14 @@ export default function init() {
     const reader = new FileReader();
     reader.readAsDataURL(blob);
     reader.onloadend = async () => {
+      const now = Date.now();
       const signature: SignatureData = {
         id: lastLoadedSignatureId || crypto.randomUUID(),
         image: reader.result as string,
         width: logicalWidth,
         height: logicalHeight,
-        timestamp: Date.now(),
+        timestamp: now,
+        updatedAt: now,
         settings: currentSettings,
         rawPaths: normalizedPaths,
       };
@@ -426,6 +430,7 @@ export default function init() {
       memCtx.clearRect(0, 0, userWidth(), userHeight());
       drawStatic();
       void renderSignatures();
+      void handleSync();
       updateUndoRedoButtons();
     };
   });
@@ -580,6 +585,7 @@ export default function init() {
             width: obj.width || 0,
             height: obj.height || 0,
             timestamp: obj.timestamp || Date.now(),
+            updatedAt: obj.updatedAt || Date.now(),
             settings: obj.settings || currentSettings,
             rawPaths: (obj.rawPaths as Point[][]) || [],
           };
@@ -594,6 +600,7 @@ export default function init() {
       if (imported > 0) {
         showMessage(`Imported ${imported} signatures.`, { timeoutMs: 4000 });
         void renderSignatures();
+        void handleSync();
       } else {
         showMessage('No valid signatures found in file.', { type: 'warning', timeoutMs: 5000 });
       }
@@ -607,6 +614,28 @@ export default function init() {
       dom.importFileInput.value = '';
     }
   });
+
+  async function handleSync() {
+    if (!hasBackend) return;
+    dom.syncBtn.classList.add('syncing');
+    dom.syncBtn.disabled = true;
+    try {
+      const db = await openDb();
+      const result = await SyncManager.sync(db, DB_STORE, 'signatures', 'id');
+      if (result.pulled > 0 || result.deleted > 0) {
+        await renderSignatures();
+      }
+      showMessage(`Sync complete! Pulled: ${result.pulled}, Pushed: ${result.pushed}`, {
+        type: 'info',
+        timeoutMs: 2000,
+      });
+    } catch (e) {
+      console.warn('Sync failed (likely offline):', e);
+    } finally {
+      dom.syncBtn.classList.remove('syncing');
+      dom.syncBtn.disabled = false;
+    }
+  }
 
   // --- Signature Rendering ---
 
@@ -630,6 +659,9 @@ export default function init() {
       }
       if (!sig.timestamp) {
         sig.timestamp = Date.now();
+      }
+      if (!sig.updatedAt) {
+        sig.updatedAt = sig.timestamp;
       }
       if (!sig.width) {
         sig.width = userWidth();
@@ -655,6 +687,7 @@ export default function init() {
         if (confirm('Are you sure you want to delete this signature?')) {
           await deleteSignature(sig.id);
           void renderSignatures();
+          void handleSync();
         }
       });
 
@@ -736,7 +769,17 @@ export default function init() {
     });
   }
 
+  dom.syncBtn.addEventListener('click', handleSync);
+
   void renderSignatures();
+  void SyncManager.isBackendAvailable().then((available) => {
+    hasBackend = available;
+    if (!available) {
+      dom.syncBtn.classList.add('hidden');
+      return;
+    }
+    void handleSync();
+  });
 
   return () => {
     debouncedRedraw.cancel();

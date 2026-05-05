@@ -29,6 +29,7 @@ export default async function init() {
   const importMdBtn = document.getElementById('import-md-btn') as HTMLButtonElement;
   const importMdInput = document.getElementById('import-md-input') as HTMLInputElement;
   const syncBtn = document.getElementById('sync-btn') as HTMLButtonElement;
+  let hasBackend = false;
 
   let editingId: number | null = null;
 
@@ -50,6 +51,7 @@ export default async function init() {
   }
 
   async function handleSync() {
+    if (!hasBackend) return;
     syncBtn.classList.add('syncing');
     syncBtn.disabled = true;
     try {
@@ -344,7 +346,14 @@ export default async function init() {
   });
 
   await loadNotes();
-  handleSync(); // Initial sync
+  void SyncManager.isBackendAvailable().then((available) => {
+    hasBackend = available;
+    if (!available) {
+      syncBtn.classList.add('hidden');
+      return;
+    }
+    void handleSync();
+  });
 
   return () => {
     db.close();
