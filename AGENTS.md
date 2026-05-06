@@ -26,7 +26,7 @@ For extended examples and walkthroughs, see:
 - Export tools as `export default function init(): void | (() => void)`.
 - Return cleanup from `init()` when adding listeners, timers, observers, or side effects.
 - Prefer listeners on tool-local containers. If global listeners are necessary, always remove them in cleanup.
-- Run `bun x tsc` or `pnpm tsc` for validation unless production behavior must be verified.
+- Run `bun x tsc` (and `bun x tsc -p backend/tsconfig.json` if backend was touched) or `pnpm tsc` for validation unless production behavior must be verified.
 - Do not run global formatting by default. Format touched files only.
 - Do not manually call `createIcons()` or import `lucide` for icon rendering.
 - Keep custom CSS minimal in `src/css/style.css`.
@@ -83,10 +83,14 @@ After editing:
 ```bash
 # bun
 bun x tsc
+# if backend touched
+bun x tsc -p backend/tsconfig.json
 bun x prettier --write <touched-file-1> <touched-file-2>
 
 # pnpm
 pnpm tsc
+# if backend touched
+pnpm tsc -p backend/tsconfig.json
 pnpm exec prettier --write <touched-file-1> <touched-file-2>
 ```
 
