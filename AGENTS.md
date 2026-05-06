@@ -21,7 +21,7 @@ For extended examples and walkthroughs, see:
   - similar tools in `src/tools/*`
   - shared utilities in `src/js/*`
   - docs in `docs/index.md`
-- Use `fetchApi`, `fetchJson`, or `fetchBlob` from `src/js/api.ts` for all backend communication. Never use direct `fetch()` for `/api/*` endpoints.
+- Use `fetchApi`, `fetchJson`, `fetchBlob`, or `uploadFile` (for streams/files) from `src/js/api.ts` for all backend communication. Never use direct `fetch()` for `/api/*` endpoints.
 - Keep tool state inside `init()`.
 - Do not use module-level tool state.
 - Export tools as `export default function init(): void | (() => void)`.

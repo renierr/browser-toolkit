@@ -156,9 +156,15 @@ export default function init() {
   const uploadFiles = async (files: FileList | File[], source: string = 'file') => {
     const retention = settings.get('retention', '24');
 
+    const fileArray = Array.from(files);
+    const total = fileArray.length;
+
     try {
-      for (const file of Array.from(files)) {
-        showProgress(`Uploading ${file.name}...`, { tooLongMs: 15000 });
+      for (let i = 0; i < total; i++) {
+        const file = fileArray[i];
+        const progressMsg = total > 1 ? `Uploading ${i + 1}/${total}: ${file.name}` : `Uploading ${file.name}...`;
+        
+        showProgress(progressMsg, { tooLongMs: 30000 });
 
         const data = await api.uploadDrop(file, String(retention), source);
 
