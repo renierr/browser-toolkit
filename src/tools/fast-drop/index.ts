@@ -2,6 +2,8 @@ import { getSettings } from '../../js/settings';
 import { showMessage } from '../../js/ui';
 import { openInTool } from '../../js/tool-chooser';
 import { setupFileDropzone } from '../../js/file-utils';
+import { copyTextToClipboard } from '../../js/utils';
+import { copyImageBlobToClipboard } from '../../js/image-utils';
 
 type Drop = {
   id: string;
@@ -30,6 +32,7 @@ export default function init() {
   const previewTitle = container.querySelector('#preview-title') as HTMLElement;
   const previewContent = container.querySelector('#preview-content') as HTMLElement;
   const previewDownloadBtn = container.querySelector('#preview-download-btn') as HTMLAnchorElement;
+  const previewCopyBtn = container.querySelector('#preview-copy-btn') as HTMLButtonElement;
 
   const fetchFiles = async () => {
     listLoading.classList.remove('hidden');
@@ -182,6 +185,7 @@ export default function init() {
     previewContent.innerHTML = '<span class="loading loading-spinner text-primary"></span>';
     previewDownloadBtn.href = `/api/drop/${drop.id}`;
     previewDownloadBtn.setAttribute('download', drop.filename);
+    previewCopyBtn.classList.add('hidden');
     previewModal.showModal();
 
     let objectUrl: string | null = null;
@@ -191,6 +195,31 @@ export default function init() {
       if (!resp.ok) throw new Error('Fetch failed');
       const blob = await resp.blob();
       objectUrl = URL.createObjectURL(blob);
+
+      const canCopy =
+        drop.type.startsWith('image/') ||
+        drop.type.startsWith('text/') ||
+        drop.type === 'application/json' ||
+        drop.type.includes('javascript') ||
+        drop.type.includes('xml');
+
+      if (canCopy) {
+        previewCopyBtn.classList.remove('hidden');
+        previewCopyBtn.onclick = async () => {
+          try {
+            if (drop.type.startsWith('image/')) {
+              await copyImageBlobToClipboard(blob);
+            } else {
+              const text = await blob.text();
+              await copyTextToClipboard(text);
+            }
+            showMessage('Copied to clipboard!', { type: 'info' });
+          } catch (err) {
+            console.error('[FastDrop] Copy failed', err);
+            showMessage('Copy failed', { type: 'alert' });
+          }
+        };
+      }
 
       if (drop.type.startsWith('image/')) {
         previewContent.innerHTML = `<img src="${objectUrl}" class="max-w-full max-h-full object-contain shadow-lg rounded" />`;
