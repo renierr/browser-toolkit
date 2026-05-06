@@ -1,0 +1,8 @@
+{
+  "name": "Fast Drop",
+  "description": "Quickly drop files or paste clipboard data to the server for temporary storage and sharing.",
+  "icon": "upload-cloud",
+  "sectionId": "Files",
+  "order": 10,
+  "requiresBackend": true
+}

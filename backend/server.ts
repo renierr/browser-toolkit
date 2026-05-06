@@ -5,6 +5,7 @@ import testRoutes from './routes/test';
 import discoveryRoutes from './routes/discovery';
 import networkRoutes from './routes/network';
 import syncRoutes from './routes/sync';
+import dropRoutes from './routes/drop';
 
 const app = new Hono();
 
@@ -14,6 +15,7 @@ app.route('/api', testRoutes);
 app.route('/api', discoveryRoutes);
 app.route('/api/network', networkRoutes);
 app.route('/api/sync', syncRoutes);
+app.route('/api/drop', dropRoutes);
 
 // Serve the static frontend (dist folder)
 // It serves everything from ../dist for any unmatched routes

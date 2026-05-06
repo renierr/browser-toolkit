@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
-- Total tools: **58** (56 normal, 2 backend)
+- Total tools: **59** (56 normal, 3 backend)
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
