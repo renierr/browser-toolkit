@@ -1,11 +1,11 @@
+import { fetchJson, fetchBlob } from '../../js/api';
 import type { Drop } from './types';
 
 export async function fetchDrops(): Promise<{ success: boolean; drops: Drop[]; error?: string }> {
   try {
-    const resp = await fetch('/api/drop');
-    return await resp.json();
-  } catch (err) {
-    return { success: false, drops: [], error: 'Backend server error' };
+    return await fetchJson('/drop');
+  } catch (err: any) {
+    return { success: false, drops: [], error: err.message || 'Backend server error' };
   }
 }
 
@@ -20,36 +20,31 @@ export async function uploadDrop(
   formData.append('source', source);
 
   try {
-    const resp = await fetch('/api/drop', {
+    return await fetchJson('/drop', {
       method: 'POST',
       body: formData,
     });
-    return await resp.json();
-  } catch (err) {
-    return { success: false, error: 'Upload failed' };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Upload failed' };
   }
 }
 
 export async function deleteDrop(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const resp = await fetch(`/api/drop/${id}`, { method: 'DELETE' });
-    return await resp.json();
-  } catch (err) {
-    return { success: false, error: 'Delete failed' };
+    return await fetchJson(`/drop/${id}`, { method: 'DELETE' });
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Delete failed' };
   }
 }
 
 export async function keepDrop(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const resp = await fetch(`/api/drop/${id}/keep`, { method: 'PATCH' });
-    return await resp.json();
-  } catch (err) {
-    return { success: false, error: 'Update failed' };
+    return await fetchJson(`/drop/${id}/keep`, { method: 'PATCH' });
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Update failed' };
   }
 }
 
 export async function fetchDropBlob(id: string): Promise<Blob> {
-  const resp = await fetch(`/api/drop/${id}`);
-  if (!resp.ok) throw new Error('Fetch failed');
-  return await resp.blob();
+  return fetchBlob(`/drop/${id}`);
 }

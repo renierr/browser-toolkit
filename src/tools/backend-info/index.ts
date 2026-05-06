@@ -1,3 +1,5 @@
+import { fetchJson } from '../../js/api';
+
 export default function init(): void | (() => void) {
   const container = document.getElementById('backend-info-tool');
   if (!container) return;
@@ -73,9 +75,7 @@ export default function init(): void | (() => void) {
     if (refreshBtn) refreshBtn.disabled = true;
 
     try {
-      const res = await fetch('/api/info');
-      if (!res.ok) throw new Error('Network response was not ok');
-      const data = await res.json();
+      const data = await fetchJson('/info');
       updateUI(data);
       contentEl.classList.remove('hidden');
     } catch (err) {

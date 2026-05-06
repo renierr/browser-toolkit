@@ -1,3 +1,5 @@
+import { fetchApi, fetchJson } from './api';
+
 /**
  * Generic Synchronization Utility
  * Handles sync between IndexedDB and Backend
@@ -16,12 +18,12 @@ export class SyncManager {
    */
   static async isBackendAvailable(): Promise<boolean> {
     try {
-      const resp = await fetch('/api/health', { method: 'HEAD' });
+      const resp = await fetchApi('/health', { method: 'HEAD' });
       return resp.ok;
     } catch {
       // If /api/health doesn't exist, try /api/sync/test
       try {
-        const resp = await fetch('/api/sync/ping', { method: 'HEAD' });
+        const resp = await fetchApi('/sync/ping', { method: 'HEAD' });
         return resp.status !== 404;
       } catch {
         return false;
@@ -70,8 +72,7 @@ export class SyncManager {
     }
 
     // 1. Pull from server
-    const response = await fetch(`/api/sync/${toolId}`);
-    const { records: serverRecords } = await response.json();
+    const { records: serverRecords } = await fetchJson<{ records: any[] }>(`/sync/${toolId}`);
 
     const localRecords = await this.getAllFromStore<T>(db, storeName);
     const localDeletions = await this.getDeletions(db, toolId);
@@ -128,7 +129,7 @@ export class SyncManager {
     }
 
     if (toPush.length > 0) {
-      await fetch(`/api/sync/${toolId}`, {
+      await fetchApi(`/sync/${toolId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ records: toPush })

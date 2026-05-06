@@ -1,3 +1,5 @@
+import { fetchApi, fetchJson } from '../../js/api';
+
 export default function init() {
   const container = document.querySelector('#lan-explorer') as HTMLElement;
   if (!container) return;
@@ -18,8 +20,7 @@ export default function init() {
 
   async function fetchDevices() {
     try {
-      const res = await fetch('/api/network/devices');
-      devices = await res.json();
+      devices = await fetchJson('/network/devices');
       renderDevices();
     } catch (e) {
       console.error('[LANExplorer] Failed to fetch devices', e);
@@ -134,7 +135,7 @@ export default function init() {
     try {
       devices = []; // Clear current list
       renderDevices();
-      await fetch('/api/network/discover', { method: 'POST' });
+      await fetchApi('/network/discover', { method: 'POST' });
     } catch (e) {
       console.error('[LANExplorer] Start scan failed', e);
     }
@@ -142,7 +143,7 @@ export default function init() {
 
   async function stopScan() {
     try {
-      await fetch('/api/network/stop', { method: 'POST' });
+      await fetchApi('/network/stop', { method: 'POST' });
     } catch (e) {
       console.error('[LANExplorer] Stop scan failed', e);
     }

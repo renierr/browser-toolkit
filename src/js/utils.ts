@@ -1,3 +1,5 @@
+import { fetchApi } from './api';
+
 export const isDev = Boolean(import.meta.env.DEV);
 
 export const fuzzyScore = (text: string, term: string): number => {
@@ -608,7 +610,7 @@ export async function checkBackend(timeoutMs = 2000): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    const response = await fetch('/api/health', { signal: controller.signal });
+    const response = await fetchApi('/health', { signal: controller.signal });
     clearTimeout(timeoutId);
     return response.ok;
   } catch (e) {
