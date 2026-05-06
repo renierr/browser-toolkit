@@ -258,6 +258,9 @@ export default function init() {
       previewContent.innerHTML = `<img src="${objectUrl}" class="max-w-full max-h-full object-contain shadow-lg rounded" />`;
     } else if (drop.type === 'application/pdf') {
       previewContent.innerHTML = `<iframe src="${objectUrl}" class="w-full h-full border-0 rounded-lg bg-white"></iframe>`;
+    } else if (drop.type === 'text/html') {
+      // Use sandbox to prevent scripts/forms/same-origin access from the uploaded HTML
+      previewContent.innerHTML = `<iframe src="${objectUrl}" sandbox="" class="w-full h-full border-0 rounded-lg bg-white shadow-inner"></iframe>`;
     } else if (
       drop.type.startsWith('text/') ||
       drop.type === 'application/json' ||
