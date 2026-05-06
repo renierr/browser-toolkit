@@ -1,0 +1,32 @@
+<!-- Preview Modal -->
+<dialog id="preview-modal" class="modal modal-bottom sm:modal-middle">
+  <div
+    class="modal-box w-11/12 max-w-5xl h-[85vh] sm:h-[80vh] flex flex-col p-0 overflow-hidden border border-base-300 shadow-2xl"
+  >
+    <div class="flex items-center justify-between p-4 bg-base-100 border-b border-base-300">
+      <div class="flex items-center gap-3 overflow-hidden">
+        <div class="p-2 bg-primary/10 rounded-lg text-primary shrink-0">
+          <i data-lucide="eye" class="w-5 h-5"></i>
+        </div>
+        <h3 id="preview-title" class="font-bold truncate pr-4 text-lg">File Preview</h3>
+      </div>
+      <div class="flex items-center gap-2">
+        <a id="preview-download-btn" href="#" class="btn btn-primary btn-sm" download>
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i> Download
+        </a>
+        <form method="dialog">
+          <button class="btn btn-ghost btn-sm btn-circle">✕</button>
+        </form>
+      </div>
+    </div>
+    <div
+      id="preview-content"
+      class="flex-1 bg-base-200 overflow-auto flex items-center justify-center p-4 checkerboard-bg"
+    >
+      <!-- Preview content injected here -->
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop bg-black/60 backdrop-blur-sm">
+    <button>close</button>
+  </form>
+</dialog>
