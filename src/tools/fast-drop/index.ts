@@ -4,6 +4,7 @@ import { openInTool } from '../../js/tool-chooser';
 import { setupFileDropzone } from '../../js/file-utils';
 import { copyTextToClipboard } from '../../js/utils';
 import { copyImageBlobToClipboard } from '../../js/image-utils';
+import { createMarkdownRenderer } from '../../js/markdown-renderer';
 
 import type { Drop } from './types';
 import * as api from './api';
@@ -28,6 +29,9 @@ export default function init() {
   const previewContent = container.querySelector('#preview-content') as HTMLElement;
   const previewDownloadBtn = container.querySelector('#preview-download-btn') as HTMLAnchorElement;
   const previewCopyBtn = container.querySelector('#preview-copy-btn') as HTMLButtonElement;
+  const previewToggleBtn = container.querySelector('#preview-toggle-btn') as HTMLButtonElement;
+  
+  const md = createMarkdownRenderer();
 
   // --- Actions ---
 
@@ -203,6 +207,7 @@ export default function init() {
     previewDownloadBtn.href = `/api/drop/${drop.id}`;
     previewDownloadBtn.setAttribute('download', drop.filename);
     previewCopyBtn.classList.add('hidden');
+    previewToggleBtn.classList.add('hidden');
     previewModal.showModal();
 
     let objectUrl: string | null = null;
@@ -268,9 +273,35 @@ export default function init() {
       drop.type.includes('xml')
     ) {
       const text = await blob.text();
-      previewContent.innerHTML = `<pre class="bg-base-300 p-4 rounded-lg w-full h-full overflow-auto text-[10px] font-mono leading-relaxed">${utils.escapeHtml(
-        text
-      )}</pre>`;
+      const isMarkdown = drop.type === 'text/markdown' || drop.filename.endsWith('.md');
+      
+      let showRendered = isMarkdown;
+
+      const render = () => {
+        if (isMarkdown && showRendered) {
+          previewContent.innerHTML = `<div class="prose prose-sm max-w-none w-full h-full overflow-auto bg-base-100 p-6 rounded-lg shadow-inner">${md.render(text)}</div>`;
+          previewToggleBtn.innerHTML = '<i data-lucide="code" class="w-4 h-4 mr-2"></i> Source';
+          previewToggleBtn.classList.remove('hidden');
+        } else {
+          previewContent.innerHTML = `<pre class="bg-base-300 p-4 rounded-lg w-full h-full overflow-auto text-[10px] font-mono leading-relaxed">${utils.escapeHtml(text)}</pre>`;
+          if (isMarkdown) {
+            previewToggleBtn.innerHTML = '<i data-lucide="eye" class="w-4 h-4 mr-2"></i> Render';
+            previewToggleBtn.classList.remove('hidden');
+          } else {
+            previewToggleBtn.classList.add('hidden');
+          }
+        }
+        if ((window as any).lucide) (window as any).lucide.createIcons({ node: previewToggleBtn });
+      };
+
+      if (isMarkdown) {
+        previewToggleBtn.onclick = () => {
+          showRendered = !showRendered;
+          render();
+        };
+      }
+
+      render();
     } else {
       previewContent.innerHTML = `
         <div class="text-center space-y-4">
