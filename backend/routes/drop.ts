@@ -77,8 +77,7 @@ drop.post('/', async (c) => {
   }
 
   try {
-    const arrayBuffer = await file.arrayBuffer();
-    await Bun.write(join(FILES_DIR, id), arrayBuffer);
+    await Bun.write(join(FILES_DIR, id), file);
 
     db.query(`
       INSERT INTO drops (id, filename, size, type, source, uploaded_at, expires_at)
@@ -115,7 +114,7 @@ drop.get('/:id', async (c) => {
   // Using inline so browser can preview if possible (images, pdfs)
   c.header('Content-Disposition', `inline; filename="${metadata.filename}"`);
   
-  return c.body(await file.arrayBuffer());
+  return c.body(file.stream());
 });
 
 // Delete file
