@@ -163,7 +163,7 @@ async function scanSubnet(ip: string, netmask: string) {
                   port,
                   socket: {
                     data() {},
-                    open() { this.end(); },
+                    open(socket) { socket.end(); },
                     error() {},
                   }
                 }),

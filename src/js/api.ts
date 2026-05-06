@@ -70,3 +70,35 @@ export async function fetchBlob(
   const response = await fetchApi(endpoint, options);
   return response.blob();
 }
+
+export type UploadOptions = ApiOptions & {
+  /** Callback for upload progress (0-100) */
+  onProgress?: (percent: number) => void;
+};
+
+/**
+ * Specialized helper for file uploads.
+ * Uses fetch for high-efficiency streaming.
+ * NOTE: Upload progress (onProgress) is not natively supported by fetch and will be ignored.
+ */
+export async function uploadFile<T = any>(
+  endpoint: string,
+  file: File | Blob,
+  options: UploadOptions = {}
+): Promise<T> {
+  const { onProgress, errorMessage, headers = {}, ...rest } = options;
+
+  const response = await fetchApi(endpoint, {
+    ...rest,
+    method: rest.method || 'POST',
+    body: file,
+    headers: {
+      ...headers,
+      'Content-Type': file.type || 'application/octet-stream',
+    },
+  });
+
+  return response.json();
+}
+
+

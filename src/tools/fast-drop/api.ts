@@ -1,4 +1,4 @@
-import { fetchJson, fetchBlob } from '../../js/api';
+import { fetchJson, fetchBlob, uploadFile } from '../../js/api';
 import type { Drop } from './types';
 
 export async function fetchDrops(): Promise<{ success: boolean; drops: Drop[]; error?: string }> {
@@ -14,15 +14,14 @@ export async function uploadDrop(
   retention: string,
   source: string
 ): Promise<{ success: boolean; error?: string }> {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('retention', retention);
-  formData.append('source', source);
-
   try {
-    return await fetchJson('/drop', {
-      method: 'POST',
-      body: formData,
+    return await uploadFile('/drop', file, {
+      headers: {
+        'X-Filename': encodeURIComponent(file.name),
+        'X-Retention': retention,
+        'X-Source': source,
+        'Content-Type': file.type || 'application/octet-stream',
+      },
     });
   } catch (err: any) {
     return { success: false, error: err.message || 'Upload failed' };

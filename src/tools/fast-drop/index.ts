@@ -1,5 +1,5 @@
 import { getSettings } from '../../js/settings';
-import { showMessage } from '../../js/ui';
+import { showMessage, showProgress, hideProgress } from '../../js/ui';
 import { openInTool } from '../../js/tool-chooser';
 import { setupFileDropzone } from '../../js/file-utils';
 import { copyTextToClipboard } from '../../js/utils';
@@ -156,13 +156,20 @@ export default function init() {
   const uploadFiles = async (files: FileList | File[], source: string = 'file') => {
     const retention = settings.get('retention', '24');
 
-    for (const file of Array.from(files)) {
-      const data = await api.uploadDrop(file, String(retention), source);
-      if (!data.success) {
-        showMessage(`Upload failed for ${file.name}: ${data.error}`, { type: 'alert' });
+    try {
+      for (const file of Array.from(files)) {
+        showProgress(`Uploading ${file.name}...`, { tooLongMs: 15000 });
+
+        const data = await api.uploadDrop(file, String(retention), source);
+
+        if (!data.success) {
+          showMessage(`Upload failed for ${file.name}: ${data.error}`, { type: 'alert' });
+        }
       }
+    } finally {
+      hideProgress();
+      fetchFiles();
     }
-    fetchFiles();
   };
 
   const deleteFile = async (id: string) => {

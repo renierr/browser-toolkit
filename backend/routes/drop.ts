@@ -55,19 +55,38 @@ drop.get('/', (c) => {
 
 // Upload file
 drop.post('/', async (c) => {
-  const body = await c.req.parseBody();
-  const file = body.file as File;
-  const retention = body.retention as string; // in hours, or 'indefinite'
-  const source = (body.source as string) || 'file';
+  const isStreaming = c.req.header('X-Filename');
+  let filename: string;
+  let size: number;
+  let type: string;
+  let retention: string;
+  let source: string;
+  let content: any;
 
-  if (!file) {
-    return c.json({ success: false, error: 'No file provided' }, 400);
+  if (isStreaming) {
+    console.log(`[Drop] Receiving stream: ${c.req.header('X-Filename')}`);
+    filename = decodeURIComponent(c.req.header('X-Filename')!);
+    retention = c.req.header('X-Retention') || '24';
+    source = c.req.header('X-Source') || 'file';
+    type = c.req.header('Content-Type') || 'application/octet-stream';
+    content = c.req.raw.body; // Native ReadableStream
+    size = parseInt(c.req.header('Content-Length') || '0');
+  } else {
+    // Fallback multipart path
+    const body = await c.req.parseBody();
+    const file = body.file as File;
+    if (!file) {
+      return c.json({ success: false, error: 'No file provided' }, 400);
+    }
+    filename = file.name || 'unnamed';
+    size = file.size;
+    type = file.type || 'application/octet-stream';
+    retention = body.retention as string;
+    source = (body.source as string) || 'file';
+    content = file;
   }
 
   const id = crypto.randomUUID();
-  const filename = file.name || 'unnamed';
-  const size = file.size;
-  const type = file.type || 'application/octet-stream';
   const uploadedAt = Date.now();
   
   let expiresAt: number | null = null;
@@ -77,7 +96,30 @@ drop.post('/', async (c) => {
   }
 
   try {
-    await Bun.write(join(FILES_DIR, id), file);
+    console.log(`[Drop] Starting upload: ${filename} (${isStreaming ? 'streaming' : 'multipart'})`);
+    
+    if (isStreaming && c.req.raw.body) {
+      // Manual streaming writer: most robust way to pipe a request body to a file in Bun
+      const writer = Bun.file(join(FILES_DIR, id)).writer();
+      const reader = c.req.raw.body.getReader();
+      
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        writer.write(value);
+      }
+      writer.end();
+    } else {
+      await Bun.write(join(FILES_DIR, id), content);
+    }
+    
+    console.log(`[Drop] Write complete: ${id}`);
+
+    // If streaming, we might not have had the size from headers, so we check the file on disk
+    if (!size || size === 0) {
+      const stats = Bun.file(join(FILES_DIR, id));
+      size = stats.size;
+    }
 
     db.query(`
       INSERT INTO drops (id, filename, size, type, source, uploaded_at, expires_at)
@@ -93,6 +135,7 @@ drop.post('/', async (c) => {
     return c.json({ success: false, error: 'Upload failed' }, 500);
   }
 });
+
 
 // Download/View file
 drop.get('/:id', async (c) => {
