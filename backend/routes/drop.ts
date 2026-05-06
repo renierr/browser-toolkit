@@ -139,4 +139,22 @@ drop.delete('/:id', (c) => {
   }
 });
 
+// Update retention to indefinite
+drop.patch('/:id/keep', (c) => {
+  const id = c.req.param('id');
+  const metadata = db.query('SELECT * FROM drops WHERE id = ?').get(id) as any;
+
+  if (!metadata) {
+    return c.json({ success: false, error: 'File not found' }, 404);
+  }
+
+  try {
+    db.query('UPDATE drops SET expires_at = NULL WHERE id = ?').run(id);
+    return c.json({ success: true });
+  } catch (err) {
+    console.error('[Drop] Update failed:', err);
+    return c.json({ success: false, error: 'Update failed' }, 500);
+  }
+});
+
 export default drop;

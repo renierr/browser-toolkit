@@ -114,6 +114,15 @@ export default function init() {
             </div>
           </div>
           <div class="card-actions justify-end mt-4 gap-1">
+            ${
+              drop.expires_at
+                ? `
+              <button class="btn btn-ghost btn-xs btn-square text-success keep-btn" title="Keep Indefinitely">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+              </button>
+            `
+                : ''
+            }
             <button class="btn btn-ghost btn-xs btn-square preview-btn" title="Preview">
               <i data-lucide="eye" class="w-3.5 h-3.5"></i>
             </button>
@@ -133,6 +142,7 @@ export default function init() {
       card.querySelector('.preview-btn')?.addEventListener('click', () => previewFile(drop));
       card.querySelector('.share-btn')?.addEventListener('click', () => shareFile(drop));
       card.querySelector('.delete-btn')?.addEventListener('click', () => deleteFile(drop.id));
+      card.querySelector('.keep-btn')?.addEventListener('click', () => keepFile(drop.id));
 
       filesContainer.appendChild(card);
     });
@@ -177,6 +187,20 @@ export default function init() {
       }
     } catch (err) {
       showMessage('Delete failed', { type: 'alert' });
+    }
+  };
+
+  const keepFile = async (id: string) => {
+    try {
+      const resp = await fetch(`/api/drop/${id}/keep`, { method: 'PATCH' });
+      const data = await resp.json();
+      if (data.success) {
+        fetchFiles();
+      } else {
+        showMessage('Update failed: ' + data.error, { type: 'alert' });
+      }
+    } catch (err) {
+      showMessage('Update failed', { type: 'alert' });
     }
   };
 
