@@ -23,6 +23,7 @@ type ToolConfig = {
   icon?: string;
   order?: number;
   sectionId?: string;
+  requiresBackend?: boolean;
   shareTarget?: {
     accept?: string[];
   };
@@ -35,6 +36,7 @@ type ToolMetadata = {
   icon: string;
   order: number | null;
   sectionId: string;
+  requiresBackend: boolean;
   shareTargetAccept: string[];
 };
 
@@ -63,6 +65,7 @@ function readTools(): ToolMetadata[] {
       icon: raw.icon?.trim() || 'not set',
       order: typeof raw.order === 'number' ? raw.order : null,
       sectionId: raw.sectionId?.trim() || 'utilities',
+      requiresBackend: !!raw.requiresBackend,
       shareTargetAccept: Array.isArray(raw.shareTarget?.accept)
         ? raw.shareTarget.accept.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
         : [],
@@ -88,13 +91,15 @@ function sortTools(a: ToolMetadata, b: ToolMetadata): number {
  */
 function renderMarkdown(tools: ToolMetadata[]): string {
   const lines: string[] = [];
+  const totalBackend = tools.filter((t) => t.requiresBackend).length;
+  const totalNormal = tools.length - totalBackend;
 
   lines.push('# Tools Inventory');
   lines.push('');
   lines.push('This file is generated from `src/tools/*/config.json`.');
   lines.push('Run `bun run generate:tool-description` after changing tool metadata.');
   lines.push('');
-  lines.push(`- Total tools: **${tools.length}**`);
+  lines.push(`- Total tools: **${tools.length}** (${totalNormal} normal, ${totalBackend} backend)`);
   lines.push('- Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`');
   lines.push('- Source of truth: `src/tools/<tool-id>/config.json`');
   lines.push('');
@@ -113,8 +118,9 @@ function renderMarkdown(tools: ToolMetadata[]): string {
         tool.shareTargetAccept.length > 0
           ? tool.shareTargetAccept.map((accept) => `\`${accept}\``).join(', ')
           : '`none`';
+      const backendBadge = tool.requiresBackend ? ' 🖥️ **(Backend)**' : '';
 
-      lines.push(`### ${tool.name} (\`${tool.id}\`)`);
+      lines.push(`### ${tool.name}${backendBadge} (\`${tool.id}\`)`);
       lines.push(`- Description: ${tool.description}`);
       lines.push(
         `- Metadata: Order \`${orderText}\`, icon \`${tool.icon}\`, share target capable \`${canShareTarget}\`, share target accepts ${shareTargetList}.`

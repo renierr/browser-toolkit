@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
-- Total tools: **57**
+- Total tools: **58** (56 normal, 2 backend)
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -180,7 +180,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `info`, share target capable `yes`, share target accepts `application/pdf`.
 - Source: `src/tools/pdf-metadata/config.json`
 
-## Utilities (19)
+## Utilities (20)
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
@@ -232,7 +232,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `11`, icon `image`, share target capable `yes`, share target accepts `image/svg+xml`.
 - Source: `src/tools/svg-optimizer/config.json`
 
-### Backend Info (`backend-info`)
+### Backend Info 🖥️ **(Backend)** (`backend-info`)
 - Description: Displays system information from the connected backend server
 - Metadata: Order `100`, icon `server`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/backend-info/config.json`
@@ -266,6 +266,11 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Description: Open KeePass (.kdbx) databases to browse groups and copy credentials securely.
 - Metadata: Order `not set`, icon `lock`, share target capable `yes`, share target accepts `application/x-keepass`, `.kdbx`.
 - Source: `src/tools/keepass-viewer/config.json`
+
+### LAN Explorer 🖥️ **(Backend)** (`lan-explorer`)
+- Description: Discover devices and services on your local network.
+- Metadata: Order `not set`, icon `network`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/lan-explorer/config.json`
 
 ### Regex Visualizer (`regex-visualizer`)
 - Description: Visualize regular expressions as railroad diagrams to explain matching behavior.
