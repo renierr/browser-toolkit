@@ -247,3 +247,78 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+/* contrast theme — neutral bg for code, bordered tables, adapts to DaisyUI dark/light */
+.md-content[data-content-theme='contrast'] pre {
+  background-color: var(--color-neutral);
+  color: var(--color-neutral-content);
+}
+.md-content[data-content-theme='contrast'] pre code {
+  color: var(--color-neutral-content);
+}
+.md-content[data-content-theme='contrast'] code:not(pre code) {
+  background-color: var(--color-neutral);
+  border-color: transparent;
+  color: var(--color-neutral-content);
+}
+.md-content[data-content-theme='contrast'] blockquote {
+  background-color: var(--color-base-300);
+  opacity: 1;
+}
+.md-content[data-content-theme='contrast'] th {
+  background-color: var(--color-base-300);
+}
+.md-content[data-content-theme='contrast'] table tbody tr:nth-child(odd) {
+  background-color: var(--color-base-200);
+}
+.md-content[data-content-theme='contrast'] th,
+.md-content[data-content-theme='contrast'] td {
+  border: 1px solid var(--color-base-300);
+  padding: 0.4em 0.8em;
+}
+
+/* paper theme — fixed light appearance regardless of app theme */
+.md-content[data-content-theme='paper'] {
+  background-color: #ffffff;
+  color: #1a1a1a;
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+.md-content[data-content-theme='paper'] pre {
+  background-color: #f6f8fa;
+  color: #24292e;
+}
+.md-content[data-content-theme='paper'] pre code {
+  color: #24292e;
+}
+.md-content[data-content-theme='paper'] code:not(pre code) {
+  background-color: #f0f0f0;
+  border-color: #d0d0d0;
+  color: #24292e;
+}
+.md-content[data-content-theme='paper'] blockquote {
+  border-left-color: #d0d7de;
+  background-color: #f6f8fa;
+  opacity: 1;
+  color: #57606a;
+}
+.md-content[data-content-theme='paper'] th {
+  background-color: #f6f8fa;
+  color: #1a1a1a;
+}
+.md-content[data-content-theme='paper'] table tbody tr:nth-child(odd) {
+  background-color: #f6f8fa;
+}
+.md-content[data-content-theme='paper'] th,
+.md-content[data-content-theme='paper'] td {
+  border: 1px solid #d0d7de;
+  padding: 0.4em 0.8em;
+}
+.md-content[data-content-theme='paper'] a {
+  color: #0969da;
+}
+.md-content[data-content-theme='paper'] h1,
+.md-content[data-content-theme='paper'] h2 {
+  border-color: #d0d7de;
+  color: #1a1a1a;
+}

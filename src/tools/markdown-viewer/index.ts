@@ -3,6 +3,7 @@ import { showMessage, showProgress, hideProgress } from '@js/ui';
 import { htmlToPdfBuffer } from '@js/mupdf-utils';
 import type { SharedFilesPayload } from '@js/share-target';
 import { createMarkdownRenderer } from '@js/markdown-renderer';
+import { getSettings } from '@js/settings';
 import { MarkdownParser } from 'overtype/parser';
 
 interface State {
@@ -33,6 +34,19 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
   const newFileBtn = document.getElementById('new-file-btn') as HTMLButtonElement;
   const exportPdfBtn = document.getElementById('export-pdf-btn') as HTMLButtonElement;
   const toolCard = document.getElementById('tool-card') as HTMLElement;
+  const themeSelect = document.getElementById('content-theme') as HTMLSelectElement;
+
+  const settings = getSettings('markdown-viewer');
+  const cleanupSettings = settings.bind(viewer);
+  applyContentTheme(themeSelect.value || 'default');
+
+  themeSelect.addEventListener('change', () => {
+    applyContentTheme(themeSelect.value);
+  });
+
+  function applyContentTheme(theme: string): void {
+    renderedContent.dataset.contentTheme = theme;
+  }
 
   setupFileDropzone('dropzone', 'file-input', (files) => {
     loadFile(files[0]);
@@ -177,7 +191,6 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
   }
 
   return () => {
-    toggleBtn.removeEventListener('click', () => {});
-    newFileBtn.removeEventListener('click', () => {});
+    cleanupSettings();
   };
 }
