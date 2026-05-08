@@ -162,8 +162,8 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
     blockquote { border-left: 4px solid #ccc; margin: 0.5em 0; padding-left: 1em; color: #555; }
     code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 0.2em; font-size: 0.9em; }
     pre code { display: block; padding: 1em; overflow-x: auto; white-space: pre; }
-    table { border-collapse: collapse; width: 100%; }
-    th,td { border: 1px solid #ccc; padding: 0.4em 0.8em; }
+    table { border-collapse: collapse; width: 100%; font-size: 0.85em; }
+    th,td { border: 1px solid #ccc; padding: 0.3em 0.6em; word-break: break-word; overflow-wrap: break-word; }
     th { background: #f0f0f0; }
     a { color: #0000ee; }
     img { max-width: 100%; }
