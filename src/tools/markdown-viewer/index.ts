@@ -1,5 +1,6 @@
-import { setupFileDropzone } from '@js/file-utils';
-import { showMessage } from '@js/ui';
+import { setupFileDropzone, downloadFile } from '@js/file-utils';
+import { showMessage, showProgress, hideProgress } from '@js/ui';
+import { htmlToPdfBuffer } from '@js/mupdf-utils';
 import type { SharedFilesPayload } from '@js/share-target';
 import { createMarkdownRenderer } from '@js/markdown-renderer';
 import { MarkdownParser } from 'overtype/parser';
@@ -30,6 +31,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
   const renderedContent = document.getElementById('rendered-content') as HTMLElement;
   const sourceView = document.getElementById('source-view') as HTMLElement;
   const newFileBtn = document.getElementById('new-file-btn') as HTMLButtonElement;
+  const exportPdfBtn = document.getElementById('export-pdf-btn') as HTMLButtonElement;
   const toolCard = document.getElementById('tool-card') as HTMLElement;
 
   setupFileDropzone('dropzone', 'file-input', (files) => {
@@ -43,6 +45,10 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
 
   newFileBtn.addEventListener('click', () => {
     resetViewer();
+  });
+
+  exportPdfBtn.addEventListener('click', () => {
+    void exportToPdf();
   });
 
   const handleSharedFiles = (files: File[]) => {
@@ -119,6 +125,41 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
       file.type === 'text/x-markdown' ||
       file.type === 'text/plain'
     );
+  }
+
+  async function exportToPdf() {
+    if (!state.renderedHtml || !state.currentFile) return;
+    showProgress('Exporting PDF…');
+    try {
+      const fullHtml = `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 24px; line-height: 1.6; color: #000; background: #fff; }
+    h1,h2,h3,h4 { font-weight: bold; margin: 0.6em 0 0.3em; }
+    h1 { font-size: 1.6em; } h2 { font-size: 1.3em; } h3 { font-size: 1.1em; }
+    ul,ol { padding-left: 1.5em; }
+    blockquote { border-left: 4px solid #ccc; margin: 0.5em 0; padding-left: 1em; color: #555; }
+    code { background: #f0f0f0; padding: 0.1em 0.3em; border-radius: 0.2em; font-size: 0.9em; }
+    pre code { display: block; padding: 1em; overflow-x: auto; white-space: pre; }
+    table { border-collapse: collapse; width: 100%; }
+    th,td { border: 1px solid #ccc; padding: 0.4em 0.8em; }
+    th { background: #f0f0f0; }
+    a { color: #0000ee; }
+    img { max-width: 100%; }
+  </style>
+</head>
+<body>${state.renderedHtml}</body>
+</html>`;
+      const pdfBytes = await htmlToPdfBuffer(fullHtml);
+      const name = (state.currentFile.name.replace(/\.[^.]+$/, '') || 'document') + '.pdf';
+      await downloadFile(pdfBytes, name, 'application/pdf');
+    } catch (e) {
+      console.error('[markdown-viewer] PDF export failed', e);
+      showMessage('Failed to export PDF.', { type: 'alert' });
+    } finally {
+      hideProgress();
+    }
   }
 
   function resetViewer() {
