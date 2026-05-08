@@ -100,6 +100,12 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
       viewer.classList.add('flex');
 
       renderedContent.innerHTML = state.renderedHtml;
+      renderedContent.querySelectorAll('table').forEach((table) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'overflow-x-auto';
+        table.parentNode?.insertBefore(wrapper, table);
+        wrapper.appendChild(table);
+      });
       sourceView.innerHTML = MarkdownParser.parse(state.currentContent);
 
       updateView();
