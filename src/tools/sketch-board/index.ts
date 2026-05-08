@@ -92,6 +92,16 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   const updateUndoRedo = () => toolbar.updateUndoRedo(history);
 
+  imageTool.setOnInsert((el) => {
+    const elements = state.getElements();
+    history.push(elements);
+    state.setElements([...elements, el]);
+    state.setHasUnsavedChanges(true);
+    updateUndoRedo();
+    renderer.markDirty();
+    renderer.requestDraw();
+  });
+
   // --- Input handler ---
   const inputHandler = new PointerInputHandler(
     dom,
