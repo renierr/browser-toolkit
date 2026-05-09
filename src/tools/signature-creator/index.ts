@@ -7,7 +7,7 @@ import {
   resetToDefaults,
   saveSettings,
 } from './settings.ts';
-import { getDomElements } from './dom.ts';
+import { getDomElements, resetDomElements } from './dom.ts';
 import type {
   Cmd,
   CurveMode,
@@ -24,7 +24,8 @@ import { debounce } from '@js/utils.ts';
 import { SyncManager } from '@js/sync.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init() {
+export default async function init() {
+  resetDomElements();
   const dom = getDomElements(document);
   let hasBackend = false;
 
@@ -767,7 +768,7 @@ export default function init() {
 
   dom.syncBtn.addEventListener('click', () => handleSync(true));
 
-  void renderSignatures();
+  await renderSignatures();
   void SyncManager.isBackendAvailable().then((available) => {
     hasBackend = available;
     if (!available) {
