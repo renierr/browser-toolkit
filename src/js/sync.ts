@@ -1,4 +1,5 @@
 import { fetchApi, fetchJson } from './api';
+import { showMessage } from './ui';
 
 /**
  * Generic Synchronization Utility
@@ -62,84 +63,103 @@ export class SyncManager {
     db: IDBDatabase,
     storeName: string,
     toolId: string,
-    keyField: keyof T = 'shortId' as keyof T
+    keyField: keyof T = 'shortId' as keyof T,
+    options: { manual?: boolean } = {}
   ): Promise<{ pulled: number; pushed: number; deleted: number }> {
-    
-    const available = await this.isBackendAvailable();
-    if (!available) {
-      console.warn(`[Sync] Backend not available for tool: ${toolId}. Skipping sync.`);
-      throw new Error('Backend unavailable');
-    }
+    const { manual = false } = options;
 
-    // 1. Pull from server
-    const { records: serverRecords } = await fetchJson<{ records: any[] }>(`/sync/${toolId}`);
-
-    const localRecords = await this.getAllFromStore<T>(db, storeName);
-    const localDeletions = await this.getDeletions(db, toolId);
-
-    const toPush: any[] = [];
-    let pulledCount = 0;
-    let deletedCount = 0;
-
-    // 2. Merge Server -> Local
-    const primaryKey = await this.getPrimaryKey(db, storeName);
-
-    for (const sRec of serverRecords) {
-      const lRec = localRecords.find(r => String(r[keyField]) === String(sRec.id));
-      
-      if (sRec.deleted) {
-        if (lRec && primaryKey) {
-          await this.deleteFromStore(db, storeName, (lRec as any)[primaryKey]);
-          deletedCount++;
-        }
-        continue;
+    try {
+      const available = await this.isBackendAvailable();
+      if (!available) {
+        console.warn(`[Sync] Backend not available for tool: ${toolId}. Skipping sync.`);
+        throw new Error('Backend unavailable');
       }
 
-      if (!lRec || sRec.updatedAt > (lRec.updatedAt || 0)) {
-        const dataToSave = { ...sRec.data, updatedAt: sRec.updatedAt };
-        if (lRec && primaryKey) {
-          (dataToSave as any)[primaryKey] = (lRec as any)[primaryKey];
-        }
-        await this.putToStore(db, storeName, dataToSave);
-        pulledCount++;
-      }
-    }
+      // 1. Pull from server
+      const { records: serverRecords } = await fetchJson<{ records: any[] }>(`/sync/${toolId}`);
 
-    // 3. Prepare Push Local -> Server (Modified since last sync or new)
-    // For simplicity, we compare all local records with what the server has (LWW)
-    for (const lRec of localRecords) {
-      const sRec = serverRecords.find((r: any) => String(r.id) === String(lRec[keyField]));
-      if (!sRec || (lRec.updatedAt || 0) > sRec.updatedAt) {
+      const localRecords = await this.getAllFromStore<T>(db, storeName);
+      const localDeletions = await this.getDeletions(db, toolId);
+
+      const toPush: any[] = [];
+      let pulledCount = 0;
+      let deletedCount = 0;
+
+      // 2. Merge Server -> Local
+      const primaryKey = await this.getPrimaryKey(db, storeName);
+
+      for (const sRec of serverRecords) {
+        const lRec = localRecords.find((r) => String(r[keyField]) === String(sRec.id));
+
+        if (sRec.deleted) {
+          if (lRec && primaryKey) {
+            await this.deleteFromStore(db, storeName, (lRec as any)[primaryKey]);
+            deletedCount++;
+          }
+          continue;
+        }
+
+        if (!lRec || sRec.updatedAt > (lRec.updatedAt || 0)) {
+          const dataToSave = { ...sRec.data, updatedAt: sRec.updatedAt };
+          if (lRec && primaryKey) {
+            (dataToSave as any)[primaryKey] = (lRec as any)[primaryKey];
+          }
+          await this.putToStore(db, storeName, dataToSave);
+          pulledCount++;
+        }
+      }
+
+      // 3. Prepare Push Local -> Server (Modified since last sync or new)
+      // For simplicity, we compare all local records with what the server has (LWW)
+      for (const lRec of localRecords) {
+        const sRec = serverRecords.find((r: any) => String(r.id) === String(lRec[keyField]));
+        if (!sRec || (lRec.updatedAt || 0) > sRec.updatedAt) {
+          toPush.push({
+            id: String(lRec[keyField]),
+            data: lRec,
+            updatedAt: lRec.updatedAt || Date.now(),
+            deleted: false,
+          });
+        }
+      }
+
+      // 4. Push Deletions
+      for (const del of localDeletions) {
         toPush.push({
-          id: String(lRec[keyField]),
-          data: lRec,
-          updatedAt: lRec.updatedAt || Date.now(),
-          deleted: false
+          id: del.recordId,
+          updatedAt: del.updatedAt,
+          deleted: true,
         });
       }
-    }
 
-    // 4. Push Deletions
-    for (const del of localDeletions) {
-      toPush.push({
-        id: del.recordId,
-        updatedAt: del.updatedAt,
-        deleted: true
-      });
-    }
+      if (toPush.length > 0) {
+        await fetchApi(`/sync/${toolId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ records: toPush }),
+        });
 
-    if (toPush.length > 0) {
-      await fetchApi(`/sync/${toolId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ records: toPush })
-      });
-      
-      // Clear local deletion tracking after successful push
-      await this.clearDeletions(db, toolId);
-    }
+        // Clear local deletion tracking after successful push
+        await this.clearDeletions(db, toolId);
+      }
 
-    return { pulled: pulledCount, pushed: toPush.length, deleted: deletedCount };
+      const result = { pulled: pulledCount, pushed: toPush.length, deleted: deletedCount };
+      const hasChanges = result.pulled > 0 || result.pushed > 0 || result.deleted > 0;
+
+      if (manual || hasChanges) {
+        showMessage(`Sync complete! Pulled: ${result.pulled}, Pushed: ${result.pushed}`, {
+          type: 'info',
+          timeoutMs: 2000,
+        });
+      }
+
+      return result;
+    } catch (e) {
+      if (manual) {
+        showMessage('Sync failed. Please check your connection.', { type: 'alert' });
+      }
+      throw e;
+    }
   }
 
   private static async getAllFromStore<T>(db: IDBDatabase, storeName: string): Promise<T[]> {

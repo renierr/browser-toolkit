@@ -615,20 +615,16 @@ export default function init() {
     }
   });
 
-  async function handleSync() {
+  async function handleSync(manual = false) {
     if (!hasBackend) return;
     dom.syncBtn.classList.add('syncing');
     dom.syncBtn.disabled = true;
     try {
       const db = await openDb();
-      const result = await SyncManager.sync(db, DB_STORE, 'signatures', 'id');
+      const result = await SyncManager.sync(db, DB_STORE, 'signatures', 'id', { manual });
       if (result.pulled > 0 || result.deleted > 0) {
         await renderSignatures();
       }
-      showMessage(`Sync complete! Pulled: ${result.pulled}, Pushed: ${result.pushed}`, {
-        type: 'info',
-        timeoutMs: 2000,
-      });
     } catch (e) {
       console.warn('Sync failed (likely offline):', e);
     } finally {
@@ -769,7 +765,7 @@ export default function init() {
     });
   }
 
-  dom.syncBtn.addEventListener('click', handleSync);
+  dom.syncBtn.addEventListener('click', () => handleSync(true));
 
   void renderSignatures();
   void SyncManager.isBackendAvailable().then((available) => {

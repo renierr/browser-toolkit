@@ -51,19 +51,17 @@ export default async function init() {
     }
   }
 
-  async function handleSync() {
+  async function handleSync(manual = false) {
     if (!hasBackend) return;
     syncBtn.classList.add('syncing');
     syncBtn.disabled = true;
     try {
-      const result = await SyncManager.sync(db, STORE_NAME, 'notes', 'shortId');
+      const result = await SyncManager.sync(db, STORE_NAME, 'notes', 'shortId', { manual });
       if (result.pulled > 0 || result.deleted > 0) {
         await loadNotes(searchInput.value);
       }
-      showMessage(`Sync complete! Pulled: ${result.pulled}, Pushed: ${result.pushed}`, { type: 'info', timeoutMs: 2000 });
     } catch (e) {
       console.warn('Sync failed (likely offline):', e);
-      // Don't show alert if it's just a connectivity issue
     } finally {
       syncBtn.classList.remove('syncing');
       syncBtn.disabled = false;
@@ -321,7 +319,7 @@ export default async function init() {
   importInput.addEventListener('change', handleGlobalImport);
   importMdBtn.addEventListener('click', () => importMdInput.click());
   importMdInput.addEventListener('change', handleImportMarkdown);
-  syncBtn.addEventListener('click', handleSync);
+  syncBtn.addEventListener('click', () => handleSync(true));
 
   container.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
