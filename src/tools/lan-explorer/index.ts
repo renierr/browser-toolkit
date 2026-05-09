@@ -40,11 +40,13 @@ export default function init() {
     }
 
     deviceGrid.innerHTML = '';
-    const sorted = [...devices].sort((a, b) => a.ip.localeCompare(b.ip, undefined, { numeric: true }));
+    const sorted = [...devices].sort((a, b) =>
+      a.ip.localeCompare(b.ip, undefined, { numeric: true })
+    );
 
-    sorted.forEach(device => {
+    sorted.forEach((device) => {
       const clone = cardTemplate.content.cloneNode(true) as HTMLElement;
-      
+
       const ipEl = clone.querySelector('.device-ip') as HTMLElement;
       const hostnameEl = clone.querySelector('.device-hostname') as HTMLElement;
       const statusEl = clone.querySelector('.device-status') as HTMLElement;
@@ -57,7 +59,7 @@ export default function init() {
       hostnameEl.textContent = device.hostname || 'Unknown Hostname';
       statusEl.textContent = device.status;
       macEl.textContent = `MAC: ${device.mac || 'Unknown'}`;
-      
+
       const lastSeenDate = new Date(device.lastSeen);
       lastSeenEl.textContent = `Seen: ${lastSeenDate.toLocaleTimeString()}`;
 
@@ -79,7 +81,7 @@ export default function init() {
       (window as any).lucide.createIcons({
         attrs: { class: 'w-4 h-4' },
         nameAttr: 'data-lucide',
-        container: deviceGrid
+        container: deviceGrid,
       });
     }
 
@@ -89,16 +91,16 @@ export default function init() {
 
   function setupSSE() {
     if (eventSource) eventSource.close();
-    
+
     eventSource = new EventSource('/api/network/events');
-    
+
     eventSource.onmessage = (event) => {
       const { event: type, data } = JSON.parse(event.data);
-      
+
       if (type === 'status') {
         updateUIState(data.scanning, data.progress, data.currentIp);
       } else if (type === 'device') {
-        const index = devices.findIndex(d => d.ip === data.ip);
+        const index = devices.findIndex((d) => d.ip === data.ip);
         if (index > -1) {
           devices[index] = data;
         } else {
@@ -121,7 +123,7 @@ export default function init() {
       progressContainer.classList.remove('hidden');
       progressBar.value = progress;
       progressText.textContent = `${progress}%`;
-      
+
       const currentIpEl = container.querySelector('#current-scan-ip') as HTMLElement;
       if (currentIpEl) currentIpEl.textContent = currentIp || '';
     } else {

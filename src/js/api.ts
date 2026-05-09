@@ -13,17 +13,15 @@ export type ApiOptions = RequestInit & {
  * Base fetch wrapper for backend API calls.
  * Automatically prefixes endpoints with /api/ if needed and handles non-ok responses.
  */
-export async function fetchApi(
-  endpoint: string,
-  options: ApiOptions = {}
-): Promise<Response> {
+export async function fetchApi(endpoint: string, options: ApiOptions = {}): Promise<Response> {
   const { errorMessage, ...fetchOptions } = options;
-  
+
   // Ensure the endpoint is correctly formatted
   // If it starts with http or already has /api/, use it as is, otherwise prefix with /api/
-  const url = (endpoint.startsWith('http') || endpoint.startsWith('/api/'))
-    ? endpoint
-    : `/api/${endpoint.startsWith('/') ? endpoint.slice(1) : endpoint}`;
+  const url =
+    endpoint.startsWith('http') || endpoint.startsWith('/api/')
+      ? endpoint
+      : `/api/${endpoint.startsWith('/') ? endpoint.slice(1) : endpoint}`;
 
   // future: const headers = new Headers(fetchOptions.headers);
   // future: headers.set('Authorization', `Bearer ${getToken()}`);
@@ -42,7 +40,7 @@ export async function fetchApi(
     } catch (e) {
       // Ignore if not JSON or other parsing error
     }
-    
+
     throw new Error(errorMessage || detail);
   }
 
@@ -52,10 +50,7 @@ export async function fetchApi(
 /**
  * Helper for API calls that return JSON.
  */
-export async function fetchJson<T = any>(
-  endpoint: string,
-  options: ApiOptions = {}
-): Promise<T> {
+export async function fetchJson<T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const response = await fetchApi(endpoint, options);
   return response.json();
 }
@@ -63,10 +58,7 @@ export async function fetchJson<T = any>(
 /**
  * Helper for API calls that return a Blob (files, images, etc.).
  */
-export async function fetchBlob(
-  endpoint: string,
-  options: ApiOptions = {}
-): Promise<Blob> {
+export async function fetchBlob(endpoint: string, options: ApiOptions = {}): Promise<Blob> {
   const response = await fetchApi(endpoint, options);
   return response.blob();
 }
@@ -100,5 +92,3 @@ export async function uploadFile<T = any>(
 
   return response.json();
 }
-
-

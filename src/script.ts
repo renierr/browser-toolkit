@@ -60,7 +60,7 @@ async function buildToolsList(isBackendAvailable: boolean): Promise<Tool[]> {
     // skip example tools early — do not import their template/script
     if (!siteContext.config.showExamples && toolConfig.example) continue;
     if (toolConfig.draft && !isDev) continue;
-    
+
     // skip backend tools if no backend is available
     if (toolConfig.requiresBackend && !isBackendAvailable) continue;
 
@@ -583,7 +583,7 @@ function handleRoute(path: string | null, payload?: any) {
 async function boot() {
   const isBackendAvailable = await checkBackend();
   setBackendAvailable(isBackendAvailable);
-  
+
   if (isBackendAvailable) {
     console.log('[script] Backend detected! Enabling server-side tools.');
   } else {
@@ -689,7 +689,8 @@ async function boot() {
 
   // Notify when offline-ready
   if ('serviceWorker' in navigator) {
-    const notifyReady = () => showMessage('App is ready for offline use!', { type: 'info', timeoutMs: 4000 });
+    const notifyReady = () =>
+      showMessage('App is ready for offline use!', { type: 'info', timeoutMs: 4000 });
 
     const monitorRegistration = (reg: ServiceWorkerRegistration) => {
       // Force a background check for updates on every boot
@@ -700,7 +701,9 @@ async function boot() {
       };
 
       if (reg.installing) {
-        reg.installing.addEventListener('statechange', (e) => checkState(e.target as ServiceWorker));
+        reg.installing.addEventListener('statechange', (e) =>
+          checkState(e.target as ServiceWorker)
+        );
       } else if (reg.waiting) {
         reg.waiting.addEventListener('statechange', (e) => checkState(e.target as ServiceWorker));
       }

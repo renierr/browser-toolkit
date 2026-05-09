@@ -2,7 +2,15 @@ import OverType from 'overtype';
 import { MarkdownParser } from 'overtype/parser';
 import { isDarkMode } from '@js/theme.ts';
 import { showMessage } from '@js/ui.ts';
-import { openDB, getAllNotes, saveNote, deleteNote, getNoteById, importNotes, STORE_NAME } from './db.ts';
+import {
+  openDB,
+  getAllNotes,
+  saveNote,
+  deleteNote,
+  getNoteById,
+  importNotes,
+  STORE_NAME,
+} from './db.ts';
 import { removeMarkdownSyntax, exportNoteToPdf } from './pdf-utils.ts';
 import { downloadFile } from '@js/file-utils.ts';
 import { openInTool } from '@js/tool-chooser.ts';
@@ -205,7 +213,7 @@ export default async function init() {
       showMessage('Failed to export markdown.', { type: 'alert' });
     }
   }
-  
+
   async function handleShare(id: number) {
     try {
       const note = await getNoteById(db, id);

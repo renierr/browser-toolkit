@@ -44,7 +44,10 @@ export default function init(): void | (() => void) {
     setText('val-status', data.status ? data.status.toUpperCase() : 'UNKNOWN');
     setText('val-hostname', data.hostname || 'unknown-host');
     setText('val-uptime', data.uptime !== undefined ? formatUptime(data.uptime) : '-');
-    setText('val-runtime-uptime', data.runtimeUptime !== undefined ? formatUptime(data.runtimeUptime) : '-');
+    setText(
+      'val-runtime-uptime',
+      data.runtimeUptime !== undefined ? formatUptime(data.runtimeUptime) : '-'
+    );
     setText('val-runtime', data.runtime || '-');
     setText('val-version', data.version ? `v${data.version}` : '');
     setText('val-os', data.os || '-');
@@ -52,7 +55,10 @@ export default function init(): void | (() => void) {
     setText('val-time', data.time ? new Date(data.time).toLocaleTimeString() : '-');
 
     if (data.memory) {
-      setText('val-mem-text', `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`);
+      setText(
+        'val-mem-text',
+        `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`
+      );
       setText('val-mem-percent', `${data.memory.percent}%`);
       setProgress('val-mem-progress', data.memory.percent);
     }

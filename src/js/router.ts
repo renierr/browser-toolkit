@@ -101,8 +101,6 @@ class Router {
     history.go(delta);
   }
 
-
-
   private clearPendingOverviewScroll(): void {
     if (this.pendingOverviewCleanup) {
       this.pendingOverviewCleanup();
@@ -221,7 +219,6 @@ class Router {
     return -idx;
   }
 
-
   public getCurrentPath(): string | null {
     return this.currentPath;
   }
@@ -274,7 +271,7 @@ class Router {
       // First run or untracked entry
       currentIdx = isTool ? 1 : 0;
       window.history.replaceState({ idx: currentIdx }, '');
-      
+
       if (isTool) {
         this.saveStack(['', newPath]); // [Overview, Tool]
       } else {
@@ -293,7 +290,7 @@ class Router {
         if (currentIdx === this.lastIdx) {
           currentIdx = this.lastIdx + 1;
           window.history.replaceState({ idx: currentIdx }, '');
-          
+
           // Push to stack
           stack.push(newPath);
           this.saveStack(stack);

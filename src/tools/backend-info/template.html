@@ -34,11 +34,16 @@
         </div>
         <div class="stat bg-base-200 rounded-box">
           <div class="stat-title">Runtime</div>
-          <div class="stat-value text-xl"><span id="val-runtime">-</span> <span class="text-xs font-normal opacity-70" id="val-version"></span></div>
+          <div class="stat-value text-xl">
+            <span id="val-runtime">-</span>
+            <span class="text-xs font-normal opacity-70" id="val-version"></span>
+          </div>
         </div>
         <div class="stat bg-base-200 rounded-box">
           <div class="stat-title">OS / Arch</div>
-          <div class="stat-value text-xl"><span id="val-os">-</span> / <span id="val-arch">-</span></div>
+          <div class="stat-value text-xl">
+            <span id="val-os">-</span> / <span id="val-arch">-</span>
+          </div>
         </div>
       </div>
 
@@ -50,17 +55,29 @@
             <span class="text-sm font-bold opacity-70 uppercase tracking-wider">Memory Usage</span>
             <span class="text-xs opacity-70" id="val-mem-text">- / -</span>
           </div>
-          <progress class="progress progress-primary w-full h-3" id="val-mem-progress" value="0" max="100"></progress>
+          <progress
+            class="progress progress-primary w-full h-3"
+            id="val-mem-progress"
+            value="0"
+            max="100"
+          ></progress>
           <div class="mt-1 text-right text-xs font-mono" id="val-mem-percent">0%</div>
         </div>
 
         <!-- Disk -->
         <div class="p-4 bg-base-200 rounded-box">
           <div class="flex justify-between items-end mb-2">
-            <span class="text-sm font-bold opacity-70 uppercase tracking-wider">Disk Space (/)</span>
+            <span class="text-sm font-bold opacity-70 uppercase tracking-wider"
+              >Disk Space (/)</span
+            >
             <span class="text-xs opacity-70" id="val-disk-text">- / -</span>
           </div>
-          <progress class="progress progress-secondary w-full h-3" id="val-disk-progress" value="0" max="100"></progress>
+          <progress
+            class="progress progress-secondary w-full h-3"
+            id="val-disk-progress"
+            value="0"
+            max="100"
+          ></progress>
           <div class="mt-1 text-right text-xs font-mono" id="val-disk-percent">0%</div>
         </div>
       </div>

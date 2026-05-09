@@ -30,7 +30,7 @@ export default function init() {
   const previewDownloadBtn = container.querySelector('#preview-download-btn') as HTMLAnchorElement;
   const previewCopyBtn = container.querySelector('#preview-copy-btn') as HTMLButtonElement;
   const previewToggleBtn = container.querySelector('#preview-toggle-btn') as HTMLButtonElement;
-  
+
   const md = createMarkdownRenderer();
 
   // --- Actions ---
@@ -138,8 +138,8 @@ export default function init() {
             <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
           </button>
           <a href="/api/drop/${drop.id}" download="${
-      drop.filename
-    }" class="btn btn-ghost btn-xs btn-square" title="Download">
+            drop.filename
+          }" class="btn btn-ghost btn-xs btn-square" title="Download">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
           </a>
           <button class="btn btn-ghost btn-xs btn-square text-error delete-btn" title="Delete">
@@ -166,8 +166,9 @@ export default function init() {
     try {
       for (let i = 0; i < total; i++) {
         const file = fileArray[i];
-        const progressMsg = total > 1 ? `Uploading ${i + 1}/${total}: ${file.name}` : `Uploading ${file.name}...`;
-        
+        const progressMsg =
+          total > 1 ? `Uploading ${i + 1}/${total}: ${file.name}` : `Uploading ${file.name}...`;
+
         showProgress(progressMsg, { tooLongMs: 30000 });
 
         const data = await api.uploadDrop(file, String(retention), source);
@@ -274,7 +275,7 @@ export default function init() {
     ) {
       const text = await blob.text();
       const isMarkdown = drop.type === 'text/markdown' || drop.filename.endsWith('.md');
-      
+
       let showRendered = isMarkdown;
 
       const render = () => {

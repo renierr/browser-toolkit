@@ -48,7 +48,11 @@ export class DiscoveryManager {
 
       this.eventSource = new EventSource(sseUrl);
       this.eventSource.onopen = () => {
-        console.debug('[Discovery] SSE open', this.topic, isBackendAvailable ? '(local)' : '(ntfy)');
+        console.debug(
+          '[Discovery] SSE open',
+          this.topic,
+          isBackendAvailable ? '(local)' : '(ntfy)'
+        );
         onStatus?.('listening');
       };
       this.eventSource.onerror = (e) => {
@@ -59,7 +63,8 @@ export class DiscoveryManager {
         try {
           // ntfy and our local backend send a JSON envelope; message field contains our payload JSON
           const parsed = JSON.parse(e.data);
-          const msg = typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed.message;
+          const msg =
+            typeof parsed.message === 'string' ? JSON.parse(parsed.message) : parsed.message;
           console.debug('[Discovery] SSE message', this.topic, msg);
           if (msg.sender !== this.peerId) onMessage(msg);
         } catch (err) {

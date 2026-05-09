@@ -17,7 +17,13 @@ import type {
   SignatureSettings,
 } from './signature-types.ts';
 import { buildNormalizedFromPaths, computeSegmentWidth, simplifyRDP } from './calculation.ts';
-import { DB_STORE, deleteSignature, getAllSignatures, openDb, putSignature } from './signature-store.ts';
+import {
+  DB_STORE,
+  deleteSignature,
+  getAllSignatures,
+  openDb,
+  putSignature,
+} from './signature-store.ts';
 import { drawSignaturePath } from './drawing.ts';
 import { generatePng, generateSvg, generateWebMAnimation } from './export.ts';
 import { debounce } from '@js/utils.ts';

@@ -45,7 +45,11 @@ export class SyncManager {
   /**
    * Track a deletion locally to propagate it to the server later
    */
-  static async trackDeletion(db: IDBDatabase, toolId: string, recordId: string | number): Promise<void> {
+  static async trackDeletion(
+    db: IDBDatabase,
+    toolId: string,
+    recordId: string | number
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(SYNC_METADATA_STORE, 'readwrite');
       const store = transaction.objectStore(SYNC_METADATA_STORE);
