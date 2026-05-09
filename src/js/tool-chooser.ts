@@ -17,6 +17,28 @@ export function setLastUsed(path: string): void {
   settings.set('lastUsed', map);
 }
 
+function getMimeKey(mimeTypes: string[]): string {
+  return [...mimeTypes].sort().join(',');
+}
+
+export function getDefaultToolPath(mimeTypes: string[]): string | null {
+  const settings = getSettings('tool-chooser');
+  const defaults = settings.get<Record<string, string>>('defaults', {});
+  return defaults[getMimeKey(mimeTypes)] || null;
+}
+
+export function setDefaultToolPath(mimeTypes: string[], path: string): void {
+  const settings = getSettings('tool-chooser');
+  const defaults = settings.get<Record<string, string>>('defaults', {});
+  defaults[getMimeKey(mimeTypes)] = path;
+  settings.set('defaults', defaults);
+}
+
+export function clearDefaultTools(): void {
+  const settings = getSettings('tool-chooser');
+  settings.set('defaults', {});
+}
+
 function sortTools(toolsToSort: Tool[], sortBy: string): Tool[] {
   if (sortBy === 'name') {
     return [...toolsToSort].sort((a, b) => a.name.localeCompare(b.name));
@@ -162,7 +184,28 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
     });
 
     const footer = document.createElement('div');
-    footer.className = 'p-3 border-t border-base-300 flex justify-between items-center';
+    footer.className = 'p-3 border-t border-base-300';
+
+    // Remember choice checkbox
+    const rememberContainer = document.createElement('div');
+    rememberContainer.className = 'px-1 mb-2';
+    const mimeTypes = files.map((f) => f.type);
+    const mimeKey = getMimeKey(mimeTypes);
+    const currentDefault = getDefaultToolPath(mimeTypes);
+
+    rememberContainer.innerHTML = `
+      <label class="label cursor-pointer justify-start gap-3 py-1">
+        <input type="checkbox" id="remember-tool-choice" class="checkbox checkbox-primary checkbox-sm" ${
+          currentDefault ? 'checked' : ''
+        } />
+        <span class="label-text text-xs">Remember my choice for these file types</span>
+      </label>
+    `;
+    footer.appendChild(rememberContainer);
+
+    const actions = document.createElement('div');
+    actions.className = 'flex justify-between items-center';
+    footer.appendChild(actions);
 
     // Share button (if supported)
     const shareBtnContainer = document.createElement('div');
@@ -190,7 +233,7 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
       });
       shareBtnContainer.appendChild(shareBtn);
     }
-    footer.appendChild(shareBtnContainer);
+    actions.appendChild(shareBtnContainer);
 
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'btn btn-ghost btn-sm';
@@ -199,7 +242,38 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
       cleanup();
       resolve(null);
     });
-    footer.appendChild(cancelBtn);
+    actions.appendChild(cancelBtn);
+
+    // Update cleanup to save setting
+    const originalCleanup = () => {
+      document.removeEventListener('keydown', handleKeydown);
+      backdrop.remove();
+    };
+
+    const cleanup = (selectedTool?: Tool) => {
+      if (selectedTool) {
+        const checkbox = rememberContainer.querySelector(
+          '#remember-tool-choice'
+        ) as HTMLInputElement;
+        if (checkbox.checked) {
+          setDefaultToolPath(mimeTypes, selectedTool.path);
+        } else if (currentDefault === selectedTool.path) {
+          // If it was default but user unchecked it, clear it
+          const defaults = getSettings('tool-chooser').get<Record<string, string>>('defaults', {});
+          delete defaults[mimeKey];
+          getSettings('tool-chooser').set('defaults', defaults);
+        }
+      }
+      originalCleanup();
+    };
+
+    sortedTools.forEach((tool) => {
+      const button = list.querySelector(`[data-tool-index="${sortedTools.indexOf(tool)}"]`);
+      button?.addEventListener('click', () => {
+        cleanup(tool);
+        resolve(tool);
+      });
+    });
 
     // Assemble modal
     modal.appendChild(header);
@@ -222,11 +296,6 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
         resolve(null);
       }
     });
-
-    const cleanup = () => {
-      document.removeEventListener('keydown', handleKeydown);
-      backdrop.remove();
-    };
 
     document.addEventListener('keydown', handleKeydown);
     document.body.appendChild(backdrop);

@@ -16,7 +16,13 @@ import {
   setupLaunchHandler,
   type SharedFilesPayload,
 } from './js/share-target.ts';
-import { showToolChooser, getLastUsedMap, setLastUsed } from './js/tool-chooser.ts';
+import {
+  showToolChooser,
+  getLastUsedMap,
+  setLastUsed,
+  getDefaultToolPath,
+  clearDefaultTools,
+} from './js/tool-chooser.ts';
 import { setTools, tools, setBackendAvailable } from './js/tools.ts';
 import { getSettings } from './js/settings.ts';
 import { getMimeTypeFromFileName } from './js/mime-types';
@@ -136,6 +142,16 @@ function renderOverview() {
         applyThemeColor((target as HTMLInputElement).value);
       }
       filterAndRender();
+    });
+  }
+
+  const clearDefaultToolsBtn = document.getElementById(
+    'clear-default-tools-btn'
+  ) as HTMLButtonElement | null;
+  if (clearDefaultToolsBtn) {
+    clearDefaultToolsBtn.addEventListener('click', () => {
+      clearDefaultTools();
+      showMessage('Default tools cleared.', { type: 'info', timeoutMs: 2000 });
     });
   }
 
@@ -622,9 +638,16 @@ async function boot() {
       // Only one matching tool, use it directly
       targetTool = matchingTools[0];
     } else {
-      // Multiple tools can handle this file type, let user choose
-      // Tools are already sorted by order from findAllToolsForMimeTypes
-      targetTool = await showToolChooser(matchingTools, files);
+      // Multiple tools can handle this file type, check for default
+      const defaultPath = getDefaultToolPath(mimeTypes);
+      const defaultTool = defaultPath ? matchingTools.find((t) => t.path === defaultPath) : null;
+
+      if (defaultTool) {
+        targetTool = defaultTool;
+      } else {
+        // No default or default not in matching list, let user choose
+        targetTool = await showToolChooser(matchingTools, files);
+      }
     }
 
     if (targetTool) {
