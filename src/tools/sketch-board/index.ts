@@ -25,6 +25,8 @@ import type { DrawMode, DrawToolContext, SelectionType, ToolMode } from './types
 import { ViewportController } from './viewport.ts';
 import { setupAllEvents } from './ui-events.ts';
 import { StateManager, type State } from './state.ts';
+import { SyncManager } from '@js/sync.ts';
+import { syncGallery } from './store.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: SharedFilesPayload): void | (() => void) {
@@ -426,6 +428,13 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     imageTool.setGetCanvasCenter(getCanvasCenter);
     imageTool.loadImageFromFile(payload.sharedFiles[0]);
   }
+
+  // --- Background sync ---
+  void SyncManager.isBackendAvailable().then((available) => {
+    if (available) {
+      void syncGallery();
+    }
+  });
 
   // --- Cleanup ---
   return () => {

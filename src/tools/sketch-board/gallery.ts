@@ -3,7 +3,8 @@ import { downloadFile } from '@js/file-utils.ts';
 import { showMessage, yieldToUI } from '@js/ui.ts';
 import { buildMeta, getCropBounds, makeThumbnail } from './drawing.ts';
 import type { SketchDom } from './dom.ts';
-import { deleteDrawing, getAllDrawings, putDrawing } from './store.ts';
+import { deleteDrawing, getAllDrawings, putDrawing, syncGallery } from './store.ts';
+import { SyncManager } from '@js/sync.ts';
 import type {
   DrawingRecord,
   GalleryExport,
@@ -16,6 +17,13 @@ export async function renderGallery(
   dom: SketchDom,
   onLoad: (record: DrawingRecord) => void
 ): Promise<void> {
+  // Sync status check
+  void SyncManager.isBackendAvailable().then((available) => {
+    if (available) {
+      dom.btnSyncGallery.classList.remove('hidden');
+    }
+  });
+
   const rows = await getAllDrawings();
   dom.galleryList.innerHTML = '';
 
@@ -79,6 +87,7 @@ export async function renderGallery(
         if (!window.confirm(`Delete drawing "${row.name}"?`)) return;
         await deleteDrawing(row.id);
         await renderGallery(dom, onLoad);
+        void handleSync(dom, onLoad); // Sync in background
       });
 
       content.appendChild(node);
@@ -86,6 +95,29 @@ export async function renderGallery(
 
     details.appendChild(content);
     dom.galleryList.appendChild(details);
+  }
+
+  // Setup sync button listener once
+  dom.btnSyncGallery.onclick = () => handleSync(dom, onLoad, true);
+}
+
+export async function handleSync(
+  dom: SketchDom,
+  onLoad: (record: DrawingRecord) => void,
+  manual = false
+) {
+  dom.btnSyncGallery.classList.add('syncing');
+  dom.btnSyncGallery.disabled = true;
+  try {
+    const result = await syncGallery(manual);
+    if (result.pulled > 0 || result.deleted > 0) {
+      await renderGallery(dom, onLoad);
+    }
+  } catch (e) {
+    console.warn('[SketchBoard] Sync failed:', e);
+  } finally {
+    dom.btnSyncGallery.classList.remove('syncing');
+    dom.btnSyncGallery.disabled = false;
   }
 }
 
@@ -158,6 +190,7 @@ export async function saveDrawing(
   try {
     await putDrawing(record);
     showMessage(`Saved version "${record.name}".`, { timeoutMs: 2500 });
+    void syncGallery(); // Sync in background
     return record;
   } catch (error) {
     console.error('[SketchBoard] Failed to save drawing', error);

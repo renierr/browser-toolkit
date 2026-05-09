@@ -1,7 +1,8 @@
+import { SyncManager } from '@js/sync.ts';
 import type { DrawingRecord } from './types.ts';
 
 const DB_NAME = 'bt-sketch-board-db';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_NAME = 'drawings';
 
 function openDb(): Promise<IDBDatabase> {
@@ -13,6 +14,7 @@ function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME, { keyPath: 'id' });
       }
+      SyncManager.ensureSyncMetadataStore(db);
     };
 
     req.onsuccess = () => resolve(req.result);
@@ -51,10 +53,18 @@ export async function putDrawing(record: DrawingRecord): Promise<void> {
 export async function deleteDrawing(id: string): Promise<void> {
   const db = await openDb();
 
+  // Track deletion for sync
+  await SyncManager.trackDeletion(db, 'sketch-board', id);
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const req = tx.objectStore(STORE_NAME).delete(id);
     req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
   });
+}
+
+export async function syncGallery(manual = false) {
+  const db = await openDb();
+  return await SyncManager.sync<DrawingRecord>(db, STORE_NAME, 'sketch-board', 'id', { manual });
 }

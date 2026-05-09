@@ -30,6 +30,7 @@ export type SketchDom = {
   btnExport: HTMLButtonElement;
   btnExportGallery: HTMLButtonElement;
   btnImportGallery: HTMLButtonElement;
+  btnSyncGallery: HTMLButtonElement;
   inputImportGallery: HTMLInputElement;
   btnShare: HTMLButtonElement;
   btnClipboard: HTMLButtonElement;
@@ -129,6 +130,7 @@ export function getDom(doc: Document): SketchDom | null {
   const btnExport = el<HTMLButtonElement>('export-file');
   const btnExportGallery = el<HTMLButtonElement>('export-gallery');
   const btnImportGallery = el<HTMLButtonElement>('import-gallery');
+  const btnSyncGallery = el<HTMLButtonElement>('sync-gallery');
   const inputImportGallery = el<HTMLInputElement>('import-gallery-file');
   const btnShare = el<HTMLButtonElement>('share-drawing');
   const btnClipboard = el<HTMLButtonElement>('copy-image');
@@ -232,6 +234,7 @@ export function getDom(doc: Document): SketchDom | null {
     btnExport,
     btnExportGallery,
     btnImportGallery,
+    btnSyncGallery,
     inputImportGallery,
     btnShare,
     btnClipboard,
@@ -337,6 +340,7 @@ export function getDom(doc: Document): SketchDom | null {
     btnExport: btnExport!,
     btnExportGallery: btnExportGallery!,
     btnImportGallery: btnImportGallery!,
+    btnSyncGallery: btnSyncGallery!,
     inputImportGallery: inputImportGallery!,
     btnShare: btnShare!,
     btnClipboard: btnClipboard!,
