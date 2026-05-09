@@ -4,10 +4,17 @@ class Router {
   private currentPath: string | null = null;
   private payload: any = null;
   private listeners: RouteListener[] = [];
+  private lastIdx = 0;
   private pendingOverviewCleanup: (() => void) | null = null;
   private pendingOverviewToken = 0;
 
   constructor() {
+    // Initialize state if missing
+    if (!window.history.state || typeof window.history.state.idx !== 'number') {
+      window.history.replaceState({ idx: 0 }, '');
+    }
+    // Do NOT set lastIdx here, let handleHashChange handle the first run
+
     window.addEventListener('hashchange', this.handleHashChange.bind(this));
     this.handleHashChange();
   }
@@ -21,7 +28,10 @@ class Router {
 
   public goTo(path: string, payload: any = null) {
     this.payload = payload;
+    const currentIdx = window.history.state?.idx ?? 0;
     window.location.hash = path;
+    // Update the new entry's state with an incremented index
+    window.history.replaceState({ idx: currentIdx + 1 }, '');
   }
 
   public goBack() {
@@ -42,13 +52,14 @@ class Router {
       return;
     }
 
-    // Fallback: replace current entry so back does not return to this tool.
     this.replaceToOverview();
   }
 
   private replaceToOverview(): void {
     const url = new URL(window.location.href);
     url.hash = '';
+    // Reset index to 0 when jumping back to overview via replace
+    window.history.replaceState({ idx: 0 }, '');
     window.location.replace(url.toString());
   }
 
@@ -89,6 +100,8 @@ class Router {
 
     history.go(delta);
   }
+
+
 
   private clearPendingOverviewScroll(): void {
     if (this.pendingOverviewCleanup) {
@@ -183,59 +196,58 @@ class Router {
     return { raf1, raf2 };
   }
 
+  private getStack(): string[] {
+    try {
+      return JSON.parse(sessionStorage.getItem('toolkit_nav_stack') || '[]');
+    } catch {
+      return [];
+    }
+  }
+
+  private saveStack(stack: string[]): void {
+    sessionStorage.setItem('toolkit_nav_stack', JSON.stringify(stack));
+  }
+
   private findOverviewHistoryDelta(): number | null {
-    // @ts-ignore - Navigation API is experimental
-    const nav = (window as any).navigation;
-    if (!nav || typeof nav.entries !== 'function') {
+    const idx = window.history.state?.idx ?? 0;
+    if (idx === 0) return null;
+
+    // Only jump if we know there is an overview entry in our history stack
+    if (sessionStorage.getItem('toolkit_has_overview') !== 'true') {
       return null;
     }
 
-    try {
-      const navEntries = nav.entries();
-      if (!Array.isArray(navEntries) || navEntries.length <= 1) {
-        return null;
-      }
-
-      const currentIndex =
-        typeof nav.currentEntryIndex === 'number' ? nav.currentEntryIndex : navEntries.length - 1;
-
-      // Prefer the oldest previous overview entry so one more back can leave the app/view.
-      for (let i = 0; i < currentIndex; i++) {
-        const entry = navEntries[i];
-        if (!entry || typeof entry.url !== 'string') {
-          continue;
-        }
-
-        if (this.isOverviewUrl(entry.url)) {
-          return i - currentIndex;
-        }
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.debug('[Router] Navigation API fallback:', error);
-    }
-
-    return null;
+    // The delta is the negative of the current index to reach the first overview (idx 0)
+    return -idx;
   }
 
-  private isOverviewUrl(url: string): boolean {
-    try {
-      const entryUrl = new URL(url, window.location.href);
-      const currentUrl = new URL(window.location.href);
-
-      return (
-        entryUrl.origin === currentUrl.origin &&
-        entryUrl.pathname === currentUrl.pathname &&
-        entryUrl.search === currentUrl.search &&
-        (!entryUrl.hash || entryUrl.hash === '#')
-      );
-    } catch {
-      return false;
-    }
-  }
 
   public getCurrentPath(): string | null {
     return this.currentPath;
+  }
+
+  public canGoBack(): boolean {
+    if (!this.currentPath) return false;
+    const idx = window.history.state?.idx ?? 0;
+    return idx > 1;
+  }
+
+  public getPreviousPath(): string | null {
+    // @ts-ignore - Navigation API is experimental
+    const nav = (window as any).navigation;
+    if (nav && typeof nav.entries === 'function') {
+      const entries = nav.entries();
+      const index = nav.currentEntryIndex;
+      if (index > 0) {
+        try {
+          const url = new URL(entries[index - 1].url);
+          return url.hash.slice(1) || null;
+        } catch {
+          return null;
+        }
+      }
+    }
+    return null;
   }
 
   /**
@@ -249,7 +261,56 @@ class Router {
 
   private handleHashChange() {
     const previousPath = this.currentPath;
-    this.currentPath = window.location.hash.slice(1) || null;
+    const newPath = window.location.hash.slice(1) || null;
+    this.currentPath = newPath;
+
+    let currentIdx = window.history.state?.idx;
+    const isTool = !!newPath;
+    const wasTool = !!previousPath;
+
+    const stack = this.getStack();
+
+    if (typeof currentIdx !== 'number') {
+      // First run or untracked entry
+      currentIdx = isTool ? 1 : 0;
+      window.history.replaceState({ idx: currentIdx }, '');
+      
+      if (isTool) {
+        this.saveStack(['', newPath]); // [Overview, Tool]
+      } else {
+        this.saveStack(['']); // [Overview]
+      }
+    } else if (isTool) {
+      if (!wasTool) {
+        // Navigating from Overview to any Tool
+        if (currentIdx !== 1) {
+          currentIdx = 1;
+          window.history.replaceState({ idx: 1 }, '');
+          this.saveStack(['', newPath]);
+        }
+      } else if (newPath !== previousPath) {
+        // Navigating from Tool A to Tool B
+        if (currentIdx === this.lastIdx) {
+          currentIdx = this.lastIdx + 1;
+          window.history.replaceState({ idx: currentIdx }, '');
+          
+          // Push to stack
+          stack.push(newPath);
+          this.saveStack(stack);
+        }
+      }
+    } else {
+      // We are back at overview
+      sessionStorage.setItem('toolkit_has_overview', 'true');
+      if (currentIdx !== 0) {
+        currentIdx = 0;
+        window.history.replaceState({ idx: 0 }, '');
+        this.saveStack(['']);
+      }
+    }
+
+    this.lastIdx = currentIdx;
+
     this.listeners.forEach((l) => l(this.currentPath, this.consumePayload()));
 
     // Native browser/gesture back from tool -> overview should restore the related card.

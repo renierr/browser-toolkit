@@ -1,10 +1,21 @@
 <main class="container mx-auto px-0 sm:px-4 py-4 sm:py-8 flex-1 min-h-0 flex flex-col items-start">
-  <button
-    id="back-btn"
-    class="inline-flex items-center gap-0.5 max-sm:ms-4 mb-4 sm:mb-6 text-link hover:text-link transition-colors font-medium cursor-pointer"
-  >
-    <span data-lucide="arrow-big-left"></span> Back to Overview
-  </button>
+  <div class="flex items-center gap-4 mb-4 sm:mb-6 max-sm:ms-4">
+    <button
+      id="overview-btn"
+      class="inline-flex items-center gap-0.5 text-link hover:text-link transition-colors font-medium cursor-pointer"
+      title="Go to Overview"
+    >
+      <span data-lucide="layout-grid"></span> Overview
+    </button>
+    <span class="text-muted/30 hidden" id="nav-divider">|</span>
+    <button
+      id="back-btn"
+      class="inline-flex items-center gap-0.5 text-link hover:text-link transition-colors font-medium cursor-pointer hidden"
+      title="Go back"
+    >
+      <span data-lucide="arrow-left"></span> Back
+    </button>
+  </div>
   <div
     id="tool-content"
     class="flex flex-col flex-1 min-h-0 h-full prose w-full max-w-none prose-invert prose-a prose-headings"
