@@ -5,6 +5,7 @@ import { showMessage } from '@js/ui.ts';
 import { openDB, getAllNotes, saveNote, deleteNote, getNoteById, importNotes, STORE_NAME } from './db.ts';
 import { removeMarkdownSyntax, exportNoteToPdf } from './pdf-utils.ts';
 import { downloadFile } from '@js/file-utils.ts';
+import { openInTool } from '@js/tool-chooser.ts';
 import { SyncManager } from '@js/sync.ts';
 import type { Note } from './types.ts';
 
@@ -100,6 +101,9 @@ export default async function init() {
               }
             </div>
             <div class="flex gap-1">
+              <button class="btn btn-ghost btn-xs share-btn" data-id="${note.id}" title="Share with Tool Chooser">
+                <i data-lucide="share-2" class="w-4 h-4"></i>
+              </button>
               <button class="btn btn-ghost btn-xs export-md-btn" data-id="${note.id}" title="Save as Markdown">
                 <i data-lucide="file-text" class="w-4 h-4"></i>
               </button>
@@ -201,6 +205,20 @@ export default async function init() {
     } catch (e) {
       console.error('Failed to export markdown:', e);
       showMessage('Failed to export markdown.', { type: 'alert' });
+    }
+  }
+  
+  async function handleShare(id: number) {
+    try {
+      const note = await getNoteById(db, id);
+      if (note) {
+        const filename = `note-${note.shortId || note.id}.md`;
+        const file = new File([note.content], filename, { type: 'text/markdown' });
+        await openInTool(file);
+      }
+    } catch (e) {
+      console.error('Failed to share note:', e);
+      showMessage('Failed to share note.', { type: 'alert' });
     }
   }
 
@@ -342,6 +360,10 @@ export default async function init() {
       const btn = target.closest('.export-md-btn') as HTMLButtonElement;
       const id = parseInt(btn.getAttribute('data-id') || '0');
       if (id) handleExportMarkdown(id);
+    } else if (target.closest('.share-btn')) {
+      const btn = target.closest('.share-btn') as HTMLButtonElement;
+      const id = parseInt(btn.getAttribute('data-id') || '0');
+      if (id) handleShare(id);
     }
   });
 
