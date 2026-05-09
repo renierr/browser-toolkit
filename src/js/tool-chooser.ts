@@ -110,8 +110,14 @@ export async function openInTool(
  *
  * @param tools - Array of tools that can handle the files (should be pre-sorted by order)
  * @param files - Array of files being shared
+ * @param options - UI options like whether to show "Remember" checkbox
  */
-export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | null> {
+export function showToolChooser(
+  tools: Tool[],
+  files: File[],
+  options: { showRemember?: boolean } = {}
+): Promise<Tool | null> {
+  const showRemember = options.showRemember ?? false;
   return new Promise((resolve) => {
     // Build file description
     const fileCount = files.length;
@@ -193,13 +199,15 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
     const mimeKey = getMimeKey(mimeTypes);
     const currentDefault = getDefaultToolPath(mimeTypes);
 
-    rememberContainer.innerHTML = `
-      <label class="label cursor-pointer justify-start gap-3 py-1">
-        <input type="checkbox" id="remember-tool-choice" class="checkbox checkbox-primary checkbox-sm" />
-        <span class="label-text text-xs">Remember my choice for these file types</span>
-      </label>
-    `;
-    footer.appendChild(rememberContainer);
+    if (showRemember) {
+      rememberContainer.innerHTML = `
+        <label class="label cursor-pointer justify-start gap-3 py-1">
+          <input type="checkbox" id="remember-tool-choice" class="checkbox checkbox-primary checkbox-sm" />
+          <span class="label-text text-xs">Remember my choice for these file types</span>
+        </label>
+      `;
+      footer.appendChild(rememberContainer);
+    }
 
     const actions = document.createElement('div');
     actions.className = 'flex justify-between items-center';
@@ -249,11 +257,11 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
     };
 
     const cleanup = (selectedTool?: Tool) => {
-      if (selectedTool) {
+      if (selectedTool && showRemember) {
         const checkbox = rememberContainer.querySelector(
           '#remember-tool-choice'
         ) as HTMLInputElement;
-        if (checkbox.checked) {
+        if (checkbox && checkbox.checked) {
           setDefaultToolPath(mimeTypes, selectedTool.path);
         } else if (currentDefault === selectedTool.path) {
           // If it was default but user unchecked it, clear it

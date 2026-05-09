@@ -646,7 +646,7 @@ async function boot() {
         targetTool = defaultTool;
       } else {
         // No default or default not in matching list, let user choose
-        targetTool = await showToolChooser(matchingTools, files);
+        targetTool = await showToolChooser(matchingTools, files, { showRemember: true });
       }
     }
 
