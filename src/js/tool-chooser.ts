@@ -195,9 +195,7 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
 
     rememberContainer.innerHTML = `
       <label class="label cursor-pointer justify-start gap-3 py-1">
-        <input type="checkbox" id="remember-tool-choice" class="checkbox checkbox-primary checkbox-sm" ${
-          currentDefault ? 'checked' : ''
-        } />
+        <input type="checkbox" id="remember-tool-choice" class="checkbox checkbox-primary checkbox-sm" />
         <span class="label-text text-xs">Remember my choice for these file types</span>
       </label>
     `;
