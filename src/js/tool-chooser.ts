@@ -93,7 +93,7 @@ export async function openInTool(
     return;
   }
 
-  const selectedTool = await showToolChooser(matchingTools, files);
+  const selectedTool = await showToolChooser(matchingTools, files, { precheckRemember: false });
 
   if (selectedTool) {
     const payload: SharedFilesPayload = {
@@ -111,7 +111,12 @@ export async function openInTool(
  * @param tools - Array of tools that can handle the files (should be pre-sorted by order)
  * @param files - Array of files being shared
  */
-export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | null> {
+export function showToolChooser(
+  tools: Tool[],
+  files: File[],
+  options: { precheckRemember?: boolean } = {}
+): Promise<Tool | null> {
+  const { precheckRemember = true } = options;
   return new Promise((resolve) => {
     // Build file description
     const fileCount = files.length;
@@ -196,7 +201,7 @@ export function showToolChooser(tools: Tool[], files: File[]): Promise<Tool | nu
     rememberContainer.innerHTML = `
       <label class="label cursor-pointer justify-start gap-3 py-1">
         <input type="checkbox" id="remember-tool-choice" class="checkbox checkbox-primary checkbox-sm" ${
-          currentDefault ? 'checked' : ''
+          precheckRemember && currentDefault ? 'checked' : ''
         } />
         <span class="label-text text-xs">Remember my choice for these file types</span>
       </label>
