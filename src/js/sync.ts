@@ -101,9 +101,15 @@ export class SyncManager {
 
         if (!lRec || sRec.updatedAt > (lRec.updatedAt || 0)) {
           const dataToSave = { ...sRec.data, updatedAt: sRec.updatedAt };
+          // If we have a local primary key (e.g. auto-increment 'id'), preserve it.
+          // Otherwise, if the pulled data has a primary key that is NOT our global keyField,
+          // remove it to let the local DB generate its own (avoiding conflicts/duplicates).
           if (lRec && primaryKey) {
             (dataToSave as any)[primaryKey] = (lRec as any)[primaryKey];
+          } else if (primaryKey && primaryKey !== keyField) {
+            delete (dataToSave as any)[primaryKey];
           }
+
           await this.putToStore(db, storeName, dataToSave);
           pulledCount++;
         }
@@ -114,9 +120,15 @@ export class SyncManager {
       for (const lRec of localRecords) {
         const sRec = serverRecords.find((r: any) => String(r.id) === String(lRec[keyField]));
         if (!sRec || (lRec.updatedAt || 0) > sRec.updatedAt) {
+          const dataToPush = { ...lRec };
+          // Don't push local-only primary keys (like auto-increment 'id') if they are not the global keyField
+          if (primaryKey && primaryKey !== keyField) {
+            delete (dataToPush as any)[primaryKey];
+          }
+
           toPush.push({
             id: String(lRec[keyField]),
-            data: lRec,
+            data: dataToPush,
             updatedAt: lRec.updatedAt || Date.now(),
             deleted: false,
           });
