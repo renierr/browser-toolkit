@@ -1,7 +1,7 @@
 import OverType from 'overtype';
-import { MarkdownParser } from 'overtype/parser';
 import { isDarkMode } from '@js/theme.ts';
 import { showMessage } from '@js/ui.ts';
+import { renderMarkdownContent, getMarkdownContentTheme } from '@js/markdown-content';
 import {
   openDB,
   getAllNotes,
@@ -11,7 +11,7 @@ import {
   importNotes,
   STORE_NAME,
 } from './db.ts';
-import { removeMarkdownSyntax, exportNoteToPdf } from './pdf-utils.ts';
+import { exportNoteToPdf } from './pdf-utils.ts';
 import { downloadFile } from '@js/file-utils.ts';
 import { openInTool } from '@js/tool-chooser.ts';
 import { SyncManager } from '@js/sync.ts';
@@ -82,18 +82,20 @@ export default async function init() {
       return;
     }
 
+    const contentTheme = getMarkdownContentTheme();
+
     container.innerHTML = notes
       .map((note) => {
         const lines = note.content.split('\n');
         const hasManyLines = lines.length > 3 || note.content.length > 200;
-        const previewHtml = removeMarkdownSyntax(MarkdownParser.parse(note.content));
+        const previewHtml = renderMarkdownContent(note.content);
 
         return `
       <div class="card bg-base-100 border border-base-300 shadow-sm hover:shadow-md transition-shadow">
         <div class="card-body p-4">
           <div class="flex justify-between items-start gap-4 flex-wrap">
             <div class="note-content-wrapper flex-1">
-              <div class="overtype-content prose prose-sm max-w-full min-w-32 break-all text-base-content ${hasManyLines ? 'note-content-collapsed' : ''}">
+              <div class="md-content max-w-full min-w-32 break-all text-base-content ${hasManyLines ? 'note-content-collapsed' : ''}" data-content-theme="${contentTheme}">
                 ${previewHtml}
               </div>
               ${
