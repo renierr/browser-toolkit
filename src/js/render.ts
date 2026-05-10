@@ -76,20 +76,17 @@ export async function renderTool(tool: Tool | undefined, payload?: any) {
   // Navigation
   const backBtn = document.getElementById('back-btn');
   const overviewBtn = document.getElementById('overview-btn');
-  const navDivider = document.getElementById('nav-divider');
 
   if (backBtn) {
     const canBack = router.canGoBack();
     if (canBack) {
       backBtn.style.display = 'inline-flex';
-      if (navDivider) navDivider.style.display = 'inline';
       backBtn.onclick = (e) => {
         e.preventDefault();
         router.goBack();
       };
     } else {
       backBtn.style.display = 'none';
-      if (navDivider) navDivider.style.display = 'none';
     }
   }
 
