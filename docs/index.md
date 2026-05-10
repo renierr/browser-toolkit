@@ -58,6 +58,7 @@ pnpm upgrade:deps    # Update dependencies to latest
 While this toolkit is designed to be 100% offline-capable and static, it includes an optional backend built with **Bun** and **Hono** to support tools that require server-side functionality (like a SQLite database).
 
 ### Two Modes:
+
 1. **Static/Offline Mode**: The default mode. When served statically (e.g., GitHub Pages) or accessed entirely offline, any tool marked with `"requiresBackend": true` in its `config.json` is silently hidden.
 2. **Backend Mode**: When run with the Bun backend, the backend serves both the `dist/` frontend and API routes. The frontend detects the backend and enables backend-dependent tools.
 
@@ -75,7 +76,7 @@ Make sure you have [Bun](https://bun.sh/) installed.
    bun install
    bun start
    ```
-   *The backend will automatically serve the static `dist/` directory on `http://localhost:3000`.*
+   _The backend will automatically serve the static `dist/` directory on `http://localhost:3000`._
 
 ## Create a new tool (30 seconds)
 
@@ -238,7 +239,6 @@ _(demo purpose only with a lightweight dependency)_
 > Note:
 > This allows tools to use different libraries or versions as needed,
 > without polluting the main project dependencies.
-
 
 ## Share Target for Tools (PWA)
 
@@ -528,6 +528,7 @@ Brief and practical:
 - syntax: use `{{ key.path }}` inside your HTML templates, e.g. `{{ config.title }}`.
 - specialized syntax: use `<include src="filename.html" />` to include other HTML partials.
 - style syntax: use `<include src="style.css" type="style" />` to include CSS files; this automatically wraps the content in a `<style>` tag.
+- shared style alias: use `<include src="@css/filename.css" type="style" />` to include CSS from `src/css/` without copying files into each tool.
 - recursive includes: partials can include other partials (up to a depth of 8).
 - site context: global values are read from the exported `siteContext` in `src/config/index.ts`.
 - replacement process: placeholders are replaced by `replacePlaceholders()` in `src/js/utils.ts`.

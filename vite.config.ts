@@ -16,7 +16,13 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'inline',
-      includeAssets: ['favicon.svg', 'favicon-192.png', 'favicon-512.png', 'sw-share-target.js', 'sw-timer.js'],
+      includeAssets: [
+        'favicon.svg',
+        'favicon-192.png',
+        'favicon-512.png',
+        'sw-share-target.js',
+        'sw-timer.js',
+      ],
       manifest: {
         name: 'Browser-Tools',
         short_name: 'B-Tools',
@@ -253,6 +259,10 @@ export default defineConfig({
       {
         find: '@tools',
         replacement: path.resolve(__dirname, 'src/tools'),
+      },
+      {
+        find: '@css',
+        replacement: path.resolve(__dirname, 'src/css'),
       },
       {
         find: 'argon2-browser',

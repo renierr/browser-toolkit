@@ -12,7 +12,7 @@ No servers · 100% client-side · Installable PWA
 
 ## 💡 What is it?
 
-A growing, searchable collection of focused tools that run entirely in your browser. 
+A growing, searchable collection of focused tools that run entirely in your browser.
 
 - **Privacy-First:** Zero server dependency. Your data never leaves your device.
 - **Developer-Friendly:** Add your own tools in ~30 seconds.
@@ -20,14 +20,14 @@ A growing, searchable collection of focused tools that run entirely in your brow
 
 ## 🧰 Included Tools
 
-*More tools are added regularly. Check the [live version](https://renierr.github.io/browser-toolkit/) for the complete list.*
+_More tools are added regularly. Check the [live version](https://renierr.github.io/browser-toolkit/) for the complete list._
 
 - Code Formatter
 - Color Picker & Checker
 - Base64 Encoder/Decoder
 - Image Redactor (crop, blur, pixel areas)
 - PDF Viewer
-- PDF Organizer 
+- PDF Organizer
 - QR code generator/reader
 - … (see live demo for newest)
 
@@ -42,12 +42,12 @@ or [TOOLS.md](TOOLS.md) file
 - **Share Target:** Share files (images, text, PDFs) directly from your OS into the tools.
 - **Workspace Isolation:** Per-tool isolated dependencies using `bun` workspaces.
 
-
 ## 🚀 Getting Started
 
 This toolkit can be run in two modes: **Static/Offline Mode** (default) or **Backend Mode** (for tools that require a server, like database interactions).
 
 ### Prerequisites
+
 Make sure you have [Bun](https://bun.sh/) (preferred) or [Node.js](https://nodejs.org/) installed.
 
 ### Installation
@@ -119,17 +119,21 @@ bash "$HOME/browser-toolkit/setup.sh" install-service --dir "$HOME/browser-toolk
 `update` does: `git pull --ff-only`, `bun install` (root + backend), rebuild frontend, and restart managed service on Linux/macOS when installed.
 
 ### 1. Static/Offline Mode (Default)
+
 If you only want the offline-capable browser tools:
+
 ```bash
 # Start the development server
 bun run dev
 ```
 
 ### 2. Backend Mode
+
 If you want to develop or use tools that require a server backend:
 
 **Development:**
 You need two terminal windows to run the frontend and backend simultaneously. The frontend will automatically proxy API requests to the backend.
+
 ```bash
 # Terminal 1 (Frontend): Starts Vite on http://localhost:5173
 bun run dev
@@ -141,6 +145,7 @@ bun run dev
 
 **Production:**
 In production, the Bun backend efficiently serves both your APIs and the built frontend static files from a single port.
+
 ```bash
 # 1. Build the frontend into the 'dist/' folder
 bun run build
@@ -149,15 +154,22 @@ bun run build
 cd backend
 bun start
 ```
-*Navigate to `http://localhost:3000` to see your deployed app.*
+
+_Navigate to `http://localhost:3000` to see your deployed app._
+
 ## 🏗️ How to add a new tool
 
-Adding a tool takes about 30 seconds thanks to the auto-detection feature.    
+Adding a tool takes about 30 seconds thanks to the auto-detection feature.  
 See a more detailed instruction inside the repositories 'docs' folder.
 
 1. Create a new folder in the `src/tools/` directory (or your specific tools folder).
 2. Add your `index.ts`, `template.html` and `config.json` logic/styles.
 3. The Vite configuration will automatically detect the new folder and add it to the main dashboard!
+
+Template includes support both local tool files and shared CSS via alias:
+
+- Local file: `<include src="style.css" type="style" />`
+- Shared CSS alias: `<include src="@css/markdown-content.css" type="style" />`
 
 > **Note:** If your tool requires specific dependencies, you can manage them within that tool's folder utilizing the `bun` workspaces setup.
 

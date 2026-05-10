@@ -42,11 +42,25 @@ if (storedThemeColor) {
 }
 
 const descModules = import.meta.glob('@tools/**/config.json', { eager: true });
-const assetModules = import.meta.glob(['@tools/**/*.html', '@tools/**/*.css'], {
+const assetModules = import.meta.glob(['@tools/**/*.html', '@tools/**/*.css', '@css/**/*.css'], {
   query: '?raw',
   import: 'default',
 });
 const scriptModules = import.meta.glob('@tools/**/index.ts');
+
+function toCssAliasKey(moduleKey: string): string | null {
+  const marker = '/src/css/';
+
+  if (moduleKey.startsWith('@css/')) return moduleKey;
+  if (moduleKey.startsWith('src/css/')) return `@css/${moduleKey.substring('src/css/'.length)}`;
+
+  const markerIndex = moduleKey.indexOf(marker);
+  if (markerIndex >= 0) {
+    return `@css/${moduleKey.substring(markerIndex + marker.length)}`;
+  }
+
+  return null;
+}
 
 async function buildToolsList(isBackendAvailable: boolean): Promise<Tool[]> {
   const result: Tool[] = [];
@@ -72,7 +86,10 @@ async function buildToolsList(isBackendAvailable: boolean): Promise<Tool[]> {
 
     // only now load the heavier assets if present
     const toolFolderPrefix = `${prefix}/${folder}/`;
-    const assetKeys = Object.keys(assetModules).filter((k) => k.startsWith(toolFolderPrefix));
+    const assetKeys = Object.keys(assetModules).filter((k) => {
+      if (k.startsWith(toolFolderPrefix)) return true;
+      return toCssAliasKey(k) !== null;
+    });
 
     let loadHtml:
       | (() => Promise<string | { template: string; partials: Record<string, string> }>)
@@ -86,7 +103,9 @@ async function buildToolsList(isBackendAvailable: boolean): Promise<Tool[]> {
             const importerOrValue = (assetModules as any)[key];
             const content =
               typeof importerOrValue === 'function' ? await importerOrValue() : importerOrValue;
-            const fileName = key.substring(toolFolderPrefix.length);
+            const fileName = key.startsWith(toolFolderPrefix)
+              ? key.substring(toolFolderPrefix.length)
+              : (toCssAliasKey(key) ?? key);
             results[fileName] = (content as any).default ?? (content as any);
           })
         );

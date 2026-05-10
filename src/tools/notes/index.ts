@@ -339,7 +339,8 @@ export default async function init() {
 
     if (expandBtn) {
       const wrapper = expandBtn.closest('.note-content-wrapper');
-      const content = wrapper?.querySelector('.overtype-content');
+      const content =
+        wrapper?.querySelector('.md-content') || wrapper?.querySelector('.overtype-content');
       if (content && expandBtn) {
         const isCollapsed = content.classList.contains('note-content-collapsed');
         if (isCollapsed) {
