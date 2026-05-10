@@ -103,6 +103,7 @@ Invoke-WebRequest "https://raw.githubusercontent.com/renierr/browser-toolkit/mai
 ```bash
 # Linux/macOS
 bash "$HOME/browser-toolkit/setup.sh" doctor --dir "$HOME/browser-toolkit"
+bash "$HOME/browser-toolkit/setup.sh" update --dir "$HOME/browser-toolkit"
 bash "$HOME/browser-toolkit/setup.sh" run --dir "$HOME/browser-toolkit" --port 3000
 bash "$HOME/browser-toolkit/setup.sh" install-service --dir "$HOME/browser-toolkit"
 ```
@@ -110,9 +111,12 @@ bash "$HOME/browser-toolkit/setup.sh" install-service --dir "$HOME/browser-toolk
 ```powershell
 # Windows
 .\setup.ps1 doctor -Dir "$env:USERPROFILE\browser-toolkit"
+.\setup.ps1 update -Dir "$env:USERPROFILE\browser-toolkit"
 .\setup.ps1 run -Dir "$env:USERPROFILE\browser-toolkit" -Port 3000
 .\setup.ps1 install-service -Dir "$env:USERPROFILE\browser-toolkit" # prints manual instructions
 ```
+
+`update` does: `git pull --ff-only`, `bun install` (root + backend), rebuild frontend, and restart managed service on Linux/macOS when installed.
 
 ### 1. Static/Offline Mode (Default)
 If you only want the offline-capable browser tools:

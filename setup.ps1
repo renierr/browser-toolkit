@@ -1,6 +1,6 @@
 param(
   [Parameter(Position = 0)]
-  [ValidateSet('bootstrap', 'doctor', 'install', 'build', 'run', 'install-service', 'uninstall-service', 'help')]
+  [ValidateSet('bootstrap', 'update', 'doctor', 'install', 'build', 'run', 'install-service', 'uninstall-service', 'help')]
   [string]$Command = 'help',
 
   [string]$Dir = "$env:USERPROFILE\browser-toolkit",
@@ -35,6 +35,7 @@ Usage:
 
 Commands:
   bootstrap         Clone (if missing), install deps, build frontend
+  update            Pull latest, reinstall deps, rebuild
   doctor            Check required tools (git, bun)
   install           Install deps in repo root and backend
   build             Build frontend dist/
@@ -123,6 +124,12 @@ function Invoke-Install {
   Invoke-InDir -WorkingDirectory (Join-Path $Dir 'backend') -Args @('bun', 'install')
 }
 
+function Invoke-PullLatest {
+  Assert-RepoDir
+  Write-Log 'Pulling latest changes'
+  Invoke-InDir -WorkingDirectory $Dir -Args @('git', 'pull', '--ff-only')
+}
+
 function Invoke-Build {
   Assert-RepoDir
   Write-Log 'Building frontend dist/'
@@ -170,8 +177,18 @@ function Invoke-Bootstrap {
   Write-Log "Run now: .\setup.ps1 run -Dir `"$Dir`""
 }
 
+function Invoke-Update {
+  Invoke-Doctor
+  Invoke-PullLatest
+  Invoke-Install
+  Invoke-Build
+  Write-Log 'Update done'
+  Write-Log 'If you run backend via Task Scheduler/background process, restart that process now.'
+}
+
 switch ($Command) {
   'bootstrap' { Invoke-Bootstrap }
+  'update' { Invoke-Update }
   'doctor' { Invoke-Doctor }
   'install' { Invoke-Install }
   'build' { Invoke-Build }

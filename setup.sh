@@ -14,6 +14,7 @@ Usage:
 
 Commands:
   bootstrap         Clone (if missing), install deps, build frontend
+  update            Pull latest, reinstall deps, rebuild, restart service
   doctor            Check required tools (git, bun)
   install           Install deps in repo root and backend
   build             Build frontend dist/
@@ -29,6 +30,7 @@ Options:
 
 Examples:
   ./setup.sh bootstrap --dir "$HOME/browser-toolkit"
+  ./setup.sh update --dir "$HOME/browser-toolkit"
   ./setup.sh run --dir "$HOME/browser-toolkit" --port 3000
 EOF
 }
@@ -251,6 +253,14 @@ clone_repo_if_needed() {
   git clone "$REPO_URL" "$TARGET_DIR"
 }
 
+pull_latest() {
+  repo_dir_exists || err "Repo not found at $TARGET_DIR"
+  ensure_cmd git
+
+  log "Pulling latest changes"
+  git -C "$TARGET_DIR" pull --ff-only
+}
+
 install_deps() {
   repo_dir_exists || err "Repo not found at $TARGET_DIR"
   local bun_bin
@@ -388,6 +398,41 @@ uninstall_service() {
   log "Service removed"
 }
 
+restart_service_if_present() {
+  case "$(uname -s)" in
+    Linux*)
+      if [[ -f "/etc/systemd/system/browser-toolkit.service" ]]; then
+        log "Restarting systemd service"
+        run_with_privilege systemctl restart browser-toolkit.service
+      else
+        log "No installed systemd service found; skipping restart"
+      fi
+      ;;
+    Darwin*)
+      local plist_path="$HOME/Library/LaunchAgents/com.browsertoolkit.backend.plist"
+      if [[ -f "$plist_path" ]]; then
+        log "Restarting launchd agent"
+        launchctl unload "$plist_path" >/dev/null 2>&1 || true
+        launchctl load "$plist_path"
+      else
+        log "No installed launchd agent found; skipping restart"
+      fi
+      ;;
+    *)
+      log "No managed service restart for this OS"
+      ;;
+  esac
+}
+
+update_stack() {
+  doctor
+  pull_latest
+  install_deps
+  build_frontend
+  restart_service_if_present
+  log "Update done"
+}
+
 bootstrap() {
   doctor
   clone_repo_if_needed
@@ -428,6 +473,7 @@ done
 
 case "$COMMAND" in
   bootstrap) bootstrap ;;
+  update) update_stack ;;
   doctor) doctor ;;
   install) install_deps ;;
   build) build_frontend ;;
