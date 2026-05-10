@@ -63,7 +63,7 @@
   position: relative;
 }
 .note-content-collapsed {
-  max-height: 4.5rem;
+  max-height: 5.5rem;
   overflow: hidden;
   mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
 }
