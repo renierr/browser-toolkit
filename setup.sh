@@ -49,14 +49,137 @@ need_cmd() {
   fi
 }
 
+is_linux() {
+  [[ "$(uname -s)" == Linux* ]]
+}
+
+can_prompt() {
+  [[ -r /dev/tty ]]
+}
+
+ask_yes_no() {
+  local prompt="$1"
+  local answer=""
+
+  if ! can_prompt; then
+    return 1
+  fi
+
+  printf '[setup] %s [y/N]: ' "$prompt" > /dev/tty
+  read -r answer < /dev/tty || return 1
+  case "$answer" in
+    y|Y|yes|YES) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+run_with_privilege() {
+  if [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+    "$@"
+    return
+  fi
+
+  if command -v sudo >/dev/null 2>&1; then
+    sudo "$@"
+    return
+  fi
+
+  err "Need root privileges for install. Re-run as root or install sudo."
+}
+
+install_bun_linux() {
+  if ! command -v curl >/dev/null 2>&1; then
+    err "curl required to install Bun. Install curl first."
+  fi
+
+  log "Installing Bun via official installer"
+  curl -fsSL https://bun.com/install | bash
+
+  export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
+  export PATH="$BUN_INSTALL/bin:$PATH"
+
+  if ! command -v bun >/dev/null 2>&1; then
+    err "Bun install finished but bun not in PATH. Open a new shell or add ~/.bun/bin to PATH."
+  fi
+}
+
+install_git_linux() {
+  log "Installing git via detected package manager"
+
+  if command -v apt-get >/dev/null 2>&1; then
+    run_with_privilege apt-get update
+    run_with_privilege apt-get install -y git
+    return
+  fi
+
+  if command -v dnf >/dev/null 2>&1; then
+    run_with_privilege dnf install -y git
+    return
+  fi
+
+  if command -v yum >/dev/null 2>&1; then
+    run_with_privilege yum install -y git
+    return
+  fi
+
+  if command -v pacman >/dev/null 2>&1; then
+    run_with_privilege pacman -Sy --noconfirm git
+    return
+  fi
+
+  if command -v zypper >/dev/null 2>&1; then
+    run_with_privilege zypper --non-interactive install git
+    return
+  fi
+
+  if command -v apk >/dev/null 2>&1; then
+    run_with_privilege apk add git
+    return
+  fi
+
+  err "Unsupported Linux package manager. Install git manually."
+}
+
+ensure_cmd() {
+  local cmd="$1"
+
+  if command -v "$cmd" >/dev/null 2>&1; then
+    return
+  fi
+
+  if ! is_linux; then
+    err "Missing command: $cmd"
+  fi
+
+  case "$cmd" in
+    bun)
+      if ask_yes_no "bun not found. Install now with: curl -fsSL https://bun.com/install | bash ?"; then
+        install_bun_linux
+      else
+        err "bun is required"
+      fi
+      ;;
+    git)
+      if ask_yes_no "git not found. Try automatic install via your Linux package manager?"; then
+        install_git_linux
+      else
+        err "git is required"
+      fi
+      ;;
+    *)
+      err "Missing command: $cmd"
+      ;;
+  esac
+}
+
 repo_dir_exists() {
   [[ -d "$TARGET_DIR" ]] && [[ -f "$TARGET_DIR/package.json" ]] && [[ -d "$TARGET_DIR/backend" ]]
 }
 
 doctor() {
   log "Checking required tools"
-  need_cmd git
-  need_cmd bun
+  ensure_cmd git
+  ensure_cmd bun
   log "OK: git and bun found"
 }
 
