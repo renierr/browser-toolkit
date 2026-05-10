@@ -132,12 +132,14 @@ run_with_privilege() {
 }
 
 install_bun_linux() {
-  if ! command -v curl >/dev/null 2>&1; then
-    err "curl required to install Bun. Install curl first."
-  fi
-
   log "Installing Bun via official installer"
-  curl -fsSL https://bun.com/install | bash
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL https://bun.com/install | bash
+  elif command -v wget >/dev/null 2>&1; then
+    wget -qO- https://bun.com/install | bash
+  else
+    err "Need curl or wget to install Bun. Install one of them first."
+  fi
 
   export BUN_INSTALL="${BUN_INSTALL:-$HOME/.bun}"
   export PATH="$BUN_INSTALL/bin:$PATH"

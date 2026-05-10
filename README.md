@@ -96,6 +96,8 @@ Invoke-WebRequest "https://raw.githubusercontent.com/renierr/browser-toolkit/mai
 
 > If your shell still cannot resolve Bun, run: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`.
 
+> Debian note: Bun auto-install in `setup.sh` works with either `curl` or `wget`.
+
 #### Useful script commands
 
 ```bash
