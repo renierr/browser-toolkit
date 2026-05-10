@@ -1,9 +1,17 @@
 import { ChiptunePlayer } from '@js/chiptune/player';
 import { parseModule } from '@js/chiptune/parser';
 import type { ModuleFile } from '@js/chiptune/types';
-import { getAllModules, saveModule, deleteModule } from '@js/chiptune/archive';
+import {
+  getAllModules,
+  saveModule,
+  deleteModule,
+  getModuleBlob,
+  openDb,
+  STORE_NAME,
+} from '@js/chiptune/archive';
 import { showMessage } from '@js/ui';
 import { downloadFile } from '@js/file-utils';
+import { SyncManager } from '@js/sync.ts';
 import { ClassicVisualizer } from './visualizers/classic-visualizer';
 import { PulseGridVisualizer } from './visualizers/pulse-grid-visualizer';
 import { NeonNexusVisualizer } from './visualizers/neon-nexus-visualizer';
@@ -122,6 +130,7 @@ function getElements(): Record<string, HTMLElement | null> {
     'btn-archive': document.getElementById('btn-archive'),
     'archive-count': document.getElementById('archive-count'),
     'archive-list': document.getElementById('archive-list'),
+    'archive-sync-btn': document.getElementById('archive-sync-btn'),
     'vis-selector': document.getElementById('vis-selector'),
   };
 }
@@ -139,6 +148,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   let currentArchiveModuleId: string | null = null;
   let lastFrameTime = 0;
   const frameInterval = 1000 / 60;
+  let hasBackend = false;
 
   const container = document.getElementById('chiptune-player');
   if (!container) return () => {};
@@ -191,6 +201,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   const btnArchive = elements['btn-archive'] as HTMLButtonElement | null;
   const archiveCount = elements['archive-count'];
   const archiveList = elements['archive-list'];
+  const archiveSyncBtn = elements['archive-sync-btn'] as HTMLButtonElement | null;
   const visSelector = elements['vis-selector'] as HTMLSelectElement | null;
   const visualizers: Record<string, Visualizer> = {
     'grid-3d': new Grid3DVisualizer(),
@@ -311,6 +322,24 @@ export default function init(payload?: SharedFilesPayload): () => void {
       .join('');
   }
 
+  async function handleArchiveSync(manual = false): Promise<void> {
+    if (!hasBackend || !archiveSyncBtn) return;
+    archiveSyncBtn.classList.add('syncing');
+    archiveSyncBtn.disabled = true;
+    try {
+      const db = await openDb();
+      const result = await SyncManager.sync(db, STORE_NAME, 'chiptune', 'id', { manual });
+      if (result.pulled > 0 || result.deleted > 0) {
+        await loadArchiveList();
+      }
+    } catch (error) {
+      console.warn('[Chiptune] Sync failed (likely offline):', error);
+    } finally {
+      archiveSyncBtn.classList.remove('syncing');
+      archiveSyncBtn.disabled = false;
+    }
+  }
+
   async function loadArchivedModuleById(id: string, autoplay: boolean): Promise<void> {
     const modules = await getAllModules();
     const module = modules.find((m) => m.id === id);
@@ -319,7 +348,9 @@ export default function init(payload?: SharedFilesPayload): () => void {
       return;
     }
 
-    const file = new File([module.fileData], module.fileName);
+    const file = new File([getModuleBlob(module)], module.fileName, {
+      type: module.fileMimeType || 'application/octet-stream',
+    });
     const fileList = new DataTransfer();
     fileList.items.add(file);
     await onFile(fileList.files);
@@ -371,7 +402,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
     const result = await saveModule(currentFile, currentFormat, title, channels);
     if (result.success) {
       showMessage('Module archived!', { type: 'info', timeoutMs: 3000 });
-      loadArchiveList();
+      await loadArchiveList();
+      void handleArchiveSync();
     } else if (result.exists) {
       showMessage('Already in archive', { type: 'warning', timeoutMs: 3000 });
     } else {
@@ -386,7 +418,8 @@ export default function init(payload?: SharedFilesPayload): () => void {
       const id = (deleteBtn as HTMLElement).dataset.id;
       if (id && confirm('Delete this archived module?')) {
         await deleteModule(id);
-        loadArchiveList();
+        await loadArchiveList();
+        void handleArchiveSync();
       }
       return;
     }
@@ -397,7 +430,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
       const modules = await getAllModules();
       const module = modules.find((m) => m.id === id);
       if (module) {
-        await downloadFile(module.fileData, module.fileName);
+        await downloadFile(getModuleBlob(module), module.fileName);
       }
       return;
     }
@@ -409,7 +442,20 @@ export default function init(payload?: SharedFilesPayload): () => void {
     }
   });
 
-  loadArchiveList();
+  void loadArchiveList();
+
+  archiveSyncBtn?.addEventListener('click', () => {
+    void handleArchiveSync(true);
+  });
+
+  void SyncManager.isBackendAvailable().then((available) => {
+    hasBackend = available;
+    if (!available) {
+      archiveSyncBtn?.classList.add('hidden');
+      return;
+    }
+    void handleArchiveSync();
+  });
 
   player.onPlaybackEnded = async () => {
     if (btnPlay) btnPlay.innerHTML = '<i data-lucide="play" class="w-4 h-4"></i>';
