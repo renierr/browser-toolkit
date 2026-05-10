@@ -673,6 +673,8 @@ export class ElementEditor {
     let newY = bounds.y;
     let newW = bounds.w;
     let newH = bounds.h;
+    const isCornerHandle =
+      handle === 'nw' || handle === 'ne' || handle === 'se' || handle === 'sw';
 
     if (handle === 'nw' || handle === 'w' || handle === 'sw') {
       newX = localPoint.x;
@@ -689,6 +691,36 @@ export class ElementEditor {
       newH = localPoint.y - bounds.y;
     }
 
+    if (isCornerHandle && el.type !== 'text') {
+      const anchorX = handle === 'nw' || handle === 'sw' ? bounds.x + bounds.w : bounds.x;
+      const anchorY = handle === 'nw' || handle === 'ne' ? bounds.y + bounds.h : bounds.y;
+      const ratio = bounds.h > 0 ? bounds.w / bounds.h : 1;
+
+      let cornerW = Math.abs(localPoint.x - anchorX);
+      let cornerH = Math.abs(localPoint.y - anchorY);
+
+      if (cornerW / Math.max(cornerH, 0.0001) > ratio) {
+        cornerH = cornerW / Math.max(ratio, 0.0001);
+      } else {
+        cornerW = cornerH * ratio;
+      }
+
+      // Min size while preserving aspect ratio
+      if (cornerW < 2) {
+        cornerW = 2;
+        cornerH = cornerW / Math.max(ratio, 0.0001);
+      }
+      if (cornerH < 2) {
+        cornerH = 2;
+        cornerW = cornerH * ratio;
+      }
+
+      newW = cornerW;
+      newH = cornerH;
+      newX = handle === 'nw' || handle === 'sw' ? anchorX - newW : anchorX;
+      newY = handle === 'nw' || handle === 'ne' ? anchorY - newH : anchorY;
+    }
+
     // Min size
     if (newW < 2) newW = 2;
     if (newH < 2) newH = 2;
@@ -702,8 +734,8 @@ export class ElementEditor {
       return true;
     }
 
-    const scaleX = newW / bounds.w;
-    const scaleY = newH / bounds.h;
+    const scaleX = newW / Math.max(bounds.w, 0.0001);
+    const scaleY = newH / Math.max(bounds.h, 0.0001);
 
     scaleElement({
       el,
