@@ -11,7 +11,7 @@ export class ImageTool implements DrawTool<ImageElement> {
   private onInsert: ((el: ImageElement) => void) | null = null;
   private getCanvasCenter: (() => Point) | null = null;
   private isInserting = false;
-  private maxSize: number | undefined = 300;
+  private maxSize: number | undefined = undefined;
 
   setOnInsert(callback: (el: ImageElement) => void): void {
     this.onInsert = callback;
