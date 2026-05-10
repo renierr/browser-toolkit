@@ -182,9 +182,16 @@ class Router {
           return;
         }
 
-        const el = document.getElementById(toolId);
-        if (el) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // find fav_ first we scroll there if we have it
+        const favEl = document.getElementById('fav_' + toolId);
+        if (favEl) {
+          favEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+          // otherwise scroll to the tool card
+          const el = document.getElementById(toolId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
         }
 
         finish();
