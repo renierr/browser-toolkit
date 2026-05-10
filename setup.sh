@@ -62,6 +62,23 @@ hydrate_bun_path() {
 
   if [[ -x "$HOME/.bun/bin/bun" ]]; then
     export PATH="$HOME/.bun/bin:$PATH"
+    return
+  fi
+
+  if [[ -x "$HOME/.local/bin/bun" ]]; then
+    export PATH="$HOME/.local/bin:$PATH"
+    return
+  fi
+
+  if [[ -x "/usr/local/bin/bun" ]]; then
+    export PATH="/usr/local/bin:$PATH"
+    return
+  fi
+
+  local login_bun=""
+  login_bun="$(bash -lc 'command -v bun' 2>/dev/null || true)"
+  if [[ -n "$login_bun" ]]; then
+    export PATH="$(dirname "$login_bun"):$PATH"
   fi
 }
 
@@ -126,7 +143,7 @@ install_bun_linux() {
   export PATH="$BUN_INSTALL/bin:$PATH"
 
   if ! command -v bun >/dev/null 2>&1; then
-    err "Bun install finished but bun not in PATH. Open a new shell or add ~/.bun/bin to PATH."
+    err "Bun install finished but bun still unavailable. Try: export BUN_INSTALL=\"$HOME/.bun\" && export PATH=\"$BUN_INSTALL/bin:$PATH\""
   fi
 }
 

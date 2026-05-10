@@ -94,6 +94,8 @@ Invoke-WebRequest "https://raw.githubusercontent.com/renierr/browser-toolkit/mai
 
 > Linux note: If Bun was just installed, the setup script automatically checks `~/.bun/bin` so you can continue in the same shell.
 
+> If your shell still cannot resolve Bun, run: `export BUN_INSTALL="$HOME/.bun" && export PATH="$BUN_INSTALL/bin:$PATH"`.
+
 #### Useful script commands
 
 ```bash
