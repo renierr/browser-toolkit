@@ -8,6 +8,7 @@ export interface TTSOptions {
 export class SpeechEngine {
   private synth: SpeechSynthesis | null;
   private voices: SpeechSynthesisVoice[] = [];
+  private userStopped = false;
 
   constructor() {
     this.synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
@@ -60,6 +61,7 @@ export class SpeechEngine {
   ): void {
     if (!this.synth) return;
 
+    this.userStopped = false;
     this.synth.cancel();
 
     setTimeout(() => {
@@ -75,8 +77,20 @@ export class SpeechEngine {
         utterance.volume = options.volume;
       }
 
-      utterance.onend = () => onEnd?.();
+      utterance.onend = () => {
+        this.userStopped = false;
+        onEnd?.();
+      };
       utterance.onerror = (e) => {
+        if (this.userStopped) {
+          this.userStopped = false;
+          return;
+        }
+
+        if (e.error === 'interrupted' || e.error === 'canceled') {
+          return;
+        }
+
         if (e.error === 'synthesis-failed') {
           onError?.('Linux Synthesis Failed. Check speech-dispatcher and spd-conf.');
         } else {
@@ -93,6 +107,25 @@ export class SpeechEngine {
   }
 
   public stop(): void {
+    this.userStopped = true;
     this.synth?.cancel();
+  }
+
+  public isSpeaking(): boolean {
+    return this.synth?.speaking ?? false;
+  }
+
+  public isPaused(): boolean {
+    return this.synth?.paused ?? false;
+  }
+
+  public pause(): void {
+    if (!this.synth || this.synth.speaking === false) return;
+    this.synth.pause();
+  }
+
+  public resume(): void {
+    if (!this.synth || this.synth.paused === false) return;
+    this.synth.resume();
   }
 }

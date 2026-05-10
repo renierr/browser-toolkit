@@ -1,6 +1,7 @@
 import { SpeechEngine } from './speech-engine';
 import type { TTSOptions } from './speech-engine';
 import { getSettings } from '../../js/settings';
+import { yieldToUI } from '../../js/ui';
 
 export default function init(): void | (() => void) {
   const container = document.getElementById('tool-content');
@@ -14,6 +15,10 @@ export default function init(): void | (() => void) {
   const btnRefresh = container.querySelector('#btn-refresh-voices') as HTMLButtonElement;
   const btnInit = container.querySelector('#btn-init-engine') as HTMLButtonElement;
   const btnSpeak = container.querySelector('#btn-speak') as HTMLButtonElement;
+  const btnTogglePause = container.querySelector('#btn-toggle-pause') as HTMLButtonElement;
+  const btnStop = container.querySelector('#btn-stop') as HTMLButtonElement;
+  const btnTogglePauseIcon = container.querySelector('#btn-toggle-pause-icon') as HTMLElement;
+  const btnTogglePauseLabel = container.querySelector('#btn-toggle-pause-label') as HTMLSpanElement;
 
   const rateRange = container.querySelector('#rate-range') as HTMLInputElement;
   const rateVal = container.querySelector('#rate-val') as HTMLSpanElement;
@@ -33,6 +38,17 @@ export default function init(): void | (() => void) {
     } else {
       statusBadge.classList.add('hidden');
     }
+  };
+
+  const updateControlState = (forcedPaused: boolean | null = null) => {
+    const speaking = engine.isSpeaking();
+    const paused = forcedPaused ?? engine.isPaused();
+    const active = speaking || paused;
+
+    btnTogglePause.disabled = !active;
+    btnTogglePauseIcon.setAttribute('data-lucide', paused ? 'play-circle' : 'pause');
+    btnTogglePauseLabel.textContent = paused ? 'Resume' : 'Pause';
+    btnStop.disabled = !active;
   };
 
   const populateVoices = async () => {
@@ -75,12 +91,20 @@ export default function init(): void | (() => void) {
     const text = textInput.value.trim();
     if (!text) return;
     updateStatus(true, 'Speaking...');
+    updateControlState(false);
     engine.speak(
       text,
       getOptions(),
-      () => updateStatus(false),
-      (errorMsg) => updateStatus(true, errorMsg, true)
+      () => {
+        updateStatus(false);
+        updateControlState();
+      },
+      (errorMsg) => {
+        updateStatus(true, errorMsg, true);
+        updateControlState();
+      }
     );
+    setTimeout(updateControlState, 80);
   };
 
   const syncRange = (input: HTMLInputElement, display: HTMLSpanElement) => {
@@ -95,6 +119,28 @@ export default function init(): void | (() => void) {
   syncRange(volumeRange, volumeVal);
 
   btnSpeak.addEventListener('click', onSpeak);
+  btnTogglePause.addEventListener('click', async () => {
+    const shouldPause = !engine.isPaused();
+
+    if (!shouldPause) {
+      engine.resume();
+      updateStatus(true, 'Speaking...', false);
+      updateControlState(false);
+    } else {
+      engine.pause();
+      updateStatus(true, 'Paused', false);
+      updateControlState(true);
+    }
+
+    await yieldToUI(true);
+    updateControlState(shouldPause);
+    setTimeout(() => updateControlState(), 120);
+  });
+  btnStop.addEventListener('click', () => {
+    engine.stop();
+    updateStatus(true, 'Stopped', false);
+    updateControlState(false);
+  });
   btnRefresh.addEventListener('click', populateVoices);
   btnInit.addEventListener('click', () => {
     const u = new SpeechSynthesisUtterance(' ');
@@ -104,6 +150,7 @@ export default function init(): void | (() => void) {
   });
 
   populateVoices();
+  updateControlState();
 
   return () => {
     engine.stop();
