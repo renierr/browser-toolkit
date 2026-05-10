@@ -6,6 +6,7 @@ import discoveryRoutes from './routes/discovery';
 import networkRoutes from './routes/network';
 import syncRoutes from './routes/sync';
 import dropRoutes from './routes/drop';
+import { startSyncBackupScheduler } from './lib/sync-backup';
 
 const app = new Hono();
 
@@ -20,6 +21,8 @@ app.route('/api/drop', dropRoutes);
 // Serve the static frontend (dist folder)
 // It serves everything from ../dist for any unmatched routes
 app.use('/*', serveStatic({ root: '../dist' }));
+
+startSyncBackupScheduler();
 
 const port = process.env.PORT || 3000;
 console.log(`\n🚀 Backend Server running at http://localhost:${port}`);
@@ -38,4 +41,3 @@ export default {
   port,
   fetch: app.fetch,
 };
-
