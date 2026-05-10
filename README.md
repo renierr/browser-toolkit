@@ -68,6 +68,46 @@ bun install
 cd ..
 ```
 
+### One-command setup (cross-platform)
+
+This repository includes setup scripts for cloning, installing dependencies, building, and running.
+
+#### Linux/macOS (`setup.sh`)
+
+```bash
+# Bootstrap into ~/browser-toolkit (clone if missing, install, build)
+curl -fsSL https://raw.githubusercontent.com/renierr/browser-toolkit/main/setup.sh | bash -s -- bootstrap --dir "$HOME/browser-toolkit"
+
+# or with wget
+wget -qO- https://raw.githubusercontent.com/renierr/browser-toolkit/main/setup.sh | bash -s -- bootstrap --dir "$HOME/browser-toolkit"
+```
+
+#### Windows (`setup.ps1`)
+
+```powershell
+$path = "$env:TEMP\setup.ps1"
+Invoke-WebRequest "https://raw.githubusercontent.com/renierr/browser-toolkit/main/setup.ps1" -OutFile $path
+& $path bootstrap -Dir "$env:USERPROFILE\browser-toolkit"
+```
+
+> Tip: For reproducible installs, prefer pinning to a tag or commit instead of `main` in raw GitHub URLs.
+
+#### Useful script commands
+
+```bash
+# Linux/macOS
+./setup.sh doctor
+./setup.sh run --dir "$HOME/browser-toolkit" --port 3000
+./setup.sh install-service --dir "$HOME/browser-toolkit"
+```
+
+```powershell
+# Windows
+.\setup.ps1 doctor -Dir "$env:USERPROFILE\browser-toolkit"
+.\setup.ps1 run -Dir "$env:USERPROFILE\browser-toolkit" -Port 3000
+.\setup.ps1 install-service -Dir "$env:USERPROFILE\browser-toolkit" # prints manual instructions
+```
+
 ### 1. Static/Offline Mode (Default)
 If you only want the offline-capable browser tools:
 ```bash
