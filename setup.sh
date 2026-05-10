@@ -49,6 +49,33 @@ need_cmd() {
   fi
 }
 
+hydrate_bun_path() {
+  if command -v bun >/dev/null 2>&1; then
+    return
+  fi
+
+  local bun_bin_dir="${BUN_INSTALL:-$HOME/.bun}/bin"
+  if [[ -x "$bun_bin_dir/bun" ]]; then
+    export PATH="$bun_bin_dir:$PATH"
+    return
+  fi
+
+  if [[ -x "$HOME/.bun/bin/bun" ]]; then
+    export PATH="$HOME/.bun/bin:$PATH"
+  fi
+}
+
+resolve_bun() {
+  hydrate_bun_path
+  if command -v bun >/dev/null 2>&1; then
+    command -v bun
+    return
+  fi
+
+  ensure_cmd bun
+  command -v bun
+}
+
 is_linux() {
   [[ "$(uname -s)" == Linux* ]]
 }
@@ -143,6 +170,10 @@ install_git_linux() {
 ensure_cmd() {
   local cmd="$1"
 
+  if [[ "$cmd" == "bun" ]]; then
+    hydrate_bun_path
+  fi
+
   if command -v "$cmd" >/dev/null 2>&1; then
     return
   fi
@@ -203,31 +234,37 @@ clone_repo_if_needed() {
 
 install_deps() {
   repo_dir_exists || err "Repo not found at $TARGET_DIR"
+  local bun_bin
+  bun_bin="$(resolve_bun)"
 
   log "Installing root dependencies"
-  bun install --cwd "$TARGET_DIR"
+  "$bun_bin" install --cwd "$TARGET_DIR"
 
   log "Installing backend dependencies"
-  bun install --cwd "$TARGET_DIR/backend"
+  "$bun_bin" install --cwd "$TARGET_DIR/backend"
 }
 
 build_frontend() {
   repo_dir_exists || err "Repo not found at $TARGET_DIR"
+  local bun_bin
+  bun_bin="$(resolve_bun)"
   log "Building frontend dist/"
-  bun run --cwd "$TARGET_DIR" build
+  "$bun_bin" run --cwd "$TARGET_DIR" build
 }
 
 run_backend() {
   repo_dir_exists || err "Repo not found at $TARGET_DIR"
+  local bun_bin
+  bun_bin="$(resolve_bun)"
   log "Starting backend at PORT=$PORT"
-  PORT="$PORT" bun run --cwd "$TARGET_DIR/backend" start
+  PORT="$PORT" "$bun_bin" run --cwd "$TARGET_DIR/backend" start
 }
 
 install_service_linux() {
   need_cmd systemctl
   local unit_path="/etc/systemd/system/browser-toolkit.service"
   local bun_path
-  bun_path="$(command -v bun)"
+  bun_path="$(resolve_bun)"
 
   log "Installing systemd service (requires sudo)"
   sudo tee "$unit_path" >/dev/null <<EOF
@@ -256,7 +293,7 @@ install_service_macos() {
   local launch_dir="$HOME/Library/LaunchAgents"
   local plist_path="$launch_dir/com.browsertoolkit.backend.plist"
   local bun_path
-  bun_path="$(command -v bun)"
+  bun_path="$(resolve_bun)"
 
   mkdir -p "$launch_dir"
 
@@ -338,7 +375,7 @@ bootstrap() {
   install_deps
   build_frontend
   log "Bootstrap done"
-  log "Run now: ./setup.sh run --dir \"$TARGET_DIR\""
+  log "Run now: bash \"$TARGET_DIR/setup.sh\" run --dir \"$TARGET_DIR\" --port \"$PORT\""
 }
 
 COMMAND="${1:-help}"

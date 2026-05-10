@@ -92,13 +92,15 @@ Invoke-WebRequest "https://raw.githubusercontent.com/renierr/browser-toolkit/mai
 
 > Tip: For reproducible installs, prefer pinning to a tag or commit instead of `main` in raw GitHub URLs.
 
+> Linux note: If Bun was just installed, the setup script automatically checks `~/.bun/bin` so you can continue in the same shell.
+
 #### Useful script commands
 
 ```bash
 # Linux/macOS
-./setup.sh doctor
-./setup.sh run --dir "$HOME/browser-toolkit" --port 3000
-./setup.sh install-service --dir "$HOME/browser-toolkit"
+bash "$HOME/browser-toolkit/setup.sh" doctor --dir "$HOME/browser-toolkit"
+bash "$HOME/browser-toolkit/setup.sh" run --dir "$HOME/browser-toolkit" --port 3000
+bash "$HOME/browser-toolkit/setup.sh" install-service --dir "$HOME/browser-toolkit"
 ```
 
 ```powershell
