@@ -37,8 +37,8 @@ system.get('/info', async (c) => {
   });
 });
 
-system.get('/update/check', (c) => {
-  const result = checkForUpdates();
+system.get('/update/check', async (c) => {
+  const result = await checkForUpdates();
   if (!result.ok) {
     return c.json(result, 500);
   }
@@ -84,9 +84,29 @@ system.get('/update/job/:jobId', (c) => {
 system.get('/update/stream/:jobId', (c) => {
   const jobId = c.req.param('jobId');
   return streamSSE(c, async (stream) => {
-    const unsubscribe = subscribeToUpdateJob(jobId, (event: UpdateJobEvent) => {
+    let streamDone = false;
+
+    const isTerminalStatus = (status: string): boolean => {
+      return (
+        status === 'failed' ||
+        status === 'completed' ||
+        status === 'no_changes' ||
+        status === 'pending_restart'
+      );
+    };
+
+    const sendEvent = async (event: UpdateJobEvent): Promise<void> => {
       const payload = JSON.stringify(event);
-      stream.writeSSE({ data: payload });
+      await stream.writeSSE({ data: payload });
+      if (event.type === 'state' && isTerminalStatus(event.job.status)) {
+        streamDone = true;
+      }
+    };
+
+    const unsubscribe = subscribeToUpdateJob(jobId, (event: UpdateJobEvent) => {
+      void sendEvent(event).catch(() => {
+        streamDone = true;
+      });
     });
 
     if (!unsubscribe) {
@@ -98,12 +118,20 @@ system.get('/update/stream/:jobId', (c) => {
     }
 
     stream.onAbort(() => {
+      streamDone = true;
       unsubscribe();
     });
 
-    while (true) {
-      await stream.sleep(30000);
-      await stream.writeSSE({ event: 'ping', data: 'heartbeat' });
+    try {
+      while (!streamDone) {
+        await stream.sleep(30000);
+        if (streamDone) {
+          break;
+        }
+        await stream.writeSSE({ event: 'ping', data: 'heartbeat' });
+      }
+    } finally {
+      unsubscribe();
     }
   });
 });

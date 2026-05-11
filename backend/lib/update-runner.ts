@@ -85,23 +85,55 @@ function commandText(parts: string[]): string {
   return parts.map((part) => (part.includes(' ') ? `"${part}"` : part)).join(' ');
 }
 
-function runCommandSync(command: string[], cwd: string): {
+const DEFAULT_STEP_TIMEOUT_MS = 30 * 60 * 1000;
+const DEFAULT_STEP_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+const COMMAND_CHECK_TIMEOUT_MS = 2 * 60 * 1000;
+
+async function runCommand(command: string[], cwd: string, timeoutMs = COMMAND_CHECK_TIMEOUT_MS): Promise<{
   success: boolean;
   stdout: string;
   stderr: string;
   exitCode: number;
-} {
-  const proc = Bun.spawnSync(command, {
+}> {
+  const proc = Bun.spawn(command, {
     cwd,
     stdout: 'pipe',
     stderr: 'pipe',
     env: process.env,
   });
+
+  let exitCode: number;
+  try {
+    exitCode = await waitForProcessExit(proc, command[0] ?? 'command', {
+      timeoutMs,
+    });
+  } catch (error) {
+    try {
+      proc.kill('SIGTERM');
+    } catch {
+      // no-op
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    if (proc.exitCode === null) {
+      try {
+        proc.kill('SIGKILL');
+      } catch {
+        // no-op
+      }
+    }
+    throw error;
+  }
+
+  const [stdoutText, stderrText] = await Promise.all([
+    proc.stdout ? new Response(proc.stdout).text() : Promise.resolve(''),
+    proc.stderr ? new Response(proc.stderr).text() : Promise.resolve(''),
+  ]);
+
   return {
-    success: proc.success,
-    stdout: proc.stdout.toString().trim(),
-    stderr: proc.stderr.toString().trim(),
-    exitCode: proc.exitCode,
+    success: exitCode === 0,
+    stdout: stdoutText.trim(),
+    stderr: stderrText.trim(),
+    exitCode,
   };
 }
 
@@ -229,6 +261,7 @@ async function readStreamLines(
 
 type RunStepOptions = {
   timeoutMs?: number;
+  idleTimeoutMs?: number;
 };
 
 function formatTimeout(timeoutMs: number): string {
@@ -239,28 +272,50 @@ function formatTimeout(timeoutMs: number): string {
   return `${sec}s`;
 }
 
+function formatDuration(ms: number): string {
+  if (ms < 1000) {
+    return `${ms}ms`;
+  }
+  const sec = Math.round(ms / 1000);
+  return `${sec}s`;
+}
+
 async function waitForProcessExit(
   proc: Bun.Subprocess<'ignore', 'pipe', 'pipe'>,
   stepName: string,
-  timeoutMs?: number
+  options: RunStepOptions = {},
+  getLastOutputAt?: () => number
 ): Promise<number> {
-  if (!timeoutMs || timeoutMs <= 0) {
-    return proc.exited;
-  }
+  const startedAt = Date.now();
 
-  let timeoutId: ReturnType<typeof setTimeout> | null = null;
-  try {
-    return await Promise.race<number>([
-      proc.exited,
-      new Promise<number>((_resolve, reject) => {
-        timeoutId = setTimeout(() => {
-          reject(new Error(`[${stepName}] command timed out after ${formatTimeout(timeoutMs)}`));
-        }, timeoutMs);
+  while (true) {
+    const raceResult = await Promise.race<
+      | { type: 'exited'; exitCode: number }
+      | { type: 'tick' }
+    >([
+      proc.exited.then((exitCode) => ({ type: 'exited', exitCode } as const)),
+      new Promise<{ type: 'tick' }>((resolve) => {
+        setTimeout(() => resolve({ type: 'tick' }), 1000);
       }),
     ]);
-  } finally {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
+
+    if (raceResult.type === 'exited') {
+      return raceResult.exitCode;
+    }
+
+    const now = Date.now();
+
+    if (options.timeoutMs && options.timeoutMs > 0 && now - startedAt > options.timeoutMs) {
+      throw new Error(`[${stepName}] command timed out after ${formatTimeout(options.timeoutMs)}`);
+    }
+
+    if (options.idleTimeoutMs && options.idleTimeoutMs > 0 && getLastOutputAt) {
+      const idleMs = now - getLastOutputAt();
+      if (idleMs > options.idleTimeoutMs) {
+        throw new Error(
+          `[${stepName}] command produced no output for ${formatTimeout(options.idleTimeoutMs)}`
+        );
+      }
     }
   }
 }
@@ -272,6 +327,9 @@ async function runStepCommand(
   cwd: string,
   options: RunStepOptions = {}
 ): Promise<void> {
+  const timeoutMs = options.timeoutMs ?? DEFAULT_STEP_TIMEOUT_MS;
+  const idleTimeoutMs = options.idleTimeoutMs ?? DEFAULT_STEP_IDLE_TIMEOUT_MS;
+
   setStepStatus(job, stepName, 'running');
   emitLog(job, 'info', `[${stepName}] $ ${commandText(command)} (cwd: ${cwd})`);
 
@@ -282,12 +340,46 @@ async function runStepCommand(
     env: process.env,
   });
 
-  const stdoutReader = readStreamLines(proc.stdout, (line) => emitLog(job, 'info', `[${stepName}] ${line}`));
-  const stderrReader = readStreamLines(proc.stderr, (line) => emitLog(job, 'error', `[${stepName}] ${line}`));
+  const startedAt = Date.now();
+  let lastOutputAt = startedAt;
+
+  const onStdoutLine = (line: string): void => {
+    lastOutputAt = Date.now();
+    emitLog(job, 'info', `[${stepName}] ${line}`);
+  };
+
+  const onStderrLine = (line: string): void => {
+    lastOutputAt = Date.now();
+    emitLog(job, 'error', `[${stepName}] ${line}`);
+  };
+
+  const stdoutReader = readStreamLines(proc.stdout, onStdoutLine);
+  const stderrReader = readStreamLines(proc.stderr, onStderrLine);
+
+  const heartbeatTimer = setInterval(() => {
+    const now = Date.now();
+    const idleMs = now - lastOutputAt;
+    if (idleMs < 30000) {
+      return;
+    }
+    emitLog(
+      job,
+      'info',
+      `[${stepName}] still running (${formatDuration(now - startedAt)} elapsed, idle ${formatDuration(idleMs)})`
+    );
+  }, 30000);
 
   let exitCode: number;
   try {
-    exitCode = await waitForProcessExit(proc, stepName, options.timeoutMs);
+    exitCode = await waitForProcessExit(
+      proc,
+      stepName,
+      {
+        timeoutMs,
+        idleTimeoutMs,
+      },
+      () => lastOutputAt
+    );
   } catch (error) {
     const timeoutMessage = error instanceof Error ? error.message : String(error);
     emitLog(job, 'error', timeoutMessage);
@@ -311,6 +403,7 @@ async function runStepCommand(
     setStepStatus(job, stepName, 'failed', forcedExitCode);
     throw error;
   } finally {
+    clearInterval(heartbeatTimer);
     await Promise.allSettled([proc.stdout?.cancel(), proc.stderr?.cancel()]);
     await Promise.allSettled([stdoutReader, stderrReader]);
   }
@@ -342,11 +435,11 @@ async function swapDistDirectories(appDir: string): Promise<void> {
   await rm(distPrevDir, { recursive: true, force: true });
 }
 
-export function checkForUpdates(): UpdateCheckResult {
+export async function checkForUpdates(): Promise<UpdateCheckResult> {
   const backendDir = backendDirFromRuntime();
   const appDir = appDirFromBackendDir(backendDir);
 
-  const branchResult = runCommandSync(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], appDir);
+  const branchResult = await runCommand(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], appDir);
   if (!branchResult.success || branchResult.stdout.length === 0) {
     return {
       ok: false,
@@ -361,7 +454,7 @@ export function checkForUpdates(): UpdateCheckResult {
   }
 
   const branch = branchResult.stdout;
-  const fetchResult = runCommandSync(['git', 'fetch', '--prune', 'origin'], appDir);
+  const fetchResult = await runCommand(['git', 'fetch', '--prune', 'origin'], appDir);
   if (!fetchResult.success) {
     return {
       ok: false,
@@ -375,9 +468,11 @@ export function checkForUpdates(): UpdateCheckResult {
     };
   }
 
-  const localHashResult = runCommandSync(['git', 'rev-parse', 'HEAD'], appDir);
-  const remoteHashResult = runCommandSync(['git', 'rev-parse', `origin/${branch}`], appDir);
-  const behindResult = runCommandSync(['git', 'rev-list', '--count', `HEAD..origin/${branch}`], appDir);
+  const [localHashResult, remoteHashResult, behindResult] = await Promise.all([
+    runCommand(['git', 'rev-parse', 'HEAD'], appDir),
+    runCommand(['git', 'rev-parse', `origin/${branch}`], appDir),
+    runCommand(['git', 'rev-list', '--count', `HEAD..origin/${branch}`], appDir),
+  ]);
 
   if (!localHashResult.success || !remoteHashResult.success || !behindResult.success) {
     return {
@@ -414,7 +509,7 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
   emitState(job);
 
   try {
-    const check = checkForUpdates();
+    const check = await checkForUpdates();
     job.check = check;
     emitState(job);
 

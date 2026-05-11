@@ -16,7 +16,7 @@ async function run(): Promise<void> {
   const { force, checkOnly } = parseArgs(process.argv.slice(2));
 
   if (checkOnly) {
-    const check = checkForUpdates();
+    const check = await checkForUpdates();
     console.log(JSON.stringify(check, null, 2));
     process.exit(check.ok ? 0 : 1);
   }
