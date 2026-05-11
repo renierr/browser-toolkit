@@ -16,6 +16,38 @@ const footerFinal = replacePlaceholders(footerHtml, siteContext);
 let currentToolCleanup: (() => void) | undefined;
 let cancelPendingInit: (() => void) | undefined;
 let settingsCleanup: (() => void) | undefined;
+const CHUNK_RELOAD_ONCE_KEY = 'chunk-reload-once';
+
+function isChunkLoadError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message || '';
+  return (
+    message.includes('Failed to fetch dynamically imported module') ||
+    message.includes('Importing a module script failed') ||
+    message.includes('Loading chunk')
+  );
+}
+
+async function tryRecoverChunkLoadError(error: unknown): Promise<boolean> {
+  if (!isChunkLoadError(error)) return false;
+  if (sessionStorage.getItem(CHUNK_RELOAD_ONCE_KEY) === '1') return false;
+
+  sessionStorage.setItem(CHUNK_RELOAD_ONCE_KEY, '1');
+
+  try {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      await registration?.update();
+    }
+  } catch (swError) {
+    console.warn('[render] SW update failed during chunk-reload recovery', swError);
+  }
+
+  const reloadUrl = new URL(location.href);
+  reloadUrl.searchParams.set('_chunk_reload', String(Date.now()));
+  location.assign(reloadUrl.href);
+  return true;
+}
 
 export function renderLayout(content: string, hideHeader?: boolean, hideFooter: boolean = true) {
   // Cancel any pending script initialization from previous navigation
@@ -102,7 +134,9 @@ export async function renderTool(tool: Tool | undefined, payload?: any) {
     try {
       const mod = await tool.loadScript();
       tool.script = mod.default ?? mod.init;
+      sessionStorage.removeItem(CHUNK_RELOAD_ONCE_KEY);
     } catch (err) {
+      if (await tryRecoverChunkLoadError(err)) return;
       console.error(`[render] Failed to lazy load script for tool ${tool.path}:`, err);
     }
   }

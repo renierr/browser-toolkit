@@ -5,7 +5,6 @@ import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
 import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getFFmpegArgs, FFmpegLogCollector, getVideoMetadata } from './video-utils.ts';
 
-import classWorkerURL from '@ffmpeg/ffmpeg/dist/esm/worker.js?url';
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
 import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
 
@@ -150,7 +149,12 @@ export default function init(payload?: SharedFilesPayload) {
       ffmpeg = new FFmpeg();
       ffmpeg.on('log', onLog);
       ffmpeg.on('progress', onProgress);
-      console.info('[FFmpeg] load urls', { classWorkerURL, coreURL, wasmURL });
+      const absoluteCoreURL = new URL(coreURL, location.href).href;
+      const absoluteWasmURL = new URL(wasmURL, location.href).href;
+      console.info('[FFmpeg] load urls', {
+        coreURL: absoluteCoreURL,
+        wasmURL: absoluteWasmURL,
+      });
 
       const loadAbortController = new AbortController();
       const loadTimeoutId = window.setTimeout(() => {
@@ -159,7 +163,10 @@ export default function init(payload?: SharedFilesPayload) {
 
       try {
         await ffmpeg.load(
-          { classWorkerURL, coreURL, wasmURL },
+          {
+            coreURL: absoluteCoreURL,
+            wasmURL: absoluteWasmURL,
+          },
           { signal: loadAbortController.signal }
         );
       } finally {
