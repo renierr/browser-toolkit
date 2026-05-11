@@ -29,6 +29,41 @@ export default function init(): void | (() => void) {
     stopUpdateStream();
     updateStreamController = new AbortController();
     let reachedTerminalState = false;
+    let lastEventAt = Date.now();
+
+    const isTerminalStatus = (status: UpdateJobSnapshot['status']): boolean => {
+      return (
+        status === 'failed' ||
+        status === 'completed' ||
+        status === 'no_changes' ||
+        status === 'pending_restart'
+      );
+    };
+
+    const syncLatestJobState = async (): Promise<boolean> => {
+      try {
+        const latestJob = await fetchJson<UpdateJobSnapshot>(`/update/job/${jobId}`);
+        renderer.renderJobState(latestJob, notify);
+        if (isTerminalStatus(latestJob.status)) {
+          reachedTerminalState = true;
+          stopUpdateStream();
+          return true;
+        }
+      } catch {
+        return false;
+      }
+      return false;
+    };
+
+    const watchdogId = window.setInterval(() => {
+      if (!updateStreamController || updateStreamController.signal.aborted) {
+        return;
+      }
+      if (Date.now() - lastEventAt < 15000) {
+        return;
+      }
+      void syncLatestJobState();
+    }, 5000);
 
     try {
       const response = await fetchApi(`/update/stream/${jobId}`, {
@@ -56,14 +91,34 @@ export default function init(): void | (() => void) {
 
         for (const chunk of chunks) {
           const lines = chunk.split(/\r?\n/);
-          const dataLines = lines
-            .filter((line) => line.startsWith('data:'))
-            .map((line) => line.slice(5).trimStart());
+          let eventName = 'message';
+          const dataLines: string[] = [];
+
+          for (const line of lines) {
+            if (line.startsWith('event:')) {
+              eventName = line.slice(6).trim();
+            } else if (line.startsWith('data:')) {
+              dataLines.push(line.slice(5).trimStart());
+            }
+          }
+
           if (dataLines.length === 0) {
             continue;
           }
+          lastEventAt = Date.now();
 
           const dataText = dataLines.join('\n');
+
+          if (eventName === 'ping') {
+            continue;
+          }
+
+          if (eventName === 'error') {
+            renderer.appendUpdateLog(`[server] ${dataText}`);
+            void syncLatestJobState();
+            continue;
+          }
+
           try {
             const event = JSON.parse(dataText) as UpdateEvent;
             if (event.type === 'log') {
@@ -72,37 +127,33 @@ export default function init(): void | (() => void) {
             }
             if (event.type === 'state') {
               renderer.renderJobState(event.job, notify);
-              if (
-                event.job.status === 'failed' ||
-                event.job.status === 'completed' ||
-                event.job.status === 'no_changes' ||
-                event.job.status === 'pending_restart'
-              ) {
+              if (isTerminalStatus(event.job.status)) {
                 reachedTerminalState = true;
                 return;
               }
             }
           } catch {
-            renderer.appendUpdateLog(`[client] failed to parse event: ${dataText}`);
+            if (dataText !== 'heartbeat') {
+              renderer.appendUpdateLog(`[client] failed to parse event: ${dataText}`);
+            }
           }
         }
       }
 
       if (!reachedTerminalState) {
-        const latestJob = await fetchJson<UpdateJobSnapshot>(`/update/job/${jobId}`);
-        renderer.renderJobState(latestJob, notify);
+        await syncLatestJobState();
       }
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         console.error('[BackendInfo] Update SSE failed:', error);
-        try {
-          const latestJob = await fetchJson<UpdateJobSnapshot>(`/update/job/${jobId}`);
-          renderer.renderJobState(latestJob, notify);
-        } catch {
+        const recovered = await syncLatestJobState();
+        if (!recovered) {
           renderer.setUpdateSummary('Lost connection to update stream.');
           renderer.setUpdateBusy(false);
         }
       }
+    } finally {
+      window.clearInterval(watchdogId);
     }
   };
 
