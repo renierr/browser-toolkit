@@ -63,6 +63,32 @@ export function createRenderer(dom: BackendInfoDom) {
     dom.updateLogsEl.scrollTop = dom.updateLogsEl.scrollHeight;
   };
 
+  const replaceLastUpdateLog = (line: string): void => {
+    const entries = dom.updateLogsEl.querySelectorAll('pre');
+    const lastEntry = entries[entries.length - 1] ?? null;
+    if (!lastEntry) {
+      appendUpdateLog(line);
+      return;
+    }
+    const code = document.createElement('code');
+    code.appendChild(renderAnsiLogLine(line));
+    lastEntry.replaceChildren(code);
+    dom.updateLogsEl.scrollTop = dom.updateLogsEl.scrollHeight;
+  };
+
+  const appendUpdateLogEntry = (line: string, replaceLast = false): void => {
+    if (replaceLast) {
+      replaceLastUpdateLog(line);
+      return;
+    }
+    const entry = document.createElement('pre');
+    const code = document.createElement('code');
+    code.appendChild(renderAnsiLogLine(line));
+    entry.appendChild(code);
+    dom.updateLogsEl.appendChild(entry);
+    dom.updateLogsEl.scrollTop = dom.updateLogsEl.scrollHeight;
+  };
+
   const clearUpdateLogs = (): void => {
     dom.updateLogsEl.innerHTML = '';
     state.renderedLogCount = 0;
@@ -79,7 +105,7 @@ export function createRenderer(dom: BackendInfoDom) {
     }
     const missing = job.logs.slice(state.renderedLogCount);
     for (const entry of missing) {
-      appendUpdateLog(entry.message);
+      appendUpdateLogEntry(entry.message, entry.replaceLast === true);
     }
     state.renderedLogCount = job.logs.length;
   };
@@ -235,6 +261,7 @@ export function createRenderer(dom: BackendInfoDom) {
     setUpdateBusy,
     setUpdateSupported,
     appendUpdateLog,
+    appendUpdateLogEntry,
     clearUpdateLogs,
     recordRenderedLog,
   };

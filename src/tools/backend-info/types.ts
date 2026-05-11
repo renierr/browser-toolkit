@@ -60,6 +60,7 @@ export type UpdateLogEntry = {
   at: string;
   level: 'info' | 'error';
   message: string;
+  replaceLast?: boolean;
 };
 
 export type UpdateJobSnapshot = {

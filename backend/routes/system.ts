@@ -92,6 +92,7 @@ system.get('/update/stream/:jobId', (c) => {
   const jobId = c.req.param('jobId');
   return streamSSE(c, async (stream) => {
     let streamDone = false;
+    let writeQueue: Promise<void> = Promise.resolve();
 
     const isTerminalStatus = (status: string): boolean => {
       return (
@@ -102,12 +103,28 @@ system.get('/update/stream/:jobId', (c) => {
       );
     };
 
-    const sendEvent = async (event: UpdateJobEvent): Promise<void> => {
-      const payload = JSON.stringify(event);
-      await stream.writeSSE({ data: payload });
-      if (event.type === 'state' && isTerminalStatus(event.job.status)) {
-        streamDone = true;
-      }
+    const enqueueWrite = (task: () => Promise<void>): Promise<void> => {
+      writeQueue = writeQueue
+        .then(async () => {
+          if (streamDone) {
+            return;
+          }
+          await task();
+        })
+        .catch(() => {
+          streamDone = true;
+        });
+      return writeQueue;
+    };
+
+    const sendEvent = (event: UpdateJobEvent): Promise<void> => {
+      return enqueueWrite(async () => {
+        const payload = JSON.stringify(event);
+        await stream.writeSSE({ data: payload });
+        if (event.type === 'state' && isTerminalStatus(event.job.status)) {
+          streamDone = true;
+        }
+      });
     };
 
     const unsubscribe = subscribeToUpdateJob(jobId, (event: UpdateJobEvent) => {
@@ -117,9 +134,11 @@ system.get('/update/stream/:jobId', (c) => {
     });
 
     if (!unsubscribe) {
-      await stream.writeSSE({
-        event: 'error',
-        data: JSON.stringify({ error: 'Update job not found.' }),
+      await enqueueWrite(async () => {
+        await stream.writeSSE({
+          event: 'error',
+          data: JSON.stringify({ error: 'Update job not found.' }),
+        });
       });
       return;
     }
@@ -135,10 +154,13 @@ system.get('/update/stream/:jobId', (c) => {
         if (streamDone) {
           break;
         }
-        await stream.writeSSE({ event: 'ping', data: 'heartbeat' });
+        await enqueueWrite(async () => {
+          await stream.writeSSE({ event: 'ping', data: 'heartbeat' });
+        });
       }
     } finally {
       unsubscribe();
+      await writeQueue.catch(() => undefined);
     }
   });
 });

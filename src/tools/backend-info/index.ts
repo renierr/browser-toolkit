@@ -34,7 +34,7 @@ export default function init(): void | (() => void) {
     stopUpdateStream();
     updateStreamController = new AbortController();
     let reachedTerminalState = false;
-    let lastEventAt = Date.now();
+    let lastJobEventAt = Date.now();
 
     const isTerminalStatus = (status: UpdateJobSnapshot['status']): boolean => {
       return (
@@ -64,9 +64,10 @@ export default function init(): void | (() => void) {
       if (!updateStreamController || updateStreamController.signal.aborted) {
         return;
       }
-      if (Date.now() - lastEventAt < 15000) {
+      if (Date.now() - lastJobEventAt < 15000) {
         return;
       }
+      lastJobEventAt = Date.now();
       void syncLatestJobState();
     }, 5000);
 
@@ -110,7 +111,6 @@ export default function init(): void | (() => void) {
           if (dataLines.length === 0) {
             continue;
           }
-          lastEventAt = Date.now();
 
           const dataText = dataLines.join('\n');
 
@@ -127,11 +127,16 @@ export default function init(): void | (() => void) {
           try {
             const event = JSON.parse(dataText) as UpdateEvent;
             if (event.type === 'log') {
-              renderer.appendUpdateLog(event.entry.message);
+              renderer.appendUpdateLogEntry(
+                event.entry.message,
+                event.entry.replaceLast === true
+              );
               renderer.recordRenderedLog();
+              lastJobEventAt = Date.now();
             }
             if (event.type === 'state') {
               renderer.renderJobState(event.job, notify);
+              lastJobEventAt = Date.now();
               if (isTerminalStatus(event.job.status)) {
                 reachedTerminalState = true;
                 return;

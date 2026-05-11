@@ -27,6 +27,7 @@ export type UpdateLogEntry = {
   at: string;
   level: 'info' | 'error';
   message: string;
+  replaceLast?: boolean;
 };
 
 export type UpdateStep = {
@@ -230,12 +231,26 @@ function emitState(job: UpdateJobInternal): void {
   }
 }
 
-function emitLog(job: UpdateJobInternal, level: 'info' | 'error', message: string): boolean {
+type EmitLogOptions = {
+  replaceLast?: boolean;
+};
+
+function emitLog(
+  job: UpdateJobInternal,
+  level: 'info' | 'error',
+  message: string,
+  options: EmitLogOptions = {}
+): boolean {
   const sanitizedMessage = sanitizeLogMessage(message);
   if (sanitizedMessage.trim().length === 0) {
     return false;
   }
-  const entry: UpdateLogEntry = { at: nowIso(), level, message: sanitizedMessage };
+  const entry: UpdateLogEntry = {
+    at: nowIso(),
+    level,
+    message: sanitizedMessage,
+    replaceLast: options.replaceLast === true,
+  };
   job.logs.push(entry);
   const event: UpdateJobEvent = { type: 'log', jobId: job.id, entry };
   for (const send of job.subscribers) {
@@ -295,14 +310,52 @@ function createJob(options: UpdateJobOptions): UpdateJobInternal {
 
 async function readStreamLines(
   stream: ReadableStream<Uint8Array> | null,
-  onLine: (line: string) => void
+  onLine: (line: string, options?: { replaceLast?: boolean }) => void
 ): Promise<void> {
   if (!stream) {
     return;
   }
   const reader = stream.getReader();
   const decoder = new TextDecoder();
+  const partialFlushBytes = 512;
+  const partialFlushMs = 1200;
   let buffer = '';
+  let lastPartialFlushAt = Date.now();
+
+  const flushLine = (line: string, replaceLast = false): void => {
+    if (line.trim().length > 0) {
+      onLine(line, { replaceLast });
+    }
+  };
+
+  const flushDelimitedLines = (): void => {
+    while (buffer.length > 0) {
+      const newlineIndex = buffer.indexOf('\n');
+      const carriageIndex = buffer.indexOf('\r');
+
+      let delimiterIndex = -1;
+      if (newlineIndex >= 0 && carriageIndex >= 0) {
+        delimiterIndex = Math.min(newlineIndex, carriageIndex);
+      } else {
+        delimiterIndex = Math.max(newlineIndex, carriageIndex);
+      }
+
+      if (delimiterIndex < 0) {
+        return;
+      }
+
+      const delimiter = buffer[delimiterIndex] ?? '';
+      const line = buffer.slice(0, delimiterIndex);
+      const isCarriageReturn = delimiter === '\r';
+      const isCrLf = isCarriageReturn && buffer[delimiterIndex + 1] === '\n';
+      const replaceLast = isCarriageReturn && !isCrLf;
+      flushLine(line, replaceLast);
+
+      const consumeLength = isCrLf ? 2 : 1;
+      buffer = buffer.slice(delimiterIndex + consumeLength);
+      lastPartialFlushAt = Date.now();
+    }
+  };
 
   try {
     while (true) {
@@ -311,20 +364,23 @@ async function readStreamLines(
         break;
       }
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(/\r\n|\n|\r/);
-      buffer = lines.pop() ?? '';
-      for (const line of lines) {
-        if (line.trim().length > 0) {
-          onLine(line);
-        }
+      flushDelimitedLines();
+
+      const now = Date.now();
+      const pendingBytes = new TextEncoder().encode(buffer).length;
+      if (pendingBytes >= partialFlushBytes || now - lastPartialFlushAt >= partialFlushMs) {
+        flushLine(buffer, true);
+        buffer = '';
+        lastPartialFlushAt = now;
       }
     }
     const tail = decoder.decode();
     if (tail.length > 0) {
       buffer += tail;
+      flushDelimitedLines();
     }
     if (buffer.trim().length > 0) {
-      onLine(buffer);
+      flushLine(buffer, false);
     }
   } finally {
     reader.releaseLock();
@@ -415,14 +471,14 @@ async function runStepCommand(
   const startedAt = Date.now();
   let lastOutputAt = startedAt;
 
-  const onStdoutLine = (line: string): void => {
-    if (emitLog(job, 'info', `[${stepName}] ${line}`)) {
+  const onStdoutLine = (line: string, options?: { replaceLast?: boolean }): void => {
+    if (emitLog(job, 'info', `[${stepName}] ${line}`, options)) {
       lastOutputAt = Date.now();
     }
   };
 
-  const onStderrLine = (line: string): void => {
-    if (emitLog(job, 'error', `[${stepName}] ${line}`)) {
+  const onStderrLine = (line: string, options?: { replaceLast?: boolean }): void => {
+    if (emitLog(job, 'error', `[${stepName}] ${line}`, options)) {
       lastOutputAt = Date.now();
     }
   };
