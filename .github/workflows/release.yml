@@ -8,6 +8,7 @@ on:
 
 env:
   RELEASE_VERSION: ${{ github.ref_name }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
 
 permissions:
   contents: write
@@ -29,7 +30,7 @@ jobs:
         run: bun run build
 
       - name: Upload dist artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: frontend-dist
           path: dist
@@ -126,7 +127,7 @@ jobs:
           Compress-Archive -Path release-root\* -DestinationPath "out/browser-toolkit-${{ env.RELEASE_VERSION }}-${{ matrix.platform }}.zip"
 
       - name: Upload bundle artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: ${{ matrix.artifact_name }}
           path: out/*
