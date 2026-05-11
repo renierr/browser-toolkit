@@ -87,6 +87,8 @@ The `backend-info` tool can now check for updates and trigger an in-place update
 - Frontend build uses `dist_next` and then swaps folders to reduce broken serve windows during rebuild.
 - On successful web-triggered update, the backend exits and relies on **systemd auto-restart**.
 
+When running from a packaged release without a git working tree and build inputs, automatic update actions are marked unsupported. In this mode `backend-info` keeps system metrics but disables update controls and shows a manual update message.
+
 Important for service setup:
 
 - Ensure your systemd unit has automatic restart enabled (for example `Restart=always`).

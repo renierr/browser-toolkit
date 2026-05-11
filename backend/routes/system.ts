@@ -4,6 +4,7 @@ import { streamSSE } from 'hono/streaming';
 import { getSystemMetrics } from '../lib/system-metrics';
 import {
   checkForUpdates,
+  getUpdateCapabilities,
   getUpdateJob,
   startUpdateJob,
   subscribeToUpdateJob,
@@ -20,6 +21,7 @@ system.get('/health', (c) => {
 // System info endpoint
 system.get('/info', async (c) => {
   const metrics = await getSystemMetrics();
+  const update = await getUpdateCapabilities();
 
   return c.json({
     status: 'ok',
@@ -33,7 +35,8 @@ system.get('/info', async (c) => {
     runtimeUptime: process.uptime(),
     memory: metrics.memory,
     load: os.loadavg(),
-    disk: metrics.disk
+    disk: metrics.disk,
+    update,
   });
 });
 

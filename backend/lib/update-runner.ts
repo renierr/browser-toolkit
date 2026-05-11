@@ -12,6 +12,8 @@ export type UpdateJobStatus =
 
 export type UpdateCheckResult = {
   ok: boolean;
+  supported: boolean;
+  mode: 'git-source' | 'packaged';
   branch: string;
   localHash: string;
   remoteHash: string;
@@ -62,6 +64,16 @@ type UpdateJobOptions = {
   restartOnSuccess: boolean;
 };
 
+export type UpdateCapabilities = {
+  supported: boolean;
+  mode: 'git-source' | 'packaged';
+  reason?: string;
+  hasGit: boolean;
+  hasRepository: boolean;
+  hasOrigin: boolean;
+  hasBuildInputs: boolean;
+};
+
 type UpdateJobInternal = UpdateJobSnapshot & {
   subscribers: Set<(event: UpdateJobEvent) => void>;
 };
@@ -79,6 +91,54 @@ function appDirFromBackendDir(backendDir: string): string {
 
 function backendDirFromRuntime(): string {
   return process.cwd();
+}
+
+function hasBuildInputs(appDir: string): boolean {
+  return (
+    existsSync(resolve(appDir, 'src')) &&
+    existsSync(resolve(appDir, 'package.json')) &&
+    existsSync(resolve(appDir, 'backend', 'package.json'))
+  );
+}
+
+export async function getUpdateCapabilities(): Promise<UpdateCapabilities> {
+  const backendDir = backendDirFromRuntime();
+  const appDir = appDirFromBackendDir(backendDir);
+  const repositoryMarker = resolve(appDir, '.git');
+  const hasRepository = existsSync(repositoryMarker);
+  const buildInputs = hasBuildInputs(appDir);
+
+  const gitVersionResult = await runCommand(['git', '--version'], appDir);
+  const hasGit = gitVersionResult.success;
+
+  let hasOrigin = false;
+  if (hasGit && hasRepository) {
+    const originResult = await runCommand(['git', 'remote', 'get-url', 'origin'], appDir);
+    hasOrigin = originResult.success && originResult.stdout.length > 0;
+  }
+
+  const supported = hasGit && hasRepository && hasOrigin && buildInputs;
+  let reason: string | undefined;
+
+  if (!hasGit) {
+    reason = 'Git not available in runtime environment. Manual release update required.';
+  } else if (!hasRepository) {
+    reason = 'No git repository detected. Running packaged release without source checkout.';
+  } else if (!hasOrigin) {
+    reason = 'Git remote origin missing. Automatic update requires origin tracking.';
+  } else if (!buildInputs) {
+    reason = 'Build source files missing. Automatic rebuild not possible in packaged release.';
+  }
+
+  return {
+    supported,
+    mode: supported ? 'git-source' : 'packaged',
+    reason,
+    hasGit,
+    hasRepository,
+    hasOrigin,
+    hasBuildInputs: buildInputs,
+  };
 }
 
 function commandText(parts: string[]): string {
@@ -438,11 +498,29 @@ async function swapDistDirectories(appDir: string): Promise<void> {
 export async function checkForUpdates(): Promise<UpdateCheckResult> {
   const backendDir = backendDirFromRuntime();
   const appDir = appDirFromBackendDir(backendDir);
+  const capabilities = await getUpdateCapabilities();
+
+  if (!capabilities.supported) {
+    return {
+      ok: true,
+      supported: false,
+      mode: capabilities.mode,
+      branch: 'n/a',
+      localHash: '',
+      remoteHash: '',
+      behindCount: 0,
+      hasUpdates: false,
+      checkedAt: nowIso(),
+      message: capabilities.reason || 'Automatic update is unavailable in this deployment mode.',
+    };
+  }
 
   const branchResult = await runCommand(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], appDir);
   if (!branchResult.success || branchResult.stdout.length === 0) {
     return {
       ok: false,
+      supported: true,
+      mode: 'git-source',
       branch: 'unknown',
       localHash: '',
       remoteHash: '',
@@ -458,6 +536,8 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
   if (!fetchResult.success) {
     return {
       ok: false,
+      supported: true,
+      mode: 'git-source',
       branch,
       localHash: '',
       remoteHash: '',
@@ -477,6 +557,8 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
   if (!localHashResult.success || !remoteHashResult.success || !behindResult.success) {
     return {
       ok: false,
+      supported: true,
+      mode: 'git-source',
       branch,
       localHash: localHashResult.stdout,
       remoteHash: remoteHashResult.stdout,
@@ -494,6 +576,8 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
   const behindCount = Number.parseInt(behindResult.stdout, 10) || 0;
   return {
     ok: true,
+    supported: true,
+    mode: 'git-source',
     branch,
     localHash: localHashResult.stdout,
     remoteHash: remoteHashResult.stdout,
@@ -579,6 +663,29 @@ export function startUpdateJob(options: UpdateJobOptions): {
   job: UpdateJobSnapshot;
   message: string;
 } {
+  const backendDir = backendDirFromRuntime();
+  const appDir = appDirFromBackendDir(backendDir);
+  if (!existsSync(resolve(appDir, '.git')) || !hasBuildInputs(appDir)) {
+    return {
+      started: false,
+      jobId: '',
+      job: {
+        id: '',
+        status: 'failed',
+        source: options.source,
+        force: options.force,
+        restartOnSuccess: options.restartOnSuccess,
+        createdAt: nowIso(),
+        appDir,
+        backendDir,
+        steps: [],
+        logs: [],
+        error: 'Automatic update unavailable in packaged release mode.',
+      },
+      message: 'Automatic update unavailable in packaged release mode. Install new release manually.',
+    };
+  }
+
   if (runningJobId) {
     const existing = jobs.get(runningJobId);
     if (existing) {

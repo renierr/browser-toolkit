@@ -38,6 +38,22 @@ export function createRenderer(dom: BackendInfoDom) {
     dom.forceToggle.disabled = busy;
   };
 
+  const setUpdateSupported = (supported: boolean, reason?: string): void => {
+    dom.checkUpdateBtn.disabled = !supported;
+    dom.runUpdateBtn.disabled = !supported;
+    dom.forceToggle.disabled = !supported;
+    if (!supported) {
+      dom.updateStateEl.textContent = 'unsupported';
+      dom.updateControlWrapEl.classList.add('opacity-60');
+      setText(dom.container, 'upd-branch', 'n/a');
+      setText(dom.container, 'upd-local', '-');
+      setText(dom.container, 'upd-remote', '-');
+      setUpdateSummary(reason || 'Automatic update unavailable in packaged release mode.');
+      return;
+    }
+    dom.updateControlWrapEl.classList.remove('opacity-60');
+  };
+
   const appendUpdateLog = (line: string): void => {
     const entry = document.createElement('pre');
     const code = document.createElement('code');
@@ -125,9 +141,18 @@ export function createRenderer(dom: BackendInfoDom) {
     if (data.load) {
       setText(dom.container, 'val-load', data.load.map((l) => l.toFixed(2)).join(' / '));
     }
+
+    if (data.update) {
+      setUpdateSupported(data.update.supported, data.update.reason);
+    }
   };
 
   const renderUpdateCheck = (result: UpdateCheckResult): void => {
+    if (!result.supported) {
+      setUpdateSupported(false, result.message);
+      return;
+    }
+
     setText(dom.container, 'upd-branch', result.branch || '-');
     setText(dom.container, 'upd-local', shortHash(result.localHash));
     setText(dom.container, 'upd-remote', shortHash(result.remoteHash));
@@ -200,6 +225,7 @@ export function createRenderer(dom: BackendInfoDom) {
     renderJobState,
     setUpdateSummary,
     setUpdateBusy,
+    setUpdateSupported,
     appendUpdateLog,
     clearUpdateLogs,
     recordRenderedLog,

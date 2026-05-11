@@ -10,6 +10,7 @@ export type BackendInfoDom = {
   updateStateEl: HTMLElement;
   updateMessageEl: HTMLElement;
   updateLogsEl: HTMLElement;
+  updateControlWrapEl: HTMLElement;
 };
 
 function requiredElement<T extends Element>(container: HTMLElement, selector: string): T {
@@ -38,5 +39,6 @@ export function getBackendInfoDom(rootId: string): BackendInfoDom | null {
     updateStateEl: requiredElement<HTMLElement>(container, '#upd-state'),
     updateMessageEl: requiredElement<HTMLElement>(container, '#upd-message'),
     updateLogsEl: requiredElement<HTMLElement>(container, '#upd-logs'),
+    updateControlWrapEl: requiredElement<HTMLElement>(container, '#upd-controls'),
   };
 }

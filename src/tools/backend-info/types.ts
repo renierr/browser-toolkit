@@ -23,10 +23,21 @@ export type BackendInfoResponse = {
     source?: 'statfs';
   } | null;
   load?: number[];
+  update?: {
+    supported: boolean;
+    mode: 'git-source' | 'packaged';
+    reason?: string;
+    hasGit: boolean;
+    hasRepository: boolean;
+    hasOrigin: boolean;
+    hasBuildInputs: boolean;
+  };
 };
 
 export type UpdateCheckResult = {
   ok: boolean;
+  supported: boolean;
+  mode: 'git-source' | 'packaged';
   branch: string;
   localHash: string;
   remoteHash: string;

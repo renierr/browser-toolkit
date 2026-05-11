@@ -185,6 +185,7 @@ When running in backend mode, `backend-info` can check for updates and trigger a
 - Flow: fetch/compare, pull, `bun install` (root), frontend build, `bun install --cwd backend`.
 - Frontend build is staged to `dist_next` and swapped into `dist` to reduce broken serve windows.
 - On successful web-triggered run, backend exits and expects **systemd auto-restart** (`Restart=always`).
+- In packaged releases (no git source checkout), update automation is disabled and `backend-info` shows manual-update guidance.
 
 Server CLI usage from `backend/`:
 
