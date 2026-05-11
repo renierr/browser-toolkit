@@ -207,7 +207,7 @@ async function readStreamLines(
         break;
       }
       buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split(/\r?\n/);
+      const lines = buffer.split(/\r\n|\n|\r/);
       buffer = lines.pop() ?? '';
       for (const line of lines) {
         if (line.trim().length > 0) {
@@ -227,11 +227,50 @@ async function readStreamLines(
   }
 }
 
+type RunStepOptions = {
+  timeoutMs?: number;
+};
+
+function formatTimeout(timeoutMs: number): string {
+  if (timeoutMs < 1000) {
+    return `${timeoutMs}ms`;
+  }
+  const sec = Math.round(timeoutMs / 1000);
+  return `${sec}s`;
+}
+
+async function waitForProcessExit(
+  proc: Bun.Subprocess<'ignore', 'pipe', 'pipe'>,
+  stepName: string,
+  timeoutMs?: number
+): Promise<number> {
+  if (!timeoutMs || timeoutMs <= 0) {
+    return proc.exited;
+  }
+
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  try {
+    return await Promise.race<number>([
+      proc.exited,
+      new Promise<number>((_resolve, reject) => {
+        timeoutId = setTimeout(() => {
+          reject(new Error(`[${stepName}] command timed out after ${formatTimeout(timeoutMs)}`));
+        }, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+}
+
 async function runStepCommand(
   job: UpdateJobInternal,
   stepName: string,
   command: string[],
-  cwd: string
+  cwd: string,
+  options: RunStepOptions = {}
 ): Promise<void> {
   setStepStatus(job, stepName, 'running');
   emitLog(job, 'info', `[${stepName}] $ ${commandText(command)} (cwd: ${cwd})`);
@@ -243,12 +282,39 @@ async function runStepCommand(
     env: process.env,
   });
 
-  await Promise.all([
-    readStreamLines(proc.stdout, (line) => emitLog(job, 'info', `[${stepName}] ${line}`)),
-    readStreamLines(proc.stderr, (line) => emitLog(job, 'error', `[${stepName}] ${line}`)),
-  ]);
+  const stdoutReader = readStreamLines(proc.stdout, (line) => emitLog(job, 'info', `[${stepName}] ${line}`));
+  const stderrReader = readStreamLines(proc.stderr, (line) => emitLog(job, 'error', `[${stepName}] ${line}`));
 
-  const exitCode = await proc.exited;
+  let exitCode: number;
+  try {
+    exitCode = await waitForProcessExit(proc, stepName, options.timeoutMs);
+  } catch (error) {
+    const timeoutMessage = error instanceof Error ? error.message : String(error);
+    emitLog(job, 'error', timeoutMessage);
+    try {
+      proc.kill('SIGTERM');
+    } catch {
+      // no-op
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (proc.exitCode === null) {
+      try {
+        proc.kill('SIGKILL');
+      } catch {
+        // no-op
+      }
+    }
+    const forcedExitCode = await Promise.race<number>([
+      proc.exited,
+      new Promise<number>((resolve) => setTimeout(() => resolve(-1), 2000)),
+    ]);
+    setStepStatus(job, stepName, 'failed', forcedExitCode);
+    throw error;
+  } finally {
+    await Promise.allSettled([proc.stdout?.cancel(), proc.stderr?.cancel()]);
+    await Promise.allSettled([stdoutReader, stderrReader]);
+  }
+
   if (exitCode !== 0) {
     setStepStatus(job, stepName, 'failed', exitCode);
     throw new Error(`[${stepName}] command failed with exit code ${exitCode}`);
@@ -378,7 +444,8 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
       job,
       'build-frontend',
       ['bun', 'x', 'vite', 'build', '--outDir', 'dist_next'],
-      job.appDir
+      job.appDir,
+      { timeoutMs: 10 * 60 * 1000 }
     );
     emitLog(job, 'info', '[build-frontend] Swapping dist directories');
     await swapDistDirectories(job.appDir);
