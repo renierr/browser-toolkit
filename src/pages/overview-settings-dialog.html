@@ -1,0 +1,83 @@
+<dialog id="overview-settings-dialog" class="modal">
+  <div class="modal-box w-full max-w-xl">
+    <form method="dialog">
+      <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2" aria-label="Close">
+        x
+      </button>
+    </form>
+
+    <h3 class="font-bold text-lg mb-2">View Settings</h3>
+
+    <div id="overview-settings" class="space-y-3">
+      <div class="form-control">
+        <label class="label cursor-pointer justify-start gap-3">
+          <input type="checkbox" class="toggle toggle-sm toggle-primary" data-setting="compactMode" />
+          <span class="label-text">Compact Mode</span>
+        </label>
+      </div>
+
+      <div class="form-control">
+        <label class="label cursor-pointer justify-start gap-3 mb-2">
+          <input type="checkbox" class="toggle toggle-sm toggle-primary" data-setting="flatList" />
+          <span class="label-text">Flat list (paginate)</span>
+        </label>
+
+        <label class="label mt-2">
+          <span class="label-text">Page size</span>
+        </label>
+        <select class="select select-sm w-full" data-setting="pageSize" aria-label="Page size">
+          <option value="3">3</option>
+          <option value="6">6</option>
+          <option value="9">9</option>
+          <option value="12">12</option>
+          <option value="24">24</option>
+          <option value="48">48</option>
+          <option value="all">All</option>
+        </select>
+
+        <label class="label mt-3">
+          <span class="label-text">Sort by</span>
+        </label>
+        <select class="select select-sm w-full mb-2" data-setting="sortBy" aria-label="Sort tools">
+          <option value="order">Order (default)</option>
+          <option value="name">Name</option>
+          <option value="recent">Recently used</option>
+        </select>
+
+        <div class="divider my-2"></div>
+        <label class="label pb-1">
+          <span class="label-text">PWA Theme Color</span>
+        </label>
+        <div class="flex gap-2 items-center mb-2">
+          <input
+            type="color"
+            class="input input-sm p-0 h-8 w-12 cursor-pointer"
+            data-setting="themeColor"
+            title="Set browser top bar color"
+          />
+          <span class="text-xs text-base-content/60">Persistent for PWA</span>
+        </div>
+
+        <div class="divider my-2"></div>
+        <button id="clear-default-tools-btn" class="btn btn-sm btn-outline w-full" type="button">
+          Clear default tools
+        </button>
+        <p class="mt-1 text-xs text-base-content/60">
+          Removes all "Remember my choice" settings for file types.
+        </p>
+
+        <div class="divider my-2"></div>
+        <button id="refresh-cached-files-btn" class="btn btn-sm btn-outline w-full" type="button">
+          Force refresh PWA
+        </button>
+        <p class="mt-1 text-xs text-base-content/60">
+          Clears all cached files including the application shell. Keeps localStorage and IndexedDB.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>

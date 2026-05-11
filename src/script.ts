@@ -1,5 +1,6 @@
 import overviewHtml from './pages/overview.html?raw';
-import { fuzzyScore, html, isDev, checkBackend } from './js/utils.ts';
+import overviewSettingsDialogHtml from './pages/overview-settings-dialog.html?raw';
+import { fuzzyScore, html, isDev, checkBackend, replacePlaceholders } from './js/utils.ts';
 import type { Tool, ToolModule } from './js/types';
 import { siteContext } from './config';
 import { renderLayout, renderTool, renderToolCard } from './js/render.ts';
@@ -143,12 +144,24 @@ function getSectionMeta(sectionId: string | undefined) {
 }
 
 function renderOverview() {
-  renderLayout(overviewHtml, false, false);
+  const resolvedOverviewHtml = replacePlaceholders(overviewHtml, siteContext, {
+    'overview-settings-dialog.html': overviewSettingsDialogHtml,
+  });
+
+  renderLayout(resolvedOverviewHtml, false, false);
 
   const grid = document.getElementById('tools-grid')!;
   const searchInput = document.getElementById('search') as HTMLInputElement;
   const clearBtn = document.getElementById('clear-search') as HTMLButtonElement | null;
   const settings = getSettings('overview');
+  const settingsDialog = document.getElementById('overview-settings-dialog') as HTMLDialogElement | null;
+  const settingsOpenBtn = document.getElementById('overview-settings-open') as HTMLButtonElement | null;
+
+  if (settingsDialog && settingsOpenBtn) {
+    settingsOpenBtn.addEventListener('click', () => {
+      if (!settingsDialog.open) settingsDialog.showModal();
+    });
+  }
 
   // Bind settings (compact mode toggle)
   const settingsContainer = document.getElementById('overview-settings');
