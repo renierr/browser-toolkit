@@ -28,6 +28,7 @@ export default function init(): void | (() => void) {
   const connectUpdateStream = async (jobId: string): Promise<void> => {
     stopUpdateStream();
     updateStreamController = new AbortController();
+    let reachedTerminalState = false;
 
     try {
       const response = await fetchApi(`/update/stream/${jobId}`, {
@@ -50,14 +51,14 @@ export default function init(): void | (() => void) {
         }
         buffer += decoder.decode(value, { stream: true });
 
-        const chunks = buffer.split('\n\n');
+        const chunks = buffer.split(/\r?\n\r?\n/);
         buffer = chunks.pop() ?? '';
 
         for (const chunk of chunks) {
-          const lines = chunk.split('\n');
+          const lines = chunk.split(/\r?\n/);
           const dataLines = lines
             .filter((line) => line.startsWith('data:'))
-            .map((line) => line.slice(5).trim());
+            .map((line) => line.slice(5).trimStart());
           if (dataLines.length === 0) {
             continue;
           }
@@ -77,6 +78,7 @@ export default function init(): void | (() => void) {
                 event.job.status === 'no_changes' ||
                 event.job.status === 'pending_restart'
               ) {
+                reachedTerminalState = true;
                 return;
               }
             }
@@ -85,11 +87,21 @@ export default function init(): void | (() => void) {
           }
         }
       }
+
+      if (!reachedTerminalState) {
+        const latestJob = await fetchJson<UpdateJobSnapshot>(`/update/job/${jobId}`);
+        renderer.renderJobState(latestJob, notify);
+      }
     } catch (error) {
       if ((error as Error).name !== 'AbortError') {
         console.error('[BackendInfo] Update SSE failed:', error);
-        renderer.setUpdateSummary('Lost connection to update stream.');
-        renderer.setUpdateBusy(false);
+        try {
+          const latestJob = await fetchJson<UpdateJobSnapshot>(`/update/job/${jobId}`);
+          renderer.renderJobState(latestJob, notify);
+        } catch {
+          renderer.setUpdateSummary('Lost connection to update stream.');
+          renderer.setUpdateBusy(false);
+        }
       }
     }
   };
