@@ -79,6 +79,8 @@ export default function init(): void | (() => void) {
   const updateLogsEl = container.querySelector('#upd-logs') as HTMLElement;
 
   let updateStreamController: AbortController | null = null;
+  let renderedLogCount = 0;
+  let notifiedTerminalStatus: UpdateJobSnapshot['status'] | null = null;
 
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -164,6 +166,19 @@ export default function init(): void | (() => void) {
   const clearUpdateLogs = () => {
     if (!updateLogsEl) return;
     updateLogsEl.innerHTML = '';
+    renderedLogCount = 0;
+    notifiedTerminalStatus = null;
+  };
+
+  const renderMissingJobLogs = (job: UpdateJobSnapshot) => {
+    if (job.logs.length <= renderedLogCount) {
+      return;
+    }
+    const missing = job.logs.slice(renderedLogCount);
+    for (const entry of missing) {
+      appendUpdateLog(entry.message);
+    }
+    renderedLogCount = job.logs.length;
   };
 
   const shortHash = (hash: string | undefined) => {
@@ -198,6 +213,8 @@ export default function init(): void | (() => void) {
   };
 
   const renderJobState = (job: UpdateJobSnapshot) => {
+    renderMissingJobLogs(job);
+
     if (updateStateEl) {
       updateStateEl.textContent = job.status;
     }
@@ -207,13 +224,36 @@ export default function init(): void | (() => void) {
     if (job.status === 'failed') {
       setUpdateSummary(job.error || 'Update failed.');
       setUpdateBusy(false);
+      if (notifiedTerminalStatus !== 'failed') {
+        showMessage(job.error || 'Update failed.', { type: 'alert', timeoutMs: 4000 });
+      }
     }
     if (job.status === 'completed' || job.status === 'no_changes') {
       setUpdateBusy(false);
+      if (job.status === 'no_changes') {
+        setUpdateSummary('No changes detected. Build skipped.');
+      }
+      if (notifiedTerminalStatus !== job.status) {
+        const doneMessage =
+          job.status === 'no_changes'
+            ? 'No changes detected. Server already up to date.'
+            : 'Update completed successfully.';
+        showMessage(doneMessage, { type: 'info', timeoutMs: 4000 });
+      }
     }
     if (job.status === 'pending_restart') {
       setUpdateSummary('Update complete. Server will restart via systemd.');
       setUpdateBusy(true);
+      if (notifiedTerminalStatus !== 'pending_restart') {
+        showMessage('Update complete. Restarting service via systemd.', {
+          type: 'info',
+          timeoutMs: 4000,
+        });
+      }
+    }
+
+    if (job.status === 'failed' || job.status === 'completed' || job.status === 'no_changes' || job.status === 'pending_restart') {
+      notifiedTerminalStatus = job.status;
     }
   };
 
@@ -256,6 +296,7 @@ export default function init(): void | (() => void) {
             const event = JSON.parse(dataText) as UpdateEvent;
             if (event.type === 'log') {
               appendUpdateLog(event.entry.message);
+              renderedLogCount += 1;
             }
             if (event.type === 'state') {
               renderJobState(event.job);
