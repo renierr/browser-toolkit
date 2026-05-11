@@ -2,7 +2,12 @@ import { fetchApi, fetchJson } from '../../js/api';
 import { showMessage } from '../../js/ui';
 import { getBackendInfoDom } from './dom';
 import { createRenderer } from './render';
-import type { BackendInfoResponse, UpdateCheckResult, UpdateEvent, UpdateJobSnapshot } from './types';
+import type {
+  BackendInfoResponse,
+  UpdateCheckResult,
+  UpdateEvent,
+  UpdateJobSnapshot,
+} from './types';
 
 export default function init(): void | (() => void) {
   const dom = getBackendInfoDom('backend-info-tool');

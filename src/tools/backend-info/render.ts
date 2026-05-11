@@ -71,7 +71,11 @@ export function createRenderer(dom: BackendInfoDom) {
   const renderInfo = (data: BackendInfoResponse): void => {
     setText(dom.container, 'val-status', data.status ? data.status.toUpperCase() : 'UNKNOWN');
     setText(dom.container, 'val-hostname', data.hostname || 'unknown-host');
-    setText(dom.container, 'val-uptime', data.uptime !== undefined ? formatUptime(data.uptime) : '-');
+    setText(
+      dom.container,
+      'val-uptime',
+      data.uptime !== undefined ? formatUptime(data.uptime) : '-'
+    );
     setText(
       dom.container,
       'val-runtime-uptime',

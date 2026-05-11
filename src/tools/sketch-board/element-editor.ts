@@ -673,8 +673,7 @@ export class ElementEditor {
     let newY = bounds.y;
     let newW = bounds.w;
     let newH = bounds.h;
-    const isCornerHandle =
-      handle === 'nw' || handle === 'ne' || handle === 'se' || handle === 'sw';
+    const isCornerHandle = handle === 'nw' || handle === 'ne' || handle === 'se' || handle === 'sw';
 
     if (handle === 'nw' || handle === 'w' || handle === 'sw') {
       newX = localPoint.x;

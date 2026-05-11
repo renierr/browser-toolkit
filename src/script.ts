@@ -154,8 +154,12 @@ function renderOverview() {
   const searchInput = document.getElementById('search') as HTMLInputElement;
   const clearBtn = document.getElementById('clear-search') as HTMLButtonElement | null;
   const settings = getSettings('overview');
-  const settingsDialog = document.getElementById('overview-settings-dialog') as HTMLDialogElement | null;
-  const settingsOpenBtn = document.getElementById('overview-settings-open') as HTMLButtonElement | null;
+  const settingsDialog = document.getElementById(
+    'overview-settings-dialog'
+  ) as HTMLDialogElement | null;
+  const settingsOpenBtn = document.getElementById(
+    'overview-settings-open'
+  ) as HTMLButtonElement | null;
 
   if (settingsDialog && settingsOpenBtn) {
     settingsOpenBtn.addEventListener('click', () => {
