@@ -1,0 +1,149 @@
+name: Build and Release Bundles
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build frontend
+        run: bun run build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: dist
+
+  build-bundles:
+    needs: build-frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            platform: linux-x64
+            archive: tar.gz
+            binary_name: browser-toolkit
+            artifact_name: bundle-linux-x64
+          - os: macos-latest
+            platform: macos-arm64
+            archive: tar.gz
+            binary_name: browser-toolkit
+            artifact_name: bundle-macos-arm64
+          - os: windows-latest
+            platform: windows-x64
+            archive: zip
+            binary_name: browser-toolkit.exe
+            artifact_name: bundle-windows-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Download dist artifact
+        uses: actions/download-artifact@v5
+        with:
+          name: frontend-dist
+          path: release-root/dist
+
+      - name: Compile backend executable
+        shell: bash
+        run: |
+          mkdir -p release-root/backend
+          bun build --compile ./backend/server.ts --outfile "./release-root/backend/${{ matrix.binary_name }}"
+
+      - name: Add unix launcher
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          cat > release-root/start.sh <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          HERE="$(cd "$(dirname "$0")" && pwd)"
+          PORT="${PORT:-3000}"
+          export PORT
+          exec "$HERE/backend/browser-toolkit"
+          EOF
+          chmod +x release-root/start.sh
+
+      - name: Add windows launcher
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          @'
+          @echo off
+          set PORT=%PORT%
+          if "%PORT%"=="" set PORT=3000
+          set SCRIPT_DIR=%~dp0
+          "%SCRIPT_DIR%backend\browser-toolkit.exe"
+          '@ | Set-Content -Path release-root/start.bat
+
+      - name: Create tar.gz bundle
+        if: matrix.archive == 'tar.gz'
+        shell: bash
+        run: |
+          mkdir -p out
+          tar -C release-root -czf "out/browser-toolkit-${{ matrix.platform }}.tar.gz" .
+
+      - name: Create zip bundle
+        if: matrix.archive == 'zip'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out | Out-Null
+          Compress-Archive -Path release-root\* -DestinationPath "out/browser-toolkit-${{ matrix.platform }}.zip"
+
+      - name: Upload bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: out/*
+
+  release:
+    needs: build-bundles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all bundle artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: release-artifacts
+          pattern: bundle-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        shell: bash
+        run: |
+          cd release-artifacts
+          sha256sum browser-toolkit-* > checksums.txt
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release-artifacts/browser-toolkit-*.tar.gz
+            release-artifacts/browser-toolkit-*.zip
+            release-artifacts/checksums.txt

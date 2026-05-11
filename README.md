@@ -118,6 +118,25 @@ bash "$HOME/browser-toolkit/setup.sh" install-service --dir "$HOME/browser-toolk
 
 `update` does: `git pull --ff-only`, `bun install` (root + backend), rebuild frontend, and restart managed service on Linux/macOS when installed.
 
+### Prebuilt release install (no Bun, no build)
+
+For end users, use GitHub Release bundles built by CI. These include backend executable + frontend `dist/`.
+
+1. Open the latest release: `https://github.com/renierr/browser-toolkit/releases/latest`
+2. Download matching OS archive:
+   - `browser-toolkit-linux-x64.tar.gz`
+   - `browser-toolkit-macos-arm64.tar.gz`
+   - `browser-toolkit-windows-x64.zip`
+3. Extract and run launcher:
+   - Linux/macOS: `./start.sh`
+   - Windows: `start.bat`
+
+Optional:
+
+- Set port with `PORT=3000` before launch.
+- Set `STATIC_ROOT` if you want custom static assets directory.
+- Set `DEBUG_STATIC_ROOT=1` to print static root lookup paths at startup.
+
 ### 1. Static/Offline Mode (Default)
 
 If you only want the offline-capable browser tools:
