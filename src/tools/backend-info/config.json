@@ -2,7 +2,7 @@
   "name": "Backend Info",
   "description": "Displays system information from the connected backend server",
   "icon": "server",
-  "sectionId": "utilities",
+  "sectionId": "backend",
   "order": 100,
   "draft": false,
   "example": false,

@@ -3,6 +3,6 @@
   "name": "LAN Explorer",
   "description": "Discover devices and services on your local network.",
   "icon": "network",
-  "category": "Network",
+  "sectionId": "backend",
   "requiresBackend": true
 }

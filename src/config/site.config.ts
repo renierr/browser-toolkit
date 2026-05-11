@@ -33,5 +33,9 @@ export const siteConfig = {
       title: 'Devices',
       description: 'Tools accessing or using devices.',
     },
+    backend: {
+      title: 'Backend Server',
+      description: 'Tools that relies on backend server like Network, Files, etc.',
+    },
   },
 } satisfies SiteConfig;
