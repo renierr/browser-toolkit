@@ -11,7 +11,10 @@ import {
   type UpdateJobEvent,
 } from '../lib/update-runner';
 
+declare const __APP_VERSION__: string | undefined;
+
 const system = new Hono();
+const appVersion = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : 'dev';
 
 // Health check endpoint
 system.get('/health', (c) => {
@@ -26,6 +29,7 @@ system.get('/info', async (c) => {
   return c.json({
     status: 'ok',
     time: new Date().toISOString(),
+    appVersion,
     runtime: 'Bun',
     version: Bun.version,
     os: process.platform,

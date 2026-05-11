@@ -83,22 +83,24 @@ jobs:
         working-directory: backend
         shell: bash
         run: |
-          mkdir -p ../release-root/backend
-          bun build --compile ./server.ts --outfile "../release-root/backend/${{ matrix.binary_name }}"
+          bun build --compile ./server.ts \
+            --define __APP_VERSION__='"${{ env.RELEASE_VERSION }}"' \
+            --outfile "../release-root/${{ matrix.binary_name }}"
 
       - name: Add unix launcher
         if: runner.os != 'Windows'
         shell: bash
         run: |
-          cat > release-root/start.sh <<'EOF'
+          cat > release-root/run.sh <<'EOF'
           #!/usr/bin/env bash
           set -euo pipefail
           HERE="$(cd "$(dirname "$0")" && pwd)"
           PORT="${PORT:-3000}"
           export PORT
-          exec "$HERE/backend/browser-toolkit"
+          exec "$HERE/browser-toolkit"
           EOF
-          chmod +x release-root/start.sh
+          chmod +x release-root/browser-toolkit
+          chmod +x release-root/run.sh
 
       - name: Add windows launcher
         if: runner.os == 'Windows'
@@ -109,8 +111,8 @@ jobs:
           set PORT=%PORT%
           if "%PORT%"=="" set PORT=3000
           set SCRIPT_DIR=%~dp0
-          "%SCRIPT_DIR%backend\browser-toolkit.exe"
-          '@ | Set-Content -Path release-root/start.bat
+          "%SCRIPT_DIR%browser-toolkit.exe"
+          '@ | Set-Content -Path release-root/run.bat
 
       - name: Create tar.gz bundle
         if: matrix.archive == 'tar.gz'

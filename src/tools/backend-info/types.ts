@@ -1,5 +1,6 @@
 export type BackendInfoResponse = {
   status?: string;
+  appVersion?: string;
   hostname?: string;
   uptime?: number;
   runtimeUptime?: number;

@@ -128,8 +128,8 @@ For end users, use GitHub Release bundles built by CI. These include backend exe
    - `browser-toolkit-macos-arm64.tar.gz`
    - `browser-toolkit-windows-x64.zip`
 3. Extract and run launcher:
-   - Linux/macOS: `./start.sh`
-   - Windows: `start.bat`
+   - Linux/macOS: `./run.sh` (or `./browser-toolkit`)
+   - Windows: `run.bat` (or `browser-toolkit.exe`)
 
 Optional:
 
