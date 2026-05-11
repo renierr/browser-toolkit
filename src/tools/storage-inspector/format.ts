@@ -1,3 +1,5 @@
+import { formatBytes as sharedFormatBytes } from '../../js/format';
+
 export function roughBytes(value: string): number {
   return value.length * 2;
 }
@@ -12,17 +14,7 @@ export function truncate(value: string, maxLength: number): string {
 }
 
 export function formatBytes(bytes: number): string {
-  if (bytes <= 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  let value = bytes;
-  let unitIndex = 0;
-
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex++;
-  }
-
-  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${units[unitIndex]}`;
+  return sharedFormatBytes(bytes);
 }
 
 export function escapeHtml(value: string): string {
