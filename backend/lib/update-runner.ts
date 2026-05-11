@@ -230,10 +230,10 @@ function emitState(job: UpdateJobInternal): void {
   }
 }
 
-function emitLog(job: UpdateJobInternal, level: 'info' | 'error', message: string): void {
+function emitLog(job: UpdateJobInternal, level: 'info' | 'error', message: string): boolean {
   const sanitizedMessage = sanitizeLogMessage(message);
   if (sanitizedMessage.trim().length === 0) {
-    return;
+    return false;
   }
   const entry: UpdateLogEntry = { at: nowIso(), level, message: sanitizedMessage };
   job.logs.push(entry);
@@ -241,6 +241,7 @@ function emitLog(job: UpdateJobInternal, level: 'info' | 'error', message: strin
   for (const send of job.subscribers) {
     send(event);
   }
+  return true;
 }
 
 function setStepStatus(
@@ -415,13 +416,15 @@ async function runStepCommand(
   let lastOutputAt = startedAt;
 
   const onStdoutLine = (line: string): void => {
-    lastOutputAt = Date.now();
-    emitLog(job, 'info', `[${stepName}] ${line}`);
+    if (emitLog(job, 'info', `[${stepName}] ${line}`)) {
+      lastOutputAt = Date.now();
+    }
   };
 
   const onStderrLine = (line: string): void => {
-    lastOutputAt = Date.now();
-    emitLog(job, 'error', `[${stepName}] ${line}`);
+    if (emitLog(job, 'error', `[${stepName}] ${line}`)) {
+      lastOutputAt = Date.now();
+    }
   };
 
   const stdoutReader = readStreamLines(proc.stdout, onStdoutLine);
