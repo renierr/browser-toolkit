@@ -24,7 +24,7 @@ Read order:
 
 ## Optional Backend Architecture
 
-While the project is offline-first, it supports an **optional Bun backend** using Hono.
+While the project is offline-first, it supports an **optional backend** using Bun + Hono.
 This is meant for tools that strictly require a server (e.g. database interactions, heavy native computations).
 
 1. **The `requiresBackend` flag:** 
@@ -34,30 +34,44 @@ This is meant for tools that strictly require a server (e.g. database interactio
    - If the backend is NOT detected (e.g., when hosted on GitHub Pages), any tool with `"requiresBackend": true` is **silently hidden** from the UI.
    - If the backend IS detected, the tools are shown and can safely fetch from `/api/*`.
 3. **Backend Scaffolding:**
-   The backend code lives in the `/backend` directory. It uses Bun, Hono, and `bun:sqlite`. The backend serves both API routes and the statically built frontend from `dist/`.
+   The backend code lives in the `/backend` directory and uses Bun + Hono. Current structure:
+   - `backend/server.ts`: Bun.serve bootstrap.
+   - `backend/app.ts`: Hono app creation + route mounting.
+   - `backend/routes/*.ts`: route modules.
+   - `backend/lib/*.ts`: shared backend logic.
+   The backend serves both API routes and the statically built frontend from `dist/`.
 4. **Local Development with Backend:**
-   In development, you must start BOTH the frontend and the backend. The Vite dev server (`pnpm run dev`) automatically proxies `/api` requests to the Bun server on port 3000.
-   - Frontend: `pnpm run dev`
+   In development, you must start BOTH the frontend and the backend. The Vite dev server (`bun run dev`) automatically proxies `/api` requests to the Bun server on port 3000.
+   - Frontend: `bun run dev`
    - Backend: `cd backend && bun run dev`
+
+## Backend Best Practices
+
+- Keep route handlers thin; move reusable logic to `backend/lib/*`.
+- Register routes centrally in `backend/app.ts` with clear path prefixes.
+- Validate inputs and return consistent JSON error payloads.
+- Use contextual logging (route or feature tag), no silent catch blocks.
+- Keep Bun/Node APIs inside backend code; frontend remains browser-safe.
 
 ## Preferred Validation and Formatting
 
 ```bash
-pnpm tsc
-pnpm exec prettier --write <touched-file-1> <touched-file-2>
+bun x tsc
+bun x tsc -p backend/tsconfig.json
+bun x prettier --write <touched-file-1> <touched-file-2>
 ```
 
 Only use these when needed:
 
 ```bash
-pnpm build
-pnpm preview
+bun run build
+bun run preview
 ```
 
 Avoid global formatting unless explicitly requested:
 
 ```bash
-pnpm format
+bun x prettier --write <touched-file-1> <touched-file-2>
 ```
 
 ## Tool Lifecycle Model
@@ -330,4 +344,3 @@ Use existing helpers in `src/js/*` before writing new ones.
 - Full tool inventory: `TOOLS.md`
 - Full docs: `docs/index.md`
 - Core rules: `AGENTS.md`
-

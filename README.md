@@ -48,7 +48,7 @@ This toolkit can be run in two modes: **Static/Offline Mode** (default) or **Bac
 
 ### Prerequisites
 
-Make sure you have [Bun](https://bun.sh/) (preferred) or [Node.js](https://nodejs.org/) installed.
+Make sure you have [Bun](https://bun.sh/) installed.
 
 ### Installation
 

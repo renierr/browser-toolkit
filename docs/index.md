@@ -10,7 +10,7 @@ Vite + TypeScript + Tailwind – **no React, no framework**
 - [Commands](#commands)
 - [Features](#features)
 - [Create a new tool (30 seconds)](#create-a-new-tool-30-seconds)
-- [Tool-specific dependencies (`pnpm-workspace.yaml`)](#tool-specific-dependencies-pnpm-workspaceyaml)
+- [Tool-specific dependencies (Bun workspaces)](#tool-specific-dependencies-bun-workspaces)
 - [Share Target for Tools (PWA)](#share-target-for-tools-pwa)
 - [Ordering & Section grouping (Overview page)](#ordering--section-grouping-overview-page)
 - [Tool Icons (Lucide)](#tool-icons-lucide)
@@ -28,21 +28,21 @@ Vite + TypeScript + Tailwind – **no React, no framework**
 
 ```bash
 # Development
-pnpm dev              # Start Vite dev server
-pnpm preview         # Preview production build on port 5000
+bun run dev          # Start Vite dev server
+bun run preview      # Preview production build on port 5000
 
 # Build & Type Check
-pnpm build            # Production build (Vite build)
-pnpm tsc             # Type check only (tsc --noEmit)
+bun run build        # Production build (Vite build)
+bun x tsc            # Type check only (tsc --noEmit)
 
 # Formatting
-pnpm format          # Format all source files with Prettier (avoid by default for focused edits)
-pnpm format:check    # Check formatting without writing
+bun run format       # Format all source files with Prettier (avoid by default for focused edits)
+bun run format:check # Check formatting without writing
 
 # Utilities
-pnpm clean           # Remove dist and node_modules/.vite
-pnpm upgrade:check   # Check outdated dependencies
-pnpm upgrade:deps    # Update dependencies to latest
+bun run clean        # Remove dist and node_modules/.vite
+bun run upgrade:check# Check outdated dependencies
+bun run upgrade:deps # Update dependencies to latest
 ```
 
 ## Features
@@ -68,7 +68,7 @@ Make sure you have [Bun](https://bun.sh/) installed.
 
 1. Build the frontend:
    ```bash
-   pnpm build
+   bun run build
    ```
 2. Start the backend server:
    ```bash
@@ -220,7 +220,7 @@ Lifecycle note:
 Start the dev server and open the app:
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 Your tool should appear automatically on the overview page.
@@ -236,10 +236,10 @@ If it doesn’t:
 - **Make it discoverable:** write a clear `description` (it powers search)
 - **Keep it stable:** don’t rename the folder unless you’re okay with the URL changing
 
-## Tool-specific dependencies (`pnpm-workspace.yaml`)
+## Tool-specific dependencies (Bun workspaces)
 
 Each tool can declare its own dependencies by adding a `package.json` inside its folder.  
-This is supported by the project’s `pnpm-workspace.yaml` setup.
+This is supported by the project’s Bun workspace setup in root `package.json`.
 
 **Example:**  
 The tool `example-package` in this project adds its own dependencies:  
@@ -257,7 +257,7 @@ _(demo purpose only with a lightweight dependency)_
 }
 ```
 
-- Run `pnpm install` at the project root to install all tool dependencies.
+- Run `bun install` at the project root to install all tool dependencies.
 - Each tool’s dependencies are isolated and won’t affect others.
 - Avoid adding dependencies unless needed. Prefer shared utilities in `src/js/*` first.
 

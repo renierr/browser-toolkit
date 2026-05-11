@@ -14,7 +14,7 @@ keywords:
   - template.html
   - index.ts
   - init cleanup
-  - pnpm tsc
+  - bun x tsc
 ---
 
 ## When to use me
@@ -40,12 +40,14 @@ Use this skill when user wants to create or add a new tool to browser-toolkit.
 
 1. Plan first-ask questions only when requirements are unclear
 2. Check src/tools/* for similar tools first to find reusable patterns
-3. Use pnpm (not npm)
-4. Keep tool code browser-only and offline-first. We prefer offline mode. Only use the optional Bun backend if the user explicitly requests it.
+3. Use Bun only (not npm/pnpm)
+4. Keep tool code browser-only and offline-first by default. Use the optional backend when feature requirements need server-side capability.
 5. Ask before adding dependencies when unclear
 6. Create required files: config.json, template.html, index.ts (only if JS needed)
-7. Follow tool entry contract
-8. Run pnpm tsc before completing
+7. If tool depends on backend, set "requiresBackend": true and use `/api/*` via `fetchApi` / `fetchJson` / `fetchBlob` / `uploadFile` from `src/js/api.ts`
+8. If backend endpoint is needed, add route in `backend/routes/*` and mount it in `backend/app.ts`
+9. Run Bun validation steps before completing
+10. Follow tool entry contract
 
 Source of truth: follow `AGENTS.md` and `AGENTS.details.md` when any rule conflicts with this skill.
 
@@ -229,6 +231,7 @@ Known utilities:
 
 After creating tool:
 
-- pnpm tsc
-- pnpm exec prettier --write <touched-file>
-- pnpm generate:tool-description
+- bun x tsc
+- bun x tsc -p backend/tsconfig.json (if backend touched)
+- bun x prettier --write <touched-file>
+- bun run generate:tool-description

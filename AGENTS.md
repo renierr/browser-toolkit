@@ -16,7 +16,7 @@ For extended examples and walkthroughs, see:
 ## ALWAYS
 
 - **Caveman terse style** (caveman.md): REQUIRED. Drop filler, articles, pleasantries.
-- Use `bun` or `pnpm`. Never use `npm`. Prefer `bun` by default.
+- Use `bun` only. Never use `npm` or `pnpm`.
 - Check existing implementations before adding new code:
   - similar tools in `src/tools/*`
   - shared utilities in `src/js/*`
@@ -27,7 +27,7 @@ For extended examples and walkthroughs, see:
 - Export tools as `export default function init(): void | (() => void)`.
 - Return cleanup from `init()` when adding listeners, timers, observers, or side effects.
 - Prefer listeners on tool-local containers. If global listeners are necessary, always remove them in cleanup.
-- Run `bun x tsc` (and `bun x tsc -p backend/tsconfig.json` if backend was touched) or `pnpm tsc` for validation unless production behavior must be verified.
+- Run `bun x tsc` (and `bun x tsc -p backend/tsconfig.json` if backend was touched) for validation unless production behavior must be verified.
 - Do not run global formatting by default. Format touched files only.
 - Do not manually call `createIcons()` or import `lucide` for icon rendering.
 - Keep custom CSS minimal in `src/css/style.css`.
@@ -59,6 +59,8 @@ For extended examples and walkthroughs, see:
 - Use pointer events for input handling when interaction is involved.
 - Check browser API availability (`navigator.clipboard`, `navigator.share`, etc.) before use.
 - For WASM usage, load lazily and clean up resources.
+- For backend tools, set `"requiresBackend": true` in `config.json`; backend-only tools stay hidden when backend is unavailable.
+- For backend tools, call `/api/*` via `fetchApi`, `fetchJson`, `fetchBlob`, or `uploadFile` from `src/js/api.ts`.
 
 ## Agent Workflow Checklist
 
@@ -77,34 +79,23 @@ While editing:
 
 After editing:
 
-- Run `bun x tsc` or `pnpm tsc`.
+- Run `bun x tsc`.
+- If backend was touched, run `bun x tsc -p backend/tsconfig.json`.
 - Optionally run file-scoped formatting on touched files.
+- If creating a new tool, run `bun run generate:tool-description`.
 - Report what changed and why.
 
 ```bash
-# bun
 bun x tsc
-# if backend touched
 bun x tsc -p backend/tsconfig.json
 bun x prettier --write <touched-file-1> <touched-file-2>
-
-# pnpm
-pnpm tsc
-# if backend touched
-pnpm tsc -p backend/tsconfig.json
-pnpm exec prettier --write <touched-file-1> <touched-file-2>
 ```
 
 Use full build only when needed:
 
 ```bash
-# bun
 bun run build
 bun run preview
-
-# pnpm
-pnpm build
-pnpm preview
 ```
 
 ## Tool Contract (Reference)
@@ -130,7 +121,7 @@ export default function init(): void | (() => void) {
 ## Key Concepts Not In Core Rules
 
 - App bootstrap and tool discovery are orchestrated in `src/script.ts`.
-- Tool-specific dependencies are supported via `pnpm-workspace.yaml` or root `package.json` workspaces (for Bun) and per-tool `package.json`.
+- Tool-specific dependencies are supported via root `package.json` workspaces (Bun) and per-tool `package.json`.
 - Share-target tools can receive `SharedFilesPayload` in `init(payload?)`.
 - Template placeholders use `{{ key.path }}` and are resolved from site context. Special syntax exists to include separated files: `<include src="file.html" />` and `<include src="file.css" type="style" />`. Global CSS aliases are supported too, for example `<include src="@css/markdown-content.css" type="style" />`.
 - Site config is managed in `src/config/site.config.ts`.
