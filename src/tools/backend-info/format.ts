@@ -1,4 +1,4 @@
-export { formatBytes } from '../../js/format';
+export { formatBytes } from '@js/format';
 
 export function formatUptime(seconds: number): string {
   const days = Math.floor(seconds / (3600 * 24));
