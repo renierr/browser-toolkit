@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "bun run server.ts",
-    "dev": "bun run --watch server.ts"
+    "dev": "bun run --watch server.ts",
+    "update": "bun run scripts/update.ts"
   },
   "dependencies": {
     "hono": "^4.2.0"

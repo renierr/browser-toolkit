@@ -78,6 +78,29 @@ Make sure you have [Bun](https://bun.sh/) installed.
    ```
    _The backend will automatically serve the static `dist/` directory on `http://localhost:3000`._
 
+### Update Automation (Backend Mode)
+
+The `backend-info` tool can now check for updates and trigger an in-place update on a running server.
+
+- The update flow runs from inside the `backend/` working directory and assumes the app root is `../`.
+- It performs: `git fetch`/compare, `git pull`, root `bun install`, frontend build, backend `bun install`.
+- Frontend build uses `dist_next` and then swaps folders to reduce broken serve windows during rebuild.
+- On successful web-triggered update, the backend exits and relies on **systemd auto-restart**.
+
+Important for service setup:
+
+- Ensure your systemd unit has automatic restart enabled (for example `Restart=always`).
+- No restart token is required for the current update endpoint design.
+
+#### Server CLI usage (inside `backend/`)
+
+```bash
+cd backend
+bun run update            # normal update run
+bun run update --force    # force install/build even when no git changes
+bun run update --check    # check-only, no pull/build
+```
+
 ## Create a new tool (30 seconds)
 
 Create a folder inside `src/tools/`.
