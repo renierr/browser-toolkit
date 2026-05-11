@@ -136,7 +136,7 @@ system.get('/update/stream/:jobId', (c) => {
     if (!unsubscribe) {
       await enqueueWrite(async () => {
         await stream.writeSSE({
-          event: 'error',
+          event: 'job-error',
           data: JSON.stringify({ error: 'Update job not found.' }),
         });
       });

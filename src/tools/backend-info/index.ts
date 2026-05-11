@@ -1,4 +1,4 @@
-import { fetchApi, fetchJson } from '../../js/api';
+import { fetchJson } from '../../js/api';
 import { showMessage } from '../../js/ui';
 import { getBackendInfoDom } from './dom';
 import { createRenderer } from './render';
@@ -16,25 +16,28 @@ export default function init(): void | (() => void) {
   }
 
   const renderer = createRenderer(dom);
-  let updateStreamController: AbortController | null = null;
+  let updateEventSource: EventSource | null = null;
 
   const notify = (message: string, type: 'info' | 'alert'): void => {
     showMessage(message, { type, timeoutMs: 4000 });
   };
 
   const stopUpdateStream = (): void => {
-    if (!updateStreamController) {
+    if (!updateEventSource) {
       return;
     }
-    updateStreamController.abort();
-    updateStreamController = null;
+    updateEventSource.close();
+    updateEventSource = null;
   };
 
   const connectUpdateStream = async (jobId: string): Promise<void> => {
     stopUpdateStream();
-    updateStreamController = new AbortController();
+    const streamUrl = `/api/update/stream/${encodeURIComponent(jobId)}`;
+    const eventSource = new EventSource(streamUrl);
+    updateEventSource = eventSource;
     let reachedTerminalState = false;
     let lastJobEventAt = Date.now();
+    let streamClosed = false;
 
     const isTerminalStatus = (status: UpdateJobSnapshot['status']): boolean => {
       return (
@@ -61,7 +64,7 @@ export default function init(): void | (() => void) {
     };
 
     const watchdogId = window.setInterval(() => {
-      if (!updateStreamController || updateStreamController.signal.aborted) {
+      if (!updateEventSource || streamClosed) {
         return;
       }
       if (Date.now() - lastJobEventAt < 15000) {
@@ -71,100 +74,68 @@ export default function init(): void | (() => void) {
       void syncLatestJobState();
     }, 5000);
 
-    try {
-      const response = await fetchApi(`/update/stream/${jobId}`, {
-        signal: updateStreamController.signal,
-        headers: { Accept: 'text/event-stream' },
-      });
-
-      if (!response.body) {
-        throw new Error('SSE stream missing response body.');
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          break;
+    const processEventPayload = (dataText: string): void => {
+      try {
+        const event = JSON.parse(dataText) as UpdateEvent;
+        if (event.type === 'log') {
+          renderer.appendUpdateLogEntry(event.entry.message, event.entry.replaceLast === true);
+          renderer.recordRenderedLog();
+          lastJobEventAt = Date.now();
         }
-        buffer += decoder.decode(value, { stream: true });
-
-        const chunks = buffer.split(/\r?\n\r?\n/);
-        buffer = chunks.pop() ?? '';
-
-        for (const chunk of chunks) {
-          const lines = chunk.split(/\r?\n/);
-          let eventName = 'message';
-          const dataLines: string[] = [];
-
-          for (const line of lines) {
-            if (line.startsWith('event:')) {
-              eventName = line.slice(6).trim();
-            } else if (line.startsWith('data:')) {
-              dataLines.push(line.slice(5).trimStart());
-            }
-          }
-
-          if (dataLines.length === 0) {
-            continue;
-          }
-
-          const dataText = dataLines.join('\n');
-
-          if (eventName === 'ping') {
-            continue;
-          }
-
-          if (eventName === 'error') {
-            renderer.appendUpdateLog(`[server] ${dataText}`);
-            void syncLatestJobState();
-            continue;
-          }
-
-          try {
-            const event = JSON.parse(dataText) as UpdateEvent;
-            if (event.type === 'log') {
-              renderer.appendUpdateLogEntry(
-                event.entry.message,
-                event.entry.replaceLast === true
-              );
-              renderer.recordRenderedLog();
-              lastJobEventAt = Date.now();
-            }
-            if (event.type === 'state') {
-              renderer.renderJobState(event.job, notify);
-              lastJobEventAt = Date.now();
-              if (isTerminalStatus(event.job.status)) {
-                reachedTerminalState = true;
-                return;
-              }
-            }
-          } catch {
-            if (dataText !== 'heartbeat') {
-              renderer.appendUpdateLog(`[client] failed to parse event: ${dataText}`);
-            }
+        if (event.type === 'state') {
+          renderer.renderJobState(event.job, notify);
+          lastJobEventAt = Date.now();
+          if (isTerminalStatus(event.job.status)) {
+            reachedTerminalState = true;
+            stopUpdateStream();
           }
         }
+      } catch {
+        renderer.appendUpdateLog(`[client] failed to parse event: ${dataText}`);
       }
+    };
 
-      if (!reachedTerminalState) {
-        await syncLatestJobState();
+    eventSource.onmessage = (messageEvent: MessageEvent<string>) => {
+      processEventPayload(messageEvent.data);
+    };
+
+    eventSource.addEventListener('job-error', (messageEvent: MessageEvent<string>) => {
+      renderer.appendUpdateLog(`[server] ${messageEvent.data}`);
+      void syncLatestJobState();
+    });
+
+    eventSource.addEventListener('ping', () => {
+      // ignore ping, watchdog tracks real job events only
+    });
+
+    eventSource.onerror = () => {
+      if (streamClosed) {
+        return;
       }
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error('[BackendInfo] Update SSE failed:', error);
-        const recovered = await syncLatestJobState();
+      if (reachedTerminalState) {
+        streamClosed = true;
+        window.clearInterval(watchdogId);
+        return;
+      }
+      void syncLatestJobState().then((recovered) => {
         if (!recovered) {
           renderer.setUpdateSummary('Lost connection to update stream.');
           renderer.setUpdateBusy(false);
         }
+      });
+    };
+
+    eventSource.addEventListener('open', () => {
+      lastJobEventAt = Date.now();
+    });
+
+    const closeWatchdogWhenDone = window.setInterval(() => {
+      if (!updateEventSource || updateEventSource !== eventSource) {
+        streamClosed = true;
+        window.clearInterval(closeWatchdogWhenDone);
+        window.clearInterval(watchdogId);
       }
-    } finally {
-      window.clearInterval(watchdogId);
-    }
+    }, 1000);
   };
 
   const fetchInfo = async (): Promise<void> => {
