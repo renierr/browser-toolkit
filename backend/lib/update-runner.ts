@@ -81,6 +81,13 @@ type UpdateJobInternal = UpdateJobSnapshot & {
 const jobs = new Map<string, UpdateJobInternal>();
 let runningJobId: string | null = null;
 
+function sanitizeLogMessage(message: string): string {
+  return message
+    .replace(/\r/g, '')
+    .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '')
+    .replace(/\x1b\[[0-9;?]*[ABCDGHJKfstu]/g, '');
+}
+
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -224,7 +231,11 @@ function emitState(job: UpdateJobInternal): void {
 }
 
 function emitLog(job: UpdateJobInternal, level: 'info' | 'error', message: string): void {
-  const entry: UpdateLogEntry = { at: nowIso(), level, message };
+  const sanitizedMessage = sanitizeLogMessage(message);
+  if (sanitizedMessage.trim().length === 0) {
+    return;
+  }
+  const entry: UpdateLogEntry = { at: nowIso(), level, message: sanitizedMessage };
   job.logs.push(entry);
   const event: UpdateJobEvent = { type: 'log', jobId: job.id, entry };
   for (const send of job.subscribers) {
@@ -622,7 +633,7 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
     await runStepCommand(
       job,
       'build-frontend',
-      ['bun', 'x', 'vite', 'build', '--outDir', 'dist_next'],
+      ['bun', 'x', 'vite', 'build', '--clearScreen', 'false', '--outDir', 'dist_next'],
       job.appDir,
       { timeoutMs: 10 * 60 * 1000 }
     );

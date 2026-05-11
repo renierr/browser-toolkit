@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   base: './',
+  clearScreen: false,
   plugins: [
     onnxStaticPlugin(),
     tailwindcss(),
