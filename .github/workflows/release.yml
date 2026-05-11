@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+env:
+  RELEASE_VERSION: ${{ github.ref_name }}
+
 permissions:
   contents: write
 
@@ -65,6 +68,10 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
+      - name: Install backend dependencies
+        working-directory: backend
+        run: bun install --frozen-lockfile
+
       - name: Download dist artifact
         uses: actions/download-artifact@v6
         with:
@@ -72,10 +79,11 @@ jobs:
           path: release-root/dist
 
       - name: Compile backend executable
+        working-directory: backend
         shell: bash
         run: |
-          mkdir -p release-root/backend
-          bun build --compile ./backend/server.ts --outfile "./release-root/backend/${{ matrix.binary_name }}"
+          mkdir -p ../release-root/backend
+          bun build --compile ./server.ts --outfile "../release-root/backend/${{ matrix.binary_name }}"
 
       - name: Add unix launcher
         if: runner.os != 'Windows'
@@ -108,14 +116,14 @@ jobs:
         shell: bash
         run: |
           mkdir -p out
-          tar -C release-root -czf "out/browser-toolkit-${{ matrix.platform }}.tar.gz" .
+          tar -C release-root -czf "out/browser-toolkit-${{ env.RELEASE_VERSION }}-${{ matrix.platform }}.tar.gz" .
 
       - name: Create zip bundle
         if: matrix.archive == 'zip'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path out | Out-Null
-          Compress-Archive -Path release-root\* -DestinationPath "out/browser-toolkit-${{ matrix.platform }}.zip"
+          Compress-Archive -Path release-root\* -DestinationPath "out/browser-toolkit-${{ env.RELEASE_VERSION }}-${{ matrix.platform }}.zip"
 
       - name: Upload bundle artifact
         uses: actions/upload-artifact@v4
@@ -138,12 +146,12 @@ jobs:
         shell: bash
         run: |
           cd release-artifacts
-          sha256sum browser-toolkit-* > checksums.txt
+          sha256sum browser-toolkit-${{ env.RELEASE_VERSION }}-* > checksums-${{ env.RELEASE_VERSION }}.txt
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-artifacts/browser-toolkit-*.tar.gz
-            release-artifacts/browser-toolkit-*.zip
-            release-artifacts/checksums.txt
+            release-artifacts/browser-toolkit-${{ env.RELEASE_VERSION }}-*.tar.gz
+            release-artifacts/browser-toolkit-${{ env.RELEASE_VERSION }}-*.zip
+            release-artifacts/checksums-${{ env.RELEASE_VERSION }}.txt
