@@ -1,10 +1,11 @@
-import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { fetchFile } from '@ffmpeg/util';
+import { FFmpeg } from '@ffmpeg/ffmpeg/dist/esm/index.js';
+import { fetchFile } from '@ffmpeg/util/dist/esm/index.js';
 import { showMessage, showProgress, hideProgress, yieldToUI } from '@js/ui.ts';
 import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
 import type { SharedFilesPayload } from '@js/share-target.ts';
 import { getFFmpegArgs, FFmpegLogCollector, getVideoMetadata } from './video-utils.ts';
 
+import classWorkerURL from '@ffmpeg/ffmpeg/dist/esm/worker.js?url';
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
 import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
 
@@ -142,18 +143,48 @@ export default function init(payload?: SharedFilesPayload) {
   const loadFFmpeg = async () => {
     if (ffmpegLoaded) return;
     await yieldToUI(true);
+    const loadTimeoutMs = 30000;
 
     try {
       showProgress('Preparing FFmpeg...');
       ffmpeg = new FFmpeg();
       ffmpeg.on('log', onLog);
       ffmpeg.on('progress', onProgress);
-      await ffmpeg.load({ coreURL, wasmURL });
+      console.info('[FFmpeg] load urls', { classWorkerURL, coreURL, wasmURL });
+
+      const loadAbortController = new AbortController();
+      const loadTimeoutId = window.setTimeout(() => {
+        loadAbortController.abort();
+      }, loadTimeoutMs);
+
+      try {
+        await ffmpeg.load(
+          { classWorkerURL, coreURL, wasmURL },
+          { signal: loadAbortController.signal }
+        );
+      } finally {
+        window.clearTimeout(loadTimeoutId);
+      }
+
       ffmpegLoaded = true;
       console.log('[FFmpeg] ✓ Core loaded');
     } catch (error) {
       console.error('[FFmpeg] Failed to load core:', error);
-      showMessage('Failed to load transcoder core.', { type: 'alert' });
+
+      try {
+        ffmpeg.terminate();
+      } catch {
+        /* ignore */
+      }
+      ffmpegLoaded = false;
+
+      const isAbortError = error instanceof DOMException && error.name === 'AbortError';
+      showMessage(
+        isAbortError
+          ? 'FFmpeg load timeout. Check worker/core requests in DevTools Network.'
+          : 'Failed to load transcoder core.',
+        { type: 'alert' }
+      );
       hideProgress();
       throw error;
     }
