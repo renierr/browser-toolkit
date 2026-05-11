@@ -28,10 +28,8 @@ routes.forEach(path => {
   console.log(`- http://localhost:${port}${path}`);
 });
 
-export default {
-  port: server.port,
-  fetch: app.fetch,
-  stop: (): void => {
-    server.stop(true);
-  },
-};
+export async function stopServer(force = true): Promise<void> {
+  await server.stop(force);
+}
+
+export { app, server };
