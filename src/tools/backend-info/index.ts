@@ -1,5 +1,5 @@
-import { fetchJson } from '../../js/api';
-import { showMessage } from '../../js/ui';
+import { fetchJson } from '@js/api';
+import { showMessage } from '@js/ui';
 import { getBackendInfoDom } from './dom';
 import { createRenderer } from './render';
 import type {
