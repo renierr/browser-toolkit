@@ -157,6 +157,29 @@ bun start
 
 _Navigate to `http://localhost:3000` to see your deployed app._
 
+### Backend Update Process (Backend Info tool)
+
+When running in backend mode, `backend-info` can check for updates and trigger a live in-place update.
+
+- Update check uses git remote comparison (`/api/update/check`).
+- Update run (`/api/update/run`) starts background job and streams logs over SSE (`/api/update/stream/:jobId`).
+- Flow: fetch/compare, pull, `bun install` (root), frontend build, `bun install --cwd backend`.
+- Frontend build is staged to `dist_next` and swapped into `dist` to reduce broken serve windows.
+- On successful web-triggered run, backend exits and expects **systemd auto-restart** (`Restart=always`).
+
+Server CLI usage from `backend/`:
+
+```bash
+bun run update            # run update flow manually
+bun run update --force    # force build/install even if no git changes
+bun run update --check    # check only, no pull/build
+```
+
+Notes:
+
+- SSE stream is only opened during an active update run and is cleaned when leaving the tool.
+- The `Refresh` button in `backend-info` refreshes system metrics only (`/api/info`).
+
 ## 🏗️ How to add a new tool
 
 Adding a tool takes about 30 seconds thanks to the auto-detection feature.  
