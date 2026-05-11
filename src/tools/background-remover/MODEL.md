@@ -128,7 +128,7 @@ OUTPUT: name='1961'     shape=[1, 1, 320, 320]   ← d2
 **Option C — Node.js (onnxruntime-node):**
 
 ```bash
-pnpm add -D onnxruntime-node
+bun add -d onnxruntime-node
 ```
 
 ```javascript
@@ -214,7 +214,7 @@ src/tools/background-remover/
 ├── image-processing.ts    Image decode, tensor conversion, mask application
 ├── template.html          Tool HTML template
 ├── config.json            Tool metadata (name, icon, section)
-├── package.json           pnpm workspace package
+├── package.json           Bun workspace package
 └── MODEL.md               This file
 
 src/js/

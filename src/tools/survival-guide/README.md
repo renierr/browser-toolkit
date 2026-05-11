@@ -290,7 +290,7 @@ Important caution or warning.
 
 After adding a guide (in BOTH languages):
 
-1. Run `pnpm tsc` to check for TypeScript errors
+1. Run `bun x tsc` to check for TypeScript errors
 2. Verify the guide appears in English
 3. Switch to German and verify the translated guide appears
 4. Test search functionality works in both languages
