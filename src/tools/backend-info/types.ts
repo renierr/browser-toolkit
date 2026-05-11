@@ -10,14 +10,18 @@ export type BackendInfoResponse = {
   time?: string;
   memory?: {
     total: number;
+    free: number;
     used: number;
     percent: number;
+    source?: 'cgroup-v2' | 'cgroup-v1' | 'proc-meminfo' | 'os';
   };
   disk?: {
     total: number;
+    free: number;
     used: number;
     percent: number;
-  };
+    source?: 'statfs';
+  } | null;
   load?: number[];
 };
 

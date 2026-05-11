@@ -89,6 +89,11 @@ export function createRenderer(dom: BackendInfoDom) {
         'val-mem-text',
         `${formatBytes(data.memory.used)} / ${formatBytes(data.memory.total)}`
       );
+      setText(
+        dom.container,
+        'val-mem-source',
+        data.memory.source ? `Source: ${data.memory.source}` : ''
+      );
       setText(dom.container, 'val-mem-percent', `${data.memory.percent}%`);
       setProgress(dom.container, 'val-mem-progress', data.memory.percent);
     }
@@ -99,8 +104,18 @@ export function createRenderer(dom: BackendInfoDom) {
         'val-disk-text',
         `${formatBytes(data.disk.used)} / ${formatBytes(data.disk.total)}`
       );
+      setText(
+        dom.container,
+        'val-disk-source',
+        data.disk.source ? `Source: ${data.disk.source}` : ''
+      );
       setText(dom.container, 'val-disk-percent', `${data.disk.percent}%`);
       setProgress(dom.container, 'val-disk-progress', data.disk.percent);
+    } else {
+      setText(dom.container, 'val-disk-text', 'Unavailable');
+      setText(dom.container, 'val-disk-source', 'Source: unavailable');
+      setText(dom.container, 'val-disk-percent', '-');
+      setProgress(dom.container, 'val-disk-progress', 0);
     }
 
     if (data.load) {

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import * as os from 'node:os';
 import { streamSSE } from 'hono/streaming';
+import { getSystemMetrics } from '../lib/system-metrics';
 import {
   checkForUpdates,
   getUpdateJob,
@@ -17,30 +18,8 @@ system.get('/health', (c) => {
 });
 
 // System info endpoint
-system.get('/info', (c) => {
-  const totalMem = os.totalmem();
-  const freeMem = os.freemem();
-  const usedMem = totalMem - freeMem;
-  const memPercent = totalMem > 0 ? (usedMem / totalMem) * 100 : 0;
-
-  let diskInfo = { total: 0, used: 0, free: 0, percent: 0 };
-  try {
-    // df -B1 / gives sizes in bytes for the root partition
-    const proc = Bun.spawnSync(['df', '-B1', '/']);
-    if (proc.success) {
-      const output = proc.stdout.toString().split('\n')[1]?.trim().split(/\s+/);
-      if (output && output.length >= 5) {
-        diskInfo = {
-          total: parseInt(output[1]),
-          used: parseInt(output[2]),
-          free: parseInt(output[3]),
-          percent: parseInt(output[4].replace('%', ''))
-        };
-      }
-    }
-  } catch (e) {
-    console.error('[BackendInfo] Failed to get disk info:', e);
-  }
+system.get('/info', async (c) => {
+  const metrics = await getSystemMetrics();
 
   return c.json({
     status: 'ok',
@@ -52,14 +31,9 @@ system.get('/info', (c) => {
     hostname: os.hostname(),
     uptime: os.uptime(),
     runtimeUptime: process.uptime(),
-    memory: {
-      total: totalMem,
-      free: freeMem,
-      used: usedMem,
-      percent: Math.round(memPercent)
-    },
+    memory: metrics.memory,
     load: os.loadavg(),
-    disk: diskInfo
+    disk: metrics.disk
   });
 });
 
