@@ -102,7 +102,11 @@ export function createRenderer(dom: BackendInfoDom) {
       data.appVersion ? `app ${data.appVersion}` : '',
       data.version ? `bun ${data.version}` : '',
     ].filter(Boolean);
-    setText(dom.container, 'val-version', versionParts.length > 0 ? `(${versionParts.join(' / ')})` : '');
+    setText(
+      dom.container,
+      'val-version',
+      versionParts.length > 0 ? `(${versionParts.join(' / ')})` : ''
+    );
     setText(dom.container, 'val-os', data.os || '-');
     setText(dom.container, 'val-arch', data.arch || '-');
     setText(dom.container, 'val-time', data.time ? new Date(data.time).toLocaleTimeString() : '-');
