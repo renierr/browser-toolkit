@@ -1,6 +1,7 @@
 import type {
   PromptApiAvailability,
   PromptApiGlobal,
+  PromptInput,
   PromptApiMonitor,
   PromptApiSession,
   PromptSessionOptions,
@@ -60,7 +61,7 @@ export class PromptSessionManager {
   }
 
   public async stream(
-    prompt: string,
+    prompt: PromptInput,
     handlers: StreamHandlers,
     signal?: AbortSignal
   ): Promise<void> {

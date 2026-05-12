@@ -16,12 +16,15 @@ import { PromptConversationHistory } from './conversation-history';
 import { PromptHistoryStore } from './history-store';
 import { PromptSessionManager } from './session-manager';
 import { getPromptApiGlobal, getUnsupportedExplanation } from './support';
-import type { PromptSessionOptions } from './types';
+import type { PromptMessage, PromptInput, PromptSessionOptions } from './types';
 
 const SESSION_OPTIONS: PromptSessionOptions = {
   expectedInputs: [{ type: 'text' }],
   expectedOutputs: [{ type: 'text' }],
 };
+
+const SYSTEM_PROMPT =
+  'You are a concise, helpful assistant running fully on-device in Chrome Prompt API. Prefer direct answers and practical steps.';
 
 export default function init(): void | (() => void) {
   const container = document.getElementById('tool-content');
@@ -45,6 +48,7 @@ export default function init(): void | (() => void) {
   let isInitializing = false;
   let isStreaming = false;
   let isDisposed = false;
+  let needsConversationRecovery = false;
 
   const syncHistoryUi = (): void => {
     renderHistory(dom, history.list(), getOutputMode(dom));
@@ -56,6 +60,15 @@ export default function init(): void | (() => void) {
     const canStop = isStreaming;
     setActionState(dom, { canAsk, canStop });
     dom.initButton.disabled = isInitializing || isStreaming;
+  };
+
+  const buildRecoveryConversationMessages = (prompt: string): PromptMessage[] => {
+    const historyMessages = history.toConversationMessages(12);
+    return [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...historyMessages,
+      { role: 'user', content: prompt },
+    ];
   };
 
   const onInitClick = async (): Promise<void> => {
@@ -72,6 +85,7 @@ export default function init(): void | (() => void) {
       });
 
       if (!result.session || result.availability === 'unavailable') {
+        needsConversationRecovery = false;
         setStatus(dom, 'idle');
         setDownloadState(dom, false, 0, '');
         showMessage('Prompt model unavailable on this device/profile.', {
@@ -83,9 +97,11 @@ export default function init(): void | (() => void) {
 
       setStatus(dom, 'ready');
       setDownloadState(dom, false, 0, '');
+      needsConversationRecovery = history.list().length > 0;
       showMessage('Prompt model is ready.', { type: 'info', hideTypeText: false, timeoutMs: 2500 });
     } catch (error) {
       console.error('[AI Prompt] Failed to initialize model:', error);
+      needsConversationRecovery = false;
       setStatus(dom, 'idle');
       setDownloadState(dom, false, 0, '');
       showMessage('Failed to initialize Prompt API model.', { type: 'alert', hideTypeText: false });
@@ -160,8 +176,12 @@ export default function init(): void | (() => void) {
     syncHistoryUi();
 
     try {
+      const promptInput: PromptInput = needsConversationRecovery
+        ? buildRecoveryConversationMessages(prompt)
+        : prompt;
+
       await manager.stream(
-        prompt,
+        promptInput,
         {
           onChunk: (chunk) => {
             history.appendResponse(historyEntry.id, chunk);
@@ -178,6 +198,7 @@ export default function init(): void | (() => void) {
       } else {
         history.markDone(historyEntry.id);
       }
+      needsConversationRecovery = false;
       syncHistoryUi();
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
@@ -210,6 +231,7 @@ export default function init(): void | (() => void) {
   const onClearClick = (): void => {
     resetOutput(dom);
     history.clear();
+    needsConversationRecovery = false;
     syncHistoryUi();
   };
 

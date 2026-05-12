@@ -30,6 +30,15 @@ export type PromptSessionOptions = {
   expectedOutputs: Array<{ type: 'text' }>;
 };
 
+export type PromptMessageRole = 'system' | 'user' | 'assistant';
+
+export type PromptMessage = {
+  role: PromptMessageRole;
+  content: string;
+};
+
+export type PromptInput = string | PromptMessage[];
+
 export type DownloadProgressEvent = Event & {
   loaded?: number;
 };
@@ -42,7 +51,7 @@ export type PromptApiMonitor = {
 };
 
 export type PromptApiSession = {
-  promptStreaming(input: string, options?: { signal?: AbortSignal }): AsyncIterable<string>;
+  promptStreaming(input: PromptInput, options?: { signal?: AbortSignal }): AsyncIterable<string>;
   destroy(): void;
 };
 

@@ -1,10 +1,5 @@
 import { PromptHistoryStore } from './history-store';
-import type { PromptHistoryEntry, PromptHistorySessionData } from './types';
-
-type ConversationMessage = {
-  role: 'user' | 'assistant';
-  content: string;
-};
+import type { PromptHistoryEntry, PromptHistorySessionData, PromptMessage } from './types';
 
 export class PromptConversationHistory {
   private readonly store: PromptHistoryStore;
@@ -92,7 +87,7 @@ export class PromptConversationHistory {
     };
   }
 
-  public toConversationMessages(maxEntries: number = 12): ConversationMessage[] {
+  public toConversationMessages(maxEntries: number = 12): PromptMessage[] {
     const ordered = this.entries
       .slice()
       .filter(
@@ -101,7 +96,7 @@ export class PromptConversationHistory {
       .sort((a, b) => a.createdAt - b.createdAt)
       .slice(-maxEntries);
 
-    const messages: ConversationMessage[] = [];
+    const messages: PromptMessage[] = [];
     for (const entry of ordered) {
       messages.push({ role: 'user', content: entry.prompt });
       if (entry.response.trim()) {
