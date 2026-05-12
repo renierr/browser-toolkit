@@ -21,6 +21,7 @@ This document explains:
 - first-time model download handling
 - streamed responses
 - plain/markdown output rendering
+- multi-mode execution (`prompt`, `translator`)
 - non-permanent session history with structured JSON
 - hybrid memory strategy (native session memory + recovery replay)
 
@@ -32,6 +33,7 @@ This document explains:
 - `template.html` - UI layout
 - `dom.ts` - DOM querying + UI rendering helpers
 - `session-manager.ts` - Prompt API session lifecycle and streaming wrapper
+- `modes.ts` - mode clients for Prompt and Translator APIs
 - `support.ts` - feature detection and unsupported-browser messages
 - `history-store.ts` - persisted in-session JSON storage (`sessionStorage`)
 - `conversation-history.ts` - history domain logic and conversation transforms
@@ -230,3 +232,77 @@ Good next steps:
    - recovery: replay limited structured history once after session recreation
 5. Stream response chunks to current output + structured session history.
 6. Refresh context telemetry panel from `contextUsage/contextWindow` when available.
+
+## Mode Architecture
+
+Tool supports two modes through a shared UI and per-mode clients:
+
+- `prompt` (default): chat-style prompting with streaming output and optional recovery replay.
+- `translator`: text translation with auto source detection option.
+
+Both modes reuse:
+
+- the same output panel
+- the same session history renderer
+- the same history storage schema
+
+History entry now includes `mode` and optional `meta` fields so future modes can attach structured metadata.
+
+## Translator Mode Workflow
+
+Translator mode uses built-in:
+
+- `Translator` API (required)
+- `LanguageDetector` API (optional, when auto-detect is enabled)
+
+Flow:
+
+1. user selects `translator` mode
+2. user can enable `Auto detect source`
+3. on run, tool optionally detects source language
+4. tool creates/reuses a translator instance for `source -> target`
+5. tool translates input and stores mode metadata in history
+
+Current language list in UI is intentionally small and easy to extend.
+
+## Extending to Other Built-in APIs
+
+To add more modes (`summarizer`, `writer`, `rewriter`, `proofreader`):
+
+1. add a new client in `modes.ts` (or split into `modes/*` later)
+2. add mode option in `template.html`
+3. branch mode handling in `index.ts` `onInitClick()` and `onAskClick()`
+4. store mode-specific metadata via `history.updateMeta(...)`
+5. add README section for new mode behavior and constraints
+
+## Related Built-in AI APIs
+
+Reference:
+
+- https://developer.chrome.com/docs/ai/built-in-apis?hl=de
+
+Short summary of the main Chrome built-in AI APIs:
+
+- **Prompt API** - General-purpose natural language prompting with Gemini Nano, including streaming and session context.
+- **Summarizer API** - Summarizes long-form text into shorter digestible output.
+- **Translator API** - Translates text between languages on-device.
+- **Language Detector API** - Detects the language of input text, often used before translation.
+- **Writer API** - Generates new text for a requested writing task (drafting assistance).
+- **Rewriter API** - Rewrites existing text to change tone, length, clarity, or structure.
+- **Proofreader API** - Provides grammar and correction assistance for user text.
+
+Status note: availability differs by API and channel (stable, origin trial, or preview programs). Check the built-in APIs page above for current rollout state.
+
+### Do all APIs require a model download?
+
+Short answer: **usually yes on first use**, but details vary by API.
+
+- **Prompt / Summarizer / Writer / Rewriter / Proofreader**: typically require Gemini Nano (or related built-in model assets) to be present locally. First-time use can trigger a download.
+- **Translator / Language Detector**: may require downloadable language resources/models depending on requested languages and what is already cached on device.
+- **After download**: assets are reused from local cache until browser/model management evicts or updates them.
+
+Practical rule for tool UX:
+
+1. always check `availability()` first,
+2. show clear download progress when possible,
+3. inform user that first run can take longer due to model/resource download.

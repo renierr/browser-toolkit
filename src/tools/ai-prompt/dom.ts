@@ -12,6 +12,11 @@ export type AiPromptDom = {
   stateBadge: HTMLSpanElement;
   streamState: HTMLSpanElement;
   promptInput: HTMLTextAreaElement;
+  modeSelect: HTMLSelectElement;
+  translatorControls: HTMLDivElement;
+  detectSource: HTMLInputElement;
+  sourceLanguage: HTMLSelectElement;
+  targetLanguage: HTMLSelectElement;
   outputMode: HTMLSelectElement;
   outputText: HTMLPreElement;
   outputMarkdown: HTMLDivElement;
@@ -39,6 +44,13 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
   const stateBadge = container.querySelector('#ai-state-badge') as HTMLSpanElement | null;
   const streamState = container.querySelector('#ai-stream-state') as HTMLSpanElement | null;
   const promptInput = container.querySelector('#ai-prompt-input') as HTMLTextAreaElement | null;
+  const modeSelect = container.querySelector('#ai-mode-select') as HTMLSelectElement | null;
+  const translatorControls = container.querySelector(
+    '#ai-translator-controls'
+  ) as HTMLDivElement | null;
+  const detectSource = container.querySelector('#ai-detect-source') as HTMLInputElement | null;
+  const sourceLanguage = container.querySelector('#ai-source-language') as HTMLSelectElement | null;
+  const targetLanguage = container.querySelector('#ai-target-language') as HTMLSelectElement | null;
   const outputMode = container.querySelector('#ai-output-mode') as HTMLSelectElement | null;
   const outputText = container.querySelector('#ai-output-text') as HTMLPreElement | null;
   const outputMarkdown = container.querySelector('#ai-output-markdown') as HTMLDivElement | null;
@@ -71,6 +83,11 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
     !stateBadge ||
     !streamState ||
     !promptInput ||
+    !modeSelect ||
+    !translatorControls ||
+    !detectSource ||
+    !sourceLanguage ||
+    !targetLanguage ||
     !outputMode ||
     !outputText ||
     !outputMarkdown ||
@@ -98,6 +115,11 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
     stateBadge,
     streamState,
     promptInput,
+    modeSelect,
+    translatorControls,
+    detectSource,
+    sourceLanguage,
+    targetLanguage,
     outputMode,
     outputText,
     outputMarkdown,
@@ -160,6 +182,10 @@ export function setOutputMode(dom: AiPromptDom, mode: OutputMode): void {
   if (mode === 'markdown') {
     applyMarkdownContentTheme(dom.outputMarkdown, 'default');
   }
+}
+
+export function setToolModeUi(dom: AiPromptDom, mode: 'prompt' | 'translator'): void {
+  dom.translatorControls.classList.toggle('hidden', mode !== 'translator');
 }
 
 function toPreview(text: string, maxLength: number): string {

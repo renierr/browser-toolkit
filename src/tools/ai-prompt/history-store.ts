@@ -11,6 +11,7 @@ function parseHistoryEntry(value: unknown): PromptHistoryEntry | null {
   if (!isObject(value)) return null;
 
   const id = value.id;
+  const mode = value.mode;
   const prompt = value.prompt;
   const response = value.response;
   const createdAt = value.createdAt;
@@ -18,6 +19,7 @@ function parseHistoryEntry(value: unknown): PromptHistoryEntry | null {
   const status = value.status;
 
   if (typeof id !== 'number') return null;
+  if (mode !== 'prompt' && mode !== 'translator') return null;
   if (typeof prompt !== 'string') return null;
   if (typeof response !== 'string') return null;
   if (typeof createdAt !== 'number') return null;
@@ -26,13 +28,25 @@ function parseHistoryEntry(value: unknown): PromptHistoryEntry | null {
     return null;
   }
 
-  return { id, prompt, response, createdAt, updatedAt, status };
+  const meta = isObject(value.meta) ? value.meta : undefined;
+  return { id, mode, prompt, response, createdAt, updatedAt, status, meta };
 }
 
 function parseHistorySessionData(value: unknown): PromptHistorySessionData {
-  if (!isObject(value)) return { version: 1, entries: [] };
-  if (value.version !== 1) return { version: 1, entries: [] };
-  if (!Array.isArray(value.entries)) return { version: 1, entries: [] };
+  if (!isObject(value)) return { version: 2, entries: [] };
+
+  if (value.version === 1 && Array.isArray(value.entries)) {
+    const legacyEntries = value.entries
+      .filter((entry): entry is Record<string, unknown> => isObject(entry))
+      .map((entry) => ({
+        ...entry,
+        mode: 'prompt',
+      }));
+    return parseHistorySessionData({ version: 2, entries: legacyEntries });
+  }
+
+  if (value.version !== 2) return { version: 2, entries: [] };
+  if (!Array.isArray(value.entries)) return { version: 2, entries: [] };
 
   const entries = value.entries
     .map((entry) => parseHistoryEntry(entry))
@@ -40,7 +54,7 @@ function parseHistorySessionData(value: unknown): PromptHistorySessionData {
     .sort((a, b) => b.createdAt - a.createdAt)
     .slice(0, MAX_HISTORY_ENTRIES);
 
-  return { version: 1, entries };
+  return { version: 2, entries };
 }
 
 export class PromptHistoryStore {
@@ -58,7 +72,7 @@ export class PromptHistoryStore {
 
   public save(entries: PromptHistoryEntry[]): void {
     const data: PromptHistorySessionData = {
-      version: 1,
+      version: 2,
       entries: entries
         .slice()
         .sort((a, b) => b.createdAt - a.createdAt)

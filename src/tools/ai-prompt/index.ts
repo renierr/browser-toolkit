@@ -1,23 +1,31 @@
 import { showMessage } from '@js/ui';
 import {
-  queryDom,
-  showUnsupported,
-  setActionState,
-  setDownloadState,
+  appendOutput,
   getOutputMode,
+  queryDom,
+  renderHistory,
+  resetOutput,
+  setActionState,
+  setContextTelemetry,
+  setDownloadState,
   setOutput,
   setOutputMode,
-  renderHistory,
-  setContextTelemetry,
-  appendOutput,
-  resetOutput,
   setStatus,
+  setToolModeUi,
+  showUnsupported,
 } from './dom';
 import { PromptConversationHistory } from './conversation-history';
 import { PromptHistoryStore } from './history-store';
-import { PromptSessionManager } from './session-manager';
+import { PromptModeClient, TranslatorModeClient } from './modes';
 import { getPromptApiGlobal, getUnsupportedExplanation } from './support';
-import type { PromptMessage, PromptInput, PromptSessionOptions } from './types';
+import type {
+  LanguageDetectorApiGlobal,
+  PromptInput,
+  PromptMessage,
+  PromptSessionOptions,
+  ToolModeId,
+  TranslatorApiGlobal,
+} from './types';
 
 const SESSION_OPTIONS: PromptSessionOptions = {
   expectedInputs: [{ type: 'text' }],
@@ -26,6 +34,13 @@ const SESSION_OPTIONS: PromptSessionOptions = {
 
 const SYSTEM_PROMPT =
   'You are a concise, helpful assistant running fully on-device in Chrome Prompt API. Prefer direct answers and practical steps.';
+
+const DEFAULT_TRANSLATOR_TARGET = 'de';
+
+type TranslatorGlobals = {
+  Translator?: TranslatorApiGlobal;
+  LanguageDetector?: LanguageDetectorApiGlobal;
+};
 
 export default function init(): void | (() => void) {
   const container = document.getElementById('tool-content');
@@ -43,8 +58,16 @@ export default function init(): void | (() => void) {
     return;
   }
 
-  const manager = new PromptSessionManager(promptApi, SESSION_OPTIONS);
+  const globals = self as unknown as TranslatorGlobals;
+  const translatorApi = globals.Translator ?? null;
+  const languageDetectorApi = globals.LanguageDetector ?? null;
+
+  const promptClient = new PromptModeClient(promptApi, SESSION_OPTIONS);
+  const translatorClient = translatorApi
+    ? new TranslatorModeClient(translatorApi, languageDetectorApi)
+    : null;
   const history = new PromptConversationHistory(new PromptHistoryStore());
+
   let promptAbortController: AbortController | null = null;
   let isInitializing = false;
   let isStreaming = false;
@@ -52,14 +75,33 @@ export default function init(): void | (() => void) {
   let needsConversationRecovery = false;
   let hasContextOverflowed = false;
 
+  const getMode = (): ToolModeId =>
+    dom.modeSelect.value === 'translator' ? 'translator' : 'prompt';
+
+  const hasActiveModeReady = (): boolean => {
+    if (getMode() === 'prompt') return promptClient.hasSession();
+    return translatorClient !== null;
+  };
+
   const syncHistoryUi = (): void => {
     renderHistory(dom, history.list(), getOutputMode(dom));
   };
 
   const syncContextTelemetry = (): void => {
-    const telemetry = manager.getContextTelemetry();
+    if (getMode() !== 'prompt') {
+      setContextTelemetry(dom, {
+        visible: false,
+        usage: null,
+        window: null,
+        percent: null,
+        hasOverflowed: false,
+      });
+      return;
+    }
+
+    const telemetry = promptClient.getContextTelemetry();
     setContextTelemetry(dom, {
-      visible: manager.hasSession(),
+      visible: promptClient.hasSession(),
       usage: telemetry.usage,
       window: telemetry.window,
       percent: telemetry.percent,
@@ -69,8 +111,8 @@ export default function init(): void | (() => void) {
 
   const refreshActionState = (): void => {
     const hasPrompt = dom.promptInput.value.trim().length > 0;
-    const canAsk = manager.hasSession() && hasPrompt && !isInitializing && !isStreaming;
-    const canStop = isStreaming;
+    const canAsk = hasActiveModeReady() && hasPrompt && !isInitializing && !isStreaming;
+    const canStop = isStreaming && getMode() === 'prompt';
     setActionState(dom, { canAsk, canStop });
     dom.initButton.disabled = isInitializing || isStreaming;
   };
@@ -93,14 +135,52 @@ export default function init(): void | (() => void) {
     refreshActionState();
 
     try {
-      const result = await manager.init((percent) => {
+      if (getMode() === 'translator') {
+        if (!translatorClient) {
+          setStatus(dom, 'idle');
+          setDownloadState(dom, false, 0, '');
+          showMessage('Translator API not available in this browser.', {
+            type: 'warning',
+            hideTypeText: false,
+          });
+          return;
+        }
+
+        const result = await translatorClient.init((percent) => {
+          setDownloadState(dom, true, percent, `Preparing translation resources... ${percent}%`);
+        });
+
+        if (!result.ready || result.availability === 'unavailable') {
+          setStatus(dom, 'idle');
+          setDownloadState(dom, false, 0, '');
+          showMessage('Translator mode unavailable on this device/profile.', {
+            type: 'warning',
+            hideTypeText: false,
+          });
+          return;
+        }
+
+        needsConversationRecovery = false;
+        hasContextOverflowed = false;
+        syncContextTelemetry();
+        setStatus(dom, 'ready');
+        setDownloadState(dom, false, 0, '');
+        showMessage('Translator mode is ready.', {
+          type: 'info',
+          hideTypeText: false,
+          timeoutMs: 2500,
+        });
+        return;
+      }
+
+      const result = await promptClient.init((percent) => {
         setDownloadState(dom, true, percent, `Downloading model... ${percent}%`);
       });
 
-      if (!result.session || result.availability === 'unavailable') {
+      if (!result.ready || result.availability === 'unavailable') {
         needsConversationRecovery = false;
         hasContextOverflowed = false;
-        manager.setContextOverflowListener(null);
+        promptClient.setContextOverflowListener(null);
         syncContextTelemetry();
         setStatus(dom, 'idle');
         setDownloadState(dom, false, 0, '');
@@ -111,11 +191,9 @@ export default function init(): void | (() => void) {
         return;
       }
 
-      setStatus(dom, 'ready');
-      setDownloadState(dom, false, 0, '');
-      needsConversationRecovery = history.list().length > 0;
+      needsConversationRecovery = history.list().some((entry) => entry.mode === 'prompt');
       hasContextOverflowed = false;
-      manager.setContextOverflowListener(() => {
+      promptClient.setContextOverflowListener(() => {
         hasContextOverflowed = true;
         syncContextTelemetry();
         showMessage('Model context overflow detected. Older turns may be dropped.', {
@@ -125,16 +203,19 @@ export default function init(): void | (() => void) {
         });
       });
       syncContextTelemetry();
+
+      setStatus(dom, 'ready');
+      setDownloadState(dom, false, 0, '');
       showMessage('Prompt model is ready.', { type: 'info', hideTypeText: false, timeoutMs: 2500 });
     } catch (error) {
-      console.error('[AI Prompt] Failed to initialize model:', error);
+      console.error('[AI Prompt] Failed to initialize mode:', error);
       needsConversationRecovery = false;
       hasContextOverflowed = false;
-      manager.setContextOverflowListener(null);
+      promptClient.setContextOverflowListener(null);
       syncContextTelemetry();
       setStatus(dom, 'idle');
       setDownloadState(dom, false, 0, '');
-      showMessage('Failed to initialize Prompt API model.', { type: 'alert', hideTypeText: false });
+      showMessage('Failed to initialize selected mode.', { type: 'alert', hideTypeText: false });
     } finally {
       isInitializing = false;
       refreshActionState();
@@ -143,7 +224,8 @@ export default function init(): void | (() => void) {
 
   const autoInitIfReady = async (): Promise<void> => {
     try {
-      const availability = await manager.checkAvailability();
+      if (getMode() !== 'prompt') return;
+      const availability = await promptClient.checkAvailability();
       if (isDisposed) return;
 
       if (availability === 'available') {
@@ -187,8 +269,19 @@ export default function init(): void | (() => void) {
       return;
     }
 
-    if (!manager.hasSession()) {
-      showMessage('Initialize model first.', {
+    const mode = getMode();
+
+    if (mode === 'prompt' && !promptClient.hasSession()) {
+      showMessage('Initialize prompt mode first.', {
+        type: 'warning',
+        hideTypeText: false,
+        timeoutMs: 2500,
+      });
+      return;
+    }
+
+    if (mode === 'translator' && !translatorClient) {
+      showMessage('Translator API is not available in this browser.', {
         type: 'warning',
         hideTypeText: false,
         timeoutMs: 2500,
@@ -202,54 +295,81 @@ export default function init(): void | (() => void) {
     setOutput(dom, '');
     refreshActionState();
 
-    const historyEntry = history.startPrompt(prompt);
+    const historyEntry = history.startPrompt({
+      mode,
+      prompt,
+      meta:
+        mode === 'translator'
+          ? {
+              detectSource: dom.detectSource.checked,
+              sourceLanguage: dom.sourceLanguage.value,
+              targetLanguage: dom.targetLanguage.value,
+            }
+          : undefined,
+    });
     syncHistoryUi();
 
     try {
-      const promptInput: PromptInput = needsConversationRecovery
-        ? buildRecoveryConversationMessages(prompt)
-        : prompt;
+      if (mode === 'translator') {
+        if (!translatorClient) throw new Error('Translator mode unavailable');
+        const translation = await translatorClient.run({
+          text: prompt,
+          sourceLanguage: dom.sourceLanguage.value,
+          targetLanguage: dom.targetLanguage.value,
+          detectSource: dom.detectSource.checked,
+        });
+        setOutput(dom, translation.output);
+        history.appendResponse(historyEntry.id, translation.output);
+        history.updateMeta(historyEntry.id, {
+          effectiveSourceLanguage: translation.detectedLanguage || dom.sourceLanguage.value,
+          targetLanguage: dom.targetLanguage.value,
+        });
+        history.markDone(historyEntry.id);
+      } else {
+        const promptInput: PromptInput = needsConversationRecovery
+          ? buildRecoveryConversationMessages(prompt)
+          : prompt;
 
-      await manager.stream(
-        promptInput,
-        {
-          onChunk: (chunk) => {
+        await promptClient.stream(
+          promptInput,
+          (chunk) => {
             history.appendResponse(historyEntry.id, chunk);
             appendOutput(dom, chunk);
             syncHistoryUi();
           },
-        },
-        promptAbortController.signal
-      );
+          promptAbortController.signal
+        );
 
-      if (!dom.outputText.textContent) {
-        setOutput(dom, 'No response returned.');
-        history.markDone(historyEntry.id, 'No response returned.');
-      } else {
-        history.markDone(historyEntry.id);
+        if (!dom.outputText.textContent) {
+          setOutput(dom, 'No response returned.');
+          history.markDone(historyEntry.id, 'No response returned.');
+        } else {
+          history.markDone(historyEntry.id);
+        }
+        needsConversationRecovery = false;
       }
-      needsConversationRecovery = false;
+
       syncHistoryUi();
       syncContextTelemetry();
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
+      if (error instanceof DOMException && error.name === 'AbortError' && mode === 'prompt') {
         history.markAborted(historyEntry.id, 'Prompt stopped before any response was returned.');
         const entry = history.list().find((item) => item.id === historyEntry.id);
         if (entry && entry.response.trim()) setOutput(dom, entry.response);
         syncHistoryUi();
         showMessage('Prompt stopped.', { type: 'info', hideTypeText: false, timeoutMs: 2000 });
       } else {
-        history.markError(historyEntry.id, 'Prompt failed before a response was returned.');
+        history.markError(historyEntry.id, 'Execution failed before a response was returned.');
         const entry = history.list().find((item) => item.id === historyEntry.id);
         if (entry && entry.response.trim()) setOutput(dom, entry.response);
         syncHistoryUi();
-        console.error('[AI Prompt] Failed to stream response:', error);
-        showMessage('Prompt failed. Try again.', { type: 'alert', hideTypeText: false });
+        console.error('[AI Prompt] Failed to run selected mode:', error);
+        showMessage('Execution failed. Try again.', { type: 'alert', hideTypeText: false });
       }
     } finally {
       promptAbortController = null;
       isStreaming = false;
-      setStatus(dom, manager.hasSession() ? 'ready' : 'idle');
+      setStatus(dom, hasActiveModeReady() ? 'ready' : 'idle');
       syncContextTelemetry();
       refreshActionState();
     }
@@ -279,8 +399,38 @@ export default function init(): void | (() => void) {
     syncHistoryUi();
   };
 
+  const onModeChange = (): void => {
+    const mode = getMode();
+    setToolModeUi(dom, mode);
+
+    if (mode === 'translator') {
+      if (!translatorClient) {
+        showMessage('Translator mode is not supported in this browser.', {
+          type: 'warning',
+          hideTypeText: false,
+          timeoutMs: 3500,
+        });
+      }
+
+      if (dom.detectSource.checked) {
+        dom.sourceLanguage.disabled = true;
+      }
+    }
+
+    setStatus(dom, hasActiveModeReady() ? 'ready' : 'idle');
+    syncContextTelemetry();
+    refreshActionState();
+  };
+
+  const onDetectSourceChange = (): void => {
+    dom.sourceLanguage.disabled = dom.detectSource.checked;
+  };
+
   resetOutput(dom);
+  setToolModeUi(dom, getMode());
   setOutputMode(dom, getOutputMode(dom));
+  dom.targetLanguage.value = dom.targetLanguage.value || DEFAULT_TRANSLATOR_TARGET;
+  onDetectSourceChange();
   syncHistoryUi();
   setStatus(dom, 'idle');
   setDownloadState(dom, false, 0, '');
@@ -291,6 +441,7 @@ export default function init(): void | (() => void) {
   const onInitButtonClick = (): void => {
     void onInitClick();
   };
+
   const onAskButtonClick = (): void => {
     void onAskClick();
   };
@@ -301,6 +452,8 @@ export default function init(): void | (() => void) {
   dom.clearButton.addEventListener('click', onClearClick);
   dom.promptInput.addEventListener('input', onPromptInput);
   dom.outputMode.addEventListener('change', onOutputModeChange);
+  dom.modeSelect.addEventListener('change', onModeChange);
+  dom.detectSource.addEventListener('change', onDetectSourceChange);
 
   return () => {
     isDisposed = true;
@@ -308,8 +461,10 @@ export default function init(): void | (() => void) {
       promptAbortController.abort();
       promptAbortController = null;
     }
-    manager.setContextOverflowListener(null);
-    manager.destroy();
+
+    promptClient.setContextOverflowListener(null);
+    promptClient.destroy();
+    translatorClient?.destroy();
 
     dom.initButton.removeEventListener('click', onInitButtonClick);
     dom.askButton.removeEventListener('click', onAskButtonClick);
@@ -317,5 +472,7 @@ export default function init(): void | (() => void) {
     dom.clearButton.removeEventListener('click', onClearClick);
     dom.promptInput.removeEventListener('input', onPromptInput);
     dom.outputMode.removeEventListener('change', onOutputModeChange);
+    dom.modeSelect.removeEventListener('change', onModeChange);
+    dom.detectSource.removeEventListener('change', onDetectSourceChange);
   };
 }

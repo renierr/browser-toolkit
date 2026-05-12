@@ -1,6 +1,12 @@
 import { PromptHistoryStore } from './history-store';
 import type { PromptHistoryEntry, PromptHistorySessionData, PromptMessage } from './types';
 
+type StartEntryArgs = {
+  mode: 'prompt' | 'translator';
+  prompt: string;
+  meta?: Record<string, unknown>;
+};
+
 export class PromptConversationHistory {
   private readonly store: PromptHistoryStore;
   private entries: PromptHistoryEntry[];
@@ -22,15 +28,17 @@ export class PromptConversationHistory {
     this.store.clear();
   }
 
-  public startPrompt(prompt: string): PromptHistoryEntry {
+  public startPrompt(args: StartEntryArgs): PromptHistoryEntry {
     const now = Date.now();
     const entry: PromptHistoryEntry = {
       id: this.nextId,
-      prompt,
+      mode: args.mode,
+      prompt: args.prompt,
       response: '',
       createdAt: now,
       updatedAt: now,
       status: 'streaming',
+      meta: args.meta,
     };
 
     this.nextId += 1;
@@ -82,16 +90,29 @@ export class PromptConversationHistory {
 
   public toSessionData(): PromptHistorySessionData {
     return {
-      version: 1,
+      version: 2,
       entries: this.entries,
     };
+  }
+
+  public updateMeta(id: number, meta: Record<string, unknown>): void {
+    const entry = this.findById(id);
+    if (!entry) return;
+    entry.meta = {
+      ...(entry.meta || {}),
+      ...meta,
+    };
+    entry.updatedAt = Date.now();
+    this.persist();
   }
 
   public toConversationMessages(maxEntries: number = 12): PromptMessage[] {
     const ordered = this.entries
       .slice()
       .filter(
-        (entry) => entry.status === 'done' || entry.status === 'aborted' || entry.status === 'error'
+        (entry) =>
+          entry.mode === 'prompt' &&
+          (entry.status === 'done' || entry.status === 'aborted' || entry.status === 'error')
       )
       .sort((a, b) => a.createdAt - b.createdAt)
       .slice(-maxEntries);
