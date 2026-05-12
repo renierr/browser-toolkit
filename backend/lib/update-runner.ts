@@ -79,6 +79,9 @@ type UpdateJobInternal = UpdateJobSnapshot & {
   subscribers: Set<(event: UpdateJobEvent) => void>;
 };
 
+const BACKEND_RESTART_PATH_PREFIXES = ['backend/'];
+const BACKEND_RESTART_PATH_EXACT = new Set(['package.json', 'bun.lock', 'bun.lockb']);
+
 const jobs = new Map<string, UpdateJobInternal>();
 let runningJobId: string | null = null;
 
@@ -151,6 +154,15 @@ export async function getUpdateCapabilities(): Promise<UpdateCapabilities> {
 
 function commandText(parts: string[]): string {
   return parts.map((part) => (part.includes(' ') ? `"${part}"` : part)).join(' ');
+}
+
+function shouldRestartForChangedFiles(changedFiles: string[]): boolean {
+  return changedFiles.some((filePath) => {
+    if (BACKEND_RESTART_PATH_EXACT.has(filePath)) {
+      return true;
+    }
+    return BACKEND_RESTART_PATH_PREFIXES.some((prefix) => filePath.startsWith(prefix));
+  });
 }
 
 const DEFAULT_STEP_TIMEOUT_MS = 30 * 60 * 1000;
@@ -685,7 +697,37 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
     }
 
     setStepStatus(job, 'git-fetch', 'completed', 0);
+    const prePullHead = check.localHash;
     await runStepCommand(job, 'git-pull', ['git', 'pull', '--ff-only', 'origin', check.branch], job.appDir);
+    const postPullHeadResult = await runCommand(['git', 'rev-parse', 'HEAD'], job.appDir);
+    if (!postPullHeadResult.success || postPullHeadResult.stdout.length === 0) {
+      throw new Error(postPullHeadResult.stderr || 'Unable to read git HEAD after pull.');
+    }
+    const postPullHead = postPullHeadResult.stdout;
+    let changedFiles: string[] = [];
+    if (prePullHead.length > 0 && prePullHead !== postPullHead) {
+      const changedFilesResult = await runCommand(
+        ['git', 'diff', '--name-only', `${prePullHead}..${postPullHead}`],
+        job.appDir
+      );
+      if (!changedFilesResult.success) {
+        throw new Error(changedFilesResult.stderr || 'Unable to detect changed files after pull.');
+      }
+      changedFiles = changedFilesResult.stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+    }
+
+    const needsBackendRestart = shouldRestartForChangedFiles(changedFiles);
+    emitLog(
+      job,
+      'info',
+      needsBackendRestart
+        ? 'Detected backend-impacting changes. Restart required after update.'
+        : 'No backend-impacting changes detected. Restart not required.'
+    );
+
     await runStepCommand(job, 'install-root', ['bun', 'install'], job.appDir);
 
     await rm(resolve(job.appDir, 'dist_next'), { recursive: true, force: true });
@@ -701,7 +743,7 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
 
     await runStepCommand(job, 'install-backend', ['bun', 'install', '--cwd', 'backend'], job.appDir);
 
-    if (job.restartOnSuccess) {
+    if (job.restartOnSuccess && needsBackendRestart) {
       job.status = 'pending_restart';
       job.endedAt = nowIso();
       emitLog(job, 'info', 'Update complete. Triggering process exit for systemd restart.');
@@ -714,6 +756,9 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
 
     job.status = 'completed';
     job.endedAt = nowIso();
+    if (job.restartOnSuccess && !needsBackendRestart) {
+      emitLog(job, 'info', 'Update complete. Frontend-only or non-runtime changes; restart skipped.');
+    }
     emitLog(job, 'info', 'Update complete.');
     emitState(job);
   } catch (error) {
