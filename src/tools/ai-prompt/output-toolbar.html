@@ -1,0 +1,23 @@
+<div class="flex flex-wrap gap-2">
+  <button id="ai-ask-btn" class="btn btn-secondary btn-sm" disabled>
+    <i data-lucide="send" class="w-4 h-4 mr-2"></i>
+    Ask
+  </button>
+  <button id="ai-stop-btn" class="btn btn-outline btn-sm" disabled>
+    <i data-lucide="square" class="w-4 h-4 mr-2"></i>
+    Stop
+  </button>
+  <button id="ai-clear-btn" class="btn btn-ghost btn-sm">
+    <i data-lucide="eraser" class="w-4 h-4 mr-2"></i>
+    Clear output
+  </button>
+  <select
+    id="ai-output-mode"
+    data-setting="output-mode"
+    class="select select-bordered select-sm w-40"
+    aria-label="Output mode"
+  >
+    <option value="plain" selected>Plain text</option>
+    <option value="markdown">Markdown</option>
+  </select>
+</div>

@@ -1,0 +1,61 @@
+<div class="flex flex-wrap gap-2 mb-2">
+  <select
+    id="ai-mode-select"
+    data-setting="mode"
+    class="select select-bordered select-sm w-44"
+    aria-label="AI mode"
+  >
+    <option value="prompt" selected>Prompt</option>
+    <option value="translator">Translator</option>
+  </select>
+  <div id="ai-translator-controls" class="hidden flex flex-wrap gap-2">
+    <label
+      class="label cursor-pointer gap-2 py-0 px-2 rounded-lg border border-base-300 bg-base-100"
+    >
+      <input
+        id="ai-detect-source"
+        data-setting="translator-detect-source"
+        type="checkbox"
+        class="checkbox checkbox-xs"
+        checked
+      />
+      <span class="label-text text-xs">Auto detect source</span>
+    </label>
+    <select
+      id="ai-source-language"
+      data-setting="translator-source-language"
+      class="select select-bordered select-sm w-28"
+      aria-label="Source language"
+    >
+      <option value="en" selected>EN</option>
+      <option value="de">DE</option>
+      <option value="fr">FR</option>
+      <option value="es">ES</option>
+      <option value="it">IT</option>
+      <option value="nl">NL</option>
+      <option value="pt">PT</option>
+      <option value="pl">PL</option>
+      <option value="tr">TR</option>
+      <option value="zh">ZH</option>
+      <option value="ja">JA</option>
+    </select>
+    <select
+      id="ai-target-language"
+      data-setting="translator-target-language"
+      class="select select-bordered select-sm w-28"
+      aria-label="Target language"
+    >
+      <option value="de" selected>DE</option>
+      <option value="en">EN</option>
+      <option value="fr">FR</option>
+      <option value="es">ES</option>
+      <option value="it">IT</option>
+      <option value="nl">NL</option>
+      <option value="pt">PT</option>
+      <option value="pl">PL</option>
+      <option value="tr">TR</option>
+      <option value="zh">ZH</option>
+      <option value="ja">JA</option>
+    </select>
+  </div>
+</div>

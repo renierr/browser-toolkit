@@ -14,110 +14,13 @@
     </div>
 
     <div id="ai-prompt-main" class="space-y-4">
-      <div class="rounded-xl border border-base-300 bg-base-200 p-4 space-y-3">
-        <div class="flex flex-wrap items-center gap-2">
-          <button id="ai-init-btn" class="btn btn-primary btn-sm">
-            <i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>
-            Initialize Model
-          </button>
-          <span id="ai-state-badge" class="badge badge-outline">Not initialized</span>
-        </div>
-        <div class="space-y-1">
-          <progress
-            id="ai-download-progress"
-            class="progress progress-primary w-full hidden"
-            value="0"
-            max="100"
-          ></progress>
-          <p id="ai-download-text" class="text-xs text-base-content/70 hidden">
-            Preparing model...
-          </p>
-        </div>
-        <div
-          id="ai-context-telemetry"
-          class="hidden rounded-lg border border-base-300 bg-base-100 p-3"
-        >
-          <div class="flex items-center justify-between text-xs text-base-content/70 mb-2">
-            <span>Context usage</span>
-            <span id="ai-context-usage-label">-- / --</span>
-          </div>
-          <progress
-            id="ai-context-usage-progress"
-            class="progress progress-secondary w-full"
-            value="0"
-            max="100"
-          ></progress>
-          <p id="ai-context-note" class="text-[11px] text-base-content/60 mt-2">
-            Context tracks how much conversation memory is currently used.
-          </p>
-        </div>
-      </div>
+      <include src="init-panel.html" />
 
       <div class="form-control w-full">
         <label class="label" for="ai-prompt-input">
           <span class="label-text font-semibold">Your prompt</span>
         </label>
-        <div class="flex flex-wrap gap-2 mb-2">
-          <select
-            id="ai-mode-select"
-            data-setting="mode"
-            class="select select-bordered select-sm w-44"
-            aria-label="AI mode"
-          >
-            <option value="prompt" selected>Prompt</option>
-            <option value="translator">Translator</option>
-          </select>
-          <div id="ai-translator-controls" class="hidden flex flex-wrap gap-2">
-            <label
-              class="label cursor-pointer gap-2 py-0 px-2 rounded-lg border border-base-300 bg-base-100"
-            >
-              <input
-                id="ai-detect-source"
-                data-setting="translator-detect-source"
-                type="checkbox"
-                class="checkbox checkbox-xs"
-                checked
-              />
-              <span class="label-text text-xs">Auto detect source</span>
-            </label>
-            <select
-              id="ai-source-language"
-              data-setting="translator-source-language"
-              class="select select-bordered select-sm w-28"
-              aria-label="Source language"
-            >
-              <option value="en" selected>EN</option>
-              <option value="de">DE</option>
-              <option value="fr">FR</option>
-              <option value="es">ES</option>
-              <option value="it">IT</option>
-              <option value="nl">NL</option>
-              <option value="pt">PT</option>
-              <option value="pl">PL</option>
-              <option value="tr">TR</option>
-              <option value="zh">ZH</option>
-              <option value="ja">JA</option>
-            </select>
-            <select
-              id="ai-target-language"
-              data-setting="translator-target-language"
-              class="select select-bordered select-sm w-28"
-              aria-label="Target language"
-            >
-              <option value="de" selected>DE</option>
-              <option value="en">EN</option>
-              <option value="fr">FR</option>
-              <option value="es">ES</option>
-              <option value="it">IT</option>
-              <option value="nl">NL</option>
-              <option value="pt">PT</option>
-              <option value="pl">PL</option>
-              <option value="tr">TR</option>
-              <option value="zh">ZH</option>
-              <option value="ja">JA</option>
-            </select>
-          </div>
-        </div>
+        <include src="mode-controls.html" />
         <textarea
           id="ai-prompt-input"
           class="textarea textarea-bordered min-h-32 w-full"
@@ -125,61 +28,9 @@
         ></textarea>
       </div>
 
-      <div class="flex flex-wrap gap-2">
-        <button id="ai-ask-btn" class="btn btn-secondary btn-sm" disabled>
-          <i data-lucide="send" class="w-4 h-4 mr-2"></i>
-          Ask
-        </button>
-        <button id="ai-stop-btn" class="btn btn-outline btn-sm" disabled>
-          <i data-lucide="square" class="w-4 h-4 mr-2"></i>
-          Stop
-        </button>
-        <button id="ai-clear-btn" class="btn btn-ghost btn-sm">
-          <i data-lucide="eraser" class="w-4 h-4 mr-2"></i>
-          Clear output
-        </button>
-        <select
-          id="ai-output-mode"
-          data-setting="output-mode"
-          class="select select-bordered select-sm w-40"
-          aria-label="Output mode"
-        >
-          <option value="plain" selected>Plain text</option>
-          <option value="markdown">Markdown</option>
-        </select>
-      </div>
-
-      <div class="rounded-xl border border-base-300 bg-base-200">
-        <div class="flex items-center justify-between border-b border-base-300 px-4 py-2">
-          <span class="text-sm font-semibold">Response</span>
-          <span id="ai-stream-state" class="text-xs text-base-content/60">Idle</span>
-        </div>
-        <pre
-          id="ai-output-text"
-          class="p-4 text-sm whitespace-pre-wrap break-words min-h-40 max-h-[50dvh] overflow-auto"
-        >
-No response yet.</pre
-        >
-        <div
-          id="ai-output-markdown"
-          class="hidden md-content p-4 text-sm min-h-40 max-h-[50dvh] overflow-auto"
-          data-content-theme="default"
-        >
-          No response yet.
-        </div>
-      </div>
-
-      <div class="rounded-xl border border-base-300 bg-base-200">
-        <div class="flex items-center justify-between border-b border-base-300 px-4 py-2">
-          <span class="text-sm font-semibold">Session history</span>
-          <span id="ai-history-count" class="text-xs text-base-content/60">0 entries</span>
-        </div>
-        <div id="ai-history-list" class="max-h-[40dvh] overflow-auto p-2">
-          <p id="ai-history-empty" class="text-sm text-base-content/60 p-3">
-            No prompts in this session yet.
-          </p>
-        </div>
-      </div>
+      <include src="output-toolbar.html" />
+      <include src="response-panel.html" />
+      <include src="history-panel.html" />
     </div>
   </div>
 </div>

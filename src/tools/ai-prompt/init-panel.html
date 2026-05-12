@@ -1,0 +1,33 @@
+<div class="rounded-xl border border-base-300 bg-base-200 p-4 space-y-3">
+  <div class="flex flex-wrap items-center gap-2">
+    <button id="ai-init-btn" class="btn btn-primary btn-sm">
+      <i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>
+      Initialize Model
+    </button>
+    <span id="ai-state-badge" class="badge badge-outline">Not initialized</span>
+  </div>
+  <div class="space-y-1">
+    <progress
+      id="ai-download-progress"
+      class="progress progress-primary w-full hidden"
+      value="0"
+      max="100"
+    ></progress>
+    <p id="ai-download-text" class="text-xs text-base-content/70 hidden">Preparing model...</p>
+  </div>
+  <div id="ai-context-telemetry" class="hidden rounded-lg border border-base-300 bg-base-100 p-3">
+    <div class="flex items-center justify-between text-xs text-base-content/70 mb-2">
+      <span>Context usage</span>
+      <span id="ai-context-usage-label">-- / --</span>
+    </div>
+    <progress
+      id="ai-context-usage-progress"
+      class="progress progress-secondary w-full"
+      value="0"
+      max="100"
+    ></progress>
+    <p id="ai-context-note" class="text-[11px] text-base-content/60 mt-2">
+      Context tracks how much conversation memory is currently used.
+    </p>
+  </div>
+</div>
