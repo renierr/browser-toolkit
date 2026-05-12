@@ -53,6 +53,10 @@ export type PromptApiMonitor = {
 export type PromptApiSession = {
   promptStreaming(input: PromptInput, options?: { signal?: AbortSignal }): AsyncIterable<string>;
   destroy(): void;
+  contextUsage?: number;
+  contextWindow?: number;
+  addEventListener?: (type: 'contextoverflow', listener: (event: Event) => void) => void;
+  removeEventListener?: (type: 'contextoverflow', listener: (event: Event) => void) => void;
 };
 
 export type PromptApiGlobal = {

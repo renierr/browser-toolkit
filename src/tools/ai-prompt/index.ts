@@ -8,6 +8,7 @@ import {
   setOutput,
   setOutputMode,
   renderHistory,
+  setContextTelemetry,
   appendOutput,
   resetOutput,
   setStatus,
@@ -49,9 +50,21 @@ export default function init(): void | (() => void) {
   let isStreaming = false;
   let isDisposed = false;
   let needsConversationRecovery = false;
+  let hasContextOverflowed = false;
 
   const syncHistoryUi = (): void => {
     renderHistory(dom, history.list(), getOutputMode(dom));
+  };
+
+  const syncContextTelemetry = (): void => {
+    const telemetry = manager.getContextTelemetry();
+    setContextTelemetry(dom, {
+      visible: manager.hasSession(),
+      usage: telemetry.usage,
+      window: telemetry.window,
+      percent: telemetry.percent,
+      hasOverflowed: hasContextOverflowed,
+    });
   };
 
   const refreshActionState = (): void => {
@@ -86,6 +99,9 @@ export default function init(): void | (() => void) {
 
       if (!result.session || result.availability === 'unavailable') {
         needsConversationRecovery = false;
+        hasContextOverflowed = false;
+        manager.setContextOverflowListener(null);
+        syncContextTelemetry();
         setStatus(dom, 'idle');
         setDownloadState(dom, false, 0, '');
         showMessage('Prompt model unavailable on this device/profile.', {
@@ -98,10 +114,24 @@ export default function init(): void | (() => void) {
       setStatus(dom, 'ready');
       setDownloadState(dom, false, 0, '');
       needsConversationRecovery = history.list().length > 0;
+      hasContextOverflowed = false;
+      manager.setContextOverflowListener(() => {
+        hasContextOverflowed = true;
+        syncContextTelemetry();
+        showMessage('Model context overflow detected. Older turns may be dropped.', {
+          type: 'warning',
+          hideTypeText: false,
+          timeoutMs: 4000,
+        });
+      });
+      syncContextTelemetry();
       showMessage('Prompt model is ready.', { type: 'info', hideTypeText: false, timeoutMs: 2500 });
     } catch (error) {
       console.error('[AI Prompt] Failed to initialize model:', error);
       needsConversationRecovery = false;
+      hasContextOverflowed = false;
+      manager.setContextOverflowListener(null);
+      syncContextTelemetry();
       setStatus(dom, 'idle');
       setDownloadState(dom, false, 0, '');
       showMessage('Failed to initialize Prompt API model.', { type: 'alert', hideTypeText: false });
@@ -200,6 +230,7 @@ export default function init(): void | (() => void) {
       }
       needsConversationRecovery = false;
       syncHistoryUi();
+      syncContextTelemetry();
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         history.markAborted(historyEntry.id, 'Prompt stopped before any response was returned.');
@@ -219,6 +250,7 @@ export default function init(): void | (() => void) {
       promptAbortController = null;
       isStreaming = false;
       setStatus(dom, manager.hasSession() ? 'ready' : 'idle');
+      syncContextTelemetry();
       refreshActionState();
     }
   };
@@ -232,7 +264,9 @@ export default function init(): void | (() => void) {
     resetOutput(dom);
     history.clear();
     needsConversationRecovery = false;
+    hasContextOverflowed = false;
     syncHistoryUi();
+    syncContextTelemetry();
   };
 
   const onPromptInput = (): void => {
@@ -250,6 +284,7 @@ export default function init(): void | (() => void) {
   syncHistoryUi();
   setStatus(dom, 'idle');
   setDownloadState(dom, false, 0, '');
+  syncContextTelemetry();
   refreshActionState();
   void autoInitIfReady();
 
@@ -273,6 +308,7 @@ export default function init(): void | (() => void) {
       promptAbortController.abort();
       promptAbortController = null;
     }
+    manager.setContextOverflowListener(null);
     manager.destroy();
 
     dom.initButton.removeEventListener('click', onInitButtonClick);

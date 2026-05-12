@@ -16,10 +16,17 @@ export type InitResult = {
   session: PromptApiSession | null;
 };
 
+export type ContextTelemetry = {
+  usage: number | null;
+  window: number | null;
+  percent: number | null;
+};
+
 export class PromptSessionManager {
   private readonly api: PromptApiGlobal;
   private readonly options: PromptSessionOptions;
   private session: PromptApiSession | null = null;
+  private contextOverflowListener: ((event: Event) => void) | null = null;
 
   public constructor(api: PromptApiGlobal, options: PromptSessionOptions) {
     this.api = api;
@@ -60,6 +67,42 @@ export class PromptSessionManager {
     return this.session !== null;
   }
 
+  public setContextOverflowListener(listener: (() => void) | null): void {
+    if (this.contextOverflowListener && this.session?.removeEventListener) {
+      this.session.removeEventListener('contextoverflow', this.contextOverflowListener);
+    }
+
+    if (!listener) {
+      this.contextOverflowListener = null;
+      return;
+    }
+
+    this.contextOverflowListener = () => listener();
+    if (this.session?.addEventListener) {
+      this.session.addEventListener('contextoverflow', this.contextOverflowListener);
+    }
+  }
+
+  public getContextTelemetry(): ContextTelemetry {
+    if (!this.session) {
+      return { usage: null, window: null, percent: null };
+    }
+
+    const usage = typeof this.session.contextUsage === 'number' ? this.session.contextUsage : null;
+    const windowSize =
+      typeof this.session.contextWindow === 'number' ? this.session.contextWindow : null;
+
+    if (usage === null || windowSize === null || windowSize <= 0) {
+      return { usage, window: windowSize, percent: null };
+    }
+
+    return {
+      usage,
+      window: windowSize,
+      percent: Math.max(0, Math.min(100, Math.round((usage / windowSize) * 100))),
+    };
+  }
+
   public async stream(
     prompt: PromptInput,
     handlers: StreamHandlers,
@@ -77,6 +120,10 @@ export class PromptSessionManager {
 
   public destroy(): void {
     if (!this.session) return;
+    if (this.contextOverflowListener && this.session.removeEventListener) {
+      this.session.removeEventListener('contextoverflow', this.contextOverflowListener);
+    }
+    this.contextOverflowListener = null;
     this.session.destroy();
     this.session = null;
   }

@@ -18,6 +18,10 @@ export type AiPromptDom = {
   historyList: HTMLDivElement;
   historyEmpty: HTMLParagraphElement;
   historyCount: HTMLSpanElement;
+  contextTelemetry: HTMLDivElement;
+  contextUsageLabel: HTMLSpanElement;
+  contextUsageProgress: HTMLProgressElement;
+  contextNote: HTMLParagraphElement;
   downloadProgress: HTMLProgressElement;
   downloadText: HTMLParagraphElement;
 };
@@ -41,6 +45,16 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
   const historyList = container.querySelector('#ai-history-list') as HTMLDivElement | null;
   const historyEmpty = container.querySelector('#ai-history-empty') as HTMLParagraphElement | null;
   const historyCount = container.querySelector('#ai-history-count') as HTMLSpanElement | null;
+  const contextTelemetry = container.querySelector(
+    '#ai-context-telemetry'
+  ) as HTMLDivElement | null;
+  const contextUsageLabel = container.querySelector(
+    '#ai-context-usage-label'
+  ) as HTMLSpanElement | null;
+  const contextUsageProgress = container.querySelector(
+    '#ai-context-usage-progress'
+  ) as HTMLProgressElement | null;
+  const contextNote = container.querySelector('#ai-context-note') as HTMLParagraphElement | null;
   const downloadProgress = container.querySelector(
     '#ai-download-progress'
   ) as HTMLProgressElement | null;
@@ -63,6 +77,10 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
     !historyList ||
     !historyEmpty ||
     !historyCount ||
+    !contextTelemetry ||
+    !contextUsageLabel ||
+    !contextUsageProgress ||
+    !contextNote ||
     !downloadProgress ||
     !downloadText
   ) {
@@ -86,6 +104,10 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
     historyList,
     historyEmpty,
     historyCount,
+    contextTelemetry,
+    contextUsageLabel,
+    contextUsageProgress,
+    contextNote,
     downloadProgress,
     downloadText,
   };
@@ -224,6 +246,40 @@ export function renderHistory(
   }
 
   dom.historyList.appendChild(fragment);
+}
+
+export function setContextTelemetry(
+  dom: AiPromptDom,
+  args: {
+    visible: boolean;
+    usage: number | null;
+    window: number | null;
+    percent: number | null;
+    hasOverflowed: boolean;
+  }
+): void {
+  dom.contextTelemetry.classList.toggle('hidden', !args.visible);
+
+  if (!args.visible) {
+    dom.contextUsageLabel.textContent = '-- / --';
+    dom.contextUsageProgress.value = 0;
+    dom.contextNote.textContent = 'Context tracks how much conversation memory is currently used.';
+    return;
+  }
+
+  const usageText = args.usage !== null ? String(args.usage) : '--';
+  const windowText = args.window !== null ? String(args.window) : '--';
+  dom.contextUsageLabel.textContent = `${usageText} / ${windowText}`;
+  dom.contextUsageProgress.value = args.percent ?? 0;
+
+  if (args.hasOverflowed) {
+    dom.contextNote.textContent =
+      'Context overflow occurred. Older turns may have been dropped by the model session.';
+  } else if (args.percent !== null) {
+    dom.contextNote.textContent = `Session context currently uses about ${args.percent}% of available tokens.`;
+  } else {
+    dom.contextNote.textContent = 'Context metrics are not exposed by this browser build yet.';
+  }
 }
 
 export function setStatus(dom: AiPromptDom, status: PromptApiStatus): void {

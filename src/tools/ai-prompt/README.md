@@ -2,6 +2,10 @@
 
 On-device chat-style tool built on Chrome Prompt API (`LanguageModel`).
 
+Primary API reference:
+
+- https://developer.chrome.com/docs/ai/prompt-api?hl=de
+
 This document explains:
 
 - how the Prompt API works
@@ -77,6 +81,23 @@ Prompt API session has its own live context window.
 - If you keep the same session, prior prompts are remembered automatically.
 - If session is destroyed/recreated, native memory is lost.
 - If context window fills, oldest context can be dropped by model internals.
+
+### 5) Context/token telemetry
+
+If exposed by browser build, session provides context metrics:
+
+- `session.contextUsage`
+- `session.contextWindow`
+- `contextoverflow` event
+
+Tool behavior:
+
+- shows usage ratio and percentage in UI
+- updates telemetry after prompts
+- listens for `contextoverflow` and warns user
+- notes that older turns may be dropped when overflow occurs
+
+If browser does not expose these fields/events, tool keeps telemetry panel visible with fallback text.
 
 ## Our Memory Strategy (Hybrid)
 
@@ -186,7 +207,7 @@ Good next steps:
 
 1. Add a "recover context now" toggle/button.
 2. Expose max replay turns in UI.
-3. Add token/context usage telemetry if API exposes it.
+3. Add per-turn telemetry snapshots to history entries.
 4. Add export/import for session history JSON.
 5. Add optional per-thread history instead of one linear list.
 
@@ -196,3 +217,16 @@ Good next steps:
 - Requires Chrome Prompt API availability.
 - Model download may be large and hardware-dependent.
 - History is intentionally non-permanent (`sessionStorage`, not `localStorage`).
+
+## Current Workflow Summary
+
+1. Check API support (`LanguageModel`).
+2. Check availability and create session.
+3. Attach listeners:
+   - download progress
+   - optional context overflow
+4. Prompt flow:
+   - normal: send plain text prompt (use native session memory)
+   - recovery: replay limited structured history once after session recreation
+5. Stream response chunks to current output + structured session history.
+6. Refresh context telemetry panel from `contextUsage/contextWindow` when available.
