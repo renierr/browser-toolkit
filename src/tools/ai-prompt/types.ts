@@ -9,6 +9,22 @@ export type PromptApiStatus = 'idle' | 'initializing' | 'ready' | 'streaming';
 
 export type OutputMode = 'plain' | 'markdown';
 
+export type PromptHistoryEntryStatus = 'streaming' | 'done' | 'aborted' | 'error';
+
+export type PromptHistoryEntry = {
+  id: number;
+  prompt: string;
+  response: string;
+  createdAt: number;
+  updatedAt: number;
+  status: PromptHistoryEntryStatus;
+};
+
+export type PromptHistorySessionData = {
+  version: 1;
+  entries: PromptHistoryEntry[];
+};
+
 export type PromptSessionOptions = {
   expectedInputs: Array<{ type: 'text' }>;
   expectedOutputs: Array<{ type: 'text' }>;

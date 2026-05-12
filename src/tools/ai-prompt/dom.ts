@@ -1,5 +1,5 @@
 import { applyMarkdownContentTheme, renderMarkdownContent } from '@js/markdown-content';
-import type { OutputMode, PromptApiStatus } from './types';
+import type { OutputMode, PromptApiStatus, PromptHistoryEntry } from './types';
 
 export type AiPromptDom = {
   unsupported: HTMLDivElement;
@@ -15,6 +15,9 @@ export type AiPromptDom = {
   outputMode: HTMLSelectElement;
   outputText: HTMLPreElement;
   outputMarkdown: HTMLDivElement;
+  historyList: HTMLDivElement;
+  historyEmpty: HTMLParagraphElement;
+  historyCount: HTMLSpanElement;
   downloadProgress: HTMLProgressElement;
   downloadText: HTMLParagraphElement;
 };
@@ -35,6 +38,9 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
   const outputMode = container.querySelector('#ai-output-mode') as HTMLSelectElement | null;
   const outputText = container.querySelector('#ai-output-text') as HTMLPreElement | null;
   const outputMarkdown = container.querySelector('#ai-output-markdown') as HTMLDivElement | null;
+  const historyList = container.querySelector('#ai-history-list') as HTMLDivElement | null;
+  const historyEmpty = container.querySelector('#ai-history-empty') as HTMLParagraphElement | null;
+  const historyCount = container.querySelector('#ai-history-count') as HTMLSpanElement | null;
   const downloadProgress = container.querySelector(
     '#ai-download-progress'
   ) as HTMLProgressElement | null;
@@ -54,6 +60,9 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
     !outputMode ||
     !outputText ||
     !outputMarkdown ||
+    !historyList ||
+    !historyEmpty ||
+    !historyCount ||
     !downloadProgress ||
     !downloadText
   ) {
@@ -74,6 +83,9 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
     outputMode,
     outputText,
     outputMarkdown,
+    historyList,
+    historyEmpty,
+    historyCount,
     downloadProgress,
     downloadText,
   };
@@ -126,6 +138,92 @@ export function setOutputMode(dom: AiPromptDom, mode: OutputMode): void {
   if (mode === 'markdown') {
     applyMarkdownContentTheme(dom.outputMarkdown, 'default');
   }
+}
+
+function toPreview(text: string, maxLength: number): string {
+  const normalized = text.replace(/\s+/g, ' ').trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength - 1)}...`;
+}
+
+export function renderHistory(
+  dom: AiPromptDom,
+  entries: PromptHistoryEntry[],
+  mode: OutputMode
+): void {
+  dom.historyCount.textContent = `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'}`;
+  dom.historyEmpty.classList.toggle('hidden', entries.length > 0);
+
+  dom.historyList.querySelectorAll('[data-history-entry]').forEach((node) => node.remove());
+
+  if (entries.length === 0) return;
+
+  const fragment = document.createDocumentFragment();
+
+  for (const entry of entries) {
+    const details = document.createElement('details');
+    details.className = 'collapse collapse-arrow bg-base-100 border border-base-300 mb-2';
+    details.setAttribute('data-history-entry', String(entry.id));
+
+    const summary = document.createElement('summary');
+    summary.className = 'collapse-title py-3 pr-10';
+    const statusBadgeClass =
+      entry.status === 'done'
+        ? 'badge-success'
+        : entry.status === 'streaming'
+          ? 'badge-warning'
+          : entry.status === 'aborted'
+            ? 'badge-ghost'
+            : 'badge-error';
+    summary.innerHTML = `
+      <div class="flex items-center gap-2 text-xs text-base-content/60 mb-1">
+        <span>${new Date(entry.createdAt).toLocaleTimeString()}</span>
+        <span class="badge badge-xs ${statusBadgeClass}">${entry.status}</span>
+      </div>
+      <div class="font-semibold text-sm truncate">${toPreview(entry.prompt, 90)}</div>
+    `;
+
+    const body = document.createElement('div');
+    body.className = 'collapse-content pt-0';
+
+    const promptLabel = document.createElement('p');
+    promptLabel.className = 'text-xs uppercase tracking-wide text-base-content/60 mb-1';
+    promptLabel.textContent = 'Prompt';
+
+    const promptText = document.createElement('pre');
+    promptText.className =
+      'whitespace-pre-wrap break-words text-sm bg-base-200 p-3 rounded-lg mb-3';
+    promptText.textContent = entry.prompt;
+
+    const responseLabel = document.createElement('p');
+    responseLabel.className = 'text-xs uppercase tracking-wide text-base-content/60 mb-1';
+    responseLabel.textContent = 'Response';
+
+    const responseContainer = document.createElement('div');
+    responseContainer.className = 'bg-base-200 p-3 rounded-lg';
+
+    if (mode === 'markdown') {
+      responseContainer.classList.add('md-content');
+      responseContainer.innerHTML = renderMarkdownContent(entry.response);
+      applyMarkdownContentTheme(responseContainer, 'default');
+    } else {
+      const responseText = document.createElement('pre');
+      responseText.className = 'whitespace-pre-wrap break-words text-sm';
+      responseText.textContent = entry.response;
+      responseContainer.appendChild(responseText);
+    }
+
+    body.appendChild(promptLabel);
+    body.appendChild(promptText);
+    body.appendChild(responseLabel);
+    body.appendChild(responseContainer);
+
+    details.appendChild(summary);
+    details.appendChild(body);
+    fragment.appendChild(details);
+  }
+
+  dom.historyList.appendChild(fragment);
 }
 
 export function setStatus(dom: AiPromptDom, status: PromptApiStatus): void {

@@ -7,10 +7,13 @@ import {
   getOutputMode,
   setOutput,
   setOutputMode,
+  renderHistory,
   appendOutput,
   resetOutput,
   setStatus,
 } from './dom';
+import { PromptConversationHistory } from './conversation-history';
+import { PromptHistoryStore } from './history-store';
 import { PromptSessionManager } from './session-manager';
 import { getPromptApiGlobal, getUnsupportedExplanation } from './support';
 import type { PromptSessionOptions } from './types';
@@ -37,10 +40,15 @@ export default function init(): void | (() => void) {
   }
 
   const manager = new PromptSessionManager(promptApi, SESSION_OPTIONS);
+  const history = new PromptConversationHistory(new PromptHistoryStore());
   let promptAbortController: AbortController | null = null;
   let isInitializing = false;
   let isStreaming = false;
   let isDisposed = false;
+
+  const syncHistoryUi = (): void => {
+    renderHistory(dom, history.list(), getOutputMode(dom));
+  };
 
   const refreshActionState = (): void => {
     const hasPrompt = dom.promptInput.value.trim().length > 0;
@@ -148,12 +156,17 @@ export default function init(): void | (() => void) {
     setOutput(dom, '');
     refreshActionState();
 
+    const historyEntry = history.startPrompt(prompt);
+    syncHistoryUi();
+
     try {
       await manager.stream(
         prompt,
         {
           onChunk: (chunk) => {
+            history.appendResponse(historyEntry.id, chunk);
             appendOutput(dom, chunk);
+            syncHistoryUi();
           },
         },
         promptAbortController.signal
@@ -161,11 +174,23 @@ export default function init(): void | (() => void) {
 
       if (!dom.outputText.textContent) {
         setOutput(dom, 'No response returned.');
+        history.markDone(historyEntry.id, 'No response returned.');
+      } else {
+        history.markDone(historyEntry.id);
       }
+      syncHistoryUi();
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
+        history.markAborted(historyEntry.id, 'Prompt stopped before any response was returned.');
+        const entry = history.list().find((item) => item.id === historyEntry.id);
+        if (entry && entry.response.trim()) setOutput(dom, entry.response);
+        syncHistoryUi();
         showMessage('Prompt stopped.', { type: 'info', hideTypeText: false, timeoutMs: 2000 });
       } else {
+        history.markError(historyEntry.id, 'Prompt failed before a response was returned.');
+        const entry = history.list().find((item) => item.id === historyEntry.id);
+        if (entry && entry.response.trim()) setOutput(dom, entry.response);
+        syncHistoryUi();
         console.error('[AI Prompt] Failed to stream response:', error);
         showMessage('Prompt failed. Try again.', { type: 'alert', hideTypeText: false });
       }
@@ -184,6 +209,8 @@ export default function init(): void | (() => void) {
 
   const onClearClick = (): void => {
     resetOutput(dom);
+    history.clear();
+    syncHistoryUi();
   };
 
   const onPromptInput = (): void => {
@@ -191,11 +218,14 @@ export default function init(): void | (() => void) {
   };
 
   const onOutputModeChange = (): void => {
-    setOutputMode(dom, getOutputMode(dom));
+    const mode = getOutputMode(dom);
+    setOutputMode(dom, mode);
+    syncHistoryUi();
   };
 
   resetOutput(dom);
   setOutputMode(dom, getOutputMode(dom));
+  syncHistoryUi();
   setStatus(dom, 'idle');
   setDownloadState(dom, false, 0, '');
   refreshActionState();
