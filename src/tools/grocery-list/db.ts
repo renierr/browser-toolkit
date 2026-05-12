@@ -1,15 +1,19 @@
 import type { GroceryItem, ItemHistory } from './types.ts';
+import { SyncManager } from '@js/sync.ts';
 
 const DB_NAME = 'GroceryListDB';
-const ITEMS_STORE = 'grocery-items';
+export const ITEMS_STORE = 'grocery-items';
 const HISTORY_STORE = 'item-history';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
+
+function generateShortId(): string {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
+}
 
 export function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onerror = () => reject(request.error);
-    request.onsuccess = () => resolve(request.result);
     request.onupgradeneeded = (event) => {
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(ITEMS_STORE)) {
@@ -18,7 +22,39 @@ export function openDB(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(HISTORY_STORE)) {
         db.createObjectStore(HISTORY_STORE, { keyPath: 'name' });
       }
+      SyncManager.ensureSyncMetadataStore(db);
     };
+    request.onsuccess = () => {
+      const db = request.result;
+      void backfillSyncFields(db)
+        .then(() => resolve(db))
+        .catch((error: unknown) => {
+          console.error('[GroceryList] Failed to backfill sync fields', error);
+          resolve(db);
+        });
+    };
+  });
+}
+
+async function backfillSyncFields(db: IDBDatabase): Promise<void> {
+  const items = await getAllItems(db);
+  const missing = items.filter((item) => !item.shortId || !item.updatedAt);
+  if (missing.length === 0) return;
+
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(ITEMS_STORE, 'readwrite');
+    const store = transaction.objectStore(ITEMS_STORE);
+
+    for (const item of missing) {
+      store.put({
+        ...item,
+        shortId: item.shortId || generateShortId(),
+        updatedAt: item.updatedAt || item.createdAt || Date.now(),
+      });
+    }
+
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
   });
 }
 
@@ -33,28 +69,41 @@ export async function getAllItems(db: IDBDatabase): Promise<GroceryItem[]> {
 }
 
 export async function saveItem(db: IDBDatabase, item: GroceryItem): Promise<number> {
+  const now = Date.now();
+  const itemToSave: GroceryItem = {
+    ...item,
+    shortId: item.shortId || generateShortId(),
+    updatedAt: now,
+    createdAt: item.createdAt || now,
+  };
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(ITEMS_STORE, 'readwrite');
     const store = transaction.objectStore(ITEMS_STORE);
 
-    if (item.id) {
-      store.put(item);
-      resolve(item.id);
+    if (itemToSave.id) {
+      const request = store.put(itemToSave);
+      request.onsuccess = () => resolve(itemToSave.id as number);
+      request.onerror = () => reject(request.error);
     } else {
-      const request = store.add(item);
+      const request = store.add(itemToSave);
       request.onsuccess = () => {
         const id = request.result as number;
-        addToHistory(db, item.name);
+        void addToHistory(db, itemToSave.name);
         resolve(id);
       };
+      request.onerror = () => reject(request.error);
     }
-
-    transaction.oncomplete = () => resolve(item.id ?? 0);
-    transaction.onerror = () => reject(transaction.error);
   });
 }
 
 export async function deleteItem(db: IDBDatabase, id: number): Promise<void> {
+  const items = await getAllItems(db);
+  const item = items.find((i) => i.id === id);
+  if (item?.shortId) {
+    await SyncManager.trackDeletion(db, 'grocery-list', item.shortId);
+  }
+
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(ITEMS_STORE, 'readwrite');
     const store = transaction.objectStore(ITEMS_STORE);
@@ -66,14 +115,22 @@ export async function deleteItem(db: IDBDatabase, id: number): Promise<void> {
 
 export async function clearCheckedItems(db: IDBDatabase): Promise<void> {
   const items = await getAllItems(db);
-  const checkedIds = items.filter((i) => i.checked).map((i) => i.id!);
+  const checkedItems = items.filter((i) => i.checked);
+
+  for (const item of checkedItems) {
+    if (item.shortId) {
+      await SyncManager.trackDeletion(db, 'grocery-list', item.shortId);
+    }
+  }
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(ITEMS_STORE, 'readwrite');
     const store = transaction.objectStore(ITEMS_STORE);
 
-    for (const id of checkedIds) {
-      store.delete(id);
+    for (const item of checkedItems) {
+      if (item.id) {
+        store.delete(item.id);
+      }
     }
 
     transaction.oncomplete = () => resolve();
@@ -91,6 +148,7 @@ export async function reAddCheckedItems(db: IDBDatabase): Promise<void> {
     for (const item of items) {
       if (item.checked) {
         item.checked = false;
+        item.updatedAt = Date.now();
         store.put(item);
       }
     }
@@ -142,7 +200,7 @@ export async function importItems(
   items: GroceryItem[]
 ): Promise<{ imported: number; skipped: number }> {
   const existingItems = await getAllItems(db);
-  const existingNames = new Set(existingItems.map((i) => i.name.toLowerCase()));
+  const existingShortIds = new Set(existingItems.map((i) => i.shortId).filter(Boolean));
 
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(ITEMS_STORE, 'readwrite');
@@ -152,14 +210,20 @@ export async function importItems(
     let skipped = 0;
 
     for (const item of items) {
-      const normalizedName = item.name.toLowerCase();
-      if (existingNames.has(normalizedName)) {
+      const shortId = item.shortId || generateShortId();
+      if (existingShortIds.has(shortId)) {
         skipped++;
         continue;
       }
 
       const { id, ...itemToSave } = item;
-      store.add(itemToSave);
+      store.add({
+        ...itemToSave,
+        shortId,
+        createdAt: item.createdAt || Date.now(),
+        updatedAt: item.updatedAt || item.createdAt || Date.now(),
+      });
+      existingShortIds.add(shortId);
       imported++;
     }
 

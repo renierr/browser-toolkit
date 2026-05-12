@@ -1,5 +1,6 @@
 import {
   openDB,
+  ITEMS_STORE,
   getAllItems,
   saveItem,
   deleteItem,
@@ -11,6 +12,7 @@ import {
 import type { GroceryItem } from './types.ts';
 import { showMessage } from '@js/ui.ts';
 import { downloadFile } from '@js/file-utils.ts';
+import { SyncManager } from '@js/sync.ts';
 
 export default async function init() {
   const db = await openDB();
@@ -25,12 +27,14 @@ export default async function init() {
   const importBtn = document.getElementById('import-btn') as HTMLButtonElement;
   const exportBtn = document.getElementById('export-btn') as HTMLButtonElement;
   const importInput = document.getElementById('import-input') as HTMLInputElement;
+  const syncBtn = document.getElementById('sync-btn') as HTMLButtonElement;
   const itemsContainer = document.getElementById('items-container') as HTMLDivElement;
   const uncheckedCount = document.getElementById('unchecked-count') as HTMLSpanElement;
   const checkedCount = document.getElementById('checked-count') as HTMLSpanElement;
 
   let editingId: number | null = null;
   let historyCache: string[] = [];
+  let hasBackend = false;
 
   async function loadHistory() {
     const history = await getHistory(db);
@@ -45,6 +49,30 @@ export default async function init() {
     } catch (e) {
       console.error('Failed to load items:', e);
       showMessage('Failed to load items.', { type: 'alert' });
+    }
+  }
+
+  async function handleSync(manual = false) {
+    if (!hasBackend) return;
+    syncBtn.classList.add('syncing');
+    syncBtn.disabled = true;
+    try {
+      const result = await SyncManager.sync<GroceryItem>(
+        db,
+        ITEMS_STORE,
+        'grocery-list',
+        'shortId',
+        { manual }
+      );
+      if (result.pulled > 0 || result.deleted > 0) {
+        await loadItems();
+        await loadHistory();
+      }
+    } catch (e) {
+      console.warn('[GroceryList] Sync failed (likely offline):', e);
+    } finally {
+      syncBtn.classList.remove('syncing');
+      syncBtn.disabled = false;
     }
   }
 
@@ -117,6 +145,7 @@ export default async function init() {
         unit,
         checked: false,
         createdAt: Date.now(),
+        updatedAt: Date.now(),
       };
 
       if (editingId !== null) {
@@ -124,6 +153,7 @@ export default async function init() {
         const items = await getAllItems(db);
         const existing = items.find((i) => i.id === editingId);
         if (existing) {
+          item.shortId = existing.shortId;
           item.checked = existing.checked;
           item.createdAt = existing.createdAt;
         }
@@ -133,6 +163,7 @@ export default async function init() {
       resetForm();
       await loadItems();
       await loadHistory();
+      void handleSync();
     } catch (e) {
       console.error('Failed to save item:', e);
       showMessage('Failed to save item.', { type: 'alert' });
@@ -171,6 +202,7 @@ export default async function init() {
       await deleteItem(db, id);
       if (editingId === id) resetForm();
       await loadItems();
+      void handleSync();
     } catch (e) {
       console.error('Failed to delete item:', e);
       showMessage('Failed to delete item.', { type: 'alert' });
@@ -185,6 +217,7 @@ export default async function init() {
         item.checked = !item.checked;
         await saveItem(db, item);
         await loadItems();
+        void handleSync();
       }
     } catch (e) {
       console.error('Failed to toggle item:', e);
@@ -197,6 +230,7 @@ export default async function init() {
       await reAddCheckedItems(db);
       await loadItems();
       showMessage('All bought items moved back to list.');
+      void handleSync();
     } catch (e) {
       console.error('Failed to re-add items:', e);
       showMessage('Failed to re-add items.', { type: 'alert' });
@@ -217,6 +251,7 @@ export default async function init() {
       await clearCheckedItems(db);
       await loadItems();
       showMessage('Cleared all bought items.');
+      void handleSync();
     } catch (e) {
       console.error('Failed to clear bought items:', e);
       showMessage('Failed to clear items.', { type: 'alert' });
@@ -265,6 +300,7 @@ export default async function init() {
       );
       await loadItems();
       await loadHistory();
+      void handleSync();
     } catch (e) {
       console.error('Failed to import:', e);
       showMessage(`Failed to import: ${e instanceof Error ? e.message : 'Invalid JSON'}`, {
@@ -331,6 +367,7 @@ export default async function init() {
   importBtn.addEventListener('click', () => importInput.click());
   exportBtn.addEventListener('click', handleExport);
   importInput.addEventListener('change', handleImport);
+  syncBtn.addEventListener('click', () => void handleSync(true));
 
   itemsContainer.addEventListener('click', async (e) => {
     const target = e.target as HTMLElement;
@@ -354,6 +391,14 @@ export default async function init() {
 
   await loadHistory();
   await loadItems();
+  void SyncManager.isBackendAvailable().then((available) => {
+    hasBackend = available;
+    if (!available) {
+      syncBtn.classList.add('hidden');
+      return;
+    }
+    void handleSync();
+  });
 
   return () => {
     db.close();
