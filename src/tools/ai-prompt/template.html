@@ -59,6 +59,14 @@
           <i data-lucide="eraser" class="w-4 h-4 mr-2"></i>
           Clear output
         </button>
+        <select
+          id="ai-output-mode"
+          class="select select-bordered select-sm w-40"
+          aria-label="Output mode"
+        >
+          <option value="plain" selected>Plain text</option>
+          <option value="markdown">Markdown</option>
+        </select>
       </div>
 
       <div class="rounded-xl border border-base-300 bg-base-200">
@@ -67,12 +75,21 @@
           <span id="ai-stream-state" class="text-xs text-base-content/60">Idle</span>
         </div>
         <pre
-          id="ai-output"
+          id="ai-output-text"
           class="p-4 text-sm whitespace-pre-wrap break-words min-h-40 max-h-[50dvh] overflow-auto"
         >
 No response yet.</pre
         >
+        <div
+          id="ai-output-markdown"
+          class="hidden md-content p-4 text-sm min-h-40 max-h-[50dvh] overflow-auto"
+          data-content-theme="default"
+        >
+          No response yet.
+        </div>
       </div>
     </div>
   </div>
 </div>
+
+<include src="@css/markdown-content.css" type="style" />

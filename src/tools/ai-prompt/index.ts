@@ -4,7 +4,9 @@ import {
   showUnsupported,
   setActionState,
   setDownloadState,
+  getOutputMode,
   setOutput,
+  setOutputMode,
   appendOutput,
   resetOutput,
   setStatus,
@@ -38,6 +40,7 @@ export default function init(): void | (() => void) {
   let promptAbortController: AbortController | null = null;
   let isInitializing = false;
   let isStreaming = false;
+  let isDisposed = false;
 
   const refreshActionState = (): void => {
     const hasPrompt = dom.promptInput.value.trim().length > 0;
@@ -84,6 +87,41 @@ export default function init(): void | (() => void) {
     }
   };
 
+  const autoInitIfReady = async (): Promise<void> => {
+    try {
+      const availability = await manager.checkAvailability();
+      if (isDisposed) return;
+
+      if (availability === 'available') {
+        await onInitClick();
+        return;
+      }
+
+      if (availability === 'downloading') {
+        setStatus(dom, 'initializing');
+        setDownloadState(dom, true, 0, 'Model download in progress. Click Initialize to attach.');
+        showMessage('Model download detected. Click Initialize to continue setup.', {
+          type: 'info',
+          hideTypeText: false,
+          timeoutMs: 3500,
+        });
+        return;
+      }
+
+      if (availability === 'downloadable') {
+        setStatus(dom, 'idle');
+        setDownloadState(dom, false, 0, '');
+        showMessage('Model not downloaded yet. Click Initialize once to start.', {
+          type: 'info',
+          hideTypeText: false,
+          timeoutMs: 3500,
+        });
+      }
+    } catch (error) {
+      console.error('[AI Prompt] Failed to check auto-init availability:', error);
+    }
+  };
+
   const onAskClick = async (): Promise<void> => {
     const prompt = dom.promptInput.value.trim();
     if (!prompt) {
@@ -121,7 +159,7 @@ export default function init(): void | (() => void) {
         promptAbortController.signal
       );
 
-      if (!dom.output.textContent) {
+      if (!dom.outputText.textContent) {
         setOutput(dom, 'No response returned.');
       }
     } catch (error) {
@@ -152,10 +190,16 @@ export default function init(): void | (() => void) {
     refreshActionState();
   };
 
+  const onOutputModeChange = (): void => {
+    setOutputMode(dom, getOutputMode(dom));
+  };
+
   resetOutput(dom);
+  setOutputMode(dom, getOutputMode(dom));
   setStatus(dom, 'idle');
   setDownloadState(dom, false, 0, '');
   refreshActionState();
+  void autoInitIfReady();
 
   const onInitButtonClick = (): void => {
     void onInitClick();
@@ -169,8 +213,10 @@ export default function init(): void | (() => void) {
   dom.stopButton.addEventListener('click', onStopClick);
   dom.clearButton.addEventListener('click', onClearClick);
   dom.promptInput.addEventListener('input', onPromptInput);
+  dom.outputMode.addEventListener('change', onOutputModeChange);
 
   return () => {
+    isDisposed = true;
     if (promptAbortController) {
       promptAbortController.abort();
       promptAbortController = null;
@@ -182,5 +228,6 @@ export default function init(): void | (() => void) {
     dom.stopButton.removeEventListener('click', onStopClick);
     dom.clearButton.removeEventListener('click', onClearClick);
     dom.promptInput.removeEventListener('input', onPromptInput);
+    dom.outputMode.removeEventListener('change', onOutputModeChange);
   };
 }

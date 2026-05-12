@@ -1,4 +1,5 @@
-import type { PromptApiStatus } from './types';
+import { applyMarkdownContentTheme, renderMarkdownContent } from '@js/markdown-content';
+import type { OutputMode, PromptApiStatus } from './types';
 
 export type AiPromptDom = {
   unsupported: HTMLDivElement;
@@ -11,7 +12,9 @@ export type AiPromptDom = {
   stateBadge: HTMLSpanElement;
   streamState: HTMLSpanElement;
   promptInput: HTMLTextAreaElement;
-  output: HTMLPreElement;
+  outputMode: HTMLSelectElement;
+  outputText: HTMLPreElement;
+  outputMarkdown: HTMLDivElement;
   downloadProgress: HTMLProgressElement;
   downloadText: HTMLParagraphElement;
 };
@@ -29,7 +32,9 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
   const stateBadge = container.querySelector('#ai-state-badge') as HTMLSpanElement | null;
   const streamState = container.querySelector('#ai-stream-state') as HTMLSpanElement | null;
   const promptInput = container.querySelector('#ai-prompt-input') as HTMLTextAreaElement | null;
-  const output = container.querySelector('#ai-output') as HTMLPreElement | null;
+  const outputMode = container.querySelector('#ai-output-mode') as HTMLSelectElement | null;
+  const outputText = container.querySelector('#ai-output-text') as HTMLPreElement | null;
+  const outputMarkdown = container.querySelector('#ai-output-markdown') as HTMLDivElement | null;
   const downloadProgress = container.querySelector(
     '#ai-download-progress'
   ) as HTMLProgressElement | null;
@@ -46,7 +51,9 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
     !stateBadge ||
     !streamState ||
     !promptInput ||
-    !output ||
+    !outputMode ||
+    !outputText ||
+    !outputMarkdown ||
     !downloadProgress ||
     !downloadText
   ) {
@@ -64,7 +71,9 @@ export function queryDom(container: HTMLElement): AiPromptDom | null {
     stateBadge,
     streamState,
     promptInput,
-    output,
+    outputMode,
+    outputText,
+    outputMarkdown,
     downloadProgress,
     downloadText,
   };
@@ -92,16 +101,31 @@ export function setDownloadState(
 }
 
 export function setOutput(dom: AiPromptDom, text: string): void {
-  dom.output.textContent = text;
+  dom.outputText.textContent = text;
+  dom.outputMarkdown.innerHTML = renderMarkdownContent(text);
 }
 
 export function appendOutput(dom: AiPromptDom, text: string): void {
-  dom.output.textContent += text;
-  dom.output.scrollTop = dom.output.scrollHeight;
+  dom.outputText.textContent += text;
+  dom.outputMarkdown.innerHTML = renderMarkdownContent(dom.outputText.textContent);
+  const active = dom.outputMode.value === 'markdown' ? dom.outputMarkdown : dom.outputText;
+  active.scrollTop = active.scrollHeight;
 }
 
 export function resetOutput(dom: AiPromptDom): void {
-  dom.output.textContent = 'No response yet.';
+  setOutput(dom, 'No response yet.');
+}
+
+export function getOutputMode(dom: AiPromptDom): OutputMode {
+  return dom.outputMode.value === 'markdown' ? 'markdown' : 'plain';
+}
+
+export function setOutputMode(dom: AiPromptDom, mode: OutputMode): void {
+  dom.outputText.classList.toggle('hidden', mode !== 'plain');
+  dom.outputMarkdown.classList.toggle('hidden', mode !== 'markdown');
+  if (mode === 'markdown') {
+    applyMarkdownContentTheme(dom.outputMarkdown, 'default');
+  }
 }
 
 export function setStatus(dom: AiPromptDom, status: PromptApiStatus): void {

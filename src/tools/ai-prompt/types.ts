@@ -7,6 +7,8 @@ export type PromptApiAvailability =
 
 export type PromptApiStatus = 'idle' | 'initializing' | 'ready' | 'streaming';
 
+export type OutputMode = 'plain' | 'markdown';
+
 export type PromptSessionOptions = {
   expectedInputs: Array<{ type: 'text' }>;
   expectedOutputs: Array<{ type: 'text' }>;
