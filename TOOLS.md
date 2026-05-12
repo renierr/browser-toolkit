@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
-- Total tools: **59** (56 normal, 3 backend)
+- Total tools: **60** (57 normal, 3 backend)
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -180,7 +180,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `info`, share target capable `yes`, share target accepts `application/pdf`.
 - Source: `src/tools/pdf-metadata/config.json`
 
-## Utilities (20)
+## Utilities (19)
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
@@ -232,10 +232,10 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `11`, icon `image`, share target capable `yes`, share target accepts `image/svg+xml`.
 - Source: `src/tools/svg-optimizer/config.json`
 
-### Backend Info 🖥️ **(Backend)** (`backend-info`)
-- Description: Displays system information from the connected backend server
-- Metadata: Order `100`, icon `server`, share target capable `no`, share target accepts `none`.
-- Source: `src/tools/backend-info/config.json`
+### AI Prompt (`ai-prompt`)
+- Description: Use Chrome Prompt API to run on-device prompts with streamed answers.
+- Metadata: Order `12`, icon `bot`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/ai-prompt/config.json`
 
 ### Share Debug (`share-debug`)
 - Description: Inspect shared files and MIME types for share-target debugging.
@@ -266,11 +266,6 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Description: Open KeePass (.kdbx) databases to browse groups and copy credentials securely.
 - Metadata: Order `not set`, icon `lock`, share target capable `yes`, share target accepts `application/x-keepass`, `.kdbx`.
 - Source: `src/tools/keepass-viewer/config.json`
-
-### LAN Explorer 🖥️ **(Backend)** (`lan-explorer`)
-- Description: Discover devices and services on your local network.
-- Metadata: Order `not set`, icon `network`, share target capable `no`, share target accepts `none`.
-- Source: `src/tools/lan-explorer/config.json`
 
 ### Regex Visualizer (`regex-visualizer`)
 - Description: Visualize regular expressions as railroad diagrams to explain matching behavior.

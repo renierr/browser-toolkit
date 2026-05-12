@@ -1,0 +1,6 @@
+{
+  "name": "ai-prompt",
+  "dependencies": {
+    "@types/dom-chromium-ai": "^0.0.16"
+  }
+}

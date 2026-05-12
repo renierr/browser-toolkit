@@ -1,0 +1,78 @@
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body gap-4">
+    <h2 class="card-title text-2xl font-bold">AI Prompt</h2>
+    <p class="text-base-content/70">
+      Prompt on-device Gemini Nano through Chrome Prompt API. Stream answers as they are generated.
+    </p>
+
+    <div id="ai-prompt-unsupported" class="hidden alert alert-warning">
+      <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+      <div>
+        <p class="font-semibold">Prompt API not available</p>
+        <p class="text-sm" id="ai-prompt-unsupported-text"></p>
+      </div>
+    </div>
+
+    <div id="ai-prompt-main" class="space-y-4">
+      <div class="rounded-xl border border-base-300 bg-base-200 p-4 space-y-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="ai-init-btn" class="btn btn-primary btn-sm">
+            <i data-lucide="sparkles" class="w-4 h-4 mr-2"></i>
+            Initialize Model
+          </button>
+          <span id="ai-state-badge" class="badge badge-outline">Not initialized</span>
+        </div>
+        <div class="space-y-1">
+          <progress
+            id="ai-download-progress"
+            class="progress progress-primary w-full hidden"
+            value="0"
+            max="100"
+          ></progress>
+          <p id="ai-download-text" class="text-xs text-base-content/70 hidden">
+            Preparing model...
+          </p>
+        </div>
+      </div>
+
+      <div class="form-control w-full">
+        <label class="label" for="ai-prompt-input">
+          <span class="label-text font-semibold">Your prompt</span>
+        </label>
+        <textarea
+          id="ai-prompt-input"
+          class="textarea textarea-bordered min-h-32 w-full"
+          placeholder="Ask something..."
+        ></textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button id="ai-ask-btn" class="btn btn-secondary btn-sm" disabled>
+          <i data-lucide="send" class="w-4 h-4 mr-2"></i>
+          Ask
+        </button>
+        <button id="ai-stop-btn" class="btn btn-outline btn-sm" disabled>
+          <i data-lucide="square" class="w-4 h-4 mr-2"></i>
+          Stop
+        </button>
+        <button id="ai-clear-btn" class="btn btn-ghost btn-sm">
+          <i data-lucide="eraser" class="w-4 h-4 mr-2"></i>
+          Clear output
+        </button>
+      </div>
+
+      <div class="rounded-xl border border-base-300 bg-base-200">
+        <div class="flex items-center justify-between border-b border-base-300 px-4 py-2">
+          <span class="text-sm font-semibold">Response</span>
+          <span id="ai-stream-state" class="text-xs text-base-content/60">Idle</span>
+        </div>
+        <pre
+          id="ai-output"
+          class="p-4 text-sm whitespace-pre-wrap break-words min-h-40 max-h-[50dvh] overflow-auto"
+        >
+No response yet.</pre
+        >
+      </div>
+    </div>
+  </div>
+</div>

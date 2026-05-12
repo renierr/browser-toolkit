@@ -1,0 +1,8 @@
+{
+  "name": "AI Prompt",
+  "description": "Use Chrome Prompt API to run on-device prompts with streamed answers.",
+  "icon": "bot",
+  "sectionId": "utilities",
+  "order": 12,
+  "draft": false
+}
