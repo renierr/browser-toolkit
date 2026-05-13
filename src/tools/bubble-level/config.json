@@ -1,0 +1,7 @@
+{
+  "name": "Bubble Level",
+  "description": "Precision spirit level using motion sensors with calibration and dual-axis/beam modes.",
+  "icon": "ruler",
+  "sectionId": "devices",
+  "order": 24
+}

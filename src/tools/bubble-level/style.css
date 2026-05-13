@@ -1,0 +1,139 @@
+#bubble-level-tool {
+  --bubble-accent: #77f55f;
+  --bubble-accent-soft: #9cff86;
+  --bubble-warning: #f4d16a;
+}
+
+#bubble-level-tool .bubble-shell {
+  background-image: radial-gradient(circle at 10% 10%, rgb(255 255 255 / 0.16), transparent 42%),
+    radial-gradient(circle at 90% 90%, rgb(120 140 150 / 0.16), transparent 45%),
+    linear-gradient(140deg, rgb(24 30 36 / 0.95), rgb(49 57 64 / 0.92));
+  color: #e9f1f7;
+}
+
+#bubble-level-tool .vial,
+#bubble-level-tool .beam-vial,
+#bubble-level-tool .stat-card {
+  background: linear-gradient(180deg, rgb(9 28 30 / 0.9), rgb(7 17 20 / 0.95));
+  border: 1px solid rgb(130 167 165 / 0.25);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.1), inset 0 -12px 28px rgb(0 0 0 / 0.35);
+}
+
+#bubble-level-tool .vial-rings {
+  border-radius: 9999px;
+  border: 2px solid rgb(144 188 181 / 0.45);
+  background: radial-gradient(circle at center, rgb(130 199 195 / 0.12), rgb(8 20 22 / 0.95));
+  overflow: hidden;
+}
+
+#bubble-level-tool .ring {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  border-radius: 9999px;
+  border: 1px solid rgb(165 214 196 / 0.35);
+}
+
+#bubble-level-tool .ring-1 {
+  width: 20%;
+  height: 20%;
+}
+
+#bubble-level-tool .ring-2 {
+  width: 50%;
+  height: 50%;
+}
+
+#bubble-level-tool .ring-3 {
+  width: 78%;
+  height: 78%;
+}
+
+#bubble-level-tool .crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: rgb(171 220 193 / 0.35);
+}
+
+#bubble-level-tool .crosshair-x {
+  width: 84%;
+  height: 1px;
+}
+
+#bubble-level-tool .crosshair-y {
+  width: 1px;
+  height: 84%;
+}
+
+#bubble-level-tool .bubble-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 28% 28%, #f7ffd8, #b9ff79 42%, #65de42 72%, #309a29);
+  border: 1px solid rgb(230 255 209 / 0.8);
+  box-shadow: 0 0 0 1px rgb(49 112 50 / 0.9), 0 0 26px rgb(126 255 87 / 0.45);
+  transition: box-shadow 180ms ease;
+}
+
+#bubble-level-tool .bubble-dot.locked,
+#bubble-level-tool .beam-bubble.locked {
+  box-shadow: 0 0 0 1px rgb(49 112 50 / 0.9), 0 0 36px rgb(164 255 128 / 0.85);
+}
+
+#bubble-level-tool .beam-track {
+  position: relative;
+  height: 3rem;
+  border-radius: 9999px;
+  border: 1px solid rgb(165 214 196 / 0.35);
+  background: linear-gradient(180deg, rgb(58 85 75 / 0.28), rgb(8 21 23 / 0.92));
+  overflow: hidden;
+}
+
+#bubble-level-tool .beam-center-zone {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 16%;
+  height: 100%;
+  background: linear-gradient(180deg, rgb(128 189 142 / 0.2), rgb(128 189 142 / 0.08));
+  border-left: 1px solid rgb(165 214 196 / 0.4);
+  border-right: 1px solid rgb(165 214 196 / 0.4);
+}
+
+#bubble-level-tool .beam-bubble {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3.4rem;
+  height: 2.1rem;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  background: radial-gradient(circle at 30% 28%, #fbffd8, #b7ff70 42%, #57cf39 85%);
+  border: 1px solid rgb(230 255 209 / 0.78);
+  box-shadow: 0 0 26px rgb(126 255 87 / 0.44);
+}
+
+#bubble-level-tool .badge {
+  border-color: rgb(183 219 193 / 0.35);
+  color: rgb(220 244 224);
+}
+
+#bubble-level-tool .badge.locked {
+  background: rgb(74 182 91 / 0.2);
+  border-color: rgb(162 230 149 / 0.55);
+  color: #deffd3;
+}
+
+@media (max-width: 420px) {
+  #bubble-level-tool .bubble-dot {
+    width: 2.2rem;
+    height: 2.2rem;
+  }
+}
