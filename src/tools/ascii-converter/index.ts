@@ -36,6 +36,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   const brightnessValue = document.getElementById('brightness-value') as HTMLSpanElement | null;
   const edgeValue = document.getElementById('edge-value') as HTMLSpanElement | null;
   const aspectValue = document.getElementById('aspect-value') as HTMLSpanElement | null;
+  const resetOptionsBtn = document.getElementById('reset-options-btn') as HTMLButtonElement | null;
   const output = document.getElementById('ascii-output') as HTMLPreElement | null;
   const status = document.getElementById('status') as HTMLDivElement | null;
   const copyBtn = document.getElementById('copy-btn') as HTMLButtonElement | null;
@@ -61,6 +62,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     !brightnessValue ||
     !edgeValue ||
     !aspectValue ||
+    !resetOptionsBtn ||
     !output ||
     !status ||
     !copyBtn ||
@@ -74,6 +76,10 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   let currentAscii = '';
 
   output.textContent = DEFAULT_OUTPUT;
+
+  const persistControl = (element: HTMLElement): void => {
+    element.dispatchEvent(new Event('change', { bubbles: true }));
+  };
 
   const formatNum = (value: number): string => value.toFixed(2);
 
@@ -98,7 +104,14 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     syncSliderLabels();
   };
 
-  applyPreset(presetSelect.value as AsciiPresetId);
+  const updatePresetHint = (): void => {
+    const preset =
+      ASCII_PRESETS[presetSelect.value as AsciiPresetId] ?? ASCII_PRESETS['photo-soft'];
+    customCharsetInput.placeholder = `Preset: ${preset.charset}`;
+  };
+
+  updatePresetHint();
+  syncSliderLabels();
 
   const setResult = (text: string) => {
     currentAscii = text;
@@ -190,7 +203,38 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   const onPresetChange = (): void => {
     applyPreset(presetSelect.value as AsciiPresetId);
+    updatePresetHint();
+    persistControl(gammaRange);
+    persistControl(contrastRange);
+    persistControl(brightnessRange);
+    persistControl(edgeRange);
+    persistControl(aspectRange);
+    persistControl(autoContrastCheckbox);
+    persistControl(ditherCheckbox);
     void renderCurrentImage();
+  };
+
+  const onResetOptions = (): void => {
+    widthInput.value = '120';
+    presetSelect.value = 'photo-soft';
+    customCharsetInput.value = '';
+    invertCheckbox.checked = false;
+    applyPreset('photo-soft');
+
+    persistControl(widthInput);
+    persistControl(presetSelect);
+    persistControl(customCharsetInput);
+    persistControl(invertCheckbox);
+    persistControl(gammaRange);
+    persistControl(contrastRange);
+    persistControl(brightnessRange);
+    persistControl(edgeRange);
+    persistControl(aspectRange);
+    persistControl(autoContrastCheckbox);
+    persistControl(ditherCheckbox);
+
+    void renderCurrentImage();
+    showMessage('Options reset to defaults.', { timeoutMs: 2000 });
   };
 
   const onCopy = async () => {
@@ -231,6 +275,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   aspectRange.addEventListener('input', onControlInput);
   autoContrastCheckbox.addEventListener('change', onControlChange);
   ditherCheckbox.addEventListener('change', onControlChange);
+  resetOptionsBtn.addEventListener('click', onResetOptions);
   copyBtn.addEventListener('click', onCopy);
   downloadBtn.addEventListener('click', onDownload);
 
@@ -252,6 +297,7 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     aspectRange.removeEventListener('input', onControlInput);
     autoContrastCheckbox.removeEventListener('change', onControlChange);
     ditherCheckbox.removeEventListener('change', onControlChange);
+    resetOptionsBtn.removeEventListener('click', onResetOptions);
     copyBtn.removeEventListener('click', onCopy);
     downloadBtn.removeEventListener('click', onDownload);
   };

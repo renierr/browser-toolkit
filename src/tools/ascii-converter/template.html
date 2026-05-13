@@ -34,6 +34,7 @@
         <span class="label-text font-semibold mb-1">Output Width</span>
         <input
           id="ascii-width"
+          data-setting="width"
           type="number"
           min="20"
           max="300"
@@ -44,7 +45,11 @@
 
       <label class="form-control w-full" for="charset-preset">
         <span class="label-text font-semibold mb-1">Style Preset</span>
-        <select id="charset-preset" class="select select-bordered select-sm w-full">
+        <select
+          id="charset-preset"
+          data-setting="preset"
+          class="select select-bordered select-sm w-full"
+        >
           <option value="photo-soft" selected>Photo Soft</option>
           <option value="photo-detailed">Photo Detailed</option>
           <option value="terminal-classic">Terminal Classic</option>
@@ -60,6 +65,7 @@
         <span class="label-text font-semibold mb-1">Custom Charset</span>
         <input
           id="custom-charset"
+          data-setting="customCharset"
           type="text"
           class="input input-bordered input-sm w-full font-mono"
           placeholder="Override preset"
@@ -67,7 +73,7 @@
       </label>
 
       <label class="label cursor-pointer justify-start gap-3 pt-7" for="invert-map">
-        <input id="invert-map" type="checkbox" class="checkbox checkbox-sm" />
+        <input id="invert-map" data-setting="invert" type="checkbox" class="checkbox checkbox-sm" />
         <span class="label-text">Invert mapping</span>
       </label>
     </div>
@@ -77,6 +83,7 @@
         <span class="label-text text-xs">Gamma: <span id="gamma-value">1.00</span></span>
         <input
           id="gamma-range"
+          data-setting="gamma"
           type="range"
           min="0.5"
           max="2"
@@ -90,6 +97,7 @@
         <span class="label-text text-xs">Contrast: <span id="contrast-value">1.10</span></span>
         <input
           id="contrast-range"
+          data-setting="contrast"
           type="range"
           min="0.5"
           max="2"
@@ -103,6 +111,7 @@
         <span class="label-text text-xs">Brightness: <span id="brightness-value">0.00</span></span>
         <input
           id="brightness-range"
+          data-setting="brightness"
           type="range"
           min="-0.4"
           max="0.4"
@@ -116,6 +125,7 @@
         <span class="label-text text-xs">Edge boost: <span id="edge-value">0.00</span></span>
         <input
           id="edge-range"
+          data-setting="edgeWeight"
           type="range"
           min="0"
           max="1"
@@ -129,6 +139,7 @@
         <span class="label-text text-xs">Font aspect: <span id="aspect-value">0.52</span></span>
         <input
           id="aspect-range"
+          data-setting="fontAspect"
           type="range"
           min="0.4"
           max="0.7"
@@ -141,13 +152,27 @@
 
     <div class="flex flex-wrap gap-4 mt-2">
       <label class="label cursor-pointer gap-2" for="auto-contrast">
-        <input id="auto-contrast" type="checkbox" class="checkbox checkbox-xs" checked />
+        <input
+          id="auto-contrast"
+          data-setting="autoContrast"
+          type="checkbox"
+          class="checkbox checkbox-xs"
+          checked
+        />
         <span class="label-text text-sm">Auto contrast</span>
       </label>
       <label class="label cursor-pointer gap-2" for="dither-map">
-        <input id="dither-map" type="checkbox" class="checkbox checkbox-xs" />
+        <input
+          id="dither-map"
+          data-setting="dithering"
+          type="checkbox"
+          class="checkbox checkbox-xs"
+        />
         <span class="label-text text-sm">Dithering</span>
       </label>
+      <button id="reset-options-btn" class="btn btn-ghost btn-xs ml-auto" type="button">
+        Reset defaults
+      </button>
     </div>
 
     <div class="mt-4 text-sm text-base-content/60" id="status">
