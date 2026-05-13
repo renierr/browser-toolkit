@@ -58,7 +58,8 @@ html[data-theme='dark'] #bubble-level-tool {
 }
 
 #bubble-level-tool .bubble-shell {
-  background-image: radial-gradient(circle at 10% 10%, var(--bubble-shell-glow-1), transparent 42%),
+  background-image:
+    radial-gradient(circle at 10% 10%, var(--bubble-shell-glow-1), transparent 42%),
     radial-gradient(circle at 90% 90%, var(--bubble-shell-glow-2), transparent 45%),
     linear-gradient(140deg, var(--bubble-shell-start), var(--bubble-shell-end));
   color: var(--bubble-shell-fg);
@@ -69,13 +70,19 @@ html[data-theme='dark'] #bubble-level-tool {
 #bubble-level-tool .stat-card {
   background: linear-gradient(180deg, var(--bubble-card-start), var(--bubble-card-end));
   border: 1px solid var(--bubble-card-border);
-  box-shadow: inset 0 1px 0 var(--bubble-card-shadow-top), inset 0 -12px 28px var(--bubble-card-shadow-bottom);
+  box-shadow:
+    inset 0 1px 0 var(--bubble-card-shadow-top),
+    inset 0 -12px 28px var(--bubble-card-shadow-bottom);
 }
 
 #bubble-level-tool .vial-rings {
   border-radius: 9999px;
   border: 2px solid var(--bubble-rings-border);
-  background: radial-gradient(circle at center, var(--bubble-rings-center), var(--bubble-rings-edge));
+  background: radial-gradient(
+    circle at center,
+    var(--bubble-rings-center),
+    var(--bubble-rings-edge)
+  );
   overflow: hidden;
 }
 
@@ -130,13 +137,17 @@ html[data-theme='dark'] #bubble-level-tool {
   transform: translate(-50%, -50%);
   background: radial-gradient(circle at 28% 28%, #f7ffd8, #b9ff79 42%, #65de42 72%, #309a29);
   border: 1px solid rgb(230 255 209 / 0.8);
-  box-shadow: 0 0 0 1px rgb(49 112 50 / 0.9), 0 0 26px rgb(126 255 87 / 0.45);
+  box-shadow:
+    0 0 0 1px rgb(49 112 50 / 0.9),
+    0 0 26px rgb(126 255 87 / 0.45);
   transition: box-shadow 180ms ease;
 }
 
 #bubble-level-tool .bubble-dot.locked,
 #bubble-level-tool .beam-bubble.locked {
-  box-shadow: 0 0 0 1px rgb(49 112 50 / 0.9), 0 0 36px rgb(164 255 128 / 0.85);
+  box-shadow:
+    0 0 0 1px rgb(49 112 50 / 0.9),
+    0 0 36px rgb(164 255 128 / 0.85);
 }
 
 #bubble-level-tool .beam-track {

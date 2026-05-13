@@ -65,21 +65,15 @@ export class EmfDetectorUi {
       axisStroke: isDark
         ? 'rgba(130, 165, 180, 0.35)'
         : `color-mix(in oklab, ${baseContent} 30%, transparent)`,
-      activeLine: isDark
-        ? 'rgba(92, 242, 203, 0.95)'
-        : 'rgba(28, 149, 128, 0.95)',
+      activeLine: isDark ? 'rgba(92, 242, 203, 0.95)' : 'rgba(28, 149, 128, 0.95)',
       inactiveLine: isDark
         ? 'rgba(110, 130, 140, 0.65)'
         : `color-mix(in oklab, ${baseContent} 40%, transparent)`,
-      activeDot: isDark
-        ? 'rgba(122, 255, 229, 1)'
-        : 'rgba(20, 137, 118, 1)',
+      activeDot: isDark ? 'rgba(122, 255, 229, 1)' : 'rgba(20, 137, 118, 1)',
       inactiveDot: isDark
         ? 'rgba(150, 162, 170, 0.8)'
         : `color-mix(in oklab, ${baseContent} 55%, transparent)`,
-      trendStroke: isDark
-        ? 'rgba(116, 246, 226, 0.95)'
-        : 'rgba(24, 153, 133, 0.95)',
+      trendStroke: isDark ? 'rgba(116, 246, 226, 0.95)' : 'rgba(24, 153, 133, 0.95)',
     };
   }
 

@@ -27,7 +27,8 @@ export class BubbleLevelUi {
 
     switch (status) {
       case 'ready':
-        this.elements.statusBanner.textContent = detail ?? 'Sensor ready. Move device slowly for best precision.';
+        this.elements.statusBanner.textContent =
+          detail ?? 'Sensor ready. Move device slowly for best precision.';
         break;
       case 'permission-needed':
         this.elements.statusBanner.textContent =

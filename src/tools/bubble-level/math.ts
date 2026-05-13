@@ -8,7 +8,11 @@ export function lowPass(previous: number, next: number, alpha: number): number {
   return previous + (next - previous) * alpha;
 }
 
-export function normalizeByScreenAngle(beta: number, gamma: number, angle: number): OrientationReading {
+export function normalizeByScreenAngle(
+  beta: number,
+  gamma: number,
+  angle: number
+): OrientationReading {
   switch (angle) {
     case 90:
       return { pitch: -gamma, roll: beta };

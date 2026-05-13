@@ -48,7 +48,8 @@ export class SensorService {
         return;
       }
 
-      const rawAngle = screen.orientation?.angle ?? (window as Window & { orientation?: number }).orientation;
+      const rawAngle =
+        screen.orientation?.angle ?? (window as Window & { orientation?: number }).orientation;
       const angle = Number.isFinite(rawAngle) ? Number(rawAngle) : 0;
       onReading(normalizeByScreenAngle(beta, gamma, angle));
     };
