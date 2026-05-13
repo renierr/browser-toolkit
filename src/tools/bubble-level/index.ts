@@ -2,6 +2,7 @@ import { CalibrationStore } from './calibration';
 import { isLevel, lowPass, roundToOne } from './math';
 import { SensorService } from './sensor-service';
 import { BubbleLevelUi, getUiElements } from './ui-controller';
+import { acquireWakeLock } from '@js/utils';
 import type { CalibrationOffset, LevelMode, OrientationReading } from './types';
 
 // noinspection JSUnusedGlobalSymbols
@@ -10,12 +11,14 @@ export default function init(): void | (() => void) {
   const toleranceSelect = document.getElementById('tolerance');
   const calibrateZeroButton = document.getElementById('calibrate-zero');
   const resetCalibrationButton = document.getElementById('reset-calibration');
+  const wakeLockButton = document.getElementById('wake-lock-btn');
 
   if (
     !uiElements ||
     !(toleranceSelect instanceof HTMLSelectElement) ||
     !(calibrateZeroButton instanceof HTMLButtonElement) ||
-    !(resetCalibrationButton instanceof HTMLButtonElement)
+    !(resetCalibrationButton instanceof HTMLButtonElement) ||
+    !(wakeLockButton instanceof HTMLButtonElement)
   ) {
     return;
   }
@@ -30,6 +33,7 @@ export default function init(): void | (() => void) {
   let filtered: OrientationReading = { pitch: 0, roll: 0 };
   let hasSignal = false;
   let stopSensors: (() => void) | null = null;
+  let releaseWakeLock: (() => void) | null = null;
 
   const applyReading = (reading: OrientationReading): void => {
     hasSignal = true;
@@ -100,18 +104,46 @@ export default function init(): void | (() => void) {
     startSensors();
   };
 
+  const updateWakeLockButton = (): void => {
+    if (releaseWakeLock) {
+      wakeLockButton.textContent = 'Release Wake Lock';
+      wakeLockButton.classList.add('btn-success');
+      wakeLockButton.classList.remove('btn-outline');
+      return;
+    }
+    wakeLockButton.textContent = 'Acquire Wake Lock';
+    wakeLockButton.classList.remove('btn-success');
+    wakeLockButton.classList.add('btn-outline');
+  };
+
+  const onWakeLockClick = (): void => {
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+      updateWakeLockButton();
+      ui.setStatus('ready', 'Wake lock released.');
+      return;
+    }
+
+    releaseWakeLock = acquireWakeLock();
+    updateWakeLockButton();
+    ui.setStatus('ready', 'Wake lock requested. Screen should stay awake.');
+  };
+
   uiElements.mode2dButton.addEventListener('click', onMode2dClick);
   uiElements.mode1dButton.addEventListener('click', onMode1dClick);
   toleranceSelect.addEventListener('change', onToleranceChange);
   calibrateZeroButton.addEventListener('click', onCalibrateZero);
   resetCalibrationButton.addEventListener('click', onResetCalibration);
   uiElements.permissionButton.addEventListener('click', onPermissionClick);
+  wakeLockButton.addEventListener('click', onWakeLockClick);
 
   ui.setMode(mode);
   ui.setLocked(false);
   ui.updateReadout(0, 0);
   ui.updateBubblePosition(0, 0);
   ui.updateBeamPosition(0);
+  updateWakeLockButton();
 
   if (sensors.canRequestPermission()) {
     ui.setStatus('permission-needed');
@@ -126,6 +158,11 @@ export default function init(): void | (() => void) {
     calibrateZeroButton.removeEventListener('click', onCalibrateZero);
     resetCalibrationButton.removeEventListener('click', onResetCalibration);
     uiElements.permissionButton.removeEventListener('click', onPermissionClick);
+    wakeLockButton.removeEventListener('click', onWakeLockClick);
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+    }
     stopSensors?.();
     sensors.stop();
   };
