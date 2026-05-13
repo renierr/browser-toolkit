@@ -89,9 +89,45 @@ export default function init(): void | (() => void) {
     }
 
     stopSensors?.();
-    const startResult = sensors.start(applyReading);
+    const startResult = sensors.start(applyReading, (error) => {
+      active = false;
+      ui.setRunning(false);
+
+      if (error.kind === 'permission-denied') {
+        ui.setStatus(
+          'permission-needed',
+          'Magnetometer permission denied. Allow Motion and Sensors in browser site settings.'
+        );
+        return;
+      }
+
+      if (error.kind === 'not-readable') {
+        ui.setStatus(
+          'error',
+          'Sensor not readable. Device may not have a usable magnetic sensor or it is blocked by the OS.'
+        );
+        return;
+      }
+
+      if (error.kind === 'not-supported') {
+        ui.setStatus(
+          'unsupported',
+          'Magnetometer API unavailable on this device/browser. No magnetic sensor access possible here.'
+        );
+        return;
+      }
+
+      ui.setStatus('error', `Magnetometer error: ${error.message}`);
+    });
     if (startResult.status !== 'ready') {
-      ui.setStatus(startResult.status);
+      if (startResult.status === 'unsupported') {
+        ui.setStatus(
+          'unsupported',
+          'Magnetometer API unavailable on this device/browser. No magnetic sensor access possible here.'
+        );
+      } else {
+        ui.setStatus(startResult.status);
+      }
       active = false;
       ui.setRunning(false);
       return;
@@ -159,7 +195,10 @@ export default function init(): void | (() => void) {
   if (!sensors.isSecureContext()) {
     ui.setStatus('insecure-context');
   } else if (!sensors.isSupported()) {
-    ui.setStatus('unsupported');
+    ui.setStatus(
+      'unsupported',
+      'No Magnetometer API detected. This device/browser likely has no exposed magnetic sensor.'
+    );
   } else {
     void sensors.canStartWithoutPrompt().then((canStart) => {
       if (!canStart) {

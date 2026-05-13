@@ -36,6 +36,13 @@ type StartResult = {
   stop: () => void;
 };
 
+type SensorErrorKind = 'permission-denied' | 'not-readable' | 'not-supported' | 'unknown';
+
+type SensorErrorPayload = {
+  kind: SensorErrorKind;
+  message: string;
+};
+
 export class SensorService {
   private stopListener: (() => void) | null = null;
 
@@ -70,7 +77,10 @@ export class SensorService {
     return state !== 'denied';
   }
 
-  public start(onReading: (reading: MagnetometerReading) => void): StartResult {
+  public start(
+    onReading: (reading: MagnetometerReading) => void,
+    onError?: (error: SensorErrorPayload) => void
+  ): StartResult {
     if (!this.isSecureContext()) {
       return { status: 'insecure-context', stop: () => undefined };
     }
@@ -105,7 +115,26 @@ export class SensorService {
       };
 
       const onSensorError = (event: Event): void => {
-        console.error('[EmfDetector] Magnetometer error event', event);
+        const errorEvent = event as Event & {
+          error?: {
+            name?: string;
+            message?: string;
+          };
+        };
+        const name = errorEvent.error?.name ?? 'UnknownError';
+        const message = errorEvent.error?.message ?? 'Magnetometer runtime error';
+
+        let kind: SensorErrorKind = 'unknown';
+        if (name === 'NotAllowedError' || name === 'SecurityError') {
+          kind = 'permission-denied';
+        } else if (name === 'NotReadableError') {
+          kind = 'not-readable';
+        } else if (name === 'NotSupportedError') {
+          kind = 'not-supported';
+        }
+
+        console.error('[EmfDetector] Magnetometer error event', { name, message, event });
+        onError?.({ kind, message });
       };
 
       sensor.addEventListener('reading', onSensorReading as EventListener);
