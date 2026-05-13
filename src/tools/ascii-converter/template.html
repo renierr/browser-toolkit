@@ -1,0 +1,95 @@
+<div id="ascii-converter-container" class="card bg-base-100 shadow-xl">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">
+      <i data-lucide="image" class="w-6 h-6"></i>
+      ASCII Art Generator
+    </h2>
+    <p class="text-base-content/70 mb-6">
+      Convert images into text symbols. Dark pixels map to characters like @ or #, bright pixels map
+      to . or spaces.
+    </p>
+
+    <div
+      id="dropzone"
+      class="mt-2 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40 group hover:bg-base-300"
+    >
+      <div
+        class="flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105"
+      >
+        <div class="text-base-content/30 text-4xl">
+          <i data-lucide="upload-cloud"></i>
+        </div>
+        <p class="text-lg font-medium">Click or drag an image here</p>
+        <p class="text-sm text-base-content/50">Supports JPG, PNG, WebP</p>
+        <button id="paste-btn" class="btn btn-outline flex-1 sm:flex-none">
+          <i data-lucide="clipboard" class="w-4 h-4 mr-2"></i>
+          or click here to Paste from clipboard
+        </button>
+      </div>
+      <input type="file" id="image-input" class="hidden" accept="image/*" />
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+      <label class="form-control w-full" for="ascii-width">
+        <span class="label-text font-semibold mb-1">Output Width</span>
+        <input
+          id="ascii-width"
+          type="number"
+          min="20"
+          max="300"
+          value="120"
+          class="input input-bordered input-sm w-full"
+        />
+      </label>
+
+      <label class="form-control w-full" for="charset-preset">
+        <span class="label-text font-semibold mb-1">Character Preset</span>
+        <select id="charset-preset" class="select select-bordered select-sm w-full">
+          <option value="dense" selected>Dense (@#S%?*+;:,. )</option>
+          <option value="classic">Classic (@#*+=-:. )</option>
+          <option value="binary">Binary (# .)</option>
+        </select>
+      </label>
+
+      <label class="form-control w-full" for="custom-charset">
+        <span class="label-text font-semibold mb-1">Custom Charset</span>
+        <input
+          id="custom-charset"
+          type="text"
+          class="input input-bordered input-sm w-full font-mono"
+          placeholder="Override preset"
+        />
+      </label>
+
+      <label class="label cursor-pointer justify-start gap-3 pt-7" for="invert-map">
+        <input id="invert-map" type="checkbox" class="checkbox checkbox-sm" />
+        <span class="label-text">Invert mapping</span>
+      </label>
+    </div>
+
+    <div class="mt-4 text-sm text-base-content/60" id="status">
+      Upload or paste an image to begin.
+    </div>
+
+    <div class="form-control w-full mt-4">
+      <label class="label" for="ascii-output">
+        <span class="label-text font-semibold">ASCII Output</span>
+      </label>
+      <pre
+        id="ascii-output"
+        class="w-full p-4 bg-base-200 rounded-lg border border-base-300 font-mono text-[10px] leading-none whitespace-pre overflow-x-auto min-h-64"
+      ></pre>
+    </div>
+
+    <div class="card-actions justify-center mt-4 gap-2">
+      <button id="copy-btn" class="btn btn-outline flex-1 sm:flex-none" disabled>
+        <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+        Copy
+      </button>
+      <button id="download-btn" class="btn btn-outline flex-1 sm:flex-none" disabled>
+        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+        Download .txt
+      </button>
+    </div>
+  </div>
+</div>

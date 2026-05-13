@@ -1,0 +1,10 @@
+{
+  "name": "ASCII Art Generator",
+  "description": "Convert images into ASCII text by mapping luminance to characters.",
+  "icon": "image",
+  "sectionId": "images",
+  "order": 30,
+  "shareTarget": {
+    "accept": ["image/*"]
+  }
+}

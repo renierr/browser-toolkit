@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
-- Total tools: **62** (59 normal, 3 backend)
+- Total tools: **63** (60 normal, 3 backend)
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -64,7 +64,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `not set`, icon `file-text`, share target capable `yes`, share target accepts `text/markdown`, `text/x-markdown`, `text/plain`, `application/octet-stream`.
 - Source: `src/tools/markdown-viewer/config.json`
 
-## Images (9)
+## Images (10)
 
 ### AI Background Remover (`background-remover`)
 - Description: Remove image backgrounds locally with an AI segmentation model.
@@ -100,6 +100,11 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Description: Extract text from images using OCR.
 - Metadata: Order `10`, icon `scan-text`, share target capable `yes`, share target accepts `image/*`.
 - Source: `src/tools/ocr-extractor/config.json`
+
+### ASCII Art Generator (`ascii-converter`)
+- Description: Convert images into ASCII text by mapping luminance to characters.
+- Metadata: Order `30`, icon `image`, share target capable `yes`, share target accepts `image/*`.
+- Source: `src/tools/ascii-converter/config.json`
 
 ### Image Convert / Redact (`image-redactor`)
 - Description: Convert, crop, redact, and pixelate images.
