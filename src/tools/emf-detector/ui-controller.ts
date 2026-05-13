@@ -2,6 +2,7 @@ import { clamp, normalize } from './math';
 import type { Baseline, MagnetometerReading, SensorStatus, ViewRange } from './types';
 
 type UiElements = {
+  toolRoot: HTMLElement;
   statusBanner: HTMLElement;
   startButton: HTMLButtonElement;
   stopButton: HTMLButtonElement;
@@ -29,11 +30,57 @@ type RenderPayload = {
   active: boolean;
 };
 
+type CanvasPalette = {
+  vectorBackground: string;
+  trendBackground: string;
+  axisStroke: string;
+  activeLine: string;
+  inactiveLine: string;
+  activeDot: string;
+  inactiveDot: string;
+  trendStroke: string;
+};
+
 export class EmfDetectorUi {
   private readonly elements: UiElements;
 
   public constructor(elements: UiElements) {
     this.elements = elements;
+  }
+
+  private getPalette(): CanvasPalette {
+    const computedStyle = window.getComputedStyle(this.elements.toolRoot);
+    const isDark = document.documentElement.dataset.theme === 'dark';
+
+    const base100 = computedStyle.getPropertyValue('--color-base-100').trim();
+    const baseContent = computedStyle.getPropertyValue('--color-base-content').trim();
+
+    return {
+      vectorBackground: isDark
+        ? 'rgba(8, 18, 24, 0.9)'
+        : `color-mix(in oklab, ${base100} 93%, #cde7ee 7%)`,
+      trendBackground: isDark
+        ? 'rgba(8, 16, 20, 0.9)'
+        : `color-mix(in oklab, ${base100} 94%, #d7eaf0 6%)`,
+      axisStroke: isDark
+        ? 'rgba(130, 165, 180, 0.35)'
+        : `color-mix(in oklab, ${baseContent} 30%, transparent)`,
+      activeLine: isDark
+        ? 'rgba(92, 242, 203, 0.95)'
+        : 'rgba(28, 149, 128, 0.95)',
+      inactiveLine: isDark
+        ? 'rgba(110, 130, 140, 0.65)'
+        : `color-mix(in oklab, ${baseContent} 40%, transparent)`,
+      activeDot: isDark
+        ? 'rgba(122, 255, 229, 1)'
+        : 'rgba(20, 137, 118, 1)',
+      inactiveDot: isDark
+        ? 'rgba(150, 162, 170, 0.8)'
+        : `color-mix(in oklab, ${baseContent} 55%, transparent)`,
+      trendStroke: isDark
+        ? 'rgba(116, 246, 226, 0.95)'
+        : 'rgba(24, 153, 133, 0.95)',
+    };
   }
 
   public setStatus(status: SensorStatus, detail?: string): void {
@@ -114,13 +161,14 @@ export class EmfDetectorUi {
     const h = canvas.height;
     const cx = w / 2;
     const cy = h / 2;
+    const palette = this.getPalette();
 
     context.clearRect(0, 0, w, h);
 
-    context.fillStyle = 'rgba(8, 18, 24, 0.9)';
+    context.fillStyle = palette.vectorBackground;
     context.fillRect(0, 0, w, h);
 
-    context.strokeStyle = 'rgba(130, 165, 180, 0.35)';
+    context.strokeStyle = palette.axisStroke;
     context.lineWidth = 1;
     context.beginPath();
     context.moveTo(0, cy);
@@ -139,14 +187,14 @@ export class EmfDetectorUi {
     const tx = cx + nx * radius * perspective;
     const ty = cy - ny * radius * perspective;
 
-    context.strokeStyle = active ? 'rgba(92, 242, 203, 0.95)' : 'rgba(110, 130, 140, 0.65)';
+    context.strokeStyle = active ? palette.activeLine : palette.inactiveLine;
     context.lineWidth = 3;
     context.beginPath();
     context.moveTo(cx, cy);
     context.lineTo(tx, ty);
     context.stroke();
 
-    context.fillStyle = active ? 'rgba(122, 255, 229, 1)' : 'rgba(150, 162, 170, 0.8)';
+    context.fillStyle = active ? palette.activeDot : palette.inactiveDot;
     context.beginPath();
     context.arc(tx, ty, 7, 0, Math.PI * 2);
     context.fill();
@@ -165,9 +213,10 @@ export class EmfDetectorUi {
 
     const w = canvas.width;
     const h = canvas.height;
+    const palette = this.getPalette();
     context.clearRect(0, 0, w, h);
 
-    context.fillStyle = 'rgba(8, 16, 20, 0.9)';
+    context.fillStyle = palette.trendBackground;
     context.fillRect(0, 0, w, h);
 
     if (history.length < 2) {
@@ -178,7 +227,7 @@ export class EmfDetectorUi {
     const selectedRange = range === 'auto' ? maxHistory : Number(range);
     const scaleMax = Math.max(selectedRange, 1);
 
-    context.strokeStyle = 'rgba(116, 246, 226, 0.95)';
+    context.strokeStyle = palette.trendStroke;
     context.lineWidth = 2;
     context.beginPath();
 
@@ -221,6 +270,7 @@ export class EmfDetectorUi {
 }
 
 export function getUiElements(): UiElements | null {
+  const toolRoot = document.getElementById('emf-detector-tool');
   const statusBanner = document.getElementById('status-banner');
   const startButton = document.getElementById('start-scan');
   const stopButton = document.getElementById('stop-scan');
@@ -239,6 +289,7 @@ export function getUiElements(): UiElements | null {
   const trendCanvas = document.getElementById('trend-canvas');
 
   if (
+    !(toolRoot instanceof HTMLElement) ||
     !(statusBanner instanceof HTMLElement) ||
     !(startButton instanceof HTMLButtonElement) ||
     !(stopButton instanceof HTMLButtonElement) ||
@@ -260,6 +311,7 @@ export function getUiElements(): UiElements | null {
   }
 
   return {
+    toolRoot,
     statusBanner,
     startButton,
     stopButton,

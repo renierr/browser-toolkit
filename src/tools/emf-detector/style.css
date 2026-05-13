@@ -1,31 +1,60 @@
 #emf-detector-tool {
   --emf-teal: #5ff2d2;
+  --emf-shell-fg: var(--color-base-content);
+  --emf-shell-glow-1: rgb(96 255 224 / 0.2);
+  --emf-shell-glow-2: rgb(105 184 255 / 0.18);
+  --emf-shell-start: color-mix(in oklab, var(--color-base-100) 94%, #cee9ef 6%);
+  --emf-shell-end: color-mix(in oklab, var(--color-base-200) 90%, #c4d7e4 10%);
+  --emf-card-start: color-mix(in oklab, var(--color-base-100) 95%, #d8edf0 5%);
+  --emf-card-end: color-mix(in oklab, var(--color-base-200) 92%, #c8dde2 8%);
+  --emf-card-border: color-mix(in oklab, var(--color-base-content) 20%, transparent);
+  --emf-card-shadow-top: rgb(255 255 255 / 0.33);
+  --emf-card-shadow-bottom: rgb(46 73 89 / 0.15);
+  --emf-canvas-bg: color-mix(in oklab, var(--color-base-100) 95%, #d2e8ec 5%);
+  --emf-canvas-border: color-mix(in oklab, var(--color-base-content) 24%, transparent);
+  --emf-badge-success-text: color-mix(in oklab, var(--color-base-content) 88%, #0f403c 12%);
+}
+
+html[data-theme='dark'] #emf-detector-tool {
+  --emf-shell-fg: rgb(232 245 249);
+  --emf-shell-glow-1: rgb(96 255 224 / 0.12);
+  --emf-shell-glow-2: rgb(105 184 255 / 0.12);
+  --emf-shell-start: rgb(10 19 26 / 0.95);
+  --emf-shell-end: rgb(27 35 44 / 0.92);
+  --emf-card-start: rgb(7 24 30 / 0.9);
+  --emf-card-end: rgb(5 14 19 / 0.95);
+  --emf-card-border: rgb(115 163 178 / 0.24);
+  --emf-card-shadow-top: rgb(255 255 255 / 0.08);
+  --emf-card-shadow-bottom: rgb(0 0 0 / 0.35);
+  --emf-canvas-bg: rgb(6 16 20 / 0.92);
+  --emf-canvas-border: rgb(120 170 186 / 0.3);
+  --emf-badge-success-text: rgb(8 30 34);
 }
 
 #emf-detector-tool .detector-shell {
   background-image:
-    radial-gradient(circle at 15% 0%, rgb(96 255 224 / 0.12), transparent 40%),
-    radial-gradient(circle at 85% 100%, rgb(105 184 255 / 0.12), transparent 44%),
-    linear-gradient(150deg, rgb(10 19 26 / 0.95), rgb(27 35 44 / 0.92));
-  color: rgb(232 245 249);
+    radial-gradient(circle at 15% 0%, var(--emf-shell-glow-1), transparent 40%),
+    radial-gradient(circle at 85% 100%, var(--emf-shell-glow-2), transparent 44%),
+    linear-gradient(150deg, var(--emf-shell-start), var(--emf-shell-end));
+  color: var(--emf-shell-fg);
 }
 
 #emf-detector-tool .viz-card,
 #emf-detector-tool .stat-card {
-  background: linear-gradient(180deg, rgb(7 24 30 / 0.9), rgb(5 14 19 / 0.95));
-  border: 1px solid rgb(115 163 178 / 0.24);
+  background: linear-gradient(180deg, var(--emf-card-start), var(--emf-card-end));
+  border: 1px solid var(--emf-card-border);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.08),
-    inset 0 -10px 22px rgb(0 0 0 / 0.35);
+    inset 0 1px 0 var(--emf-card-shadow-top),
+    inset 0 -10px 22px var(--emf-card-shadow-bottom);
 }
 
 #emf-detector-tool canvas {
-  border: 1px solid rgb(120 170 186 / 0.3);
-  background: rgb(6 16 20 / 0.92);
+  border: 1px solid var(--emf-canvas-border);
+  background: var(--emf-canvas-bg);
 }
 
 #emf-detector-tool .badge-success {
-  color: rgb(8 30 34);
+  color: var(--emf-badge-success-text);
 }
 
 @media (max-width: 640px) {
