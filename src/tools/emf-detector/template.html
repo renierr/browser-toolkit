@@ -1,0 +1,91 @@
+<div id="emf-detector-tool" class="mx-auto w-full max-w-4xl">
+  <div
+    class="detector-shell rounded-3xl border border-base-300/60 bg-base-100/90 p-4 shadow-2xl sm:p-6"
+  >
+    <div class="mb-4 flex items-start justify-between gap-3">
+      <div>
+        <h2 class="text-xl font-black tracking-tight sm:text-2xl">Magnetic Field EMF Detector</h2>
+        <p class="text-sm text-base-content/70">
+          Real-time 3-axis magnetometer view. Great for experiments, not certified electrical safety
+          testing.
+        </p>
+      </div>
+      <div id="signal-badge" class="badge badge-outline">Stopped</div>
+    </div>
+
+    <div
+      id="status-banner"
+      class="mb-4 rounded-xl border border-base-300 bg-base-200/70 px-3 py-2 text-sm text-base-content/80"
+    >
+      Initializing magnetometer...
+    </div>
+
+    <div class="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <button id="start-scan" class="btn btn-primary btn-sm">Start</button>
+      <button id="stop-scan" class="btn btn-sm btn-outline" disabled>Stop</button>
+      <button id="calibrate-baseline" class="btn btn-sm btn-outline">Calibrate Baseline</button>
+      <button id="reset-baseline" class="btn btn-sm btn-ghost">Reset Baseline</button>
+      <button id="wake-lock-btn" class="btn btn-sm btn-outline">Acquire Wake Lock</button>
+    </div>
+
+    <div class="mb-4 grid gap-2 sm:max-w-56">
+      <label
+        for="range-select"
+        class="text-xs font-semibold uppercase tracking-wide text-base-content/70"
+        >Display Range</label
+      >
+      <select id="range-select" class="select select-bordered select-sm w-full">
+        <option value="auto" selected>Auto</option>
+        <option value="100">+-100 uT</option>
+        <option value="500">+-500 uT</option>
+        <option value="2000">+-2000 uT</option>
+      </select>
+    </div>
+
+    <div class="grid gap-4 lg:grid-cols-[1.35fr,1fr]">
+      <div class="space-y-3">
+        <div class="viz-card rounded-2xl p-3">
+          <div class="mb-2 text-xs uppercase tracking-wide text-base-content/60">Vector View</div>
+          <canvas id="vector-canvas" class="block h-64 w-full rounded-xl"></canvas>
+        </div>
+        <div class="viz-card rounded-2xl p-3">
+          <div class="mb-2 text-xs uppercase tracking-wide text-base-content/60">
+            Magnitude Trend
+          </div>
+          <canvas id="trend-canvas" class="block h-24 w-full rounded-xl"></canvas>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 self-start">
+        <div class="stat-card rounded-xl p-3 text-center">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">X</div>
+          <div id="x-value" class="font-mono text-xl font-bold tabular-nums">0.0 uT</div>
+        </div>
+        <div class="stat-card rounded-xl p-3 text-center">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">Y</div>
+          <div id="y-value" class="font-mono text-xl font-bold tabular-nums">0.0 uT</div>
+        </div>
+        <div class="stat-card rounded-xl p-3 text-center">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">Z</div>
+          <div id="z-value" class="font-mono text-xl font-bold tabular-nums">0.0 uT</div>
+        </div>
+        <div class="stat-card rounded-xl p-3 text-center">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">|B|</div>
+          <div id="magnitude-value" class="font-mono text-xl font-bold tabular-nums">0.0 uT</div>
+        </div>
+        <div class="stat-card rounded-xl p-3 text-center col-span-2">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">
+            Delta From Baseline
+          </div>
+          <div id="delta-value" class="font-mono text-2xl font-bold tabular-nums">0.0 uT</div>
+        </div>
+        <div class="stat-card rounded-xl p-3 text-center col-span-2">
+          <div class="text-xs uppercase tracking-wide text-base-content/60">Baseline Magnitude</div>
+          <div id="baseline-value" class="font-mono text-lg font-semibold tabular-nums">0.0 uT</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<include src="style.css" type="style" />

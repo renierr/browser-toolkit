@@ -1,0 +1,7 @@
+{
+  "name": "Magnetic Field EMF Detector",
+  "description": "Real-time 3-axis magnetometer with live vector visualization and baseline calibration.",
+  "icon": "magnet",
+  "sectionId": "devices",
+  "order": 12
+}

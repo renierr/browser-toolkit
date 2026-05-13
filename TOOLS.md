@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
-- Total tools: **61** (58 normal, 3 backend)
+- Total tools: **62** (59 normal, 3 backend)
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -277,7 +277,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `not set`, icon `database`, share target capable `yes`, share target accepts `application/vnd.sqlite3`, `application/x-sqlite3`, `.sqlite`, `.sqlite3`, `.db`.
 - Source: `src/tools/sqlite-explorer/config.json`
 
-## Devices (6)
+## Devices (7)
 
 ### Heart Rate Monitor (`heart-rate-monitor`)
 - Description: Connect to a Bluetooth heart rate monitor and track live pulse measurements.
@@ -303,6 +303,11 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Description: Connect to BLE temperature and humidity sensors like Mijia MJ_HT_V1 and compatible environmental devices.
 - Metadata: Order `11`, icon `thermometer`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/ble-climate-monitor/config.json`
+
+### Magnetic Field EMF Detector (`emf-detector`)
+- Description: Real-time 3-axis magnetometer with live vector visualization and baseline calibration.
+- Metadata: Order `12`, icon `magnet`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/emf-detector/config.json`
 
 ### Bubble Level (`bubble-level`)
 - Description: Precision spirit level using motion sensors with calibration and dual-axis/beam modes.
