@@ -1,9 +1,10 @@
 import { downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from '@js/file-utils.ts';
 import type { SharedFilesPayload } from '@js/share-target';
 import { showMessage } from '@js/ui.ts';
+import { debounce } from '@js/utils.ts';
 import { ASCII_PRESETS, resolveCharset } from './ascii-mapper.ts';
 import { convertImageToAscii } from './image-to-ascii.ts';
-import type { AsciiOptions, AsciiPreset } from './types.ts';
+import type { AsciiOptions, AsciiPresetId } from './types.ts';
 
 const DEFAULT_OUTPUT = 'ASCII art will appear here.';
 
@@ -23,6 +24,18 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   const presetSelect = document.getElementById('charset-preset') as HTMLSelectElement | null;
   const customCharsetInput = document.getElementById('custom-charset') as HTMLInputElement | null;
   const invertCheckbox = document.getElementById('invert-map') as HTMLInputElement | null;
+  const gammaRange = document.getElementById('gamma-range') as HTMLInputElement | null;
+  const contrastRange = document.getElementById('contrast-range') as HTMLInputElement | null;
+  const brightnessRange = document.getElementById('brightness-range') as HTMLInputElement | null;
+  const edgeRange = document.getElementById('edge-range') as HTMLInputElement | null;
+  const aspectRange = document.getElementById('aspect-range') as HTMLInputElement | null;
+  const autoContrastCheckbox = document.getElementById('auto-contrast') as HTMLInputElement | null;
+  const ditherCheckbox = document.getElementById('dither-map') as HTMLInputElement | null;
+  const gammaValue = document.getElementById('gamma-value') as HTMLSpanElement | null;
+  const contrastValue = document.getElementById('contrast-value') as HTMLSpanElement | null;
+  const brightnessValue = document.getElementById('brightness-value') as HTMLSpanElement | null;
+  const edgeValue = document.getElementById('edge-value') as HTMLSpanElement | null;
+  const aspectValue = document.getElementById('aspect-value') as HTMLSpanElement | null;
   const output = document.getElementById('ascii-output') as HTMLPreElement | null;
   const status = document.getElementById('status') as HTMLDivElement | null;
   const copyBtn = document.getElementById('copy-btn') as HTMLButtonElement | null;
@@ -36,6 +49,18 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
     !presetSelect ||
     !customCharsetInput ||
     !invertCheckbox ||
+    !gammaRange ||
+    !contrastRange ||
+    !brightnessRange ||
+    !edgeRange ||
+    !aspectRange ||
+    !autoContrastCheckbox ||
+    !ditherCheckbox ||
+    !gammaValue ||
+    !contrastValue ||
+    !brightnessValue ||
+    !edgeValue ||
+    !aspectValue ||
     !output ||
     !status ||
     !copyBtn ||
@@ -50,6 +75,31 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   output.textContent = DEFAULT_OUTPUT;
 
+  const formatNum = (value: number): string => value.toFixed(2);
+
+  const syncSliderLabels = (): void => {
+    gammaValue.textContent = formatNum(Number(gammaRange.value));
+    contrastValue.textContent = formatNum(Number(contrastRange.value));
+    brightnessValue.textContent = formatNum(Number(brightnessRange.value));
+    edgeValue.textContent = formatNum(Number(edgeRange.value));
+    aspectValue.textContent = formatNum(Number(aspectRange.value));
+  };
+
+  const applyPreset = (presetId: AsciiPresetId): void => {
+    const preset = ASCII_PRESETS[presetId] ?? ASCII_PRESETS['photo-soft'];
+    customCharsetInput.placeholder = `Preset: ${preset.charset}`;
+    gammaRange.value = String(preset.gamma);
+    contrastRange.value = String(preset.contrast);
+    brightnessRange.value = String(preset.brightness);
+    edgeRange.value = String(preset.edgeWeight);
+    aspectRange.value = String(preset.fontAspect);
+    ditherCheckbox.checked = preset.useDithering;
+    autoContrastCheckbox.checked = preset.autoContrast;
+    syncSliderLabels();
+  };
+
+  applyPreset(presetSelect.value as AsciiPresetId);
+
   const setResult = (text: string) => {
     currentAscii = text;
     output.textContent = text.length > 0 ? text : DEFAULT_OUTPUT;
@@ -60,11 +110,23 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   const getOptions = (): AsciiOptions => {
     const width = clampWidth(Number(widthInput.value));
     widthInput.value = String(width);
-    const preset = presetSelect.value as AsciiPreset;
-    const presetCharset = ASCII_PRESETS[preset] ?? ASCII_PRESETS.classic;
+    const preset = presetSelect.value as AsciiPresetId;
+    const presetConfig = ASCII_PRESETS[preset] ?? ASCII_PRESETS['photo-soft'];
+    const presetCharset = presetConfig.charset;
     const charset = resolveCharset(customCharsetInput.value, presetCharset);
     const invert = invertCheckbox.checked;
-    return { width, charset, invert };
+    return {
+      width,
+      charset,
+      invert,
+      gamma: Number(gammaRange.value),
+      contrast: Number(contrastRange.value),
+      brightness: Number(brightnessRange.value),
+      edgeWeight: Number(edgeRange.value),
+      fontAspect: Number(aspectRange.value),
+      useDithering: ditherCheckbox.checked,
+      autoContrast: autoContrastCheckbox.checked,
+    };
   };
 
   const renderCurrentImage = async (): Promise<void> => {
@@ -117,6 +179,17 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   };
 
   const onControlChange = () => {
+    syncSliderLabels();
+    void renderCurrentImage();
+  };
+
+  const onControlInput = debounce(() => {
+    syncSliderLabels();
+    void renderCurrentImage();
+  }, 80);
+
+  const onPresetChange = (): void => {
+    applyPreset(presetSelect.value as AsciiPresetId);
     void renderCurrentImage();
   };
 
@@ -146,10 +219,18 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
   });
 
   pasteBtn.addEventListener('click', onPasteClick);
+  widthInput.addEventListener('input', onControlInput);
   widthInput.addEventListener('change', onControlChange);
-  presetSelect.addEventListener('change', onControlChange);
-  customCharsetInput.addEventListener('input', onControlChange);
+  presetSelect.addEventListener('change', onPresetChange);
+  customCharsetInput.addEventListener('input', onControlInput);
   invertCheckbox.addEventListener('change', onControlChange);
+  gammaRange.addEventListener('input', onControlInput);
+  contrastRange.addEventListener('input', onControlInput);
+  brightnessRange.addEventListener('input', onControlInput);
+  edgeRange.addEventListener('input', onControlInput);
+  aspectRange.addEventListener('input', onControlInput);
+  autoContrastCheckbox.addEventListener('change', onControlChange);
+  ditherCheckbox.addEventListener('change', onControlChange);
   copyBtn.addEventListener('click', onCopy);
   downloadBtn.addEventListener('click', onDownload);
 
@@ -159,10 +240,18 @@ export default function init(payload?: SharedFilesPayload): void | (() => void) 
 
   return () => {
     pasteBtn.removeEventListener('click', onPasteClick);
+    widthInput.removeEventListener('input', onControlInput);
     widthInput.removeEventListener('change', onControlChange);
-    presetSelect.removeEventListener('change', onControlChange);
-    customCharsetInput.removeEventListener('input', onControlChange);
+    presetSelect.removeEventListener('change', onPresetChange);
+    customCharsetInput.removeEventListener('input', onControlInput);
     invertCheckbox.removeEventListener('change', onControlChange);
+    gammaRange.removeEventListener('input', onControlInput);
+    contrastRange.removeEventListener('input', onControlInput);
+    brightnessRange.removeEventListener('input', onControlInput);
+    edgeRange.removeEventListener('input', onControlInput);
+    aspectRange.removeEventListener('input', onControlInput);
+    autoContrastCheckbox.removeEventListener('change', onControlChange);
+    ditherCheckbox.removeEventListener('change', onControlChange);
     copyBtn.removeEventListener('click', onCopy);
     downloadBtn.removeEventListener('click', onDownload);
   };

@@ -43,11 +43,16 @@
       </label>
 
       <label class="form-control w-full" for="charset-preset">
-        <span class="label-text font-semibold mb-1">Character Preset</span>
+        <span class="label-text font-semibold mb-1">Style Preset</span>
         <select id="charset-preset" class="select select-bordered select-sm w-full">
-          <option value="dense" selected>Dense (@#S%?*+;:,. )</option>
-          <option value="classic">Classic (@#*+=-:. )</option>
-          <option value="binary">Binary (# .)</option>
+          <option value="photo-soft" selected>Photo Soft</option>
+          <option value="photo-detailed">Photo Detailed</option>
+          <option value="terminal-classic">Terminal Classic</option>
+          <option value="binary-bold">Binary Bold</option>
+          <option value="blueprint">Blueprint</option>
+          <option value="outline">Outline</option>
+          <option value="minimal">Minimal</option>
+          <option value="dots">Dots</option>
         </select>
       </label>
 
@@ -64,6 +69,84 @@
       <label class="label cursor-pointer justify-start gap-3 pt-7" for="invert-map">
         <input id="invert-map" type="checkbox" class="checkbox checkbox-sm" />
         <span class="label-text">Invert mapping</span>
+      </label>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
+      <label class="form-control w-full" for="gamma-range">
+        <span class="label-text text-xs">Gamma: <span id="gamma-value">1.00</span></span>
+        <input
+          id="gamma-range"
+          type="range"
+          min="0.5"
+          max="2"
+          step="0.05"
+          value="1"
+          class="range range-sm"
+        />
+      </label>
+
+      <label class="form-control w-full" for="contrast-range">
+        <span class="label-text text-xs">Contrast: <span id="contrast-value">1.10</span></span>
+        <input
+          id="contrast-range"
+          type="range"
+          min="0.5"
+          max="2"
+          step="0.05"
+          value="1.1"
+          class="range range-sm"
+        />
+      </label>
+
+      <label class="form-control w-full" for="brightness-range">
+        <span class="label-text text-xs">Brightness: <span id="brightness-value">0.00</span></span>
+        <input
+          id="brightness-range"
+          type="range"
+          min="-0.4"
+          max="0.4"
+          step="0.01"
+          value="0"
+          class="range range-sm"
+        />
+      </label>
+
+      <label class="form-control w-full" for="edge-range">
+        <span class="label-text text-xs">Edge boost: <span id="edge-value">0.00</span></span>
+        <input
+          id="edge-range"
+          type="range"
+          min="0"
+          max="1"
+          step="0.05"
+          value="0"
+          class="range range-sm"
+        />
+      </label>
+
+      <label class="form-control w-full" for="aspect-range">
+        <span class="label-text text-xs">Font aspect: <span id="aspect-value">0.52</span></span>
+        <input
+          id="aspect-range"
+          type="range"
+          min="0.4"
+          max="0.7"
+          step="0.01"
+          value="0.52"
+          class="range range-sm"
+        />
+      </label>
+    </div>
+
+    <div class="flex flex-wrap gap-4 mt-2">
+      <label class="label cursor-pointer gap-2" for="auto-contrast">
+        <input id="auto-contrast" type="checkbox" class="checkbox checkbox-xs" checked />
+        <span class="label-text text-sm">Auto contrast</span>
+      </label>
+      <label class="label cursor-pointer gap-2" for="dither-map">
+        <input id="dither-map" type="checkbox" class="checkbox checkbox-xs" />
+        <span class="label-text text-sm">Dithering</span>
       </label>
     </div>
 
