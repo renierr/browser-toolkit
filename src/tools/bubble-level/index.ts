@@ -1,4 +1,3 @@
-import { CalibrationStore } from './calibration';
 import { isLevel, lowPass, roundToOne } from './math';
 import { SensorService } from './sensor-service';
 import { BubbleLevelUi, getUiElements } from './ui-controller';
@@ -14,24 +13,27 @@ export default function init(): void | (() => void) {
   const resetCalibrationButton = document.getElementById('reset-calibration');
   const wakeLockButton = document.getElementById('wake-lock-btn');
 
+  const pitchOffsetInput = document.getElementById('pitch-offset-setting') as HTMLInputElement;
+  const rollOffsetInput = document.getElementById('roll-offset-setting') as HTMLInputElement;
+
   if (
     !uiElements ||
     !(toleranceSelect instanceof HTMLSelectElement) ||
     !(calibrateZeroButton instanceof HTMLButtonElement) ||
     !(resetCalibrationButton instanceof HTMLButtonElement) ||
-    !(wakeLockButton instanceof HTMLButtonElement)
+    !(wakeLockButton instanceof HTMLButtonElement) ||
+    !pitchOffsetInput ||
+    !rollOffsetInput
   ) {
     return;
   }
 
   const ui = new BubbleLevelUi(uiElements);
   const sensors = new SensorService();
-  const calibration = new CalibrationStore();
   const settings = getSettings('bubble-level');
 
   let mode: LevelMode = '2d';
   let tolerance = Number(toleranceSelect.value) || 0.2;
-  let offset: CalibrationOffset = calibration.load();
   let filtered: OrientationReading = { pitch: 0, roll: 0 };
   let hasSignal = false;
   let isRulerVisible = false;
@@ -45,12 +47,17 @@ export default function init(): void | (() => void) {
   };
 
   const getPxPerMm = (): number => Number(uiElements.ppiSettingInput.value) || 3.78;
+  const getOffset = (): CalibrationOffset => ({
+    pitch: Number(pitchOffsetInput.value) || 0,
+    roll: Number(rollOffsetInput.value) || 0,
+  });
 
   // 2. Bind settings (restores from storage and listens for changes)
   const unbindSettings = settings.bind(document.getElementById('bubble-level-tool')!);
 
-  // Initial UI state from bound value
+  // Initial UI state from bound values
   updatePxPerMm(getPxPerMm());
+  let offset: CalibrationOffset = getOffset();
 
   const applyReading = (reading: OrientationReading): void => {
     hasSignal = true;
@@ -97,17 +104,28 @@ export default function init(): void | (() => void) {
       ui.setStatus('error', 'Cannot calibrate yet. Wait for sensor signal first.');
       return;
     }
+
     offset = {
       pitch: offset.pitch + filtered.pitch,
       roll: offset.roll + filtered.roll,
     };
-    calibration.save(offset);
+
+    pitchOffsetInput.value = offset.pitch.toString();
+    rollOffsetInput.value = offset.roll.toString();
+    pitchOffsetInput.dispatchEvent(new Event('change'));
+    rollOffsetInput.dispatchEvent(new Event('change'));
+
     filtered = { pitch: 0, roll: 0 };
     ui.setStatus('ready', 'Calibration saved. Current surface now zero reference.');
   };
 
   const onResetCalibration = (): void => {
-    offset = calibration.reset();
+    offset = { pitch: 0, roll: 0 };
+    pitchOffsetInput.value = '0';
+    rollOffsetInput.value = '0';
+    pitchOffsetInput.dispatchEvent(new Event('change'));
+    rollOffsetInput.dispatchEvent(new Event('change'));
+
     ui.setStatus('ready', 'Calibration reset. Using raw sensor zero.');
   };
 
