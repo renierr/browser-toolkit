@@ -124,30 +124,18 @@ export default function init(): void | (() => void) {
     ui.updateCalibrationPreview(uiElements.calibrationSlider.valueAsNumber);
   };
 
-  const onRefObjectChange = (): void => {
-    ui.updateRefLengthUi();
-    const refLen = ui.getRefLength();
-    // Update slider to current ppi * new refLen
-    uiElements.calibrationSlider.value = (getPxPerMm() * refLen).toString();
-    ui.updateCalibrationPreview(uiElements.calibrationSlider.valueAsNumber);
-  };
-
-  const onCustomLenInput = (): void => {
-    onRefObjectChange();
-  };
-
   const onPpiPlus = (): void => {
-    uiElements.calibrationSlider.valueAsNumber += 0.5;
+    uiElements.calibrationSlider.valueAsNumber += 0.01;
     onCalibrationSliderInput();
   };
 
   const onPpiMinus = (): void => {
-    uiElements.calibrationSlider.valueAsNumber -= 0.5;
+    uiElements.calibrationSlider.valueAsNumber -= 0.01;
     onCalibrationSliderInput();
   };
 
   const onSaveCalibration = (): void => {
-    const newPxPerMm = uiElements.calibrationSlider.valueAsNumber / ui.getRefLength();
+    const newPxPerMm = uiElements.calibrationSlider.valueAsNumber;
     uiElements.ppiSettingInput.value = newPxPerMm.toFixed(4);
     uiElements.ppiSettingInput.dispatchEvent(new Event('change'));
     updatePxPerMm(newPxPerMm);
@@ -155,6 +143,8 @@ export default function init(): void | (() => void) {
   };
 
   const onCancelCalibration = (): void => {
+    // Revert ruler to last saved value
+    ui.setPixelsPerMm(getPxPerMm());
     ui.closeCalibration();
   };
 
@@ -215,8 +205,6 @@ export default function init(): void | (() => void) {
   uiElements.toggleRulerButton.addEventListener('click', onToggleRuler);
   uiElements.calibrateRulerButton.addEventListener('click', onCalibrateRuler);
   uiElements.rotationLockButton.addEventListener('click', onRotationLockClick);
-  uiElements.refObjectSelect.addEventListener('change', onRefObjectChange);
-  uiElements.customLenInput.addEventListener('input', onCustomLenInput);
   uiElements.calibrationSlider.addEventListener('input', onCalibrationSliderInput);
   uiElements.ppiPlusButton.addEventListener('click', onPpiPlus);
   uiElements.ppiMinusButton.addEventListener('click', onPpiMinus);
@@ -252,8 +240,6 @@ export default function init(): void | (() => void) {
     uiElements.toggleRulerButton.removeEventListener('click', onToggleRuler);
     uiElements.calibrateRulerButton.removeEventListener('click', onCalibrateRuler);
     uiElements.rotationLockButton.removeEventListener('click', onRotationLockClick);
-    uiElements.refObjectSelect.removeEventListener('change', onRefObjectChange);
-    uiElements.customLenInput.removeEventListener('input', onCustomLenInput);
     uiElements.calibrationSlider.removeEventListener('input', onCalibrationSliderInput);
     uiElements.ppiPlusButton.removeEventListener('click', onPpiPlus);
     uiElements.ppiMinusButton.removeEventListener('click', onPpiMinus);

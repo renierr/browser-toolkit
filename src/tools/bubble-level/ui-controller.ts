@@ -18,19 +18,14 @@ type UiElements = {
   calibrateRulerButton: HTMLButtonElement;
   calibrationModal: HTMLDialogElement;
   calibrationSlider: HTMLInputElement;
-  calibrationCard: HTMLElement;
   ppiDisplay: HTMLElement;
+  realSizeDisplay: HTMLElement;
   saveCalibrationButton: HTMLButtonElement;
   cancelCalibrationButton: HTMLButtonElement;
   ppiMinusButton: HTMLButtonElement;
   ppiPlusButton: HTMLButtonElement;
   ppiSettingInput: HTMLInputElement;
   rotationLockButton: HTMLButtonElement;
-  refObjectSelect: HTMLSelectElement;
-  customLenContainer: HTMLElement;
-  customLenInput: HTMLInputElement;
-  realSizeDisplay: HTMLElement;
-  refLabel: HTMLElement;
 };
 
 export class BubbleLevelUi {
@@ -73,10 +68,8 @@ export class BubbleLevelUi {
   }
 
   public openCalibration(pxPerMm: number): void {
-    const refLen = this.getRefLength();
-    const currentWidth = pxPerMm * refLen;
-    this.elements.calibrationSlider.value = currentWidth.toString();
-    this.updateCalibrationPreview(currentWidth);
+    this.elements.calibrationSlider.value = pxPerMm.toString();
+    this.updateCalibrationPreview(pxPerMm);
     this.elements.calibrationModal.showModal();
   }
 
@@ -84,32 +77,11 @@ export class BubbleLevelUi {
     this.elements.calibrationModal.close();
   }
 
-  public updateCalibrationPreview(widthPx: number): void {
-    this.elements.calibrationCard.style.width = `${widthPx}px`;
-    const refLen = this.getRefLength();
-    const ppi = (widthPx / refLen) * 25.4;
-    this.elements.ppiDisplay.textContent = `${Math.round(ppi)} DPI`;
-    this.elements.realSizeDisplay.textContent = `${refLen} mm`;
-  }
-
-  public getRefLength(): number {
-    const val = this.elements.refObjectSelect.value;
-    if (val === 'custom') {
-      return Number(this.elements.customLenInput.value) || 50;
-    }
-    return Number(val);
-  }
-
-  public updateRefLengthUi(): void {
-    const isCustom = this.elements.refObjectSelect.value === 'custom';
-    this.elements.customLenContainer.classList.toggle('hidden', !isCustom);
-
-    const refLen = this.getRefLength();
-    const labelText = isCustom
-      ? 'Custom Reference'
-      : this.elements.refObjectSelect.selectedOptions[0].text;
-    this.elements.refLabel.textContent = labelText;
-    this.elements.realSizeDisplay.textContent = `${refLen} mm`;
+  public updateCalibrationPreview(pxPerMm: number): void {
+    const dpi = pxPerMm * 25.4;
+    this.elements.ppiDisplay.textContent = `${Math.round(dpi)} DPI`;
+    this.elements.realSizeDisplay.textContent = `${pxPerMm.toFixed(2)} px/mm`;
+    this.setPixelsPerMm(pxPerMm);
   }
 
   public setRotationLockState(locked: boolean): void {
@@ -192,19 +164,14 @@ export function getUiElements(): UiElements | null {
   const calibrateRulerButton = document.getElementById('calibrate-ruler');
   const calibrationModal = document.getElementById('ruler-calibration-modal');
   const calibrationSlider = document.getElementById('calibration-slider');
-  const calibrationCard = document.getElementById('calibration-card');
   const ppiDisplay = document.getElementById('ppi-display');
+  const realSizeDisplay = document.getElementById('real-size-display');
   const saveCalibrationButton = document.getElementById('save-calibration');
   const cancelCalibrationButton = document.getElementById('cancel-calibration');
   const ppiMinusButton = document.getElementById('ppi-minus');
   const ppiPlusButton = document.getElementById('ppi-plus');
   const ppiSettingInput = document.getElementById('ppi-setting');
   const rotationLockButton = document.getElementById('rotation-lock-btn');
-  const refObjectSelect = document.getElementById('ref-object');
-  const customLenContainer = document.getElementById('custom-len-container');
-  const customLenInput = document.getElementById('custom-len');
-  const realSizeDisplay = document.getElementById('real-size-display');
-  const refLabel = document.getElementById('ref-label');
 
   if (
     !(lockBadge instanceof HTMLElement) ||
@@ -223,19 +190,14 @@ export function getUiElements(): UiElements | null {
     !(calibrateRulerButton instanceof HTMLButtonElement) ||
     !(calibrationModal instanceof HTMLDialogElement) ||
     !(calibrationSlider instanceof HTMLInputElement) ||
-    !(calibrationCard instanceof HTMLElement) ||
     !(ppiDisplay instanceof HTMLElement) ||
+    !(realSizeDisplay instanceof HTMLElement) ||
     !(saveCalibrationButton instanceof HTMLButtonElement) ||
     !(cancelCalibrationButton instanceof HTMLButtonElement) ||
     !(ppiMinusButton instanceof HTMLButtonElement) ||
     !(ppiPlusButton instanceof HTMLButtonElement) ||
     !(ppiSettingInput instanceof HTMLInputElement) ||
-    !(rotationLockButton instanceof HTMLButtonElement) ||
-    !(refObjectSelect instanceof HTMLSelectElement) ||
-    !(customLenContainer instanceof HTMLElement) ||
-    !(customLenInput instanceof HTMLInputElement) ||
-    !(realSizeDisplay instanceof HTMLElement) ||
-    !(refLabel instanceof HTMLElement)
+    !(rotationLockButton instanceof HTMLButtonElement)
   ) {
     return null;
   }
@@ -257,18 +219,13 @@ export function getUiElements(): UiElements | null {
     calibrateRulerButton,
     calibrationModal,
     calibrationSlider,
-    calibrationCard,
     ppiDisplay,
+    realSizeDisplay,
     saveCalibrationButton,
     cancelCalibrationButton,
     ppiMinusButton,
     ppiPlusButton,
     ppiSettingInput,
     rotationLockButton,
-    refObjectSelect,
-    customLenContainer,
-    customLenInput,
-    realSizeDisplay,
-    refLabel,
   };
 }

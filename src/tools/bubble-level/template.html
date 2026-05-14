@@ -89,80 +89,52 @@
 
 <!-- Ruler Calibration Modal -->
 <dialog id="ruler-calibration-modal" class="modal">
-  <div class="modal-box max-w-lg">
-    <h3 class="text-lg font-bold">Ruler Calibration</h3>
+  <div class="modal-box max-w-sm">
+    <h3 class="text-lg font-bold text-primary">Ruler Calibration</h3>
     <p class="py-4 text-sm opacity-80">
-      Place a physical object of known length against your screen. Adjust the slider until the box
-      below matches the physical object exactly.
+      Hold a <b>physical ruler</b> against the screen edge. Adjust the scale until the markings
+      match exactly.
     </p>
 
-    <div class="mb-4 grid grid-cols-2 gap-3">
-      <div class="form-control">
-        <label class="label"
-          ><span class="label-text text-xs font-bold uppercase">Reference</span></label
-        >
-        <select id="ref-object" class="select select-bordered select-sm">
-          <option value="85.6" selected>Credit Card (85.6mm)</option>
-          <option value="50">Small Object (50mm)</option>
-          <option value="25.4">1 Inch (25.4mm)</option>
-          <option value="custom">Custom Length</option>
-        </select>
-      </div>
-      <div id="custom-len-container" class="form-control hidden">
-        <label class="label"
-          ><span class="label-text text-xs font-bold uppercase">Length (mm)</span></label
-        >
-        <input
-          type="number"
-          id="custom-len"
-          class="input input-bordered input-sm"
-          value="50"
-          step="1"
-          min="1"
-        />
-      </div>
-    </div>
-
-    <div class="flex justify-center py-8">
+    <div class="mb-6 space-y-4">
       <div
-        id="calibration-card"
-        class="flex h-32 items-center justify-center rounded-xl border-2 border-primary/30 bg-primary/10 shadow-lg"
-        style="width: 323px"
+        class="flex items-center justify-between text-xs font-black uppercase tracking-widest text-base-content/50"
       >
-        <div class="flex flex-col items-center gap-1">
-          <div id="ref-label" class="text-[10px] font-bold uppercase tracking-widest opacity-30">
-            Credit Card Reference
-          </div>
-          <div id="real-size-display" class="font-mono text-sm font-black text-primary/60">
-            85.6 mm
-          </div>
-        </div>
+        <span>Fine Adjustment</span>
+        <span id="ppi-display" class="text-primary">--- DPI</span>
       </div>
-    </div>
 
-    <div class="mb-6">
-      <div class="mb-2 flex justify-between text-xs font-bold uppercase tracking-wide opacity-70">
-        <span>Adjust Size</span>
-        <span id="ppi-display">--- DPI</span>
-      </div>
-      <div class="flex items-center gap-4">
-        <button id="ppi-minus" class="btn btn-circle btn-outline btn-sm">-</button>
+      <div class="flex items-center gap-3">
+        <button id="ppi-minus" class="btn btn-circle btn-primary btn-outline btn-sm shadow-sm">
+          -
+        </button>
         <input
           type="range"
           id="calibration-slider"
-          min="200"
-          max="800"
-          value="323"
+          min="1"
+          max="10"
+          step="0.01"
+          value="3.78"
           class="range range-primary range-sm flex-1"
         />
-        <button id="ppi-plus" class="btn btn-circle btn-outline btn-sm">+</button>
+        <button id="ppi-plus" class="btn btn-circle btn-primary btn-outline btn-sm shadow-sm">
+          +
+        </button>
       </div>
+
+      <div class="rounded-lg bg-base-200/50 p-3 text-center">
+        <div class="text-[10px] font-bold uppercase tracking-tighter opacity-40">Current Scale</div>
+        <div id="real-size-display" class="font-mono text-xl font-black text-base-content/70">
+          3.78 px/mm
+        </div>
+      </div>
+
       <input type="hidden" id="ppi-setting" data-setting="pxPerMm" value="3.78" />
     </div>
 
     <div class="modal-action">
-      <button id="cancel-calibration" class="btn btn-ghost">Cancel</button>
-      <button id="save-calibration" class="btn btn-primary">Save Calibration</button>
+      <button id="cancel-calibration" class="btn btn-ghost btn-sm">Cancel</button>
+      <button id="save-calibration" class="btn btn-primary btn-sm px-6">Save</button>
     </div>
   </div>
 </dialog>
