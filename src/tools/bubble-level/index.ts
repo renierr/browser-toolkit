@@ -3,6 +3,7 @@ import { isLevel, lowPass, roundToOne } from './math';
 import { SensorService } from './sensor-service';
 import { BubbleLevelUi, getUiElements } from './ui-controller';
 import { acquireWakeLock } from '@js/utils';
+import { getSettings } from '@js/settings';
 import type { CalibrationOffset, LevelMode, OrientationReading } from './types';
 
 // noinspection JSUnusedGlobalSymbols
@@ -26,6 +27,7 @@ export default function init(): void | (() => void) {
   const ui = new BubbleLevelUi(uiElements);
   const sensors = new SensorService();
   const calibration = new CalibrationStore();
+  const settings = getSettings('bubble-level');
 
   let mode: LevelMode = '2d';
   let tolerance = Number(toleranceSelect.value) || 0.2;
@@ -33,8 +35,11 @@ export default function init(): void | (() => void) {
   let filtered: OrientationReading = { pitch: 0, roll: 0 };
   let hasSignal = false;
   let isRulerVisible = false;
+  let pxPerMm = settings.get('pxPerMm', 3.78);
   let stopSensors: (() => void) | null = null;
   let releaseWakeLock: (() => void) | null = null;
+
+  ui.setPixelsPerMm(pxPerMm);
 
   const applyReading = (reading: OrientationReading): void => {
     hasSignal = true;
@@ -100,6 +105,25 @@ export default function init(): void | (() => void) {
     ui.toggleRuler(isRulerVisible);
   };
 
+  const onCalibrateRuler = (): void => {
+    ui.openCalibration(pxPerMm);
+  };
+
+  const onCalibrationSliderInput = (): void => {
+    ui.updateCalibrationPreview(uiElements.calibrationSlider.valueAsNumber);
+  };
+
+  const onSaveCalibration = (): void => {
+    pxPerMm = uiElements.calibrationSlider.valueAsNumber / 85.6;
+    settings.set('pxPerMm', pxPerMm);
+    ui.setPixelsPerMm(pxPerMm);
+    ui.closeCalibration();
+  };
+
+  const onCancelCalibration = (): void => {
+    ui.closeCalibration();
+  };
+
   const onPermissionClick = async (): Promise<void> => {
     ui.setStatus('initializing', 'Requesting sensor permission...');
     const granted = await sensors.requestPermissionIfNeeded();
@@ -139,6 +163,10 @@ export default function init(): void | (() => void) {
   uiElements.mode2dButton.addEventListener('click', onMode2dClick);
   uiElements.mode1dButton.addEventListener('click', onMode1dClick);
   uiElements.toggleRulerButton.addEventListener('click', onToggleRuler);
+  uiElements.calibrateRulerButton.addEventListener('click', onCalibrateRuler);
+  uiElements.calibrationSlider.addEventListener('input', onCalibrationSliderInput);
+  uiElements.saveCalibrationButton.addEventListener('click', onSaveCalibration);
+  uiElements.cancelCalibrationButton.addEventListener('click', onCancelCalibration);
   toleranceSelect.addEventListener('change', onToleranceChange);
   calibrateZeroButton.addEventListener('click', onCalibrateZero);
   resetCalibrationButton.addEventListener('click', onResetCalibration);
@@ -162,6 +190,10 @@ export default function init(): void | (() => void) {
     uiElements.mode2dButton.removeEventListener('click', onMode2dClick);
     uiElements.mode1dButton.removeEventListener('click', onMode1dClick);
     uiElements.toggleRulerButton.removeEventListener('click', onToggleRuler);
+    uiElements.calibrateRulerButton.removeEventListener('click', onCalibrateRuler);
+    uiElements.calibrationSlider.removeEventListener('input', onCalibrationSliderInput);
+    uiElements.saveCalibrationButton.removeEventListener('click', onSaveCalibration);
+    uiElements.cancelCalibrationButton.removeEventListener('click', onCancelCalibration);
     toleranceSelect.removeEventListener('change', onToleranceChange);
     calibrateZeroButton.removeEventListener('click', onCalibrateZero);
     resetCalibrationButton.removeEventListener('click', onResetCalibration);

@@ -15,6 +15,13 @@ type UiElements = {
   rollValue: HTMLElement;
   toggleRulerButton: HTMLButtonElement;
   rulerOverlay: HTMLElement;
+  calibrateRulerButton: HTMLButtonElement;
+  calibrationModal: HTMLDialogElement;
+  calibrationSlider: HTMLInputElement;
+  calibrationCard: HTMLElement;
+  ppiDisplay: HTMLElement;
+  saveCalibrationButton: HTMLButtonElement;
+  cancelCalibrationButton: HTMLButtonElement;
 };
 
 export class BubbleLevelUi {
@@ -32,11 +39,12 @@ export class BubbleLevelUi {
     const numbers = document.createElement('div');
     numbers.className = 'ruler-numbers';
 
-    // Generate numbers for up to 50cm (more than enough for most phones/tablets)
-    for (let i = 0; i <= 50; i++) {
+    // Generate numbers for up to 100cm (plenty for any mobile/tablet)
+    for (let i = 0; i <= 100; i++) {
       const num = document.createElement('div');
       num.className = 'ruler-number';
-      num.style.top = `${i}cm`;
+      // Positioning now uses the same CSS variable as the ticks
+      num.style.top = `calc(var(--px-per-mm) * 10 * ${i})`;
       num.textContent = i.toString();
       numbers.appendChild(num);
     }
@@ -48,6 +56,28 @@ export class BubbleLevelUi {
   public toggleRuler(show: boolean): void {
     this.elements.rulerOverlay.classList.toggle('hidden', !show);
     this.elements.toggleRulerButton.classList.toggle('btn-active', show);
+    this.elements.calibrateRulerButton.classList.toggle('hidden', !show);
+  }
+
+  public setPixelsPerMm(pxPerMm: number): void {
+    this.elements.rulerOverlay.style.setProperty('--px-per-mm', pxPerMm.toString());
+  }
+
+  public openCalibration(pxPerMm: number): void {
+    const cardWidth = pxPerMm * 85.6;
+    this.elements.calibrationSlider.value = cardWidth.toString();
+    this.updateCalibrationPreview(cardWidth);
+    this.elements.calibrationModal.showModal();
+  }
+
+  public closeCalibration(): void {
+    this.elements.calibrationModal.close();
+  }
+
+  public updateCalibrationPreview(widthPx: number): void {
+    this.elements.calibrationCard.style.width = `${widthPx}px`;
+    const ppi = (widthPx / 85.6) * 25.4;
+    this.elements.ppiDisplay.textContent = `${Math.round(ppi)} DPI`;
   }
 
   public setStatus(status: SensorStatus, detail?: string): void {
@@ -121,6 +151,13 @@ export function getUiElements(): UiElements | null {
   const rollValue = document.getElementById('roll-value');
   const toggleRulerButton = document.getElementById('toggle-ruler');
   const rulerOverlay = document.getElementById('ruler-overlay');
+  const calibrateRulerButton = document.getElementById('calibrate-ruler');
+  const calibrationModal = document.getElementById('ruler-calibration-modal');
+  const calibrationSlider = document.getElementById('calibration-slider');
+  const calibrationCard = document.getElementById('calibration-card');
+  const ppiDisplay = document.getElementById('ppi-display');
+  const saveCalibrationButton = document.getElementById('save-calibration');
+  const cancelCalibrationButton = document.getElementById('cancel-calibration');
 
   if (
     !(lockBadge instanceof HTMLElement) ||
@@ -135,7 +172,14 @@ export function getUiElements(): UiElements | null {
     !(pitchValue instanceof HTMLElement) ||
     !(rollValue instanceof HTMLElement) ||
     !(toggleRulerButton instanceof HTMLButtonElement) ||
-    !(rulerOverlay instanceof HTMLElement)
+    !(rulerOverlay instanceof HTMLElement) ||
+    !(calibrateRulerButton instanceof HTMLButtonElement) ||
+    !(calibrationModal instanceof HTMLDialogElement) ||
+    !(calibrationSlider instanceof HTMLInputElement) ||
+    !(calibrationCard instanceof HTMLElement) ||
+    !(ppiDisplay instanceof HTMLElement) ||
+    !(saveCalibrationButton instanceof HTMLButtonElement) ||
+    !(cancelCalibrationButton instanceof HTMLButtonElement)
   ) {
     return null;
   }
@@ -154,5 +198,12 @@ export function getUiElements(): UiElements | null {
     rollValue,
     toggleRulerButton,
     rulerOverlay,
+    calibrateRulerButton,
+    calibrationModal,
+    calibrationSlider,
+    calibrationCard,
+    ppiDisplay,
+    saveCalibrationButton,
+    cancelCalibrationButton,
   };
 }

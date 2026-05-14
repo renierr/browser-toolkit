@@ -29,6 +29,7 @@
       <button id="mode-2d" class="btn btn-sm btn-active">2-Axis</button>
       <button id="mode-1d" class="btn btn-sm">Beam</button>
       <button id="toggle-ruler" class="btn btn-sm btn-outline">Ruler</button>
+      <button id="calibrate-ruler" class="btn btn-sm btn-outline hidden">Calibrate Ruler</button>
       <button id="wake-lock-btn" class="btn btn-sm btn-outline">Acquire Wake Lock</button>
       <button id="calibrate-zero" class="btn btn-sm btn-outline">Set Zero</button>
       <button id="reset-calibration" class="btn btn-sm btn-ghost">Reset Zero</button>
@@ -84,5 +85,48 @@
     </div>
   </div>
 </div>
+
+<!-- Ruler Calibration Modal -->
+<dialog id="ruler-calibration-modal" class="modal">
+  <div class="modal-box max-w-lg">
+    <h3 class="text-lg font-bold">Ruler Calibration</h3>
+    <p class="py-4 text-sm opacity-80">
+      Place a standard <b>credit card</b> (85.6mm) against your screen. Adjust the slider until the
+      box below matches the physical card width exactly.
+    </p>
+
+    <div class="flex justify-center py-8">
+      <div
+        id="calibration-card"
+        class="flex h-32 items-center justify-center rounded-xl border-2 border-primary/30 bg-primary/10 shadow-lg"
+        style="width: 323px"
+      >
+        <div class="text-xs font-bold uppercase tracking-widest opacity-30">
+          Credit Card Reference
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-6">
+      <div class="mb-2 flex justify-between text-xs font-bold uppercase tracking-wide opacity-70">
+        <span>Adjust Size</span>
+        <span id="ppi-display">--- DPI</span>
+      </div>
+      <input
+        type="range"
+        id="calibration-slider"
+        min="200"
+        max="800"
+        value="323"
+        class="range range-primary range-sm"
+      />
+    </div>
+
+    <div class="modal-action">
+      <button id="cancel-calibration" class="btn btn-ghost">Cancel</button>
+      <button id="save-calibration" class="btn btn-primary">Save Calibration</button>
+    </div>
+  </div>
+</dialog>
 
 <include src="style.css" type="style" />

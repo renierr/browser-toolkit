@@ -204,6 +204,7 @@ html[data-theme='dark'] #bubble-level-tool {
 
 /* Ruler Overlay */
 #bubble-level-tool .ruler-overlay {
+  --px-per-mm: 3.78; /* Default approx for 96 DPI */
   display: none;
   position: fixed;
   top: 0;
@@ -233,16 +234,15 @@ html[data-theme='dark'] #bubble-level-tool {
   position: absolute;
   inset: 0;
   /* Using multiple gradients with background-size for perfect repeating ticks */
-  background-image: 
-    /* 1cm thick lines */
+  background-image: /* 1cm thick lines */
     linear-gradient(to bottom, #111827 2px, transparent 2px),
     /* 5mm medium lines */ linear-gradient(to bottom, #374151 1px, transparent 1px),
     /* 1mm thin lines */ linear-gradient(to bottom, #9ca3af 1px, transparent 1px),
     /* Vertical baseline */ linear-gradient(to right, #374151 2px, transparent 2px);
   background-size:
-    45px 10mm,
-    30px 5mm,
-    20px 1mm,
+    45px calc(var(--px-per-mm) * 10px),
+    30px calc(var(--px-per-mm) * 5px),
+    20px calc(var(--px-per-mm) * 1px),
     2px 100%;
   background-repeat: repeat-y, repeat-y, repeat-y, no-repeat;
   background-position: 0 0;
