@@ -15,9 +15,11 @@
     "format:check": "prettier --check \"src/**/*.{js,ts,html,css,json,md}\"",
     "upgrade:check": "bun outdated",
     "upgrade:deps": "bun update",
+    "test:e2e": "playwright test",
     "generate:tool-description": "bun scripts/generate-tool-description.ts"
   },
   "devDependencies": {
+    "@playwright/test": "^1.60.0",
     "@tailwindcss/vite": "^4.3.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^25.6.2",
