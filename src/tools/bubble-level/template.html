@@ -112,14 +112,19 @@
         <span>Adjust Size</span>
         <span id="ppi-display">--- DPI</span>
       </div>
-      <input
-        type="range"
-        id="calibration-slider"
-        min="200"
-        max="800"
-        value="323"
-        class="range range-primary range-sm"
-      />
+      <div class="flex items-center gap-4">
+        <button id="ppi-minus" class="btn btn-circle btn-outline btn-sm">-</button>
+        <input
+          type="range"
+          id="calibration-slider"
+          min="200"
+          max="800"
+          value="323"
+          class="range range-primary range-sm flex-1"
+        />
+        <button id="ppi-plus" class="btn btn-circle btn-outline btn-sm">+</button>
+      </div>
+      <input type="hidden" id="ppi-setting" data-setting="pxPerMm" value="3.78" />
     </div>
 
     <div class="modal-action">

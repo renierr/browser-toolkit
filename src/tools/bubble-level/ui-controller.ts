@@ -22,6 +22,9 @@ type UiElements = {
   ppiDisplay: HTMLElement;
   saveCalibrationButton: HTMLButtonElement;
   cancelCalibrationButton: HTMLButtonElement;
+  ppiMinusButton: HTMLButtonElement;
+  ppiPlusButton: HTMLButtonElement;
+  ppiSettingInput: HTMLInputElement;
 };
 
 export class BubbleLevelUi {
@@ -158,6 +161,9 @@ export function getUiElements(): UiElements | null {
   const ppiDisplay = document.getElementById('ppi-display');
   const saveCalibrationButton = document.getElementById('save-calibration');
   const cancelCalibrationButton = document.getElementById('cancel-calibration');
+  const ppiMinusButton = document.getElementById('ppi-minus');
+  const ppiPlusButton = document.getElementById('ppi-plus');
+  const ppiSettingInput = document.getElementById('ppi-setting');
 
   if (
     !(lockBadge instanceof HTMLElement) ||
@@ -179,7 +185,10 @@ export function getUiElements(): UiElements | null {
     !(calibrationCard instanceof HTMLElement) ||
     !(ppiDisplay instanceof HTMLElement) ||
     !(saveCalibrationButton instanceof HTMLButtonElement) ||
-    !(cancelCalibrationButton instanceof HTMLButtonElement)
+    !(cancelCalibrationButton instanceof HTMLButtonElement) ||
+    !(ppiMinusButton instanceof HTMLButtonElement) ||
+    !(ppiPlusButton instanceof HTMLButtonElement) ||
+    !(ppiSettingInput instanceof HTMLInputElement)
   ) {
     return null;
   }
@@ -205,5 +214,8 @@ export function getUiElements(): UiElements | null {
     ppiDisplay,
     saveCalibrationButton,
     cancelCalibrationButton,
+    ppiMinusButton,
+    ppiPlusButton,
+    ppiSettingInput,
   };
 }

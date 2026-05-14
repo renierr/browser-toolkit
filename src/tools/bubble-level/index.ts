@@ -35,11 +35,21 @@ export default function init(): void | (() => void) {
   let filtered: OrientationReading = { pitch: 0, roll: 0 };
   let hasSignal = false;
   let isRulerVisible = false;
-  let pxPerMm = settings.get('pxPerMm', 3.78);
   let stopSensors: (() => void) | null = null;
   let releaseWakeLock: (() => void) | null = null;
 
-  ui.setPixelsPerMm(pxPerMm);
+  // 1. Initial Load from settings
+  const updatePxPerMm = (val: number): void => {
+    ui.setPixelsPerMm(val);
+  };
+
+  const getPxPerMm = (): number => Number(uiElements.ppiSettingInput.value) || 3.78;
+
+  // 2. Bind settings (restores from storage and listens for changes)
+  const unbindSettings = settings.bind(document.getElementById('bubble-level-tool')!);
+
+  // Initial UI state from bound value
+  updatePxPerMm(getPxPerMm());
 
   const applyReading = (reading: OrientationReading): void => {
     hasSignal = true;
@@ -106,17 +116,28 @@ export default function init(): void | (() => void) {
   };
 
   const onCalibrateRuler = (): void => {
-    ui.openCalibration(pxPerMm);
+    ui.openCalibration(getPxPerMm());
   };
 
   const onCalibrationSliderInput = (): void => {
     ui.updateCalibrationPreview(uiElements.calibrationSlider.valueAsNumber);
   };
 
+  const onPpiPlus = (): void => {
+    uiElements.calibrationSlider.valueAsNumber += 0.5;
+    onCalibrationSliderInput();
+  };
+
+  const onPpiMinus = (): void => {
+    uiElements.calibrationSlider.valueAsNumber -= 0.5;
+    onCalibrationSliderInput();
+  };
+
   const onSaveCalibration = (): void => {
-    pxPerMm = uiElements.calibrationSlider.valueAsNumber / 85.6;
-    settings.set('pxPerMm', pxPerMm);
-    ui.setPixelsPerMm(pxPerMm);
+    const newPxPerMm = uiElements.calibrationSlider.valueAsNumber / 85.6;
+    uiElements.ppiSettingInput.value = newPxPerMm.toFixed(4);
+    uiElements.ppiSettingInput.dispatchEvent(new Event('change'));
+    updatePxPerMm(newPxPerMm);
     ui.closeCalibration();
   };
 
@@ -165,6 +186,8 @@ export default function init(): void | (() => void) {
   uiElements.toggleRulerButton.addEventListener('click', onToggleRuler);
   uiElements.calibrateRulerButton.addEventListener('click', onCalibrateRuler);
   uiElements.calibrationSlider.addEventListener('input', onCalibrationSliderInput);
+  uiElements.ppiPlusButton.addEventListener('click', onPpiPlus);
+  uiElements.ppiMinusButton.addEventListener('click', onPpiMinus);
   uiElements.saveCalibrationButton.addEventListener('click', onSaveCalibration);
   uiElements.cancelCalibrationButton.addEventListener('click', onCancelCalibration);
   toleranceSelect.addEventListener('change', onToleranceChange);
@@ -187,11 +210,14 @@ export default function init(): void | (() => void) {
   }
 
   return () => {
+    unbindSettings();
     uiElements.mode2dButton.removeEventListener('click', onMode2dClick);
     uiElements.mode1dButton.removeEventListener('click', onMode1dClick);
     uiElements.toggleRulerButton.removeEventListener('click', onToggleRuler);
     uiElements.calibrateRulerButton.removeEventListener('click', onCalibrateRuler);
     uiElements.calibrationSlider.removeEventListener('input', onCalibrationSliderInput);
+    uiElements.ppiPlusButton.removeEventListener('click', onPpiPlus);
+    uiElements.ppiMinusButton.removeEventListener('click', onPpiMinus);
     uiElements.saveCalibrationButton.removeEventListener('click', onSaveCalibration);
     uiElements.cancelCalibrationButton.removeEventListener('click', onCancelCalibration);
     toleranceSelect.removeEventListener('change', onToleranceChange);
