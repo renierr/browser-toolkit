@@ -37,6 +37,7 @@ export default function init(): void | (() => void) {
   let isRulerVisible = false;
   let stopSensors: (() => void) | null = null;
   let releaseWakeLock: (() => void) | null = null;
+  let isRotationLocked = false;
 
   // 1. Initial Load from settings
   const updatePxPerMm = (val: number): void => {
@@ -123,6 +124,18 @@ export default function init(): void | (() => void) {
     ui.updateCalibrationPreview(uiElements.calibrationSlider.valueAsNumber);
   };
 
+  const onRefObjectChange = (): void => {
+    ui.updateRefLengthUi();
+    const refLen = ui.getRefLength();
+    // Update slider to current ppi * new refLen
+    uiElements.calibrationSlider.value = (getPxPerMm() * refLen).toString();
+    ui.updateCalibrationPreview(uiElements.calibrationSlider.valueAsNumber);
+  };
+
+  const onCustomLenInput = (): void => {
+    onRefObjectChange();
+  };
+
   const onPpiPlus = (): void => {
     uiElements.calibrationSlider.valueAsNumber += 0.5;
     onCalibrationSliderInput();
@@ -134,7 +147,7 @@ export default function init(): void | (() => void) {
   };
 
   const onSaveCalibration = (): void => {
-    const newPxPerMm = uiElements.calibrationSlider.valueAsNumber / 85.6;
+    const newPxPerMm = uiElements.calibrationSlider.valueAsNumber / ui.getRefLength();
     uiElements.ppiSettingInput.value = newPxPerMm.toFixed(4);
     uiElements.ppiSettingInput.dispatchEvent(new Event('change'));
     updatePxPerMm(newPxPerMm);
@@ -143,6 +156,35 @@ export default function init(): void | (() => void) {
 
   const onCancelCalibration = (): void => {
     ui.closeCalibration();
+  };
+
+  const onRotationLockClick = async (): Promise<void> => {
+    if (isRotationLocked) {
+      try {
+        if (screen.orientation && 'unlock' in screen.orientation) {
+          screen.orientation.unlock();
+        }
+      } catch (e) {
+        console.warn('Orientation unlock failed', e);
+      }
+      isRotationLocked = false;
+      ui.setRotationLockState(false);
+      return;
+    }
+
+    try {
+      if (screen.orientation && 'lock' in screen.orientation) {
+        // Lock to current orientation
+        await screen.orientation.lock(screen.orientation.type);
+        isRotationLocked = true;
+        ui.setRotationLockState(true);
+      } else {
+        ui.setStatus('error', 'Rotation lock not supported in this browser.');
+      }
+    } catch (e) {
+      console.warn('Orientation lock failed', e);
+      ui.setStatus('error', 'Rotation lock requires full-screen mode on some devices.');
+    }
   };
 
   const onPermissionClick = async (): Promise<void> => {
@@ -185,6 +227,9 @@ export default function init(): void | (() => void) {
   uiElements.mode1dButton.addEventListener('click', onMode1dClick);
   uiElements.toggleRulerButton.addEventListener('click', onToggleRuler);
   uiElements.calibrateRulerButton.addEventListener('click', onCalibrateRuler);
+  uiElements.rotationLockButton.addEventListener('click', onRotationLockClick);
+  uiElements.refObjectSelect.addEventListener('change', onRefObjectChange);
+  uiElements.customLenInput.addEventListener('input', onCustomLenInput);
   uiElements.calibrationSlider.addEventListener('input', onCalibrationSliderInput);
   uiElements.ppiPlusButton.addEventListener('click', onPpiPlus);
   uiElements.ppiMinusButton.addEventListener('click', onPpiMinus);
@@ -211,10 +256,16 @@ export default function init(): void | (() => void) {
 
   return () => {
     unbindSettings();
+    if (isRotationLocked) {
+      screen.orientation?.unlock?.();
+    }
     uiElements.mode2dButton.removeEventListener('click', onMode2dClick);
     uiElements.mode1dButton.removeEventListener('click', onMode1dClick);
     uiElements.toggleRulerButton.removeEventListener('click', onToggleRuler);
     uiElements.calibrateRulerButton.removeEventListener('click', onCalibrateRuler);
+    uiElements.rotationLockButton.removeEventListener('click', onRotationLockClick);
+    uiElements.refObjectSelect.removeEventListener('change', onRefObjectChange);
+    uiElements.customLenInput.removeEventListener('input', onCustomLenInput);
     uiElements.calibrationSlider.removeEventListener('input', onCalibrationSliderInput);
     uiElements.ppiPlusButton.removeEventListener('click', onPpiPlus);
     uiElements.ppiMinusButton.removeEventListener('click', onPpiMinus);

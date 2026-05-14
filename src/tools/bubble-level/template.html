@@ -30,6 +30,7 @@
       <button id="mode-1d" class="btn btn-sm">Beam</button>
       <button id="toggle-ruler" class="btn btn-sm btn-outline">Ruler</button>
       <button id="calibrate-ruler" class="btn btn-sm btn-outline hidden">Calibrate Ruler</button>
+      <button id="rotation-lock-btn" class="btn btn-sm btn-outline">Lock Rotation</button>
       <button id="wake-lock-btn" class="btn btn-sm btn-outline">Acquire Wake Lock</button>
       <button id="calibrate-zero" class="btn btn-sm btn-outline">Set Zero</button>
       <button id="reset-calibration" class="btn btn-sm btn-ghost">Reset Zero</button>
@@ -91,9 +92,36 @@
   <div class="modal-box max-w-lg">
     <h3 class="text-lg font-bold">Ruler Calibration</h3>
     <p class="py-4 text-sm opacity-80">
-      Place a standard <b>credit card</b> (85.6mm) against your screen. Adjust the slider until the
-      box below matches the physical card width exactly.
+      Place a physical object of known length against your screen. Adjust the slider until the box
+      below matches the physical object exactly.
     </p>
+
+    <div class="mb-4 grid grid-cols-2 gap-3">
+      <div class="form-control">
+        <label class="label"
+          ><span class="label-text text-xs font-bold uppercase">Reference</span></label
+        >
+        <select id="ref-object" class="select select-bordered select-sm">
+          <option value="85.6" selected>Credit Card (85.6mm)</option>
+          <option value="50">Small Object (50mm)</option>
+          <option value="25.4">1 Inch (25.4mm)</option>
+          <option value="custom">Custom Length</option>
+        </select>
+      </div>
+      <div id="custom-len-container" class="form-control hidden">
+        <label class="label"
+          ><span class="label-text text-xs font-bold uppercase">Length (mm)</span></label
+        >
+        <input
+          type="number"
+          id="custom-len"
+          class="input input-bordered input-sm"
+          value="50"
+          step="1"
+          min="1"
+        />
+      </div>
+    </div>
 
     <div class="flex justify-center py-8">
       <div
@@ -101,8 +129,13 @@
         class="flex h-32 items-center justify-center rounded-xl border-2 border-primary/30 bg-primary/10 shadow-lg"
         style="width: 323px"
       >
-        <div class="text-xs font-bold uppercase tracking-widest opacity-30">
-          Credit Card Reference
+        <div class="flex flex-col items-center gap-1">
+          <div id="ref-label" class="text-[10px] font-bold uppercase tracking-widest opacity-30">
+            Credit Card Reference
+          </div>
+          <div id="real-size-display" class="font-mono text-sm font-black text-primary/60">
+            85.6 mm
+          </div>
         </div>
       </div>
     </div>

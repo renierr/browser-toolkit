@@ -25,6 +25,12 @@ type UiElements = {
   ppiMinusButton: HTMLButtonElement;
   ppiPlusButton: HTMLButtonElement;
   ppiSettingInput: HTMLInputElement;
+  rotationLockButton: HTMLButtonElement;
+  refObjectSelect: HTMLSelectElement;
+  customLenContainer: HTMLElement;
+  customLenInput: HTMLInputElement;
+  realSizeDisplay: HTMLElement;
+  refLabel: HTMLElement;
 };
 
 export class BubbleLevelUi {
@@ -47,7 +53,7 @@ export class BubbleLevelUi {
       const num = document.createElement('div');
       num.className = 'ruler-number';
       // Positioning now uses the same CSS variable as the ticks
-      num.style.top = `calc(var(--px-per-mm) * 10 * ${i})`;
+      num.style.top = `calc(var(--px-per-mm) * 10px * ${i})`;
       num.textContent = i.toString();
       numbers.appendChild(num);
     }
@@ -67,9 +73,10 @@ export class BubbleLevelUi {
   }
 
   public openCalibration(pxPerMm: number): void {
-    const cardWidth = pxPerMm * 85.6;
-    this.elements.calibrationSlider.value = cardWidth.toString();
-    this.updateCalibrationPreview(cardWidth);
+    const refLen = this.getRefLength();
+    const currentWidth = pxPerMm * refLen;
+    this.elements.calibrationSlider.value = currentWidth.toString();
+    this.updateCalibrationPreview(currentWidth);
     this.elements.calibrationModal.showModal();
   }
 
@@ -79,8 +86,36 @@ export class BubbleLevelUi {
 
   public updateCalibrationPreview(widthPx: number): void {
     this.elements.calibrationCard.style.width = `${widthPx}px`;
-    const ppi = (widthPx / 85.6) * 25.4;
+    const refLen = this.getRefLength();
+    const ppi = (widthPx / refLen) * 25.4;
     this.elements.ppiDisplay.textContent = `${Math.round(ppi)} DPI`;
+    this.elements.realSizeDisplay.textContent = `${refLen} mm`;
+  }
+
+  public getRefLength(): number {
+    const val = this.elements.refObjectSelect.value;
+    if (val === 'custom') {
+      return Number(this.elements.customLenInput.value) || 50;
+    }
+    return Number(val);
+  }
+
+  public updateRefLengthUi(): void {
+    const isCustom = this.elements.refObjectSelect.value === 'custom';
+    this.elements.customLenContainer.classList.toggle('hidden', !isCustom);
+
+    const refLen = this.getRefLength();
+    const labelText = isCustom
+      ? 'Custom Reference'
+      : this.elements.refObjectSelect.selectedOptions[0].text;
+    this.elements.refLabel.textContent = labelText;
+    this.elements.realSizeDisplay.textContent = `${refLen} mm`;
+  }
+
+  public setRotationLockState(locked: boolean): void {
+    this.elements.rotationLockButton.classList.toggle('btn-success', locked);
+    this.elements.rotationLockButton.classList.toggle('btn-outline', !locked);
+    this.elements.rotationLockButton.textContent = locked ? 'Rotation Locked' : 'Lock Rotation';
   }
 
   public setStatus(status: SensorStatus, detail?: string): void {
@@ -164,6 +199,12 @@ export function getUiElements(): UiElements | null {
   const ppiMinusButton = document.getElementById('ppi-minus');
   const ppiPlusButton = document.getElementById('ppi-plus');
   const ppiSettingInput = document.getElementById('ppi-setting');
+  const rotationLockButton = document.getElementById('rotation-lock-btn');
+  const refObjectSelect = document.getElementById('ref-object');
+  const customLenContainer = document.getElementById('custom-len-container');
+  const customLenInput = document.getElementById('custom-len');
+  const realSizeDisplay = document.getElementById('real-size-display');
+  const refLabel = document.getElementById('ref-label');
 
   if (
     !(lockBadge instanceof HTMLElement) ||
@@ -188,7 +229,13 @@ export function getUiElements(): UiElements | null {
     !(cancelCalibrationButton instanceof HTMLButtonElement) ||
     !(ppiMinusButton instanceof HTMLButtonElement) ||
     !(ppiPlusButton instanceof HTMLButtonElement) ||
-    !(ppiSettingInput instanceof HTMLInputElement)
+    !(ppiSettingInput instanceof HTMLInputElement) ||
+    !(rotationLockButton instanceof HTMLButtonElement) ||
+    !(refObjectSelect instanceof HTMLSelectElement) ||
+    !(customLenContainer instanceof HTMLElement) ||
+    !(customLenInput instanceof HTMLInputElement) ||
+    !(realSizeDisplay instanceof HTMLElement) ||
+    !(refLabel instanceof HTMLElement)
   ) {
     return null;
   }
@@ -217,5 +264,11 @@ export function getUiElements(): UiElements | null {
     ppiMinusButton,
     ppiPlusButton,
     ppiSettingInput,
+    rotationLockButton,
+    refObjectSelect,
+    customLenContainer,
+    customLenInput,
+    realSizeDisplay,
+    refLabel,
   };
 }
