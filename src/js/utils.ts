@@ -603,6 +603,42 @@ export async function copyTextToClipboard(text: string): Promise<boolean> {
 }
 
 /**
+ * Acquires a screen orientation lock, preventing the device from rotating.
+ * Returns a function to release the lock.
+ * Returns null if the Screen Orientation API is not supported.
+ */
+export function acquireRotationLock(): (() => void) | null {
+  if (!('orientation' in screen) || !('lock' in screen.orientation)) {
+    return null;
+  }
+
+  let released = false;
+
+  const tryLock = async () => {
+    try {
+      // Lock to current orientation type
+      await screen.orientation.lock(screen.orientation.type);
+      console.log(`Rotation Lock acquired: ${screen.orientation.type}`);
+    } catch (err: any) {
+      console.warn(`Rotation Lock failed: ${err.name}, ${err.message}`);
+    }
+  };
+
+  tryLock();
+
+  return () => {
+    if (released) return;
+    released = true;
+    try {
+      screen.orientation.unlock();
+      console.log('Rotation Lock released');
+    } catch (err: any) {
+      console.warn(`Rotation Lock release failed: ${err.name}, ${err.message}`);
+    }
+  };
+}
+
+/**
  * Checks if the backend server is available and responsive.
  * @param timeoutMs Timeout in milliseconds for the health check.
  */

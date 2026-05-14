@@ -2,7 +2,7 @@ import { CalibrationStore } from './calibration';
 import { isLevel, lowPass, roundToOne } from './math';
 import { SensorService } from './sensor-service';
 import { BubbleLevelUi, getUiElements } from './ui-controller';
-import { acquireWakeLock } from '@js/utils';
+import { acquireWakeLock, acquireRotationLock } from '@js/utils';
 import { getSettings } from '@js/settings';
 import type { CalibrationOffset, LevelMode, OrientationReading } from './types';
 
@@ -37,7 +37,7 @@ export default function init(): void | (() => void) {
   let isRulerVisible = false;
   let stopSensors: (() => void) | null = null;
   let releaseWakeLock: (() => void) | null = null;
-  let isRotationLocked = false;
+  let releaseRotationLock: (() => void) | null = null;
 
   // 1. Initial Load from settings
   const updatePxPerMm = (val: number): void => {
@@ -158,32 +158,19 @@ export default function init(): void | (() => void) {
     ui.closeCalibration();
   };
 
-  const onRotationLockClick = async (): Promise<void> => {
-    if (isRotationLocked) {
-      try {
-        if (screen.orientation && 'unlock' in screen.orientation) {
-          screen.orientation.unlock();
-        }
-      } catch (e) {
-        console.warn('Orientation unlock failed', e);
-      }
-      isRotationLocked = false;
+  const onRotationLockClick = (): void => {
+    if (releaseRotationLock) {
+      releaseRotationLock();
+      releaseRotationLock = null;
       ui.setRotationLockState(false);
       return;
     }
 
-    try {
-      if (screen.orientation && 'lock' in screen.orientation) {
-        // Lock to current orientation
-        await screen.orientation.lock(screen.orientation.type);
-        isRotationLocked = true;
-        ui.setRotationLockState(true);
-      } else {
-        ui.setStatus('error', 'Rotation lock not supported in this browser.');
-      }
-    } catch (e) {
-      console.warn('Orientation lock failed', e);
-      ui.setStatus('error', 'Rotation lock requires full-screen mode on some devices.');
+    releaseRotationLock = acquireRotationLock();
+    if (releaseRotationLock) {
+      ui.setRotationLockState(true);
+    } else {
+      ui.setStatus('error', 'Rotation lock not supported in this browser.');
     }
   };
 
@@ -256,8 +243,9 @@ export default function init(): void | (() => void) {
 
   return () => {
     unbindSettings();
-    if (isRotationLocked) {
-      screen.orientation?.unlock?.();
+    if (releaseRotationLock) {
+      releaseRotationLock();
+      releaseRotationLock = null;
     }
     uiElements.mode2dButton.removeEventListener('click', onMode2dClick);
     uiElements.mode1dButton.removeEventListener('click', onMode1dClick);
