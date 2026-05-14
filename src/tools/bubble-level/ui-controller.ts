@@ -13,6 +13,8 @@ type UiElements = {
   beamBubble: HTMLElement;
   pitchValue: HTMLElement;
   rollValue: HTMLElement;
+  toggleRulerButton: HTMLButtonElement;
+  rulerOverlay: HTMLElement;
 };
 
 export class BubbleLevelUi {
@@ -20,6 +22,32 @@ export class BubbleLevelUi {
 
   public constructor(elements: UiElements) {
     this.elements = elements;
+    this.initRuler();
+  }
+
+  private initRuler(): void {
+    const marks = document.createElement('div');
+    marks.className = 'ruler-marks';
+
+    const numbers = document.createElement('div');
+    numbers.className = 'ruler-numbers';
+
+    // Generate numbers for up to 50cm (more than enough for most phones/tablets)
+    for (let i = 0; i <= 50; i++) {
+      const num = document.createElement('div');
+      num.className = 'ruler-number';
+      num.style.top = `${i}cm`;
+      num.textContent = i.toString();
+      numbers.appendChild(num);
+    }
+
+    this.elements.rulerOverlay.appendChild(marks);
+    this.elements.rulerOverlay.appendChild(numbers);
+  }
+
+  public toggleRuler(show: boolean): void {
+    this.elements.rulerOverlay.classList.toggle('hidden', !show);
+    this.elements.toggleRulerButton.classList.toggle('btn-active', show);
   }
 
   public setStatus(status: SensorStatus, detail?: string): void {
@@ -91,6 +119,8 @@ export function getUiElements(): UiElements | null {
   const beamBubble = document.getElementById('beam-bubble');
   const pitchValue = document.getElementById('pitch-value');
   const rollValue = document.getElementById('roll-value');
+  const toggleRulerButton = document.getElementById('toggle-ruler');
+  const rulerOverlay = document.getElementById('ruler-overlay');
 
   if (
     !(lockBadge instanceof HTMLElement) ||
@@ -103,7 +133,9 @@ export function getUiElements(): UiElements | null {
     !(bubbleDot instanceof HTMLElement) ||
     !(beamBubble instanceof HTMLElement) ||
     !(pitchValue instanceof HTMLElement) ||
-    !(rollValue instanceof HTMLElement)
+    !(rollValue instanceof HTMLElement) ||
+    !(toggleRulerButton instanceof HTMLButtonElement) ||
+    !(rulerOverlay instanceof HTMLElement)
   ) {
     return null;
   }
@@ -120,5 +152,7 @@ export function getUiElements(): UiElements | null {
     beamBubble,
     pitchValue,
     rollValue,
+    toggleRulerButton,
+    rulerOverlay,
   };
 }

@@ -32,6 +32,7 @@ export default function init(): void | (() => void) {
   let offset: CalibrationOffset = calibration.load();
   let filtered: OrientationReading = { pitch: 0, roll: 0 };
   let hasSignal = false;
+  let isRulerVisible = false;
   let stopSensors: (() => void) | null = null;
   let releaseWakeLock: (() => void) | null = null;
 
@@ -94,6 +95,11 @@ export default function init(): void | (() => void) {
     ui.setStatus('ready', 'Calibration reset. Using raw sensor zero.');
   };
 
+  const onToggleRuler = (): void => {
+    isRulerVisible = !isRulerVisible;
+    ui.toggleRuler(isRulerVisible);
+  };
+
   const onPermissionClick = async (): Promise<void> => {
     ui.setStatus('initializing', 'Requesting sensor permission...');
     const granted = await sensors.requestPermissionIfNeeded();
@@ -132,6 +138,7 @@ export default function init(): void | (() => void) {
 
   uiElements.mode2dButton.addEventListener('click', onMode2dClick);
   uiElements.mode1dButton.addEventListener('click', onMode1dClick);
+  uiElements.toggleRulerButton.addEventListener('click', onToggleRuler);
   toleranceSelect.addEventListener('change', onToleranceChange);
   calibrateZeroButton.addEventListener('click', onCalibrateZero);
   resetCalibrationButton.addEventListener('click', onResetCalibration);
@@ -154,6 +161,7 @@ export default function init(): void | (() => void) {
   return () => {
     uiElements.mode2dButton.removeEventListener('click', onMode2dClick);
     uiElements.mode1dButton.removeEventListener('click', onMode1dClick);
+    uiElements.toggleRulerButton.removeEventListener('click', onToggleRuler);
     toleranceSelect.removeEventListener('change', onToleranceChange);
     calibrateZeroButton.removeEventListener('click', onCalibrateZero);
     resetCalibrationButton.removeEventListener('click', onResetCalibration);
