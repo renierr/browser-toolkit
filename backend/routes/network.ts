@@ -39,32 +39,59 @@ function getLocalSubnets() {
         ip: info.address,
         netmask: info.netmask,
         family: info.family,
-        address: info.address
+        address: info.address,
       });
     }
   }
   return subnets;
 }
 
-// Read Linux ARP table
-async function getArpTable(): Promise<Map<string, string>> {
-  const arpMap = new Map<string, string>();
-  if (process.platform !== 'linux') return arpMap;
+// Read ARP table cross-platform
+async function getArpTable(): Promise<Map<string, { mac: string; hostname?: string }>> {
+  const arpMap = new Map<string, { mac: string; hostname?: string }>();
 
-  try {
-    const content = await Bun.file('/proc/net/arp').text();
-    const lines = content.split('\n').slice(1); // skip header
-    for (const line of lines) {
-      const parts = line.trim().split(/\s+/);
-      if (parts.length >= 4) {
-        const ip = parts[0];
-        const mac = parts[3];
-        if (mac !== '00:00:00:00:00:00') {
-          arpMap.set(ip, mac);
+  // Linux /proc/net/arp (Efficient)
+  if (process.platform === 'linux') {
+    try {
+      const content = await Bun.file('/proc/net/arp').text();
+      const lines = content.split('\n').slice(1);
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 4) {
+          const ip = parts[0];
+          const mac = parts[3];
+          if (mac !== '00:00:00:00:00:00') {
+            arpMap.set(ip, { mac });
+          }
         }
+      }
+      return arpMap;
+    } catch (e) {}
+  }
+
+  // Fallback to 'arp -a' (Windows/Mac)
+  try {
+    const { stdout } = Bun.spawnSync(['arp', '-a']);
+    const output = stdout.toString();
+    const lines = output.split('\n');
+
+    for (const line of lines) {
+      // Windows format: 192.168.1.1           00-00-00-00-00-00     dynamic
+      const winMatch = line.match(/^\s*(\d+\.\d+\.\d+\.\d+)\s+([0-9a-f-]{17})/i);
+      if (winMatch) {
+        arpMap.set(winMatch[1], { mac: winMatch[2].replace(/-/g, ':') });
+        continue;
+      }
+
+      // Mac format: hostname (192.168.1.1) at 0:0:0:0:0:0 on en0 ...
+      const macMatch = line.match(/^(\S+)\s+\((\d+\.\d+\.\d+\.\d+)\)\s+at\s+([0-9a-f:]+)/i);
+      if (macMatch) {
+        const hostname = macMatch[1] === '?' ? undefined : macMatch[1];
+        arpMap.set(macMatch[2], { mac: macMatch[3], hostname });
       }
     }
   } catch (e) {}
+
   return arpMap;
 }
 
@@ -72,7 +99,7 @@ async function getArpTable(): Promise<Map<string, string>> {
 function startServiceDiscovery() {
   const mdnsSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
   const ssdpSocket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
-  
+
   // mDNS Discovery
   mdnsSocket.on('message', (msg, rinfo) => {
     updateDevice(rinfo.address, { services: ['mDNS'] });
@@ -93,9 +120,10 @@ function startServiceDiscovery() {
       mdnsSocket.addMembership('224.0.0.251');
       // Send a "discovery" query to nudge devices to respond
       const query = Buffer.from([
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x09, 0x5f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x07, 0x5f, 0x64, 0x6e, 0x73, 0x2d, 0x73, 0x64, 0x04, 0x5f, 0x75, 0x64, 0x70, 0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x00,
-        0x00, 0x0c, 0x00, 0x01
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x09, 0x5f, 0x73,
+        0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x73, 0x07, 0x5f, 0x64, 0x6e, 0x73, 0x2d, 0x73, 0x64,
+        0x04, 0x5f, 0x75, 0x64, 0x70, 0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x00, 0x00, 0x0c, 0x00,
+        0x01,
       ]);
       mdnsSocket.send(query, 5353, '224.0.0.251');
     });
@@ -103,11 +131,11 @@ function startServiceDiscovery() {
     ssdpSocket.bind(0, () => {
       const query = Buffer.from(
         'M-SEARCH * HTTP/1.1\r\n' +
-        'HOST: 239.255.255.250:1900\r\n' +
-        'MAN: "ssdp:discover"\r\n' +
-        'MX: 1\r\n' +
-        'ST: ssdp:all\r\n' +
-        '\r\n'
+          'HOST: 239.255.255.250:1900\r\n' +
+          'MAN: "ssdp:discover"\r\n' +
+          'MX: 1\r\n' +
+          'ST: ssdp:all\r\n' +
+          '\r\n'
       );
       ssdpSocket.send(query, 1900, '239.255.255.250');
     });
@@ -121,82 +149,209 @@ function startServiceDiscovery() {
   }
 }
 
-async function scanSubnet(ip: string, netmask: string) {
+async function scanSubnet(ip: string, netmask: string, thorough = false) {
   if (isScanning) return;
   isScanning = true;
   shouldStopScan = false;
   scanProgress = 0;
-  broadcast('status', { scanning: true, progress: 0, currentIp: 'Initializing...' });
 
-  // Start mDNS/SSDP in parallel
-  startServiceDiscovery();
+  // 1. Fast Scan (always run first)
+  await performScanTask(ip, netmask, false, 'Fast Scan');
+
+  // 2. Intensive Scan (if requested)
+  if (thorough && !shouldStopScan) {
+    await performScanTask(ip, netmask, true, 'Intensive Scan');
+  }
+
+  isScanning = false;
+  broadcast('status', { scanning: false, progress: 100, currentIp: 'Done' });
+}
+
+async function performScanTask(
+  ip: string,
+  netmask: string,
+  isThorough: boolean,
+  phaseName: string
+) {
+  scanProgress = 0;
+  const nmapPath = isThorough ? Bun.which('nmap') : null;
+  const method = nmapPath ? 'nmap' : 'socket';
+
+  broadcast('status', {
+    scanning: true,
+    progress: 0,
+    currentIp: `Starting ${phaseName}...`,
+    method,
+    phase: phaseName,
+  });
+
+  // Start mDNS/SSDP in parallel for fast scan
+  if (!isThorough) {
+    startServiceDiscovery();
+  }
 
   const parts = ip.split('.').map(Number);
   const maskParts = netmask.split('.').map(Number);
-  
+
   if (parts.length === 4 && maskParts[0] === 255 && maskParts[1] === 255 && maskParts[2] === 255) {
     const base = parts.slice(0, 3).join('.');
     const total = 254;
-    
-    const ports = [80, 443, 8080, 22, 5000, 3000, 8123]; 
-    const chunkSize = 15;
-    const arpTable = await getArpTable();
 
-    for (let i = 1; i < 255; i += chunkSize) {
-      if (shouldStopScan) break;
+    if (nmapPath) {
+      // Nmap Thorough Scan
+      const subnet = `${base}.0/24`;
+      broadcast('status', {
+        scanning: true,
+        progress: 0,
+        currentIp: `Nmap: ${subnet}`,
+        method: 'nmap',
+        phase: phaseName,
+      });
 
-      const chunk = [];
-      const currentChunkIp = `${base}.${i}`;
-      broadcast('status', { scanning: true, progress: scanProgress, currentIp: currentChunkIp });
+      try {
+        const proc = Bun.spawn([nmapPath, '-F', '-oG', '-', subnet], {
+          stdout: 'pipe',
+          stderr: 'ignore',
+        });
 
-      for (let j = 0; j < chunkSize && (i + j) < 255; j++) {
-        const targetIp = `${base}.${i + j}`;
-        if (targetIp === ip) continue;
+        const reader = proc.stdout.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
 
-        chunk.push((async () => {
-          for (const port of ports) {
-            if (shouldStopScan) break;
-            try {
-              const socket = await Promise.race([
-                Bun.connect({
-                  hostname: targetIp,
-                  port,
-                  socket: {
-                    data() {},
-                    open(socket) { socket.end(); },
-                    error() {},
-                  }
-                }),
-                new Promise((_, reject) => setTimeout(() => reject('timeout'), 500))
-              ]) as any;
-              
-              if (socket) {
-                const mac = arpTable.get(targetIp);
-                let serviceName = 'HTTP';
-                if (port === 22) serviceName = 'SSH';
-                else if (port === 443) serviceName = 'HTTPS';
-                
-                const serviceWithPort = `${serviceName} (${port})`;
-                const device = updateDevice(targetIp, { status: 'online', services: [serviceWithPort], mac });
-                broadcast('device', device);
-                break; 
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value);
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            if (shouldStopScan) {
+              proc.kill();
+              break;
+            }
+            // Parse grepable output: Host: 192.168.1.1 (router.lan)  Ports: 22/open/tcp//ssh///, 80/open/tcp//http///
+            const hostMatch = line.match(/Host: (\d+\.\d+\.\d+\.\d+) \(([^)]*)\)\s+Ports: (.*)/);
+            if (hostMatch) {
+              const [_, targetIp, hostname, portsStr] = hostMatch;
+              const services: string[] = [];
+              const portMatches = portsStr.matchAll(/(\d+)\/open/g);
+              for (const pm of portMatches) {
+                services.push(`Port ${pm[1]}`);
               }
-            } catch (e) {}
+
+              if (services.length > 0 || hostname) {
+                const device = updateDevice(targetIp, {
+                  status: 'online',
+                  services,
+                  hostname: hostname === '?' ? undefined : hostname,
+                });
+                broadcast('device', device);
+              }
+
+              // Estimate progress based on IP (last octet)
+              const lastOctet = parseInt(targetIp.split('.').pop() || '0');
+              scanProgress = Math.min(99, Math.round((lastOctet / 254) * 100));
+              broadcast('status', {
+                scanning: true,
+                progress: scanProgress,
+                currentIp: targetIp,
+                method: 'nmap',
+                phase: phaseName,
+              });
+            }
           }
-        })());
+        }
+      } catch (e) {
+        console.error('[Network] Nmap scan failed:', e);
       }
-      
-      await Promise.allSettled(chunk);
-      scanProgress = Math.round((i / total) * 100);
-      
-      // Refresh ARP table periodically during scan
-      if (i % 60 === 0) {
-        const freshArp = await getArpTable();
-        for (const [ip, mac] of freshArp) {
-          if (discoveredDevices.has(ip)) {
-            const dev = discoveredDevices.get(ip)!;
-            if (!dev.mac) {
-              dev.mac = mac;
+    } else {
+      // Socket Fallback (Standard or Expanded)
+      const ports = isThorough
+        ? [
+            21, 22, 23, 25, 53, 80, 110, 111, 135, 139, 143, 443, 445, 993, 995, 1723, 3306, 3389,
+            5432, 5900, 6379, 8080, 8123, 8443, 9000, 27017,
+          ]
+        : [80, 443, 8080, 22, 5000, 3000, 8123];
+
+      const chunkSize = isThorough ? 10 : 15;
+      const arpTable = await getArpTable();
+
+      for (let i = 1; i < 255; i += chunkSize) {
+        if (shouldStopScan) break;
+
+        const chunk = [];
+        const currentChunkIp = `${base}.${i}`;
+        broadcast('status', {
+          scanning: true,
+          progress: scanProgress,
+          currentIp: currentChunkIp,
+          method: 'socket',
+          phase: phaseName,
+        });
+
+        for (let j = 0; j < chunkSize && i + j < 255; j++) {
+          const targetIp = `${base}.${i + j}`;
+          if (targetIp === ip) continue;
+
+          chunk.push(
+            (async () => {
+              const arpData = arpTable.get(targetIp);
+              if (arpData?.hostname) {
+                updateDevice(targetIp, { hostname: arpData.hostname });
+              }
+
+              for (const port of ports) {
+                if (shouldStopScan) break;
+                try {
+                  const socket = (await Promise.race([
+                    Bun.connect({
+                      hostname: targetIp,
+                      port,
+                      socket: {
+                        data() {},
+                        open(socket) {
+                          socket.end();
+                        },
+                        error() {},
+                      },
+                    }),
+                    new Promise((_, reject) => setTimeout(() => reject('timeout'), 500)),
+                  ])) as any;
+
+                  if (socket) {
+                    let serviceName = 'Port';
+                    if (port === 22) serviceName = 'SSH';
+                    else if (port === 80) serviceName = 'HTTP';
+                    else if (port === 443) serviceName = 'HTTPS';
+
+                    const serviceWithPort = `${serviceName} (${port})`;
+                    const device = updateDevice(targetIp, {
+                      status: 'online',
+                      services: [serviceWithPort],
+                      mac: arpData?.mac,
+                    });
+                    broadcast('device', device);
+                    break;
+                  }
+                } catch (e) {}
+              }
+            })()
+          );
+        }
+
+        await Promise.allSettled(chunk);
+        scanProgress = Math.round((i / total) * 100);
+
+        // Refresh ARP table periodically during scan
+        if (i % 60 === 0) {
+          const freshArp = await getArpTable();
+          for (const [ip, data] of freshArp) {
+            if (discoveredDevices.has(ip)) {
+              const dev = discoveredDevices.get(ip)!;
+              if (!dev.mac) dev.mac = data.mac;
+              if (!dev.hostname && data.hostname) dev.hostname = data.hostname;
               broadcast('device', dev);
             }
           }
@@ -204,9 +359,6 @@ async function scanSubnet(ip: string, netmask: string) {
       }
     }
   }
-
-  isScanning = false;
-  broadcast('status', { scanning: false, progress: 100, currentIp: 'Done' });
 }
 
 function updateDevice(ip: string, data: Partial<Device>) {
@@ -214,22 +366,23 @@ function updateDevice(ip: string, data: Partial<Device>) {
     ip,
     services: [],
     lastSeen: Date.now(),
-    status: 'online'
+    status: 'online',
   };
-  
+
   const updated = {
     ...existing,
     ...data,
     services: [...new Set([...existing.services, ...(data.services || [])])],
-    lastSeen: Date.now()
+    lastSeen: Date.now(),
   };
-  
+
   discoveredDevices.set(ip, updated);
 
   // Try to resolve hostname in background if not already known
   if (!updated.hostname) {
-    dns.reverse(ip)
-      .then(hostnames => {
+    dns
+      .reverse(ip)
+      .then((hostnames) => {
         if (hostnames && hostnames.length > 0) {
           updated.hostname = hostnames[0];
           broadcast('device', updated);
@@ -247,17 +400,20 @@ network.get('/devices', (c) => {
   return c.json(Array.from(discoveredDevices.values()));
 });
 
-network.post('/discover', (c) => {
+network.post('/discover', async (c) => {
   if (isScanning) return c.json({ error: 'Scan already in progress' }, 400);
-  
+
+  const body = await c.req.json().catch(() => ({}));
+  const thorough = !!body.thorough;
+
   const subnets = getLocalSubnets();
-  const ipv4 = subnets.find(s => s.family === 'IPv4' || s.family === 4);
-  
+  const ipv4 = subnets.find((s) => s.family === 'IPv4' || s.family === 4);
+
   if (ipv4) {
-    scanSubnet(ipv4.address, ipv4.netmask);
+    scanSubnet(ipv4.address, ipv4.netmask, thorough);
     return c.json({ message: 'Discovery started' });
   }
-  
+
   return c.json({ error: 'No suitable network interface found' }, 400);
 });
 
@@ -273,9 +429,12 @@ network.get('/events', (c) => {
     };
 
     sseClients.add(send);
-    
-    stream.writeSSE({ 
-      data: JSON.stringify({ event: 'status', data: { scanning: isScanning, progress: scanProgress } }) 
+
+    stream.writeSSE({
+      data: JSON.stringify({
+        event: 'status',
+        data: { scanning: isScanning, progress: scanProgress },
+      }),
     });
 
     stream.onAbort(() => {

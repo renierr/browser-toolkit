@@ -6,6 +6,15 @@
         LAN Explorer
       </h2>
       <p class="text-base-content/70">Scan local network for active devices and services.</p>
+      <div class="mt-2 flex items-center gap-2">
+        <input type="checkbox" id="thorough-scan" class="checkbox checkbox-xs checkbox-primary" />
+        <label
+          for="thorough-scan"
+          class="text-xs cursor-pointer select-none text-base-content/60 hover:text-base-content/80 transition-colors"
+        >
+          Thorough Scan (Slower, more ports & hostnames)
+        </label>
+      </div>
     </div>
     <div class="flex gap-2 w-full sm:w-auto">
       <button id="scan-btn" class="btn btn-primary flex-1 sm:flex-none">
@@ -26,8 +35,9 @@
     <div
       class="flex justify-between text-xs font-semibold uppercase tracking-wider text-base-content/60"
     >
-      <div class="flex gap-2">
+      <div class="flex gap-2 items-center">
         <span>Scanning network...</span>
+        <span id="scan-method" class="badge badge-outline badge-xs opacity-50"></span>
         <span id="current-scan-ip" class="text-primary animate-pulse"></span>
       </div>
       <span id="scan-percentage">0%</span>

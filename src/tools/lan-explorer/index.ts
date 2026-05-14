@@ -98,7 +98,7 @@ export default function init() {
       const { event: type, data } = JSON.parse(event.data);
 
       if (type === 'status') {
-        updateUIState(data.scanning, data.progress, data.currentIp);
+        updateUIState(data.scanning, data.progress, data.currentIp, data.method, data.phase);
       } else if (type === 'device') {
         const index = devices.findIndex((d) => d.ip === data.ip);
         if (index > -1) {
@@ -116,7 +116,13 @@ export default function init() {
     };
   }
 
-  function updateUIState(scanning: boolean, progress: number, currentIp?: string) {
+  function updateUIState(
+    scanning: boolean,
+    progress: number,
+    currentIp?: string,
+    method?: string,
+    phase?: string
+  ) {
     if (scanning) {
       scanBtn.classList.add('hidden');
       stopBtn.classList.remove('hidden');
@@ -126,6 +132,15 @@ export default function init() {
 
       const currentIpEl = container.querySelector('#current-scan-ip') as HTMLElement;
       if (currentIpEl) currentIpEl.textContent = currentIp || '';
+
+      const methodEl = container.querySelector('#scan-method') as HTMLElement;
+      if (methodEl) {
+        let label = '';
+        if (phase) label += phase.toUpperCase();
+        if (method) label += (label ? ' | ' : '') + method.toUpperCase();
+        methodEl.textContent = label;
+        methodEl.classList.toggle('hidden', !label);
+      }
     } else {
       scanBtn.classList.remove('hidden');
       stopBtn.classList.add('hidden');
@@ -137,7 +152,13 @@ export default function init() {
     try {
       devices = []; // Clear current list
       renderDevices();
-      await fetchApi('/network/discover', { method: 'POST' });
+      const thorough =
+        (container.querySelector('#thorough-scan') as HTMLInputElement)?.checked || false;
+      await fetchApi('/network/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ thorough }),
+      });
     } catch (e) {
       console.error('[LANExplorer] Start scan failed', e);
     }
