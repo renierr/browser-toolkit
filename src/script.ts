@@ -12,6 +12,7 @@ import { setupLucideCreateIcons } from './js/tool-icons.ts';
 import router from './js/router.ts';
 import { setBackendAvailable, setTools } from './js/tools.ts';
 import { checkBackend } from './js/utils.ts';
+import type { ToolPayload } from './js/types.ts';
 
 document.title = siteContext.config.title;
 const metaDesc = document.querySelector('meta[name="description"]');
@@ -59,7 +60,10 @@ async function boot(): Promise<void> {
 
   const handledByLaunchOrShare = await handleStartupSharedLaunch(loadedTools);
   if (!handledByLaunchOrShare) {
-    handleRoute(router.getCurrentPath());
+    const path = router.getCurrentPath();
+    const hashArgs = router.getHashArgs();
+    const payload: ToolPayload | undefined = hashArgs ? { hashArgs } : undefined;
+    handleRoute(path, payload);
   }
 
   setupOfflineReadyNotification();

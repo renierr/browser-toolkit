@@ -1,4 +1,10 @@
-export type ToolScript = (payload?: any) => void | (() => void);
+export interface ToolPayload {
+  sharedFiles?: File[];
+  mimeTypes?: string[];
+  hashArgs?: string;
+}
+
+export type ToolScript = (payload?: ToolPayload) => void | (() => void);
 export type ToolModule = { default?: ToolScript; init?: ToolScript };
 
 /**

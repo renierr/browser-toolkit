@@ -1,17 +1,18 @@
 import { renderTool } from '../render.ts';
 import { setLastUsed } from '../tool-chooser.ts';
 import { tools } from '../tools.ts';
+import type { ToolPayload } from '../types.ts';
 
 let activeViewTransition: ViewTransition | null = null;
 
-export type RouteHandler = (path: string | null, payload?: unknown) => void;
+export type RouteHandler = (path: string | null, payload?: ToolPayload) => void;
 
 export type CreateRouteHandlerDeps = {
   renderOverview: () => void;
 };
 
 export function createRouteHandler(deps: CreateRouteHandlerDeps): RouteHandler {
-  return (path: string | null, payload?: unknown): void => {
+  return (path: string | null, payload?: ToolPayload): void => {
     const doRender = (): void => {
       if (path) {
         const tool = tools.find((t) => t.path === path);

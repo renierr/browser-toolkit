@@ -3,7 +3,7 @@ import footerHtml from '../components/footer.html?raw';
 import toolPageHtml from '../pages/tool.html?raw';
 import { setupThemeToggle } from './theme.ts';
 import { siteContext } from '../config';
-import type { Tool } from './types.ts';
+import type { Tool, ToolPayload, ToolScript } from './types.ts';
 import { html, replacePlaceholders } from './utils.ts';
 import { renderToolIconSvg } from './tool-icons.ts';
 import { isFavorite } from './favorites.ts';
@@ -72,7 +72,7 @@ export function renderLayout(content: string, hideHeader?: boolean, hideFooter: 
   setupThemeToggle();
 }
 
-export async function renderTool(tool: Tool | undefined, payload?: any) {
+export async function renderTool(tool: Tool | undefined, payload?: ToolPayload) {
   // Lazy load HTML if we have a loader
   if (tool?.loadHtml) {
     try {
@@ -133,7 +133,7 @@ export async function renderTool(tool: Tool | undefined, payload?: any) {
   if (tool && !tool.script && tool.loadScript) {
     try {
       const mod = await tool.loadScript();
-      tool.script = mod.default ?? mod.init;
+      tool.script = (mod.default ?? mod.init) as ToolScript;
       sessionStorage.removeItem(CHUNK_RELOAD_ONCE_KEY);
     } catch (err) {
       if (await tryRecoverChunkLoadError(err)) return;

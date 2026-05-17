@@ -1,12 +1,15 @@
-type RouteListener = (path: string | null, payload?: any) => void;
+import type { ToolPayload } from './types.ts';
+
+type RouteListener = (path: string | null, payload?: ToolPayload) => void;
 
 class Router {
   private currentPath: string | null = null;
-  private payload: any = null;
+  private payload: ToolPayload | undefined;
   private listeners: RouteListener[] = [];
   private lastIdx = 0;
   private pendingOverviewCleanup: (() => void) | null = null;
   private pendingOverviewToken = 0;
+  private hashArgs: string | null = null;
 
   constructor() {
     // Initialize state if missing
@@ -26,7 +29,7 @@ class Router {
     };
   }
 
-  public goTo(path: string, payload: any = null) {
+  public goTo(path: string, payload?: ToolPayload) {
     this.payload = payload;
     const currentIdx = window.history.state?.idx ?? 0;
     window.location.hash = path;
@@ -230,6 +233,10 @@ class Router {
     return this.currentPath;
   }
 
+  public getHashArgs(): string | null {
+    return this.hashArgs;
+  }
+
   public canGoBack(): boolean {
     if (!this.currentPath) return false;
     const idx = window.history.state?.idx ?? 0;
@@ -257,15 +264,18 @@ class Router {
   /**
    * Returns the payload and clears it.
    */
-  private consumePayload(): any {
+  private consumePayload(): ToolPayload | undefined {
     const p = this.payload;
-    this.payload = null;
+    this.payload = undefined;
     return p;
   }
 
   private handleHashChange() {
+    const hash = window.location.hash.slice(1);
+    const semicolonIdx = hash.indexOf(';');
+    const newPath = semicolonIdx === -1 ? hash || null : hash.slice(0, semicolonIdx) || null;
+    this.hashArgs = semicolonIdx === -1 ? null : hash.slice(semicolonIdx + 1);
     const previousPath = this.currentPath;
-    const newPath = window.location.hash.slice(1) || null;
     this.currentPath = newPath;
 
     let currentIdx = window.history.state?.idx;
@@ -315,7 +325,11 @@ class Router {
 
     this.lastIdx = currentIdx;
 
-    this.listeners.forEach((l) => l(this.currentPath, this.consumePayload()));
+    let payload: ToolPayload | undefined = this.consumePayload();
+    if (this.hashArgs !== null) {
+      payload = { ...(payload ?? {}), hashArgs: this.hashArgs };
+    }
+    this.listeners.forEach((l) => l(this.currentPath, payload));
 
     // Native browser/gesture back from tool -> overview should restore the related card.
     if (previousPath && !this.currentPath) {

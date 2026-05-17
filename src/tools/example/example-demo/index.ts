@@ -27,6 +27,6 @@ export default function init() {
     });
   });
   helloBtn?.addEventListener('click', () => {
-    router.goTo('example-hello', { foo: 'bar' });
+    router.goTo('example-hello', { foo: 'bar' } as any);
   });
 }
