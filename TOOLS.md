@@ -3,11 +3,11 @@
 This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
-- Total tools: **63** (60 normal, 3 backend)
+- Total tools: **64** (61 normal, 3 backend)
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
-## General (11)
+## General (12)
 
 ### QR Scanner (`qr-scanner`)
 - Description: Scan QR codes from the camera or image files.
@@ -58,6 +58,11 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Description: Display battery level, charging state, and related device battery details.
 - Metadata: Order `11`, icon `battery`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/battery-info/config.json`
+
+### Call Simulator (`call-simulator`)
+- Description: Simulate a realistic incoming call to politely exit any situation.
+- Metadata: Order `15`, icon `phone-incoming`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/call-simulator/config.json`
 
 ### Markdown Viewer (`markdown-viewer`)
 - Description: Render Markdown files with GitHub Flavored Markdown extensions.

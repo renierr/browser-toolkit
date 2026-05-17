@@ -1,0 +1,7 @@
+{
+  "name": "Call Simulator",
+  "description": "Simulate a realistic incoming call to politely exit any situation.",
+  "icon": "phone-incoming",
+  "sectionId": "general",
+  "order": 15
+}

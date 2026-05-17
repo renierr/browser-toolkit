@@ -1,0 +1,357 @@
+<div id="call-sim-root" class="relative w-full">
+  <!-- ===== Setup Screen ===== -->
+  <div id="screen-setup" class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title text-2xl font-bold mb-4">
+        <i data-lucide="phone-incoming" class="w-6 h-6"></i>
+        Call Simulator
+      </h2>
+      <p class="text-base-content/70 mb-6">Configure your fake call and start when ready.</p>
+
+      <div class="space-y-5 max-w-md">
+        <!-- Contact Name -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Contact Name</span>
+          </label>
+          <input
+            type="text"
+            id="input-name"
+            data-setting="contactName"
+            class="input input-bordered w-full"
+            placeholder="Unknown Caller"
+            maxlength="40"
+          />
+        </div>
+
+        <!-- Avatar -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Avatar</span>
+          </label>
+          <div class="flex flex-wrap gap-2" id="avatar-picker">
+            <button
+              class="btn btn-outline btn-sm avatar-btn selected"
+              data-emoji="😎"
+              type="button"
+            >
+              😎
+            </button>
+            <button class="btn btn-outline btn-sm avatar-btn" data-emoji="🤖" type="button">
+              🤖
+            </button>
+            <button class="btn btn-outline btn-sm avatar-btn" data-emoji="👩‍💼" type="button">
+              👩‍💼
+            </button>
+            <button class="btn btn-outline btn-sm avatar-btn" data-emoji="👨‍💼" type="button">
+              👨‍💼
+            </button>
+            <button class="btn btn-outline btn-sm avatar-btn" data-emoji="👤" type="button">
+              👤
+            </button>
+            <button class="btn btn-outline btn-sm avatar-btn" data-emoji="📞" type="button">
+              📞
+            </button>
+          </div>
+        </div>
+
+        <!-- Timer -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Countdown Timer</span>
+          </label>
+          <div class="flex flex-wrap gap-2" id="timer-picker">
+            <button
+              class="btn btn-primary btn-sm timer-btn selected"
+              data-seconds="0"
+              type="button"
+            >
+              Instant
+            </button>
+            <button class="btn btn-outline btn-sm timer-btn" data-seconds="10" type="button">
+              10s
+            </button>
+            <button class="btn btn-outline btn-sm timer-btn" data-seconds="30" type="button">
+              30s
+            </button>
+            <button class="btn btn-outline btn-sm timer-btn" data-seconds="60" type="button">
+              1m
+            </button>
+            <button class="btn btn-outline btn-sm timer-btn" data-seconds="120" type="button">
+              2m
+            </button>
+            <button class="btn btn-outline btn-sm timer-btn" data-seconds="300" type="button">
+              5m
+            </button>
+          </div>
+        </div>
+
+        <!-- Ringtone -->
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Ringtone</span>
+          </label>
+          <select
+            id="select-ringtone"
+            data-setting="ringtone"
+            class="select select-bordered w-full"
+          >
+            <option value="classic">Classic Phone</option>
+            <option value="modern">Modern Chime</option>
+            <option value="silent">Silent</option>
+          </select>
+        </div>
+
+        <!-- Vibrate -->
+        <div class="form-control">
+          <label class="label cursor-pointer justify-start gap-3">
+            <input
+              type="checkbox"
+              id="chk-vibrate"
+              data-setting="vibrate"
+              class="checkbox checkbox-primary"
+              checked
+            />
+            <span class="label-text font-semibold">Vibrate</span>
+          </label>
+        </div>
+
+        <!-- Start Button -->
+        <button id="btn-start" class="btn btn-primary btn-lg w-full gap-2 mt-4">
+          <i data-lucide="phone" class="w-5 h-5"></i>
+          Start Call
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Countdown Overlay ===== -->
+  <div
+    id="screen-countdown"
+    class="hidden fixed inset-0 z-40 flex items-center justify-center bg-base-300/80 backdrop-blur-sm"
+  >
+    <div class="text-center">
+      <i data-lucide="clock" class="w-12 h-12 mx-auto mb-4 text-primary animate-pulse"></i>
+      <div class="text-6xl font-mono font-bold tabular-nums" id="countdown-display">00</div>
+      <div class="text-base-content/60 mt-2">Calling in...</div>
+      <button id="btn-cancel-countdown" class="btn btn-ghost btn-sm mt-6">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ===== Incoming Call Screen ===== -->
+  <div
+    id="screen-incoming"
+    class="hidden fixed inset-0 z-50 flex flex-col bg-base-200 select-none"
+    style="touch-action: manipulation; -webkit-user-select: none"
+  >
+    <div class="flex-1"></div>
+
+    <div class="flex flex-col items-center gap-3 px-6">
+      <div id="incoming-avatar" class="text-8xl transition-all">📞</div>
+      <div id="incoming-name" class="text-3xl sm:text-4xl font-bold text-center">
+        Unknown Caller
+      </div>
+      <div class="text-base-content/50 text-lg">Incoming Call...</div>
+    </div>
+
+    <div class="flex-1"></div>
+
+    <div class="flex justify-center gap-8 sm:gap-16 pb-16 px-6">
+      <button id="btn-decline" class="flex flex-col items-center gap-1 group">
+        <div
+          class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-error flex items-center justify-center shadow-lg transition-transform active:scale-90 group-hover:scale-105"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="sm:w-8 sm:h-8"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </div>
+        <span class="text-xs font-medium text-base-content/70">Decline</span>
+      </button>
+      <button id="btn-answer" class="flex flex-col items-center gap-1 group">
+        <div
+          class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-success flex items-center justify-center shadow-lg transition-transform active:scale-90 group-hover:scale-105"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="sm:w-8 sm:h-8"
+          >
+            <path
+              d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+            ></path>
+          </svg>
+        </div>
+        <span class="text-xs font-medium text-base-content/70">Answer</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Active Call Screen ===== -->
+  <div
+    id="screen-active"
+    class="hidden fixed inset-0 z-50 flex flex-col bg-base-100 select-none"
+    style="touch-action: manipulation; -webkit-user-select: none"
+  >
+    <div class="text-center pt-6 pb-2">
+      <div class="text-green-500 text-xs font-medium mb-1">● Connected</div>
+      <div
+        id="call-timer"
+        class="text-4xl sm:text-5xl font-mono font-bold tabular-nums tracking-wider"
+      >
+        00:00
+      </div>
+    </div>
+
+    <div class="flex-1"></div>
+
+    <div class="flex flex-col items-center gap-2 px-6">
+      <div id="active-avatar" class="text-5xl sm:text-6xl">📞</div>
+      <div id="active-name" class="text-xl sm:text-2xl font-bold">Unknown Caller</div>
+    </div>
+
+    <div class="flex-1"></div>
+
+    <div class="grid grid-cols-3 gap-4 sm:gap-6 max-w-sm mx-auto w-full px-6">
+      <button id="btn-mute" class="flex flex-col items-center gap-1 group">
+        <div
+          class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-base-300 flex items-center justify-center transition-colors group-hover:bg-base-200 active:scale-90"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="sm:w-6 sm:h-6"
+          >
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </div>
+        <span class="text-xs font-medium text-base-content/70">Mute</span>
+      </button>
+      <button id="btn-speaker" class="flex flex-col items-center gap-1 group">
+        <div
+          class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-base-300 flex items-center justify-center transition-colors group-hover:bg-base-200 active:scale-90"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="sm:w-6 sm:h-6"
+          >
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+          </svg>
+        </div>
+        <span class="text-xs font-medium text-base-content/70">Speaker</span>
+      </button>
+      <button id="btn-keypad" class="flex flex-col items-center gap-1 group">
+        <div
+          class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-base-300 flex items-center justify-center transition-colors group-hover:bg-base-200 active:scale-90"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="sm:w-6 sm:h-6"
+          >
+            <rect x="2" y="2" width="20" height="20" rx="3"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="12" y1="6" x2="12.01" y2="6"></line>
+            <line x1="18" y1="6" x2="18.01" y2="6"></line>
+            <line x1="6" y1="12" x2="6.01" y2="12"></line>
+            <line x1="12" y1="12" x2="12.01" y2="12"></line>
+            <line x1="18" y1="12" x2="18.01" y2="12"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            <line x1="18" y1="18" x2="18.01" y2="18"></line>
+          </svg>
+        </div>
+        <span class="text-xs font-medium text-base-content/70">Keypad</span>
+      </button>
+    </div>
+
+    <div class="flex-1"></div>
+
+    <div class="flex justify-center pb-12">
+      <button id="btn-end-call" class="flex flex-col items-center gap-1 group">
+        <div
+          class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-error flex items-center justify-center shadow-lg transition-transform active:scale-90 group-hover:scale-105"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            stroke-width="2.5"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="sm:w-8 sm:h-8"
+          >
+            <path
+              d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
+            ></path>
+          </svg>
+        </div>
+        <span class="text-xs font-medium text-red-500">End Call</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== Call Ended Screen ===== -->
+  <div
+    id="screen-ended"
+    class="hidden fixed inset-0 z-50 flex flex-col items-center justify-center bg-base-200 gap-6"
+  >
+    <div class="text-5xl mb-2">📞</div>
+    <div class="text-2xl font-bold">Call Ended</div>
+    <div class="text-base-content/50 text-lg font-mono" id="ended-duration">00:00</div>
+    <button id="btn-new-call" class="btn btn-primary btn-lg mt-4 gap-2">
+      <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+      New Call
+    </button>
+  </div>
+</div>
+
+<include src="style.css" type="style" />

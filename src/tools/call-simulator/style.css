@@ -1,0 +1,27 @@
+#screen-incoming,
+#screen-active,
+#screen-ended,
+#screen-countdown {
+  animation: fadeIn 0.25s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+#screen-incoming {
+  background: linear-gradient(180deg, var(--color-base-200) 0%, var(--color-base-300) 100%);
+}
+
+#screen-active {
+  background: linear-gradient(180deg, var(--color-base-100) 0%, var(--color-base-200) 100%);
+}
+
+#screen-ended {
+  background: linear-gradient(180deg, var(--color-base-200) 0%, var(--color-base-300) 100%);
+}
