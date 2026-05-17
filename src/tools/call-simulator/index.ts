@@ -161,7 +161,7 @@ export default function init(): void | (() => void) {
         stopCountdown();
         showIncoming();
       },
-    });
+    }, { suppressNotification: true });
   }
 
   function stopCountdown(): void {

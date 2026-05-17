@@ -1,6 +1,6 @@
 export interface BgTimerHandle {
   readonly id: string
-  start(seconds: number, callbacks: BgTimerCallbacks): void
+  start(seconds: number, callbacks: BgTimerCallbacks, options?: BgTimerStartOptions): void
   cancel(): void
   getRemaining(): number
   isRunning(): boolean
@@ -9,6 +9,10 @@ export interface BgTimerHandle {
 export interface BgTimerCallbacks {
   onTick?(remaining: number): void
   onComplete?(): void
+}
+
+export interface BgTimerStartOptions {
+  suppressNotification?: boolean
 }
 
 let nextId = 0;
@@ -195,7 +199,7 @@ class BackgroundTimerEngine {
     return {
       id,
 
-      start(seconds: number, cb: BgTimerCallbacks) {
+      start(seconds: number, cb: BgTimerCallbacks, options?: BgTimerStartOptions) {
         cleanup();
         callbacks = cb;
         remaining = seconds;
@@ -204,7 +208,7 @@ class BackgroundTimerEngine {
 
         if (swAvailable()) {
           navigator.serviceWorker.addEventListener('message', onSWMessage);
-          sendToSW('bg-timer-start', { duration: seconds });
+          sendToSW('bg-timer-start', { duration: seconds, suppressNotification: !!options?.suppressNotification });
           document.addEventListener('visibilitychange', onVisibilityChange);
           engine.ensureSilentAudio();
           startKeepalive();

@@ -58,6 +58,17 @@ function broadcastToClients(type, payload) {
   });
 }
 
+function focusClients() {
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+    for (const c of clients) {
+      if (c.url.includes('index.html') || !c.url.includes('sw-')) {
+        c.focus();
+        break;
+      }
+    }
+  });
+}
+
 function showTimerNotification(timer) {
   const mins = Math.floor(timer.duration / 60);
   const secs = timer.duration % 60;
@@ -90,7 +101,10 @@ function runCheckLoop(timerId, event) {
       timer.endTime = 0;
       await saveTimer(timer);
       broadcastToClients('bg-timer-finished', { id: timerId });
-      showTimerNotification(timer);
+      if (!timer.suppressNotification) {
+        showTimerNotification(timer);
+      }
+      focusClients();
       return;
     }
 
@@ -132,7 +146,10 @@ self.addEventListener('activate', (event) => {
           t.endTime = 0;
           saveTimer(t);
           broadcastToClients('bg-timer-finished', { id: t.id });
-          showTimerNotification(t);
+          if (!t.suppressNotification) {
+            showTimerNotification(t);
+          }
+          focusClients();
         }
       });
     };
@@ -149,7 +166,7 @@ self.addEventListener('message', (event) => {
         const { id, duration } = payload || {};
         if (!id || !duration) return;
         const endTime = Date.now() + duration * 1000;
-        const timer = { id, duration, isRunning: true, endTime, timeLeft: duration * 1000 };
+        const timer = { id, duration, isRunning: true, endTime, timeLeft: duration * 1000, suppressNotification: !!payload.suppressNotification };
         bgTimers[id] = timer;
         await saveTimer(timer);
         broadcastToClients('bg-timer-started', { id, duration });
@@ -177,7 +194,10 @@ self.addEventListener('message', (event) => {
           timer.endTime = 0;
           await saveTimer(timer);
           broadcastToClients('bg-timer-finished', { id });
-          showTimerNotification(timer);
+          if (!timer.suppressNotification) {
+            showTimerNotification(timer);
+          }
+          focusClients();
         } else {
           runCheckLoop(id, event);
         }
