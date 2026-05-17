@@ -22,7 +22,7 @@ export default defineConfig({
         'favicon-192.png',
         'favicon-512.png',
         'sw-share-target.js',
-        'sw-timer.js',
+        'sw-bg-timer.js',
       ],
       manifest: {
         name: 'Browser-Tools',
@@ -186,7 +186,7 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
-        importScripts: ['sw-share-target.js', 'sw-timer.js'],
+        importScripts: ['sw-share-target.js', 'sw-bg-timer.js'],
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
         runtimeCaching: [
           {

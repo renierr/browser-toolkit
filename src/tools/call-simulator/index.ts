@@ -1,4 +1,6 @@
 import { acquireWakeLock } from '@js/utils';
+import { backgroundTimer } from '@js/background-timer';
+import type { BgTimerHandle } from '@js/background-timer';
 import { playRingtone } from './ringtone';
 import type { RingtoneType, RingtoneControl } from './ringtone';
 
@@ -11,9 +13,9 @@ export default function init(): void | (() => void) {
   let audioCtx: AudioContext | null = null;
   let ringtone: RingtoneControl | null = null;
   let releaseWakeLock: (() => void) | null = null;
-  let countdownInterval: ReturnType<typeof setInterval> | null = null;
   let callTimerInterval: ReturnType<typeof setInterval> | null = null;
   let callStartTime = 0;
+  let bgTimer: BgTimerHandle | null = null;
 
   const el = (id: string) => container.querySelector<HTMLElement>(`#${id}`)!;
   const inp = (id: string) => container.querySelector<HTMLInputElement>(`#${id}`)!;
@@ -42,6 +44,7 @@ export default function init(): void | (() => void) {
   const activeName = el('active-name');
   const callTimer = el('call-timer');
   const endedDuration = el('ended-duration');
+  const notifStatus = el('notif-status') as HTMLElement | null;
 
   const avatarBtns = container.querySelectorAll<HTMLButtonElement>('.avatar-btn');
   const timerBtns = container.querySelectorAll<HTMLButtonElement>('.timer-btn');
@@ -140,28 +143,31 @@ export default function init(): void | (() => void) {
     }
   }
 
-  // --- Countdown ---
+  // --- Countdown (via background timer) ---
 
   function startCountdown(seconds: number): void {
     let remaining = seconds;
     countdownDisplay.textContent = String(remaining);
     showScreen('countdown');
 
-    if (countdownInterval) clearInterval(countdownInterval);
-    countdownInterval = setInterval(() => {
-      remaining--;
-      countdownDisplay.textContent = String(remaining);
-      if (remaining <= 0) {
+    bgTimer = backgroundTimer.createTimer();
+    bgTimer.start(seconds, {
+      onTick(r: number) {
+        remaining = r;
+        countdownDisplay.textContent = String(r);
+      },
+      onComplete() {
+        bgTimer = null;
         stopCountdown();
         showIncoming();
-      }
-    }, 1000);
+      },
+    });
   }
 
   function stopCountdown(): void {
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
-      countdownInterval = null;
+    if (bgTimer) {
+      bgTimer.cancel();
+      bgTimer = null;
     }
   }
 
@@ -184,10 +190,43 @@ export default function init(): void | (() => void) {
     }
   }
 
+  function resyncCallTimer(): void {
+    if (!callStartTime) return;
+    const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
+    callTimer.textContent = formatDuration(elapsed);
+  }
+
   function getCallDuration(): string {
     if (!callStartTime) return '00:00';
     const elapsed = Math.floor((Date.now() - callStartTime) / 1000);
     return formatDuration(elapsed);
+  }
+
+  // --- Notifications ---
+
+  function requestNotificationPermission(): void {
+    if (!('Notification' in window)) {
+      if (notifStatus) notifStatus.textContent = 'Not supported';
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      if (notifStatus) notifStatus.textContent = 'Enabled';
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then((permission) => {
+        if (notifStatus) {
+          notifStatus.textContent = permission === 'granted' ? 'Enabled' : 'Denied';
+        }
+      });
+    } else {
+      if (notifStatus) notifStatus.textContent = 'Denied';
+    }
+  }
+
+  // --- Visibility resync ---
+
+  function handleVisibilityChange(): void {
+    if (document.visibilityState !== 'visible') return;
+    resyncCallTimer();
   }
 
   // --- State transitions ---
@@ -304,6 +343,9 @@ export default function init(): void | (() => void) {
     }
   });
 
+  // Request notification permission
+  requestNotificationPermission();
+
   // --- Event listeners ---
 
   container.addEventListener('click', (e: Event) => {
@@ -328,6 +370,7 @@ export default function init(): void | (() => void) {
   const onSpeaker = () => toggleSpeaker();
   const onEndCall = () => handleEndCall();
   const onNewCall = () => handleNewCall();
+  const onVisibilityChange = () => handleVisibilityChange();
 
   btnStart.addEventListener('click', onStart);
   btnCancelCountdown.addEventListener('click', onCancelCountdown);
@@ -337,6 +380,7 @@ export default function init(): void | (() => void) {
   btnSpeaker.addEventListener('click', onSpeaker);
   btnEndCall.addEventListener('click', onEndCall);
   btnNewCall.addEventListener('click', onNewCall);
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   // --- Cleanup ---
 
@@ -345,6 +389,8 @@ export default function init(): void | (() => void) {
     stopCallTimer();
     stopRingtone();
     releaseScreenLock();
+
+    document.removeEventListener('visibilitychange', onVisibilityChange);
 
     if (audioCtx) {
       audioCtx.close().catch(() => {});
