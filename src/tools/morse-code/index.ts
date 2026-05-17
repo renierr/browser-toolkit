@@ -5,6 +5,7 @@ import { textToMorse, textToMorseHtml } from './morsecode.ts';
 import { decodeArrayBufferToMonoPCM } from './decoder.ts';
 import DecodeWorker from './decode.worker?worker';
 import type { WorkerOutMessage } from './worker-protocol';
+import type { ToolPayload } from '@js/types';
 
 let currentAbortController: AbortController | null = null;
 let isPlaying = false;
@@ -104,7 +105,7 @@ function delay(ms: number): Promise<void> {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: any) {
+export default function init(payload?: ToolPayload) {
   const input = document.getElementById('input-text') as HTMLTextAreaElement;
   const outputMorse = document.getElementById('output-morse') as HTMLDivElement;
   const btnPlay = document.getElementById('btn-play') as HTMLButtonElement;
@@ -300,8 +301,8 @@ export default function init(payload?: any) {
     }
   }
 
-  if (payload?.sharedFiles?.length > 0) {
-    const file = payload.sharedFiles[0];
+  if (payload?.sharedFiles?.length) {
+    const file = payload.sharedFiles![0];
     if (file.type.startsWith('audio/')) {
       handleAudioFile(file);
     }

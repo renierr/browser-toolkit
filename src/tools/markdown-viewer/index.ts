@@ -1,7 +1,7 @@
 import { setupFileDropzone, downloadFile } from '@js/file-utils';
 import { showMessage, showProgress, hideProgress } from '@js/ui';
 import { htmlToPdfBuffer } from '@js/mupdf-utils';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import {
   renderMarkdownContent,
   applyMarkdownContentTheme,
@@ -24,7 +24,7 @@ const state: State = {
   renderedHtml: '',
 };
 
-export default function init(payload?: SharedFilesPayload): (() => void) | undefined {
+export default function init(payload?: ToolPayload): (() => void) | undefined {
   const viewer = document.getElementById('viewer') as HTMLElement;
   const fileName = document.getElementById('file-name') as HTMLElement;
   const toggleBtn = document.getElementById('toggle-view') as HTMLButtonElement;

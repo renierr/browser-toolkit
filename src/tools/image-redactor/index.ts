@@ -6,13 +6,13 @@ import { retrieveImageBlobFromClipboard, setupFileDropzone } from '@js/file-util
 import { showMessage, showProgress, hideProgress, yieldToUI } from '@js/ui.ts';
 import { blobToImage } from '@js/image-utils.ts';
 import { debounce } from '@js/utils.ts';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 import { CanvasExporter } from '@js/canvas-utils.ts';
 
 const EXPORT_QUALITY = 0.92;
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const elements = {
     dropzone: document.getElementById('dropzone')!,
     editor: document.getElementById('editor-container')!,

@@ -1,6 +1,6 @@
 import { showMessage, showProgress, hideProgress } from '@js/ui';
 import { downloadFile } from '@js/file-utils';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import {
   loadArchive,
   type ArchiveLoader,
@@ -312,7 +312,7 @@ function setupEventListeners(state: ViewerState): void {
   });
 }
 
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const state = createState();
   setupEventListeners(state);
 

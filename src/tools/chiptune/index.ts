@@ -135,11 +135,11 @@ function getElements(): Record<string, HTMLElement | null> {
   };
 }
 
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import { setupFileDropzone } from '@js/file-utils';
 import { debounce } from '@js/utils.ts';
 
-export default function init(payload?: SharedFilesPayload): () => void {
+export default function init(payload?: ToolPayload): () => void {
   let player: ChiptunePlayer | null = null;
   let animationId: number | null = null;
   let shouldVisualize = false;
@@ -286,7 +286,7 @@ export default function init(payload?: SharedFilesPayload): () => void {
   if (payload && payload.sharedFiles && payload.sharedFiles.length > 0) {
     setTimeout(() => {
       const fileList = new DataTransfer();
-      fileList.items.add(payload.sharedFiles[0]);
+      fileList.items.add(payload.sharedFiles![0]);
       onFile(fileList.files);
     }, 100);
   }

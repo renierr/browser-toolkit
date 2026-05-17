@@ -2,7 +2,7 @@ import { setupFileDropzone } from '@js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '@js/ui.ts';
 import mupdf, { type Document } from 'mupdf';
 import { formatPdfDate, parseXmpMetadata, flattenXmpMetadata } from '@js/pdf-utils.ts';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 
 // standard metadata info
 const standardKeys = [
@@ -18,7 +18,7 @@ const standardKeys = [
 ];
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const dropzone = document.getElementById('pdf-dropzone');
   const results = document.getElementById('metadata-results');
   const tableBody = document.getElementById('metadata-table-body');

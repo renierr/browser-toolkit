@@ -183,11 +183,6 @@ export function findAllToolsForMimeTypes(tools: Tool[], mimeTypes: string[]): To
   });
 }
 
-export interface SharedFilesPayload {
-  sharedFiles: File[];
-  mimeTypes: string[];
-}
-
 export function setupLaunchHandler(callback: (files: File[]) => void): () => void {
   if (!('launchQueue' in window)) {
     return () => {};

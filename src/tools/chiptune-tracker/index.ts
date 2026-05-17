@@ -2,7 +2,7 @@ import { ChiptunePlayer } from '@js/chiptune/player';
 import { parseModule } from '@js/chiptune/parser';
 import type { ModuleFile } from '@js/chiptune/types';
 import { downloadFile } from '@js/file-utils';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import {
   ROWS_PER_PATTERN,
   noteNameToNumber,
@@ -24,7 +24,7 @@ import {
 } from './tracker-renderer';
 import { renderPatternOrder, handleRemovePattern, type DragState } from './pattern-order-manager';
 
-export default function init(payload?: SharedFilesPayload): () => void {
+export default function init(payload?: ToolPayload): () => void {
   let mod: ModuleFile | null = null;
   let player: ChiptunePlayer | null = null;
   let selectedNote = 'C';

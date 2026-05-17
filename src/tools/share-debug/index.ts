@@ -1,4 +1,4 @@
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import { getMimeTypeFromFileName } from '@js/mime-types';
 import { setupFileDropzone } from '@js/file-utils';
 import { showToolChooser } from '@js/tool-chooser';
@@ -7,7 +7,7 @@ import { tools } from '@js/tools';
 import router from '@js/router';
 import { showMessage } from '@js/ui';
 
-export default function init(payload?: SharedFilesPayload): (() => void) | undefined {
+export default function init(payload?: ToolPayload): (() => void) | undefined {
   let currentFiles: File[] = [];
   let selectedFileIndex = 0;
 
@@ -70,7 +70,7 @@ export default function init(payload?: SharedFilesPayload): (() => void) | undef
     const selectedTool = await showToolChooser(matchingTools, currentFiles);
 
     if (selectedTool) {
-      const payload: SharedFilesPayload = {
+      const payload: ToolPayload = {
         sharedFiles: currentFiles,
         mimeTypes: mimeTypes,
       };

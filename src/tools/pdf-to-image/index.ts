@@ -2,10 +2,10 @@ import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '@js/ui.ts';
 import mupdf, { Pixmap } from 'mupdf';
 import { addImageToPDFDocument } from '@js/mupdf-utils.ts';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const processFiles = async (files: FileList | File[]) => {
     const dpi = parseInt((document.getElementById('opt-dpi') as HTMLInputElement)?.value);
     const format = (document.getElementById('opt-format') as HTMLSelectElement)?.value as

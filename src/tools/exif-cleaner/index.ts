@@ -11,10 +11,10 @@ import {
   gpsGenerateGoogleMapsLink,
   isImageFile,
 } from '@js/utils.ts';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const resultContainer = document.getElementById('result-container');
   const previewImg = document.getElementById('preview-img') as HTMLImageElement;
   const previewVideo = document.getElementById('preview-video') as HTMLVideoElement;

@@ -1,10 +1,10 @@
 import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
 import { showProgress, hideProgress, showMessage, yieldToUI } from '@js/ui.ts';
 import mupdf from 'mupdf';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const startOverBtn = document.getElementById('start-over-btn') as HTMLButtonElement;
   const dropzone = document.getElementById('pdf-dropzone') as HTMLDivElement;
   const restrictionsConfig = document.getElementById('restrictions-config') as HTMLDivElement;

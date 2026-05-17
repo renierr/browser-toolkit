@@ -1,5 +1,5 @@
 import { downloadFile, retrieveImageBlobFromClipboard, setupFileDropzone } from '@js/file-utils.ts';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import { showMessage } from '@js/ui.ts';
 import { debounce } from '@js/utils.ts';
 import { ASCII_PRESETS, resolveCharset } from './ascii-mapper.ts';
@@ -16,7 +16,7 @@ function clampWidth(value: number): number {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload): void | (() => void) {
+export default function init(payload?: ToolPayload): void | (() => void) {
   const container = document.getElementById('ascii-converter-container');
   const imageInput = document.getElementById('image-input') as HTMLInputElement | null;
   const pasteBtn = document.getElementById('paste-btn') as HTMLButtonElement | null;

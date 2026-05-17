@@ -2,7 +2,7 @@ import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
 import { showProgress, hideProgress, showMessage, yieldToUI } from '@js/ui.ts';
 import mupdf, { type PDFDocument, type Document } from 'mupdf';
 import Sortable from 'sortablejs';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 import { openInTool } from '@js/tool-chooser.ts';
 
 interface PageItem {
@@ -14,7 +14,7 @@ interface PageItem {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const pageList = document.getElementById('page-list') as HTMLDivElement;
   const actions = document.getElementById('organizer-actions') as HTMLDivElement;
   const dropzone = document.getElementById('pdf-dropzone') as HTMLDivElement;

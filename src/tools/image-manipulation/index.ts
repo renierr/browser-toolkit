@@ -6,13 +6,13 @@ import {
   type DownloadBuffer,
 } from '@js/file-utils';
 import { showMessage, showProgress, hideProgress } from '@js/ui';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import ImageWorker from './worker?worker';
 import { getProcessingOptions, type ImageQueueItem } from './utils.ts';
 import { openInTool } from '@js/tool-chooser';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const pasteBtn = document.getElementById('paste-btn') as HTMLButtonElement;
   const gallery = document.getElementById('results-gallery')!;
   const bulkActions = document.getElementById('bulk-actions')!;

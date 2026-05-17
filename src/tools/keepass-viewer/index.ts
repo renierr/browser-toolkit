@@ -1,4 +1,4 @@
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 import { setupFileDropzone } from '@js/file-utils.ts';
 import { showMessage } from '@js/ui.ts';
 import * as kdbxweb from 'kdbxweb';
@@ -31,7 +31,7 @@ async function loadDatabase(
   return await kdbxweb.Kdbx.load(data, credentials);
 }
 
-export default function init(payload?: SharedFilesPayload): (() => void) | void {
+export default function init(payload?: ToolPayload): (() => void) | void {
   const resolved = initDOM('keepass-viewer-app');
   if (!resolved) return;
   const dom: DOMEls = resolved;

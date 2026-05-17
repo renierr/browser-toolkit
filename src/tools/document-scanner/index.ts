@@ -1,4 +1,4 @@
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import { applyFilters as applyFiltersUtil } from './utils/filters';
 import type { Point } from './utils/perspective';
 import {
@@ -34,7 +34,7 @@ import { CanvasExporter } from '@js/canvas-utils.ts';
 import { getSettings } from '@js/settings.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   // --- DOM Elements ---
 
   const video = document.getElementById('video') as HTMLVideoElement;

@@ -13,11 +13,11 @@ import {
   type ExportOptions,
 } from './export.ts';
 import { setupFileDropzone } from '@js/file-utils.ts';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 import { CanvasExporter } from '@js/canvas-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const input = document.getElementById('code-input') as HTMLTextAreaElement;
   const outputContainer = document.getElementById('code-output') as HTMLDivElement;
   const outputCode = document.getElementById('code-output-code') as HTMLElement;

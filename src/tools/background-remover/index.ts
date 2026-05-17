@@ -7,7 +7,7 @@ import {
 } from '@js/file-utils';
 import { hideProgress, showMessage, showProgress } from '@js/ui';
 import { debounce } from '@js/utils';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import BackgroundRemovalWorker from './worker?worker';
 import {
   type ProcessingOptions,
@@ -23,7 +23,7 @@ import {
 import { openInTool } from '@js/tool-chooser';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const gallery = document.getElementById('results-gallery')!;
   const bulkActions = document.getElementById('bulk-actions')!;
   const queueStatus = document.getElementById('queue-status')!;

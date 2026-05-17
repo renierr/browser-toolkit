@@ -4,7 +4,7 @@ import { blobToImage, imageElToBlob } from '@js/image-utils.ts';
 import Sortable from 'sortablejs';
 import { addImageToPDFDocument } from '@js/mupdf-utils.ts';
 import mupdf from 'mupdf';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import { isImageFile } from '@js/utils.ts';
 
 interface ImageItem {
@@ -14,7 +14,7 @@ interface ImageItem {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const fileInput = document.getElementById('file-input') as HTMLInputElement;
   const imageList = document.getElementById('image-list') as HTMLDivElement;
   const actions = document.getElementById('actions') as HTMLDivElement;

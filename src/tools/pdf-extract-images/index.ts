@@ -2,7 +2,7 @@ import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '@js/file-
 import { hideProgress, showMessage, showProgress, yieldToUI } from '@js/ui.ts';
 import mupdf, { Image, type Matrix, PDFPage, type Rect, type Document, type Pixmap } from 'mupdf';
 import { hashUint8Array } from '@js/utils.ts';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 
 let extractedImages: Array<{
   name: string;
@@ -14,7 +14,7 @@ let extractedImages: Array<{
 const seenHashes = new Set<string>();
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files) => {
     await extractImages(files);
   });

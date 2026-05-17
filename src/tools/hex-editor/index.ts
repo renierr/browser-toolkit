@@ -8,10 +8,10 @@ import {
   HexBufferManager,
   scanForStrings,
 } from './hex-utils';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const dropzone = document.getElementById('hex-dropzone')!;
   const fileInput = document.getElementById('hex-file-input') as HTMLInputElement;
   const fileInfoHeader = document.getElementById('file-info-header')!;

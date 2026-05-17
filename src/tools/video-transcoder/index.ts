@@ -2,14 +2,14 @@ import { FFmpeg } from '@ffmpeg/ffmpeg/dist/esm/index.js';
 import { fetchFile } from '@ffmpeg/util/dist/esm/index.js';
 import { showMessage, showProgress, hideProgress, yieldToUI } from '@js/ui.ts';
 import { setupFileDropzone, downloadFile } from '@js/file-utils.ts';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 import { getFFmpegArgs, FFmpegLogCollector, getVideoMetadata } from './video-utils.ts';
 
 import coreURL from '@ffmpeg/core/dist/esm/ffmpeg-core.js?url';
 import wasmURL from '@ffmpeg/core/dist/esm/ffmpeg-core.wasm?url';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   let ffmpeg: FFmpeg = null!;
   let ffmpegLoaded = false;
   const logCollector = new FFmpegLogCollector();

@@ -10,7 +10,7 @@ import {
   getDocManager,
   injectStyles,
 } from '@js/embedpdf-utils.ts';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 
 const toggleToolCard = (show: boolean) => {
   const toolCardElement = document.getElementById('pdf-edit-tool-card');
@@ -105,7 +105,7 @@ const scrollTopOfViewer = (viewerEl: HTMLElement) => {
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(
-  payload?: SharedFilesPayload | { pdfBytes: ArrayBuffer; fileName: string }
+  payload?: ToolPayload | { pdfBytes: ArrayBuffer; fileName: string }
 ) {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files: FileList) => {
     showProgress('Load PDF file...');
@@ -121,7 +121,7 @@ export default function init(
     );
   });
 
-  // Handle SharedFilesPayload (from PWA share target)
+  // Handle payload from PWA share target
   if (payload && 'sharedFiles' in payload && payload.sharedFiles?.length) {
     const pdfFiles = payload.sharedFiles.filter(
       (f) => f.type === 'application/pdf' || f.name?.toLowerCase().endsWith('.pdf')

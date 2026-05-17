@@ -1,8 +1,8 @@
-import type { Tool } from './types';
+import type { Tool, ToolPayload } from './types';
 import { renderToolIconSvg } from './tool-icons';
 import { tools } from './tools';
 import router from './router';
-import { findAllToolsForMimeTypes, type SharedFilesPayload } from './share-target.ts';
+import { findAllToolsForMimeTypes } from './share-target.ts';
 import { hideProgress, showMessage } from './ui.ts';
 import { getSettings } from './settings.ts';
 
@@ -96,7 +96,7 @@ export async function openInTool(
   const selectedTool = await showToolChooser(matchingTools, files);
 
   if (selectedTool) {
-    const payload: SharedFilesPayload = {
+    const payload: ToolPayload = {
       sharedFiles: files,
       mimeTypes: mimeTypes,
     };

@@ -6,10 +6,9 @@ import {
   getSharedContentInfo,
   loadSharedFiles,
   setupLaunchHandler,
-  type SharedFilesPayload,
 } from '../share-target.ts';
 import { showToolChooser, getDefaultToolPath } from '../tool-chooser.ts';
-import type { Tool } from '../types.ts';
+import type { Tool, ToolPayload } from '../types.ts';
 import { showMessage } from '../ui.ts';
 
 async function routeFilesToTool(
@@ -39,7 +38,7 @@ async function routeFilesToTool(
 
   if (!targetTool) return false;
 
-  const payload: SharedFilesPayload = {
+  const payload: ToolPayload = {
     sharedFiles: files,
     mimeTypes,
   };

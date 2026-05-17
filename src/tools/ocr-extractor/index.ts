@@ -2,13 +2,13 @@ import { retrieveImageBlobFromClipboard, setupFileDropzone } from '@js/file-util
 import { showMessage, showProgress, hideProgress } from '@js/ui';
 import { blobToImageData } from '@js/image-utils';
 import OcrWorker from './worker?worker';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 
 const DET_MODEL_URL = new URL('./lib/models/ocr/det.onnx', document.baseURI).href;
 const REC_MODEL_URL = new URL('./lib/models/ocr/rec.onnx', document.baseURI).href;
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const statusContainer = document.getElementById('status-container');
   const statusText = document.getElementById('status-text');
   const resultContainer = document.getElementById('result-container');

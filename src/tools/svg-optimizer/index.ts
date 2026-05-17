@@ -1,7 +1,7 @@
 import { optimize, type Config } from 'svgo/browser';
 import { downloadAsZip, downloadFile, setupFileDropzone } from '@js/file-utils';
 import { showMessage, showProgress, hideProgress, yieldToUI } from '@js/ui';
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 import { getSettings } from '@js/settings.ts';
 
 interface OptimizedFile {
@@ -13,7 +13,7 @@ interface OptimizedFile {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   const inputText = document.getElementById('svg-input') as HTMLTextAreaElement;
   const outputText = document.getElementById('svg-output') as HTMLTextAreaElement;
   const btnOptimize = document.getElementById('btn-optimize') as HTMLButtonElement;

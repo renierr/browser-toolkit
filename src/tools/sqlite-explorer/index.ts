@@ -1,4 +1,4 @@
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import { setupFileDropzone } from '@js/file-utils';
 import { getSettings } from '@js/settings';
 
@@ -20,7 +20,7 @@ let dbName = '';
 let settingsCleanup: (() => void) | undefined;
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload) {
+export default function init(payload?: ToolPayload) {
   if (!initDOM('sqlite-explorer-app')) return;
 
   let pendingFile: File | null = null;

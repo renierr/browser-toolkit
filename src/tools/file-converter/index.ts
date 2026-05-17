@@ -1,7 +1,7 @@
 import { downloadAsZip, downloadFile, setupFileDropzone } from '@js/file-utils';
 import { hideProgress, showMessage, showProgress } from '@js/ui';
 import { loadSharedFiles } from '@js/share-target';
-import type { SharedFilesPayload } from '@js/share-target';
+import type { ToolPayload } from '@js/types';
 import { identifyFileType, isPandocSupportedInput, getFileTypeLabel } from '@js/magic-bytes';
 import { openInTool } from '@js/tool-chooser';
 
@@ -35,7 +35,7 @@ function formatSize(bytes: number): string {
 }
 
 // noinspection JSUnusedGlobalSymbols
-export default async function init(payload?: SharedFilesPayload) {
+export default async function init(payload?: ToolPayload) {
   const files: File[] = [];
   const outputs: FileEntry[] = [];
 

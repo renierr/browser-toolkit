@@ -1,4 +1,4 @@
-import type { SharedFilesPayload } from '@js/share-target.ts';
+import type { ToolPayload } from '@js/types';
 import { getCropBounds, setImageGetter } from './drawing.ts';
 import { setPathCache } from './utils/brush-styles.ts';
 import { getDom } from './dom.ts';
@@ -29,7 +29,7 @@ import { SyncManager } from '@js/sync.ts';
 import { syncGallery } from './store.ts';
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(payload?: SharedFilesPayload): void | (() => void) {
+export default function init(payload?: ToolPayload): void | (() => void) {
   const dom = getDom(document);
   if (!dom) return;
 
