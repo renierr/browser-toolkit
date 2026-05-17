@@ -17,6 +17,8 @@ For extended examples and walkthroughs, see:
 
 - **Caveman terse style** (caveman.md): REQUIRED. Drop filler, articles, pleasantries.
 - Use `bun` only. Never use `npm` or `pnpm`.
+- Do not run `bun run build` unless user explicitly asks or final verification was requested.
+- Do not `git add`, `git commit`, `git push`, or run any git write operation unless user explicitly says "commit" or "push". Prior consent does not carry forward — each write requires a fresh explicit command.
 - Check existing implementations before adding new code:
   - similar tools in `src/tools/*`
   - shared utilities in `src/js/*`
