@@ -1016,6 +1016,7 @@ export class HtmlEditor {
       const width = Math.max(50, startWidth + (event.clientX - startX));
       image.style.width = `${width}px`;
       image.style.maxWidth = 'none';
+      image.style.removeProperty('height');
     };
 
     const stopResize = (event: PointerEvent): void => {
