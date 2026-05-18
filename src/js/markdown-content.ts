@@ -42,7 +42,7 @@ export function buildMarkdownPdfHtml(renderedHtml: string): string {
     th,td { border: 1px solid #ccc; padding: 0.3em 0.6em; word-break: break-word; overflow-wrap: break-word; }
     th { background: #f0f0f0; }
     a { color: #0000ee; }
-    img { max-width: 100%; }
+    img { display: block; max-width: 100%; page-break-inside: avoid; break-inside: avoid; }
   </style>
 </head>
 <body>${renderedHtml}</body>

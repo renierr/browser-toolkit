@@ -56,7 +56,10 @@ export async function convertBuffer(
     if (from === 'html') {
       onProgress?.(10);
       const htmlText = new TextDecoder().decode(input);
-      const pdfData = await htmlToPdfBuffer(htmlText, { fontSize: 14 });
+      const pdfData = await htmlToPdfBuffer(
+        `<style>img{display:block;page-break-inside:avoid;break-inside:avoid}</style>` + htmlText,
+        { fontSize: 14 }
+      );
       onProgress?.(100);
       return { data: pdfData, name: outName, mime: targetInfo.mime };
     }
@@ -84,7 +87,10 @@ export async function convertBuffer(
 
     const htmlText = new TextDecoder().decode(htmlOutput);
     onProgress?.(70);
-    const pdfData = await htmlToPdfBuffer(htmlText, { fontSize: 14 });
+    const pdfData = await htmlToPdfBuffer(
+      `<style>img{display:block;page-break-inside:avoid;break-inside:avoid}</style>` + htmlText,
+      { fontSize: 14 }
+    );
     onProgress?.(100);
 
     return { data: pdfData, name: outName, mime: targetInfo.mime };

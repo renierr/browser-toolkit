@@ -172,7 +172,7 @@ pre { white-space: pre-wrap; word-wrap: break-word; }
 ul, ol { margin: 8pt 0; padding-left: 25pt; }
 li { margin: 4pt 0; }
 a { color: #0066cc; text-decoration: underline; }
-img { max-width: 100%; height: auto; margin: 8pt 0; }
+img { display: block; max-width: 100%; height: auto; margin: 8pt 0; page-break-inside: avoid; break-inside: avoid; }
 .editor-image-container { display: block; max-width: 100%; margin: 8pt 0; }
 .editor-image-container img { display: block; max-width: 100%; }
 strong, b { font-weight: bold; }
