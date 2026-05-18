@@ -1,22 +1,26 @@
 import wasmUrl from 'pandoc-wasm/src/pandoc.wasm?url';
 import { ConsoleStdout, File, OpenFile, PreopenDirectory, WASI } from '@bjorn3/browser_wasi_shim';
 
+type PandocConvertResult = {
+  output: Uint8Array;
+  stdout: string;
+  stderr: string;
+  media: Map<string, Uint8Array>;
+  mediaZip?: Uint8Array;
+};
+
 type PandocInstance = {
   convert: (
     options: any,
     input: string | Uint8Array | Blob,
     inputName: string
-  ) => Promise<{
-    output: Uint8Array;
-    stdout: string;
-    stderr: string;
-  }>;
+  ) => Promise<PandocConvertResult>;
 };
 
 let pandocInstance: PandocInstance | null = null;
 
 function createPandocInstance(wasmBinary: ArrayBuffer): Promise<PandocInstance> {
-  const args = ['pandoc.wasm'];
+  const args = ['pandoc.wasm', '+RTS', '-H64m', '-RTS'];
   const env: string[] = [];
   const fileSystem = new Map<string, File>();
   const fds = [
@@ -85,10 +89,31 @@ function createPandocInstance(wasmBinary: ArrayBuffer): Promise<PandocInstance> 
         fileSystem.set(inputName, new File(inputData, { readonly: false }));
       }
 
+      const extractMediaPath = options['extract-media'] as string | undefined;
+      if (extractMediaPath) {
+        fileSystem.set(extractMediaPath, new File(new Uint8Array(), { readonly: false }));
+      }
+
+      const preFiles = new Set(fileSystem.keys());
       exp.convert(optsPtr, encoded.length);
+
+      const mediaFiles = new Map<string, Uint8Array>();
+      for (const [name, file] of fileSystem.entries()) {
+        if (!preFiles.has(name) && file.data.length > 0) {
+          mediaFiles.set(name, new Uint8Array(file.data));
+        }
+      }
 
       const stdoutFile = fileSystem.get('stdout')!;
       const stderrFile = fileSystem.get('stderr')!;
+
+      let mediaZip: Uint8Array | undefined;
+      if (extractMediaPath) {
+        const f = fileSystem.get(extractMediaPath);
+        if (f && f.data.length > 0) {
+          mediaZip = new Uint8Array(f.data);
+        }
+      }
 
       let output = new Uint8Array(0);
       if (stdoutFile.data.length > 0) {
@@ -99,6 +124,8 @@ function createPandocInstance(wasmBinary: ArrayBuffer): Promise<PandocInstance> 
         output,
         stdout: new TextDecoder('utf-8').decode(stdoutFile.data),
         stderr: new TextDecoder('utf-8').decode(stderrFile.data),
+        media: mediaFiles,
+        mediaZip,
       };
     }
 
@@ -123,7 +150,7 @@ export async function convertInput(
   options: any,
   input: Uint8Array,
   inputName: string
-): Promise<{ output: Uint8Array; stdout: string; stderr: string }> {
+): Promise<PandocConvertResult> {
   const instance = await getPandocInstance();
   return instance.convert(options, input, inputName);
 }
