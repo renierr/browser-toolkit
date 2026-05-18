@@ -5,6 +5,10 @@ export interface RingtoneControl {
   setVibrate(on: boolean): void;
 }
 
+const OLD_BELL_RING_DUR = 1.5;
+const OLD_BELL_GAP = 0.3;
+const OLD_BELL_LOOP_MS = (OLD_BELL_RING_DUR + OLD_BELL_GAP + OLD_BELL_RING_DUR + 2) * 1000;
+
 function scheduleClassicRing(ctx: AudioContext, output: AudioNode): void {
   const now = ctx.currentTime;
 
@@ -63,7 +67,7 @@ function scheduleOldBell(ctx: AudioContext, output: AudioNode): void {
   const now = ctx.currentTime;
 
   const scheduleRing = (start: number) => {
-    const dur = 1.5;
+    const dur = OLD_BELL_RING_DUR;
 
     const osc1 = ctx.createOscillator();
     osc1.type = 'sine';
@@ -124,7 +128,7 @@ function scheduleOldBell(ctx: AudioContext, output: AudioNode): void {
   };
 
   scheduleRing(now);
-  scheduleRing(now + 1.8);
+  scheduleRing(now + OLD_BELL_RING_DUR + OLD_BELL_GAP);
 }
 
 export function playRingtone(ctx: AudioContext, type: RingtoneType): RingtoneControl {
@@ -152,13 +156,13 @@ export function playRingtone(ctx: AudioContext, type: RingtoneType): RingtoneCon
     scheduleOldBell(ctx, masterGain);
     patternInterval = window.setInterval(() => {
       if (!stopped) scheduleOldBell(ctx, masterGain);
-    }, 5300);
+    }, OLD_BELL_LOOP_MS);
   }
 
   function startVibration(): void {
     if (!vibrateOn || !navigator.vibrate) return;
     const pattern = type === 'classic' ? [250, 100, 250, 100, 600] : type === 'modern' ? [150, 100, 150, 100, 300] : [400, 100, 400, 1200];
-    const loopMs = type === 'classic' ? 5000 : type === 'modern' ? 4000 : 5300;
+    const loopMs = type === 'classic' ? 5000 : type === 'modern' ? 4000 : OLD_BELL_LOOP_MS;
 
     const fire = () => {
       if (!stopped && vibrateOn) navigator.vibrate(pattern);
