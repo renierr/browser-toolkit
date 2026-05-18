@@ -42,13 +42,17 @@ export const fuzzyScore = (text: string, term: string): number => {
   return score - totalGap * 10;
 };
 
-function getValueByDotNotation(obj: any, path: string): string | undefined {
+function getValueByDotNotation(obj: unknown, path: string): string | undefined {
   const keys = path.split('.');
-  let current = obj;
+  let current: unknown = obj;
 
   for (const key of keys) {
-    if (current && typeof current === 'object' && current.hasOwnProperty(key)) {
-      current = current[key];
+    if (
+      current &&
+      typeof current === 'object' &&
+      Object.prototype.hasOwnProperty.call(current, key)
+    ) {
+      current = (current as Record<string, unknown>)[key];
     } else {
       return undefined;
     }
@@ -62,7 +66,7 @@ function getValueByDotNotation(obj: any, path: string): string | undefined {
 
 export const replacePlaceholders = (
   templateHtml: string,
-  context: any,
+  context: unknown,
   partials?: Record<string, string>
 ): string => {
   const placeholderRegex = /{{([\s\S]+?)}}/g;
@@ -73,7 +77,6 @@ export const replacePlaceholders = (
       return text;
     }
 
-    // 1. Handle <include src="..." type="style" />
     const tagRegex = /<include\s+([^>]+?)\s*\/?>/g;
     let result = text.replace(tagRegex, (match, attrString) => {
       const srcMatch = attrString.match(/src=["']([^"']+)["']/);
@@ -92,32 +95,8 @@ export const replacePlaceholders = (
       return `[INCLUDE NOT FOUND: ${fileName}]`;
     });
 
-    // 2. Handle {{ ... }} placeholders (including legacy include/style)
     return result.replace(placeholderRegex, (match, keyPath) => {
       const trimmedPath = keyPath.trim();
-
-      // Legacy Handle {{ include "filename" }}
-      if (trimmedPath.startsWith('include ')) {
-        const fileName = trimmedPath.substring(8).replace(/["']/g, '').trim();
-        if (partials && typeof partials[fileName] === 'string') {
-          return process(partials[fileName], depth + 1);
-        }
-        console.warn(`[utils] Include not found: ${fileName}`);
-        return `[INCLUDE NOT FOUND: ${fileName}]`;
-      }
-
-      // Legacy Handle {{ style "filename" }}
-      if (trimmedPath.startsWith('style ')) {
-        const fileName = trimmedPath.substring(6).replace(/["']/g, '').trim();
-        if (partials && typeof partials[fileName] === 'string') {
-          const content = process(partials[fileName], depth + 1);
-          return `<style>\n${content}\n</style>`;
-        }
-        console.warn(`[utils] Style include not found: ${fileName}`);
-        return `[STYLE NOT FOUND: ${fileName}]`;
-      }
-
-      // Handle normal context placeholders
       const value = getValueByDotNotation(context, trimmedPath);
       if (value !== undefined) {
         return value;
@@ -131,7 +110,7 @@ export const replacePlaceholders = (
   return process(templateHtml, 0);
 };
 
-export const html = (strings: TemplateStringsArray, ...values: any[]) => {
+export const html = (strings: TemplateStringsArray, ...values: unknown[]) => {
   return strings.reduce((acc, str, i) => {
     const v = values[i];
     const value = Array.isArray(v) ? v.join('') : (v ?? '');
@@ -139,7 +118,7 @@ export const html = (strings: TemplateStringsArray, ...values: any[]) => {
   }, '');
 };
 
-const parseRational = (v: any): number => {
+const parseRational = (v: unknown): number => {
   if (v === undefined || v === null) return NaN;
   if (typeof v === 'number') return v;
 
@@ -170,33 +149,31 @@ const parseRational = (v: any): number => {
   }
 
   if (typeof v === 'object') {
-    // ExifReader may provide { numerator, denominator } or { num, den } or { value: ... }
-    if ('numerator' in v && 'denominator' in v) {
-      const n = Number((v as any).numerator);
-      const d = Number((v as any).denominator || 1);
+    const vObj = v as Record<string, unknown>;
+    if ('numerator' in vObj && 'denominator' in vObj) {
+      const n = Number(vObj.numerator);
+      const d = Number(vObj.denominator ?? 1);
       return Number.isFinite(n) && d !== 0 ? n / d : NaN;
     }
-    if ('num' in v && 'den' in v) {
-      const n = Number((v as any).num);
-      const d = Number((v as any).den || 1);
+    if ('num' in vObj && 'den' in vObj) {
+      const n = Number(vObj.num);
+      const d = Number(vObj.den ?? 1);
       return Number.isFinite(n) && d !== 0 ? n / d : NaN;
     }
-    // Some tag implementations wrap the actual value under a `value` property
-    if ('value' in v) return parseRational((v as any).value);
+    if ('value' in vObj) return parseRational(vObj.value);
 
-    // Some objects expose numeric indices (array-like object)
-    if (typeof (v as any)[0] !== 'undefined') return parseRational([(v as any)[0], (v as any)[1]]);
+    if (typeof vObj[0] !== 'undefined') return parseRational([vObj[0], vObj[1]]);
   }
   return NaN;
 };
 
-const gpsArrayToDecimal = (arr: any): number => {
+const gpsArrayToDecimal = (arr: unknown): number => {
   if (arr === undefined || arr === null) return NaN;
   // Accept real arrays and array-like/typed arrays
   const parts = Array.isArray(arr)
     ? arr
-    : typeof arr === 'object' && typeof (arr as any).length === 'number'
-      ? Array.from(arr as any)
+    : typeof arr === 'object' && 'length' in arr
+      ? Array.from(arr as ArrayLike<unknown>)
       : null;
   if (!parts) return NaN;
   const [degRaw, minRaw = 0, secRaw = 0] = parts;
@@ -207,7 +184,7 @@ const gpsArrayToDecimal = (arr: any): number => {
   return deg + min / 60 + sec / 3600;
 };
 
-const gpsParseDescriptionToDecimal = (desc: any): number => {
+const gpsParseDescriptionToDecimal = (desc: unknown): number => {
   if (desc === undefined || desc === null) return NaN;
   const s = String(desc);
   // If it's a single decimal number, return it
@@ -229,9 +206,10 @@ const gpsParseDescriptionToDecimal = (desc: any): number => {
   return NaN;
 };
 
-const gpsApplyHemisphereReferences = (coord: number, refTag: any): number => {
+const gpsApplyHemisphereReferences = (coord: number, refTag: unknown): number => {
   if (!Number.isFinite(coord)) return NaN;
-  const ref = String(refTag?.description ?? refTag?.value ?? refTag ?? '')
+  const refTagRecord = refTag as Record<string, unknown>;
+  const ref = String(refTagRecord?.description ?? refTagRecord?.value ?? refTag ?? '')
     .trim()
     .toUpperCase();
   if (ref.startsWith('S') || ref.startsWith('W') || ref === 'SOUTH' || ref === 'WEST')
@@ -240,23 +218,28 @@ const gpsApplyHemisphereReferences = (coord: number, refTag: any): number => {
 };
 
 export const gpsParseCoordinateFromExifTags = (
-  longTag: any,
-  latTag: any,
-  longRefTag: any,
-  latRefTag: any
+  longTag: unknown,
+  latTag: unknown,
+  longRefTag: unknown,
+  latRefTag: unknown
 ): { longitude: number; latitude: number } => {
   let latDecimal = NaN;
   let lonDecimal = NaN;
 
-  // Prefer .value arrays when available (rational components)
-  if (latTag?.value) latDecimal = gpsArrayToDecimal(latTag.value);
-  if (longTag?.value) lonDecimal = gpsArrayToDecimal(longTag.value);
+  const latTagRecord = latTag as Record<string, unknown>;
+  const longTagRecord = longTag as Record<string, unknown>;
 
-  // Fallback to description parsing
+  if (latTagRecord?.value) latDecimal = gpsArrayToDecimal(latTagRecord.value);
+  if (longTagRecord?.value) lonDecimal = gpsArrayToDecimal(longTagRecord.value);
+
   if (!Number.isFinite(latDecimal))
-    latDecimal = gpsParseDescriptionToDecimal(latTag?.description ?? latTag?.value ?? latTag);
+    latDecimal = gpsParseDescriptionToDecimal(
+      latTagRecord?.description ?? latTagRecord?.value ?? latTag
+    );
   if (!Number.isFinite(lonDecimal))
-    lonDecimal = gpsParseDescriptionToDecimal(longTag?.description ?? longTag?.value ?? longTag);
+    lonDecimal = gpsParseDescriptionToDecimal(
+      longTagRecord?.description ?? longTagRecord?.value ?? longTag
+    );
 
   // Apply hemisphere references
   const finalLat = gpsApplyHemisphereReferences(latDecimal, latRefTag);
@@ -450,8 +433,8 @@ function updateWakeLockIndicatorState() {
     if (label) {
       label.textContent = indicatorLabel;
     }
-  } catch (_) {
-    // ignore
+  } catch (error) {
+    console.warn('[Utils] Failed to update wake lock indicator:', error);
   }
 }
 
@@ -486,8 +469,8 @@ function showWakeLockIndicator() {
       el.addEventListener('click', handleWakeLockIndicatorClick);
       updateWakeLockIndicatorState();
     }
-  } catch (_) {
-    // ignore
+  } catch (error) {
+    console.warn('[Utils] Failed to show wake lock indicator:', error);
   }
 }
 
@@ -499,8 +482,8 @@ function hideWakeLockIndicator() {
       el.classList.add('hidden');
       el.setAttribute('aria-hidden', 'true');
     }
-  } catch (_) {
-    // ignore
+  } catch (error) {
+    console.warn('[Utils] Failed to hide wake lock indicator:', error);
   }
 }
 

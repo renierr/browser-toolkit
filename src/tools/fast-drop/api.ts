@@ -3,7 +3,7 @@ import type { Drop } from './types';
 
 export async function fetchDrops(): Promise<{ success: boolean; drops: Drop[]; error?: string }> {
   try {
-    return await fetchJson('/drop');
+    return await fetchJson<{ success: boolean; drops: Drop[]; error?: string }>('/drop');
   } catch (err: any) {
     return { success: false, drops: [], error: err.message || 'Backend server error' };
   }
@@ -30,7 +30,9 @@ export async function uploadDrop(
 
 export async function deleteDrop(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    return await fetchJson(`/drop/${id}`, { method: 'DELETE' });
+    return await fetchJson<{ success: boolean; error?: string }>(`/drop/${id}`, {
+      method: 'DELETE',
+    });
   } catch (err: any) {
     return { success: false, error: err.message || 'Delete failed' };
   }
@@ -38,7 +40,9 @@ export async function deleteDrop(id: string): Promise<{ success: boolean; error?
 
 export async function keepDrop(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    return await fetchJson(`/drop/${id}/keep`, { method: 'PATCH' });
+    return await fetchJson<{ success: boolean; error?: string }>(`/drop/${id}/keep`, {
+      method: 'PATCH',
+    });
   } catch (err: any) {
     return { success: false, error: err.message || 'Update failed' };
   }

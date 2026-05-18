@@ -244,7 +244,6 @@ class Router {
   }
 
   public getPreviousPath(): string | null {
-    // @ts-ignore - Navigation API is experimental
     const nav = (window as any).navigation;
     if (nav && typeof nav.entries === 'function') {
       const entries = nav.entries();

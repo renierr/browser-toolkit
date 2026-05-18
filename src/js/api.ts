@@ -50,7 +50,10 @@ export async function fetchApi(endpoint: string, options: ApiOptions = {}): Prom
 /**
  * Helper for API calls that return JSON.
  */
-export async function fetchJson<T = any>(endpoint: string, options: ApiOptions = {}): Promise<T> {
+export async function fetchJson<T = unknown>(
+  endpoint: string,
+  options: ApiOptions = {}
+): Promise<T> {
   const response = await fetchApi(endpoint, options);
   return response.json();
 }

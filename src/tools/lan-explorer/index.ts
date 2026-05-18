@@ -20,7 +20,7 @@ export default function init() {
 
   async function fetchDevices() {
     try {
-      devices = await fetchJson('/network/devices');
+      devices = await fetchJson<any[]>('/network/devices');
       renderDevices();
     } catch (e) {
       console.error('[LANExplorer] Failed to fetch devices', e);
