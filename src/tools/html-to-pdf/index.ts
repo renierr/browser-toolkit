@@ -115,7 +115,12 @@ export default function init(): (() => void) | undefined {
     try {
       const settings = getPageSettings();
       const cleanHtml = editor.getCleanHtml();
-      const normalizedHtml = normalizeImagesForPdf(cleanHtml, editorHost);
+      const normalizedHtml = normalizeImagesForPdf(
+        cleanHtml,
+        editorHost,
+        settings.width,
+        settings.margin
+      );
       const wrappedHtml = wrapHtmlForPdf(normalizedHtml, settings);
 
       const pdfBuffer = await htmlToPdfBuffer(wrappedHtml, {

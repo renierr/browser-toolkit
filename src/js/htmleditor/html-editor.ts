@@ -1013,7 +1013,7 @@ export class HtmlEditor {
         return;
       }
 
-      const width = Math.max(50, Math.min(startWidth + (event.clientX - startX), 800));
+      const width = Math.max(50, startWidth + (event.clientX - startX));
       image.style.width = `${width}px`;
       image.style.maxWidth = 'none';
     };

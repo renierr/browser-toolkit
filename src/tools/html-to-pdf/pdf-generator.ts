@@ -81,7 +81,9 @@ const getRenderedImageWidths = (editorHost: HTMLElement | null): number[] => {
 
 export const normalizeImagesForPdf = (
   htmlContent: string,
-  editorHost: HTMLElement | null
+  editorHost: HTMLElement | null,
+  pageWidth: number,
+  pageMargin: number
 ): string => {
   const imageWidths = getRenderedImageWidths(editorHost);
   if (!imageWidths.length) {
@@ -119,14 +121,16 @@ export const normalizeImagesForPdf = (
     return htmlContent;
   }
 
+  const pageContentWidth = pageWidth - pageMargin * 2;
+
   images.forEach((image, index) => {
     const widthPercent = imageWidths[index];
     if (!widthPercent) {
       return;
     }
 
-    image.style.width = `${widthPercent.toFixed(2)}%`;
-    image.style.maxWidth = '100%';
+    const widthPt = (widthPercent / 100) * pageContentWidth;
+    image.style.width = `${widthPt.toFixed(2)}pt`;
     image.style.height = 'auto';
     image.removeAttribute('width');
     image.removeAttribute('height');
