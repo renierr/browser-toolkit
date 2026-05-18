@@ -1,4 +1,4 @@
-export type RingtoneType = 'classic' | 'modern' | 'silent';
+export type RingtoneType = 'classic' | 'modern' | 'silent' | 'old-bell';
 
 export interface RingtoneControl {
   stop(): void;
@@ -59,6 +59,74 @@ function scheduleModernChime(ctx: AudioContext, output: AudioNode): void {
   });
 }
 
+function scheduleOldBell(ctx: AudioContext, output: AudioNode): void {
+  const now = ctx.currentTime;
+
+  const scheduleRing = (start: number) => {
+    const dur = 1.5;
+
+    const osc1 = ctx.createOscillator();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(440, start);
+
+    const osc2 = ctx.createOscillator();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(480, start);
+
+    const osc3 = ctx.createOscillator();
+    osc3.type = 'triangle';
+    osc3.frequency.setValueAtTime(440, start);
+
+    const osc4 = ctx.createOscillator();
+    osc4.type = 'sine';
+    osc4.frequency.setValueAtTime(880, start);
+
+    const bellMix = ctx.createGain();
+    bellMix.gain.setValueAtTime(0.5, start);
+    osc1.connect(bellMix);
+    osc2.connect(bellMix);
+    osc3.connect(bellMix);
+    osc4.connect(bellMix);
+
+    const lfo = ctx.createOscillator();
+    lfo.type = 'triangle';
+    lfo.frequency.setValueAtTime(20, start);
+
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.setValueAtTime(0.4, start);
+
+    const tremoloGain = ctx.createGain();
+    tremoloGain.gain.setValueAtTime(0.5, start);
+    lfo.connect(lfoGain);
+    lfoGain.connect(tremoloGain.gain);
+
+    const envelope = ctx.createGain();
+    envelope.gain.setValueAtTime(0, start);
+    envelope.gain.linearRampToValueAtTime(1, start + 0.03);
+    envelope.gain.setValueAtTime(0.9, start + dur - 0.1);
+    envelope.gain.exponentialRampToValueAtTime(0.001, start + dur);
+
+    bellMix.connect(tremoloGain);
+    tremoloGain.connect(envelope);
+    envelope.connect(output);
+
+    const stopT = start + dur + 0.05;
+    lfo.start(start);
+    osc1.start(start);
+    osc2.start(start);
+    osc3.start(start);
+    osc4.start(start);
+    lfo.stop(stopT);
+    osc1.stop(stopT);
+    osc2.stop(stopT);
+    osc3.stop(stopT);
+    osc4.stop(stopT);
+  };
+
+  scheduleRing(now);
+  scheduleRing(now + 1.8);
+}
+
 export function playRingtone(ctx: AudioContext, type: RingtoneType): RingtoneControl {
   let stopped = false;
   let vibrateOn = false;
@@ -80,12 +148,17 @@ export function playRingtone(ctx: AudioContext, type: RingtoneType): RingtoneCon
     patternInterval = window.setInterval(() => {
       if (!stopped) scheduleModernChime(ctx, masterGain);
     }, 4000);
+  } else if (type === 'old-bell') {
+    scheduleOldBell(ctx, masterGain);
+    patternInterval = window.setInterval(() => {
+      if (!stopped) scheduleOldBell(ctx, masterGain);
+    }, 5300);
   }
 
   function startVibration(): void {
     if (!vibrateOn || !navigator.vibrate) return;
-    const pattern = type === 'classic' ? [250, 100, 250, 100, 600] : [150, 100, 150, 100, 300];
-    const loopMs = type === 'classic' ? 5000 : 4000;
+    const pattern = type === 'classic' ? [250, 100, 250, 100, 600] : type === 'modern' ? [150, 100, 150, 100, 300] : [400, 100, 400, 1200];
+    const loopMs = type === 'classic' ? 5000 : type === 'modern' ? 4000 : 5300;
 
     const fire = () => {
       if (!stopped && vibrateOn) navigator.vibrate(pattern);
