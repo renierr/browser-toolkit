@@ -1,7 +1,8 @@
 import { showMessage } from '@js/ui.ts';
+import type { ToolPayload } from '@js/types';
 import { transforms } from './transforms.ts';
 
-export default function init() {
+export default function init(payload?: ToolPayload) {
   const inputText = document.getElementById('input-text') as HTMLTextAreaElement;
   const outputText = document.getElementById('output-text') as HTMLTextAreaElement;
   const transformSelect = document.getElementById('transform-select') as HTMLSelectElement;
@@ -64,6 +65,15 @@ export default function init() {
   btnClear.addEventListener('click', handleClear);
   btnCopy.addEventListener('click', handleCopy);
   btnSwap.addEventListener('click', handleSwap);
+
+  if (payload?.sharedFiles?.length) {
+    const file = payload.sharedFiles[0];
+    file.text().then((text) => {
+      inputText.value = text;
+      updateStats();
+      transform();
+    });
+  }
 
   transform();
 

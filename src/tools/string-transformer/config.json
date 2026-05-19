@@ -3,5 +3,8 @@
   "description": "Convert text between various formats: camelCase, snake_case, kebab-case, PascalCase, URL slugs, Base64, Hex, and decode ad URLs.",
   "icon": "text",
   "sectionId": "utilities",
-  "order": 15
+  "order": 15,
+  "shareTarget": {
+    "accept": ["text/*"]
+  }
 }

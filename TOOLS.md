@@ -249,7 +249,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 
 ### String Transformer (`string-transformer`)
 - Description: Convert text between various formats: camelCase, snake_case, kebab-case, PascalCase, URL slugs, Base64, Hex, and decode ad URLs.
-- Metadata: Order `15`, icon `text`, share target capable `no`, share target accepts `none`.
+- Metadata: Order `15`, icon `text`, share target capable `yes`, share target accepts `text/*`.
 - Source: `src/tools/string-transformer/config.json`
 
 ### Share Debug (`share-debug`)
