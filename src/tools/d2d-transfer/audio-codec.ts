@@ -4,6 +4,8 @@ export const BIT_TIME_MS = 20;
 const BIT_TIME_S = BIT_TIME_MS / 1000;
 const BEACON_BITS = 64;
 const GAP_MS = 300;
+const REPEATS = 3;
+const END_TIMEOUT_MS = 1000;
 
 export const FREQ_MIN = 10000;
 export const FREQ_MAX = 18000;
@@ -32,9 +34,11 @@ export class AudioSender {
   private _active = false;
   private startTime = 0;
   private rafId: number | null = null;
+  private repeatTimer: ReturnType<typeof setTimeout> | null = null;
   private freqSpace = FREQ_DEFAULT;
   private freqMark = FREQ_DEFAULT + FREQ_SPACING;
   private progressCb: ((pct: number) => void) | null = null;
+  private _onComplete: (() => void) | null = null;
 
   get active(): boolean {
     return this._active;
@@ -47,6 +51,9 @@ export class AudioSender {
 
   onProgress(cb: (pct: number) => void): void {
     this.progressCb = cb;
+  }
+  onComplete(cb: () => void): void {
+    this._onComplete = cb;
   }
 
   async start(data: Uint8Array): Promise<void> {
@@ -72,6 +79,8 @@ export class AudioSender {
     if (this.progressCb) this.progressCb(0);
 
     const loopMs = (buf.length / sr) * 1000;
+    const totalMs = loopMs * REPEATS;
+
     const tick = () => {
       if (!this._active) return;
       const elapsed = performance.now() - this.startTime;
@@ -80,10 +89,19 @@ export class AudioSender {
       this.rafId = requestAnimationFrame(tick);
     };
     this.rafId = requestAnimationFrame(tick);
+
+    this.repeatTimer = setTimeout(() => {
+      this.stop();
+      if (this._onComplete) this._onComplete();
+    }, totalMs);
   }
 
   stop(): void {
     this._active = false;
+    if (this.repeatTimer !== null) {
+      clearTimeout(this.repeatTimer);
+      this.repeatTimer = null;
+    }
     if (this.rafId) {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
@@ -147,6 +165,9 @@ export class AudioReceiver {
   private lastSignal = false;
   private freqSpace = FREQ_DEFAULT;
   private freqMark = FREQ_DEFAULT + FREQ_SPACING;
+  private _gotFrame = false;
+  private _frameData: Uint8Array | null = null;
+  private _silentStart: number | null = null;
 
   get active(): boolean {
     return this._active;
@@ -181,6 +202,9 @@ export class AudioReceiver {
       this._active = true;
       this.bitBuffer = [];
       this.lastSignal = false;
+      this._gotFrame = false;
+      this._frameData = null;
+      this._silentStart = null;
 
       const tickMs = Math.ceil(BIT_TIME_MS / 2);
       this.intervalId = window.setInterval(() => this.tick(sr), tickMs);
@@ -205,6 +229,9 @@ export class AudioReceiver {
       this.ctx = null;
     }
     this.analyser = null;
+    this._gotFrame = false;
+    this._frameData = null;
+    this._silentStart = null;
   }
 
   private tick(sr: number): void {
@@ -216,14 +243,27 @@ export class AudioReceiver {
     const eSpace = goertzel(td, this.freqSpace, sr);
     const eMark = goertzel(td, this.freqMark, sr);
     const maxE = Math.max(eSpace, eMark);
-    const threshold = 0.5;
-    const hasSignal = maxE > threshold;
+    const hasSignal = maxE > 0.5;
     const level = Math.min(1, maxE / 10);
 
-    if (hasSignal !== this.lastSignal) {
-      this.lastSignal = hasSignal;
-    }
+    if (hasSignal !== this.lastSignal) this.lastSignal = hasSignal;
     if (this._onSignal) this._onSignal(hasSignal, level);
+
+    if (this._gotFrame) {
+      if (!hasSignal) {
+        if (this._silentStart === null) this._silentStart = performance.now();
+        else if (performance.now() - this._silentStart > END_TIMEOUT_MS) {
+          const data = this._frameData!;
+          this._gotFrame = false;
+          this._frameData = null;
+          this._silentStart = null;
+          if (this._onData) this._onData(data);
+        }
+      } else {
+        this._silentStart = null;
+      }
+      return;
+    }
 
     if (!hasSignal) return;
 
@@ -291,8 +331,10 @@ export class AudioReceiver {
       const decoded = decodeFrame(frameBytes);
       if (decoded) {
         this.bitBuffer = [];
+        this._gotFrame = true;
+        this._frameData = decoded.payload;
+        this._silentStart = null;
         if (this._onSignal) this._onSignal(true, 1);
-        if (this._onData) this._onData(decoded.payload);
         return;
       }
     }

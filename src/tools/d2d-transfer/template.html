@@ -306,7 +306,8 @@
         class="text-xs text-base-content/50 p-3 bg-base-200 rounded-lg"
         id="transfer-instruction"
       >
-        The sender broadcasts continuously. Keep devices close together.
+        Sender auto-stops after 3 passes. Receiver detects end of transmission and shows received
+        data.
       </div>
 
       <button id="btn-cancel-transfer" class="btn btn-error btn-outline w-full">
@@ -318,7 +319,10 @@
     <div id="step-sender-done" class="hidden space-y-4">
       <div class="alert alert-success">
         <i data-lucide="check-circle" class="w-5 h-5"></i>
-        <span>Transmission broadcasting! Receiver should pick it up within one loop cycle.</span>
+        <span
+          >Transmission complete! Data was broadcast 3 times. Receiver should have received
+          it.</span
+        >
       </div>
       <button id="btn-send-another" class="btn btn-outline btn-sm">
         <i data-lucide="refresh" class="w-4 h-4 mr-2"></i> Send Another

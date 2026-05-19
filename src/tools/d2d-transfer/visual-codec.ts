@@ -3,6 +3,8 @@ import { encodeFrame, decodeFrame, HEADER_SIZE, dataToBits, bitsToData } from '.
 export const BIT_TIME_MS = 200;
 const BEACON_BITS = 32;
 const GAP_MS = 500;
+const REPEATS = 3;
+const END_TIMEOUT_MS = 1500;
 
 export class VisualSender {
   private _active = false;
@@ -12,6 +14,7 @@ export class VisualSender {
   private startTime = 0;
   private progressCb: ((pct: number) => void) | null = null;
   private _onCancel: (() => void) | null = null;
+  private _onComplete: (() => void) | null = null;
 
   get active(): boolean {
     return this._active;
@@ -22,6 +25,9 @@ export class VisualSender {
   }
   onCancelRequest(cb: () => void): void {
     this._onCancel = cb;
+  }
+  onComplete(cb: () => void): void {
+    this._onComplete = cb;
   }
 
   start(data: Uint8Array): void {
@@ -39,7 +45,7 @@ export class VisualSender {
     document.body.appendChild(this.overlay);
 
     this.cancelBtn = document.createElement('button');
-    this.cancelBtn.textContent = '✕ Cancel';
+    this.cancelBtn.textContent = '\u2715 Cancel';
     Object.assign(this.cancelBtn.style, {
       position: 'fixed',
       top: '12px',
@@ -66,11 +72,20 @@ export class VisualSender {
     const beaconMs = BEACON_BITS * BIT_TIME_MS;
     const frameMs = bits.length * BIT_TIME_MS;
     const loopMs = beaconMs + frameMs + GAP_MS;
+    const totalMs = loopMs * REPEATS;
 
     const render = () => {
       if (!this._active) return;
-      const elapsed = (performance.now() - this.startTime) % loopMs;
-      let remaining = elapsed;
+      const elapsed = performance.now() - this.startTime;
+
+      if (elapsed >= totalMs) {
+        this.stop();
+        if (this._onComplete) this._onComplete();
+        return;
+      }
+
+      const t = elapsed % loopMs;
+      let remaining = t;
       let showing = false;
 
       if (remaining < beaconMs) {
@@ -96,8 +111,7 @@ export class VisualSender {
         this.overlay.style.backgroundColor = 'transparent';
       }
 
-      const loopPct = (elapsed % loopMs) / loopMs;
-      if (this.progressCb) this.progressCb(Math.min(1, loopPct * 2));
+      if (this.progressCb) this.progressCb(Math.min(1, elapsed / (totalMs * 0.8)));
 
       this.rafId = requestAnimationFrame(render);
     };
@@ -133,6 +147,9 @@ export class VisualReceiver {
   private bitBuffer: number[] = [];
   private lastSampleTime = 0;
   private brightnessBaseline = 128;
+  private _gotFrame = false;
+  private _frameData: Uint8Array | null = null;
+  private _silentStart: number | null = null;
 
   get active(): boolean {
     return this._active;
@@ -173,6 +190,9 @@ export class VisualReceiver {
       this.bitBuffer = [];
       this.lastSampleTime = performance.now();
       this.brightnessBaseline = 128;
+      this._gotFrame = false;
+      this._frameData = null;
+      this._silentStart = null;
 
       const loop = () => {
         if (!this._active) return;
@@ -202,6 +222,9 @@ export class VisualReceiver {
     }
     this.canvas = null;
     this.ctx = null;
+    this._gotFrame = false;
+    this._frameData = null;
+    this._silentStart = null;
   }
 
   private processFrame(): void {
@@ -224,7 +247,26 @@ export class VisualReceiver {
 
     const delta = brightness - this.brightnessBaseline;
     const absDelta = Math.abs(delta);
-    if (this._onSignal) this._onSignal(absDelta > 15, Math.min(1, absDelta / 80));
+    const hasSignal = absDelta > 15;
+    const level = Math.min(1, absDelta / 80);
+
+    if (this._onSignal) this._onSignal(hasSignal, level);
+
+    if (this._gotFrame) {
+      if (!hasSignal) {
+        if (this._silentStart === null) this._silentStart = performance.now();
+        else if (performance.now() - this._silentStart > END_TIMEOUT_MS) {
+          const data = this._frameData!;
+          this._gotFrame = false;
+          this._frameData = null;
+          this._silentStart = null;
+          if (this._onData) this._onData(data);
+        }
+      } else {
+        this._silentStart = null;
+      }
+      return;
+    }
 
     if (absDelta < 15) return;
 
@@ -284,8 +326,10 @@ export class VisualReceiver {
       const d = decodeFrame(fb);
       if (d) {
         this.bitBuffer = [];
+        this._gotFrame = true;
+        this._frameData = d.payload;
+        this._silentStart = null;
         if (this._onSignal) this._onSignal(true, 1);
-        if (this._onData) this._onData(d.payload);
         return;
       }
     }

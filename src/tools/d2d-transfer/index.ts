@@ -1,5 +1,6 @@
 import { setupFileDropzone } from '@js/file-utils.ts';
 import { showMessage } from '@js/ui.ts';
+import { acquireWakeLock } from '@js/utils';
 import { AudioSender, AudioReceiver, BIT_TIME_MS as AUDIO_BIT, FREQ_DEFAULT } from './audio-codec';
 import { VisualSender, VisualReceiver, BIT_TIME_MS as VISUAL_BIT } from './visual-codec';
 import { TransferStore } from './transfer-store';
@@ -47,6 +48,7 @@ export default function init() {
 
   let freqBase = FREQ_DEFAULT;
   let sendTimer: ReturnType<typeof setInterval> | null = null;
+  let releaseWakeLock: (() => void) | null = null;
 
   function show(id: string): void {
     const all = [
@@ -104,7 +106,7 @@ export default function init() {
         fmtDur(aMs) +
         ' via Sound &middot; ~' +
         fmtDur(vMs) +
-        ' via Light (repeats continuously)';
+        ' via Light (auto-stops after 3 loops)';
     } else {
       els.senderEstimate.classList.add('hidden');
     }
@@ -297,7 +299,7 @@ export default function init() {
             if (type.startsWith('image/')) {
               const blob = await item.getType(type);
               pendingFile = new File([blob], 'clipboard.' + (type.split('/')[1] || 'png'), {
-                type: type,
+                type,
               });
               isFile = true;
               refillSender();
@@ -307,7 +309,7 @@ export default function init() {
         }
       }
       setStatus('Clipboard empty or not accessible');
-    } catch (_e) {
+    } catch {
       setStatus('Cannot read clipboard');
     }
   }
@@ -316,7 +318,7 @@ export default function init() {
     if (isFile && pendingFile) {
       try {
         return await loadFile(pendingFile);
-      } catch (_e) {
+      } catch {
         showMessage('Failed to read file', { type: 'alert' });
         return null;
       }
@@ -346,15 +348,17 @@ export default function init() {
     hideStatus();
     show('step-transfer');
     els.transferStatus.textContent =
-      'Broadcasting via ' + (m === 'audio' ? 'Sound' : 'Light') + ' (continuous loop)...';
+      'Broadcasting via ' + (m === 'audio' ? 'Sound' : 'Light') + ' (3 passes)...';
     els.transferTotal.textContent = fmtBytes(total);
     els.transferMethod.textContent = m === 'audio' ? 'Sound' : 'Light';
     els.transferProgressBar.style.width = '0%';
     els.transferSent.textContent = '0';
     els.transferInstruction.textContent =
       m === 'audio'
-        ? 'Sender broadcasts continuously. Place receiver mic near laptop speaker. Adjust frequency slider lower if no signal detected.'
-        : 'Sender flashes continuously. Point receiver camera at this screen. Use fullscreen (F11).';
+        ? 'Sender broadcasts 3 passes then auto-stops. Place receiver mic near laptop speaker.'
+        : 'Sender flashes 3 passes then auto-stops. Point receiver camera at this screen.';
+
+    releaseWakeLock = acquireWakeLock();
 
     const start = performance.now();
 
@@ -365,10 +369,18 @@ export default function init() {
       els.transferElapsed.textContent = fmtDur(performance.now() - start);
     }
 
+    function onDone(): void {
+      cleanupSend();
+      els.transferProgressBar.style.width = '100%';
+      els.transferSent.textContent = fmtBytes(total);
+      show('step-sender-done');
+    }
+
     if (m === 'audio') {
       audioSender = new AudioSender();
       audioSender.setFrequency(freqBase);
       audioSender.onProgress(onP);
+      audioSender.onComplete(onDone);
       audioSender.start(data).catch(function () {
         setStatus('Failed to start audio');
         cleanupSend();
@@ -376,6 +388,7 @@ export default function init() {
     } else {
       visualSender = new VisualSender();
       visualSender.onProgress(onP);
+      visualSender.onComplete(onDone);
       visualSender.onCancelRequest(function () {
         visualSender?.stop();
         cleanupSend();
@@ -402,6 +415,8 @@ export default function init() {
     btn('btn-listen').querySelector('span')!.textContent = 'Listening...';
     rxSignal('audio', false, 0);
 
+    releaseWakeLock = acquireWakeLock();
+
     audioReceiver = new AudioReceiver();
     audioReceiver.setFrequency((parseInt(rxSlider.value) || 12) * 1000);
 
@@ -426,6 +441,8 @@ export default function init() {
     el('receiver-camera').classList.remove('hidden');
     el('camera-placeholder').classList.add('hidden');
     rxSignal('visual', false, 0);
+
+    releaseWakeLock = acquireWakeLock();
 
     visualReceiver = new VisualReceiver();
     visualReceiver.setVideoElement(els.receiverCamera);
@@ -541,6 +558,10 @@ export default function init() {
       visualSender.stop();
       visualSender = null;
     }
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+    }
   }
 
   function cleanupRcv(): void {
@@ -558,6 +579,10 @@ export default function init() {
     btn('btn-listen').querySelector('span')!.textContent = 'Listen via Microphone';
     btn('btn-watch').disabled = false;
     btn('btn-watch').querySelector('span')!.textContent = 'Watch via Camera';
+    if (releaseWakeLock) {
+      releaseWakeLock();
+      releaseWakeLock = null;
+    }
   }
 
   function cleanupAll(): void {
