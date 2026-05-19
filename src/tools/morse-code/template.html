@@ -145,5 +145,22 @@
     </div>
 
     <div id="status" class="mt-4 text-sm text-base-content/60 text-center"></div>
+
+    <div class="divider mt-8">Live Listen</div>
+
+    <div class="flex items-center justify-center gap-3 mt-4">
+      <button id="btn-live-start" class="btn btn-success">
+        <i data-lucide="mic" class="w-4 h-4 mr-2"></i>
+        Start Listening
+      </button>
+      <button id="btn-live-stop" class="btn btn-outline btn-error hidden">
+        <i data-lucide="square" class="w-4 h-4 mr-2"></i>
+        Stop
+      </button>
+      <span id="live-status" class="text-sm text-base-content/60 hidden items-center gap-2">
+        <span class="loading loading-dots loading-sm"></span>
+        Listening...
+      </span>
+    </div>
   </div>
 </div>

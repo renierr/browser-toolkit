@@ -9,6 +9,15 @@ import type { ToolPayload } from '@js/types';
 
 let currentAbortController: AbortController | null = null;
 let isPlaying = false;
+let liveWorker: Worker | null = null;
+let liveStream: MediaStream | null = null;
+let liveAudioCtx: AudioContext | null = null;
+let liveSourceNode: MediaStreamAudioSourceNode | null = null;
+let liveProcessor: ScriptProcessorNode | null = null;
+let liveChunks: Float32Array[] = [];
+let liveDecodeTimer: number | null = null;
+let isListening = false;
+let liveDecodeId = 0;
 
 function wpmToUnitMs(wpm: number): number {
   // Standard: "PARIS" = 50 units -> 1200 / WPM = duration of one unit
@@ -102,6 +111,113 @@ async function playMorse(
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+function stopLiveListen() {
+  isListening = false;
+
+  if (liveDecodeTimer) {
+    clearInterval(liveDecodeTimer);
+    liveDecodeTimer = null;
+  }
+  if (liveProcessor) {
+    liveProcessor.disconnect();
+    liveProcessor = null;
+  }
+  if (liveSourceNode) {
+    liveSourceNode.disconnect();
+    liveSourceNode = null;
+  }
+  if (liveStream) {
+    liveStream.getTracks().forEach((t) => t.stop());
+    liveStream = null;
+  }
+  if (liveAudioCtx) {
+    liveAudioCtx.close();
+    liveAudioCtx = null;
+  }
+  if (liveWorker) {
+    liveWorker.terminate();
+    liveWorker = null;
+  }
+  liveChunks = [];
+
+  document.getElementById('btn-live-start')?.classList.remove('hidden');
+  document.getElementById('btn-live-stop')?.classList.add('hidden');
+  document.getElementById('live-status')?.classList.add('hidden');
+}
+
+async function startLiveListen() {
+  if (isListening) return;
+
+  const inputEl = document.getElementById('input-text') as HTMLTextAreaElement;
+  const outputMorseEl = document.getElementById('output-morse') as HTMLDivElement;
+  inputEl.value = '';
+  outputMorseEl.innerHTML = '';
+
+  try {
+    liveStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    liveAudioCtx = new AudioContext();
+    liveSourceNode = liveAudioCtx.createMediaStreamSource(liveStream);
+    liveProcessor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
+
+    liveProcessor.onaudioprocess = (e: AudioProcessingEvent) => {
+      const inputData = e.inputBuffer.getChannelData(0);
+      liveChunks.push(new Float32Array(inputData));
+    };
+
+    liveSourceNode.connect(liveProcessor);
+
+    liveWorker = new DecodeWorker();
+    liveWorker.addEventListener('message', (ev: MessageEvent<WorkerOutMessage>) => {
+      const m = ev.data;
+      if (m.type !== 'decode-result') return;
+
+      const el = document.getElementById('input-text') as HTMLTextAreaElement | null;
+      if (!el) return;
+
+      if (m.text) {
+        el.value = m.text;
+        const out = document.getElementById('output-morse') as HTMLDivElement | null;
+        if (out) out.innerHTML = textToMorseHtml(m.text);
+      } else if (m.reason) {
+        console.warn('Live decode warning:', m.reason);
+      }
+    });
+
+    liveDecodeTimer = window.setInterval(() => {
+      if (liveChunks.length === 0) return;
+
+      const totalSamples = liveChunks.reduce((sum, c) => sum + c.length, 0);
+      const combined = new Float32Array(totalSamples);
+      let offset = 0;
+      for (const chunk of liveChunks) {
+        combined.set(chunk, offset);
+        offset += chunk.length;
+      }
+
+      const id = ++liveDecodeId;
+      const msg = {
+        type: 'decode-pcm' as const,
+        id,
+        audio: combined,
+        sampleRate: liveAudioCtx!.sampleRate,
+      };
+      liveWorker?.postMessage(msg, [combined.buffer]);
+    }, 2000);
+
+    isListening = true;
+
+    document.getElementById('btn-live-start')?.classList.add('hidden');
+    document.getElementById('btn-live-stop')?.classList.remove('hidden');
+    document.getElementById('live-status')?.classList.remove('hidden');
+  } catch (err) {
+    console.error('Failed to start live listen:', err);
+    showMessage('Could not access microphone. Please ensure you have granted permission.', {
+      type: 'alert',
+    });
+    stopLiveListen();
+  }
 }
 
 // noinspection JSUnusedGlobalSymbols
@@ -202,6 +318,12 @@ export default function init(payload?: ToolPayload) {
     currentAbortController?.abort();
     currentAbortController = null;
   });
+
+  const btnLiveStart = document.getElementById('btn-live-start') as HTMLButtonElement;
+  const btnLiveStop = document.getElementById('btn-live-stop') as HTMLButtonElement;
+
+  btnLiveStart.addEventListener('click', startLiveListen);
+  btnLiveStop.addEventListener('click', stopLiveListen);
 
   btnExport.addEventListener('click', async () => {
     const text = input.value.trim();
@@ -310,6 +432,7 @@ export default function init(payload?: ToolPayload) {
 
   return () => {
     if (currentAbortController) currentAbortController.abort();
+    stopLiveListen();
     flashIndicator = null;
   };
 }
