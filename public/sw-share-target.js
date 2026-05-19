@@ -119,39 +119,29 @@ function getMimeTypeFromFileName(mime, fileName) {
   return mime || 'application/octet-stream';
 }
 
+const DB_NAME = 'bt_shared_v1';
+const STORE_NAME = 'files';
+const DB_VERSION = 1;
+
 function openDb() {
   return new Promise((resolve, reject) => {
-    const DB_NAME = 'shared-db';
-    const STORE_NAME = 'files';
-    const DB_VERSION = 11; // Increment version
-
     const req = indexedDB.open(DB_NAME, DB_VERSION);
-    
-    req.onupgradeneeded = (event) => {
+    req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
     };
-
     req.onsuccess = () => {
       const db = req.result;
-      // Defensive check: if store is STILL missing, we need to recreate
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.close();
-        const deleteReq = indexedDB.deleteDatabase(DB_NAME);
-        deleteReq.onsuccess = () => {
-          // Re-attempt opening (this will trigger upgradeneeded again)
-          openDb().then(resolve).catch(reject);
-        };
-        deleteReq.onerror = () => reject(new Error('Failed to recreate corrupted IDB'));
-        return;
-      }
+      db.onversionchange = () => db.close();
       resolve(db);
     };
-
     req.onerror = () => reject(req.error);
-    req.onblocked = () => console.warn('IDB open blocked');
+    req.onblocked = () => {
+      console.warn('IDB open blocked');
+      reject(new Error('IDB blocked'));
+    };
   });
 }
 
@@ -159,13 +149,23 @@ async function idbPut(key, value) {
   const db = await openDb();
   return new Promise((res, rej) => {
     try {
-      const tx = db.transaction('files', 'readwrite');
-      const store = tx.objectStore('files');
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
       store.put(value, key);
-      tx.oncomplete = () => res();
-      tx.onerror = () => rej(tx.error);
-      tx.onabort = () => rej(new Error('Transaction aborted'));
+      tx.oncomplete = () => {
+        db.close();
+        res();
+      };
+      tx.onerror = () => {
+        db.close();
+        rej(tx.error);
+      };
+      tx.onabort = () => {
+        db.close();
+        rej(new Error('Transaction aborted'));
+      };
     } catch (e) {
+      db.close();
       rej(e);
     }
   });
@@ -193,7 +193,7 @@ self.addEventListener('fetch', (event) => {
         try {
           form = await req.formData();
         } catch (err) {
-          redirectUrl.searchParams.set('sw_error', String(err));
+          redirectUrl.searchParams.set('sw_error', 'formData failed: ' + String(err));
           return Response.redirect(redirectUrl.href, 303);
         }
 
@@ -201,6 +201,7 @@ self.addEventListener('fetch', (event) => {
         const mimeTypes = [];
         const fileNames = [];
 
+        // 1. Process Files
         const blobs = Array.from(form.entries())
           .filter(([, value]) => value instanceof Blob)
           .map(([, value]) => value);
@@ -214,6 +215,7 @@ self.addEventListener('fetch', (event) => {
           fileNames.push(f.name || '');
         }
 
+        // 2. Process Text/URL
         const textValue = form.get('text');
         const titleValue = form.get('title');
         const urlValue = form.get('url');
@@ -243,13 +245,15 @@ self.addEventListener('fetch', (event) => {
           fileNames.push(fileName);
         }
 
-        redirectUrl.searchParams.set('keys', keys.join(','));
-        redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
-        redirectUrl.searchParams.set('names', fileNames.join(','));
+        if (keys.length > 0) {
+          redirectUrl.searchParams.set('keys', keys.join(','));
+          redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
+          redirectUrl.searchParams.set('names', fileNames.join(','));
+        }
 
         return Response.redirect(redirectUrl.href, 303);
       } catch (err) {
-        redirectUrl.searchParams.set('sw_error', String(err));
+        redirectUrl.searchParams.set('sw_error', 'idb failed: ' + String(err));
         return Response.redirect(redirectUrl.href, 303);
       }
     })()

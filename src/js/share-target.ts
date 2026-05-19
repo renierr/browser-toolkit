@@ -1,12 +1,12 @@
 import type { Tool } from './types';
 import { getMimeTypeFromFileName } from './mime-types';
 
+const DB_NAME = 'bt_shared_v1';
+const STORE_NAME = 'files';
+const DB_VERSION = 1;
+
 function openDbClient(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const DB_NAME = 'shared-db';
-    const STORE_NAME = 'files';
-    const DB_VERSION = 11;
-
     const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
@@ -16,19 +16,14 @@ function openDbClient(): Promise<IDBDatabase> {
     };
     req.onsuccess = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.close();
-        const deleteReq = indexedDB.deleteDatabase(DB_NAME);
-        deleteReq.onsuccess = () => {
-          openDbClient().then(resolve).catch(reject);
-        };
-        deleteReq.onerror = () => reject(new Error('Failed to recreate corrupted IDB'));
-        return;
-      }
+      db.onversionchange = () => db.close();
       resolve(db);
     };
     req.onerror = () => reject(req.error);
-    req.onblocked = () => console.warn('IDB open blocked');
+    req.onblocked = () => {
+      console.warn('IDB open blocked');
+      reject(new Error('IDB blocked'));
+    };
   });
 }
 
@@ -36,12 +31,19 @@ async function idbGet(key: string): Promise<File | Blob | undefined> {
   const db = await openDbClient();
   return new Promise((res, rej) => {
     try {
-      const tx = db.transaction('files', 'readonly');
-      const store = tx.objectStore('files');
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const store = tx.objectStore(STORE_NAME);
       const r = store.get(key);
-      r.onsuccess = () => res(r.result);
-      r.onerror = () => rej(r.error);
+      r.onsuccess = () => {
+        db.close();
+        res(r.result);
+      };
+      r.onerror = () => {
+        db.close();
+        rej(r.error);
+      };
     } catch (e) {
+      db.close();
       rej(e);
     }
   });
@@ -51,23 +53,32 @@ async function idbDelete(key: string): Promise<void> {
   const db = await openDbClient();
   return new Promise((res, rej) => {
     try {
-      const tx = db.transaction('files', 'readwrite');
-      const store = tx.objectStore('files');
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
       store.delete(key);
-      tx.oncomplete = () => res();
-      tx.onerror = () => rej(tx.error);
+      tx.oncomplete = () => {
+        db.close();
+        res();
+      };
+      tx.onerror = () => {
+        db.close();
+        rej(tx.error);
+      };
     } catch (e) {
+      db.close();
       rej(e);
     }
   });
 }
 
 export async function cleanupOldSharedFiles(): Promise<void> {
+  let db: IDBDatabase | null = null;
   try {
-    const db = await openDbClient();
+    db = await openDbClient();
     return new Promise((resolve, reject) => {
-      const tx = db.transaction('files', 'readwrite');
-      const store = tx.objectStore('files');
+      if (!db) return reject(new Error('DB not opened'));
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      const store = tx.objectStore(STORE_NAME);
       const req = store.getAllKeys();
 
       req.onsuccess = () => {
@@ -83,12 +94,19 @@ export async function cleanupOldSharedFiles(): Promise<void> {
             store.delete(key);
           }
         }
-        resolve();
+        tx.oncomplete = () => {
+          db?.close();
+          resolve();
+        };
       };
 
-      req.onerror = () => reject(req.error);
+      req.onerror = () => {
+        db?.close();
+        reject(req.error);
+      };
     });
   } catch (e) {
+    db?.close();
     console.warn('Cleanup shared files failed', e);
   }
 }
