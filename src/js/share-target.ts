@@ -92,14 +92,21 @@ export function getSharedContentInfo(): SharedContent | null | string {
   const mimesParam = params.get('mimes');
   const namesParam = params.get('names');
   const errorParam = params.get('sw_error');
+  const textContent = params.get('text_content');
 
   if (errorParam !== null) return errorParam;
 
-  if (!keysParam) return null;
-
-  const keys = keysParam.split(',').filter(Boolean);
+  const keys = keysParam ? keysParam.split(',').filter(Boolean) : [];
   const mimes = mimesParam?.split(',') ?? [];
   const fileNames = namesParam?.split(',').filter(Boolean) ?? [];
+
+  if (textContent) {
+    keys.push(`inline-${Date.now()}`);
+    mimes.push(params.get('text_mime') || 'text/plain');
+    fileNames.push(params.get('text_name') || 'shared-text.txt');
+  }
+
+  if (keys.length === 0) return null;
 
   const mimeTypes = mimes.map((mime, i) => getMimeTypeFromFileName(mime, fileNames[i] ?? ''));
 
@@ -112,6 +119,8 @@ export function getSharedContentInfo(): SharedContent | null | string {
 
 export async function loadSharedFiles(keys: string[]): Promise<File[]> {
   const files: File[] = [];
+  const params = new URLSearchParams(location.search);
+  const textContent = params.get('text_content');
 
   const timeoutMs = 5000;
   const timeoutPromise = new Promise<'timeout'>((resolve) =>
@@ -119,6 +128,13 @@ export async function loadSharedFiles(keys: string[]): Promise<File[]> {
   );
 
   for (const key of keys) {
+    if (key.startsWith('inline-') && textContent) {
+      const name = params.get('text_name') || 'shared-text.txt';
+      const mime = params.get('text_mime') || 'text/plain';
+      files.push(new File([textContent], name, { type: mime }));
+      continue;
+    }
+
     try {
       const result = await Promise.race([idbGet(key), timeoutPromise]);
       if (result === 'timeout') {
@@ -150,6 +166,9 @@ export function clearSharedParams(): void {
   url.searchParams.delete('mimes');
   url.searchParams.delete('names');
   url.searchParams.delete('sw_error');
+  url.searchParams.delete('text_content');
+  url.searchParams.delete('text_mime');
+  url.searchParams.delete('text_name');
   history.replaceState(null, '', url.href);
 }
 

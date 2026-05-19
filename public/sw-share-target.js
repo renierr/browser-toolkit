@@ -216,16 +216,25 @@ self.addEventListener('fetch', (event) => {
             ? titleValue.trim()
             : 'shared-text.txt';
         const mime = getMimeTypeFromFileName('', fileName);
-        const blob = new Blob([textContent], { type: mime });
-        const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
-        try {
-          await idbPut(key, blob);
-          keys.push(key);
-          mimeTypes.push(mime);
-          fileNames.push(fileName);
-        } catch (err) {
-          const errMsg = encodeURIComponent(String(err));
-          return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
+
+        if (keys.length === 0) {
+          // No file blobs — pass text directly in URL params, bypass IDB
+          redirectUrl.searchParams.set('text_content', textContent);
+          redirectUrl.searchParams.set('text_mime', mime);
+          redirectUrl.searchParams.set('text_name', fileName);
+        } else {
+          // File blobs stored in IDB already — store text alongside them
+          const blob = new Blob([textContent], { type: mime });
+          const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
+          try {
+            await idbPut(key, blob);
+            keys.push(key);
+            mimeTypes.push(mime);
+            fileNames.push(fileName);
+          } catch (err) {
+            const errMsg = encodeURIComponent(String(err));
+            return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
+          }
         }
       }
 
