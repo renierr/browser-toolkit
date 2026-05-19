@@ -1,181 +1,237 @@
 <div class="card bg-base-100 shadow-xl">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">Code Formatter</h2>
-    <p class="text-base-content/70 mb-6">
-      Format, minify, and highlight code and data formats. Export highlighted code as image.
-    </p>
-
-    <!-- Upload Section -->
-    <div
-      id="dropzone"
-      class="mt-4 flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40 group hover:bg-base-300"
-    >
+    <!-- ===== LANDING ===== -->
+    <div id="landing-view">
+      <h2 class="card-title text-2xl font-bold mb-4">Code Formatter</h2>
+      <p class="text-base-content/70 mb-6">
+        Format, minify, and highlight code and data formats. Export highlighted code as image.
+      </p>
       <div
-        class="flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105"
+        id="dropzone"
+        class="flex items-center justify-center border-2 border-dashed rounded-lg cursor-pointer bg-base-200 dark:bg-gray-800 dark:border-gray-600 transition-colors p-3 min-h-40 group hover:bg-base-300"
       >
-        <div class="text-base-content/30 text-4xl">
-          <i data-lucide="upload-cloud"></i>
+        <div
+          class="flex flex-col items-center gap-2 text-center transition-transform group-hover:scale-105"
+        >
+          <div class="text-base-content/30 text-4xl">
+            <i data-lucide="upload-cloud"></i>
+          </div>
+          <p class="text-lg font-medium">Click or drag file here</p>
+          <p class="text-sm text-base-content/50">Supports text files</p>
         </div>
-        <p class="text-lg font-medium">Click or drag file here</p>
-        <p class="text-sm text-base-content/50">Supports text files</p>
+        <input type="file" id="file-input" class="hidden" />
       </div>
-      <input type="file" id="file-input" class="hidden" />
+      <div class="divider my-4 text-base-content/50">or</div>
+      <div class="text-center">
+        <button id="btn-open-editor" class="btn btn-outline btn-lg">
+          <i data-lucide="keyboard" class="w-5 h-5"></i>
+          Paste code manually
+        </button>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <div class="form-control w-full">
-        <div class="flex items-center justify-between mb-2 flex-wrap">
-          <label class="label py-0" for="code-input">
-            <span class="label-text font-semibold">Input</span>
-          </label>
-          <div class="flex items-center gap-2">
-            <span id="detected-format" class="badge badge-ghost badge-sm hidden"></span>
-            <select id="format-select" class="select select-bordered select-sm">
-              <option value="auto" selected>Auto Detect</option>
-              <option value="text">Plain Text</option>
-              <optgroup label="Data Formats">
-                <option value="json">JSON</option>
-                <option value="json5">JSON5</option>
-                <option value="xml">XML</option>
-                <option value="yaml">YAML</option>
-                <option value="toml">TOML</option>
-                <option value="ini">INI</option>
-              </optgroup>
-              <optgroup label="Web Languages">
-                <option value="html">HTML</option>
-                <option value="vue">Vue</option>
-                <option value="angular">Angular</option>
-                <option value="css">CSS</option>
-                <option value="scss">SCSS</option>
-                <option value="less">LESS</option>
-                <option value="javascript">JavaScript</option>
-                <option value="typescript">TypeScript</option>
-              </optgroup>
-              <optgroup label="Backend Languages">
-                <option value="python">Python</option>
-                <option value="ruby">Ruby</option>
-                <option value="php">PHP</option>
-                <option value="java">Java</option>
-                <option value="csharp">C#</option>
-                <option value="go">Go</option>
-                <option value="rust">Rust</option>
-              </optgroup>
-              <optgroup label="Systems Languages">
-                <option value="c">C</option>
-                <option value="cpp">C++</option>
-                <option value="swift">Swift</option>
-                <option value="kotlin">Kotlin</option>
-              </optgroup>
-              <optgroup label="Shell &amp; Config">
-                <option value="bash">Bash</option>
-                <option value="powershell">PowerShell</option>
-                <option value="dockerfile">Dockerfile</option>
-              </optgroup>
-              <optgroup label="Other">
-                <option value="sql">SQL</option>
-                <option value="graphql">GraphQL</option>
-                <option value="markdown">Markdown</option>
-                <option value="mdx">MDX</option>
-              </optgroup>
-            </select>
-          </div>
+    <!-- ===== VIEWER ===== -->
+    <div id="viewer-view" class="hidden space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <span id="viewer-filename" class="badge badge-ghost font-mono hidden"></span>
+          <span id="viewer-format-badge" class="badge badge-primary hidden"></span>
         </div>
-        <textarea
-          id="code-input"
-          class="textarea textarea-bordered h-72 font-mono text-sm w-full"
-          placeholder="Paste your code here..."
-          spellcheck="false"
-        ></textarea>
+        <div class="flex items-center gap-2">
+          <select id="viewer-theme" class="select select-bordered select-sm">
+            <option value="github-dark">GitHub Dark</option>
+            <option value="github-light">GitHub Light</option>
+            <option value="dracula" selected>Dracula</option>
+            <option value="nord">Nord</option>
+            <option value="one-dark-pro">One Dark Pro</option>
+            <option value="vitesse-dark">Vitesse Dark</option>
+            <option value="vitesse-light">Vitesse Light</option>
+            <option value="min-dark">Min Dark</option>
+            <option value="min-light">Min Light</option>
+          </select>
+          <button id="btn-switch-editor" class="btn btn-ghost btn-sm">
+            <i data-lucide="edit" class="w-4 h-4"></i>
+            Edit
+          </button>
+          <button id="btn-viewer-copy" class="btn btn-outline btn-sm">Copy</button>
+          <button id="btn-viewer-export-clipboard" class="btn btn-outline btn-sm">
+            Copy Image
+          </button>
+          <button id="btn-viewer-export-file" class="btn btn-primary btn-sm">Download PNG</button>
+          <button id="btn-close-viewer" class="btn btn-ghost btn-sm btn-square">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+      <div
+        id="viewer-output"
+        class="h-[75vh] font-mono text-sm bg-base-200 w-full border rounded-lg overflow-auto p-3"
+      >
+        <pre id="viewer-output-pre" class="h-full m-0"><code id="viewer-output-code"></code></pre>
+      </div>
+    </div>
+
+    <!-- ===== EDITOR ===== -->
+    <div id="editor-view" class="hidden space-y-4">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <select id="format-select" class="select select-bordered select-sm">
+            <option value="auto" selected>Auto Detect</option>
+            <option value="text">Plain Text</option>
+            <optgroup label="Data Formats">
+              <option value="json">JSON</option>
+              <option value="json5">JSON5</option>
+              <option value="xml">XML</option>
+              <option value="yaml">YAML</option>
+              <option value="toml">TOML</option>
+              <option value="ini">INI</option>
+            </optgroup>
+            <optgroup label="Web Languages">
+              <option value="html">HTML</option>
+              <option value="vue">Vue</option>
+              <option value="angular">Angular</option>
+              <option value="css">CSS</option>
+              <option value="scss">SCSS</option>
+              <option value="less">LESS</option>
+              <option value="javascript">JavaScript</option>
+              <option value="typescript">TypeScript</option>
+            </optgroup>
+            <optgroup label="Backend Languages">
+              <option value="python">Python</option>
+              <option value="ruby">Ruby</option>
+              <option value="php">PHP</option>
+              <option value="java">Java</option>
+              <option value="csharp">C#</option>
+              <option value="go">Go</option>
+              <option value="rust">Rust</option>
+            </optgroup>
+            <optgroup label="Systems Languages">
+              <option value="c">C</option>
+              <option value="cpp">C++</option>
+              <option value="swift">Swift</option>
+              <option value="kotlin">Kotlin</option>
+            </optgroup>
+            <optgroup label="Shell &amp; Config">
+              <option value="bash">Bash</option>
+              <option value="powershell">PowerShell</option>
+              <option value="dockerfile">Dockerfile</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option value="sql">SQL</option>
+              <option value="graphql">GraphQL</option>
+              <option value="markdown">Markdown</option>
+              <option value="mdx">MDX</option>
+            </optgroup>
+          </select>
+          <span id="detected-format" class="badge badge-ghost badge-sm hidden"></span>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="theme-select" class="select select-bordered select-sm">
+            <option value="github-dark">GitHub Dark</option>
+            <option value="github-light">GitHub Light</option>
+            <option value="dracula" selected>Dracula</option>
+            <option value="nord">Nord</option>
+            <option value="one-dark-pro">One Dark Pro</option>
+            <option value="vitesse-dark">Vitesse Dark</option>
+            <option value="vitesse-light">Vitesse Light</option>
+            <option value="min-dark">Min Dark</option>
+            <option value="min-light">Min Light</option>
+          </select>
+          <button id="btn-switch-viewer" class="btn btn-ghost btn-sm">
+            <i data-lucide="eye" class="w-4 h-4"></i>
+            Viewer
+          </button>
+        </div>
       </div>
 
-      <div class="form-control w-full">
-        <div class="flex items-center justify-between mb-2 flex-wrap">
-          <label class="label mb-1" for="code-output">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="form-control w-full">
+          <div class="flex items-center justify-between mb-2">
+            <label class="label py-0" for="code-input">
+              <span class="label-text font-semibold">Input</span>
+            </label>
+          </div>
+          <textarea
+            id="code-input"
+            class="textarea textarea-bordered h-72 font-mono text-sm w-full"
+            placeholder="Paste your code here..."
+            spellcheck="false"
+          ></textarea>
+        </div>
+
+        <div class="form-control w-full">
+          <label class="label mb-1" for="editor-output">
             <span class="label-text font-semibold">Output (Highlighted)</span>
           </label>
-
-          <div class="flex items-center gap-2">
-            <label class="label py-0" for="theme-select">
-              <span class="label-text text-xs">Theme</span>
-            </label>
-            <select id="theme-select" class="select select-bordered select-sm w-full">
-              <option value="github-dark">GitHub Dark</option>
-              <option value="github-light">GitHub Light</option>
-              <option value="dracula" selected>Dracula</option>
-              <option value="nord">Nord</option>
-              <option value="one-dark-pro">One Dark Pro</option>
-              <option value="vitesse-dark">Vitesse Dark</option>
-              <option value="vitesse-light">Vitesse Light</option>
-              <option value="min-dark">Min Dark</option>
-              <option value="min-light">Min Light</option>
-            </select>
+          <div
+            id="editor-output"
+            class="h-72 font-mono text-sm bg-base-200 w-full border rounded-lg overflow-auto p-3"
+          >
+            <pre
+              id="editor-output-pre"
+              class="h-full m-0"
+            ><code id="editor-output-code"></code></pre>
           </div>
         </div>
-        <div
-          id="code-output"
-          class="h-72 font-mono text-sm bg-base-200 w-full border rounded-lg overflow-auto p-3"
-        >
-          <pre id="code-output-pre" class=""><code id="code-output-code"></code></pre>
+      </div>
+
+      <div class="card-actions justify-center mt-6 gap-2 flex-wrap">
+        <button id="btn-format" class="btn btn-primary flex-1 sm:flex-none">
+          <i data-lucide="align-left" class="w-4 h-4 mr-2"></i>
+          Format
+        </button>
+        <button id="btn-minify" class="btn btn-secondary flex-1 sm:flex-none">
+          <i data-lucide="minimize" class="w-4 h-4 mr-2"></i>
+          Minify
+        </button>
+        <button id="btn-copy" class="btn btn-outline flex-1 sm:flex-none">
+          <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
+          Copy Text
+        </button>
+        <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
+      </div>
+
+      <div class="divider my-4">Export as Image</div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div class="form-control">
+          <label class="label py-0" for="export-font-size">
+            <span class="label-text text-xs">Font Size</span>
+          </label>
+          <input
+            type="number"
+            id="export-font-size"
+            value="14"
+            min="8"
+            max="32"
+            class="input input-bordered input-sm w-full"
+          />
+        </div>
+        <div class="form-control">
+          <label class="label py-0" for="export-padding">
+            <span class="label-text text-xs">Padding</span>
+          </label>
+          <input
+            type="number"
+            id="export-padding"
+            value="20"
+            min="0"
+            max="100"
+            class="input input-bordered input-sm w-full"
+          />
         </div>
       </div>
-    </div>
 
-    <div class="card-actions justify-center mt-6 gap-2 flex-wrap">
-      <button id="btn-format" class="btn btn-primary flex-1 sm:flex-none">
-        <i data-lucide="align-left" class="w-4 h-4 mr-2"></i>
-        Format
-      </button>
-      <button id="btn-minify" class="btn btn-secondary flex-1 sm:flex-none">
-        <i data-lucide="minimize" class="w-4 h-4 mr-2"></i>
-        Minify
-      </button>
-      <button id="btn-copy" class="btn btn-outline flex-1 sm:flex-none">
-        <i data-lucide="copy" class="w-4 h-4 mr-2"></i>
-        Copy Text
-      </button>
-      <button id="btn-clear" class="btn btn-ghost flex-1 sm:flex-none">Clear</button>
-    </div>
-
-    <div class="divider my-4">Export as Image</div>
-
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-      <div class="form-control">
-        <label class="label py-0" for="export-font-size">
-          <span class="label-text text-xs">Font Size</span>
-        </label>
-        <input
-          type="number"
-          id="export-font-size"
-          value="14"
-          min="8"
-          max="32"
-          class="input input-bordered input-sm w-full"
-        />
+      <div class="card-actions justify-center gap-2">
+        <button id="btn-export-clipboard" class="btn btn-outline flex-1 sm:flex-none">
+          <i data-lucide="clipboard-copy" class="w-4 h-4 mr-2"></i>
+          Copy Image
+        </button>
+        <button id="btn-export-file" class="btn btn-primary flex-1 sm:flex-none">
+          <i data-lucide="download" class="w-4 h-4 mr-2"></i>
+          Download PNG
+        </button>
       </div>
-      <div class="form-control">
-        <label class="label py-0" for="export-padding">
-          <span class="label-text text-xs">Padding</span>
-        </label>
-        <input
-          type="number"
-          id="export-padding"
-          value="20"
-          min="0"
-          max="100"
-          class="input input-bordered input-sm w-full"
-        />
-      </div>
-    </div>
-
-    <div class="card-actions justify-center gap-2">
-      <button id="btn-export-clipboard" class="btn btn-outline flex-1 sm:flex-none">
-        <i data-lucide="clipboard-copy" class="w-4 h-4 mr-2"></i>
-        Copy Image
-      </button>
-      <button id="btn-export-file" class="btn btn-primary flex-1 sm:flex-none">
-        <i data-lucide="download" class="w-4 h-4 mr-2"></i>
-        Download PNG
-      </button>
     </div>
   </div>
 </div>

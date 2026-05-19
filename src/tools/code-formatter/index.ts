@@ -18,12 +18,37 @@ import { CanvasExporter } from '@js/canvas-utils.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: ToolPayload) {
+  // === Landing ===
+  const landingView = document.getElementById('landing-view') as HTMLDivElement;
+
+  // === Viewer ===
+  const viewerView = document.getElementById('viewer-view') as HTMLDivElement;
+  const viewerOutput = document.getElementById('viewer-output') as HTMLDivElement;
+  const viewerOutputCode = document.getElementById('viewer-output-code') as HTMLElement;
+  const viewerFilename = document.getElementById('viewer-filename') as HTMLSpanElement;
+  const viewerFormatBadge = document.getElementById('viewer-format-badge') as HTMLSpanElement;
+  const viewerTheme = document.getElementById('viewer-theme') as HTMLSelectElement;
+  const btnSwitchEditor = document.getElementById('btn-switch-editor') as HTMLButtonElement;
+  const btnViewerCopy = document.getElementById('btn-viewer-copy') as HTMLButtonElement;
+  const btnViewerExportClipboard = document.getElementById(
+    'btn-viewer-export-clipboard'
+  ) as HTMLButtonElement;
+  const btnViewerExportFile = document.getElementById(
+    'btn-viewer-export-file'
+  ) as HTMLButtonElement;
+  const btnCloseViewer = document.getElementById('btn-close-viewer') as HTMLButtonElement;
+
+  const btnOpenEditor = document.getElementById('btn-open-editor') as HTMLButtonElement;
+
+  // === Editor ===
+  const editorView = document.getElementById('editor-view') as HTMLDivElement;
   const input = document.getElementById('code-input') as HTMLTextAreaElement;
-  const outputContainer = document.getElementById('code-output') as HTMLDivElement;
-  const outputCode = document.getElementById('code-output-code') as HTMLElement;
+  const editorOutput = document.getElementById('editor-output') as HTMLDivElement;
+  const editorOutputCode = document.getElementById('editor-output-code') as HTMLElement;
   const formatSelect = document.getElementById('format-select') as HTMLSelectElement;
   const detectedFormatBadge = document.getElementById('detected-format') as HTMLSpanElement;
   const themeSelect = document.getElementById('theme-select') as HTMLSelectElement;
+  const btnSwitchViewer = document.getElementById('btn-switch-viewer') as HTMLButtonElement;
   const fontSizeInput = document.getElementById('export-font-size') as HTMLInputElement;
   const paddingInput = document.getElementById('export-padding') as HTMLInputElement;
 
@@ -34,15 +59,21 @@ export default function init(payload?: ToolPayload) {
   const btnExportClipboard = document.getElementById('btn-export-clipboard') as HTMLButtonElement;
   const btnExportFile = document.getElementById('btn-export-file') as HTMLButtonElement;
 
-  let currentFormattedCode = '';
+  // === State ===
+  let currentCode = '';
+  let currentResolvedFormat: SupportedFormat = 'text';
+  let currentFileName = '';
+  let currentTheme = 'dracula';
   let isProcessing = false;
 
   const getFormat = (): SupportedFormat => {
     return formatSelect.value as SupportedFormat;
   };
 
+  const getActiveTheme = (): ExportTheme => currentTheme as ExportTheme;
+
   const getExportOptions = (): ExportOptions => ({
-    theme: themeSelect.value as ExportTheme,
+    theme: getActiveTheme(),
     fontSize: parseInt(fontSizeInput.value) || 14,
     padding: parseInt(paddingInput.value) || 20,
   });
@@ -58,9 +89,7 @@ export default function init(payload?: ToolPayload) {
 
   const updateButtonStates = (format: SupportedFormat) => {
     const hasText = input.value.trim() !== '';
-    // Disable format/minify for plain text
     const isText = format === 'text';
-    // Some formats don't support minification
     const noMinify = [
       'yaml',
       'markdown',
@@ -76,73 +105,154 @@ export default function init(payload?: ToolPayload) {
       'ini',
     ].includes(format);
 
-    if (btnFormat) btnFormat.disabled = !hasText || isText;
-    if (btnMinify) btnMinify.disabled = !hasText || noMinify;
+    btnFormat.disabled = !hasText || isText;
+    btnMinify.disabled = !hasText || noMinify;
   };
 
-  const clearState = () => {
-    input.value = '';
-    outputCode.innerHTML = '';
-    outputContainer.innerHTML =
-      '<pre id="code-output-pre" class=""><code id="code-output-code"></code></pre>';
-    currentFormattedCode = '';
-    updateDetectedFormatBadge(null);
-    updateButtonStates('text');
+  const updateViewerFormatBadge = (format: SupportedFormat) => {
+    if (format && format !== 'text') {
+      viewerFormatBadge.textContent = format.toUpperCase();
+      viewerFormatBadge.classList.remove('hidden');
+    } else {
+      viewerFormatBadge.classList.add('hidden');
+    }
   };
 
-  const updateHighlightedPreview = async (code: string) => {
+  const resetOutputs = () => {
+    viewerOutput.innerHTML =
+      '<pre id="viewer-output-pre" class="h-full m-0"><code id="viewer-output-code"></code></pre>';
+    editorOutput.innerHTML =
+      '<pre id="editor-output-pre" class="h-full m-0"><code id="editor-output-code"></code></pre>';
+  };
+
+  const applyHighlightedHtml = (html: string, container: HTMLElement, fallbackEl: HTMLElement) => {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    const pre = tempDiv.querySelector('pre');
+    if (pre) {
+      container.innerHTML = '';
+      container.appendChild(pre);
+    } else {
+      fallbackEl.textContent = currentCode;
+    }
+  };
+
+  const render = async (code: string) => {
     if (!code.trim()) {
-      clearState();
+      resetOutputs();
+      currentCode = '';
       return;
     }
 
+    const theme = getActiveTheme();
+    let format = getFormat();
+    if (format === 'auto') {
+      format = detectFormat(code);
+    }
+
+    currentResolvedFormat = format;
+
     try {
-      const options = getExportOptions();
-      let format = getFormat();
-
-      // If auto, detect format for highlighting
-      if (format === 'auto') {
-        const detected = detectFormat(code);
-        format = detected;
-        updateDetectedFormatBadge(detected);
-      } else {
-        updateDetectedFormatBadge(null);
-      }
-
-      updateButtonStates(format);
-
-      const html = await generateHighlightedHtml(code, format, options.theme);
-
-      // Extract just the code content and apply to our container
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      const pre = tempDiv.querySelector('pre');
-
-      if (pre) {
-        // Apply the highlighted content
-        outputContainer.innerHTML = '';
-        outputContainer.appendChild(pre);
-        pre.className = 'h-full overflow-auto rounded-lg';
-        pre.style.margin = '0';
-        pre.style.height = '100%';
-      } else {
-        outputCode.innerHTML = html;
-      }
-
-      currentFormattedCode = code;
+      const html = await generateHighlightedHtml(code, format, theme);
+      applyHighlightedHtml(html, viewerOutput, viewerOutputCode);
+      applyHighlightedHtml(html, editorOutput, editorOutputCode);
+      currentCode = code;
     } catch (e) {
-      // Fallback to plain text
-      outputCode.textContent = code;
-      currentFormattedCode = code;
+      viewerOutputCode.textContent = code;
+      editorOutputCode.textContent = code;
+      currentCode = code;
+    }
+
+    updateViewerFormatBadge(format);
+    updateDetectedFormatBadge(format);
+  };
+
+  // === Mode switching ===
+
+  const showLanding = () => {
+    viewerView.classList.add('hidden');
+    editorView.classList.add('hidden');
+    landingView.classList.remove('hidden');
+  };
+
+  const switchToViewer = () => {
+    if (editorView.classList.contains('hidden') === false) {
+      currentCode = input.value || currentCode;
+    }
+    render(currentCode);
+
+    viewerFilename.textContent = currentFileName;
+    viewerFilename.classList.toggle('hidden', !currentFileName);
+
+    landingView.classList.add('hidden');
+    editorView.classList.add('hidden');
+    viewerView.classList.remove('hidden');
+  };
+
+  const switchToEditor = () => {
+    input.value = currentCode;
+    updateButtonStates(currentResolvedFormat);
+
+    landingView.classList.add('hidden');
+    viewerView.classList.add('hidden');
+    editorView.classList.remove('hidden');
+  };
+
+  // === File handling ===
+
+  const clearAll = () => {
+    currentCode = '';
+    currentFileName = '';
+    currentResolvedFormat = 'text';
+    input.value = '';
+    resetOutputs();
+    viewerFilename.classList.add('hidden');
+    viewerFormatBadge.classList.add('hidden');
+    updateDetectedFormatBadge(null);
+    formatSelect.value = 'auto';
+    updateButtonStates('text');
+    showLanding();
+  };
+
+  const handleFileUpload = async (files: FileList | File[]) => {
+    if (files.length === 0) return;
+
+    const file = files[0];
+    try {
+      const buffer = await file.slice(0, 8192).arrayBuffer();
+      const view = new Uint8Array(buffer);
+      if (view.some((b) => b === 0)) {
+        showMessage('Binary file detected. Please upload a text file.', { type: 'warning' });
+        return;
+      }
+
+      const text = await file.text();
+      currentCode = text;
+      currentFileName = file.name;
+
+      const detectedFormat = detectFormatFromExtension(file.name);
+      if (detectedFormat) {
+        formatSelect.value = detectedFormat;
+        updateButtonStates(detectedFormat);
+      } else {
+        formatSelect.value = 'auto';
+      }
+
+      await render(text);
+      switchToViewer();
+    } catch (err) {
+      showMessage('Failed to read file', { type: 'alert' });
     }
   };
+
+  // === Processing ===
 
   const processCode = async (action: 'format' | 'minify') => {
     if (isProcessing) return;
 
     const val = input.value.trim();
     if (!val) {
-      await updateHighlightedPreview('');
+      await render('');
       return;
     }
 
@@ -158,7 +268,7 @@ export default function init(payload?: ToolPayload) {
       }
 
       input.value = result;
-      await updateHighlightedPreview(result);
+      await render(result);
     } catch (e: any) {
       showMessage(`${format.toUpperCase()} Error: ${e.message}`, { type: 'alert' });
     } finally {
@@ -166,173 +276,147 @@ export default function init(payload?: ToolPayload) {
     }
   };
 
-  const handleFileUpload = async (files: FileList | File[]) => {
-    if (files.length === 0) return;
+  // === Helpers for copy/export ===
 
-    const file = files[0];
-    try {
-      // Check for binary content (null bytes) in the first 8KB
-      const buffer = await file.slice(0, 8192).arrayBuffer();
-      const view = new Uint8Array(buffer);
-      if (view.some((b) => b === 0)) {
-        showMessage('Binary file detected. Please upload a text file.', { type: 'warning' });
-        return;
-      }
-
-      const text = await file.text();
-      input.value = text;
-
-      // Try to detect format from extension
-      const detectedFormat = detectFormatFromExtension(file.name);
-      if (detectedFormat) {
-        formatSelect.value = detectedFormat;
-        updateButtonStates(detectedFormat);
-        updateDetectedFormatBadge(null); // Hide auto badge since we selected a format
-      } else {
-        formatSelect.value = 'auto';
-        // Let auto-detection happen in processCode or updateHighlightedPreview
-      }
-
-      // Auto-format on upload
-      setTimeout(() => processCode('format'), 0);
-    } catch (err) {
-      showMessage('Failed to read file', { type: 'alert' });
-    }
+  const flashButton = (btn: HTMLButtonElement, html: string, successClass: string) => {
+    const original = btn.innerHTML;
+    btn.innerHTML = html;
+    btn.classList.add(successClass);
+    setTimeout(() => {
+      btn.innerHTML = original;
+      btn.classList.remove(successClass);
+    }, 2000);
   };
 
-  // Setup file dropzone
-  setupFileDropzone('dropzone', 'file-input', handleFileUpload);
-
-  // Event listeners for format/minify buttons
-  btnFormat?.addEventListener('click', () => processCode('format'));
-  btnMinify?.addEventListener('click', () => processCode('minify'));
-
-  // Clear button
-  btnClear?.addEventListener('click', () => {
-    clearState();
-  });
-
-  // Copy formatted text to clipboard
-  btnCopy?.addEventListener('click', async () => {
-    if (!currentFormattedCode) return;
+  const handleCopy = async (btn: HTMLButtonElement) => {
+    if (!currentCode) return;
     try {
-      await navigator.clipboard.writeText(currentFormattedCode);
-      const originalHtml = btnCopy.innerHTML;
-      btnCopy.innerHTML = '<i data-lucide="check" class="w-4 h-4 mr-2"></i>Copied!';
-      btnCopy.classList.add('btn-success');
-      setTimeout(() => {
-        btnCopy.innerHTML = originalHtml;
-        btnCopy.classList.remove('btn-success');
-      }, 2000);
+      await navigator.clipboard.writeText(currentCode);
+      flashButton(btn, '<i data-lucide="check" class="w-4 h-4 mr-2"></i>Copied!', 'btn-success');
     } catch (err) {
       showMessage('Failed to copy to clipboard', { type: 'alert', timeoutMs: 5000 });
     }
-  });
+  };
 
-  // Export as image to clipboard
-  btnExportClipboard?.addEventListener('click', async () => {
-    if (!currentFormattedCode) {
+  const handleExportClipboard = async (btn: HTMLButtonElement) => {
+    if (!currentCode) {
       showMessage('No code to export', { type: 'warning' });
       return;
     }
 
     try {
-      btnExportClipboard.disabled = true;
-
-      let format = getFormat();
-      if (format === 'auto') {
-        format = detectFormat(currentFormattedCode);
-      }
-
+      btn.disabled = true;
       const canvas = await renderCodeToCanvasSimple(
-        currentFormattedCode,
-        format,
+        currentCode,
+        currentResolvedFormat,
         getExportOptions()
       );
       await CanvasExporter.copyToClipboard(canvas);
-
-      const originalHtml = btnExportClipboard.innerHTML;
-      btnExportClipboard.innerHTML = '<i data-lucide="check" class="w-4 h-4 mr-2"></i>Copied!';
-      btnExportClipboard.classList.add('btn-success');
-      setTimeout(() => {
-        btnExportClipboard.innerHTML = originalHtml;
-        btnExportClipboard.classList.remove('btn-success');
-        btnExportClipboard.disabled = false;
-      }, 2000);
+      flashButton(btn, '<i data-lucide="check" class="w-4 h-4 mr-2"></i>Copied!', 'btn-success');
+      btn.disabled = false;
     } catch (err: any) {
       showMessage(`Failed to copy image: ${err.message}`, { type: 'alert' });
-      btnExportClipboard.disabled = false;
+      btn.disabled = false;
     }
-  });
+  };
 
-  // Export as image file download
-  btnExportFile?.addEventListener('click', async () => {
-    if (!currentFormattedCode) {
+  const handleExportFile = async (btn: HTMLButtonElement) => {
+    if (!currentCode) {
       showMessage('No code to export', { type: 'warning' });
       return;
     }
 
     try {
-      btnExportFile.disabled = true;
-
-      let format = getFormat();
-      if (format === 'auto') {
-        format = detectFormat(currentFormattedCode);
-      }
-
+      btn.disabled = true;
       const canvas = await renderCodeToCanvasSimple(
-        currentFormattedCode,
-        format,
+        currentCode,
+        currentResolvedFormat,
         getExportOptions()
       );
-
       const timestamp = new Date().toISOString().slice(0, 10);
-      await CanvasExporter.download(canvas, `code-${format}-${timestamp}`, 'png');
-
-      btnExportFile.disabled = false;
+      await CanvasExporter.download(canvas, `code-${currentResolvedFormat}-${timestamp}`, 'png');
+      btn.disabled = false;
     } catch (err: any) {
       showMessage(`Failed to export image: ${err.message}`, { type: 'alert' });
-      btnExportFile.disabled = false;
+      btn.disabled = false;
     }
+  };
+
+  // === Setup ===
+
+  setupFileDropzone('dropzone', 'file-input', handleFileUpload);
+
+  btnOpenEditor?.addEventListener('click', () => {
+    currentCode = '';
+    currentFileName = '';
+    formatSelect.value = 'auto';
+    input.value = '';
+    resetOutputs();
+    updateButtonStates('text');
+    switchToEditor();
+    input.focus();
   });
 
-  // Update preview when theme changes
+  // --- Viewer listeners ---
+
+  btnSwitchEditor?.addEventListener('click', switchToEditor);
+  btnCloseViewer?.addEventListener('click', clearAll);
+  btnViewerCopy?.addEventListener('click', () => handleCopy(btnViewerCopy));
+  btnViewerExportClipboard?.addEventListener('click', () =>
+    handleExportClipboard(btnViewerExportClipboard)
+  );
+  btnViewerExportFile?.addEventListener('click', () => handleExportFile(btnViewerExportFile));
+
+  viewerTheme?.addEventListener('change', () => {
+    currentTheme = viewerTheme.value;
+    themeSelect.value = currentTheme;
+    if (currentCode) render(currentCode);
+  });
+
+  // --- Editor listeners ---
+
+  btnSwitchViewer?.addEventListener('click', switchToViewer);
+
   themeSelect?.addEventListener('change', () => {
-    if (currentFormattedCode) {
-      updateHighlightedPreview(currentFormattedCode);
-    }
+    currentTheme = themeSelect.value;
+    viewerTheme.value = currentTheme;
+    if (currentCode) render(currentCode);
   });
 
-  // Update preview when format changes (to re-highlight with correct language)
   formatSelect?.addEventListener('change', () => {
-    if (currentFormattedCode) {
-      updateHighlightedPreview(currentFormattedCode);
-    }
-    // Hide badge if user manually selects a format
+    if (currentCode) render(currentCode);
     if (formatSelect.value !== 'auto') {
       updateDetectedFormatBadge(null);
       updateButtonStates(formatSelect.value as SupportedFormat);
     } else {
-      // If switching back to auto, re-detect to set button states
-      const detected = detectFormat(currentFormattedCode);
+      const detected = detectFormat(currentCode);
       updateButtonStates(detected);
     }
   });
 
-  // Clear output when input is emptied
+  btnFormat?.addEventListener('click', () => processCode('format'));
+  btnMinify?.addEventListener('click', () => processCode('minify'));
+  btnClear?.addEventListener('click', clearAll);
+
+  btnCopy?.addEventListener('click', () => handleCopy(btnCopy));
+
+  btnExportClipboard?.addEventListener('click', () => handleExportClipboard(btnExportClipboard));
+  btnExportFile?.addEventListener('click', () => handleExportFile(btnExportFile));
+
   input?.addEventListener('input', () => {
     if (input.value.trim() === '') {
-      clearState();
+      resetOutputs();
+      currentCode = '';
     }
     updateButtonStates('auto');
   });
 
-  // Auto-format on paste
   input?.addEventListener('paste', () => {
     setTimeout(() => processCode('format'), 0);
   });
 
-  // Handle shared content
+  // === Share target ===
+
   if (payload) {
     if (payload.sharedFiles && payload.sharedFiles.length > 0) {
       handleFileUpload(payload.sharedFiles);
