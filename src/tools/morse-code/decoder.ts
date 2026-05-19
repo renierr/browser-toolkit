@@ -368,7 +368,7 @@ export async function decodeFromFloat32(
   const unitLength = estimateUnitLength(onDurations);
   if (unitLength <= 0) return '';
 
-  // 10. Decode with more forgiving thresholds
+  // 10. Decode thresholds
   let result = '';
   const dotDashThreshold = 2.0; // Below this is dot, above is dash
   const charGapThreshold = 2.0; // Below this is inter-element, above is char gap

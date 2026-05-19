@@ -1,4 +1,5 @@
 import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
+import { acquireWakeLock } from '@js/utils.ts';
 import { downloadFile } from '@js/file-utils.ts';
 import { ensureAudioContextReady, exportAudio, playTone } from './audio.ts';
 import { textToMorse, textToMorseHtml } from './morsecode.ts';
@@ -14,10 +15,9 @@ let liveStream: MediaStream | null = null;
 let liveAudioCtx: AudioContext | null = null;
 let liveSourceNode: MediaStreamAudioSourceNode | null = null;
 let liveProcessor: ScriptProcessorNode | null = null;
-let liveAnalyser: AnalyserNode | null = null;
 let liveChunks: Float32Array[] = [];
 let liveDecodeTimer: number | null = null;
-let visualizerFrame: number | null = null;
+let releaseWakeLock: (() => void) | null = null;
 let isListening = false;
 let liveDecodeId = 0;
 
@@ -119,7 +119,7 @@ function delay(ms: number): Promise<void> {
 function bandpass600Hz(data: Float32Array, sampleRate: number): Float32Array {
   const out = new Float32Array(data.length);
   const fc = 600 / sampleRate;
-  const Q = 4;
+  const Q = 10;
 
   const w0 = 2 * Math.PI * fc;
   const alpha = Math.sin(w0) / (2 * Q);
@@ -151,10 +151,6 @@ function bandpass600Hz(data: Float32Array, sampleRate: number): Float32Array {
 function stopLiveListen() {
   isListening = false;
 
-  if (visualizerFrame) {
-    cancelAnimationFrame(visualizerFrame);
-    visualizerFrame = null;
-  }
   if (liveDecodeTimer) {
     clearInterval(liveDecodeTimer);
     liveDecodeTimer = null;
@@ -162,10 +158,6 @@ function stopLiveListen() {
   if (liveProcessor) {
     liveProcessor.disconnect();
     liveProcessor = null;
-  }
-  if (liveAnalyser) {
-    liveAnalyser.disconnect();
-    liveAnalyser = null;
   }
   if (liveSourceNode) {
     liveSourceNode.disconnect();
@@ -184,6 +176,10 @@ function stopLiveListen() {
     liveWorker = null;
   }
   liveChunks = [];
+  if (releaseWakeLock) {
+    releaseWakeLock();
+    releaseWakeLock = null;
+  }
 
   document.getElementById('flash-indicator')?.classList.remove('on');
   document.getElementById('btn-live-start')?.classList.remove('hidden');
@@ -204,53 +200,31 @@ async function startLiveListen() {
     });
     liveAudioCtx = new AudioContext();
 
-    // Resume if suspended (auto-blocked by browser)
     if (liveAudioCtx.state === 'suspended') {
       await liveAudioCtx.resume();
     }
 
     liveSourceNode = liveAudioCtx.createMediaStreamSource(liveStream);
-
-    // Analyser for visual feedback (lamp reacts to audio level)
-    liveAnalyser = liveAudioCtx.createAnalyser();
-    liveAnalyser.fftSize = 256;
-    liveAnalyser.smoothingTimeConstant = 0;
-    liveSourceNode.connect(liveAnalyser);
-
-    // ScriptProcessorNode for raw PCM capture
     liveProcessor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
-    liveAnalyser.connect(liveProcessor);
-
-    // Connect to destination so the audio graph is complete (required for
-    // ScriptProcessorNode to fire onaudioprocess in some browsers).
+    liveSourceNode.connect(liveProcessor);
     liveProcessor.connect(liveAudioCtx.destination);
 
     liveProcessor.onaudioprocess = (e: AudioProcessingEvent) => {
       const inputData = e.inputBuffer.getChannelData(0);
       liveChunks.push(new Float32Array(inputData));
-    };
 
-    // Visualiser: flash lamp with audio activity
-    function drawLiveVisualizer() {
-      if (!isListening || !liveAnalyser) return;
-      visualizerFrame = requestAnimationFrame(drawLiveVisualizer);
-
-      const data = new Uint8Array(liveAnalyser.frequencyBinCount);
-      liveAnalyser.getByteTimeDomainData(data);
-
-      let sumSquares = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = (data[i] - 128) / 128;
-        sumSquares += v * v;
+      // RMS for lamp visual feedback — computed directly from PCM to avoid
+      // any AuditionNode / rAF timing issues.
+      let sumSq = 0;
+      for (let i = 0; i < inputData.length; i++) {
+        sumSq += inputData[i] * inputData[i];
       }
-      const rms = Math.sqrt(sumSquares / data.length);
-
+      const rms = Math.sqrt(sumSq / inputData.length);
       const fi = document.getElementById('flash-indicator');
       if (fi) {
-        fi.classList.toggle('on', rms > 0.006);
+        fi.classList.toggle('on', rms > 0.008);
       }
-    }
-    drawLiveVisualizer();
+    };
 
     liveWorker = new DecodeWorker();
     liveWorker.addEventListener('message', (ev: MessageEvent<WorkerOutMessage>) => {
@@ -286,8 +260,16 @@ async function startLiveListen() {
         offset += chunk.length;
       }
 
-      // Bandpass around 600Hz (CW tone) to suppress noise picked up by the mic
+      // Narrow bandpass around 600Hz to suppress everything except the CW tone
       const filtered = bandpass600Hz(combined, sr);
+
+      // Skip decode when filtered energy is near-zero (just noise)
+      let energy = 0;
+      for (let i = 0; i < filtered.length; i++) {
+        energy += filtered[i] * filtered[i];
+      }
+      const rms = Math.sqrt(energy / filtered.length);
+      if (rms < 0.002) return;
 
       const id = ++liveDecodeId;
       const msg = {
@@ -300,6 +282,7 @@ async function startLiveListen() {
     }, 2000);
 
     isListening = true;
+    releaseWakeLock = acquireWakeLock();
 
     document.getElementById('btn-live-start')?.classList.add('hidden');
     document.getElementById('btn-live-stop')?.classList.remove('hidden');
