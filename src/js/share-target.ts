@@ -121,13 +121,16 @@ export async function loadSharedFiles(keys: string[]): Promise<File[]> {
   const files: File[] = [];
   const params = new URLSearchParams(location.search);
   const textContent = params.get('text_content');
+  const namesParam = params.get('names');
+  const fileNames = namesParam ? namesParam.split(',').filter(Boolean) : [];
 
   const timeoutMs = 5000;
   const timeoutPromise = new Promise<'timeout'>((resolve) =>
     setTimeout(() => resolve('timeout'), timeoutMs)
   );
 
-  for (const key of keys) {
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
     if (key.startsWith('inline-') && textContent) {
       const name = params.get('text_name') || 'shared-text.txt';
       const mime = params.get('text_mime') || 'text/plain';
@@ -146,7 +149,8 @@ export async function loadSharedFiles(keys: string[]): Promise<File[]> {
         if (fileOrBlob instanceof File) {
           files.push(fileOrBlob);
         } else {
-          const file = new File([fileOrBlob], 'shared-file', { type: fileOrBlob.type });
+          const name = fileNames[i] || 'shared-file';
+          const file = new File([fileOrBlob], name, { type: fileOrBlob.type });
           files.push(file);
         }
         await idbDelete(key).catch(() => {});

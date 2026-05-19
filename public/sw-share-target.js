@@ -169,82 +169,73 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(
     (async () => {
-      let form;
-      try {
-        form = await req.formData();
-      } catch (err) {
-        const errMsg = encodeURIComponent(String(err));
-        return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
-      }
-
-      const keys = [];
-      const mimeTypes = [];
-      const fileNames = [];
-
-      const blobs = Array.from(form.entries())
-        .filter(([, value]) => value instanceof Blob)
-        .map(([, value]) => value);
-
-      for (let i = 0; i < blobs.length; i++) {
-        const f = blobs[i];
-        const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-${i}`;
-        try {
-          await idbPut(key, f);
-        } catch (err) {
-          const errMsg = encodeURIComponent(String(err));
-          return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
-        }
-        keys.push(key);
-        mimeTypes.push(getMimeTypeFromFileName(f.type || '', f.name || ''));
-        fileNames.push(f.name || '');
-      }
-
-      const textValue = form.get('text');
-      const titleValue = form.get('title');
-      const urlValue = form.get('url');
-
-      let textContent = '';
-      if (urlValue && typeof urlValue === 'string') textContent += urlValue;
-      if (textValue && typeof textValue === 'string') {
-        if (textContent) textContent += '\n';
-        textContent += textValue;
-      }
-
-      if (textContent) {
-        const fileName =
-          titleValue && typeof titleValue === 'string' && titleValue.trim()
-            ? titleValue.trim()
-            : 'shared-text.txt';
-        const mime = getMimeTypeFromFileName('', fileName);
-
-        if (keys.length === 0) {
-          // No file blobs — pass text directly in URL params, bypass IDB
-          redirectUrl.searchParams.set('text_content', textContent);
-          redirectUrl.searchParams.set('text_mime', mime);
-          redirectUrl.searchParams.set('text_name', fileName);
-        } else {
-          // File blobs stored in IDB already — store text alongside them
-          const blob = new Blob([textContent], { type: mime });
-          const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
-          try {
-            await idbPut(key, blob);
-            keys.push(key);
-            mimeTypes.push(mime);
-            fileNames.push(fileName);
-          } catch (err) {
-            const errMsg = encodeURIComponent(String(err));
-            return Response.redirect(`./index.html?shared=1&sw_error=${errMsg}`, 303);
-          }
-        }
-      }
-
       const redirectUrl = new URL('./index.html', self.registration.scope);
       redirectUrl.searchParams.set('shared', '1');
-      redirectUrl.searchParams.set('keys', keys.join(','));
-      redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
-      redirectUrl.searchParams.set('names', fileNames.join(','));
 
-      return Response.redirect(redirectUrl.href, 303);
+      try {
+        let form;
+        try {
+          form = await req.formData();
+        } catch (err) {
+          redirectUrl.searchParams.set('sw_error', String(err));
+          return Response.redirect(redirectUrl.href, 303);
+        }
+
+        const keys = [];
+        const mimeTypes = [];
+        const fileNames = [];
+
+        const blobs = Array.from(form.entries())
+          .filter(([, value]) => value instanceof Blob)
+          .map(([, value]) => value);
+
+        for (let i = 0; i < blobs.length; i++) {
+          const f = blobs[i];
+          const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-${i}`;
+          await idbPut(key, f);
+          keys.push(key);
+          mimeTypes.push(getMimeTypeFromFileName(f.type || '', f.name || ''));
+          fileNames.push(f.name || '');
+        }
+
+        const textValue = form.get('text');
+        const titleValue = form.get('title');
+        const urlValue = form.get('url');
+
+        let textContent = '';
+        if (urlValue && typeof urlValue === 'string') textContent += urlValue;
+        if (textValue && typeof textValue === 'string') {
+          if (textContent && !textContent.includes(textValue)) {
+            textContent += '\n' + textValue;
+          } else if (!textContent) {
+            textContent = textValue;
+          }
+        }
+
+        if (textContent) {
+          const fileName =
+            titleValue && typeof titleValue === 'string' && titleValue.trim()
+              ? titleValue.trim()
+              : 'shared-text.txt';
+          const mime = getMimeTypeFromFileName('', fileName);
+
+          const blob = new Blob([textContent], { type: mime });
+          const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
+          await idbPut(key, blob);
+          keys.push(key);
+          mimeTypes.push(mime);
+          fileNames.push(fileName);
+        }
+
+        redirectUrl.searchParams.set('keys', keys.join(','));
+        redirectUrl.searchParams.set('mimes', mimeTypes.join(','));
+        redirectUrl.searchParams.set('names', fileNames.join(','));
+
+        return Response.redirect(redirectUrl.href, 303);
+      } catch (err) {
+        redirectUrl.searchParams.set('sw_error', String(err));
+        return Response.redirect(redirectUrl.href, 303);
+      }
     })()
   );
 });
