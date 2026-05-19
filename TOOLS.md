@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
-- Total tools: **64** (61 normal, 3 backend)
+- Total tools: **65** (62 normal, 3 backend)
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -190,7 +190,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `info`, share target capable `yes`, share target accepts `application/pdf`.
 - Source: `src/tools/pdf-metadata/config.json`
 
-## Utilities (19)
+## Utilities (20)
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
@@ -261,6 +261,11 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Description: Inspect browser storage data and clear cache, IndexedDB, localStorage, sessionStorage, and cookies.
 - Metadata: Order `105`, icon `database`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/storage-inspector/config.json`
+
+### D2D Transfer (Sound & Light) (`d2d-transfer`)
+- Description: Transfer files between devices using near-ultrasonic sound or light pulses via camera.
+- Metadata: Order `110`, icon `radio`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/d2d-transfer/config.json`
 
 ### Base64 Encoder/Decoder (`base64`)
 - Description: Encode and decode text using Base64 with UTF-8 support.

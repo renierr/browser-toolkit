@@ -1,0 +1,7 @@
+{
+  "name": "D2D Transfer (Sound & Light)",
+  "description": "Transfer files between devices using near-ultrasonic sound or light pulses via camera.",
+  "icon": "radio",
+  "sectionId": "utilities",
+  "order": 110
+}
