@@ -1,44 +1,20 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { siteConfig } from '../src/config/site.config';
+import { parseToolConfig, ToolConfig } from '../src/js/tool-config';
 
 const ROOT_DIR = process.cwd();
 const TOOLS_DIR = join(ROOT_DIR, 'src', 'tools');
 const OUTPUT_FILE = join(ROOT_DIR, 'TOOLS.md');
 
-const SECTION_ORDER = ['general', 'images', 'media', 'pdf', 'utilities', 'devices'] as const;
-type SectionId = (typeof SECTION_ORDER)[number];
+const IS_CHECK_MODE = process.argv.includes('--check');
 
-const SECTION_TITLE: Record<SectionId, string> = {
-  general: 'General',
-  images: 'Images',
-  media: 'Media',
-  pdf: 'PDF',
-  utilities: 'Utilities',
-  devices: 'Devices',
-};
+const SECTION_ORDER = Object.keys(siteConfig.toolSections) as string[];
+const SECTION_TITLE = Object.fromEntries(
+  Object.entries(siteConfig.toolSections).map(([id, cfg]) => [id, cfg.title])
+);
 
-type ToolConfig = {
-  name?: string;
-  description?: string;
-  icon?: string;
-  order?: number;
-  sectionId?: string;
-  requiresBackend?: boolean;
-  shareTarget?: {
-    accept?: string[];
-  };
-};
-
-type ToolMetadata = {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  order: number | null;
-  sectionId: string;
-  requiresBackend: boolean;
-  shareTargetAccept: string[];
-};
+type ToolMetadata = ToolConfig & { id: string };
 
 /**
  * Read all tool config files and normalize the metadata.
@@ -50,26 +26,34 @@ function readTools(): ToolMetadata[] {
     .sort((a, b) => a.localeCompare(b));
 
   const tools: ToolMetadata[] = [];
+  const errors: string[] = [];
 
   for (const toolId of toolFolders) {
     const configPath = join(TOOLS_DIR, toolId, 'config.json');
     if (!existsSync(configPath)) {
       continue;
     }
-    const raw: ToolConfig = JSON.parse(readFileSync(configPath, 'utf-8'));
 
-    tools.push({
-      id: toolId,
-      name: raw.name?.trim() || toolId,
-      description: raw.description?.trim() || 'No description provided.',
-      icon: raw.icon?.trim() || 'not set',
-      order: typeof raw.order === 'number' ? raw.order : null,
-      sectionId: raw.sectionId?.trim() || 'utilities',
-      requiresBackend: !!raw.requiresBackend,
-      shareTargetAccept: Array.isArray(raw.shareTarget?.accept)
-        ? raw.shareTarget.accept.filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-        : [],
-    });
+    try {
+      const raw = JSON.parse(readFileSync(configPath, 'utf-8'));
+      const config = parseToolConfig(raw, toolId, {
+        strict: true,
+        sourceId: `src/tools/${toolId}/config.json`,
+      });
+
+      tools.push({
+        id: toolId,
+        ...config,
+      });
+    } catch (e) {
+      errors.push((e as Error).message);
+    }
+  }
+
+  if (errors.length > 0) {
+    console.error('\n❌ Tool configuration validation failed:\n');
+    errors.forEach((err) => console.error(`- ${err}`));
+    process.exit(1);
   }
 
   return tools;
@@ -100,7 +84,7 @@ function renderMarkdown(tools: ToolMetadata[]): string {
   lines.push('Run `bun run generate:tool-description` after changing tool metadata.');
   lines.push('');
   lines.push(`- Total tools: **${tools.length}** (${totalNormal} normal, ${totalBackend} backend)`);
-  lines.push('- Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`');
+  lines.push(`- Sections: ${SECTION_ORDER.map((s) => `\`${s}\``).join(', ')}`);
   lines.push('- Source of truth: `src/tools/<tool-id>/config.json`');
   lines.push('');
 
@@ -112,18 +96,19 @@ function renderMarkdown(tools: ToolMetadata[]): string {
     lines.push('');
 
     for (const tool of toolsInSection) {
-      const orderText = tool.order === null ? 'not set' : String(tool.order);
-      const canShareTarget = tool.shareTargetAccept.length > 0 ? 'yes' : 'no';
+      const orderText = String(tool.order);
+      const canShareTarget =
+        tool.shareTarget?.accept && tool.shareTarget.accept.length > 0 ? 'yes' : 'no';
       const shareTargetList =
-        tool.shareTargetAccept.length > 0
-          ? tool.shareTargetAccept.map((accept) => `\`${accept}\``).join(', ')
+        tool.shareTarget?.accept && tool.shareTarget.accept.length > 0
+          ? tool.shareTarget.accept.map((accept) => `\`${accept}\``).join(', ')
           : '`none`';
       const backendBadge = tool.requiresBackend ? ' 🖥️ **(Backend)**' : '';
 
       lines.push(`### ${tool.name}${backendBadge} (\`${tool.id}\`)`);
       lines.push(`- Description: ${tool.description}`);
       lines.push(
-        `- Metadata: Order \`${orderText}\`, icon \`${tool.icon}\`, share target capable \`${canShareTarget}\`, share target accepts ${shareTargetList}.`
+        `- Metadata: Order \`${orderText}\`, icon \`${tool.icon ?? 'not set'}\`, share target capable \`${canShareTarget}\`, share target accepts ${shareTargetList}.`
       );
       lines.push(`- Source: \`src/tools/${tool.id}/config.json\``);
       lines.push('');
@@ -132,7 +117,7 @@ function renderMarkdown(tools: ToolMetadata[]): string {
 
   lines.push('## Notes');
   lines.push('');
-  lines.push('- `Order` uses the value from each config; `not set` means the field is missing.');
+  lines.push('- `Order` uses the value from each config; default is `0`.');
   lines.push('- `Share target capable` is `yes` when `shareTarget.accept` has at least one entry.');
   lines.push('- Re-run `bun run generate:tool-description` whenever tool metadata changes.');
 
@@ -140,6 +125,12 @@ function renderMarkdown(tools: ToolMetadata[]): string {
 }
 
 const tools = readTools();
+
+if (IS_CHECK_MODE) {
+  console.log(`✅ Validated ${tools.length} tools. No issues found.`);
+  process.exit(0);
+}
+
 const markdown = renderMarkdown(tools);
 writeFileSync(OUTPUT_FILE, markdown, 'utf-8');
 

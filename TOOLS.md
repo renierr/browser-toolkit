@@ -4,10 +4,15 @@ This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
 - Total tools: **66** (63 normal, 3 backend)
-- Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
+- Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`, `backend`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
 ## General (12)
+
+### Markdown Viewer (`markdown-viewer`)
+- Description: Render Markdown files with GitHub Flavored Markdown extensions.
+- Metadata: Order `0`, icon `file-text`, share target capable `yes`, share target accepts `text/markdown`, `text/x-markdown`, `text/plain`, `application/octet-stream`.
+- Source: `src/tools/markdown-viewer/config.json`
 
 ### QR Scanner (`qr-scanner`)
 - Description: Scan QR codes from the camera or image files.
@@ -64,12 +69,17 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `15`, icon `phone-incoming`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/call-simulator/config.json`
 
-### Markdown Viewer (`markdown-viewer`)
-- Description: Render Markdown files with GitHub Flavored Markdown extensions.
-- Metadata: Order `not set`, icon `file-text`, share target capable `yes`, share target accepts `text/markdown`, `text/x-markdown`, `text/plain`, `application/octet-stream`.
-- Source: `src/tools/markdown-viewer/config.json`
+## Image Tools (10)
 
-## Images (10)
+### Image Convert / Redact (`image-redactor`)
+- Description: Convert, crop, redact, and pixelate images.
+- Metadata: Order `0`, icon `crop`, share target capable `yes`, share target accepts `image/*`.
+- Source: `src/tools/image-redactor/config.json`
+
+### Image Vectorizer (`image-vectorizer`)
+- Description: Convert raster images into scalable SVG vector graphics.
+- Metadata: Order `0`, icon `image`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/image-vectorizer/config.json`
 
 ### AI Background Remover (`background-remover`)
 - Description: Remove image backgrounds locally with an AI segmentation model.
@@ -111,17 +121,17 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `30`, icon `image`, share target capable `yes`, share target accepts `image/*`.
 - Source: `src/tools/ascii-converter/config.json`
 
-### Image Convert / Redact (`image-redactor`)
-- Description: Convert, crop, redact, and pixelate images.
-- Metadata: Order `not set`, icon `crop`, share target capable `yes`, share target accepts `image/*`.
-- Source: `src/tools/image-redactor/config.json`
+## Media Tools (6)
 
-### Image Vectorizer (`image-vectorizer`)
-- Description: Convert raster images into scalable SVG vector graphics.
-- Metadata: Order `not set`, icon `image`, share target capable `no`, share target accepts `none`.
-- Source: `src/tools/image-vectorizer/config.json`
+### Text to Speech (`text-to-speech`)
+- Description: Convert text to spoken audio using built-in browser voices.
+- Metadata: Order `0`, icon `volume-2`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/text-to-speech/config.json`
 
-## Media (6)
+### Video Transcoder (`video-transcoder`)
+- Description: Convert and compress video files with FFmpeg.wasm.
+- Metadata: Order `0`, icon `video`, share target capable `yes`, share target accepts `video/*`.
+- Source: `src/tools/video-transcoder/config.json`
 
 ### Chiptune (`chiptune`)
 - Description: Play MOD, XM, and IT tracker files with waveform and spectrum visualizations.
@@ -143,17 +153,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `6`, icon `mic`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/audio-recorder/config.json`
 
-### Text to Speech (`text-to-speech`)
-- Description: Convert text to spoken audio using built-in browser voices.
-- Metadata: Order `not set`, icon `volume-2`, share target capable `no`, share target accepts `none`.
-- Source: `src/tools/text-to-speech/config.json`
-
-### Video Transcoder (`video-transcoder`)
-- Description: Convert and compress video files with FFmpeg.wasm.
-- Metadata: Order `not set`, icon `video`, share target capable `yes`, share target accepts `video/*`.
-- Source: `src/tools/video-transcoder/config.json`
-
-## PDF (7)
+## PDF Tools (7)
 
 ### PDF Viewer / Editor (`pdf-viewer`)
 - Description: View and edit PDF files with EmbedPDF.
@@ -191,6 +191,31 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Source: `src/tools/pdf-metadata/config.json`
 
 ## Utilities (21)
+
+### Base64 Encoder/Decoder (`base64`)
+- Description: Encode and decode text using Base64 with UTF-8 support.
+- Metadata: Order `0`, icon `binary`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/base64/config.json`
+
+### File Converter (`file-converter`)
+- Description: Convert documents between commonly used file formats.
+- Metadata: Order `0`, icon `file-text`, share target capable `yes`, share target accepts `text/*`, `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/xhtml+xml`, `text/markdown`, `text/html`, `application/epub+zip`.
+- Source: `src/tools/file-converter/config.json`
+
+### KeePass Viewer (`keepass-viewer`)
+- Description: Open KeePass (.kdbx) databases to browse groups and copy credentials securely.
+- Metadata: Order `0`, icon `lock`, share target capable `yes`, share target accepts `application/x-keepass`, `.kdbx`.
+- Source: `src/tools/keepass-viewer/config.json`
+
+### Regex Visualizer (`regex-visualizer`)
+- Description: Visualize regular expressions as railroad diagrams to explain matching behavior.
+- Metadata: Order `0`, icon `regex`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/regex-visualizer/config.json`
+
+### SQLite Explorer (`sqlite-explorer`)
+- Description: Open SQLite databases, browse schemas, and run SQL queries.
+- Metadata: Order `0`, icon `database`, share target capable `yes`, share target accepts `application/vnd.sqlite3`, `application/x-sqlite3`, `.sqlite`, `.sqlite3`, `.db`.
+- Source: `src/tools/sqlite-explorer/config.json`
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
@@ -272,31 +297,6 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `110`, icon `radio`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/d2d-transfer/config.json`
 
-### Base64 Encoder/Decoder (`base64`)
-- Description: Encode and decode text using Base64 with UTF-8 support.
-- Metadata: Order `not set`, icon `binary`, share target capable `no`, share target accepts `none`.
-- Source: `src/tools/base64/config.json`
-
-### File Converter (`file-converter`)
-- Description: Convert documents between commonly used file formats.
-- Metadata: Order `not set`, icon `file-text`, share target capable `yes`, share target accepts `text/*`, `application/msword`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, `application/xhtml+xml`, `text/markdown`, `text/html`, `application/epub+zip`.
-- Source: `src/tools/file-converter/config.json`
-
-### KeePass Viewer (`keepass-viewer`)
-- Description: Open KeePass (.kdbx) databases to browse groups and copy credentials securely.
-- Metadata: Order `not set`, icon `lock`, share target capable `yes`, share target accepts `application/x-keepass`, `.kdbx`.
-- Source: `src/tools/keepass-viewer/config.json`
-
-### Regex Visualizer (`regex-visualizer`)
-- Description: Visualize regular expressions as railroad diagrams to explain matching behavior.
-- Metadata: Order `not set`, icon `regex`, share target capable `no`, share target accepts `none`.
-- Source: `src/tools/regex-visualizer/config.json`
-
-### SQLite Explorer (`sqlite-explorer`)
-- Description: Open SQLite databases, browse schemas, and run SQL queries.
-- Metadata: Order `not set`, icon `database`, share target capable `yes`, share target accepts `application/vnd.sqlite3`, `application/x-sqlite3`, `.sqlite`, `.sqlite3`, `.db`.
-- Source: `src/tools/sqlite-explorer/config.json`
-
 ## Devices (7)
 
 ### Heart Rate Monitor (`heart-rate-monitor`)
@@ -334,8 +334,25 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `24`, icon `ruler`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/bubble-level/config.json`
 
+## Backend Server (3)
+
+### LAN Explorer 🖥️ **(Backend)** (`lan-explorer`)
+- Description: Discover devices and services on your local network.
+- Metadata: Order `0`, icon `network`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/lan-explorer/config.json`
+
+### Fast Drop 🖥️ **(Backend)** (`fast-drop`)
+- Description: Quickly drop files or paste clipboard data to the server for temporary storage and sharing.
+- Metadata: Order `10`, icon `upload-cloud`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/fast-drop/config.json`
+
+### Backend Info 🖥️ **(Backend)** (`backend-info`)
+- Description: Displays system information from the connected backend server
+- Metadata: Order `100`, icon `server`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/backend-info/config.json`
+
 ## Notes
 
-- `Order` uses the value from each config; `not set` means the field is missing.
+- `Order` uses the value from each config; default is `0`.
 - `Share target capable` is `yes` when `shareTarget.accept` has at least one entry.
 - Re-run `bun run generate:tool-description` whenever tool metadata changes.

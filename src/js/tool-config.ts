@@ -11,7 +11,7 @@ export type ToolConfig = {
   icon?: string;
 
   order: number;
-  sectionId?: string;
+  sectionId: string;
 
   hideHeader?: boolean;
   hideFooter?: boolean;
@@ -40,7 +40,7 @@ const DEFAULTS: Omit<ToolConfig, 'name'> = {
   tags: [],
   keywords: [],
   order: 0,
-  sectionId: undefined,
+  sectionId: 'utilities',
   shareTarget: undefined,
   requiresBackend: false,
 };
@@ -92,75 +92,53 @@ export function parseToolConfig(
 
   if (!isRecord(raw)) {
     failOrSkip(`${ctx}: Expected a JSON object, got ${typeOf(raw)}.`, strict);
-    return { name: fallbackName, ...DEFAULTS };
+    return { name: fallbackName, ...DEFAULTS, sectionId: 'utilities' };
   }
 
-  // Validate field types in strict mode
-  if (raw.name !== undefined && typeof raw.name !== 'string') {
-    failOrSkip(`${ctx}: Field "name" must be a string, got ${typeOf(raw.name)}.`, strict);
-  }
-  if (raw.description !== undefined && typeof raw.description !== 'string') {
-    failOrSkip(
-      `${ctx}: Field "description" must be a string, got ${typeOf(raw.description)}.`,
-      strict
-    );
-  }
-  if (raw.draft !== undefined && typeof raw.draft !== 'boolean') {
-    failOrSkip(`${ctx}: Field "draft" must be a boolean, got ${typeOf(raw.draft)}.`, strict);
-  }
-  if (raw.example !== undefined && typeof raw.example !== 'boolean') {
-    failOrSkip(`${ctx}: Field "example" must be a boolean, got ${typeOf(raw.example)}.`, strict);
-  }
-  if (raw.requiresBackend !== undefined && typeof raw.requiresBackend !== 'boolean') {
-    failOrSkip(
-      `${ctx}: Field "requiresBackend" must be a boolean, got ${typeOf(raw.requiresBackend)}.`,
-      strict
-    );
-  }
+  const errors: string[] = [];
+
+  // Helper to check types and collect errors
+  const check = (field: string, type: string, value: unknown) => {
+    if (value !== undefined && typeOf(value) !== type) {
+      errors.push(`Field "${field}" must be a ${type}, got ${typeOf(value)}.`);
+    }
+  };
+
+  check('name', 'string', raw.name);
+  check('description', 'string', raw.description);
+  check('draft', 'boolean', raw.draft);
+  check('example', 'boolean', raw.example);
+  check('requiresBackend', 'boolean', raw.requiresBackend);
+  check('icon', 'string', raw.icon);
+  check('order', 'number', raw.order);
+  check('sectionId', 'string', raw.sectionId);
+  check('hideHeader', 'boolean', raw.hideHeader);
+  check('hideFooter', 'boolean', raw.hideFooter);
+
   if (raw.tags !== undefined && !asStringArray(raw.tags)) {
-    failOrSkip(`${ctx}: Field "tags" must be a string[], got ${typeOf(raw.tags)}.`, strict);
+    errors.push(`Field "tags" must be a string array.`);
   }
   if (raw.keywords !== undefined && !asStringArray(raw.keywords)) {
-    failOrSkip(`${ctx}: Field "keywords" must be a string[], got ${typeOf(raw.keywords)}.`, strict);
+    errors.push(`Field "keywords" must be a string array.`);
   }
-  if (raw.icon !== undefined && typeof raw.icon !== 'string') {
-    failOrSkip(`${ctx}: Field "icon" must be a string, got ${typeOf(raw.icon)}.`, strict);
-  }
-  if (raw.order !== undefined && typeof raw.order !== 'number') {
-    failOrSkip(`${ctx}: Field "order" must be a number, got ${typeOf(raw.order)}.`, strict);
-  }
-  if (raw.sectionId !== undefined && typeof raw.sectionId !== 'string') {
-    failOrSkip(`${ctx}: Field "sectionId" must be a string, got ${typeOf(raw.sectionId)}.`, strict);
-  }
-  if (raw.hideHeader !== undefined && typeof raw.hideHeader !== 'boolean') {
-    failOrSkip(
-      `${ctx}: Field "hideHeader" must be a boolean, got ${typeOf(raw.hideHeader)}.`,
-      strict
-    );
-  }
-  if (raw.hideFooter !== undefined && typeof raw.hideFooter !== 'boolean') {
-    failOrSkip(
-      `${ctx}: Field "hideFooter" must be a boolean, got ${typeOf(raw.hideFooter)}.`,
-      strict
-    );
-  }
+
   if (raw.shareTarget !== undefined) {
     if (!isRecord(raw.shareTarget)) {
-      failOrSkip(
-        `${ctx}: Field "shareTarget" must be an object, got ${typeOf(raw.shareTarget)}.`,
-        strict
-      );
+      errors.push(`Field "shareTarget" must be an object.`);
     } else if (!asStringArray(raw.shareTarget.accept)) {
-      failOrSkip(
-        `${ctx}: Field "shareTarget.accept" must be a string[], got ${typeOf(raw.shareTarget.accept)}.`,
-        strict
-      );
+      errors.push(`Field "shareTarget.accept" must be a string array.`);
     }
+  }
+
+  if (errors.length > 0 && strict) {
+    throw new Error(`${ctx} validation failed:\n- ${errors.join('\n- ')}`);
+  } else if (errors.length > 0) {
+    console.warn(`${ctx} validation warnings:\n- ${errors.join('\n- ')}`);
   }
 
   const name = asString(raw.name)?.trim() || fallbackName;
   const description = asString(raw.description)?.trim() || DEFAULTS.description;
-  const sectionId = asString(raw.sectionId)?.trim() || undefined;
+  const sectionId = asString(raw.sectionId)?.trim() || 'utilities';
 
   // Parse shareTarget config
   let shareTarget: ShareTargetConfig | undefined = undefined;
