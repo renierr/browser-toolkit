@@ -1,0 +1,84 @@
+<div class="card bg-base-100 shadow-xl">
+  <div class="card-body">
+    <h2 class="card-title text-2xl font-bold mb-4">String Transformer</h2>
+    <p class="text-base-content/70 mb-6">
+      Convert text between various formats: camelCase, snake_case, kebab-case, PascalCase, URL
+      slugs, Base64, Hex, and decode ad URLs.
+    </p>
+
+    <!-- Input -->
+    <div class="form-control w-full mb-4">
+      <div class="flex items-center justify-between mb-2">
+        <label class="label py-0" for="input-text">
+          <span class="label-text font-semibold">Input</span>
+        </label>
+        <button id="btn-clear" class="btn btn-ghost btn-xs">
+          <i data-lucide="x" class="w-3 h-3 mr-1"></i>
+          Clear
+        </button>
+      </div>
+      <textarea
+        id="input-text"
+        class="textarea textarea-bordered h-32 font-mono text-sm w-full"
+        placeholder="Type or paste text here..."
+        spellcheck="false"
+      ></textarea>
+      <div class="label">
+        <span class="label-text-alt" id="input-stats">0 chars</span>
+      </div>
+    </div>
+
+    <!-- Transform Select -->
+    <div class="form-control w-full mb-4">
+      <label class="label" for="transform-select">
+        <span class="label-text font-semibold">Transform</span>
+      </label>
+      <select
+        id="transform-select"
+        class="select select-bordered w-full"
+        data-setting="transformType"
+      >
+        <option value="camel-case">camelCase</option>
+        <option value="snake-case">snake_case</option>
+        <option value="kebab-case">kebab-case</option>
+        <option value="pascal-case">PascalCase</option>
+        <option value="url-slug">URL Slug</option>
+        <option value="base64-encode">Base64 Encode</option>
+        <option value="base64-decode">Base64 Decode</option>
+        <option value="hex-encode">Hex Encode</option>
+        <option value="hex-decode">Hex Decode</option>
+        <option value="ad-url-decode">AD URL Decode</option>
+      </select>
+    </div>
+
+    <!-- Output -->
+    <div class="form-control w-full">
+      <div class="flex items-center justify-between mb-2">
+        <label class="label py-0" for="output-text">
+          <span class="label-text font-semibold">Output</span>
+        </label>
+        <button id="btn-copy" class="btn btn-ghost btn-xs">
+          <i data-lucide="copy" class="w-3 h-3 mr-1"></i>
+          Copy
+        </button>
+      </div>
+      <textarea
+        id="output-text"
+        class="textarea textarea-bordered h-32 font-mono text-sm bg-base-200 w-full"
+        readonly
+        placeholder="Result will appear here..."
+      ></textarea>
+      <div class="label">
+        <span class="label-text-alt" id="output-stats">0 chars</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="card-actions justify-center mt-6 gap-2">
+      <button id="btn-swap" class="btn btn-outline">
+        <i data-lucide="arrow-left-right" class="w-4 h-4 mr-2"></i>
+        Swap Input/Output
+      </button>
+    </div>
+  </div>
+</div>

@@ -3,7 +3,7 @@
 This file is generated from `src/tools/*/config.json`.
 Run `bun run generate:tool-description` after changing tool metadata.
 
-- Total tools: **65** (62 normal, 3 backend)
+- Total tools: **66** (63 normal, 3 backend)
 - Sections: `general`, `images`, `media`, `pdf`, `utilities`, `devices`
 - Source of truth: `src/tools/<tool-id>/config.json`
 
@@ -190,7 +190,7 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Metadata: Order `100`, icon `info`, share target capable `yes`, share target accepts `application/pdf`.
 - Source: `src/tools/pdf-metadata/config.json`
 
-## Utilities (20)
+## Utilities (21)
 
 ### Calculator (`calculator`)
 - Description: Run scientific calculations with expression history and mobile-friendly controls.
@@ -246,6 +246,11 @@ Run `bun run generate:tool-description` after changing tool metadata.
 - Description: Use Chrome Prompt API to run on-device prompts with streamed answers.
 - Metadata: Order `12`, icon `bot`, share target capable `no`, share target accepts `none`.
 - Source: `src/tools/ai-prompt/config.json`
+
+### String Transformer (`string-transformer`)
+- Description: Convert text between various formats: camelCase, snake_case, kebab-case, PascalCase, URL slugs, Base64, Hex, and decode ad URLs.
+- Metadata: Order `15`, icon `text`, share target capable `no`, share target accepts `none`.
+- Source: `src/tools/string-transformer/config.json`
 
 ### Share Debug (`share-debug`)
 - Description: Inspect shared files and MIME types for share-target debugging.

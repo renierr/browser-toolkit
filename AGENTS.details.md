@@ -87,7 +87,7 @@ bun x prettier --write <touched-file-1> <touched-file-2>
 - App bootstrap and tool discovery live in `src/script.ts`.
 - Tools are discovered lazily via `import.meta.glob(...)` (`config.json`, `template.html`, `index.ts`).
 - Prefer the `html` tagged template from `src/js/utils.ts` for composing HTML strings.
-- Prefer `getSettings(toolId).bind(container)` from `src/js/settings.ts` for persisted form controls.
+- `data-setting` attributes on form controls are auto-bound by the framework (`src/js/render.ts:105` calls `settings.bind()`). Do **not** call `settings.bind()` in tool code — only add `data-setting="name"` to the element.
 - Tool lifecycle cleanup/cancellation is orchestrated in `src/js/render.ts` (`currentToolCleanup`, `settingsCleanup`, `cancelPendingInit`).
 - Do not reimplement your own global navigation lifecycle inside tools; return cleanup from `init()` instead.
 
