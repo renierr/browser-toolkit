@@ -14,8 +14,10 @@ let liveStream: MediaStream | null = null;
 let liveAudioCtx: AudioContext | null = null;
 let liveSourceNode: MediaStreamAudioSourceNode | null = null;
 let liveProcessor: ScriptProcessorNode | null = null;
+let liveAnalyser: AnalyserNode | null = null;
 let liveChunks: Float32Array[] = [];
 let liveDecodeTimer: number | null = null;
+let visualizerFrame: number | null = null;
 let isListening = false;
 let liveDecodeId = 0;
 
@@ -116,6 +118,10 @@ function delay(ms: number): Promise<void> {
 function stopLiveListen() {
   isListening = false;
 
+  if (visualizerFrame) {
+    cancelAnimationFrame(visualizerFrame);
+    visualizerFrame = null;
+  }
   if (liveDecodeTimer) {
     clearInterval(liveDecodeTimer);
     liveDecodeTimer = null;
@@ -123,6 +129,10 @@ function stopLiveListen() {
   if (liveProcessor) {
     liveProcessor.disconnect();
     liveProcessor = null;
+  }
+  if (liveAnalyser) {
+    liveAnalyser.disconnect();
+    liveAnalyser = null;
   }
   if (liveSourceNode) {
     liveSourceNode.disconnect();
@@ -142,6 +152,7 @@ function stopLiveListen() {
   }
   liveChunks = [];
 
+  document.getElementById('flash-indicator')?.classList.remove('on');
   document.getElementById('btn-live-start')?.classList.remove('hidden');
   document.getElementById('btn-live-stop')?.classList.add('hidden');
   document.getElementById('live-status')?.classList.add('hidden');
@@ -158,15 +169,53 @@ async function startLiveListen() {
   try {
     liveStream = await navigator.mediaDevices.getUserMedia({ audio: true });
     liveAudioCtx = new AudioContext();
+
+    // Resume if suspended (auto-blocked by browser)
+    if (liveAudioCtx.state === 'suspended') {
+      await liveAudioCtx.resume();
+    }
+
     liveSourceNode = liveAudioCtx.createMediaStreamSource(liveStream);
+
+    // Analyser for visual feedback (lamp reacts to audio level)
+    liveAnalyser = liveAudioCtx.createAnalyser();
+    liveAnalyser.fftSize = 256;
+    liveSourceNode.connect(liveAnalyser);
+
+    // ScriptProcessorNode for raw PCM capture
     liveProcessor = liveAudioCtx.createScriptProcessor(4096, 1, 1);
+    liveAnalyser.connect(liveProcessor);
+
+    // Connect to destination so the audio graph is complete (required for
+    // ScriptProcessorNode to fire onaudioprocess in some browsers).
+    liveProcessor.connect(liveAudioCtx.destination);
 
     liveProcessor.onaudioprocess = (e: AudioProcessingEvent) => {
       const inputData = e.inputBuffer.getChannelData(0);
       liveChunks.push(new Float32Array(inputData));
     };
 
-    liveSourceNode.connect(liveProcessor);
+    // Visualiser: flash lamp with audio activity
+    function drawLiveVisualizer() {
+      if (!isListening || !liveAnalyser) return;
+      visualizerFrame = requestAnimationFrame(drawLiveVisualizer);
+
+      const data = new Uint8Array(liveAnalyser.frequencyBinCount);
+      liveAnalyser.getByteTimeDomainData(data);
+
+      let sumSquares = 0;
+      for (let i = 0; i < data.length; i++) {
+        const v = (data[i] - 128) / 128;
+        sumSquares += v * v;
+      }
+      const rms = Math.sqrt(sumSquares / data.length);
+
+      const fi = document.getElementById('flash-indicator');
+      if (fi) {
+        fi.classList.toggle('on', rms > 0.03);
+      }
+    }
+    drawLiveVisualizer();
 
     liveWorker = new DecodeWorker();
     liveWorker.addEventListener('message', (ev: MessageEvent<WorkerOutMessage>) => {
@@ -179,9 +228,21 @@ async function startLiveListen() {
       if (m.text) {
         el.value = m.text;
         const out = document.getElementById('output-morse') as HTMLDivElement | null;
-        if (out) out.innerHTML = textToMorseHtml(m.text);
-      } else if (m.reason) {
-        console.warn('Live decode warning:', m.reason);
+        if (out) {
+          out.innerHTML = textToMorseHtml(m.text);
+          // Brief glow pulse when new decode lands
+          out.style.transition = 'box-shadow 0.15s';
+          out.style.boxShadow = '0 0 24px var(--color-primary)';
+          setTimeout(() => {
+            out.style.boxShadow = '';
+          }, 300);
+        }
+        showMessage(`Decoded ${m.text.length} chars`, { timeoutMs: 2000 });
+      } else {
+        // Decoder returned empty – may just need more audio
+        if (liveChunks.length > 20) {
+          // ~2+ seconds of audio with no morse – let user know
+        }
       }
     });
 
