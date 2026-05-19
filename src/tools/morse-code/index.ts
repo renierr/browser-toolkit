@@ -115,6 +115,39 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+/** Bandpass filter centered on 600Hz (standard CW tone). */
+function bandpass600Hz(data: Float32Array, sampleRate: number): Float32Array {
+  const out = new Float32Array(data.length);
+  const fc = 600 / sampleRate;
+  const Q = 4;
+
+  const w0 = 2 * Math.PI * fc;
+  const alpha = Math.sin(w0) / (2 * Q);
+
+  const b0 = alpha;
+  const b1 = 0;
+  const b2 = -alpha;
+  const a0 = 1 + alpha;
+  const a1 = -2 * Math.cos(w0);
+  const a2 = 1 - alpha;
+
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  const b0_a0 = b0 / a0;
+  const b1_a0 = b1 / a0;
+  const b2_a0 = b2 / a0;
+  const a1_a0 = a1 / a0;
+  const a2_a0 = a2 / a0;
+
+  for (let i = 0; i < data.length; i++) {
+    const x = data[i];
+    const y = b0_a0 * x + b1_a0 * x1 + b2_a0 * x2 - a1_a0 * y1 - a2_a0 * y2;
+    x2 = x1; x1 = x;
+    y2 = y1; y1 = y;
+    out[i] = y;
+  }
+  return out;
+}
+
 function stopLiveListen() {
   isListening = false;
 
@@ -161,13 +194,14 @@ function stopLiveListen() {
 async function startLiveListen() {
   if (isListening) return;
 
-  const inputEl = document.getElementById('input-text') as HTMLTextAreaElement;
-  const outputMorseEl = document.getElementById('output-morse') as HTMLDivElement;
-  inputEl.value = '';
-  outputMorseEl.innerHTML = '';
-
   try {
-    liveStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    liveStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+      },
+    });
     liveAudioCtx = new AudioContext();
 
     // Resume if suspended (auto-blocked by browser)
@@ -180,6 +214,7 @@ async function startLiveListen() {
     // Analyser for visual feedback (lamp reacts to audio level)
     liveAnalyser = liveAudioCtx.createAnalyser();
     liveAnalyser.fftSize = 256;
+    liveAnalyser.smoothingTimeConstant = 0;
     liveSourceNode.connect(liveAnalyser);
 
     // ScriptProcessorNode for raw PCM capture
@@ -212,7 +247,7 @@ async function startLiveListen() {
 
       const fi = document.getElementById('flash-indicator');
       if (fi) {
-        fi.classList.toggle('on', rms > 0.03);
+        fi.classList.toggle('on', rms > 0.006);
       }
     }
     drawLiveVisualizer();
@@ -230,18 +265,11 @@ async function startLiveListen() {
         const out = document.getElementById('output-morse') as HTMLDivElement | null;
         if (out) {
           out.innerHTML = textToMorseHtml(m.text);
-          // Brief glow pulse when new decode lands
           out.style.transition = 'box-shadow 0.15s';
           out.style.boxShadow = '0 0 24px var(--color-primary)';
           setTimeout(() => {
             out.style.boxShadow = '';
           }, 300);
-        }
-        showMessage(`Decoded ${m.text.length} chars`, { timeoutMs: 2000 });
-      } else {
-        // Decoder returned empty – may just need more audio
-        if (liveChunks.length > 20) {
-          // ~2+ seconds of audio with no morse – let user know
         }
       }
     });
@@ -249,6 +277,7 @@ async function startLiveListen() {
     liveDecodeTimer = window.setInterval(() => {
       if (liveChunks.length === 0) return;
 
+      const sr = liveAudioCtx!.sampleRate;
       const totalSamples = liveChunks.reduce((sum, c) => sum + c.length, 0);
       const combined = new Float32Array(totalSamples);
       let offset = 0;
@@ -257,14 +286,17 @@ async function startLiveListen() {
         offset += chunk.length;
       }
 
+      // Bandpass around 600Hz (CW tone) to suppress noise picked up by the mic
+      const filtered = bandpass600Hz(combined, sr);
+
       const id = ++liveDecodeId;
       const msg = {
         type: 'decode-pcm' as const,
         id,
-        audio: combined,
-        sampleRate: liveAudioCtx!.sampleRate,
+        audio: filtered,
+        sampleRate: sr,
       };
-      liveWorker?.postMessage(msg, [combined.buffer]);
+      liveWorker?.postMessage(msg, [filtered.buffer]);
     }, 2000);
 
     isListening = true;
