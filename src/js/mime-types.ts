@@ -111,6 +111,7 @@ export const MIME_TYPE_FALLBACKS: Record<string, string> = {
   '.azw': 'application/vnd.amazon.ebook',
   '.ics': 'text/calendar',
   '.vcf': 'text/vcard',
+  '.kdbx': 'application/x-keepass',
 };
 
 export function getMimeTypeFromFileName(mime: string, fileName: string): string {

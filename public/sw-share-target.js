@@ -110,6 +110,7 @@ const MIME_TYPE_FALLBACKS = {
   '.azw': 'application/vnd.amazon.ebook',
   '.ics': 'text/calendar',
   '.vcf': 'text/vcard',
+  '.kdbx': 'application/x-keepass',
 };
 
 function getMimeTypeFromFileName(mime, fileName) {
@@ -221,13 +222,10 @@ self.addEventListener('fetch', (event) => {
         const urlValue = form.get('url');
 
         let textContent = '';
-        if (urlValue && typeof urlValue === 'string') textContent += urlValue;
-        if (textValue && typeof textValue === 'string') {
-          if (textContent && !textContent.includes(textValue)) {
-            textContent += '\n' + textValue;
-          } else if (!textContent) {
-            textContent = textValue;
-          }
+        if (urlValue && typeof urlValue === 'string') {
+          textContent = urlValue;
+        } else if (textValue && typeof textValue === 'string') {
+          textContent = textValue;
         }
 
         if (textContent) {
@@ -235,7 +233,12 @@ self.addEventListener('fetch', (event) => {
             titleValue && typeof titleValue === 'string' && titleValue.trim()
               ? titleValue.trim()
               : 'shared-text.txt';
-          const mime = getMimeTypeFromFileName('', fileName);
+          
+          let mime = getMimeTypeFromFileName('', fileName);
+          // Text/URL shares from form fields are always text
+          if (mime === 'application/octet-stream') {
+            mime = 'text/plain';
+          }
 
           const blob = new Blob([textContent], { type: mime });
           const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
