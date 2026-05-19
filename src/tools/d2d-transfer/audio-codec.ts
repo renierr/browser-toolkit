@@ -1,92 +1,83 @@
-import { encodeFrame, dataToBits, bitsToData, decodeFrame, HEADER_SIZE } from './protocol';
+import { encodeFrame, decodeFrame, HEADER_SIZE, dataToBits, bitsToData } from './protocol';
 
-export const FREQ_SPACE = 18500;
-export const FREQ_MARK = 19500;
-export const BIT_TIME_MS = 10;
+export const BIT_TIME_MS = 20;
 const BIT_TIME_S = BIT_TIME_MS / 1000;
-const REPEATS = 3;
-const GAP_MS = 50;
-const SAMPLE_RATE = 48000;
+const BEACON_BITS = 64;
+const GAP_MS = 300;
 
-function binForFreq(freq: number): number {
-  return Math.round((freq * 2048) / SAMPLE_RATE);
+export const FREQ_MIN = 10000;
+export const FREQ_MAX = 18000;
+export const FREQ_DEFAULT = 12000;
+const FREQ_SPACING = 2000;
+
+function goertzel(samples: Float32Array, targetFreq: number, sampleRate: number): number {
+  const N = samples.length;
+  const k = Math.round((N * targetFreq) / sampleRate);
+  if (k <= 0 || k >= N) return 0;
+  const omega = (2 * Math.PI * k) / N;
+  const coeff = 2 * Math.cos(omega);
+  let s1 = 0,
+    s2 = 0;
+  for (let i = 0; i < N; i++) {
+    const s0 = samples[i] + coeff * s1 - s2;
+    s2 = s1;
+    s1 = s0;
+  }
+  return s1 * s1 + s2 * s2 - coeff * s1 * s2;
 }
-
-const BIN_MARK = binForFreq(FREQ_MARK);
-const BIN_SPACE = binForFreq(FREQ_SPACE);
 
 export class AudioSender {
   private ctx: AudioContext | null = null;
   private source: AudioBufferSourceNode | null = null;
-  private gain: GainNode | null = null;
   private _active = false;
-  private _totalBits = 0;
-  private _durationMs = 0;
   private startTime = 0;
   private rafId: number | null = null;
+  private freqSpace = FREQ_DEFAULT;
+  private freqMark = FREQ_DEFAULT + FREQ_SPACING;
   private progressCb: ((pct: number) => void) | null = null;
-  private _onComplete: (() => void) | null = null;
 
   get active(): boolean {
     return this._active;
   }
 
-  get progress(): number {
-    return this._durationMs > 0
-      ? Math.min(1, (performance.now() - this.startTime) / this._durationMs)
-      : 0;
-  }
-
-  get totalBytes(): number {
-    return this._totalBits / 8;
+  setFrequency(baseHz: number): void {
+    this.freqSpace = Math.max(FREQ_MIN, Math.min(FREQ_MAX, baseHz));
+    this.freqMark = this.freqSpace + FREQ_SPACING;
   }
 
   onProgress(cb: (pct: number) => void): void {
     this.progressCb = cb;
   }
 
-  onComplete(cb: () => void): void {
-    this._onComplete = cb;
-  }
-
   async start(data: Uint8Array): Promise<void> {
     if (this._active) return;
     const frame = encodeFrame(data);
     const bits = dataToBits(frame);
-    this._totalBits = bits.length * REPEATS;
 
     this.ctx = new AudioContext();
-    this.gain = this.ctx.createGain();
-    this.gain.gain.value = 0.25;
-    this.gain.connect(this.ctx.destination);
+    const sr = this.ctx.sampleRate;
+    const gain = this.ctx.createGain();
+    gain.gain.value = 0.5;
+    gain.connect(this.ctx.destination);
 
-    const buf = this.generateWaveform(bits, this.ctx.sampleRate);
-    this._durationMs = (buf.length / this.ctx.sampleRate) * 1000;
-
+    const buf = this.buildLoopBuffer(bits, sr);
     this.source = this.ctx.createBufferSource();
     this.source.buffer = buf;
-    this.source.loop = false;
-    this.source.connect(this.gain);
+    this.source.loop = true;
+    this.source.connect(gain);
     this.source.start();
     this._active = true;
     this.startTime = performance.now();
 
     if (this.progressCb) this.progressCb(0);
 
-    this.source.onended = () => {
-      if (this._active) {
-        this._active = false;
-        if (this._onComplete) this._onComplete();
-      }
-    };
-
+    const loopMs = (buf.length / sr) * 1000;
     const tick = () => {
       if (!this._active) return;
-      const pct = this.progress;
+      const elapsed = performance.now() - this.startTime;
+      const pct = Math.min(1, (elapsed % loopMs) / (loopMs * 0.8));
       if (this.progressCb) this.progressCb(pct);
-      if (pct < 1) {
-        this.rafId = requestAnimationFrame(tick);
-      }
+      this.rafId = requestAnimationFrame(tick);
     };
     this.rafId = requestAnimationFrame(tick);
   }
@@ -104,43 +95,42 @@ export class AudioSender {
       this.source.disconnect();
       this.source = null;
     }
-    if (this.gain) {
-      this.gain.disconnect();
-      this.gain = null;
-    }
     if (this.ctx) {
       this.ctx.close();
       this.ctx = null;
     }
   }
 
-  private generateWaveform(bits: number[], sampleRate: number): AudioBuffer {
-    const samplesPerBit = Math.ceil(BIT_TIME_S * sampleRate);
-    const gapSamples = Math.ceil((GAP_MS / 1000) * sampleRate);
-    const passSamples = bits.length * samplesPerBit;
-    const totalSamples =
-      passSamples * REPEATS + (REPEATS - 1) * gapSamples + Math.ceil(0.02 * sampleRate);
+  private buildLoopBuffer(bits: number[], sr: number): AudioBuffer {
+    const spb = Math.ceil(BIT_TIME_S * sr);
+    const gapSamples = Math.ceil((GAP_MS / 1000) * sr);
+    const beaconSamples = BEACON_BITS * spb;
+    const frameSamples = bits.length * spb;
+    const total = beaconSamples + frameSamples + gapSamples;
 
-    const buf = new AudioBuffer({ length: totalSamples, sampleRate });
+    const buf = new AudioBuffer({ length: total, sampleRate: sr });
     const ch = buf.getChannelData(0);
-
     let wi = 0;
-    for (let r = 0; r < REPEATS; r++) {
-      if (r > 0) {
-        for (let g = 0; g < gapSamples; g++) {
-          ch[wi++] = 0;
-        }
-      }
-      for (const bit of bits) {
-        const freq = bit === 1 ? FREQ_MARK : FREQ_SPACE;
-        const rampLen = Math.min(samplesPerBit, Math.ceil(0.001 * sampleRate));
-        for (let s = 0; s < samplesPerBit; s++) {
-          const t = s / sampleRate;
-          const ramp = s < rampLen ? s / rampLen : 1;
-          ch[wi++] = Math.sin(2 * Math.PI * freq * t) * 0.8 * ramp;
-        }
+
+    for (let i = 0; i < BEACON_BITS; i++) {
+      const freq = i % 2 === 0 ? this.freqSpace : this.freqMark;
+      const rampLen = Math.min(spb, Math.ceil(0.002 * sr));
+      for (let s = 0; s < spb; s++) {
+        const ramp = s < rampLen ? s / rampLen : 1;
+        ch[wi++] = Math.sin(2 * Math.PI * freq * (s / sr)) * 0.7 * ramp;
       }
     }
+
+    for (const bit of bits) {
+      const freq = bit === 1 ? this.freqMark : this.freqSpace;
+      const rampLen = Math.min(spb, Math.ceil(0.002 * sr));
+      for (let s = 0; s < spb; s++) {
+        const ramp = s < rampLen ? s / rampLen : 1;
+        ch[wi++] = Math.sin(2 * Math.PI * freq * (s / sr)) * 0.7 * ramp;
+      }
+    }
+
+    for (let g = 0; g < gapSamples; g++) ch[wi++] = 0;
     return buf;
   }
 }
@@ -149,60 +139,54 @@ export class AudioReceiver {
   private ctx: AudioContext | null = null;
   private stream: MediaStream | null = null;
   private analyser: AnalyserNode | null = null;
+  private _onData: ((data: Uint8Array) => void) | null = null;
+  private _onSignal: ((detected: boolean, level: number) => void) | null = null;
   private _active = false;
   private intervalId: number | null = null;
-  private _onData: ((data: Uint8Array) => void) | null = null;
-  private _onStatus: ((status: string) => void) | null = null;
-  private _onSignalLevel: ((level: number) => void) | null = null;
   private bitBuffer: number[] = [];
-  private silentCount = 0;
-  private receivedFrames = 0;
+  private lastSignal = false;
+  private freqSpace = FREQ_DEFAULT;
+  private freqMark = FREQ_DEFAULT + FREQ_SPACING;
 
   get active(): boolean {
     return this._active;
   }
 
+  setFrequency(baseHz: number): void {
+    this.freqSpace = Math.max(FREQ_MIN, Math.min(FREQ_MAX, baseHz));
+    this.freqMark = this.freqSpace + FREQ_SPACING;
+  }
+
   onData(cb: (data: Uint8Array) => void): void {
     this._onData = cb;
   }
-
-  onStatus(cb: (status: string) => void): void {
-    this._onStatus = cb;
-  }
-
-  onSignalLevel(cb: (level: number) => void): void {
-    this._onSignalLevel = cb;
+  onSignal(cb: (detected: boolean, level: number) => void): void {
+    this._onSignal = cb;
   }
 
   async start(): Promise<void> {
     if (this._active) return;
     try {
       this.ctx = new AudioContext();
+      const sr = this.ctx.sampleRate;
       this.stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          sampleRate: { ideal: SAMPLE_RATE },
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       });
       const src = this.ctx.createMediaStreamSource(this.stream);
       this.analyser = this.ctx.createAnalyser();
-      this.analyser.fftSize = 2048;
+      this.analyser.fftSize = 1024;
       this.analyser.smoothingTimeConstant = 0;
       src.connect(this.analyser);
 
       this._active = true;
       this.bitBuffer = [];
-      this.silentCount = 0;
-      this.receivedFrames = 0;
-      if (this._onStatus) this._onStatus('listening');
+      this.lastSignal = false;
 
       const tickMs = Math.ceil(BIT_TIME_MS / 2);
-      this.intervalId = window.setInterval(() => this.tick(), tickMs);
+      this.intervalId = window.setInterval(() => this.tick(sr), tickMs);
     } catch (err) {
-      console.error('[AudioReceiver] Failed to start:', err);
-      if (this._onStatus) this._onStatus('error: mic access denied');
+      console.error('[AudioRx]', err);
+      if (this._onSignal) this._onSignal(false, 0);
     }
   }
 
@@ -223,75 +207,66 @@ export class AudioReceiver {
     this.analyser = null;
   }
 
-  private tick(): void {
+  private tick(sr: number): void {
     if (!this._active || !this.analyser) return;
 
-    const data = new Uint8Array(this.analyser.frequencyBinCount);
-    this.analyser.getByteFrequencyData(data);
+    const td = new Float32Array(this.analyser.fftSize);
+    this.analyser.getFloatTimeDomainData(td);
 
-    const m = data[BIN_MARK] || 0;
-    const s = data[BIN_SPACE] || 0;
-    const maxEnergy = Math.max(m, s);
-    const threshold = 30;
+    const eSpace = goertzel(td, this.freqSpace, sr);
+    const eMark = goertzel(td, this.freqMark, sr);
+    const maxE = Math.max(eSpace, eMark);
+    const threshold = 0.5;
+    const hasSignal = maxE > threshold;
+    const level = Math.min(1, maxE / 10);
 
-    if (this._onSignalLevel) this._onSignalLevel(Math.min(1, maxEnergy / 200));
-
-    if (m < threshold && s < threshold) {
-      this.silentCount++;
-      if (this.silentCount > 20 && this.receivedFrames > 0) {
-        if (this._onStatus) this._onStatus('idle');
-        this.bitBuffer = [];
-        this.receivedFrames = 0;
-      }
-      return;
+    if (hasSignal !== this.lastSignal) {
+      this.lastSignal = hasSignal;
     }
-    this.silentCount = 0;
+    if (this._onSignal) this._onSignal(hasSignal, level);
 
-    const bit = m > s ? 1 : 0;
+    if (!hasSignal) return;
+
+    const bit = eMark > eSpace ? 1 : 0;
     this.bitBuffer.push(bit);
-
-    if (this.bitBuffer.length > 5000) {
-      this.bitBuffer.splice(0, 1000);
-    }
+    if (this.bitBuffer.length > 8000) this.bitBuffer.splice(0, 2000);
 
     this.tryDecode();
   }
 
   private tryDecode(): void {
-    const preambleLen = 32;
+    const preambleLen = 64;
     const syncLen = 16;
     const lenLen = 16;
 
-    for (let start = 0; start < this.bitBuffer.length - 100; start++) {
-      let altOk = true;
+    for (let start = 0; start < this.bitBuffer.length - 200; start++) {
+      let altScore = 0;
       for (let i = 0; i < preambleLen - 1; i++) {
-        if (this.bitBuffer[start + i] === this.bitBuffer[start + i + 1]) {
-          altOk = false;
-          break;
-        }
+        if (this.bitBuffer[start + i] !== this.bitBuffer[start + i + 1]) altScore++;
       }
-      if (!altOk) continue;
+      const altRatio = altScore / (preambleLen - 1);
+      if (altRatio < 0.7) continue;
 
       const syncStart = start + preambleLen;
       if (syncStart + syncLen + lenLen > this.bitBuffer.length) continue;
 
-      const syncBits = this.bitBuffer.slice(syncStart, syncStart + syncLen);
       const expectedSync = [0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0];
-      let syncMatch = true;
+      let syncScore = 0;
       for (let i = 0; i < syncLen; i++) {
-        if (syncBits[i] !== expectedSync[i]) {
-          syncMatch = false;
-          break;
-        }
+        if (
+          syncStart + i < this.bitBuffer.length &&
+          this.bitBuffer[syncStart + i] === expectedSync[i]
+        )
+          syncScore++;
       }
-      if (!syncMatch) continue;
+      if (syncScore / syncLen < 0.75) continue;
 
       const lenBits = this.bitBuffer.slice(syncStart + syncLen, syncStart + syncLen + lenLen);
-      const payloadLenBytes = bitsToLen(lenBits);
+      const payloadLenBytes = bitsToVal(lenBits);
       if (payloadLenBytes === 0 || payloadLenBytes > 64000) continue;
 
-      const totalFrameBits = preambleLen + syncLen + lenLen + payloadLenBytes * 8 + 16;
-      if (start + totalFrameBits > this.bitBuffer.length) continue;
+      const totalBits = preambleLen + syncLen + lenLen + payloadLenBytes * 8 + 16;
+      if (start + totalBits > this.bitBuffer.length) continue;
 
       const payloadBits = this.bitBuffer.slice(
         syncStart + syncLen + lenLen,
@@ -299,7 +274,7 @@ export class AudioReceiver {
       );
       const crcBits = this.bitBuffer.slice(
         syncStart + syncLen + lenLen + payloadLenBytes * 8,
-        start + totalFrameBits
+        start + totalBits
       );
 
       const payload = bitsToData(payloadBits);
@@ -309,26 +284,23 @@ export class AudioReceiver {
       frameBytes[2] = (payloadLenBytes >> 8) & 0xff;
       frameBytes[3] = payloadLenBytes & 0xff;
       frameBytes.set(payload, 4);
-      const crcVal = bitsToData(crcBits);
-      frameBytes[4 + payloadLenBytes] = crcVal[0] || 0;
-      frameBytes[5 + payloadLenBytes] = crcVal[1] || 0;
+      const crcV = bitsToData(crcBits);
+      frameBytes[4 + payloadLenBytes] = crcV[0] || 0;
+      frameBytes[5 + payloadLenBytes] = crcV[1] || 0;
 
       const decoded = decodeFrame(frameBytes);
       if (decoded) {
-        this.receivedFrames++;
+        this.bitBuffer = [];
+        if (this._onSignal) this._onSignal(true, 1);
         if (this._onData) this._onData(decoded.payload);
-        if (this._onStatus) this._onStatus('done');
-        this.bitBuffer.splice(0, start + totalFrameBits);
         return;
       }
     }
   }
 }
 
-function bitsToLen(bits: number[]): number {
-  let val = 0;
-  for (let i = 0; i < bits.length; i++) {
-    val = (val << 1) | (bits[i] || 0);
-  }
-  return val;
+function bitsToVal(bits: number[]): number {
+  let v = 0;
+  for (let i = 0; i < bits.length; i++) v = (v << 1) | (bits[i] || 0);
+  return v;
 }

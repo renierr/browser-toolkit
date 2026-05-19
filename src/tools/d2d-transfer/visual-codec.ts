@@ -1,48 +1,25 @@
-import { encodeFrame, dataToBits, bitsToData, decodeFrame, HEADER_SIZE } from './protocol';
+import { encodeFrame, decodeFrame, HEADER_SIZE, dataToBits, bitsToData } from './protocol';
 
-export const BIT_TIME_MS = 100;
-const REPEATS = 2;
-const GAP_MS = 200;
-
-export type VisualColor = { r: number; g: number; b: number };
-
-const COLOR_1: VisualColor = { r: 255, g: 255, b: 255 };
-const COLOR_0: VisualColor = { r: 0, g: 0, b: 0 };
+export const BIT_TIME_MS = 200;
+const BEACON_BITS = 32;
+const GAP_MS = 500;
 
 export class VisualSender {
   private _active = false;
   private overlay: HTMLDivElement | null = null;
   private cancelBtn: HTMLButtonElement | null = null;
-  private _totalBits = 0;
-  private _durationMs = 0;
-  private startTime = 0;
   private rafId: number | null = null;
+  private startTime = 0;
   private progressCb: ((pct: number) => void) | null = null;
-  private _onComplete: (() => void) | null = null;
   private _onCancel: (() => void) | null = null;
 
   get active(): boolean {
     return this._active;
   }
 
-  get progress(): number {
-    return this._durationMs > 0
-      ? Math.min(1, (performance.now() - this.startTime) / this._durationMs)
-      : 0;
-  }
-
-  get totalBytes(): number {
-    return this._totalBits / 8;
-  }
-
   onProgress(cb: (pct: number) => void): void {
     this.progressCb = cb;
   }
-
-  onComplete(cb: () => void): void {
-    this._onComplete = cb;
-  }
-
   onCancelRequest(cb: () => void): void {
     this._onCancel = cb;
   }
@@ -51,11 +28,6 @@ export class VisualSender {
     if (this._active) return;
     const frame = encodeFrame(data);
     const bits = dataToBits(frame);
-    this._totalBits = bits.length * REPEATS;
-
-    const singlePassMs = bits.length * BIT_TIME_MS;
-    const gapMs = GAP_MS;
-    this._durationMs = singlePassMs * REPEATS + (REPEATS - 1) * gapMs;
 
     this.overlay = document.createElement('div');
     Object.assign(this.overlay.style, {
@@ -82,53 +54,53 @@ export class VisualSender {
       fontSize: '13px',
       fontWeight: '600',
     });
-    this.cancelBtn.addEventListener('click', () => {
+    this.cancelBtn.onclick = () => {
       if (this._onCancel) this._onCancel();
-    });
+    };
     document.body.appendChild(this.cancelBtn);
 
     this._active = true;
     this.startTime = performance.now();
-
     if (this.progressCb) this.progressCb(0);
+
+    const beaconMs = BEACON_BITS * BIT_TIME_MS;
+    const frameMs = bits.length * BIT_TIME_MS;
+    const loopMs = beaconMs + frameMs + GAP_MS;
 
     const render = () => {
       if (!this._active) return;
-      const elapsed = performance.now() - this.startTime;
+      const elapsed = (performance.now() - this.startTime) % loopMs;
       let remaining = elapsed;
-      let found = false;
+      let showing = false;
 
-      for (let r = 0; r < REPEATS; r++) {
-        if (r > 0) remaining -= gapMs;
-        if (remaining < 0) break;
-        if (remaining < singlePassMs) {
-          const bitIdx = Math.floor(remaining / BIT_TIME_MS);
-          if (bitIdx < bits.length) {
-            const bit = bits[bitIdx];
-            const c = bit === 1 ? COLOR_1 : COLOR_0;
-            if (this.overlay) {
-              this.overlay.style.backgroundColor = `rgb(${c.r},${c.g},${c.b})`;
-            }
-            const pct = (r * bits.length + bitIdx + 1) / this._totalBits;
-            if (this.progressCb) this.progressCb(pct);
-            found = true;
-          }
-          break;
+      if (remaining < beaconMs) {
+        const idx = Math.floor(remaining / BIT_TIME_MS);
+        if (idx < BEACON_BITS) {
+          const c = idx % 2 === 0 ? '#000' : '#fff';
+          if (this.overlay) this.overlay.style.backgroundColor = c;
+          showing = true;
         }
-        remaining -= singlePassMs;
+      }
+      remaining -= beaconMs;
+
+      if (!showing && remaining >= 0 && remaining < frameMs) {
+        const idx = Math.floor(remaining / BIT_TIME_MS);
+        if (idx < bits.length) {
+          const c = bits[idx] === 1 ? '#fff' : '#000';
+          if (this.overlay) this.overlay.style.backgroundColor = c;
+          showing = true;
+        }
       }
 
-      if (!found) {
-        if (this.overlay) this.overlay.style.backgroundColor = 'transparent';
-        this._active = false;
-        this.cleanupOverlay();
-        if (this._onComplete) this._onComplete();
-        return;
+      if (!showing && this.overlay) {
+        this.overlay.style.backgroundColor = 'transparent';
       }
+
+      const loopPct = (elapsed % loopMs) / loopMs;
+      if (this.progressCb) this.progressCb(Math.min(1, loopPct * 2));
 
       this.rafId = requestAnimationFrame(render);
     };
-
     this.rafId = requestAnimationFrame(render);
   }
 
@@ -138,10 +110,6 @@ export class VisualSender {
       cancelAnimationFrame(this.rafId);
       this.rafId = null;
     }
-    this.cleanupOverlay();
-  }
-
-  private cleanupOverlay(): void {
     if (this.overlay) {
       this.overlay.remove();
       this.overlay = null;
@@ -159,14 +127,12 @@ export class VisualReceiver {
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private _active = false;
-  private intervalId: number | null = null;
+  private rafId: number | null = null;
   private _onData: ((data: Uint8Array) => void) | null = null;
-  private _onStatus: ((status: string) => void) | null = null;
-  private _onSignalLevel: ((level: number) => void) | null = null;
+  private _onSignal: ((detected: boolean, level: number) => void) | null = null;
   private bitBuffer: number[] = [];
-  private brightnessHistory: number[] = [];
-  private silentCount = 0;
-  private receivedFrames = 0;
+  private lastSampleTime = 0;
+  private brightnessBaseline = 128;
 
   get active(): boolean {
     return this._active;
@@ -175,17 +141,12 @@ export class VisualReceiver {
   onData(cb: (data: Uint8Array) => void): void {
     this._onData = cb;
   }
-
-  onStatus(cb: (status: string) => void): void {
-    this._onStatus = cb;
+  onSignal(cb: (detected: boolean, level: number) => void): void {
+    this._onSignal = cb;
   }
 
-  onSignalLevel(cb: (level: number) => void): void {
-    this._onSignalLevel = cb;
-  }
-
-  setVideoElement(video: HTMLVideoElement): void {
-    this.video = video;
+  setVideoElement(vid: HTMLVideoElement): void {
+    this.video = vid;
   }
 
   async start(): Promise<void> {
@@ -204,30 +165,32 @@ export class VisualReceiver {
       await this.video.play();
 
       this.canvas = document.createElement('canvas');
-      this.canvas.width = 320;
-      this.canvas.height = 240;
+      this.canvas.width = 160;
+      this.canvas.height = 120;
       this.ctx = this.canvas.getContext('2d');
 
       this._active = true;
       this.bitBuffer = [];
-      this.brightnessHistory = [];
-      this.silentCount = 0;
-      this.receivedFrames = 0;
+      this.lastSampleTime = performance.now();
+      this.brightnessBaseline = 128;
 
-      if (this._onStatus) this._onStatus('watching');
-
-      this.intervalId = window.setInterval(() => this.tick(), BIT_TIME_MS);
+      const loop = () => {
+        if (!this._active) return;
+        this.processFrame();
+        this.rafId = requestAnimationFrame(loop);
+      };
+      this.rafId = requestAnimationFrame(loop);
     } catch (err) {
-      console.error('[VisualReceiver] Failed:', err);
-      if (this._onStatus) this._onStatus('error: camera access denied');
+      console.error('[VisualRx]', err);
+      if (this._onSignal) this._onSignal(false, 0);
     }
   }
 
   stop(): void {
     this._active = false;
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
     }
     if (this.video) {
       this.video.pause();
@@ -241,54 +204,33 @@ export class VisualReceiver {
     this.ctx = null;
   }
 
-  private tick(): void {
-    if (!this._active || !this.video || !this.ctx || !this.canvas) return;
+  private processFrame(): void {
+    if (!this.video || !this.ctx || !this.canvas) return;
     if (this.video.readyState < 2) return;
 
-    this.ctx.drawImage(this.video, 0, 0, 320, 240);
-    const imageData = this.ctx.getImageData(0, 0, 320, 240);
-    const pixels = imageData.data;
+    const now = performance.now();
+    const dt = now - this.lastSampleTime;
+    if (dt < BIT_TIME_MS) return;
+    this.lastSampleTime = now - (dt - BIT_TIME_MS);
 
-    let totalBrightness = 0;
-    let sampleCount = 0;
-    for (let y = 60; y < 180; y += 4) {
-      for (let x = 80; x < 240; x += 4) {
-        const idx = (y * 320 + x) * 4;
-        const brightness = (pixels[idx] + pixels[idx + 1] + pixels[idx + 2]) / 3;
-        totalBrightness += brightness;
-        sampleCount++;
-      }
-    }
-    const avgBrightness = totalBrightness / sampleCount;
-    const brightnessNorm = avgBrightness / 255;
+    this.ctx.drawImage(this.video, 0, 0, 160, 120);
+    const id = this.ctx.getImageData(40, 30, 80, 60);
+    const p = id.data;
+    let sum = 0;
+    for (let i = 0; i < p.length; i += 4) sum += (p[i] + p[i + 1] + p[i + 2]) / 3;
+    const brightness = sum / (p.length / 4);
 
-    if (this._onSignalLevel) this._onSignalLevel(brightnessNorm);
+    this.brightnessBaseline += (brightness - this.brightnessBaseline) * 0.01;
 
-    this.brightnessHistory.push(avgBrightness);
-    if (this.brightnessHistory.length > 20) this.brightnessHistory.shift();
+    const delta = brightness - this.brightnessBaseline;
+    const absDelta = Math.abs(delta);
+    if (this._onSignal) this._onSignal(absDelta > 15, Math.min(1, absDelta / 80));
 
-    const minB = Math.min(...this.brightnessHistory);
-    const maxB = Math.max(...this.brightnessHistory);
-    const range = maxB - minB;
+    if (absDelta < 15) return;
 
-    if (range < 20) {
-      this.silentCount++;
-      if (this.silentCount > 10 && this.receivedFrames > 0) {
-        if (this._onStatus) this._onStatus('idle');
-        this.bitBuffer = [];
-        this.receivedFrames = 0;
-      }
-      return;
-    }
-    this.silentCount = 0;
-
-    const threshold = minB + range * 0.4;
-    const bit = avgBrightness > threshold ? 1 : 0;
+    const bit = delta > 0 ? 1 : 0;
     this.bitBuffer.push(bit);
-
-    if (this.bitBuffer.length > 5000) {
-      this.bitBuffer.splice(0, 1000);
-    }
+    if (this.bitBuffer.length > 8000) this.bitBuffer.splice(0, 2000);
 
     this.tryDecode();
   }
@@ -298,73 +240,60 @@ export class VisualReceiver {
     const syncLen = 16;
     const lenLen = 16;
 
-    for (let start = 0; start < this.bitBuffer.length - 100; start++) {
-      let altOk = true;
+    for (let start = 0; start < this.bitBuffer.length - 200; start++) {
+      let altScore = 0;
       for (let i = 0; i < preambleLen - 1; i++) {
-        if (this.bitBuffer[start + i] === this.bitBuffer[start + i + 1]) {
-          altOk = false;
-          break;
-        }
+        if (this.bitBuffer[start + i] !== this.bitBuffer[start + i + 1]) altScore++;
       }
-      if (!altOk) continue;
+      if (altScore / (preambleLen - 1) < 0.7) continue;
 
       const syncStart = start + preambleLen;
       if (syncStart + syncLen + lenLen > this.bitBuffer.length) continue;
 
-      const syncBits = this.bitBuffer.slice(syncStart, syncStart + syncLen);
-      const expectedSync = [0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0];
-      let syncMatch = true;
+      const expected = [0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0];
+      let syncScore = 0;
       for (let i = 0; i < syncLen; i++) {
-        if (syncBits[i] !== expectedSync[i]) {
-          syncMatch = false;
-          break;
-        }
+        if (syncStart + i < this.bitBuffer.length && this.bitBuffer[syncStart + i] === expected[i])
+          syncScore++;
       }
-      if (!syncMatch) continue;
+      if (syncScore / syncLen < 0.75) continue;
 
       const lenBits = this.bitBuffer.slice(syncStart + syncLen, syncStart + syncLen + lenLen);
-      const payloadLenBytes = bitsToLenVisual(lenBits);
-      if (payloadLenBytes === 0 || payloadLenBytes > 64000) continue;
+      const payloadLen = bitsToVal(lenBits);
+      if (payloadLen === 0 || payloadLen > 64000) continue;
 
-      const totalFrameBits = preambleLen + syncLen + lenLen + payloadLenBytes * 8 + 16;
-      if (start + totalFrameBits > this.bitBuffer.length) continue;
+      const total = preambleLen + syncLen + lenLen + payloadLen * 8 + 16;
+      if (start + total > this.bitBuffer.length) continue;
 
-      const payloadBits = this.bitBuffer.slice(
+      const pb = this.bitBuffer.slice(
         syncStart + syncLen + lenLen,
-        syncStart + syncLen + lenLen + payloadLenBytes * 8
+        syncStart + syncLen + lenLen + payloadLen * 8
       );
-      const crcBits = this.bitBuffer.slice(
-        syncStart + syncLen + lenLen + payloadLenBytes * 8,
-        start + totalFrameBits
-      );
+      const cb = this.bitBuffer.slice(syncStart + syncLen + lenLen + payloadLen * 8, start + total);
+      const payload = bitsToData(pb);
+      const fb = new Uint8Array(HEADER_SIZE - 2 + payloadLen + 2);
+      fb[0] = 0x3c;
+      fb[1] = 0x5a;
+      fb[2] = (payloadLen >> 8) & 0xff;
+      fb[3] = payloadLen & 0xff;
+      fb.set(payload, 4);
+      const cv = bitsToData(cb);
+      fb[4 + payloadLen] = cv[0] || 0;
+      fb[5 + payloadLen] = cv[1] || 0;
 
-      const payload = bitsToData(payloadBits);
-      const frameBytes = new Uint8Array(HEADER_SIZE - 2 + payloadLenBytes + 2);
-      frameBytes[0] = 0x3c;
-      frameBytes[1] = 0x5a;
-      frameBytes[2] = (payloadLenBytes >> 8) & 0xff;
-      frameBytes[3] = payloadLenBytes & 0xff;
-      frameBytes.set(payload, 4);
-      const crcVal = bitsToData(crcBits);
-      frameBytes[4 + payloadLenBytes] = crcVal[0] || 0;
-      frameBytes[5 + payloadLenBytes] = crcVal[1] || 0;
-
-      const decoded = decodeFrame(frameBytes);
-      if (decoded) {
-        this.receivedFrames++;
-        if (this._onData) this._onData(decoded.payload);
-        if (this._onStatus) this._onStatus('done');
-        this.bitBuffer.splice(0, start + totalFrameBits);
+      const d = decodeFrame(fb);
+      if (d) {
+        this.bitBuffer = [];
+        if (this._onSignal) this._onSignal(true, 1);
+        if (this._onData) this._onData(d.payload);
         return;
       }
     }
   }
 }
 
-function bitsToLenVisual(bits: number[]): number {
-  let val = 0;
-  for (let i = 0; i < bits.length; i++) {
-    val = (val << 1) | (bits[i] || 0);
-  }
-  return val;
+function bitsToVal(bits: number[]): number {
+  let v = 0;
+  for (let i = 0; i < bits.length; i++) v = (v << 1) | (bits[i] || 0);
+  return v;
 }

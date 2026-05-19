@@ -2,19 +2,28 @@
   <div class="card-body">
     <h2 class="card-title text-2xl font-bold mb-1">D2D Transfer via Sound &amp; Light</h2>
     <p class="text-base-content/70 mb-6 text-sm">
-      Transfer text or small files between nearby devices using near-ultrasonic audio (18.5–19.5 kHz) or light flashes via camera.
+      Transfer text or small files between nearby devices using sound waves or light flashes via
+      camera.
     </p>
 
     <!-- ====== STEP 1: ROLE ====== -->
     <div id="step-role" class="space-y-4">
-      <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider">Step 1: Choose your device role</div>
+      <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider">
+        Step 1: Choose your device role
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button id="btn-sender" class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2">
+        <button
+          id="btn-sender"
+          class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2"
+        >
           <i data-lucide="upload" class="w-8 h-8"></i>
           <span class="text-lg font-bold">Sender</span>
           <span class="text-xs text-base-content/60">Send data from this device</span>
         </button>
-        <button id="btn-receiver" class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2">
+        <button
+          id="btn-receiver"
+          class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2"
+        >
           <i data-lucide="download" class="w-8 h-8"></i>
           <span class="text-lg font-bold">Receiver</span>
           <span class="text-xs text-base-content/60">Receive data on this device</span>
@@ -24,34 +33,75 @@
 
     <!-- ====== STEP 2: METHOD ====== -->
     <div id="step-method" class="hidden space-y-4">
-      <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider">Step 2: Choose transmission method</div>
+      <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider">
+        Step 2: Choose transmission method
+      </div>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <button id="btn-method-audio" class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2">
+        <button
+          id="btn-method-audio"
+          class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2"
+        >
           <i data-lucide="volume-2" class="w-8 h-8"></i>
           <span class="text-lg font-bold">Sound Wave</span>
-          <span class="text-xs text-base-content/60">Near-ultrasonic (18.5–19.5 kHz)</span>
-          <span class="text-xs font-mono text-base-content/40">~12 bytes/sec</span>
+          <span class="text-xs text-base-content/60">Audible high-frequency tones</span>
+          <span class="text-xs font-mono text-base-content/40">~6 bytes/sec</span>
         </button>
-        <button id="btn-method-visual" class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2">
+        <button
+          id="btn-method-visual"
+          class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2"
+        >
           <i data-lucide="sun" class="w-8 h-8"></i>
           <span class="text-lg font-bold">Light Flash</span>
           <span class="text-xs text-base-content/60">Screen flashes via camera</span>
-          <span class="text-xs font-mono text-base-content/40">~1.2 bytes/sec</span>
+          <span class="text-xs font-mono text-base-content/40">~0.6 bytes/sec</span>
         </button>
       </div>
       <div class="text-xs text-base-content/50 mt-2 p-3 bg-base-200 rounded-lg" id="method-info">
-        Place devices 5–20 cm apart for best results.
+        Devices need to be within 5–20 cm for reliable transfer.
       </div>
-      <button id="btn-back-role" class="btn btn-ghost btn-xs"><i data-lucide="arrow-left" class="w-3 h-3 mr-1"></i> Back</button>
+      <button id="btn-back-role" class="btn btn-ghost btn-xs">
+        <i data-lucide="arrow-left" class="w-3 h-3 mr-1"></i> Back
+      </button>
     </div>
 
     <!-- ====== STEP 3: SENDER INPUT ====== -->
     <div id="step-sender-input" class="hidden space-y-4">
-      <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider">Step 3: Enter data to send</div>
+      <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider">
+        Step 3: Enter data to send
+      </div>
 
       <div class="form-control">
-        <label class="label"><span class="label-text">Text message</span></label>
-        <textarea id="sender-text" class="textarea textarea-bordered h-24 font-mono text-sm" placeholder="Type or paste text here..."></textarea>
+        <label class="label block" for="sender-text"
+          ><span class="label-text">Text message</span></label
+        >
+        <textarea
+          id="sender-text"
+          class="textarea textarea-bordered h-24 font-mono text-sm"
+          placeholder="Type or paste text here..."
+        ></textarea>
+      </div>
+
+      <div id="sender-audio-settings" class="hidden p-3 bg-base-200 rounded-lg space-y-2">
+        <label class="label py-0"
+          ><span class="label-text text-xs"
+            >Base Frequency: <span id="freq-display">12</span> kHz (lower = more audible, better
+            speaker compatibility)</span
+          ></label
+        >
+        <input
+          type="range"
+          id="freq-slider"
+          class="range range-sm"
+          min="10"
+          max="18"
+          value="12"
+          step="1"
+        />
+        <div class="flex justify-between text-[10px] text-base-content/40 px-1">
+          <span>10 kHz<br />(audible)</span>
+          <span>14 kHz</span>
+          <span>18 kHz<br />(near-ultrasonic)</span>
+        </div>
       </div>
 
       <div
@@ -70,7 +120,10 @@
         </button>
       </div>
 
-      <div id="sender-estimate" class="hidden text-xs text-base-content/50 p-2 bg-base-200 rounded-lg"></div>
+      <div
+        id="sender-estimate"
+        class="hidden text-xs text-base-content/50 p-2 bg-base-200 rounded-lg"
+      ></div>
 
       <div class="flex gap-2">
         <button id="btn-send-audio" class="btn btn-primary flex-1 hidden">
@@ -80,36 +133,81 @@
           <i data-lucide="sun" class="w-4 h-4 mr-2"></i> Send via Light
         </button>
       </div>
-      <button id="btn-back-method-sender" class="btn btn-ghost btn-xs"><i data-lucide="arrow-left" class="w-3 h-3 mr-1"></i> Back</button>
+      <button id="btn-back-method-sender" class="btn btn-ghost btn-xs">
+        <i data-lucide="arrow-left" class="w-3 h-3 mr-1"></i> Back
+      </button>
     </div>
 
     <!-- ====== STEP 3: RECEIVER VIEW ====== -->
     <div id="step-receiver" class="hidden space-y-4">
-      <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider">Step 3: Start receiving</div>
+      <div class="text-sm font-semibold text-base-content/60 uppercase tracking-wider">
+        Step 3: Start receiving
+      </div>
 
       <div id="receiver-audio-area" class="hidden space-y-3">
-        <div class="flex items-center justify-center h-24 bg-base-200 rounded-lg">
-          <div class="text-center">
-            <i data-lucide="mic" class="w-10 h-10 mx-auto text-base-content/40 mb-2"></i>
-            <p class="text-sm">Listening for ultrasonic audio...</p>
-            <div class="flex items-center justify-center gap-1 mt-2" id="audio-vu">
-              <span class="w-1 h-2 bg-primary rounded-full vu-bar"></span>
-              <span class="w-1 h-3 bg-primary rounded-full vu-bar"></span>
-              <span class="w-1 h-4 bg-primary rounded-full vu-bar"></span>
-              <span class="w-1 h-6 bg-primary rounded-full vu-bar"></span>
-              <span class="w-1 h-3 bg-primary rounded-full vu-bar"></span>
-              <span class="w-1 h-2 bg-primary rounded-full vu-bar"></span>
-            </div>
+        <div
+          id="receiver-signal-indicator"
+          class="flex items-center gap-3 p-3 bg-base-200 rounded-lg"
+        >
+          <span id="rx-signal-dot" class="w-3 h-3 rounded-full bg-gray-400 shrink-0"></span>
+          <span id="rx-signal-text" class="text-sm text-base-content/60"
+            >Waiting for signal...</span
+          >
+        </div>
+
+        <div class="flex items-center justify-center h-12 bg-base-200 rounded-lg">
+          <div class="flex items-center gap-1" id="audio-vu">
+            <span class="w-2 h-2 rounded-full vu-bar bg-green-500"></span>
+            <span class="w-2 h-2 rounded-full vu-bar bg-green-500"></span>
+            <span class="w-2 h-3 rounded-full vu-bar bg-green-500"></span>
+            <span class="w-2 h-4 rounded-full vu-bar bg-yellow-500"></span>
+            <span class="w-2 h-5 rounded-full vu-bar bg-yellow-500"></span>
+            <span class="w-2 h-6 rounded-full vu-bar bg-orange-500"></span>
+            <span class="w-2 h-5 rounded-full vu-bar bg-orange-500"></span>
+            <span class="w-2 h-4 rounded-full vu-bar bg-red-500"></span>
+            <span class="w-2 h-3 rounded-full vu-bar bg-red-500"></span>
+            <span class="w-2 h-2 rounded-full vu-bar bg-red-500"></span>
           </div>
         </div>
+
+        <div id="receiver-audio-freq" class="hidden p-3 bg-base-200 rounded-lg space-y-2">
+          <label class="label py-0"
+            ><span class="label-text text-xs"
+              >Match sender's Frequency: <span id="rx-freq-display">12</span> kHz</span
+            ></label
+          >
+          <input
+            type="range"
+            id="rx-freq-slider"
+            class="range range-sm"
+            min="10"
+            max="18"
+            value="12"
+            step="1"
+          />
+          <div class="flex justify-between text-[10px] text-base-content/40 px-1">
+            <span>10 kHz</span><span>14 kHz</span><span>18 kHz</span>
+          </div>
+        </div>
+
         <button id="btn-listen" class="btn btn-primary w-full">
           <i data-lucide="mic" class="w-4 h-4 mr-2"></i> <span>Listen via Microphone</span>
         </button>
       </div>
 
       <div id="receiver-visual-area" class="hidden space-y-3">
-        <div class="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center" id="camera-container">
+        <div id="rx-visual-signal" class="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
+          <span id="rx-vdot" class="w-3 h-3 rounded-full bg-gray-400 shrink-0"></span>
+          <span id="rx-vtext" class="text-sm text-base-content/60"
+            >Waiting for light flashes...</span
+          >
+        </div>
+        <div
+          class="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center"
+          id="camera-container"
+        >
           <video id="receiver-camera" class="w-full h-full object-cover hidden"></video>
+          <video id="receiver-camera-preview" class="w-full h-full object-cover hidden"></video>
           <div class="text-white text-center" id="camera-placeholder">
             <i data-lucide="camera" class="w-10 h-10 mx-auto mb-2 opacity-50"></i>
             <p class="text-sm opacity-70">Camera preview</p>
@@ -120,7 +218,9 @@
         </button>
       </div>
 
-      <button id="btn-back-method-receiver" class="btn btn-ghost btn-xs"><i data-lucide="arrow-left" class="w-3 h-3 mr-1"></i> Back</button>
+      <button id="btn-back-method-receiver" class="btn btn-ghost btn-xs">
+        <i data-lucide="arrow-left" class="w-3 h-3 mr-1"></i> Back
+      </button>
     </div>
 
     <!-- ====== RECEIVER RECEIVED DATA ====== -->
@@ -132,7 +232,11 @@
 
       <div id="received-text-container" class="hidden">
         <label class="label"><span class="label-text font-semibold">Received Text</span></label>
-        <textarea id="received-text" class="textarea textarea-bordered w-full h-24 font-mono text-sm" readonly></textarea>
+        <textarea
+          id="received-text"
+          class="textarea textarea-bordered w-full h-24 font-mono text-sm"
+          readonly
+        ></textarea>
         <button id="btn-copy-received" class="btn btn-outline btn-sm mt-2">
           <i data-lucide="copy" class="w-4 h-4 mr-2"></i> Copy Text
         </button>
@@ -145,21 +249,27 @@
             <p id="received-file-name" class="font-medium truncate"></p>
             <p id="received-file-size" class="text-xs text-base-content/60"></p>
           </div>
-          <a id="received-file-download" class="btn btn-primary btn-sm" download>
-            <i data-lucide="download" class="w-4 h-4 mr-1"></i> Save
-          </a>
+          <a id="received-file-download" class="btn btn-primary btn-sm" download
+            ><i data-lucide="download" class="w-4 h-4 mr-1"></i> Save</a
+          >
         </div>
       </div>
 
       <div id="received-image-container" class="hidden">
         <p class="text-sm font-semibold">Received Image</p>
-        <img id="received-image" class="max-w-full h-auto rounded-lg border border-base-300" alt="Received image" />
-        <a id="received-image-download" class="btn btn-primary btn-sm mt-2" download>
-          <i data-lucide="download" class="w-4 h-4 mr-1"></i> Save Image
-        </a>
+        <img
+          id="received-image"
+          class="max-w-full h-auto rounded-lg border border-base-300"
+          alt="Received image"
+        />
+        <a id="received-image-download" class="btn btn-primary btn-sm mt-2" download
+          ><i data-lucide="download" class="w-4 h-4 mr-1"></i> Save Image</a
+        >
       </div>
 
-      <button id="btn-receive-new" class="btn btn-outline btn-sm"><i data-lucide="refresh" class="w-4 h-4 mr-2"></i> Receive Another</button>
+      <button id="btn-receive-new" class="btn btn-outline btn-sm">
+        <i data-lucide="refresh" class="w-4 h-4 mr-2"></i> Receive Another
+      </button>
     </div>
 
     <!-- ====== ACTIVE TRANSFER VIEW ====== -->
@@ -170,18 +280,33 @@
       </div>
 
       <div class="w-full bg-base-200 rounded-full h-3 overflow-hidden">
-        <div id="transfer-progress-bar" class="bg-primary h-full rounded-full transition-all duration-300" style="width:0%"></div>
+        <div
+          id="transfer-progress-bar"
+          class="bg-primary h-full rounded-full transition-all duration-300"
+          style="width: 0%"
+        ></div>
       </div>
 
       <div class="grid grid-cols-2 gap-3 text-sm">
-        <div><span class="text-base-content/50">Sent:</span> <span id="transfer-sent">0</span> bytes</div>
-        <div><span class="text-base-content/50">Total:</span> <span id="transfer-total">0</span> bytes</div>
-        <div><span class="text-base-content/50">Elapsed:</span> <span id="transfer-elapsed">0s</span></div>
-        <div><span class="text-base-content/50">Method:</span> <span id="transfer-method">Sound</span></div>
+        <div>
+          <span class="text-base-content/50">Sent:</span> <span id="transfer-sent">0</span> bytes
+        </div>
+        <div>
+          <span class="text-base-content/50">Total:</span> <span id="transfer-total">0</span> bytes
+        </div>
+        <div>
+          <span class="text-base-content/50">Elapsed:</span> <span id="transfer-elapsed">0s</span>
+        </div>
+        <div>
+          <span class="text-base-content/50">Method:</span> <span id="transfer-method">Sound</span>
+        </div>
       </div>
 
-      <div class="text-xs text-base-content/50 p-3 bg-base-200 rounded-lg" id="transfer-instruction">
-        Hold devices close together (5–20 cm) with speaker facing microphone.
+      <div
+        class="text-xs text-base-content/50 p-3 bg-base-200 rounded-lg"
+        id="transfer-instruction"
+      >
+        The sender broadcasts continuously. Keep devices close together.
       </div>
 
       <button id="btn-cancel-transfer" class="btn btn-error btn-outline w-full">
@@ -193,24 +318,37 @@
     <div id="step-sender-done" class="hidden space-y-4">
       <div class="alert alert-success">
         <i data-lucide="check-circle" class="w-5 h-5"></i>
-        <span>Transmission complete! Data was sent.</span>
+        <span>Transmission broadcasting! Receiver should pick it up within one loop cycle.</span>
       </div>
-      <button id="btn-send-another" class="btn btn-outline btn-sm"><i data-lucide="refresh" class="w-4 h-4 mr-2"></i> Send Another</button>
+      <button id="btn-send-another" class="btn btn-outline btn-sm">
+        <i data-lucide="refresh" class="w-4 h-4 mr-2"></i> Send Another
+      </button>
     </div>
 
     <!-- ====== TRANSFER HISTORY ====== -->
     <div id="history-section" class="hidden mt-8 pt-4 border-t border-base-300">
-      <h3 class="text-sm font-semibold text-base-content/60 uppercase tracking-wider mb-3">Transfer History</h3>
+      <h3 class="text-sm font-semibold text-base-content/60 uppercase tracking-wider mb-3">
+        Transfer History
+      </h3>
       <div id="history-list" class="space-y-2 max-h-48 overflow-y-auto">
-        <div class="text-xs text-base-content/40 italic text-center py-4" id="history-empty">No transfers yet.</div>
+        <div class="text-xs text-base-content/40 italic text-center py-4" id="history-empty">
+          No transfers yet.
+        </div>
       </div>
-      <button id="btn-clear-history" class="btn btn-ghost btn-xs mt-2"><i data-lucide="trash-2" class="w-3 h-3 mr-1"></i> Clear History</button>
+      <button id="btn-clear-history" class="btn btn-ghost btn-xs mt-2">
+        <i data-lucide="trash-2" class="w-3 h-3 mr-1"></i> Clear History
+      </button>
     </div>
 
     <!-- ====== STATUS BAR ====== -->
-    <div id="status-bar" class="hidden mt-4 p-2 bg-base-200 rounded-lg text-center text-xs text-base-content/60"></div>
+    <div
+      id="status-bar"
+      class="hidden mt-4 p-2 bg-base-200 rounded-lg text-center text-xs text-base-content/60"
+    ></div>
 
     <!-- ====== RESET ====== -->
-    <button id="btn-reset-all" class="btn btn-ghost btn-xs mt-4"><i data-lucide="rotate-ccw" class="w-3 h-3 mr-1"></i> Start Over</button>
+    <button id="btn-reset-all" class="btn btn-ghost btn-xs mt-4">
+      <i data-lucide="rotate-ccw" class="w-3 h-3 mr-1"></i> Start Over
+    </button>
   </div>
 </div>
