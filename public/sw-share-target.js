@@ -121,29 +121,53 @@ function getMimeTypeFromFileName(mime, fileName) {
 
 function openDb() {
   return new Promise((resolve, reject) => {
-    // Using a higher version to ensure onupgradeneeded is triggered
-    const req = indexedDB.open('shared-db', 10);
+    const DB_NAME = 'shared-db';
+    const STORE_NAME = 'files';
+    const DB_VERSION = 11; // Increment version
+
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    
     req.onupgradeneeded = (event) => {
       const db = req.result;
-      if (!db.objectStoreNames.contains('files')) {
-        db.createObjectStore('files');
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-    req.onblocked = () => {
-      console.warn('IDB open blocked. Please close other tabs.');
+
+    req.onsuccess = () => {
+      const db = req.result;
+      // Defensive check: if store is STILL missing, we need to recreate
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.close();
+        const deleteReq = indexedDB.deleteDatabase(DB_NAME);
+        deleteReq.onsuccess = () => {
+          // Re-attempt opening (this will trigger upgradeneeded again)
+          openDb().then(resolve).catch(reject);
+        };
+        deleteReq.onerror = () => reject(new Error('Failed to recreate corrupted IDB'));
+        return;
+      }
+      resolve(db);
     };
+
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => console.warn('IDB open blocked');
   });
 }
 
 async function idbPut(key, value) {
   const db = await openDb();
   return new Promise((res, rej) => {
-    const tx = db.transaction('files', 'readwrite');
-    tx.objectStore('files').put(value, key);
-    tx.oncomplete = () => res();
-    tx.onerror = () => rej(tx.error);
+    try {
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      store.put(value, key);
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(new Error('Transaction aborted'));
+    } catch (e) {
+      rej(e);
+    }
   });
 }
 

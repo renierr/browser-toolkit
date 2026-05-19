@@ -3,39 +3,62 @@ import { getMimeTypeFromFileName } from './mime-types';
 
 function openDbClient(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    // Using a higher version to ensure onupgradeneeded is triggered
-    const req = indexedDB.open('shared-db', 10);
+    const DB_NAME = 'shared-db';
+    const STORE_NAME = 'files';
+    const DB_VERSION = 11;
+
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
     req.onupgradeneeded = () => {
       const db = req.result;
-      if (!db.objectStoreNames.contains('files')) {
-        db.createObjectStore('files');
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-    req.onblocked = () => {
-      console.warn('IDB open blocked. Please close other tabs.');
+    req.onsuccess = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.close();
+        const deleteReq = indexedDB.deleteDatabase(DB_NAME);
+        deleteReq.onsuccess = () => {
+          openDbClient().then(resolve).catch(reject);
+        };
+        deleteReq.onerror = () => reject(new Error('Failed to recreate corrupted IDB'));
+        return;
+      }
+      resolve(db);
     };
+    req.onerror = () => reject(req.error);
+    req.onblocked = () => console.warn('IDB open blocked');
   });
 }
 
 async function idbGet(key: string): Promise<File | Blob | undefined> {
   const db = await openDbClient();
   return new Promise((res, rej) => {
-    const tx = db.transaction('files', 'readonly');
-    const r = tx.objectStore('files').get(key);
-    r.onsuccess = () => res(r.result);
-    r.onerror = () => rej(r.error);
+    try {
+      const tx = db.transaction('files', 'readonly');
+      const store = tx.objectStore('files');
+      const r = store.get(key);
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    } catch (e) {
+      rej(e);
+    }
   });
 }
 
 async function idbDelete(key: string): Promise<void> {
   const db = await openDbClient();
   return new Promise((res, rej) => {
-    const tx = db.transaction('files', 'readwrite');
-    tx.objectStore('files').delete(key);
-    tx.oncomplete = () => res();
-    tx.onerror = () => rej(tx.error);
+    try {
+      const tx = db.transaction('files', 'readwrite');
+      const store = tx.objectStore('files');
+      store.delete(key);
+      tx.oncomplete = () => res();
+      tx.onerror = () => rej(tx.error);
+    } catch (e) {
+      rej(e);
+    }
   });
 }
 
