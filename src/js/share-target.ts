@@ -8,7 +8,21 @@ function openDbClient(): Promise<IDBDatabase> {
       const db = req.result;
       if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('files')) {
+        db.close();
+        const req2 = indexedDB.open('shared-db', 2);
+        req2.onupgradeneeded = () => {
+          const db2 = req2.result;
+          if (!db2.objectStoreNames.contains('files')) db2.createObjectStore('files');
+        };
+        req2.onsuccess = () => resolve(req2.result);
+        req2.onerror = () => reject(req2.error);
+        return;
+      }
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
   });
 }

@@ -126,7 +126,21 @@ function openDb() {
       const db = req.result;
       if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('files')) {
+        db.close();
+        const req2 = indexedDB.open('shared-db', 2);
+        req2.onupgradeneeded = () => {
+          const db2 = req2.result;
+          if (!db2.objectStoreNames.contains('files')) db2.createObjectStore('files');
+        };
+        req2.onsuccess = () => resolve(req2.result);
+        req2.onerror = () => reject(req2.error);
+        return;
+      }
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
   });
 }
@@ -187,14 +201,22 @@ self.addEventListener('fetch', (event) => {
 
       const textValue = form.get('text');
       const titleValue = form.get('title');
+      const urlValue = form.get('url');
 
-      if (blobs.length === 0 && textValue && typeof textValue === 'string') {
+      let textContent = '';
+      if (urlValue && typeof urlValue === 'string') textContent += urlValue;
+      if (textValue && typeof textValue === 'string') {
+        if (textContent) textContent += '\n';
+        textContent += textValue;
+      }
+
+      if (textContent) {
         const fileName =
           titleValue && typeof titleValue === 'string' && titleValue.trim()
             ? titleValue.trim()
             : 'shared-text.txt';
         const mime = getMimeTypeFromFileName('', fileName);
-        const blob = new Blob([textValue], { type: mime });
+        const blob = new Blob([textContent], { type: mime });
         const key = `${Date.now()}-${Math.random().toString(36).slice(2)}-text`;
         try {
           await idbPut(key, blob);
