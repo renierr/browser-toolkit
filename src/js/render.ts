@@ -1,6 +1,7 @@
 import headerHtml from '../components/header.html?raw';
 import footerHtml from '../components/footer.html?raw';
 import toolPageHtml from '../pages/tool.html?raw';
+import backendMissingHtml from '../pages/backend-missing.html?raw';
 import { setupThemeToggle } from './theme.ts';
 import { siteContext } from '../config';
 import type { Tool, ToolPayload, ToolScript } from './types.ts';
@@ -9,6 +10,7 @@ import { renderToolIconSvg } from './tool-icons.ts';
 import { isFavorite } from './favorites.ts';
 import router from './router.ts';
 import { getSettings } from './settings.ts';
+import { isBackendAvailable } from './tools.ts';
 
 const headerFinal = replacePlaceholders(headerHtml, siteContext);
 const footerFinal = replacePlaceholders(footerHtml, siteContext);
@@ -96,11 +98,16 @@ export async function renderTool(tool: Tool | undefined, payload?: ToolPayload) 
     <h2 class="text-2xl text-heading">Tool not found</h2>
     `;
   const contentDiv = document.getElementById('tool-content')!;
-  contentDiv.innerHTML = tool
-    ? replacePlaceholders(tool.html, siteContext, tool.partials)
-    : noToolHtml;
 
-  if (tool) {
+  if (tool && tool.requiresBackend && !isBackendAvailable) {
+    contentDiv.innerHTML = replacePlaceholders(backendMissingHtml, { ...siteContext, tool });
+  } else {
+    contentDiv.innerHTML = tool
+      ? replacePlaceholders(tool.html, siteContext, tool.partials)
+      : noToolHtml;
+  }
+
+  if (tool && (!tool.requiresBackend || isBackendAvailable)) {
     // Automatically bind settings for this tool
     settingsCleanup = getSettings(tool.path).bind(contentDiv);
   }
@@ -129,6 +136,14 @@ export async function renderTool(tool: Tool | undefined, payload?: ToolPayload) 
     });
   }
 
+  const missingOverviewBtn = document.getElementById('missing-overview-btn');
+  if (missingOverviewBtn) {
+    missingOverviewBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      router.goOverview();
+    });
+  }
+
   // Lazy load script if needed
   if (tool && !tool.script && tool.loadScript) {
     try {
@@ -142,7 +157,7 @@ export async function renderTool(tool: Tool | undefined, payload?: ToolPayload) 
   }
 
   // call Tool-specific script (if exist) with payload
-  if (tool?.script) {
+  if (tool?.script && (!tool.requiresBackend || isBackendAvailable)) {
     let isCancelled = false;
     const myCancel = () => {
       isCancelled = true;
@@ -178,7 +193,12 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
 
   let badge = '';
   if (tool.draft) {
-    badge = html`<div class="badge badge-warning font-semibold">DRAFT</div>`;
+    badge += html`<div class="badge badge-warning badge-xs font-semibold">DRAFT</div>`;
+  }
+  if (tool.requiresBackend) {
+    badge += html`<div class="badge badge-primary badge-outline badge-xs font-semibold">
+      BACKEND
+    </div>`;
   }
 
   let favoriteBtn = '';
@@ -199,30 +219,32 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
 
   const cardContent = compact
     ? html`
-        <div class="card-body p-1 ps-2">
+        <div class="card-body p-1 ps-2 pe-8">
           <div class="flex items-center gap-3">
             <div class="shrink-0">${renderToolIconSvg(tool.icon, 'w-5 h-5')}</div>
-            <div class="flex-1 min-w-0">
+            <div class="flex-1 min-w-0 flex items-center gap-2">
               <h3 class="whitespace-normal text-base font-bold text-heading truncate">
                 ${tool.name}
               </h3>
+              ${badge}
             </div>
-            ${badge}
           </div>
         </div>
       `
     : html`
-        <div class="card-body p-4">
+        <div class="card-body p-4 pe-8">
           <div class="flex flex-col items-center sm:flex-row sm:items-start gap-4">
             <div class="shrink-0">${renderToolIconSvg(tool.icon, 'w-6 h-6')}</div>
 
             <div class="flex-1 min-w-0 text-center sm:text-left">
-              <h3 class="text-xl whitespace-normal font-bold text-heading truncate">
-                ${tool.name}
-              </h3>
+              <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-1">
+                <h3 class="text-xl whitespace-normal font-bold text-heading truncate">
+                  ${tool.name}
+                </h3>
+                ${badge}
+              </div>
               <p class="whitespace-normal text-muted mt-2 text-sm">${tool.description}</p>
             </div>
-            ${badge}
           </div>
         </div>
       `;
@@ -234,7 +256,9 @@ export function renderToolCard(tool: Tool, insideFav: boolean = false, compact: 
         aria-label="Open tool: ${tool.name}${tool.draft ? ' (draft)' : ''}"
         class="card card-compact hover:bg-base-200 bg-base-100 rounded-xl shadow shadow-black/50 dark:shadow-white/50 hover:shadow-md transition-all border-l-2 ${tool.draft
           ? 'border-l-yellow-400'
-          : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
+          : tool.requiresBackend
+            ? 'border-l-accent'
+            : 'border-l-primary'} border focus:outline-none focus:ring-2 focus:ring-offset-2 ring-offset-2 ring-offset-base-100 ${tool.draft
           ? 'focus:ring-yellow-300'
           : 'focus:ring-secondary'} h-full"
       >

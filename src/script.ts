@@ -42,7 +42,7 @@ async function boot(): Promise<void> {
     console.log('[script] Running in offline/static mode (no backend detected).');
   }
 
-  const loadedTools = await buildToolsList(isBackendAvailable);
+  const loadedTools = await buildToolsList();
   setTools(loadedTools);
   siteContext.toolCount = loadedTools.length;
 

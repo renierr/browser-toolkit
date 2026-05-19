@@ -1,0 +1,61 @@
+<div class="card bg-base-100 shadow-xl max-w-2xl mx-auto border-t-4 border-t-warning">
+  <div class="card-body items-center text-center py-12">
+    <div class="p-4 bg-warning/10 rounded-full text-warning mb-6">
+      <i data-lucide="server-off" class="w-12 h-12"></i>
+    </div>
+
+    <h2 class="card-title text-3xl font-bold mb-2">Backend Server Required</h2>
+    <p class="text-base-content/70 mb-8 max-w-md">
+      The tool <strong>{{ tool.name }}</strong> requires a running backend server to function. It
+      looks like you're currently in static/offline mode.
+    </p>
+
+    <div class="bg-base-200 p-6 rounded-xl w-full text-left mb-8">
+      <h3 class="font-bold flex items-center gap-2 mb-4">
+        <i data-lucide="terminal" class="w-5 h-5 text-primary"></i>
+        How to enable the backend
+      </h3>
+      <ol class="space-y-4 text-sm">
+        <li class="flex gap-3">
+          <span class="badge badge-primary badge-sm mt-0.5">1</span>
+          <div>
+            <p class="font-semibold">Ensure you have Bun installed</p>
+            <p class="opacity-70 text-xs mt-0.5">
+              The backend runs on the Bun runtime for maximum performance.
+            </p>
+          </div>
+        </li>
+        <li class="flex gap-3">
+          <span class="badge badge-primary badge-sm mt-0.5">2</span>
+          <div>
+            <p class="font-semibold">Start the backend server</p>
+            <p class="opacity-70 text-xs mt-0.5">
+              Run the toolkit with the backend enabled (e.g. using the provided
+              <code>bun</code> scripts) to serve the required API endpoints.
+            </p>
+          </div>
+        </li>
+        <li class="flex gap-3">
+          <span class="badge badge-primary badge-sm mt-0.5">3</span>
+          <div>
+            <p class="font-semibold">Refresh this page</p>
+            <p class="opacity-70 text-xs mt-0.5">
+              Once the server is running, the tool will automatically become available.
+            </p>
+          </div>
+        </li>
+      </ol>
+    </div>
+
+    <div class="card-actions">
+      <button id="missing-overview-btn" class="btn btn-ghost">
+        <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i>
+        Back to Overview
+      </button>
+      <button onclick="location.reload()" class="btn btn-primary">
+        <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i>
+        Check Again
+      </button>
+    </div>
+  </div>
+</div>

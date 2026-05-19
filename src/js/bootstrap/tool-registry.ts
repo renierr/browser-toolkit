@@ -38,7 +38,7 @@ function getAssetString(moduleValue: unknown): string {
   return '';
 }
 
-export async function buildToolsList(isBackendAvailable: boolean): Promise<Tool[]> {
+export async function buildToolsList(): Promise<Tool[]> {
   const result: Tool[] = [];
 
   for (const pathKey in descModules) {
@@ -56,7 +56,6 @@ export async function buildToolsList(isBackendAvailable: boolean): Promise<Tool[
 
     if (!siteContext.config.showExamples && toolConfig.example) continue;
     if (toolConfig.draft && !isDev) continue;
-    if (toolConfig.requiresBackend && !isBackendAvailable) continue;
 
     const toolFolderPrefix = `${prefix}/${folder}/`;
     const assetKeys = Object.keys(assetModules).filter((k) => {
