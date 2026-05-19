@@ -1,4 +1,4 @@
-import { acquireWakeLock } from '@js/utils';
+import { acquireWakeLock } from '@js/wake-lock';
 import { backgroundTimer } from '@js/background-timer';
 import type { BgTimerHandle } from '@js/background-timer';
 import { playRingtone } from './ringtone';
@@ -151,17 +151,21 @@ export default function init(): void | (() => void) {
     showScreen('countdown');
 
     bgTimer = backgroundTimer.createTimer();
-    bgTimer.start(seconds, {
-      onTick(r: number) {
-        remaining = r;
-        countdownDisplay.textContent = String(r);
+    bgTimer.start(
+      seconds,
+      {
+        onTick(r: number) {
+          remaining = r;
+          countdownDisplay.textContent = String(r);
+        },
+        onComplete() {
+          bgTimer = null;
+          stopCountdown();
+          showIncoming();
+        },
       },
-      onComplete() {
-        bgTimer = null;
-        stopCountdown();
-        showIncoming();
-      },
-    }, { suppressNotification: true });
+      { suppressNotification: true }
+    );
   }
 
   function stopCountdown(): void {

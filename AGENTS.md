@@ -30,7 +30,7 @@ For extended examples and walkthroughs, see:
 - Return cleanup from `init()` when adding listeners, timers, observers, or side effects.
 - Prefer listeners on tool-local containers. If global listeners are necessary, always remove them in cleanup.
 - Run `bun x tsc` (and `bun x tsc -p backend/tsconfig.json` if backend was touched) for validation unless production behavior must be verified.
-- Do not run global formatting by default. Format touched files only.
+- Format touched files using Prettier. Do not run global formatting.
 - Do not manually call `createIcons()` or import `lucide` for icon rendering.
 - Keep custom CSS minimal in `src/css/style.css`.
 - Do not add dependencies unless necessary. Ask first if unclear.
@@ -83,7 +83,7 @@ After editing:
 
 - Run `bun x tsc`.
 - If backend was touched, run `bun x tsc -p backend/tsconfig.json`.
-- Optionally run file-scoped formatting on touched files.
+- Run file-scoped formatting on touched files.
 - If creating a new tool, run `bun run generate:tool-description`.
 - Report what changed and why.
 

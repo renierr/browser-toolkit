@@ -1,4 +1,4 @@
-import { acquireWakeLock } from '@js/utils';
+import { acquireWakeLock } from '@js/wake-lock';
 import { BaselineStore } from './calibration';
 import { deltaFromBaseline, lowPass } from './math';
 import { SensorService } from './sensor-service';

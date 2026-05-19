@@ -1,5 +1,5 @@
 import { hideProgress, showMessage, showProgress } from '@js/ui.ts';
-import { acquireWakeLock } from '@js/utils.ts';
+import { acquireWakeLock } from '@js/wake-lock';
 import { downloadFile } from '@js/file-utils.ts';
 import { ensureAudioContextReady, exportAudio, playTone } from './audio.ts';
 import { textToMorse, textToMorseHtml } from './morsecode.ts';
@@ -131,7 +131,10 @@ function bandpass600Hz(data: Float32Array, sampleRate: number): Float32Array {
   const a1 = -2 * Math.cos(w0);
   const a2 = 1 - alpha;
 
-  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  let x1 = 0,
+    x2 = 0,
+    y1 = 0,
+    y2 = 0;
   const b0_a0 = b0 / a0;
   const b1_a0 = b1 / a0;
   const b2_a0 = b2 / a0;
@@ -141,8 +144,10 @@ function bandpass600Hz(data: Float32Array, sampleRate: number): Float32Array {
   for (let i = 0; i < data.length; i++) {
     const x = data[i];
     const y = b0_a0 * x + b1_a0 * x1 + b2_a0 * x2 - a1_a0 * y1 - a2_a0 * y2;
-    x2 = x1; x1 = x;
-    y2 = y1; y1 = y;
+    x2 = x1;
+    x1 = x;
+    y2 = y1;
+    y1 = y;
     out[i] = y;
   }
   return out;

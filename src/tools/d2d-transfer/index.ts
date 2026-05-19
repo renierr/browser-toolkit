@@ -1,6 +1,6 @@
 import { setupFileDropzone } from '@js/file-utils.ts';
 import { showMessage } from '@js/ui.ts';
-import { acquireWakeLock } from '@js/utils';
+import { acquireWakeLock } from '@js/wake-lock';
 import { AudioSender, AudioReceiver, BIT_TIME_MS as AUDIO_BIT, FREQ_DEFAULT } from './audio-codec';
 import { VisualSender, VisualReceiver, BIT_TIME_MS as VISUAL_BIT } from './visual-codec';
 import { TransferStore } from './transfer-store';

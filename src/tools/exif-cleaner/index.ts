@@ -6,11 +6,8 @@ import {
   type DownloadBuffer,
 } from '@js/file-utils';
 import { showMessage } from '@js/ui';
-import {
-  gpsParseCoordinateFromExifTags,
-  gpsGenerateGoogleMapsLink,
-  isImageFile,
-} from '@js/utils.ts';
+import { gpsParseCoordinateFromExifTags, gpsGenerateGoogleMapsLink } from '@js/gps-utils.ts';
+import { isImageFile } from '@js/utils.ts';
 import type { ToolPayload } from '@js/types';
 
 // noinspection JSUnusedGlobalSymbols

@@ -1,7 +1,7 @@
 import { downloadAsZip, type DownloadBuffer, setupFileDropzone } from '@js/file-utils.ts';
 import { hideProgress, showMessage, showProgress, yieldToUI } from '@js/ui.ts';
 import mupdf, { Image, type Matrix, PDFPage, type Rect, type Document, type Pixmap } from 'mupdf';
-import { hashUint8Array } from '@js/utils.ts';
+import { hashUint8Array } from '@js/crypto-utils.ts';
 import type { ToolPayload } from '@js/types';
 
 let extractedImages: Array<{

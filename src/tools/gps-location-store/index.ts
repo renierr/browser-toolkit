@@ -8,7 +8,7 @@ import {
 } from './db.ts';
 import type { SavedLocation } from './types.ts';
 import { showMessage } from '@js/ui.ts';
-import { gpsGenerateGoogleMapsLink } from '@js/utils.ts';
+import { gpsGenerateGoogleMapsLink } from '@js/gps-utils.ts';
 import {
   calculateDistance,
   formatDistance,

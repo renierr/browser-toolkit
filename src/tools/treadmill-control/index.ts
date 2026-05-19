@@ -11,7 +11,7 @@ import { saveSession, getAllSessions, deleteSession, type TreadmillSession } fro
 import * as details from './details';
 import { generateShortId } from '../heart-rate-monitor/utils';
 import { showMessage } from '@js/ui';
-import { acquireWakeLock } from '@js/utils';
+import { acquireWakeLock } from '@js/wake-lock';
 
 // noinspection JSUnusedGlobalSymbols
 export function init() {

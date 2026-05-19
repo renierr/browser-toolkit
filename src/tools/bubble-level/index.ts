@@ -1,7 +1,8 @@
 import { isLevel, lowPass, roundToOne } from './math';
 import { SensorService } from './sensor-service';
 import { BubbleLevelUi, getUiElements } from './ui-controller';
-import { acquireWakeLock, acquireRotationLock } from '@js/utils';
+import { acquireWakeLock } from '@js/wake-lock';
+import { acquireRotationLock } from '@js/rotation-lock';
 import { getSettings } from '@js/settings';
 import type { CalibrationOffset, LevelMode, OrientationReading } from './types';
 

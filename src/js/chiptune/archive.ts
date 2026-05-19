@@ -1,4 +1,4 @@
-import { hashUint8Array } from '../utils';
+import { hashUint8Array } from '../crypto-utils';
 import { SyncManager } from '@js/sync.ts';
 
 const DB_NAME = 'chiptune-archive';

@@ -1,5 +1,5 @@
 import { NoiseGenerator } from './noise-utils';
-import { acquireWakeLock } from '@js/utils';
+import { acquireWakeLock } from '@js/wake-lock';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {

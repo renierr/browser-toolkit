@@ -1,6 +1,6 @@
 import { WebRTCManager } from './webrtc-manager.ts';
 import { downloadFile } from '@js/file-utils.ts';
-import { acquireWakeLock } from '@js/utils.ts';
+import { acquireWakeLock } from '@js/wake-lock';
 import * as Utils from './utils.ts';
 
 export interface TransferConfig {
