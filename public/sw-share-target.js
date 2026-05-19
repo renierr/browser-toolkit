@@ -121,27 +121,19 @@ function getMimeTypeFromFileName(mime, fileName) {
 
 function openDb() {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open('shared-db', 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains('files')) db.createObjectStore('files');
-    };
-    req.onsuccess = () => {
+    // Using a higher version to ensure onupgradeneeded is triggered
+    const req = indexedDB.open('shared-db', 10);
+    req.onupgradeneeded = (event) => {
       const db = req.result;
       if (!db.objectStoreNames.contains('files')) {
-        db.close();
-        const req2 = indexedDB.open('shared-db', 2);
-        req2.onupgradeneeded = () => {
-          const db2 = req2.result;
-          if (!db2.objectStoreNames.contains('files')) db2.createObjectStore('files');
-        };
-        req2.onsuccess = () => resolve(req2.result);
-        req2.onerror = () => reject(req2.error);
-        return;
+        db.createObjectStore('files');
       }
-      resolve(db);
     };
+    req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
+    req.onblocked = () => {
+      console.warn('IDB open blocked. Please close other tabs.');
+    };
   });
 }
 
