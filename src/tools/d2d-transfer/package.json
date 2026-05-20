@@ -1,0 +1,11 @@
+{
+  "name": "d2d-transfer-tool",
+  "version": "1.0.0",
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "zxing-wasm": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.6"
+  }
+}

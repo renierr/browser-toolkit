@@ -50,10 +50,10 @@
           id="btn-method-visual"
           class="btn btn-outline btn-block h-28 flex flex-col items-center justify-center gap-2"
         >
-          <i data-lucide="sun" class="w-8 h-8"></i>
-          <span class="text-lg font-bold">Light Flash</span>
-          <span class="text-xs text-base-content/60">Screen flashes via camera</span>
-          <span class="text-xs font-mono text-base-content/40">~0.6 bytes/sec</span>
+          <i data-lucide="qr-code" class="w-8 h-8"></i>
+          <span class="text-lg font-bold">QR Stream</span>
+          <span class="text-xs text-base-content/60">Animated QR codes via camera</span>
+          <span class="text-xs font-mono text-base-content/40">~500 bytes/sec</span>
         </button>
       </div>
       <div class="text-xs text-base-content/50 mt-2 p-3 bg-base-200 rounded-lg" id="method-info">
@@ -130,7 +130,7 @@
           <i data-lucide="volume-2" class="w-4 h-4 mr-2"></i> Send via Sound
         </button>
         <button id="btn-send-visual" class="btn btn-primary flex-1 hidden">
-          <i data-lucide="sun" class="w-4 h-4 mr-2"></i> Send via Light
+          <i data-lucide="qr-code" class="w-4 h-4 mr-2"></i> Send via QR Stream
         </button>
       </div>
       <button id="btn-back-method-sender" class="btn btn-ghost btn-xs">
@@ -199,7 +199,7 @@
         <div id="rx-visual-signal" class="flex items-center gap-3 p-3 bg-base-200 rounded-lg">
           <span id="rx-vdot" class="w-3 h-3 rounded-full bg-gray-400 shrink-0"></span>
           <span id="rx-vtext" class="text-sm text-base-content/60"
-            >Waiting for light flashes...</span
+            >Waiting for QR codes...</span
           >
         </div>
         <div
@@ -214,7 +214,7 @@
           </div>
         </div>
         <button id="btn-watch" class="btn btn-primary w-full">
-          <i data-lucide="camera" class="w-4 h-4 mr-2"></i> <span>Watch via Camera</span>
+          <i data-lucide="camera" class="w-4 h-4 mr-2"></i> <span>Scan via Camera</span>
         </button>
       </div>
 

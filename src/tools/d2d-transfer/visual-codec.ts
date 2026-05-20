@@ -1,20 +1,35 @@
-import { encodeFrame, decodeFrame, HEADER_SIZE, dataToBits, bitsToData } from './protocol';
+import QRCode from 'qrcode';
+import { readBarcodes, prepareZXingModule } from 'zxing-wasm/reader';
+import zxingWasmUrl from 'zxing-wasm/reader/zxing_reader.wasm?url';
 
-export const BIT_TIME_MS = 200;
-const BEACON_BITS = 32;
-const GAP_MS = 500;
-const REPEATS = 3;
-const END_TIMEOUT_MS = 1500;
+export const BIT_TIME_MS = 220; // 4.5 Hz rotation speed, highly reliable for most cameras
+const CHUNK_SIZE = 100; // ~100 bytes yields small, high-density, low-complexity version 3/4 QR codes
+const REPEATS = 4; // Broadcast 4 full cycles for absolute robustness
+
+// Initialize ZXing WASM module overrides
+prepareZXingModule({
+  overrides: {
+    locateFile: (path: string, prefix: string) => {
+      if (path.endsWith('.wasm')) {
+        return zxingWasmUrl;
+      }
+      return prefix + path;
+    },
+  },
+});
 
 export class VisualSender {
   private _active = false;
   private overlay: HTMLDivElement | null = null;
   private cancelBtn: HTMLButtonElement | null = null;
-  private rafId: number | null = null;
-  private startTime = 0;
+  private canvas: HTMLCanvasElement | null = null;
+  private loopId: ReturnType<typeof setTimeout> | null = null;
   private progressCb: ((pct: number) => void) | null = null;
   private _onCancel: (() => void) | null = null;
   private _onComplete: (() => void) | null = null;
+
+  // Pre-rendered frames for lag-free visual cycling
+  private preRenderedCanvases: HTMLCanvasElement[] = [];
 
   get active(): boolean {
     return this._active;
@@ -30,35 +45,100 @@ export class VisualSender {
     this._onComplete = cb;
   }
 
-  start(data: Uint8Array): void {
+  async start(data: Uint8Array): Promise<void> {
     if (this._active) return;
-    const frame = encodeFrame(data);
-    const bits = dataToBits(frame);
 
+    // Segment payload into base64 chunks
+    const chunks: string[] = [];
+    const total = Math.ceil(data.length / CHUNK_SIZE);
+    for (let i = 0; i < total; i++) {
+      const slice = data.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+      const base64 = btoa(String.fromCharCode(...slice));
+      chunks.push(`D2D:${total}:${i}:${base64}`);
+    }
+
+    // Pre-render QR code canvases to ensure buttery-smooth timing
+    this.preRenderedCanvases = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const c = document.createElement('canvas');
+      await QRCode.toCanvas(c, chunks[i], {
+        width: 280,
+        margin: 2,
+        color: {
+          dark: '#0f172a', // deep slate
+          light: '#ffffff',
+        },
+      });
+      this.preRenderedCanvases.push(c);
+    }
+
+    // Create the visual transmission overlay modal
     this.overlay = document.createElement('div');
     Object.assign(this.overlay.style, {
       position: 'fixed',
       inset: '0',
       zIndex: '9998',
-      transition: 'background-color 0.02s linear',
+      background: 'rgba(15, 23, 42, 0.85)',
+      backdropFilter: 'blur(8px)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
     });
+
+    const card = document.createElement('div');
+    card.className = 'card bg-base-100 shadow-2xl max-w-sm w-full mx-4 border border-base-300';
+    Object.assign(card.style, {
+      padding: '24px',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '16px',
+    });
+
+    const title = document.createElement('h3');
+    title.className = 'text-lg font-bold text-base-content';
+    title.textContent = 'Visual Transmission';
+
+    const canvasContainer = document.createElement('div');
+    Object.assign(canvasContainer.style, {
+      width: '280px',
+      height: '280px',
+      background: '#fff',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+    });
+
+    this.canvas = document.createElement('canvas');
+    this.canvas.width = 280;
+    this.canvas.height = 280;
+    canvasContainer.appendChild(this.canvas);
+
+    const statusPill = document.createElement('div');
+    statusPill.className = 'badge badge-primary badge-outline py-2 px-3 font-semibold text-xs';
+    statusPill.textContent = `Preparing loops...`;
+
+    const progressEl = document.createElement('progress');
+    progressEl.className = 'progress progress-primary w-full';
+    progressEl.max = 100;
+    progressEl.value = 0;
+
+    card.appendChild(title);
+    card.appendChild(canvasContainer);
+    card.appendChild(statusPill);
+    card.appendChild(progressEl);
+    this.overlay.appendChild(card);
     document.body.appendChild(this.overlay);
 
+    // Create Cancel button
     this.cancelBtn = document.createElement('button');
-    this.cancelBtn.textContent = '\u2715 Cancel';
+    this.cancelBtn.textContent = '✕ Close';
+    this.cancelBtn.className = 'btn btn-sm btn-circle btn-ghost text-white';
     Object.assign(this.cancelBtn.style, {
       position: 'fixed',
-      top: '12px',
-      right: '12px',
+      top: '16px',
+      right: '16px',
       zIndex: '9999',
-      padding: '6px 14px',
-      background: 'rgba(0,0,0,0.6)',
-      color: '#fff',
-      border: '1px solid rgba(255,255,255,0.3)',
-      borderRadius: '6px',
-      cursor: 'pointer',
-      fontSize: '13px',
-      fontWeight: '600',
     });
     this.cancelBtn.onclick = () => {
       if (this._onCancel) this._onCancel();
@@ -66,63 +146,49 @@ export class VisualSender {
     document.body.appendChild(this.cancelBtn);
 
     this._active = true;
-    this.startTime = performance.now();
-    if (this.progressCb) this.progressCb(0);
-
-    const beaconMs = BEACON_BITS * BIT_TIME_MS;
-    const frameMs = bits.length * BIT_TIME_MS;
-    const loopMs = beaconMs + frameMs + GAP_MS;
+    const startTime = performance.now();
+    const loopMs = chunks.length * BIT_TIME_MS;
     const totalMs = loopMs * REPEATS;
 
-    const render = () => {
-      if (!this._active) return;
-      const elapsed = performance.now() - this.startTime;
+    const ctx = this.canvas.getContext('2d');
 
+    const tick = () => {
+      if (!this._active) return;
+
+      const elapsed = performance.now() - startTime;
       if (elapsed >= totalMs) {
         this.stop();
         if (this._onComplete) this._onComplete();
         return;
       }
 
-      const t = elapsed % loopMs;
-      let remaining = t;
-      let showing = false;
-
-      if (remaining < beaconMs) {
-        const idx = Math.floor(remaining / BIT_TIME_MS);
-        if (idx < BEACON_BITS) {
-          const c = idx % 2 === 0 ? '#000' : '#fff';
-          if (this.overlay) this.overlay.style.backgroundColor = c;
-          showing = true;
-        }
-      }
-      remaining -= beaconMs;
-
-      if (!showing && remaining >= 0 && remaining < frameMs) {
-        const idx = Math.floor(remaining / BIT_TIME_MS);
-        if (idx < bits.length) {
-          const c = bits[idx] === 1 ? '#fff' : '#000';
-          if (this.overlay) this.overlay.style.backgroundColor = c;
-          showing = true;
-        }
+      // Determine active chunk index
+      const chunkIdx = Math.floor((elapsed % loopMs) / BIT_TIME_MS);
+      const preCanvas = this.preRenderedCanvases[chunkIdx];
+      if (preCanvas && ctx) {
+        ctx.clearRect(0, 0, 280, 280);
+        ctx.drawImage(preCanvas, 0, 0);
       }
 
-      if (!showing && this.overlay) {
-        this.overlay.style.backgroundColor = 'transparent';
-      }
+      const activeLoop = Math.floor(elapsed / loopMs) + 1;
+      statusPill.textContent = `Loop ${activeLoop}/${REPEATS} • Chunk ${chunkIdx + 1}/${chunks.length}`;
 
-      if (this.progressCb) this.progressCb(Math.min(1, elapsed / (totalMs * 0.8)));
+      const pct = Math.min(1, elapsed / totalMs);
+      progressEl.value = Math.round(pct * 100);
+      if (this.progressCb) this.progressCb(pct);
 
-      this.rafId = requestAnimationFrame(render);
+      const targetNextTime = startTime + (Math.floor(elapsed / BIT_TIME_MS) + 1) * BIT_TIME_MS;
+      this.loopId = setTimeout(tick, Math.max(0, targetNextTime - performance.now()));
     };
-    this.rafId = requestAnimationFrame(render);
+
+    tick();
   }
 
   stop(): void {
     this._active = false;
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
+    if (this.loopId !== null) {
+      clearTimeout(this.loopId);
+      this.loopId = null;
     }
     if (this.overlay) {
       this.overlay.remove();
@@ -132,6 +198,7 @@ export class VisualSender {
       this.cancelBtn.remove();
       this.cancelBtn = null;
     }
+    this.preRenderedCanvases = [];
   }
 }
 
@@ -141,15 +208,14 @@ export class VisualReceiver {
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private _active = false;
-  private rafId: number | null = null;
+  private scanTimerId: ReturnType<typeof setTimeout> | null = null;
   private _onData: ((data: Uint8Array) => void) | null = null;
   private _onSignal: ((detected: boolean, level: number) => void) | null = null;
-  private bitBuffer: number[] = [];
-  private lastSampleTime = 0;
-  private brightnessBaseline = 128;
-  private _gotFrame = false;
-  private _frameData: Uint8Array | null = null;
-  private _silentStart: number | null = null;
+
+  // Track received chunks: chunkIndex -> payload
+  private receivedChunks = new Map<number, Uint8Array>();
+  private nativeDetector: any = null;
+  private floatingPill: HTMLDivElement | null = null;
 
   get active(): boolean {
     return this._active;
@@ -172,9 +238,8 @@ export class VisualReceiver {
       this.stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: 'environment',
-          width: { ideal: 320 },
-          height: { ideal: 240 },
-          frameRate: { ideal: 30 },
+          width: { ideal: 640 },
+          height: { ideal: 480 },
         },
         audio: false,
       });
@@ -182,35 +247,48 @@ export class VisualReceiver {
       await this.video.play();
 
       this.canvas = document.createElement('canvas');
-      this.canvas.width = 160;
-      this.canvas.height = 120;
-      this.ctx = this.canvas.getContext('2d');
+      this.canvas.width = 320;
+      this.canvas.height = 240;
+      this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+
+      // Initialize hardware-accelerated BarcodeDetector if natively supported
+      if ('BarcodeDetector' in window) {
+        try {
+          // @ts-ignore
+          this.nativeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+        } catch {}
+      }
 
       this._active = true;
-      this.bitBuffer = [];
-      this.lastSampleTime = performance.now();
-      this.brightnessBaseline = 128;
-      this._gotFrame = false;
-      this._frameData = null;
-      this._silentStart = null;
+      this.receivedChunks.clear();
 
-      const loop = () => {
-        if (!this._active) return;
-        this.processFrame();
-        this.rafId = requestAnimationFrame(loop);
-      };
-      this.rafId = requestAnimationFrame(loop);
+      // Inject visual status pill into camera viewport container
+      const container = document.getElementById('camera-container');
+      if (container) {
+        this.floatingPill = document.createElement('div');
+        this.floatingPill.className =
+          'bg-black/60 backdrop-blur rounded-full px-4 py-1.5 absolute bottom-4 text-xs text-white font-medium flex items-center gap-2 border border-white/10 shadow-lg';
+        this.floatingPill.textContent = 'Align QR code in camera view';
+        container.appendChild(this.floatingPill);
+      }
+
+      // Fast frame processing scan loop (every 100 ms)
+      this.scanTimerId = setTimeout(() => this.scanFrame(), 100);
     } catch (err) {
-      console.error('[VisualRx]', err);
+      console.error('[VisualRx] Start failed', err);
       if (this._onSignal) this._onSignal(false, 0);
     }
   }
 
   stop(): void {
     this._active = false;
-    if (this.rafId) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
+    if (this.scanTimerId !== null) {
+      clearTimeout(this.scanTimerId);
+      this.scanTimerId = null;
+    }
+    if (this.floatingPill) {
+      this.floatingPill.remove();
+      this.floatingPill = null;
     }
     if (this.video) {
       this.video.pause();
@@ -222,122 +300,110 @@ export class VisualReceiver {
     }
     this.canvas = null;
     this.ctx = null;
-    this._gotFrame = false;
-    this._frameData = null;
-    this._silentStart = null;
   }
 
-  private processFrame(): void {
-    if (!this.video || !this.ctx || !this.canvas) return;
-    if (this.video.readyState < 2) return;
+  private async scanFrame(): Promise<void> {
+    if (!this._active || !this.video || !this.ctx || !this.canvas) return;
 
-    const now = performance.now();
-    const dt = now - this.lastSampleTime;
-    if (dt < BIT_TIME_MS) return;
-    this.lastSampleTime = now - (dt - BIT_TIME_MS);
+    if (this.video.readyState >= 2) {
+      this.ctx.drawImage(this.video, 0, 0, 320, 240);
+      const imgData = this.ctx.getImageData(0, 0, 320, 240);
 
-    this.ctx.drawImage(this.video, 0, 0, 160, 120);
-    const id = this.ctx.getImageData(40, 30, 80, 60);
-    const p = id.data;
-    let sum = 0;
-    for (let i = 0; i < p.length; i += 4) sum += (p[i] + p[i + 1] + p[i + 2]) / 3;
-    const brightness = sum / (p.length / 4);
+      let textResult: string | null = null;
 
-    this.brightnessBaseline += (brightness - this.brightnessBaseline) * 0.01;
+      // 1. Try Native BarcodeDetector (fast, hardware accelerated)
+      if (this.nativeDetector) {
+        try {
+          const results = await this.nativeDetector.detect(this.canvas);
+          if (results && results.length > 0) {
+            textResult = results[0].rawValue;
+          }
+        } catch {}
+      }
 
-    const delta = brightness - this.brightnessBaseline;
-    const absDelta = Math.abs(delta);
-    const hasSignal = absDelta > 15;
-    const level = Math.min(1, absDelta / 80);
+      // 2. Fall back to high-fidelity ZXing WASM
+      if (!textResult) {
+        try {
+          const wasmResults = await readBarcodes(imgData, {
+            tryHarder: true,
+            maxNumberOfSymbols: 1,
+          });
+          if (wasmResults && wasmResults.length > 0) {
+            textResult = wasmResults[0].text;
+          }
+        } catch {}
+      }
 
-    if (this._onSignal) this._onSignal(hasSignal, level);
+      if (textResult && textResult.startsWith('D2D:')) {
+        this.processQRResult(textResult);
+      }
+    }
 
-    if (this._gotFrame) {
-      if (!hasSignal) {
-        if (this._silentStart === null) this._silentStart = performance.now();
-        else if (performance.now() - this._silentStart > END_TIMEOUT_MS) {
-          const data = this._frameData!;
-          this._gotFrame = false;
-          this._frameData = null;
-          this._silentStart = null;
-          if (this._onData) this._onData(data);
+    if (this._active) {
+      this.scanTimerId = setTimeout(() => this.scanFrame(), 80);
+    }
+  }
+
+  private processQRResult(qrString: string): void {
+    try {
+      const parts = qrString.split(':');
+      const numChunks = parseInt(parts[1]);
+      const chunkIdx = parseInt(parts[2]);
+      const base64 = parts[3];
+
+      if (isNaN(numChunks) || isNaN(chunkIdx) || !base64) return;
+
+      if (!this.receivedChunks.has(chunkIdx)) {
+        // Decode base64 to binary payload
+        const rawBin = atob(base64);
+        const bytes = new Uint8Array(rawBin.length);
+        for (let i = 0; i < rawBin.length; i++) {
+          bytes[i] = rawBin.charCodeAt(i);
         }
-      } else {
-        this._silentStart = null;
+
+        this.receivedChunks.set(chunkIdx, bytes);
+
+        // Update progress UI
+        const pct = this.receivedChunks.size / numChunks;
+        if (this._onSignal) this._onSignal(true, pct);
+
+        if (this.floatingPill) {
+          this.floatingPill.className =
+            'bg-primary/90 text-primary-content backdrop-blur rounded-full px-4 py-1.5 absolute bottom-4 text-xs font-semibold flex items-center gap-2 border border-white/10 shadow-lg';
+          this.floatingPill.textContent = `Receiving: ${this.receivedChunks.size}/${numChunks} Chunks`;
+        }
+
+        // Check if all chunks received
+        if (this.receivedChunks.size === numChunks) {
+          this.assembleAndDeliver(numChunks);
+        }
       }
-      return;
-    }
-
-    if (absDelta < 15) return;
-
-    const bit = delta > 0 ? 1 : 0;
-    this.bitBuffer.push(bit);
-    if (this.bitBuffer.length > 8000) this.bitBuffer.splice(0, 2000);
-
-    this.tryDecode();
-  }
-
-  private tryDecode(): void {
-    const preambleLen = 32;
-    const syncLen = 16;
-    const lenLen = 16;
-
-    for (let start = 0; start < this.bitBuffer.length - 200; start++) {
-      let altScore = 0;
-      for (let i = 0; i < preambleLen - 1; i++) {
-        if (this.bitBuffer[start + i] !== this.bitBuffer[start + i + 1]) altScore++;
-      }
-      if (altScore / (preambleLen - 1) < 0.7) continue;
-
-      const syncStart = start + preambleLen;
-      if (syncStart + syncLen + lenLen > this.bitBuffer.length) continue;
-
-      const expected = [0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0];
-      let syncScore = 0;
-      for (let i = 0; i < syncLen; i++) {
-        if (syncStart + i < this.bitBuffer.length && this.bitBuffer[syncStart + i] === expected[i])
-          syncScore++;
-      }
-      if (syncScore / syncLen < 0.75) continue;
-
-      const lenBits = this.bitBuffer.slice(syncStart + syncLen, syncStart + syncLen + lenLen);
-      const payloadLen = bitsToVal(lenBits);
-      if (payloadLen === 0 || payloadLen > 64000) continue;
-
-      const total = preambleLen + syncLen + lenLen + payloadLen * 8 + 16;
-      if (start + total > this.bitBuffer.length) continue;
-
-      const pb = this.bitBuffer.slice(
-        syncStart + syncLen + lenLen,
-        syncStart + syncLen + lenLen + payloadLen * 8
-      );
-      const cb = this.bitBuffer.slice(syncStart + syncLen + lenLen + payloadLen * 8, start + total);
-      const payload = bitsToData(pb);
-      const fb = new Uint8Array(HEADER_SIZE - 2 + payloadLen + 2);
-      fb[0] = 0x3c;
-      fb[1] = 0x5a;
-      fb[2] = (payloadLen >> 8) & 0xff;
-      fb[3] = payloadLen & 0xff;
-      fb.set(payload, 4);
-      const cv = bitsToData(cb);
-      fb[4 + payloadLen] = cv[0] || 0;
-      fb[5 + payloadLen] = cv[1] || 0;
-
-      const d = decodeFrame(fb);
-      if (d) {
-        this.bitBuffer = [];
-        this._gotFrame = true;
-        this._frameData = d.payload;
-        this._silentStart = null;
-        if (this._onSignal) this._onSignal(true, 1);
-        return;
-      }
+    } catch (err) {
+      console.warn('[VisualRx] QR parse error', err);
     }
   }
-}
 
-function bitsToVal(bits: number[]): number {
-  let v = 0;
-  for (let i = 0; i < bits.length; i++) v = (v << 1) | (bits[i] || 0);
-  return v;
+  private assembleAndDeliver(numChunks: number): void {
+    // Stop scanning and camera immediately
+    const callback = this._onData;
+    this.stop();
+
+    // Reconstruct continuous payload
+    let totalLen = 0;
+    for (let i = 0; i < numChunks; i++) {
+      totalLen += this.receivedChunks.get(i)!.length;
+    }
+
+    const payload = new Uint8Array(totalLen);
+    let offset = 0;
+    for (let i = 0; i < numChunks; i++) {
+      const chunk = this.receivedChunks.get(i)!;
+      payload.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    if (callback) {
+      callback(payload);
+    }
+  }
 }

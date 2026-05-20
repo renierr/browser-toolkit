@@ -211,7 +211,7 @@ export default function init() {
   btn('btn-method-visual').addEventListener('click', function () {
     method = 'visual';
     el('method-info').innerHTML =
-      'Flashes screen <b>white (1)</b> / <b>black (0)</b> at 200ms per bit. Point receiver camera at this screen. Fullscreen recommended (F11).';
+      'Broadcasting high-density <b>Animated QR Codes</b> at 4.5 frames per second. Point receiver camera at the sender screen.';
     if (role === 'sender') {
       show('step-sender-input');
       el('sender-audio-settings').classList.add('hidden');
@@ -455,7 +455,7 @@ export default function init() {
 
     visualReceiver.start().catch(function () {
       btn('btn-watch').disabled = false;
-      btn('btn-watch').querySelector('span')!.textContent = 'Watch via Camera';
+      btn('btn-watch').querySelector('span')!.textContent = 'Scan via Camera';
       setStatus('Failed to access camera');
     });
   });
@@ -464,13 +464,18 @@ export default function init() {
     const dot = type === 'audio' ? els.rxSignalDot : els.rxVdot;
     const txt = type === 'audio' ? els.rxSignalText : els.rxVtext;
     if (detected) {
-      dot.className =
-        'w-3 h-3 rounded-full shrink-0 ' + (level > 0.5 ? 'bg-green-500' : 'bg-yellow-400');
-      txt.textContent = level > 0.5 ? 'Signal detected! Receiving...' : 'Weak signal...';
+      if (type === 'visual') {
+        dot.className = 'w-3 h-3 rounded-full shrink-0 bg-green-500 animate-pulse';
+        txt.textContent = 'Receiving QR Stream: ' + Math.round(level * 100) + '%';
+      } else {
+        dot.className =
+          'w-3 h-3 rounded-full shrink-0 ' + (level > 0.5 ? 'bg-green-500' : 'bg-yellow-400');
+        txt.textContent = level > 0.5 ? 'Signal detected! Receiving...' : 'Weak signal...';
+      }
     } else {
       dot.className = 'w-3 h-3 rounded-full bg-gray-400 shrink-0';
       txt.textContent =
-        type === 'audio' ? 'Waiting for audio signal...' : 'Waiting for light flashes...';
+        type === 'audio' ? 'Waiting for audio signal...' : 'Waiting for QR codes...';
     }
   }
 
@@ -578,7 +583,7 @@ export default function init() {
     btn('btn-listen').disabled = false;
     btn('btn-listen').querySelector('span')!.textContent = 'Listen via Microphone';
     btn('btn-watch').disabled = false;
-    btn('btn-watch').querySelector('span')!.textContent = 'Watch via Camera';
+    btn('btn-watch').querySelector('span')!.textContent = 'Scan via Camera';
     if (releaseWakeLock) {
       releaseWakeLock();
       releaseWakeLock = null;

@@ -5,7 +5,6 @@ const BIT_TIME_S = BIT_TIME_MS / 1000;
 const BEACON_BITS = 64;
 const GAP_MS = 300;
 const REPEATS = 3;
-const END_TIMEOUT_MS = 1000;
 
 export const FREQ_MIN = 10000;
 export const FREQ_MAX = 18000;
@@ -160,14 +159,14 @@ export class AudioReceiver {
   private _onData: ((data: Uint8Array) => void) | null = null;
   private _onSignal: ((detected: boolean, level: number) => void) | null = null;
   private _active = false;
-  private intervalId: number | null = null;
+  private loopId: number | null = null;
+  private sampleTimerId: ReturnType<typeof setTimeout> | null = null;
   private bitBuffer: number[] = [];
-  private lastSignal = false;
   private freqSpace = FREQ_DEFAULT;
   private freqMark = FREQ_DEFAULT + FREQ_SPACING;
-  private _gotFrame = false;
-  private _frameData: Uint8Array | null = null;
-  private _silentStart: number | null = null;
+  private isSynchronized = false;
+  private syncStartTime = 0;
+  private lastActiveSignalTime = 0;
 
   get active(): boolean {
     return this._active;
@@ -189,36 +188,37 @@ export class AudioReceiver {
     if (this._active) return;
     try {
       this.ctx = new AudioContext();
-      const sr = this.ctx.sampleRate;
       this.stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
       });
       const src = this.ctx.createMediaStreamSource(this.stream);
       this.analyser = this.ctx.createAnalyser();
-      this.analyser.fftSize = 1024;
+      this.analyser.fftSize = 512; // smaller window size for lower latency and less inter-symbol blur
       this.analyser.smoothingTimeConstant = 0;
       src.connect(this.analyser);
 
       this._active = true;
       this.bitBuffer = [];
-      this.lastSignal = false;
-      this._gotFrame = false;
-      this._frameData = null;
-      this._silentStart = null;
+      this.isSynchronized = false;
 
-      const tickMs = Math.ceil(BIT_TIME_MS / 2);
-      this.intervalId = window.setInterval(() => this.tick(sr), tickMs);
+      // Start the fast detection loop to listen for start of beacon/preamble
+      this.startFastPoll();
     } catch (err) {
-      console.error('[AudioRx]', err);
+      console.error('[AudioRx] Start failed', err);
       if (this._onSignal) this._onSignal(false, 0);
     }
   }
 
   stop(): void {
     this._active = false;
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
+    this.isSynchronized = false;
+    if (this.loopId !== null) {
+      cancelAnimationFrame(this.loopId);
+      this.loopId = null;
+    }
+    if (this.sampleTimerId !== null) {
+      clearTimeout(this.sampleTimerId);
+      this.sampleTimerId = null;
     }
     if (this.stream) {
       this.stream.getTracks().forEach((t) => t.stop());
@@ -229,12 +229,50 @@ export class AudioReceiver {
       this.ctx = null;
     }
     this.analyser = null;
-    this._gotFrame = false;
-    this._frameData = null;
-    this._silentStart = null;
   }
 
-  private tick(sr: number): void {
+  private startFastPoll(): void {
+    const sr = this.ctx?.sampleRate || 44100;
+
+    const poll = () => {
+      if (!this._active || !this.analyser) return;
+
+      const td = new Float32Array(this.analyser.fftSize);
+      this.analyser.getFloatTimeDomainData(td);
+
+      const eSpace = goertzel(td, this.freqSpace, sr);
+      const eMark = goertzel(td, this.freqMark, sr);
+      const maxE = Math.max(eSpace, eMark);
+      const hasSignal = maxE > 0.4;
+      const level = Math.min(1, maxE / 10);
+
+      if (this._onSignal) this._onSignal(hasSignal, level);
+
+      if (hasSignal && !this.isSynchronized) {
+        // Beacon signal start detected! Sync symbol phase
+        this.isSynchronized = true;
+        this.syncStartTime = performance.now();
+        this.bitBuffer = [];
+        this.lastActiveSignalTime = this.syncStartTime;
+
+        if (this.loopId !== null) {
+          cancelAnimationFrame(this.loopId);
+          this.loopId = null;
+        }
+
+        // Schedule first bit sample at 50% through the symbol duration
+        const firstSampleDelay = BIT_TIME_MS / 2;
+        this.sampleTimerId = setTimeout(() => this.sampleTick(0, sr), firstSampleDelay);
+        return;
+      }
+
+      this.loopId = requestAnimationFrame(poll);
+    };
+
+    this.loopId = requestAnimationFrame(poll);
+  }
+
+  private sampleTick(symbolIndex: number, sr: number): void {
     if (!this._active || !this.analyser) return;
 
     const td = new Float32Array(this.analyser.fftSize);
@@ -243,35 +281,36 @@ export class AudioReceiver {
     const eSpace = goertzel(td, this.freqSpace, sr);
     const eMark = goertzel(td, this.freqMark, sr);
     const maxE = Math.max(eSpace, eMark);
-    const hasSignal = maxE > 0.5;
+    const hasSignal = maxE > 0.4;
     const level = Math.min(1, maxE / 10);
 
-    if (hasSignal !== this.lastSignal) this.lastSignal = hasSignal;
     if (this._onSignal) this._onSignal(hasSignal, level);
 
-    if (this._gotFrame) {
-      if (!hasSignal) {
-        if (this._silentStart === null) this._silentStart = performance.now();
-        else if (performance.now() - this._silentStart > END_TIMEOUT_MS) {
-          const data = this._frameData!;
-          this._gotFrame = false;
-          this._frameData = null;
-          this._silentStart = null;
-          if (this._onData) this._onData(data);
-        }
-      } else {
-        this._silentStart = null;
-      }
+    if (hasSignal) {
+      this.lastActiveSignalTime = performance.now();
+    } else if (performance.now() - this.lastActiveSignalTime > 1500) {
+      // No valid signal for 1.5 seconds. Revert to waiting state.
+      this.isSynchronized = false;
+      this.bitBuffer = [];
+      this.startFastPoll();
       return;
     }
 
-    if (!hasSignal) return;
-
     const bit = eMark > eSpace ? 1 : 0;
     this.bitBuffer.push(bit);
-    if (this.bitBuffer.length > 8000) this.bitBuffer.splice(0, 2000);
+
+    // Keep buffer bounded
+    if (this.bitBuffer.length > 2000) {
+      this.bitBuffer.shift();
+    }
 
     this.tryDecode();
+
+    const nextIndex = symbolIndex + 1;
+    const targetTime = this.syncStartTime + BIT_TIME_MS / 2 + nextIndex * BIT_TIME_MS;
+    const delay = targetTime - performance.now();
+
+    this.sampleTimerId = setTimeout(() => this.sampleTick(nextIndex, sr), Math.max(0, delay));
   }
 
   private tryDecode(): void {
@@ -279,7 +318,11 @@ export class AudioReceiver {
     const syncLen = 16;
     const lenLen = 16;
 
-    for (let start = 0; start < this.bitBuffer.length - 200; start++) {
+    for (
+      let start = 0;
+      start <= this.bitBuffer.length - (preambleLen + syncLen + lenLen);
+      start++
+    ) {
       let altScore = 0;
       for (let i = 0; i < preambleLen - 1; i++) {
         if (this.bitBuffer[start + i] !== this.bitBuffer[start + i + 1]) altScore++;
@@ -288,16 +331,10 @@ export class AudioReceiver {
       if (altRatio < 0.7) continue;
 
       const syncStart = start + preambleLen;
-      if (syncStart + syncLen + lenLen > this.bitBuffer.length) continue;
-
       const expectedSync = [0, 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 1, 0];
       let syncScore = 0;
       for (let i = 0; i < syncLen; i++) {
-        if (
-          syncStart + i < this.bitBuffer.length &&
-          this.bitBuffer[syncStart + i] === expectedSync[i]
-        )
-          syncScore++;
+        if (this.bitBuffer[syncStart + i] === expectedSync[i]) syncScore++;
       }
       if (syncScore / syncLen < 0.75) continue;
 
@@ -330,11 +367,19 @@ export class AudioReceiver {
 
       const decoded = decodeFrame(frameBytes);
       if (decoded) {
+        // Clear buffer and state, stop current sampling, go back to idle fast poll
+        this.isSynchronized = false;
         this.bitBuffer = [];
-        this._gotFrame = true;
-        this._frameData = decoded.payload;
-        this._silentStart = null;
-        if (this._onSignal) this._onSignal(true, 1);
+        if (this.sampleTimerId !== null) {
+          clearTimeout(this.sampleTimerId);
+          this.sampleTimerId = null;
+        }
+
+        if (this._onData) {
+          this._onData(decoded.payload);
+        }
+
+        this.startFastPoll();
         return;
       }
     }

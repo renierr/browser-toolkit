@@ -36,3 +36,4 @@ backend/*.sqlite
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+.antigravitycli/
