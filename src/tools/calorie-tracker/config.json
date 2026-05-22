@@ -1,0 +1,15 @@
+{
+  "name": "Calorie Tracker",
+  "description": "AI-powered meal calorie & macro tracking with camera uploads, elegant canvas reporting, and isolated multi-user cloud sync.",
+  "icon": "flame",
+  "sectionId": "general",
+  "order": 10,
+  "draft": false,
+  "example": false,
+  "hideHeader": false,
+  "hideFooter": false,
+  "requiresBackend": true,
+  "shareTarget": {
+    "accept": ["image/*"]
+  }
+}
