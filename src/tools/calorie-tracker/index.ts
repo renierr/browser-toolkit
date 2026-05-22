@@ -3,15 +3,12 @@ import { showMessage } from '@js/ui';
 import { getSettings } from '@js/settings';
 import { setupImageIntake } from './image-helper';
 import { performAIAnalysis } from './analysis';
-import { loadAndRenderDashboard, cleanupDashboardPreviews, type DashboardElements } from './dashboard';
 import {
-  openDB,
-  saveMeal,
-  deleteMeal,
-  getMealById,
-  STORE_NAME,
-  type Meal,
-} from './db';
+  loadAndRenderDashboard,
+  cleanupDashboardPreviews,
+  type DashboardElements,
+} from './dashboard';
+import { openDB, saveMeal, deleteMeal, getMealById, STORE_NAME, type Meal } from './db';
 
 export default async function init() {
   const db = await openDB();
@@ -44,7 +41,9 @@ export default async function init() {
   // Estimate Form DOM elements
   const aiLoadingOverlay = document.getElementById('ai-loading-overlay') as HTMLDivElement;
   const estimateEmptyState = document.getElementById('estimate-empty-state') as HTMLDivElement;
-  const estimateFormContainer = document.getElementById('estimate-form-container') as HTMLDivElement;
+  const estimateFormContainer = document.getElementById(
+    'estimate-form-container'
+  ) as HTMLDivElement;
   const confidenceBadge = document.getElementById('ai-confidence-badge') as HTMLSpanElement;
 
   const editMealName = document.getElementById('edit-meal-name') as HTMLInputElement;
@@ -61,7 +60,9 @@ export default async function init() {
 
   // Dashboard Aggregation Elements
   const dashboardElements: DashboardElements = {
-    calorieCircle: document.getElementById('calorie-progress-circle') as unknown as SVGCircleElement,
+    calorieCircle: document.getElementById(
+      'calorie-progress-circle'
+    ) as unknown as SVGCircleElement,
     calConsumedText: document.getElementById('summary-calories-consumed') as HTMLSpanElement,
     calGoalText: document.getElementById('summary-calories-goal') as HTMLSpanElement,
     calDeltaBadge: document.getElementById('calorie-delta-label') as HTMLSpanElement,
@@ -336,15 +337,54 @@ export default async function init() {
     const target = e.target as HTMLElement;
     const editBtn = target.closest('.edit-log-btn');
     const deleteBtn = target.closest('.delete-log-btn');
+    const imgBtn = target.closest('.show-details-img');
 
-    if (editBtn) {
-      const id = parseInt(editBtn.getAttribute('data-id') || '0');
+    const el = editBtn || imgBtn;
+    if (el) {
+      const id = parseInt(el.getAttribute('data-id') || '0');
       if (id) void handleEditLog(id);
     } else if (deleteBtn) {
       const id = parseInt(deleteBtn.getAttribute('data-id') || '0');
       if (id) void handleDeleteLog(id);
     }
   });
+
+  // 8. Lightbox Overlay for Image Enlargement (Mobile Aware)
+  const lightbox = document.getElementById('meal-lightbox') as HTMLDivElement;
+  const lightboxImg = document.getElementById('lightbox-img') as HTMLImageElement;
+  const lightboxCaption = document.getElementById('lightbox-caption') as HTMLParagraphElement;
+  const lightboxCloseBtn = document.getElementById('lightbox-close-btn') as HTMLButtonElement;
+
+  const openLightbox = () => {
+    const url = editMealPreview.src;
+    if (!url || !activeImageBlob) return;
+
+    lightboxImg.src = url;
+    lightboxCaption.textContent = editMealName.value.trim() || 'Meal Detail';
+
+    lightbox.classList.remove('hidden');
+    // Force browser reflow to trigger transition
+    lightbox.offsetHeight;
+    lightbox.classList.add('opacity-100');
+    lightboxImg.classList.replace('scale-95', 'scale-100');
+  };
+
+  const closeLightbox = () => {
+    lightbox.classList.remove('opacity-100');
+    lightboxImg.classList.replace('scale-100', 'scale-95');
+    setTimeout(() => {
+      lightbox.classList.add('hidden');
+      lightboxImg.src = '';
+    }, 250);
+  };
+
+  editMealPreview.addEventListener('click', openLightbox);
+  lightbox.addEventListener('click', (e) => {
+    if (e.target !== lightboxImg) {
+      closeLightbox();
+    }
+  });
+  lightboxCloseBtn.addEventListener('click', closeLightbox);
 
   // Load preferences and render dashboard initially
   loadPreferences();
@@ -366,5 +406,6 @@ export default async function init() {
     settingsCleanup();
     imageIntake.cleanup();
     cleanupDashboardPreviews();
+    editMealPreview.removeEventListener('click', openLightbox);
   };
 }

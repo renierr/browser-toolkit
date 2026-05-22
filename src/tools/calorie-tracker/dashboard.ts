@@ -67,7 +67,7 @@ export function renderHistoryLogs(
       if (m.imageBlob) {
         const url = URL.createObjectURL(m.imageBlob);
         activeObjectUrls.push(url);
-        previewHtml = `<img class="w-10 h-10 object-cover rounded border border-base-300" src="${url}" alt="dish" />`;
+        previewHtml = `<img class="w-10 h-10 object-cover rounded border border-base-300 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200 show-details-img" data-id="${m.id}" src="${url}" alt="dish" title="Click to view details & large image" />`;
       }
 
       const dateStr = new Date(m.timestamp).toLocaleTimeString(undefined, {
@@ -187,8 +187,7 @@ export async function loadAndRenderDashboard(
       proteinGoal > 0 ? Math.min(100, (todayProt / proteinGoal) * 100) : 0;
     elements.carbsProgressBar.value =
       carbsGoal > 0 ? Math.min(100, (todayCarb / carbsGoal) * 100) : 0;
-    elements.fatProgressBar.value =
-      fatGoal > 0 ? Math.min(100, (todayFat / fatGoal) * 100) : 0;
+    elements.fatProgressBar.value = fatGoal > 0 ? Math.min(100, (todayFat / fatGoal) * 100) : 0;
 
     elements.summaryDateLabel.textContent = new Date().toLocaleDateString(undefined, {
       weekday: 'short',

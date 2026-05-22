@@ -2,20 +2,30 @@
 
 <div class="container mx-auto p-4 max-w-6xl space-y-6">
   <!-- Top Action Bar -->
-  <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-base-300 pb-4">
+  <div
+    class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-base-300 pb-4"
+  >
     <div>
       <h1 class="text-3xl font-extrabold tracking-tight flex items-center gap-2">
         <i data-lucide="flame" class="w-8 h-8 text-orange-500 animate-pulse"></i>
         <span>Calorie Tracker</span>
       </h1>
-      <p class="text-sm opacity-60 mt-1">AI-powered nutritional intelligence for your healthy lifestyle</p>
+      <p class="text-sm opacity-60 mt-1">
+        AI-powered nutritional intelligence for your healthy lifestyle
+      </p>
     </div>
     <div class="flex items-center gap-2 self-stretch md:self-auto justify-end">
-      <button id="sync-btn" class="btn btn-ghost btn-sm border border-base-300 flex items-center gap-2">
+      <button
+        id="sync-btn"
+        class="btn btn-ghost btn-sm border border-base-300 flex items-center gap-2"
+      >
         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
         <span>Sync</span>
       </button>
-      <button id="settings-toggle-btn" class="btn btn-ghost btn-sm border border-base-300 flex items-center gap-2">
+      <button
+        id="settings-toggle-btn"
+        class="btn btn-ghost btn-sm border border-base-300 flex items-center gap-2"
+      >
         <i data-lucide="settings" class="w-4 h-4"></i>
         <span>Settings</span>
       </button>
@@ -39,4 +49,28 @@
 
   <!-- Historic Logs Card -->
   <include src="history.html" />
+</div>
+
+<!-- Lightbox Modal Overlay -->
+<div
+  id="meal-lightbox"
+  class="hidden fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex flex-col justify-center items-center p-4 cursor-zoom-out select-none transition-all duration-300 opacity-0"
+>
+  <button
+    id="lightbox-close-btn"
+    class="absolute top-4 right-4 btn btn-circle btn-ghost text-white hover:bg-white/10"
+    aria-label="Close Lightbox"
+  >
+    <i data-lucide="x" class="w-6 h-6"></i>
+  </button>
+  <img
+    id="lightbox-img"
+    class="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl transition-transform duration-300 scale-95"
+    src=""
+    alt="Enlarged Food Detail"
+  />
+  <p
+    id="lightbox-caption"
+    class="text-white/70 text-sm font-semibold mt-4 px-4 text-center select-text bg-black/40 py-1.5 px-3 rounded-full backdrop-blur-sm"
+  ></p>
 </div>

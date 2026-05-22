@@ -1,13 +1,23 @@
-<div class="md:col-span-2 card bg-base-100 border border-base-300 shadow-xl p-5 relative overflow-hidden flex flex-col">
+<div
+  class="md:col-span-2 card bg-base-100 border border-base-300 shadow-xl p-5 relative overflow-hidden flex flex-col"
+>
   <!-- Loading Overlay -->
-  <div id="ai-loading-overlay" class="hidden absolute inset-0 bg-base-100/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-center p-6 space-y-3">
+  <div
+    id="ai-loading-overlay"
+    class="hidden absolute inset-0 bg-base-100/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-center p-6 space-y-3"
+  >
     <span class="loading loading-spinner loading-lg text-primary"></span>
     <h4 class="font-bold text-lg">Gemini analyzing meal...</h4>
-    <p class="text-sm opacity-60 max-w-sm">Deducing ingredients, portions, and calculating micro-nutrient distributions.</p>
+    <p class="text-sm opacity-60 max-w-sm">
+      Deducing ingredients, portions, and calculating micro-nutrient distributions.
+    </p>
   </div>
 
   <!-- Empty State -->
-  <div id="estimate-empty-state" class="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-40 italic space-y-2">
+  <div
+    id="estimate-empty-state"
+    class="flex-1 flex flex-col items-center justify-center text-center p-8 opacity-40 italic space-y-2"
+  >
     <i data-lucide="sparkles" class="w-12 h-12 text-primary opacity-60"></i>
     <p class="text-sm font-semibold">Ready for Nutritional Intelligence</p>
     <p class="text-xs">Provide a photo or custom description to receive the AI macro breakdown.</p>
@@ -16,56 +26,102 @@
   <!-- Edit/Verify Form -->
   <div id="estimate-form-container" class="hidden flex-1 flex flex-col justify-between space-y-4">
     <div>
-      <h3 class="font-extrabold text-lg flex items-center justify-between border-b border-base-300 pb-2">
+      <h3
+        class="font-extrabold text-lg flex items-center justify-between border-b border-base-300 pb-2"
+      >
         <span class="flex items-center gap-2">
           <i data-lucide="sparkles" class="w-5 h-5 text-orange-500 animate-pulse"></i>
           <span>Nutritional Estimate Details</span>
         </span>
-        <span id="ai-confidence-badge" class="badge badge-success text-white font-bold text-xs">90% AI Confidence</span>
+        <span id="ai-confidence-badge" class="badge badge-success text-white font-bold text-xs"
+          >90% AI Confidence</span
+        >
       </h3>
 
       <div class="grid grid-cols-1 sm:grid-cols-12 gap-4 mt-4">
         <!-- Details fields -->
         <div class="sm:col-span-8 space-y-3">
           <div class="form-control">
-            <label class="label py-0.5"><span class="label-text text-xs font-semibold">Meal Description / Food Name</span></label>
-            <input id="edit-meal-name" type="text" class="input input-bordered input-sm w-full font-bold" />
+            <label class="label py-0.5"
+              ><span class="label-text text-xs font-semibold"
+                >Meal Description / Food Name</span
+              ></label
+            >
+            <input
+              id="edit-meal-name"
+              type="text"
+              class="input input-bordered input-sm w-full font-bold"
+            />
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div class="form-control">
-              <label class="label py-0.5"><span class="label-text text-xs font-semibold">Calories (kcal)</span></label>
-              <input id="edit-meal-calories" type="number" class="input input-bordered input-sm w-full font-bold text-orange-500" />
+              <label class="label py-0.5"
+                ><span class="label-text text-xs font-semibold">Calories (kcal)</span></label
+              >
+              <input
+                id="edit-meal-calories"
+                type="number"
+                class="input input-bordered input-sm w-full font-bold text-orange-500"
+              />
             </div>
             <div class="form-control">
-              <label class="label py-0.5"><span class="label-text text-xs font-semibold">Protein (g)</span></label>
-              <input id="edit-meal-protein" type="number" class="input input-bordered input-sm w-full font-bold text-error" />
+              <label class="label py-0.5"
+                ><span class="label-text text-xs font-semibold">Protein (g)</span></label
+              >
+              <input
+                id="edit-meal-protein"
+                type="number"
+                class="input input-bordered input-sm w-full font-bold text-error"
+              />
             </div>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <div class="form-control">
-              <label class="label py-0.5"><span class="label-text text-xs font-semibold">Carbs (g)</span></label>
-              <input id="edit-meal-carbs" type="number" class="input input-bordered input-sm w-full font-bold text-info" />
+              <label class="label py-0.5"
+                ><span class="label-text text-xs font-semibold">Carbs (g)</span></label
+              >
+              <input
+                id="edit-meal-carbs"
+                type="number"
+                class="input input-bordered input-sm w-full font-bold text-info"
+              />
             </div>
             <div class="form-control">
-              <label class="label py-0.5"><span class="label-text text-xs font-semibold">Fat (g)</span></label>
-              <input id="edit-meal-fat" type="number" class="input input-bordered input-sm w-full font-bold text-warning" />
+              <label class="label py-0.5"
+                ><span class="label-text text-xs font-semibold">Fat (g)</span></label
+              >
+              <input
+                id="edit-meal-fat"
+                type="number"
+                class="input input-bordered input-sm w-full font-bold text-warning"
+              />
             </div>
           </div>
           <div class="form-control">
-            <label class="label py-0.5"><span class="label-text text-xs font-semibold">AI Explanatory Notes</span></label>
-            <textarea id="edit-meal-notes" class="textarea textarea-bordered h-14 text-xs opacity-80" readonly></textarea>
+            <label class="label py-0.5 block"
+              ><span class="label-text text-xs font-semibold">AI Explanatory Notes</span></label
+            >
+            <textarea
+              id="edit-meal-notes"
+              class="textarea textarea-bordered h-14 text-xs opacity-80"
+              readonly
+            ></textarea>
           </div>
         </div>
 
         <!-- Thumbnail Visualizer -->
-        <div class="sm:col-span-4 flex items-center justify-center border border-base-300 rounded-xl overflow-hidden bg-base-200 min-h-[140px] max-h-[220px]">
+        <div
+          class="sm:col-span-4 flex items-center justify-center border border-base-300 rounded-xl overflow-hidden bg-base-200 min-h-[140px] max-h-[220px]"
+        >
           <img id="edit-meal-preview" class="w-full h-full object-cover" src="" alt="Meal Visual" />
         </div>
       </div>
     </div>
 
     <div class="flex justify-end gap-2 border-t border-base-300 pt-3">
-      <button id="btn-discard-estimate" class="btn btn-ghost btn-sm border border-base-300">Discard</button>
+      <button id="btn-discard-estimate" class="btn btn-ghost btn-sm border border-base-300">
+        Discard
+      </button>
       <button id="btn-save-estimate" class="btn btn-primary btn-sm flex items-center gap-1.5">
         <i data-lucide="plus" class="w-4 h-4"></i>
         <span id="btn-save-text">Save & Log Meal</span>
