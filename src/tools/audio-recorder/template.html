@@ -1,6 +1,12 @@
 <div class="card bg-base-100 shadow-xl">
   <div class="card-body">
-    <h2 class="card-title text-2xl font-bold mb-4">Audio Recorder</h2>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="card-title text-2xl font-bold">Audio Recorder</h2>
+      <button id="sync-btn" class="btn btn-outline btn-xs hidden" title="Sync with server">
+        <i data-lucide="refresh-cw" class="w-4 h-4 sync-icon"></i>
+        Sync
+      </button>
+    </div>
     <p class="text-base-content/70 mb-6">
       Record voice/audio, visualize waveform, and save as WebM.
     </p>

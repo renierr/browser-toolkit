@@ -2,6 +2,8 @@ import { AudioRecorder, type AudioRecorderOptions } from './audio-utils';
 import { openInTool } from '@js/tool-chooser.ts';
 import { showMessage } from '@js/ui.ts';
 import { getSettings } from '@js/settings.ts';
+import { openDB, getAllRecordings, saveRecording, deleteRecording, STORE_NAME } from './db';
+import { SyncManager } from '@js/sync.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
@@ -14,9 +16,12 @@ export default function init() {
   const canvas = document.getElementById('visualizer-canvas') as HTMLCanvasElement;
   const recordingsList = document.getElementById('recordings-list') as HTMLElement;
   const noRecordingsMsg = document.getElementById('no-recordings-msg') as HTMLElement;
+  const syncBtn = document.getElementById('sync-btn') as HTMLButtonElement;
 
+  let db: IDBDatabase | null = null;
   let visualizerFrame: number | null = null;
   let analyser: AnalyserNode | null = null;
+  const activeUrls = new Set<string>();
 
   // --- Audio Recorder Logic ---
 
@@ -24,13 +29,31 @@ export default function init() {
     recordingTimer.textContent = time;
   };
 
-  const onStop = (url: string, date: Date, mimeType: string) => {
-    addRecording(url, date, mimeType);
+  const onStop = async (url: string, date: Date, mimeType: string, blob: Blob) => {
     stopVisualizer();
     btnRecord.classList.remove('hidden');
     btnStopRecord.classList.add('hidden');
     recordingIndicator.classList.add('hidden');
     recordingTimer.textContent = '00:00';
+
+    if (db) {
+      const name = `Recording ${date.toLocaleTimeString()}`;
+      try {
+        const saved = await saveRecording(db, name, mimeType, blob);
+        const objUrl = URL.createObjectURL(blob);
+        activeUrls.add(objUrl);
+        addRecording(objUrl, date, mimeType, saved.id, saved.name);
+        void handleSync(); // Sync in background
+      } catch (err) {
+        console.error('[AudioRecorder] Failed to save recording to DB', err);
+        showMessage('Failed to save recording locally.', { type: 'alert' });
+        activeUrls.add(url);
+        addRecording(url, date, mimeType);
+      }
+    } else {
+      activeUrls.add(url);
+      addRecording(url, date, mimeType);
+    }
   };
 
   const audioRecorder = new AudioRecorder(onTimerUpdate, onStop);
@@ -142,13 +165,19 @@ export default function init() {
     return 'webm';
   };
 
-  const addRecording = (url: string, date: Date, mimeType: string) => {
+  const addRecording = (
+    url: string,
+    date: Date,
+    mimeType: string,
+    id?: number,
+    customName?: string
+  ) => {
     noRecordingsMsg.classList.add('hidden');
 
     const item = document.createElement('div');
     item.className = 'flex flex-col gap-2 p-3 bg-base-200 rounded-lg border border-base-300';
 
-    const name = `Recording ${date.toLocaleTimeString()}`;
+    const name = customName || `Recording ${date.toLocaleTimeString()}`;
     const ext = getExtension(mimeType);
 
     item.innerHTML = `
@@ -171,10 +200,14 @@ export default function init() {
 
     // Delete handler
     const deleteBtn = item.querySelector('.btn-delete');
-    deleteBtn?.addEventListener('click', () => {
+    deleteBtn?.addEventListener('click', async () => {
       item.remove();
       if (recordingsList.children.length === 1) {
         noRecordingsMsg.classList.remove('hidden');
+      }
+      if (id !== undefined && db) {
+        await deleteRecording(db, id);
+        void handleSync(); // Sync in background
       }
     });
 
@@ -238,6 +271,54 @@ export default function init() {
     }
   };
 
+  // Sync handler
+  async function handleSync(manual = false) {
+    if (!db) return;
+    if (syncBtn) {
+      syncBtn.classList.add('syncing');
+      syncBtn.disabled = true;
+    }
+    try {
+      await SyncManager.sync(db, STORE_NAME, 'audio-recorder', 'shortId', { manual });
+      await loadRecordings();
+    } catch (e) {
+      console.warn('[AudioRecorder] Sync failed (likely offline):', e);
+    } finally {
+      if (syncBtn) {
+        syncBtn.classList.remove('syncing');
+        syncBtn.disabled = false;
+      }
+    }
+  }
+
+  // Load recordings from DB
+  async function loadRecordings() {
+    if (!db) return;
+    const recordings = await getAllRecordings(db);
+
+    // Clear list but keep 'no recordings' element
+    recordingsList.innerHTML = '';
+    recordingsList.appendChild(noRecordingsMsg);
+
+    // Revoke old URLs to prevent memory leaks
+    activeUrls.forEach((url) => URL.revokeObjectURL(url));
+    activeUrls.clear();
+
+    if (recordings.length === 0) {
+      noRecordingsMsg.classList.remove('hidden');
+    } else {
+      noRecordingsMsg.classList.add('hidden');
+      // Sort newest first
+      recordings.sort((a, b) => b.createdAt - a.createdAt);
+
+      for (const rec of recordings) {
+        const url = URL.createObjectURL(rec.audioData);
+        activeUrls.add(url);
+        addRecording(url, new Date(rec.createdAt), rec.mimeType, rec.id, rec.name);
+      }
+    }
+  }
+
   // Populate initially
   populateDevices();
 
@@ -247,9 +328,27 @@ export default function init() {
   btnRecord.addEventListener('click', startRecording);
   btnStopRecord.addEventListener('click', stopRecording);
 
+  // Initialize DB and load recordings
+  openDB()
+    .then(async (openedDb) => {
+      db = openedDb;
+      await loadRecordings();
+
+      const available = await SyncManager.isBackendAvailable();
+      if (available && syncBtn) {
+        syncBtn.classList.remove('hidden');
+        syncBtn.addEventListener('click', () => handleSync(true));
+        void handleSync(); // BG sync
+      }
+    })
+    .catch((err) => {
+      console.error('[AudioRecorder] Failed to open IndexedDB:', err);
+    });
+
   // Cleanup
   return () => {
     stopRecording();
     navigator.mediaDevices.removeEventListener('devicechange', populateDevices);
+    activeUrls.forEach((url) => URL.revokeObjectURL(url));
   };
 }

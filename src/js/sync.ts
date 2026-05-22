@@ -1,5 +1,6 @@
 import { fetchApi, fetchJson } from './api';
 import { showMessage } from './ui';
+import { uint8ArrayToBase64, base64ToUint8Array } from './utils';
 
 /**
  * Generic Synchronization Utility
@@ -14,6 +15,59 @@ export interface SyncableRecord {
 }
 
 export class SyncManager {
+  /**
+   * Recursively serialize any Blob properties in a record to base64 objects
+   */
+  static async serializeRecord(record: any): Promise<any> {
+    if (!record || typeof record !== 'object') {
+      return record;
+    }
+
+    if (record instanceof Blob) {
+      const arrayBuffer = await record.arrayBuffer();
+      const base64 = uint8ArrayToBase64(new Uint8Array(arrayBuffer));
+      return {
+        __type: 'blob',
+        mimeType: record.type,
+        data: base64,
+      };
+    }
+
+    if (Array.isArray(record)) {
+      return Promise.all(record.map((item) => this.serializeRecord(item)));
+    }
+
+    const serialized: any = {};
+    for (const key of Object.keys(record)) {
+      serialized[key] = await this.serializeRecord(record[key]);
+    }
+    return serialized;
+  }
+
+  /**
+   * Recursively deserialize any base64 objects in a record back to native Blobs
+   */
+  static deserializeRecord(record: any): any {
+    if (!record || typeof record !== 'object') {
+      return record;
+    }
+
+    if (record.__type === 'blob' && typeof record.data === 'string') {
+      const bytes = base64ToUint8Array(record.data);
+      return new Blob([bytes as any], { type: record.mimeType });
+    }
+
+    if (Array.isArray(record)) {
+      return record.map((item) => this.deserializeRecord(item));
+    }
+
+    const deserialized: any = {};
+    for (const key of Object.keys(record)) {
+      deserialized[key] = this.deserializeRecord(record[key]);
+    }
+    return deserialized;
+  }
+
   /**
    * Check if the backend is reachable
    */
@@ -104,7 +158,11 @@ export class SyncManager {
         }
 
         if (!lRec || sRec.updatedAt > (lRec.updatedAt || 0)) {
-          const dataToSave = { ...sRec.data, updatedAt: sRec.updatedAt };
+          let dataToSave = { ...sRec.data, updatedAt: sRec.updatedAt };
+
+          // Deserialize any Blobs inside dataToSave
+          dataToSave = this.deserializeRecord(dataToSave);
+
           // If we have a local primary key (e.g. auto-increment 'id'), preserve it.
           // Otherwise, if the pulled data has a primary key that is NOT our global keyField,
           // remove it to let the local DB generate its own (avoiding conflicts/duplicates).
@@ -130,9 +188,12 @@ export class SyncManager {
             delete (dataToPush as any)[primaryKey];
           }
 
+          // Serialize any Blobs inside dataToPush
+          const serializedData = await this.serializeRecord(dataToPush);
+
           toPush.push({
             id: String(lRec[keyField]),
-            data: dataToPush,
+            data: serializedData,
             updatedAt: lRec.updatedAt || Date.now(),
             deleted: false,
           });

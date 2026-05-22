@@ -15,12 +15,12 @@ export class AudioRecorder {
   private recordingStartTime: number = 0;
   private recordingInterval: number | null = null;
   private onTimerUpdate: ((time: string) => void) | null = null;
-  private onStop: ((url: string, date: Date, mimeType: string) => void) | null = null;
+  private onStop: ((url: string, date: Date, mimeType: string, blob: Blob) => void) | null = null;
   private recordedMimeType: string = 'audio/webm';
 
   constructor(
     onTimerUpdate?: (time: string) => void,
-    onStop?: (url: string, date: Date, mimeType: string) => void
+    onStop?: (url: string, date: Date, mimeType: string, blob: Blob) => void
   ) {
     this.onTimerUpdate = onTimerUpdate || null;
     this.onStop = onStop || null;
@@ -90,7 +90,7 @@ export class AudioRecorder {
         const audioBlob = new Blob(this.audioChunks, { type: this.recordedMimeType });
         const audioUrl = URL.createObjectURL(audioBlob);
         if (this.onStop) {
-          this.onStop(audioUrl, new Date(), this.recordedMimeType);
+          this.onStop(audioUrl, new Date(), this.recordedMimeType, audioBlob);
         }
       };
 
