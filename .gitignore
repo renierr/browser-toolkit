@@ -37,3 +37,8 @@ backend/*.sqlite
 /blob-report/
 /playwright/.cache/
 .antigravitycli/
+
+# Environment configurations
+.env
+.env.*
+
