@@ -1,0 +1,38 @@
+<div class="md:col-span-1 card bg-base-100 border border-base-300 shadow-xl p-5 space-y-4">
+  <h3 class="font-bold text-lg flex items-center gap-2">
+    <i data-lucide="camera" class="w-5 h-5 text-primary"></i>
+    <span>Capture Meal</span>
+  </h3>
+
+  <!-- Dropzone -->
+  <div id="meal-dropzone" class="flex flex-col items-center justify-center border-2 border-dashed border-base-300 rounded-xl cursor-pointer bg-base-200/50 hover:bg-base-200 transition-all p-6 min-h-[160px] text-center relative group overflow-hidden">
+    <div id="dropzone-prompt" class="flex flex-col items-center gap-2 group-hover:scale-105 transition-transform duration-200">
+      <i data-lucide="upload-cloud" class="w-10 h-10 text-primary opacity-70"></i>
+      <p class="text-sm font-bold">Snap or Upload Food Photo</p>
+      <p class="text-xs opacity-50">Drag file, copy & paste, or click</p>
+    </div>
+    <img id="dropzone-preview" class="hidden absolute inset-0 w-full h-full object-cover rounded-xl" />
+    <input id="dropzone-file-input" type="file" class="hidden" accept="image/*" />
+  </div>
+
+  <!-- Paste Clipboard Button and Camera triggers -->
+  <div class="flex gap-2">
+    <button id="paste-btn" class="btn btn-outline btn-sm flex-1 flex items-center justify-center gap-1.5">
+      <i data-lucide="clipboard" class="w-4 h-4"></i>
+      <span>Paste Image</span>
+    </button>
+    <button id="clear-image-btn" class="btn btn-sm btn-error btn-outline hidden flex-initial">
+      Clear
+    </button>
+  </div>
+
+  <div class="form-control">
+    <label class="label"><span class="label-text font-semibold text-xs">Optional Description / Context Hints</span></label>
+    <textarea id="meal-hint-input" class="textarea textarea-bordered h-16 text-sm" placeholder="E.g., Caesar salad with light dressing and grilled chicken"></textarea>
+  </div>
+
+  <button id="analyze-btn" class="btn btn-primary w-full flex items-center justify-center gap-2" disabled>
+    <i data-lucide="sparkles" class="w-4 h-4"></i>
+    <span>AI Analyze Meal</span>
+  </button>
+</div>

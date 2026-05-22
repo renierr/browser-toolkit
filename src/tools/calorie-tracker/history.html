@@ -1,0 +1,36 @@
+<div class="card bg-base-100 border border-base-300 shadow-xl p-5">
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+    <h2 class="font-bold text-xl flex items-center gap-2">
+      <i data-lucide="list" class="w-5 h-5 text-primary"></i>
+      <span>Logged Meals History</span>
+    </h2>
+    <div class="flex items-center gap-2">
+      <span class="text-xs opacity-50 font-bold">Filter Day:</span>
+      <input id="history-date-filter" type="date" class="input input-bordered input-sm" />
+      <button id="btn-clear-filter" class="btn btn-ghost btn-xs underline hidden">Show All</button>
+    </div>
+  </div>
+
+  <!-- Logs container -->
+  <div class="overflow-x-auto w-full">
+    <table class="table w-full">
+      <thead>
+        <tr class="border-b border-base-300">
+          <th class="w-16">Meal</th>
+          <th>Name & Notes</th>
+          <th class="text-right">Calories</th>
+          <th class="text-right hidden sm:table-cell">Protein</th>
+          <th class="text-right hidden sm:table-cell">Carbs</th>
+          <th class="text-right hidden sm:table-cell">Fats</th>
+          <th class="text-center w-24">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="logs-tbody" class="divide-y divide-base-200">
+        <!-- Dynamically filled logs rows -->
+      </tbody>
+    </table>
+    <div id="logs-empty-state" class="text-center p-8 opacity-50 italic text-sm">
+      No logged meals found. Start by capturing a food photo.
+    </div>
+  </div>
+</div>
