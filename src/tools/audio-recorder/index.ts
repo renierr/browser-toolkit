@@ -1,9 +1,12 @@
 import { AudioRecorder, type AudioRecorderOptions } from './audio-utils';
 import { openInTool } from '@js/tool-chooser.ts';
 import { showMessage } from '@js/ui.ts';
+import { getSettings } from '@js/settings.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default function init() {
+  const settings = getSettings('audio-recorder');
+
   const btnRecord = document.getElementById('btn-record') as HTMLButtonElement;
   const btnStopRecord = document.getElementById('btn-stop-record') as HTMLButtonElement;
   const recordingTimer = document.getElementById('recording-timer') as HTMLElement;
@@ -44,12 +47,15 @@ export default function init() {
         true;
       const qualitySelect = document.getElementById('settings-audio-quality') as HTMLSelectElement;
       const audioBitrate = qualitySelect ? parseInt(qualitySelect.value, 10) : 256000;
+      const deviceId =
+        (document.getElementById('settings-audio-device') as HTMLSelectElement)?.value || undefined;
 
       const options: AudioRecorderOptions = {
         autoGainControl: autoGain,
         noiseSuppression,
         echoCancellation,
         audioBitrate,
+        deviceId,
       };
 
       analyser = await audioRecorder.start(options);
@@ -201,11 +207,49 @@ export default function init() {
     recordingsList.insertBefore(item, recordingsList.firstElementChild?.nextElementSibling || null);
   };
 
+  const deviceSelect = document.getElementById('settings-audio-device') as HTMLSelectElement;
+
+  const populateDevices = async () => {
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      if (deviceSelect) {
+        const savedDeviceId = settings.get<string>('deviceId', '');
+        deviceSelect.innerHTML = '';
+        devices.forEach((device) => {
+          if (device.kind === 'audioinput') {
+            const option = document.createElement('option');
+            option.value = device.deviceId;
+            option.textContent = device.label || `Microphone ${deviceSelect.length + 1}`;
+            if (device.deviceId === savedDeviceId) {
+              option.selected = true;
+            }
+            deviceSelect.appendChild(option);
+          }
+        });
+        if (deviceSelect.children.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = 'No microphones found';
+          deviceSelect.appendChild(option);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not enumerate audio devices:', err);
+    }
+  };
+
+  // Populate initially
+  populateDevices();
+
+  // Listen for device changes
+  navigator.mediaDevices.addEventListener('devicechange', populateDevices);
+
   btnRecord.addEventListener('click', startRecording);
   btnStopRecord.addEventListener('click', stopRecording);
 
   // Cleanup
   return () => {
     stopRecording();
+    navigator.mediaDevices.removeEventListener('devicechange', populateDevices);
   };
 }

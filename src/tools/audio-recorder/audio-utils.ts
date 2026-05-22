@@ -3,6 +3,7 @@ export type AudioRecorderOptions = {
   noiseSuppression?: boolean;
   autoGainControl?: boolean;
   audioBitrate?: number;
+  deviceId?: string;
 };
 
 export class AudioRecorder {
@@ -28,13 +29,20 @@ export class AudioRecorder {
   async start(options: AudioRecorderOptions = {}): Promise<AnalyserNode | null> {
     try {
       this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+
+      const constraints: MediaStreamConstraints = {
         audio: {
           echoCancellation: options.echoCancellation ?? true,
           noiseSuppression: options.noiseSuppression ?? true,
           autoGainControl: options.autoGainControl ?? true,
         },
-      });
+      };
+
+      if (options.deviceId) {
+        (constraints.audio as MediaTrackConstraints).deviceId = { exact: options.deviceId };
+      }
+
+      this.mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
 
       const source = this.audioContext.createMediaStreamSource(this.mediaStream);
       this.analyser = this.audioContext.createAnalyser();
