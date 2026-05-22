@@ -1,4 +1,4 @@
-import { AudioRecorder } from './audio-utils';
+import { AudioRecorder, type AudioRecorderOptions } from './audio-utils';
 import { openInTool } from '@js/tool-chooser.ts';
 import { showMessage } from '@js/ui.ts';
 
@@ -21,8 +21,8 @@ export default function init() {
     recordingTimer.textContent = time;
   };
 
-  const onStop = (url: string, date: Date) => {
-    addRecording(url, date);
+  const onStop = (url: string, date: Date, mimeType: string) => {
+    addRecording(url, date, mimeType);
     stopVisualizer();
     btnRecord.classList.remove('hidden');
     btnStopRecord.classList.add('hidden');
@@ -34,7 +34,25 @@ export default function init() {
 
   const startRecording = async () => {
     try {
-      analyser = await audioRecorder.start();
+      const autoGain =
+        (document.getElementById('settings-auto-gain') as HTMLInputElement)?.checked ?? true;
+      const noiseSuppression =
+        (document.getElementById('settings-noise-suppression') as HTMLInputElement)?.checked ??
+        true;
+      const echoCancellation =
+        (document.getElementById('settings-echo-cancellation') as HTMLInputElement)?.checked ??
+        true;
+      const qualitySelect = document.getElementById('settings-audio-quality') as HTMLSelectElement;
+      const audioBitrate = qualitySelect ? parseInt(qualitySelect.value, 10) : 256000;
+
+      const options: AudioRecorderOptions = {
+        autoGainControl: autoGain,
+        noiseSuppression,
+        echoCancellation,
+        audioBitrate,
+      };
+
+      analyser = await audioRecorder.start(options);
 
       btnRecord.classList.add('hidden');
       btnStopRecord.classList.remove('hidden');
@@ -112,13 +130,20 @@ export default function init() {
     if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
   };
 
-  const addRecording = (url: string, date: Date) => {
+  const getExtension = (mime: string): string => {
+    if (mime.includes('mp4') || mime.includes('aac')) return 'm4a';
+    if (mime.includes('ogg')) return 'ogg';
+    return 'webm';
+  };
+
+  const addRecording = (url: string, date: Date, mimeType: string) => {
     noRecordingsMsg.classList.add('hidden');
 
     const item = document.createElement('div');
     item.className = 'flex flex-col gap-2 p-3 bg-base-200 rounded-lg border border-base-300';
 
     const name = `Recording ${date.toLocaleTimeString()}`;
+    const ext = getExtension(mimeType);
 
     item.innerHTML = `
       <div class="flex items-center justify-between w-full">
@@ -127,7 +152,7 @@ export default function init() {
           <div class="text-xs text-base-content/60">${date.toLocaleDateString()}</div>
         </div>
         <div class="flex items-center gap-1 shrink-0">
-          <a href="${url}" download="recording-${date.getTime()}.webm" class="btn btn-ghost btn-xs btn-square" title="Download">
+          <a href="${url}" download="recording-${date.getTime()}.${ext}" class="btn btn-ghost btn-xs btn-square" title="Download">
             <i data-lucide="download" class="w-4 h-4"></i>
           </a>
           <button class="btn btn-ghost btn-xs btn-square text-error btn-delete" title="Delete">
@@ -158,8 +183,8 @@ export default function init() {
         // Fetch the blob from the object URL and open in tool
         const resp = await fetch(url);
         const blob = await resp.blob();
-        const filename = `recording-${date.getTime()}.webm`;
-        const file = new File([blob], filename, { type: blob.type || 'audio/webm' });
+        const filename = `recording-${date.getTime()}.${ext}`;
+        const file = new File([blob], filename, { type: blob.type || mimeType });
         await openInTool(file, { filename, mimeType: file.type });
       } catch (err) {
         console.error('Failed to open recording in tool:', err);

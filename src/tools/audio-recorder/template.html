@@ -16,6 +16,85 @@
       </div>
     </div>
 
+    <!-- Settings -->
+    <details class="collapse collapse-arrow bg-base-200 border border-base-300 rounded-xl mb-6">
+      <summary class="collapse-title text-sm font-semibold flex items-center gap-2 py-3 min-h-0">
+        <i data-lucide="sliders" class="w-4 h-4"></i>
+        Audio Settings
+      </summary>
+      <div class="collapse-content space-y-3">
+        <div class="form-control">
+          <label class="label cursor-pointer justify-between py-1 px-0">
+            <span class="label-text flex flex-col pr-4">
+              <span class="font-medium">Auto Gain Control</span>
+              <span class="text-xs text-base-content/60"
+                >Prevents clipping, can cause first-second overgain</span
+              >
+            </span>
+            <input
+              type="checkbox"
+              id="settings-auto-gain"
+              data-setting="autoGainControl"
+              class="toggle toggle-primary"
+              checked
+            />
+          </label>
+        </div>
+        <div class="form-control">
+          <label class="label cursor-pointer justify-between py-1 px-0">
+            <span class="label-text flex flex-col pr-4">
+              <span class="font-medium">Noise Suppression</span>
+              <span class="text-xs text-base-content/60"
+                >Filters out background hum and white noise</span
+              >
+            </span>
+            <input
+              type="checkbox"
+              id="settings-noise-suppression"
+              data-setting="noiseSuppression"
+              class="toggle toggle-primary"
+              checked
+            />
+          </label>
+        </div>
+        <div class="form-control">
+          <label class="label cursor-pointer justify-between py-1 px-0">
+            <span class="label-text flex flex-col pr-4">
+              <span class="font-medium">Echo Cancellation</span>
+              <span class="text-xs text-base-content/60">Prevents feedback/echo from speakers</span>
+            </span>
+            <input
+              type="checkbox"
+              id="settings-echo-cancellation"
+              data-setting="echoCancellation"
+              class="toggle toggle-primary"
+              checked
+            />
+          </label>
+        </div>
+        <div class="form-control">
+          <label class="label cursor-pointer justify-between py-1 px-0">
+            <span class="label-text flex flex-col pr-4">
+              <span class="font-medium">Recording Quality</span>
+              <span class="text-xs text-base-content/60"
+                >Higher bitrates improve audio fidelity</span
+              >
+            </span>
+            <select
+              id="settings-audio-quality"
+              data-setting="audioQuality"
+              class="select select-bordered select-sm w-44"
+            >
+              <option value="96000">Standard (96 kbps)</option>
+              <option value="128000">High (128 kbps)</option>
+              <option value="256000" selected>High Fidelity (256 kbps)</option>
+              <option value="320000">Ultra (320 kbps)</option>
+            </select>
+          </label>
+        </div>
+      </div>
+    </details>
+
     <!-- Controls -->
     <div class="card-actions justify-center gap-2">
       <button id="btn-record" class="btn btn-error flex-1">
