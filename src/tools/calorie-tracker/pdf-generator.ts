@@ -2,7 +2,7 @@ import { htmlToPdfBuffer } from '@js/mupdf-utils';
 import { downloadFile } from '@js/file-utils';
 import { type Meal } from './db';
 
-export const PLACEHOLDER_SVG = `data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' xml:space='preserve' viewBox='0 0 177.807 177.807'%3E%3Cpath d='M13.463 2.353c-1.508 1.486-2.412 3.655.745 16.652 1.891 7.786 16.652 51.198 21.682 63.67 10.235 25.374 16.786 24.537 20.539 25.02a7.35 7.35 0 0 0 5.157-1.247c4.197-2.864 5.597-3.699 7.218-4.667a156 156 0 0 0 1.936-1.169c4.537 7.434 10.138 18.967 15.576 30.163 7.317 15.067 14.884 30.648 20.93 38.71 3.845 5.125 8.003 6.633 10.815 6.994 5.382.692 10.948-2.192 14.183-7.348 3.281-5.232 3.392-11.437.288-16.19-6.389-9.79-99.916-132.93-113.936-149.832-1.946-2.348-4.265-1.612-5.133-.756m113.063 163.19c-1.839 2.933-4.824 4.597-7.604 4.239-2.182-.28-4.353-1.785-6.275-4.349-5.658-7.543-13.08-22.827-20.259-37.608-6.558-13.503-12.752-26.258-17.819-33.75a3.37 3.37 0 0 0-4.626-.944c-2.266 1.463-7.795 4.76-12.163 7.741-.2.137-.317.15-.49.129-2.315 1.198-2.462-.561-6.369-5.864-6.293-8.542-24.063-58.716-29.203-75.196-1.994-6.391.13-2.867 1.692-.857 16.886 21.724 97.263 128.037 103.47 137.548 1.969 3.014 1.108 6.58-.354 8.911m50.328-129.885a3.373 3.373 0 0 0-4.772-.071c-8.615 8.358-16.65 16.508-23.106 23.057-1.649 1.674-3.16 3.206-4.528 4.587l-6.365-6.37 26.897-26.098a3.375 3.375 0 0 0-4.701-4.844L133.31 52.086l-5.992-5.997 27.058-26.254a3.374 3.374 0 1 0-4.7-4.844l-27.129 26.323-5.837-5.842 29.318-28.447a3.37 3.37 0 0 0 .071-4.771 3.37 3.37 0 0 0-4.771-.072l-33.739 32.737c-8.623 8.366-7.957 20.653 1.438 31.984l-19.189 18.9a3.373 3.373 0 0 0 1.795 5.75 3.37 3.37 0 0 0 2.906-.907l19.203-18.914c3.781 3.148 8.251 5.231 12.947 6.011a24 24 0 0 0 1.826.236c6.129.57 11.745-1.144 15.412-4.702 2.342-2.271 5.657-5.635 9.856-9.894 6.433-6.524 14.438-14.645 23-22.951a3.38 3.38 0 0 0 .071-4.774m-47.716 35.599c-4.737-.44-9.29-2.684-12.812-6.314-6.9-7.112-11.598-17.279-4.449-24.758L139.669 68l-.444.433c-2.217 2.149-5.987 3.206-10.087 2.824'/%3E%3Cpath d='M74.588 116.551a3.374 3.374 0 0 0-4.765.281c-13.581 15.281-38.226 42.275-46.542 49.651-4.134 3.667-10.646 2.188-14.133-1.496-3.647-3.852-3.097-8.73 1.509-13.388 11.695-11.819 28.923-25.353 41.918-35.152a3.376 3.376 0 0 0-4.064-5.39c-13.162 9.926-30.649 23.663-42.652 35.794-8.742 8.837-6.332 17.792-1.612 22.776 2.667 2.815 6.444 4.841 10.456 5.507 4.464.741 9.219-.199 13.057-3.604 9.61-8.523 37.265-39.141 47.109-50.218a3.37 3.37 0 0 0-.281-4.761'/%3E%3C/svg%3E`;
+export const PLACEHOLDER_SVG = `data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='85'%3E🍴%3C/text%3E%3C/svg%3E`;
 
 // --- Shared Constants & Styles ---
 
@@ -29,15 +29,13 @@ const SINGLE_MEAL_STYLES = `
   }
   .no-img-box {
     width: 100%;
-    height: 160pt;
-    background-color: #f7fafc;
-    border: 2px dashed #cbd5e0;
+    height: 180pt;
+    line-height: 180pt;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
     border-radius: 8pt;
     text-align: center;
-    padding-top: 60pt;
-    color: #718096;
-    font-size: 11pt;
-    font-style: italic;
+    font-size: 70pt;
   }
   .food-name {
     font-size: 18pt;
@@ -218,6 +216,16 @@ const SUMMARY_REPORTS_STYLES = `
     border-radius: 6pt;
     border: 1px solid #e2e8f0;
   }
+  .meal-thumbnail-placeholder {
+    width: 90pt;
+    height: 90pt;
+    line-height: 90pt;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6pt;
+    text-align: center;
+    font-size: 38pt;
+  }
   .meal-info-cell {
     vertical-align: top;
     padding: 10pt;
@@ -390,7 +398,7 @@ export async function generateMealPdf(meal: Meal, settings: any): Promise<void> 
         ${
           imgBase64
             ? `<img class="meal-img" src="${imgBase64}" alt="${meal.foodName}">`
-            : `<img class="meal-img" src="${PLACEHOLDER_SVG}" alt="Placeholder" style="opacity: 0.45; padding: 20pt; box-sizing: border-box; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8pt; max-height: 180pt;">`
+            : `<div class="no-img-box">🍴</div>`
         }
       </td>
       <td class="info-cell">
@@ -508,7 +516,9 @@ export async function generateSummaryPdf(
         <tr>
           ${
             includeImages
-              ? `<td class="meal-thumbnail-cell"><img class="meal-thumbnail" src="${imgBase64 || PLACEHOLDER_SVG}" alt="${m.foodName}" style="${imgBase64 ? '' : 'opacity: 0.45; padding: 10pt; box-sizing: border-box; background-color: #f8fafc;'}"></td>`
+              ? imgBase64
+                ? `<td class="meal-thumbnail-cell"><img class="meal-thumbnail" src="${imgBase64}" alt="${m.foodName}"></td>`
+                : `<td class="meal-thumbnail-cell"><div class="meal-thumbnail-placeholder">🍴</div></td>`
               : ''
           }
           <td class="meal-info-cell">
