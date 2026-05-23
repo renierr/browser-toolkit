@@ -119,7 +119,7 @@ export default function init(): void | (() => void) {
       }
       void syncLatestJobState().then((recovered) => {
         if (!recovered) {
-          renderer.setUpdateSummary('Lost connection to update stream.');
+          renderer.setUpdateSummary('Lost connection to update stream.', 'error');
           renderer.setUpdateBusy(false);
         }
       });
@@ -172,7 +172,7 @@ export default function init(): void | (() => void) {
     } catch (error) {
       console.error('[BackendInfo] Failed to check updates:', error);
       const message = (error as Error).message || 'Failed to check updates.';
-      renderer.setUpdateSummary(message);
+      renderer.setUpdateSummary(message, 'error');
       notify(message, 'alert');
     } finally {
       renderer.setUpdateBusy(false);
@@ -221,7 +221,7 @@ export default function init(): void | (() => void) {
       console.error('[BackendInfo] Failed to start update:', error);
       const message = (error as Error).message || 'Failed to start update job.';
       renderer.appendUpdateLog(`[client] ${message}`);
-      renderer.setUpdateSummary('Failed to start update job.');
+      renderer.setUpdateSummary('Failed to start update job.', 'error');
       notify(message, 'alert');
       renderer.setUpdateBusy(false);
     }

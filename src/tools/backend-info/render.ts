@@ -28,8 +28,23 @@ export function createRenderer(dom: BackendInfoDom) {
     notifiedTerminalStatus: null,
   };
 
-  const setUpdateSummary = (message: string): void => {
+  const setUpdateSummary = (
+    message: string,
+    type: 'info' | 'success' | 'warning' | 'error' = 'info'
+  ): void => {
     dom.updateMessageEl.textContent = message;
+    const alertEl = dom.updateMessageEl.closest('.alert');
+    if (alertEl) {
+      alertEl.className = `alert py-2 ${
+        type === 'error'
+          ? 'alert-error'
+          : type === 'success'
+            ? 'alert-success'
+            : type === 'warning'
+              ? 'alert-warning'
+              : 'alert-info'
+      }`;
+    }
   };
 
   const setUpdateBusy = (busy: boolean): void => {
@@ -48,7 +63,10 @@ export function createRenderer(dom: BackendInfoDom) {
       setText(dom.container, 'upd-branch', 'n/a');
       setText(dom.container, 'upd-local', '-');
       setText(dom.container, 'upd-remote', '-');
-      setUpdateSummary(reason || 'Automatic update unavailable in packaged release mode.');
+      setUpdateSummary(
+        reason || 'Automatic update unavailable in packaged release mode.',
+        'warning'
+      );
       return;
     }
     dom.updateControlWrapEl.classList.remove('opacity-60');
@@ -195,11 +213,11 @@ export function createRenderer(dom: BackendInfoDom) {
       const summary = result.hasUpdates
         ? `Updates available (${result.behindCount} commit${result.behindCount === 1 ? '' : 's'} behind).`
         : 'Already up to date.';
-      setUpdateSummary(summary);
+      setUpdateSummary(summary, result.hasUpdates ? 'warning' : 'success');
       return;
     }
 
-    setUpdateSummary(result.message || 'Failed to check updates.');
+    setUpdateSummary(result.message || 'Failed to check updates.', 'error');
   };
 
   const renderJobState = (
@@ -214,7 +232,7 @@ export function createRenderer(dom: BackendInfoDom) {
     }
 
     if (job.status === 'failed') {
-      setUpdateSummary(job.error || 'Update failed.');
+      setUpdateSummary(job.error || 'Update failed.', 'error');
       setUpdateBusy(false);
       if (state.notifiedTerminalStatus !== 'failed') {
         notify(job.error || 'Update failed.', 'alert');
@@ -224,7 +242,7 @@ export function createRenderer(dom: BackendInfoDom) {
     if (job.status === 'completed' || job.status === 'no_changes') {
       setUpdateBusy(false);
       if (job.status === 'no_changes') {
-        setUpdateSummary('No changes detected. Build skipped.');
+        setUpdateSummary('No changes detected. Build skipped.', 'info');
       }
       if (state.notifiedTerminalStatus !== job.status) {
         const doneMessage =
@@ -236,7 +254,7 @@ export function createRenderer(dom: BackendInfoDom) {
     }
 
     if (job.status === 'pending_restart') {
-      setUpdateSummary('Update complete. Server will restart via systemd.');
+      setUpdateSummary('Update complete. Server will restart via systemd.', 'success');
       setUpdateBusy(true);
       if (state.notifiedTerminalStatus !== 'pending_restart') {
         notify('Update complete. Restarting service via systemd.', 'info');
