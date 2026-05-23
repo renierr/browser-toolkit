@@ -17,7 +17,11 @@
   <div class="flex flex-wrap items-center gap-3 border-t border-base-200 pt-3 mb-4">
     <div class="flex items-center gap-2">
       <span class="text-xs opacity-60 font-bold">Filter Duration:</span>
-      <select id="history-filter-select" class="select select-bordered select-sm">
+      <select
+        id="history-filter-select"
+        class="select select-bordered select-sm"
+        data-setting="historyFilter"
+      >
         <option value="all" selected>All Time</option>
         <option value="today">Today</option>
         <option value="7days">Last 7 Days</option>
