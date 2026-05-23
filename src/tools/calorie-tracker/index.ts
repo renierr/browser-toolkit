@@ -8,7 +8,16 @@ import {
   cleanupDashboardPreviews,
   type DashboardElements,
 } from './dashboard';
-import { openDB, saveMeal, deleteMeal, getMealById, STORE_NAME, type Meal } from './db';
+import {
+  openDB,
+  saveMeal,
+  deleteMeal,
+  getMealById,
+  getAllMeals,
+  STORE_NAME,
+  type Meal,
+} from './db';
+import { generateMealPdf, generateSummaryPdf } from './pdf-generator';
 
 export default async function init() {
   const db = await openDB();
@@ -89,6 +98,30 @@ export default async function init() {
     historyDateFilter: document.getElementById('history-date-filter') as HTMLInputElement,
     btnClearFilter: document.getElementById('btn-clear-filter') as HTMLButtonElement,
   };
+
+  // Report Modal Elements
+  const reportModal = document.getElementById('report-modal') as HTMLDialogElement;
+  const btnOpenReportModal = document.getElementById('btn-open-report-modal') as HTMLButtonElement;
+  const reportTypeSelect = document.getElementById('report-type-select') as HTMLSelectElement;
+  const reportDailyContainer = document.getElementById('report-daily-container') as HTMLDivElement;
+  const reportTimeframeContainer = document.getElementById(
+    'report-timeframe-container'
+  ) as HTMLDivElement;
+  const reportSingleDate = document.getElementById('report-single-date') as HTMLInputElement;
+  const reportStartDate = document.getElementById('report-start-date') as HTMLInputElement;
+  const reportEndDate = document.getElementById('report-end-date') as HTMLInputElement;
+  const reportTitleInput = document.getElementById('report-title-input') as HTMLInputElement;
+  const reportNotesInput = document.getElementById('report-notes-input') as HTMLTextAreaElement;
+  const reportIncludeImagesCheckbox = document.getElementById(
+    'report-include-images-checkbox'
+  ) as HTMLInputElement;
+  const reportModalClose = document.getElementById('report-modal-close') as HTMLButtonElement;
+  const reportModalGenerate = document.getElementById('report-modal-generate') as HTMLButtonElement;
+  const reportGenerateSpinner = document.getElementById(
+    'report-generate-spinner'
+  ) as HTMLSpanElement;
+  const reportGenerateIcon = document.getElementById('report-generate-icon') as HTMLElement;
+  const reportGenerateText = document.getElementById('report-generate-text') as HTMLSpanElement;
 
   // State Management
   let activeImageBlob: Blob | null = null;
@@ -333,11 +366,120 @@ export default async function init() {
     void loadAndRenderDashboard(db, settings, dashboardElements);
   });
 
+  // PDF Report Helpers
+  const handleSingleMealPdf = async (id: number) => {
+    try {
+      const m = await getMealById(db, id);
+      if (!m) return;
+
+      showMessage('Generating PDF Report...', { type: 'info', timeoutMs: 1500 });
+      await generateMealPdf(m, settings);
+      showMessage('PDF Report Downloaded!', { type: 'info', timeoutMs: 2000 });
+    } catch (e: any) {
+      console.error('[Calorie Tracker] Single PDF generation failed:', e);
+      showMessage(`Failed to generate PDF: ${e.message || 'Error.'}`, { type: 'alert' });
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    const type = reportTypeSelect.value;
+    const title = reportTitleInput.value.trim();
+    const notes = reportNotesInput.value.trim();
+    const includeImages = reportIncludeImagesCheckbox.checked;
+
+    let filteredMeals: Meal[] = [];
+    let timeframeStr = '';
+
+    try {
+      const all = await getAllMeals(db);
+
+      if (type === 'daily') {
+        const targetDateVal = reportSingleDate.value;
+        if (!targetDateVal) {
+          showMessage('Please select a valid date.', { type: 'alert' });
+          return;
+        }
+        const targetDateStr = new Date(targetDateVal).toDateString();
+        filteredMeals = all.filter((m) => new Date(m.timestamp).toDateString() === targetDateStr);
+
+        const formattedDate = new Date(targetDateVal).toLocaleDateString(undefined, {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        });
+        timeframeStr = `Daily Report for ${formattedDate}`;
+      } else {
+        const startVal = reportStartDate.value;
+        const endVal = reportEndDate.value;
+        if (!startVal || !endVal) {
+          showMessage('Please select valid start and end dates.', { type: 'alert' });
+          return;
+        }
+
+        const startTimestamp = new Date(startVal).setHours(0, 0, 0, 0);
+        const endTimestamp = new Date(endVal).setHours(23, 59, 59, 999);
+
+        if (startTimestamp > endTimestamp) {
+          showMessage('Start date cannot be after end date.', { type: 'alert' });
+          return;
+        }
+
+        filteredMeals = all.filter(
+          (m) => m.timestamp >= startTimestamp && m.timestamp <= endTimestamp
+        );
+
+        const formattedStart = new Date(startVal).toLocaleDateString();
+        const formattedEnd = new Date(endVal).toLocaleDateString();
+        timeframeStr = `Range: ${formattedStart} - ${formattedEnd}`;
+      }
+
+      if (filteredMeals.length === 0) {
+        showMessage('No meals found in selected timeframe.', { type: 'warning' });
+        return;
+      }
+
+      // Set loading state
+      reportModalGenerate.disabled = true;
+      reportGenerateSpinner.classList.remove('hidden');
+      reportGenerateIcon.classList.add('hidden');
+      reportGenerateText.textContent = 'Generating...';
+
+      // Sort chronologically (oldest first)
+      filteredMeals.sort((a, b) => a.timestamp - b.timestamp);
+
+      const reportTitle =
+        title || (type === 'daily' ? 'Daily Nutritional Report' : 'Timeframe Nutritional Report');
+
+      await generateSummaryPdf(
+        filteredMeals,
+        reportTitle,
+        timeframeStr,
+        notes,
+        includeImages,
+        settings
+      );
+
+      showMessage('PDF Report Downloaded!', { type: 'info', timeoutMs: 2500 });
+      reportModal.close();
+    } catch (e: any) {
+      console.error('[Calorie Tracker] PDF generation failed:', e);
+      showMessage(`Failed to generate PDF: ${e.message || 'Error occurred.'}`, { type: 'alert' });
+    } finally {
+      // Reset state
+      reportModalGenerate.disabled = false;
+      reportGenerateSpinner.classList.add('hidden');
+      reportGenerateIcon.classList.remove('hidden');
+      reportGenerateText.textContent = 'Generate PDF';
+    }
+  };
+
   dashboardElements.logsTbody.addEventListener('click', (e) => {
     const target = e.target as HTMLElement;
     const editBtn = target.closest('.edit-log-btn');
     const deleteBtn = target.closest('.delete-log-btn');
     const imgBtn = target.closest('.show-details-img');
+    const pdfBtn = target.closest('.export-pdf-btn');
 
     const el = editBtn || imgBtn;
     if (el) {
@@ -346,7 +488,50 @@ export default async function init() {
     } else if (deleteBtn) {
       const id = parseInt(deleteBtn.getAttribute('data-id') || '0');
       if (id) void handleDeleteLog(id);
+    } else if (pdfBtn) {
+      const id = parseInt(pdfBtn.getAttribute('data-id') || '0');
+      if (id) void handleSingleMealPdf(id);
     }
+  });
+
+  // Modal events
+  btnOpenReportModal.addEventListener('click', () => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
+
+    reportSingleDate.value = todayStr;
+    reportStartDate.value = sevenDaysAgoStr;
+    reportEndDate.value = todayStr;
+
+    reportTitleInput.value = '';
+    reportNotesInput.value = '';
+    reportIncludeImagesCheckbox.checked = true;
+
+    reportTypeSelect.value = 'daily';
+    reportDailyContainer.classList.remove('hidden');
+    reportTimeframeContainer.classList.add('hidden');
+
+    reportModal.showModal();
+  });
+
+  reportTypeSelect.addEventListener('change', () => {
+    if (reportTypeSelect.value === 'daily') {
+      reportDailyContainer.classList.remove('hidden');
+      reportTimeframeContainer.classList.add('hidden');
+    } else {
+      reportDailyContainer.classList.add('hidden');
+      reportTimeframeContainer.classList.remove('hidden');
+    }
+  });
+
+  reportModalClose.addEventListener('click', () => {
+    reportModal.close();
+  });
+
+  reportModalGenerate.addEventListener('click', () => {
+    void handleGenerateReport();
   });
 
   // 8. Lightbox Overlay for Image Enlargement (Mobile Aware)

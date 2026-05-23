@@ -4,8 +4,15 @@
       <i data-lucide="list" class="w-5 h-5 text-primary"></i>
       <span>Logged Meals History</span>
     </h2>
-    <div class="flex items-center gap-2">
-      <span class="text-xs opacity-50 font-bold">Filter Day:</span>
+    <div class="flex flex-wrap items-center gap-2">
+      <button
+        id="btn-open-report-modal"
+        class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+      >
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        <span>Generate Report</span>
+      </button>
+      <span class="text-xs opacity-50 font-bold ml-2">Filter Day:</span>
       <input id="history-date-filter" type="date" class="input input-bordered input-sm" />
       <button id="btn-clear-filter" class="btn btn-ghost btn-xs underline hidden">Show All</button>
     </div>

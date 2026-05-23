@@ -90,6 +90,9 @@ export function renderHistoryLogs(
         <td class="text-right hidden sm:table-cell text-xs opacity-75 font-semibold">${m.fat}g</td>
         <td>
           <div class="flex gap-1 justify-center">
+            <button class="btn btn-ghost btn-xs text-secondary export-pdf-btn" data-id="${m.id}" title="Export PDF Report">
+              <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+            </button>
             <button class="btn btn-ghost btn-xs edit-log-btn" data-id="${m.id}" title="Edit Log">
               <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
             </button>
