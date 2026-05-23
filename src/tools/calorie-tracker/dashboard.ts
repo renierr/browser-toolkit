@@ -1,5 +1,6 @@
 import { drawTrendChart } from './chart';
 import { getAllMeals, type Meal } from './db';
+import { PLACEHOLDER_SVG } from './pdf-generator';
 
 export type DashboardElements = {
   calorieCircle: SVGCircleElement;
@@ -63,12 +64,12 @@ export function renderHistoryLogs(
 
   logsTbody.innerHTML = meals
     .map((m) => {
-      let previewHtml = `<div class="w-10 h-10 rounded bg-base-200 border border-base-300 flex items-center justify-center opacity-45"><i data-lucide="image" class="w-5 h-5"></i></div>`;
+      let url = PLACEHOLDER_SVG;
       if (m.imageBlob) {
-        const url = URL.createObjectURL(m.imageBlob);
+        url = URL.createObjectURL(m.imageBlob);
         activeObjectUrls.push(url);
-        previewHtml = `<img class="w-10 h-10 object-cover rounded border border-base-300 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200 show-details-img" data-id="${m.id}" src="${url}" alt="dish" title="Click to view details & large image" />`;
       }
+      const previewHtml = `<img class="w-10 h-10 object-cover rounded border border-base-300 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200 show-details-img ${m.imageBlob ? '' : 'p-1 opacity-70 bg-base-200'}" data-id="${m.id}" src="${url}" alt="dish" title="Click to view details & large image" />`;
 
       const dateStr = new Date(m.timestamp).toLocaleTimeString(undefined, {
         hour: '2-digit',

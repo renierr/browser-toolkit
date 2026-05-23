@@ -18,7 +18,7 @@ import {
   STORE_NAME,
   type Meal,
 } from './db';
-import { generateMealPdf, generateSummaryPdf } from './pdf-generator';
+import { generateMealPdf, generateSummaryPdf, PLACEHOLDER_SVG } from './pdf-generator';
 
 export default async function init(payload?: ToolPayload) {
   const db = await openDB();
@@ -47,6 +47,7 @@ export default async function init(payload?: ToolPayload) {
   const clearImageBtn = document.getElementById('clear-image-btn') as HTMLButtonElement;
   const mealHintInput = document.getElementById('meal-hint-input') as HTMLTextAreaElement;
   const analyzeBtn = document.getElementById('analyze-btn') as HTMLButtonElement;
+  const btnManualAdd = document.getElementById('btn-manual-add') as HTMLButtonElement;
 
   // Estimate Form DOM elements
   const aiLoadingOverlay = document.getElementById('ai-loading-overlay') as HTMLDivElement;
@@ -339,7 +340,7 @@ export default async function init(payload?: ToolPayload) {
       if (m.imageBlob) {
         editMealPreview.src = URL.createObjectURL(m.imageBlob);
       } else {
-        editMealPreview.src = '';
+        editMealPreview.src = PLACEHOLDER_SVG;
       }
 
       btnSaveText.textContent = 'Update Logged Meal';
@@ -361,6 +362,32 @@ export default async function init(payload?: ToolPayload) {
 
   analyzeBtn.addEventListener('click', () => {
     void performAIAnalysisAction();
+  });
+
+  btnManualAdd.addEventListener('click', () => {
+    editingMealId = undefined;
+    activeEstimateShortId = '';
+
+    if (activeImageBlob) {
+      editMealPreview.src = URL.createObjectURL(activeImageBlob);
+    } else {
+      activeImageBlob = null;
+      editMealPreview.src = PLACEHOLDER_SVG;
+    }
+
+    editMealName.value = 'New Meal';
+    editMealCalories.value = '0';
+    editMealProtein.value = '0';
+    editMealCarbs.value = '0';
+    editMealFat.value = '0';
+    editMealNotes.value = '';
+    confidenceBadge.textContent = 'Manual Entry';
+
+    btnSaveText.textContent = 'Save & Log Meal';
+    estimateEmptyState.classList.add('hidden');
+    estimateFormContainer.classList.remove('hidden');
+
+    estimateFormContainer.scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
   btnDiscardEstimate.addEventListener('click', discardEstimate);
   btnSaveEstimate.addEventListener('click', () => {
