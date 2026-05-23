@@ -45,6 +45,20 @@ export function renderOverview(): void {
     settingsOpenBtn.addEventListener('click', () => {
       if (!settingsDialog.open) settingsDialog.showModal();
     });
+
+    const hashEl = document.getElementById('settings-git-hash');
+    const dateEl = document.getElementById('settings-build-date');
+    if (hashEl) {
+      hashEl.textContent = typeof __GIT_HASH__ !== 'undefined' ? __GIT_HASH__ : 'dev';
+    }
+    if (dateEl) {
+      try {
+        const dateStr = typeof __BUILD_DATE__ !== 'undefined' ? __BUILD_DATE__ : '';
+        dateEl.textContent = dateStr ? new Date(dateStr).toLocaleDateString() : 'dev';
+      } catch {
+        dateEl.textContent = 'dev';
+      }
+    }
   }
 
   const settingsContainer = document.getElementById('overview-settings');

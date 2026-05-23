@@ -4,13 +4,27 @@ import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { onnxStaticPlugin } from './src/plugins/onnx-static-plugin';
+import { execSync } from 'child_process';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+let gitHash = 'unknown';
+try {
+  gitHash = execSync('git rev-parse --short HEAD').toString().trim();
+} catch (e) {
+  console.warn('Failed to get git hash', e);
+}
+
+const buildDate = new Date().toISOString();
+
 export default defineConfig({
   base: './',
   clearScreen: false,
+  define: {
+    __GIT_HASH__: JSON.stringify(gitHash),
+    __BUILD_DATE__: JSON.stringify(buildDate),
+  },
   plugins: [
     onnxStaticPlugin(),
     tailwindcss(),

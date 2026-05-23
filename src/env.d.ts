@@ -14,3 +14,6 @@ declare module '*?worker&url' {
   const src: string;
   export default src;
 }
+
+declare const __GIT_HASH__: string;
+declare const __BUILD_DATE__: string;
