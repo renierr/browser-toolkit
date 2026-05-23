@@ -2,7 +2,8 @@ import { htmlToPdfBuffer } from '@js/mupdf-utils';
 import { downloadFile } from '@js/file-utils';
 import { type Meal } from './db';
 
-export const PLACEHOLDER_SVG = `data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='85'%3E🍴%3C/text%3E%3C/svg%3E`;
+export const PLACEHOLDER_EMOJI = '🍽️';
+export const PLACEHOLDER_SVG = `data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='0.9em' font-size='85'%3E${PLACEHOLDER_EMOJI}%3C/text%3E%3C/svg%3E`;
 
 // --- Shared Constants & Styles ---
 
@@ -398,7 +399,7 @@ export async function generateMealPdf(meal: Meal, settings: any): Promise<void> 
         ${
           imgBase64
             ? `<img class="meal-img" src="${imgBase64}" alt="${meal.foodName}">`
-            : `<div class="no-img-box">🍴</div>`
+            : `<div class="no-img-box">${PLACEHOLDER_EMOJI}</div>`
         }
       </td>
       <td class="info-cell">
@@ -518,7 +519,7 @@ export async function generateSummaryPdf(
             includeImages
               ? imgBase64
                 ? `<td class="meal-thumbnail-cell"><img class="meal-thumbnail" src="${imgBase64}" alt="${m.foodName}"></td>`
-                : `<td class="meal-thumbnail-cell"><div class="meal-thumbnail-placeholder">🍴</div></td>`
+                : `<td class="meal-thumbnail-cell"><div class="meal-thumbnail-placeholder">${PLACEHOLDER_EMOJI}</div></td>`
               : ''
           }
           <td class="meal-info-cell">
