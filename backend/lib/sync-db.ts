@@ -139,8 +139,16 @@ export function upsertSyncRecord(
   return false;
 }
 
-export function getSyncRecords(toolId: string) {
-  const rows = syncDb.query('SELECT * FROM sync_data WHERE tool_id = ?').all(toolId) as any[];
+export function getSyncRecords(toolId: string, ids?: string[]) {
+  let rows: any[];
+  if (ids && ids.length > 0) {
+    const placeholders = ids.map(() => '?').join(',');
+    rows = syncDb
+      .query(`SELECT * FROM sync_data WHERE tool_id = ? AND record_id IN (${placeholders})`)
+      .all(toolId, ...ids) as any[];
+  } else {
+    rows = syncDb.query('SELECT * FROM sync_data WHERE tool_id = ?').all(toolId) as any[];
+  }
   return rows.map((row) => {
     if (row.deleted) {
       return row;
@@ -154,4 +162,15 @@ export function getSyncRecords(toolId: string) {
     }
     return row;
   });
+}
+
+export function getSyncMetadata(toolId: string) {
+  const rows = syncDb
+    .query('SELECT record_id, updated_at, deleted FROM sync_data WHERE tool_id = ?')
+    .all(toolId) as { record_id: string; updated_at: number; deleted: number }[];
+  return rows.map((row) => ({
+    id: row.record_id,
+    updatedAt: row.updated_at,
+    deleted: Boolean(row.deleted),
+  }));
 }

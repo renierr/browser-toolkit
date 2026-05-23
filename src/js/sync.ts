@@ -133,57 +133,43 @@ export class SyncManager {
         throw new Error('Backend unavailable');
       }
 
-      // 1. Pull from server
-      const { records: serverRecords } = await fetchJson<{ records: any[] }>(`/sync/${toolId}`);
+      // 1. Pull metadata from server (super lightweight, no image payload)
+      const { records: serverMeta } = await fetchJson<{
+        records: { id: string; updatedAt: number; deleted: boolean }[];
+      }>(`/sync/${toolId}/metadata`);
 
       const localRecords = await this.getAllFromStore<T>(db, storeName);
       const localDeletions = await this.getDeletions(db, toolId);
 
+      const toPullIds: string[] = [];
       const toPush: any[] = [];
-      let pulledCount = 0;
       let deletedCount = 0;
 
-      // 2. Merge Server -> Local
       const primaryKey = await this.getPrimaryKey(db, storeName);
 
-      for (const sRec of serverRecords) {
-        const lRec = localRecords.find((r) => String(r[keyField]) === String(sRec.id));
+      // 2. Resolve Deletions & Identify Pull Targets
+      for (const sMeta of serverMeta) {
+        const lRec = localRecords.find((r) => String(r[keyField]) === String(sMeta.id));
 
-        if (sRec.deleted) {
+        if (sMeta.deleted) {
           if (lRec && primaryKey) {
+            // Delete locally right away if server has deleted it, without fetching details
             await this.deleteFromStore(db, storeName, (lRec as any)[primaryKey]);
             deletedCount++;
           }
           continue;
         }
 
-        if (!lRec || sRec.updatedAt > (lRec.updatedAt || 0)) {
-          let dataToSave = { ...sRec.data, updatedAt: sRec.updatedAt };
-
-          // Deserialize any Blobs inside dataToSave
-          dataToSave = this.deserializeRecord(dataToSave);
-
-          // If we have a local primary key (e.g. auto-increment 'id'), preserve it.
-          // Otherwise, if the pulled data has a primary key that is NOT our global keyField,
-          // remove it to let the local DB generate its own (avoiding conflicts/duplicates).
-          if (lRec && primaryKey) {
-            (dataToSave as any)[primaryKey] = (lRec as any)[primaryKey];
-          } else if (primaryKey && primaryKey !== keyField) {
-            delete (dataToSave as any)[primaryKey];
-          }
-
-          await this.putToStore(db, storeName, dataToSave);
-          pulledCount++;
+        if (!lRec || sMeta.updatedAt > (lRec.updatedAt || 0)) {
+          toPullIds.push(sMeta.id);
         }
       }
 
-      // 3. Prepare Push Local -> Server (Modified since last sync or new)
-      // For simplicity, we compare all local records with what the server has (LWW)
+      // 3. Identify Push Targets (Local -> Server)
       for (const lRec of localRecords) {
-        const sRec = serverRecords.find((r: any) => String(r.id) === String(lRec[keyField]));
-        if (!sRec || (lRec.updatedAt || 0) > sRec.updatedAt) {
+        const sMeta = serverMeta.find((meta) => String(meta.id) === String(lRec[keyField]));
+        if (!sMeta || (lRec.updatedAt || 0) > sMeta.updatedAt) {
           const dataToPush = { ...lRec };
-          // Don't push local-only primary keys (like auto-increment 'id') if they are not the global keyField
           if (primaryKey && primaryKey !== keyField) {
             delete (dataToPush as any)[primaryKey];
           }
@@ -200,7 +186,7 @@ export class SyncManager {
         }
       }
 
-      // 4. Push Deletions
+      // Add local deletions to push
       for (const del of localDeletions) {
         toPush.push({
           id: del.recordId,
@@ -209,6 +195,60 @@ export class SyncManager {
         });
       }
 
+      // 4. No-change Fast Path: Exit early if nothing to transfer!
+      if (toPullIds.length === 0 && toPush.length === 0) {
+        const result = { pulled: 0, pushed: 0, deleted: deletedCount };
+        if (manual || deletedCount > 0) {
+          showMessage(`Sync complete! Pulled: 0, Pushed: 0`, {
+            type: 'info',
+            timeoutMs: 2000,
+          });
+        }
+        return result;
+      }
+
+      // 5. Delta Pulling: Retrieve only full records that changed
+      let pulledCount = 0;
+      let pulledRecords: any[] = [];
+      if (toPullIds.length > 0) {
+        const pullResp = await fetchJson<{ records: any[] }>(`/sync/${toolId}/pull`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: toPullIds }),
+        });
+        pulledRecords = pullResp.records;
+      }
+
+      // 6. Merge Pulled Records -> Local IndexedDB
+      for (const sRec of pulledRecords) {
+        const lRec = localRecords.find((r) => String(r[keyField]) === String(sRec.id));
+
+        if (sRec.deleted) {
+          if (lRec && primaryKey) {
+            await this.deleteFromStore(db, storeName, (lRec as any)[primaryKey]);
+            deletedCount++;
+          }
+          continue;
+        }
+
+        if (!lRec || sRec.updatedAt > (lRec.updatedAt || 0)) {
+          let dataToSave = { ...sRec.data, updatedAt: sRec.updatedAt };
+
+          // Deserialize any Blobs inside dataToSave
+          dataToSave = this.deserializeRecord(dataToSave);
+
+          if (lRec && primaryKey) {
+            (dataToSave as any)[primaryKey] = (lRec as any)[primaryKey];
+          } else if (primaryKey && primaryKey !== keyField) {
+            delete (dataToSave as any)[primaryKey];
+          }
+
+          await this.putToStore(db, storeName, dataToSave);
+          pulledCount++;
+        }
+      }
+
+      // 7. Push Local Changes to Server
       if (toPush.length > 0) {
         await fetchApi(`/sync/${toolId}`, {
           method: 'POST',
