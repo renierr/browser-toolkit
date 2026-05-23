@@ -1,6 +1,7 @@
 import { SyncManager } from '@js/sync';
 import { showMessage } from '@js/ui';
 import { getSettings } from '@js/settings';
+import type { ToolPayload } from '@js/types';
 import { setupImageIntake } from './image-helper';
 import { performAIAnalysis } from './analysis';
 import {
@@ -19,7 +20,7 @@ import {
 } from './db';
 import { generateMealPdf, generateSummaryPdf } from './pdf-generator';
 
-export default async function init() {
+export default async function init(payload?: ToolPayload) {
   const db = await openDB();
 
   // Root container
@@ -190,6 +191,14 @@ export default async function init() {
       },
     }
   );
+
+  // Handle shared files payload (e.g. when routed as a Share Target PWA)
+  if (payload?.sharedFiles?.length) {
+    const sharedFile = payload.sharedFiles[0];
+    if (sharedFile.type.startsWith('image/')) {
+      void imageIntake.handleImageBlob(sharedFile);
+    }
+  }
 
   // 4. AI Nutritional Analysis
   const performAIAnalysisAction = async () => {

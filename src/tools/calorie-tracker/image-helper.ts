@@ -164,6 +164,7 @@ export function setupImageIntake(
 
   return {
     clearImage,
+    handleImageBlob,
     cleanup: () => {
       mealDropzone.removeEventListener('click', onDropzoneClick);
       fileInput.removeEventListener('change', onFileChange);
