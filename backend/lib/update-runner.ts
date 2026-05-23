@@ -169,7 +169,11 @@ const DEFAULT_STEP_TIMEOUT_MS = 30 * 60 * 1000;
 const DEFAULT_STEP_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 const COMMAND_CHECK_TIMEOUT_MS = 2 * 60 * 1000;
 
-async function runCommand(command: string[], cwd: string, timeoutMs = COMMAND_CHECK_TIMEOUT_MS): Promise<{
+async function runCommand(
+  command: string[],
+  cwd: string,
+  timeoutMs = COMMAND_CHECK_TIMEOUT_MS
+): Promise<{
   success: boolean;
   stdout: string;
   stderr: string;
@@ -429,11 +433,8 @@ async function waitForProcessExit(
   const startedAt = Date.now();
 
   while (true) {
-    const raceResult = await Promise.race<
-      | { type: 'exited'; exitCode: number }
-      | { type: 'tick' }
-    >([
-      proc.exited.then((exitCode) => ({ type: 'exited', exitCode } as const)),
+    const raceResult = await Promise.race<{ type: 'exited'; exitCode: number } | { type: 'tick' }>([
+      proc.exited.then((exitCode) => ({ type: 'exited', exitCode }) as const),
       new Promise<{ type: 'tick' }>((resolve) => {
         setTimeout(() => resolve({ type: 'tick' }), 1000);
       }),
@@ -698,7 +699,12 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
 
     setStepStatus(job, 'git-fetch', 'completed', 0);
     const prePullHead = check.localHash;
-    await runStepCommand(job, 'git-pull', ['git', 'pull', '--ff-only', 'origin', check.branch], job.appDir);
+    await runStepCommand(
+      job,
+      'git-pull',
+      ['git', 'pull', '--ff-only', 'origin', check.branch],
+      job.appDir
+    );
     const postPullHeadResult = await runCommand(['git', 'rev-parse', 'HEAD'], job.appDir);
     if (!postPullHeadResult.success || postPullHeadResult.stdout.length === 0) {
       throw new Error(postPullHeadResult.stderr || 'Unable to read git HEAD after pull.');
@@ -734,14 +740,19 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
     await runStepCommand(
       job,
       'build-frontend',
-      ['bun', 'x', 'vite', 'build', '--clearScreen', 'false', '--outDir', 'dist_next'],
+      ['bun', '--bun', 'vite', 'build', '--clearScreen', 'false', '--outDir', 'dist_next'],
       job.appDir,
       { timeoutMs: 10 * 60 * 1000 }
     );
     emitLog(job, 'info', '[build-frontend] Swapping dist directories');
     await swapDistDirectories(job.appDir);
 
-    await runStepCommand(job, 'install-backend', ['bun', 'install', '--cwd', 'backend'], job.appDir);
+    await runStepCommand(
+      job,
+      'install-backend',
+      ['bun', 'install', '--cwd', 'backend'],
+      job.appDir
+    );
 
     if (job.restartOnSuccess && needsBackendRestart) {
       job.status = 'pending_restart';
@@ -757,7 +768,11 @@ async function executeJob(job: UpdateJobInternal): Promise<void> {
     job.status = 'completed';
     job.endedAt = nowIso();
     if (job.restartOnSuccess && !needsBackendRestart) {
-      emitLog(job, 'info', 'Update complete. Frontend-only or non-runtime changes; restart skipped.');
+      emitLog(
+        job,
+        'info',
+        'Update complete. Frontend-only or non-runtime changes; restart skipped.'
+      );
     }
     emitLog(job, 'info', 'Update complete.');
     emitState(job);
@@ -797,7 +812,8 @@ export function startUpdateJob(options: UpdateJobOptions): {
         logs: [],
         error: 'Automatic update unavailable in packaged release mode.',
       },
-      message: 'Automatic update unavailable in packaged release mode. Install new release manually.',
+      message:
+        'Automatic update unavailable in packaged release mode. Install new release manually.',
     };
   }
 
