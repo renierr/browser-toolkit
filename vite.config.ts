@@ -202,6 +202,9 @@ export default defineConfig({
         clientsClaim: true,
         importScripts: ['sw-share-target.js', 'sw-bg-timer.js'],
         maximumFileSizeToCacheInBytes: 100 * 1024 * 1024,
+        precacheOptions: {
+          credentials: 'same-origin',
+        },
         runtimeCaching: [
           {
             urlPattern: ({ url }) => url.pathname.startsWith('/api'),
@@ -226,6 +229,9 @@ export default defineConfig({
               cacheName: 'dynamic-files',
               expiration: {
                 maxEntries: 500,
+              },
+              fetchOptions: {
+                credentials: 'same-origin',
               },
             },
           },

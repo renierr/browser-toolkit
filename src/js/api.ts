@@ -27,7 +27,10 @@ export async function fetchApi(endpoint: string, options: ApiOptions = {}): Prom
   // future: headers.set('Authorization', `Bearer ${getToken()}`);
   // future: fetchOptions.headers = headers;
 
-  const response = await fetch(url, fetchOptions);
+  const response = await fetch(url, {
+    credentials: 'same-origin',
+    ...fetchOptions,
+  });
 
   if (!response.ok) {
     let detail = `API Error: ${response.status} ${response.statusText}`;
