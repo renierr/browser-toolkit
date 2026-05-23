@@ -161,7 +161,12 @@ export function playRingtone(ctx: AudioContext, type: RingtoneType): RingtoneCon
 
   function startVibration(): void {
     if (!vibrateOn || !navigator.vibrate) return;
-    const pattern = type === 'classic' ? [250, 100, 250, 100, 600] : type === 'modern' ? [150, 100, 150, 100, 300] : [400, 100, 400, 1200];
+    const pattern =
+      type === 'classic'
+        ? [250, 100, 250, 100, 600]
+        : type === 'modern'
+          ? [150, 100, 150, 100, 300]
+          : [400, 100, 400, 1200];
     const loopMs = type === 'classic' ? 5000 : type === 'modern' ? 4000 : OLD_BELL_LOOP_MS;
 
     const fire = () => {

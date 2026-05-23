@@ -104,9 +104,7 @@ const scrollTopOfViewer = (viewerEl: HTMLElement) => {
 };
 
 // noinspection JSUnusedGlobalSymbols
-export default function init(
-  payload?: ToolPayload | { pdfBytes: ArrayBuffer; fileName: string }
-) {
+export default function init(payload?: ToolPayload | { pdfBytes: ArrayBuffer; fileName: string }) {
   setupFileDropzone('pdf-dropzone', 'pdf-file', async (files: FileList) => {
     showProgress('Load PDF file...');
     if (await showPdfViewer(files)) {

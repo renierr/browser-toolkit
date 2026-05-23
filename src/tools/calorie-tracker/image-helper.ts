@@ -47,10 +47,7 @@ export type ImageIntakeCallbacks = {
  * Employs aspect-preserving 800px downscaling.
  * Returns a cleanup function for attached global/local event listeners.
  */
-export function setupImageIntake(
-  elements: ImageIntakeElements,
-  callbacks: ImageIntakeCallbacks
-) {
+export function setupImageIntake(elements: ImageIntakeElements, callbacks: ImageIntakeCallbacks) {
   const {
     mealDropzone,
     dropzonePrompt,

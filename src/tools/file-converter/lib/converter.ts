@@ -62,16 +62,13 @@ async function buildDataUriMap(
 
 function replaceImageRefs(md: string, dataUris: Map<string, string>): string {
   if (dataUris.size === 0) return md;
-  return md.replace(
-    /!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?/g,
-    (_match, alt, path, _attrs) => {
-      const uri =
-        dataUris.get(path) ||
-        dataUris.get(path.replace(/^\.\//, '')) ||
-        dataUris.get(path.replace(/^(?:\.\/)?media\//, ''));
-      return uri ? `![${alt}](${uri})` : _match;
-    }
-  );
+  return md.replace(/!\[([^\]]*)\]\(([^)]+)\)(\{[^}]*\})?/g, (_match, alt, path, _attrs) => {
+    const uri =
+      dataUris.get(path) ||
+      dataUris.get(path.replace(/^\.\//, '')) ||
+      dataUris.get(path.replace(/^(?:\.\/)?media\//, ''));
+    return uri ? `![${alt}](${uri})` : _match;
+  });
 }
 
 const TARGET_FORMATS: Record<string, { ext: string; mime?: string }> = {

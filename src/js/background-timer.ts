@@ -1,18 +1,18 @@
 export interface BgTimerHandle {
-  readonly id: string
-  start(seconds: number, callbacks: BgTimerCallbacks, options?: BgTimerStartOptions): void
-  cancel(): void
-  getRemaining(): number
-  isRunning(): boolean
+  readonly id: string;
+  start(seconds: number, callbacks: BgTimerCallbacks, options?: BgTimerStartOptions): void;
+  cancel(): void;
+  getRemaining(): number;
+  isRunning(): boolean;
 }
 
 export interface BgTimerCallbacks {
-  onTick?(remaining: number): void
-  onComplete?(): void
+  onTick?(remaining: number): void;
+  onComplete?(): void;
 }
 
 export interface BgTimerStartOptions {
-  suppressNotification?: boolean
+  suppressNotification?: boolean;
 }
 
 let nextId = 0;
@@ -26,7 +26,9 @@ class BackgroundTimerEngine {
   private getCtx(): AudioContext | null {
     if (!this.audioCtx) {
       try {
-        const AC = window.AudioContext || (window as never as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const AC =
+          window.AudioContext ||
+          (window as never as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
         this.audioCtx = new AC();
       } catch {
         return null;
@@ -58,11 +60,16 @@ class BackgroundTimerEngine {
     this.refCount = Math.max(0, this.refCount - 1);
     if (this.refCount > 0) return;
     if (this.silentOsc) {
-      try { this.silentOsc.stop(); this.silentOsc.disconnect(); } catch {}
+      try {
+        this.silentOsc.stop();
+        this.silentOsc.disconnect();
+      } catch {}
       this.silentOsc = null;
     }
     if (this.silentGain) {
-      try { this.silentGain.disconnect(); } catch {}
+      try {
+        this.silentGain.disconnect();
+      } catch {}
       this.silentGain = null;
     }
   }
@@ -208,7 +215,10 @@ class BackgroundTimerEngine {
 
         if (swAvailable()) {
           navigator.serviceWorker.addEventListener('message', onSWMessage);
-          sendToSW('bg-timer-start', { duration: seconds, suppressNotification: !!options?.suppressNotification });
+          sendToSW('bg-timer-start', {
+            duration: seconds,
+            suppressNotification: !!options?.suppressNotification,
+          });
           document.addEventListener('visibilitychange', onVisibilityChange);
           engine.ensureSilentAudio();
           startKeepalive();

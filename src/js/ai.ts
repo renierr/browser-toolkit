@@ -44,10 +44,7 @@ export class AIClient {
    * Server-Sent Events (SSE) streaming content generation.
    * Feeds raw string token chunks to the onChunk callback as they arrive.
    */
-  static async stream(
-    options: GenerateOptions,
-    onChunk: (text: string) => void
-  ): Promise<void> {
+  static async stream(options: GenerateOptions, onChunk: (text: string) => void): Promise<void> {
     const response = await fetchApi('/ai/stream', {
       method: 'POST',
       headers: {

@@ -46,7 +46,10 @@ export async function performAIAnalysis(
       carbs: { type: 'INTEGER', description: 'Estimated carbohydrates weight in grams' },
       fat: { type: 'INTEGER', description: 'Estimated lipids weight in grams' },
       confidence: { type: 'INTEGER', description: 'Estimation confidence rating from 1 to 100' },
-      notes: { type: 'STRING', description: 'Breakdown explanation of food portions or components detected' },
+      notes: {
+        type: 'STRING',
+        description: 'Breakdown explanation of food portions or components detected',
+      },
     },
     required: ['foodName', 'calories', 'protein', 'carbs', 'fat', 'confidence', 'notes'],
   };

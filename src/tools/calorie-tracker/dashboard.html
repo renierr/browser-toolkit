@@ -1,8 +1,12 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
   <!-- Today's Glassmorphism Progress Board -->
-  <div class="lg:col-span-2 card bg-base-100/80 backdrop-blur-md border border-base-300 shadow-xl overflow-hidden p-6 relative">
+  <div
+    class="lg:col-span-2 card bg-base-100/80 backdrop-blur-md border border-base-300 shadow-xl overflow-hidden p-6 relative"
+  >
     <!-- Glow effect decorative background -->
-    <div class="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div
+      class="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"
+    ></div>
 
     <div class="flex justify-between items-center mb-6">
       <h2 class="font-bold text-xl flex items-center gap-2">
@@ -17,16 +21,40 @@
       <div class="md:col-span-5 flex flex-col items-center justify-center py-4 relative">
         <div class="relative w-40 h-40 flex items-center justify-center">
           <svg class="w-full h-full transform -rotate-90">
-            <circle cx="80" cy="80" r="70" stroke-width="12" class="stroke-base-200" fill="transparent" />
-            <circle id="calorie-progress-circle" cx="80" cy="80" r="70" stroke-width="12" class="stroke-orange-500 transition-all duration-500" stroke-linecap="round" fill="transparent" stroke-dasharray="440" stroke-dashoffset="440" />
+            <circle
+              cx="80"
+              cy="80"
+              r="70"
+              stroke-width="12"
+              class="stroke-base-200"
+              fill="transparent"
+            />
+            <circle
+              id="calorie-progress-circle"
+              cx="80"
+              cy="80"
+              r="70"
+              stroke-width="12"
+              class="stroke-orange-500 transition-all duration-500"
+              stroke-linecap="round"
+              fill="transparent"
+              stroke-dasharray="440"
+              stroke-dashoffset="440"
+            />
           </svg>
           <div class="absolute flex flex-col items-center text-center">
             <span id="summary-calories-consumed" class="text-3xl font-black">0</span>
-            <span class="text-[10px] uppercase tracking-wider opacity-60">of <span id="summary-calories-goal">2000</span> kcal</span>
+            <span class="text-[10px] uppercase tracking-wider opacity-60"
+              >of <span id="summary-calories-goal">2000</span> kcal</span
+            >
           </div>
         </div>
         <div class="text-center mt-3">
-          <span id="calorie-delta-label" class="text-xs font-semibold badge badge-success text-white px-3 py-1">2000 kcal remaining</span>
+          <span
+            id="calorie-delta-label"
+            class="text-xs font-semibold badge badge-success text-white px-3 py-1"
+            >2000 kcal remaining</span
+          >
         </div>
       </div>
 
@@ -35,35 +63,67 @@
         <!-- Protein -->
         <div>
           <div class="flex justify-between items-center text-sm font-semibold mb-1">
-            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>Protein</span>
-            <span class="opacity-80"><span id="summary-protein-consumed">0</span> / <span id="summary-protein-goal">130</span>g</span>
+            <span class="flex items-center gap-1.5"
+              ><span class="w-2.5 h-2.5 rounded-full bg-red-500"></span>Protein</span
+            >
+            <span class="opacity-80"
+              ><span id="summary-protein-consumed">0</span> /
+              <span id="summary-protein-goal">130</span>g</span
+            >
           </div>
-          <progress id="protein-progress" class="progress progress-error w-full h-2.5" value="0" max="100"></progress>
+          <progress
+            id="protein-progress"
+            class="progress progress-error w-full h-2.5"
+            value="0"
+            max="100"
+          ></progress>
         </div>
 
         <!-- Carbs -->
         <div>
           <div class="flex justify-between items-center text-sm font-semibold mb-1">
-            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>Carbohydrates</span>
-            <span class="opacity-80"><span id="summary-carbs-consumed">0</span> / <span id="summary-carbs-goal">220</span>g</span>
+            <span class="flex items-center gap-1.5"
+              ><span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>Carbohydrates</span
+            >
+            <span class="opacity-80"
+              ><span id="summary-carbs-consumed">0</span> /
+              <span id="summary-carbs-goal">220</span>g</span
+            >
           </div>
-          <progress id="carbs-progress" class="progress progress-info w-full h-2.5" value="0" max="100"></progress>
+          <progress
+            id="carbs-progress"
+            class="progress progress-info w-full h-2.5"
+            value="0"
+            max="100"
+          ></progress>
         </div>
 
         <!-- Fat -->
         <div>
           <div class="flex justify-between items-center text-sm font-semibold mb-1">
-            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>Fats</span>
-            <span class="opacity-80"><span id="summary-fat-consumed">0</span> / <span id="summary-fat-goal">70</span>g</span>
+            <span class="flex items-center gap-1.5"
+              ><span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>Fats</span
+            >
+            <span class="opacity-80"
+              ><span id="summary-fat-consumed">0</span> /
+              <span id="summary-fat-goal">70</span>g</span
+            >
           </div>
-          <progress id="fat-progress" class="progress progress-warning w-full h-2.5" value="0" max="100"></progress>
+          <progress
+            id="fat-progress"
+            class="progress progress-warning w-full h-2.5"
+            value="0"
+            max="100"
+          ></progress>
         </div>
       </div>
     </div>
   </div>
 
   <!-- Trend Analytics Widget -->
-  <div class="card bg-base-100/80 backdrop-blur-md border border-base-300 shadow-xl p-5 relative overflow-hidden flex flex-col justify-between">
+  <div
+    class="card bg-base-100/80 backdrop-blur-md border border-base-300 shadow-xl p-5 relative overflow-hidden flex flex-col justify-between"
+  >
     <div class="flex justify-between items-center mb-3">
       <h2 class="font-bold text-lg flex items-center gap-2">
         <i data-lucide="trending-up" class="w-5 h-5 text-orange-500"></i>
@@ -73,7 +133,10 @@
     <!-- Canvas Trend Chart -->
     <div class="flex-1 flex items-center justify-center min-h-[140px] relative">
       <canvas id="trend-chart" class="w-full h-full max-h-[180px] pointer-events-none"></canvas>
-      <div id="chart-empty-state" class="absolute inset-0 flex items-center justify-center opacity-40 italic text-sm text-center p-4">
+      <div
+        id="chart-empty-state"
+        class="absolute inset-0 flex items-center justify-center opacity-40 italic text-sm text-center p-4"
+      >
         No logs found. Enter meals to display daily trend.
       </div>
     </div>

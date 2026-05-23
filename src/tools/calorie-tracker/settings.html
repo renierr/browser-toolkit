@@ -1,29 +1,66 @@
-<div id="settings-panel" class="hidden card bg-base-200 border border-base-300 shadow-inner p-4 transition-all">
+<div
+  id="settings-panel"
+  class="hidden card bg-base-200 border border-base-300 shadow-inner p-4 transition-all"
+>
   <h3 class="font-bold text-lg mb-3 flex items-center gap-2">
     <i data-lucide="settings" class="w-5 h-5"></i>
     <span>Preferences & Goal Setup</span>
   </h3>
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
     <div class="form-control w-full">
-      <label class="label"><span class="label-text font-semibold">User ID (Sync Separation)</span></label>
-      <input id="setting-user-id" data-setting="userId" type="text" class="input input-bordered input-sm w-full" placeholder="user-123" />
+      <label class="label"
+        ><span class="label-text font-semibold">User ID (Sync Separation)</span></label
+      >
+      <input
+        id="setting-user-id"
+        data-setting="userId"
+        type="text"
+        class="input input-bordered input-sm w-full"
+        placeholder="user-123"
+      />
     </div>
     <div class="form-control w-full">
-      <label class="label"><span class="label-text font-semibold">Daily Calorie Goal (kcal)</span></label>
-      <input id="setting-cal-goal" data-setting="calorieGoal" type="number" class="input input-bordered input-sm w-full" placeholder="2000" />
+      <label class="label"
+        ><span class="label-text font-semibold">Daily Calorie Goal (kcal)</span></label
+      >
+      <input
+        id="setting-cal-goal"
+        data-setting="calorieGoal"
+        type="number"
+        class="input input-bordered input-sm w-full"
+        placeholder="2000"
+      />
     </div>
     <div class="form-control w-full">
       <label class="label"><span class="label-text font-semibold">Target Protein (g)</span></label>
-      <input id="setting-protein-goal" data-setting="proteinGoal" type="number" class="input input-bordered input-sm w-full" placeholder="130" />
+      <input
+        id="setting-protein-goal"
+        data-setting="proteinGoal"
+        type="number"
+        class="input input-bordered input-sm w-full"
+        placeholder="130"
+      />
     </div>
     <div class="form-control w-full flex flex-row items-end gap-2">
       <div class="flex-1">
         <label class="label"><span class="label-text font-semibold">Target Carbs (g)</span></label>
-        <input id="setting-carbs-goal" data-setting="carbsGoal" type="number" class="input input-bordered input-sm w-full" placeholder="220" />
+        <input
+          id="setting-carbs-goal"
+          data-setting="carbsGoal"
+          type="number"
+          class="input input-bordered input-sm w-full"
+          placeholder="220"
+        />
       </div>
       <div class="flex-1">
         <label class="label"><span class="label-text font-semibold">Target Fat (g)</span></label>
-        <input id="setting-fat-goal" data-setting="fatGoal" type="number" class="input input-bordered input-sm w-full" placeholder="70" />
+        <input
+          id="setting-fat-goal"
+          data-setting="fatGoal"
+          type="number"
+          class="input input-bordered input-sm w-full"
+          placeholder="70"
+        />
       </div>
     </div>
   </div>

@@ -69,7 +69,7 @@ export function renderHistoryLogs(
         url = URL.createObjectURL(m.imageBlob);
         activeObjectUrls.push(url);
       }
-      const previewHtml = `<img class="w-10 h-10 object-cover rounded border border-base-300 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200 show-details-img ${m.imageBlob ? '' : 'p-1 opacity-70 bg-base-200'}" data-id="${m.id}" src="${url}" alt="dish" title="Click to view details & large image" />`;
+      const previewHtml = `<img class="checkerboard-bg w-10 h-10 object-cover rounded border border-base-300 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200 show-details-img ${m.imageBlob ? '' : 'p-1 opacity-70 bg-base-200'}" data-id="${m.id}" src="${url}" alt="dish" title="Click to view details & large image" />`;
 
       const dateStr = new Date(m.timestamp).toLocaleTimeString(undefined, {
         hour: '2-digit',

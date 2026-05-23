@@ -20,7 +20,9 @@ export default function init() {
 
   function ensureAudioContext() {
     if (!audioCtx) {
-      const AC = window.AudioContext || (window as never as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AC =
+        window.AudioContext ||
+        (window as never as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       audioCtx = new AC();
     }
     if (audioCtx.state === 'suspended') {
