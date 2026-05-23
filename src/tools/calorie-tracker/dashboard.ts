@@ -26,8 +26,8 @@ export type DashboardElements = {
 
   logsTbody: HTMLTableSectionElement;
   logsEmptyState: HTMLDivElement;
+  historyFilterSelect: HTMLSelectElement;
   historyDateFilter: HTMLInputElement;
-  btnClearFilter: HTMLButtonElement;
 };
 
 // Store active preview URLs so they can be revoked on redraw
@@ -118,16 +118,27 @@ export async function loadAndRenderDashboard(
   try {
     const all = await getAllMeals(db);
 
-    // Apply History Date Filters
-    const dateFilterVal = elements.historyDateFilter.value;
+    // Apply History Duration Filters
+    const filterType = elements.historyFilterSelect.value;
     let filtered = all;
 
-    if (dateFilterVal) {
-      const filterDateStr = new Date(dateFilterVal).toDateString();
-      filtered = all.filter((m) => new Date(m.timestamp).toDateString() === filterDateStr);
-      elements.btnClearFilter.classList.remove('hidden');
-    } else {
-      elements.btnClearFilter.classList.add('hidden');
+    if (filterType === 'today') {
+      const todayStr = new Date().toDateString();
+      filtered = all.filter((m) => new Date(m.timestamp).toDateString() === todayStr);
+    } else if (filterType === '7days') {
+      const boundary = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      filtered = all.filter((m) => m.timestamp >= boundary);
+    } else if (filterType === 'month') {
+      const boundary = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      filtered = all.filter((m) => m.timestamp >= boundary);
+    } else if (filterType === 'custom') {
+      const dateFilterVal = elements.historyDateFilter.value;
+      if (dateFilterVal) {
+        const filterDateStr = new Date(dateFilterVal).toDateString();
+        filtered = all.filter((m) => new Date(m.timestamp).toDateString() === filterDateStr);
+      } else {
+        filtered = [];
+      }
     }
 
     // Sort logs newest first

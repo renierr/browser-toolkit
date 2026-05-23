@@ -95,8 +95,8 @@ export default async function init() {
 
     logsTbody: document.getElementById('logs-tbody') as HTMLTableSectionElement,
     logsEmptyState: document.getElementById('logs-empty-state') as HTMLDivElement,
+    historyFilterSelect: document.getElementById('history-filter-select') as HTMLSelectElement,
     historyDateFilter: document.getElementById('history-date-filter') as HTMLInputElement,
-    btnClearFilter: document.getElementById('btn-clear-filter') as HTMLButtonElement,
   };
 
   // Report Modal Elements
@@ -358,11 +358,17 @@ export default async function init() {
     void handleSaveMeal();
   });
 
-  dashboardElements.historyDateFilter.addEventListener('change', () => {
+  const historyCustomDateContainer = document.getElementById(
+    'history-custom-date-container'
+  ) as HTMLDivElement;
+
+  dashboardElements.historyFilterSelect.addEventListener('change', () => {
+    const isCustom = dashboardElements.historyFilterSelect.value === 'custom';
+    historyCustomDateContainer.classList.toggle('hidden', !isCustom);
     void loadAndRenderDashboard(db, settings, dashboardElements);
   });
-  dashboardElements.btnClearFilter.addEventListener('click', () => {
-    dashboardElements.historyDateFilter.value = '';
+
+  dashboardElements.historyDateFilter.addEventListener('change', () => {
     void loadAndRenderDashboard(db, settings, dashboardElements);
   });
 

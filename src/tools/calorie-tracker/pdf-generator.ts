@@ -1,84 +1,10 @@
-import { htmlToPdfBuffer } from '../../js/mupdf-utils';
-import { downloadFile } from '../../js/file-utils';
+import { htmlToPdfBuffer } from '@js/mupdf-utils';
+import { downloadFile } from '@js/file-utils';
 import { type Meal } from './db';
 
-/**
- * Converts a Blob to a base64 Data URL.
- */
-async function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        resolve(reader.result);
-      } else {
-        reject(new Error('Failed to read blob as Base64.'));
-      }
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
+// --- Shared Constants & Styles ---
 
-/**
- * Generates and downloads a PDF for a single meal log.
- */
-export async function generateMealPdf(meal: Meal, settings: any): Promise<void> {
-  const calGoal = settings.get('calorieGoal', 2000);
-  const proteinGoal = settings.get('proteinGoal', 130);
-  const carbsGoal = settings.get('carbsGoal', 220);
-  const fatGoal = settings.get('fatGoal', 70);
-
-  const dateStr = new Date(meal.timestamp).toLocaleDateString(undefined, {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  const timeStr = new Date(meal.timestamp).toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-
-  let imgBase64 = '';
-  if (meal.imageBlob) {
-    try {
-      imgBase64 = await blobToBase64(meal.imageBlob);
-    } catch (e) {
-      console.warn('[Calorie Tracker PDF] Failed to convert image to Base64:', e);
-    }
-  }
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #2d3748;
-    margin: 20pt;
-    padding: 0;
-    line-height: 1.5;
-  }
-  .header {
-    border-bottom: 2px solid #ea580c;
-    padding-bottom: 12pt;
-    margin-bottom: 20pt;
-  }
-  .title {
-    font-size: 22pt;
-    font-weight: 800;
-    color: #ea580c;
-    margin: 0;
-  }
-  .subtitle {
-    font-size: 9.5pt;
-    color: #718096;
-    margin-top: 4pt;
-    font-weight: bold;
-  }
+const SINGLE_MEAL_STYLES = `
   .meal-container {
     width: 100%;
     margin-bottom: 20pt;
@@ -93,9 +19,9 @@ export async function generateMealPdf(meal: Meal, settings: any): Promise<void> 
     vertical-align: top;
   }
   .meal-img {
-    width: 100%;
-    max-height: 250pt;
-    object-fit: cover;
+    max-width: 100%;
+    height: auto;
+    display: block;
     border-radius: 8pt;
     border: 1px solid #e2e8f0;
   }
@@ -198,207 +124,9 @@ export async function generateMealPdf(meal: Meal, settings: any): Promise<void> 
     color: #4a5568;
     margin: 0;
   }
-  .footer {
-    border-top: 1px solid #edf2f7;
-    padding-top: 10pt;
-    margin-top: 30pt;
-    text-align: center;
-    font-size: 8pt;
-    color: #a0aec0;
-  }
-</style>
-</head>
-<body>
-  <div class="header">
-    <div class="title">Meal Nutrition Report</div>
-    <div class="subtitle">CALORIE TRACKER &bull; NUTRITIONAL INTELLIGENCE</div>
-  </div>
+`;
 
-  <table class="meal-container">
-    <tr>
-      <td class="photo-cell">
-        ${
-          imgBase64
-            ? `<img class="meal-img" src="${imgBase64}" alt="${meal.foodName}">`
-            : `<div class="no-img-box">No photo attached</div>`
-        }
-      </td>
-      <td class="info-cell">
-        <div class="food-name">${meal.foodName}</div>
-        <div class="timestamp">${dateStr} &bull; ${timeStr}</div>
-        <div class="meta-tag">Verified Log (${meal.shortId})</div>
-
-        <div class="nutrition-box">
-          <div class="nutrition-val">${meal.calories} kcal</div>
-          <div class="nutrition-lbl">CALORIE CONTENT &bull; Target: ${calGoal} kcal</div>
-        </div>
-
-        <table class="macro-table">
-          <tr class="macro-row">
-            <td class="macro-lbl">Protein</td>
-            <td class="macro-val">${meal.protein}g <span class="macro-goal">/ Daily Goal: ${proteinGoal}g</span></td>
-          </tr>
-          <tr class="macro-row">
-            <td class="macro-lbl">Carbohydrates</td>
-            <td class="macro-val">${meal.carbs}g <span class="macro-goal">/ Daily Goal: ${carbsGoal}g</span></td>
-          </tr>
-          <tr class="macro-row">
-            <td class="macro-lbl">Fats</td>
-            <td class="macro-val">${meal.fat}g <span class="macro-goal">/ Daily Goal: ${fatGoal}g</span></td>
-          </tr>
-        </table>
-
-        ${
-          meal.notes
-            ? `
-        <div class="notes-box">
-          <div class="notes-title">Description & Notes</div>
-          <p class="notes-content">${meal.notes}</p>
-        </div>
-        `
-            : ''
-        }
-      </td>
-    </tr>
-  </table>
-
-  <div class="footer">
-    Report generated on ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} &bull; Offline PWA Calorie Tracker
-  </div>
-</body>
-</html>
-  `;
-
-  const pdfBytes = await htmlToPdfBuffer(html);
-  const safeName = meal.foodName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  await downloadFile(pdfBytes, `meal-${safeName}-${meal.id}.pdf`, 'application/pdf');
-}
-
-/**
- * Generates and downloads a summary report (daily or timeframe).
- */
-export async function generateSummaryPdf(
-  meals: Meal[],
-  title: string,
-  timeframeStr: string,
-  notes: string,
-  includeImages: boolean,
-  settings: any
-): Promise<void> {
-  const calorieGoal = settings.get('calorieGoal', 2000);
-  const proteinGoal = settings.get('proteinGoal', 130);
-  const carbsGoal = settings.get('carbsGoal', 220);
-  const fatGoal = settings.get('fatGoal', 70);
-
-  // Compute stats
-  let totalCalories = 0;
-  let totalProtein = 0;
-  let totalCarbs = 0;
-  let totalFat = 0;
-
-  for (const m of meals) {
-    totalCalories += m.calories;
-    totalProtein += m.protein;
-    totalCarbs += m.carbs;
-    totalFat += m.fat;
-  }
-
-  // Calculate unique days in meals set
-  const uniqueDays = new Set(meals.map((m) => new Date(m.timestamp).toDateString())).size || 1;
-
-  // Daily Averages
-  const avgCal = Math.round(totalCalories / uniqueDays);
-  const avgProt = Math.round(totalProtein / uniqueDays);
-  const avgCarb = Math.round(totalCarbs / uniqueDays);
-  const avgFat = Math.round(totalFat / uniqueDays);
-
-  // Render meal rows HTML
-  const mealsHtmlPromises = meals.map(async (m, i) => {
-    let imgBase64 = '';
-    if (includeImages && m.imageBlob) {
-      try {
-        imgBase64 = await blobToBase64(m.imageBlob);
-      } catch (e) {
-        console.warn('[Calorie Tracker PDF] Failed to convert list image:', e);
-      }
-    }
-
-    const dateDayStr = new Date(m.timestamp).toLocaleDateString();
-    const dateTimeStr = new Date(m.timestamp).toLocaleTimeString(undefined, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-
-    return `
-    <div class="meal-item">
-      <table class="meal-item-table">
-        <tr>
-          ${
-            includeImages && imgBase64
-              ? `<td class="meal-thumbnail-cell"><img class="meal-thumbnail" src="${imgBase64}" alt="${m.foodName}"></td>`
-              : ''
-          }
-          <td class="meal-info-cell">
-            <div class="meal-name">${i + 1}. ${m.foodName}</div>
-            <div class="meal-time">${dateDayStr} @ ${dateTimeStr} &bull; ID: ${m.shortId}</div>
-            
-            <table class="meal-macros-table">
-              <tr>
-                <td style="font-weight: 800; color: #ea580c; font-size: 10pt;">Calories: ${m.calories} kcal</td>
-                <td style="color: #16a34a; font-weight: bold;">Protein: ${m.protein}g</td>
-                <td style="color: #2563eb; font-weight: bold;">Carbs: ${m.carbs}g</td>
-                <td style="color: #d97706; font-weight: bold;">Fats: ${m.fat}g</td>
-              </tr>
-            </table>
-
-            ${m.notes ? `<div class="meal-notes">${m.notes}</div>` : ''}
-          </td>
-        </tr>
-      </table>
-    </div>
-    `;
-  });
-
-  const mealsHtmlArray = await Promise.all(mealsHtmlPromises);
-  const mealsListHtml = mealsHtmlArray.join('');
-
-  // Targets achievements
-  const calPercent = Math.min(100, Math.round((avgCal / calorieGoal) * 100));
-  const protPercent = Math.min(100, Math.round((avgProt / proteinGoal) * 100));
-  const carbPercent = Math.min(100, Math.round((avgCarb / carbsGoal) * 100));
-  const fatPercent = Math.min(100, Math.round((avgFat / fatGoal) * 100));
-
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<style>
-  body {
-    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-    color: #2d3748;
-    margin: 20pt;
-    padding: 0;
-    line-height: 1.5;
-  }
-  .header {
-    border-bottom: 2px solid #2563eb;
-    padding-bottom: 12pt;
-    margin-bottom: 20pt;
-  }
-  .title {
-    font-size: 22pt;
-    font-weight: 800;
-    color: #1e3a8a;
-    margin: 0;
-  }
-  .subtitle {
-    font-size: 9.5pt;
-    color: #4b5563;
-    margin-top: 4pt;
-    font-weight: bold;
-    text-transform: uppercase;
-  }
+const SUMMARY_REPORTS_STYLES = `
   .summary-title {
     font-size: 13pt;
     font-weight: 800;
@@ -474,6 +202,7 @@ export async function generateSummaryPdf(
   .meal-item-table {
     width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
   }
   .meal-thumbnail-cell {
     width: 110pt;
@@ -481,21 +210,26 @@ export async function generateSummaryPdf(
     padding: 10pt;
   }
   .meal-thumbnail {
-    width: 110pt;
-    height: 90pt;
-    object-fit: cover;
+    max-width: 100%;
+    height: auto;
+    display: block;
     border-radius: 6pt;
     border: 1px solid #e2e8f0;
   }
   .meal-info-cell {
     vertical-align: top;
     padding: 10pt;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
   .meal-name {
     font-size: 11.5pt;
     font-weight: 800;
     color: #0f172a;
     margin: 0 0 4pt 0;
+    word-wrap: break-word;
+    word-break: break-word;
   }
   .meal-time {
     font-size: 8.5pt;
@@ -521,6 +255,73 @@ export async function generateSummaryPdf(
     border-radius: 4pt;
     margin-top: 6pt;
     border-left: 2px solid #94a3b8;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+  }
+`;
+
+// --- Reusable Logic Helpers ---
+
+/**
+ * Converts a Blob to a base64 Data URL.
+ */
+async function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        resolve(reader.result);
+      } else {
+        reject(new Error('Failed to read blob as Base64.'));
+      }
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Builds the complete HTML page structure with standard styles, reusable header, and footer.
+ */
+function wrapHtmlDocument(
+  title: string,
+  subtitle: string,
+  themeColor: string,
+  titleColor: string,
+  contentHtml: string,
+  stylesHtml: string
+): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #2d3748;
+    margin: 20pt;
+    padding: 0;
+    line-height: 1.5;
+  }
+  .header {
+    border-bottom: 2px solid ${themeColor};
+    padding-bottom: 12pt;
+    margin-bottom: 20pt;
+  }
+  .title {
+    font-size: 22pt;
+    font-weight: 800;
+    color: ${titleColor};
+    margin: 0;
+  }
+  .subtitle {
+    font-size: 9.5pt;
+    color: #718096;
+    margin-top: 4pt;
+    font-weight: bold;
+    text-transform: uppercase;
   }
   .footer {
     border-top: 1px solid #edf2f7;
@@ -530,14 +331,215 @@ export async function generateSummaryPdf(
     font-size: 8pt;
     color: #a0aec0;
   }
+  ${stylesHtml}
 </style>
 </head>
 <body>
   <div class="header">
-    <div class="title">${title || 'Nutritional Progress Report'}</div>
-    <div class="subtitle">CALORIE TRACKER REPORT &bull; ${timeframeStr}</div>
+    <div class="title">${title}</div>
+    <div class="subtitle">${subtitle}</div>
   </div>
 
+  ${contentHtml}
+
+  <div class="footer">
+    Report generated on ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} &bull; Calorie Tracker
+  </div>
+</body>
+</html>
+  `;
+}
+
+// --- Primary API Exporters ---
+
+/**
+ * Generates and downloads a PDF for a single meal log.
+ */
+export async function generateMealPdf(meal: Meal, settings: any): Promise<void> {
+  const calGoal = settings.get('calorieGoal', 2000);
+  const proteinGoal = settings.get('proteinGoal', 130);
+  const carbsGoal = settings.get('carbsGoal', 220);
+  const fatGoal = settings.get('fatGoal', 70);
+
+  const dateStr = new Date(meal.timestamp).toLocaleDateString(undefined, {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const timeStr = new Date(meal.timestamp).toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  let imgBase64 = '';
+  if (meal.imageBlob) {
+    try {
+      imgBase64 = await blobToBase64(meal.imageBlob);
+    } catch (e) {
+      console.warn('[Calorie Tracker PDF] Failed to convert image to Base64:', e);
+    }
+  }
+
+  const contentHtml = `
+  <table class="meal-container">
+    <tr>
+      <td class="photo-cell">
+        ${
+          imgBase64
+            ? `<img class="meal-img" src="${imgBase64}" alt="${meal.foodName}">`
+            : `<div class="no-img-box">No photo attached</div>`
+        }
+      </td>
+      <td class="info-cell">
+        <div class="food-name">${meal.foodName}</div>
+        <div class="timestamp">${dateStr} &bull; ${timeStr}</div>
+        <div class="meta-tag">Verified Log (${meal.shortId})</div>
+
+        <div class="nutrition-box">
+          <div class="nutrition-val">${meal.calories} kcal</div>
+          <div class="nutrition-lbl">CALORIE CONTENT &bull; Target: ${calGoal} kcal</div>
+        </div>
+
+        <table class="macro-table">
+          <tr class="macro-row">
+            <td class="macro-lbl">Protein</td>
+            <td class="macro-val">${meal.protein}g <span class="macro-goal">/ Daily Goal: ${proteinGoal}g</span></td>
+          </tr>
+          <tr class="macro-row">
+            <td class="macro-lbl">Carbohydrates</td>
+            <td class="macro-val">${meal.carbs}g <span class="macro-goal">/ Daily Goal: ${carbsGoal}g</span></td>
+          </tr>
+          <tr class="macro-row">
+            <td class="macro-lbl">Fats</td>
+            <td class="macro-val">${meal.fat}g <span class="macro-goal">/ Daily Goal: ${fatGoal}g</span></td>
+          </tr>
+        </table>
+
+        ${
+          meal.notes
+            ? `
+        <div class="notes-box">
+          <div class="notes-title">Description & Notes</div>
+          <p class="notes-content">${meal.notes}</p>
+        </div>
+        `
+            : ''
+        }
+      </td>
+    </tr>
+  </table>
+  `;
+
+  const html = wrapHtmlDocument(
+    'Meal Nutrition Report',
+    'CALORIE TRACKER &bull; NUTRITIONAL INTELLIGENCE',
+    '#ea580c',
+    '#ea580c',
+    contentHtml,
+    SINGLE_MEAL_STYLES
+  );
+
+  const pdfBytes = await htmlToPdfBuffer(html);
+  const safeName = meal.foodName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+  await downloadFile(pdfBytes, `meal-${safeName}-${meal.id}.pdf`, 'application/pdf');
+}
+
+/**
+ * Generates and downloads a summary report (daily or timeframe).
+ */
+export async function generateSummaryPdf(
+  meals: Meal[],
+  title: string,
+  timeframeStr: string,
+  notes: string,
+  includeImages: boolean,
+  settings: any
+): Promise<void> {
+  const calorieGoal = settings.get('calorieGoal', 2000);
+  const proteinGoal = settings.get('proteinGoal', 130);
+  const carbsGoal = settings.get('carbsGoal', 220);
+  const fatGoal = settings.get('fatGoal', 70);
+
+  // Compute stats
+  let totalCalories = 0;
+  let totalProtein = 0;
+  let totalCarbs = 0;
+  let totalFat = 0;
+
+  for (const m of meals) {
+    totalCalories += m.calories;
+    totalProtein += m.protein;
+    totalCarbs += m.carbs;
+    totalFat += m.fat;
+  }
+
+  // Calculate unique days in meals set
+  const uniqueDays = new Set(meals.map((m) => new Date(m.timestamp).toDateString())).size || 1;
+
+  // Daily Averages
+  const avgCal = Math.round(totalCalories / uniqueDays);
+  const avgProt = Math.round(totalProtein / uniqueDays);
+  const avgCarb = Math.round(totalCarbs / uniqueDays);
+  const avgFat = Math.round(totalFat / uniqueDays);
+
+  // Render meal rows HTML
+  const mealsHtmlPromises = meals.map(async (m, i) => {
+    let imgBase64 = '';
+    if (includeImages && m.imageBlob) {
+      try {
+        imgBase64 = await blobToBase64(m.imageBlob);
+      } catch (e) {
+        console.warn('[Calorie Tracker PDF] Failed to convert list image:', e);
+      }
+    }
+
+    const dateDayStr = new Date(m.timestamp).toLocaleDateString();
+    const dateTimeStr = new Date(m.timestamp).toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    return `
+    <div class="meal-item">
+      <table class="meal-item-table">
+        <tr>
+          ${
+            includeImages && imgBase64
+              ? `<td class="meal-thumbnail-cell"><img class="meal-thumbnail" src="${imgBase64}" alt="${m.foodName}"></td>`
+              : ''
+          }
+          <td class="meal-info-cell">
+            <div class="meal-name">${i + 1}. ${m.foodName}</div>
+            <div class="meal-time">${dateDayStr} @ ${dateTimeStr} &bull; ID: ${m.shortId}</div>
+
+            <table class="meal-macros-table">
+              <tr>
+                <td style="font-weight: 800; color: #ea580c; font-size: 10pt;">Calories: ${m.calories} kcal</td>
+                <td style="color: #16a34a; font-weight: bold;">Protein: ${m.protein}g</td>
+                <td style="color: #2563eb; font-weight: bold;">Carbs: ${m.carbs}g</td>
+                <td style="color: #d97706; font-weight: bold;">Fats: ${m.fat}g</td>
+              </tr>
+            </table>
+
+            ${m.notes ? `<div class="meal-notes">${m.notes}</div>` : ''}
+          </td>
+        </tr>
+      </table>
+    </div>
+    `;
+  });
+
+  const mealsHtmlArray = await Promise.all(mealsHtmlPromises);
+  const mealsListHtml = mealsHtmlArray.join('');
+
+  // Targets achievements
+  const calPercent = Math.min(100, Math.round((avgCal / calorieGoal) * 100));
+  const protPercent = Math.min(100, Math.round((avgProt / proteinGoal) * 100));
+  const carbPercent = Math.min(100, Math.round((avgCarb / carbsGoal) * 100));
+  const fatPercent = Math.min(100, Math.round((avgFat / fatGoal) * 100));
+
+  const contentHtml = `
   <div class="summary-title">Nutritional Metrics & Performance</div>
   <table class="summary-table">
     <thead>
@@ -613,17 +615,20 @@ export async function generateSummaryPdf(
   }
 
   <div class="summary-title">Logged Meals Details (${meals.length} meal${meals.length !== 1 ? 's' : ''})</div>
-  
+
   <div style="margin-top: 10pt;">
     ${mealsListHtml || '<div style="font-style: italic; color: #64748b; padding: 10pt; text-align: center;">No meal logs present in selected duration.</div>'}
   </div>
-
-  <div class="footer">
-    Report generated on ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()} &bull; Offline PWA Calorie Tracker
-  </div>
-</body>
-</html>
   `;
+
+  const html = wrapHtmlDocument(
+    title || 'Nutritional Progress Report',
+    `CALORIE TRACKER REPORT &bull; ${timeframeStr}`,
+    '#2563eb',
+    '#1e3a8a',
+    contentHtml,
+    SUMMARY_REPORTS_STYLES
+  );
 
   const pdfBytes = await htmlToPdfBuffer(html);
   const safeTitle = (title || 'report').toLowerCase().replace(/[^a-z0-9]+/g, '-');

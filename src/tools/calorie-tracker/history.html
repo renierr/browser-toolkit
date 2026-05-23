@@ -4,17 +4,30 @@
       <i data-lucide="list" class="w-5 h-5 text-primary"></i>
       <span>Logged Meals History</span>
     </h2>
-    <div class="flex flex-wrap items-center gap-2">
-      <button
-        id="btn-open-report-modal"
-        class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
-      >
-        <i data-lucide="file-text" class="w-4 h-4"></i>
-        <span>Generate Report</span>
-      </button>
-      <span class="text-xs opacity-50 font-bold ml-2">Filter Day:</span>
+    <button
+      id="btn-open-report-modal"
+      class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+    >
+      <i data-lucide="file-text" class="w-4 h-4"></i>
+      <span>Generate Report</span>
+    </button>
+  </div>
+
+  <!-- Duration Filter Bar (Below) -->
+  <div class="flex flex-wrap items-center gap-3 border-t border-base-200 pt-3 mb-4">
+    <div class="flex items-center gap-2">
+      <span class="text-xs opacity-60 font-bold">Filter Duration:</span>
+      <select id="history-filter-select" class="select select-bordered select-sm">
+        <option value="all" selected>All Time</option>
+        <option value="today">Today</option>
+        <option value="7days">Last 7 Days</option>
+        <option value="month">Last Month</option>
+        <option value="custom">Custom Date...</option>
+      </select>
+    </div>
+    <div id="history-custom-date-container" class="flex items-center gap-2 hidden">
+      <span class="text-xs opacity-60 font-bold">Select Date:</span>
       <input id="history-date-filter" type="date" class="input input-bordered input-sm" />
-      <button id="btn-clear-filter" class="btn btn-ghost btn-xs underline hidden">Show All</button>
     </div>
   </div>
 

@@ -1,4 +1,4 @@
-import { SyncManager } from '../../js/sync';
+import { SyncManager } from '@js/sync';
 
 const DB_NAME = 'CalorieTrackerDB';
 export const STORE_NAME = 'meals';
