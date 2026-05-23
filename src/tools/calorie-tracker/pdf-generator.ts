@@ -159,18 +159,21 @@ const SUMMARY_REPORTS_STYLES = `
   .summary-val {
     font-weight: 800;
   }
+  .pct-cell {
+    white-space: nowrap;
+  }
   .progress-bg {
-    width: 100px;
-    height: 12px;
+    width: 70px;
+    height: 10px;
     background-color: #e2e8f0;
-    border-radius: 6px;
+    border-radius: 5px;
     overflow: hidden;
     display: inline-block;
     vertical-align: middle;
   }
   .progress-fill {
     height: 100%;
-    border-radius: 6px;
+    border-radius: 5px;
   }
   .notes-box {
     background-color: #eff6ff;
@@ -557,11 +560,11 @@ export async function generateSummaryPdf(
   <table class="summary-table">
     <thead>
       <tr>
-        <th>Nutrient / Goal</th>
-        <th>Total Consumed</th>
-        <th>Daily Average (${uniqueDays} Day${uniqueDays > 1 ? 's' : ''})</th>
-        <th>Target Daily Goal</th>
-        <th>% Achieved</th>
+        <th style="width: 22%;">Nutrient / Goal</th>
+        <th style="width: 18%;">Total Consumed</th>
+        <th style="width: 22%;">Daily Average (${uniqueDays} Day${uniqueDays > 1 ? 's' : ''})</th>
+        <th style="width: 18%;">Target Daily Goal</th>
+        <th class="pct-cell" style="width: 20%;">% Achieved</th>
       </tr>
     </thead>
     <tbody>
@@ -570,7 +573,7 @@ export async function generateSummaryPdf(
         <td>${totalCalories} kcal</td>
         <td class="summary-val">${avgCal} kcal</td>
         <td>${calorieGoal} kcal</td>
-        <td>
+        <td class="pct-cell">
           <div class="progress-bg">
             <div class="progress-fill" style="width: ${calPercent}%; background-color: #ea580c;"></div>
           </div>
@@ -582,7 +585,7 @@ export async function generateSummaryPdf(
         <td>${totalProtein}g</td>
         <td class="summary-val">${avgProt}g</td>
         <td>${proteinGoal}g</td>
-        <td>
+        <td class="pct-cell">
           <div class="progress-bg">
             <div class="progress-fill" style="width: ${protPercent}%; background-color: #16a34a;"></div>
           </div>
@@ -594,7 +597,7 @@ export async function generateSummaryPdf(
         <td>${totalCarbs}g</td>
         <td class="summary-val">${avgCarb}g</td>
         <td>${carbsGoal}g</td>
-        <td>
+        <td class="pct-cell">
           <div class="progress-bg">
             <div class="progress-fill" style="width: ${carbPercent}%; background-color: #2563eb;"></div>
           </div>
@@ -606,7 +609,7 @@ export async function generateSummaryPdf(
         <td>${totalFat}g</td>
         <td class="summary-val">${avgFat}g</td>
         <td>${fatGoal}g</td>
-        <td>
+        <td class="pct-cell">
           <div class="progress-bg">
             <div class="progress-fill" style="width: ${fatPercent}%; background-color: #d97706;"></div>
           </div>
