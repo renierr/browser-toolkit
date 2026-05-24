@@ -4,8 +4,8 @@ import { blobToImageData } from '@js/image-utils';
 import OcrWorker from './worker?worker';
 import type { ToolPayload } from '@js/types';
 
-const DET_MODEL_URL = new URL('./lib/models/ocr/det.onnx', document.baseURI).href;
-const REC_MODEL_URL = new URL('./lib/models/ocr/rec.onnx', document.baseURI).href;
+const DET_MODEL_URL = new URL('./lib/models/ocr/det.onnx?v=1.0.0', document.baseURI).href;
+const REC_MODEL_URL = new URL('./lib/models/ocr/rec.onnx?v=1.0.0', document.baseURI).href;
 
 // noinspection JSUnusedGlobalSymbols
 export default function init(payload?: ToolPayload) {

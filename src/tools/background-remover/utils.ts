@@ -15,7 +15,7 @@ export const MODELS: Record<string, ModelConfig> = {
   silueta: {
     id: 'silueta',
     name: 'Silueta',
-    url: new URL('./lib/models/silueta.onnx', document.baseURI).href,
+    url: new URL('./lib/models/silueta.onnx?v=1.0.0', document.baseURI).href,
     inputSize: 320,
     mean: [0.485, 0.456, 0.406],
     std: [0.229, 0.224, 0.225],
@@ -23,7 +23,7 @@ export const MODELS: Record<string, ModelConfig> = {
   u2netp: {
     id: 'u2netp',
     name: 'U2NetP',
-    url: new URL('./lib/models/u2netp-q.onnx', document.baseURI).href,
+    url: new URL('./lib/models/u2netp-q.onnx?v=1.0.0', document.baseURI).href,
     inputSize: 320,
     mean: [0.485, 0.456, 0.406],
     std: [0.229, 0.224, 0.225],

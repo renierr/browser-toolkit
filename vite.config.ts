@@ -196,7 +196,7 @@ export default defineConfig({
         enabled: true,
       },
       workbox: {
-        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,wasm,onnx,md,json,webmanifest}'],
+        globPatterns: ['**/*.{js,mjs,css,html,svg,png,ico,md,json,webmanifest}'],
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
@@ -229,6 +229,21 @@ export default defineConfig({
               },
               fetchOptions: {
                 credentials: 'same-origin',
+              },
+            },
+          },
+          {
+            urlPattern: ({ url }) =>
+              url.pathname.endsWith('.wasm') || url.pathname.endsWith('.onnx'),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'wasm-onnx-cache',
+              expiration: {
+                maxEntries: 30,
+                maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+              },
+              cacheableResponse: {
+                statuses: [0, 200],
               },
             },
           },

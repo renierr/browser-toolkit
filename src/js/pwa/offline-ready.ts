@@ -1,4 +1,5 @@
 import { showMessage } from '../ui.ts';
+import { startBackgroundPrefetch } from './prefetch.ts';
 
 export function setupOfflineReadyNotification(): void {
   if (!('serviceWorker' in navigator)) return;
@@ -35,4 +36,7 @@ export function setupOfflineReadyNotification(): void {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     notifyReady();
   });
+
+  // Start background caching of heavy assets on idle
+  startBackgroundPrefetch();
 }
