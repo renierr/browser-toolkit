@@ -19,14 +19,14 @@ const STATIC_MODELS: string[] = [
 ];
 
 const ONNX_RUNTIME_FILES: string[] = [
+  'onnx/ort-wasm-simd-threaded.asyncify.mjs',
+  'onnx/ort-wasm-simd-threaded.asyncify.wasm',
+  'onnx/ort-wasm-simd-threaded.jsep.mjs',
   'onnx/ort-wasm-simd-threaded.jsep.wasm',
-  'onnx/ort-wasm-simd.wasm',
-  'onnx/ort-wasm-threaded.wasm',
-  'onnx/ort-wasm.wasm',
+  'onnx/ort-wasm-simd-threaded.jspi.mjs',
+  'onnx/ort-wasm-simd-threaded.jspi.wasm',
   'onnx/ort-wasm-simd-threaded.mjs',
-  'onnx/ort-wasm-simd.mjs',
-  'onnx/ort-wasm-threaded.mjs',
-  'onnx/ort-wasm.mjs',
+  'onnx/ort-wasm-simd-threaded.wasm',
 ];
 
 export function startBackgroundPrefetch(): void {
