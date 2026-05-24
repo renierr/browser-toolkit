@@ -43,8 +43,6 @@ export default async function init(payload?: ToolPayload) {
   const dropzonePrompt = document.getElementById('dropzone-prompt') as HTMLDivElement;
   const dropzonePreview = document.getElementById('dropzone-preview') as HTMLImageElement;
   const fileInput = document.getElementById('dropzone-file-input') as HTMLInputElement;
-  const cameraInput = document.getElementById('camera-file-input') as HTMLInputElement;
-  const takePhotoBtn = document.getElementById('take-photo-btn') as HTMLButtonElement;
   const pasteBtn = document.getElementById('paste-btn') as HTMLButtonElement;
   const clearImageBtn = document.getElementById('clear-image-btn') as HTMLButtonElement;
   const mealHintInput = document.getElementById('meal-hint-input') as HTMLTextAreaElement;
@@ -194,22 +192,6 @@ export default async function init(payload?: ToolPayload) {
       },
     }
   );
-
-  // Setup Camera elements for Mobile / Desktop fallback
-  const onTakePhotoClick = () => {
-    cameraInput.click();
-  };
-
-  const onCameraInputChange = (e: Event) => {
-    const file = (e.target as HTMLInputElement).files?.[0];
-    if (file) {
-      void imageIntake.handleImageBlob(file);
-      cameraInput.value = '';
-    }
-  };
-
-  takePhotoBtn.addEventListener('click', onTakePhotoClick);
-  cameraInput.addEventListener('change', onCameraInputChange);
 
   // Handle shared files payload (e.g. when routed as a Share Target PWA)
   if (payload?.sharedFiles?.length) {
@@ -652,7 +634,5 @@ export default async function init(payload?: ToolPayload) {
     imageIntake.cleanup();
     cleanupDashboardPreviews();
     editMealPreview.removeEventListener('click', openLightbox);
-    takePhotoBtn.removeEventListener('click', onTakePhotoClick);
-    cameraInput.removeEventListener('change', onCameraInputChange);
   };
 }
