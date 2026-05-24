@@ -4,13 +4,32 @@
       <i data-lucide="list" class="w-5 h-5 text-primary"></i>
       <span>Logged Meals History</span>
     </h2>
-    <button
-      id="btn-open-report-modal"
-      class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
-    >
-      <i data-lucide="file-text" class="w-4 h-4"></i>
-      <span>Generate Report</span>
-    </button>
+    <div class="flex flex-wrap items-center gap-2">
+      <input id="meals-import-file" type="file" accept=".json" class="hidden" />
+      <button
+        id="btn-import-meals"
+        class="btn btn-ghost btn-sm border border-base-300 flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+        title="Import meals from JSON"
+      >
+        <i data-lucide="upload" class="w-4 h-4"></i>
+        <span>Import</span>
+      </button>
+      <button
+        id="btn-export-meals"
+        class="btn btn-ghost btn-sm border border-base-300 flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+        title="Export filtered meals to JSON"
+      >
+        <i data-lucide="download" class="w-4 h-4"></i>
+        <span>Export</span>
+      </button>
+      <button
+        id="btn-open-report-modal"
+        class="btn btn-primary btn-sm flex items-center gap-1.5 shadow-sm hover:scale-[1.02] active:scale-95 transition-all"
+      >
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        <span>Generate Report</span>
+      </button>
+    </div>
   </div>
 
   <!-- Duration Filter Bar (Below) -->

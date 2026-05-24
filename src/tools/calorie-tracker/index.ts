@@ -38,6 +38,11 @@ export default async function init(payload?: ToolPayload) {
   // Sync Button
   const syncBtn = document.getElementById('sync-btn') as HTMLButtonElement;
 
+  // Import / Export Elements
+  const btnImportMeals = document.getElementById('btn-import-meals') as HTMLButtonElement;
+  const btnExportMeals = document.getElementById('btn-export-meals') as HTMLButtonElement;
+  const fileImportInput = document.getElementById('meals-import-file') as HTMLInputElement;
+
   // Image Capture Elements
   const mealDropzone = document.getElementById('meal-dropzone') as HTMLDivElement;
   const dropzonePrompt = document.getElementById('dropzone-prompt') as HTMLDivElement;
@@ -353,7 +358,222 @@ export default async function init(payload?: ToolPayload) {
     }
   };
 
+  // Import/Export Helper Methods
+  const dataURIToBlob = (dataURI: string): Blob => {
+    try {
+      const parts = dataURI.split(',');
+      if (parts.length < 2) throw new Error('Invalid Data URI format');
+      const byteString = atob(parts[1]);
+      const mimeString = parts[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      return new Blob([ab], { type: mimeString });
+    } catch (err) {
+      console.error('[Calorie Tracker] failed to convert Data URI to Blob:', err);
+      return new Blob([], { type: 'image/png' });
+    }
+  };
+
+  const handleExportMeals = async () => {
+    try {
+      showMessage('Preparing export...', { type: 'info', timeoutMs: 1500 });
+      const all = await getAllMeals(db);
+
+      const filterType = dashboardElements.historyFilterSelect.value;
+      let filtered = all;
+
+      if (filterType === 'today') {
+        const todayStr = new Date().toDateString();
+        filtered = all.filter((m) => new Date(m.timestamp).toDateString() === todayStr);
+      } else if (filterType === '7days') {
+        const boundary = Date.now() - 7 * 24 * 60 * 60 * 1000;
+        filtered = all.filter((m) => m.timestamp >= boundary);
+      } else if (filterType === 'month') {
+        const boundary = Date.now() - 30 * 24 * 60 * 60 * 1000;
+        filtered = all.filter((m) => m.timestamp >= boundary);
+      } else if (filterType === 'custom') {
+        const dateFilterVal = dashboardElements.historyDateFilter.value;
+        if (dateFilterVal) {
+          const filterDateStr = new Date(dateFilterVal).toDateString();
+          filtered = all.filter((m) => new Date(m.timestamp).toDateString() === filterDateStr);
+        } else {
+          filtered = [];
+        }
+      }
+
+      if (filtered.length === 0) {
+        showMessage('No meals found in selected timeframe to export.', { type: 'warning' });
+        return;
+      }
+
+      const exportMeals = await Promise.all(
+        filtered.map(async (m) => {
+          let base64Image: string | null = null;
+          if (m.imageBlob) {
+            try {
+              base64Image = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(m.imageBlob as Blob);
+              });
+            } catch (err) {
+              console.error('[Calorie Tracker] Image base64 conversion failed:', err);
+            }
+          }
+          return {
+            shortId: m.shortId,
+            foodName: m.foodName,
+            calories: m.calories,
+            protein: m.protein,
+            carbs: m.carbs,
+            fat: m.fat,
+            confidence: m.confidence,
+            notes: m.notes || '',
+            timestamp: m.timestamp,
+            updatedAt: m.updatedAt,
+            image: base64Image,
+          };
+        })
+      );
+
+      const exportData = {
+        version: '1.0.0',
+        exportedAt: new Date().toISOString(),
+        settings: {
+          calorieGoal: settings.get('calorieGoal', 2000),
+          proteinGoal: settings.get('proteinGoal', 130),
+          carbsGoal: settings.get('carbsGoal', 220),
+          fatGoal: settings.get('fatGoal', 70),
+        },
+        meals: exportMeals,
+      };
+
+      const jsonString = JSON.stringify(exportData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `calorie-tracker-export-${filterType}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showMessage('Meals exported successfully!', { type: 'info', timeoutMs: 2500 });
+    } catch (e: any) {
+      console.error('[Calorie Tracker] Export failed:', e);
+      showMessage(`Export failed: ${e.message || 'Error'}`, { type: 'alert' });
+    }
+  };
+
+  const handleImportMeals = async (file: File) => {
+    try {
+      const text = await file.text();
+      const importedData = JSON.parse(text);
+
+      let mealsToImport: any[] = [];
+      if (Array.isArray(importedData)) {
+        mealsToImport = importedData;
+      } else if (importedData && typeof importedData === 'object') {
+        if (Array.isArray(importedData.meals)) {
+          mealsToImport = importedData.meals;
+          if (importedData.settings && typeof importedData.settings === 'object') {
+            const incomingSettings = importedData.settings;
+            if (typeof incomingSettings.calorieGoal === 'number') {
+              settings.set('calorieGoal', incomingSettings.calorieGoal);
+            }
+            if (typeof incomingSettings.proteinGoal === 'number') {
+              settings.set('proteinGoal', incomingSettings.proteinGoal);
+            }
+            if (typeof incomingSettings.carbsGoal === 'number') {
+              settings.set('carbsGoal', incomingSettings.carbsGoal);
+            }
+            if (typeof incomingSettings.fatGoal === 'number') {
+              settings.set('fatGoal', incomingSettings.fatGoal);
+            }
+            loadPreferences();
+          }
+        } else if (importedData.foodName) {
+          mealsToImport = [importedData];
+        }
+      }
+
+      if (mealsToImport.length === 0) {
+        showMessage('No valid meals found in import file.', { type: 'warning' });
+        return;
+      }
+
+      showMessage(`Importing ${mealsToImport.length} meal(s)...`, {
+        type: 'info',
+        timeoutMs: 1500,
+      });
+
+      const existingMeals = await getAllMeals(db);
+      let importedCount = 0;
+
+      for (const item of mealsToImport) {
+        if (!item.foodName) continue;
+
+        const shortId =
+          item.shortId || 'MEAL-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+        const existing = existingMeals.find((m) => m.shortId === shortId);
+
+        let imageBlob: Blob | null = null;
+        if (item.image && typeof item.image === 'string') {
+          imageBlob = dataURIToBlob(item.image);
+        }
+
+        const mealToSave: Omit<Meal, 'id'> & { id?: number } = {
+          shortId,
+          foodName: item.foodName,
+          calories: Math.max(0, Number(item.calories) || 0),
+          protein: Math.max(0, Number(item.protein) || 0),
+          carbs: Math.max(0, Number(item.carbs) || 0),
+          fat: Math.max(0, Number(item.fat) || 0),
+          confidence: Number(item.confidence) || 100,
+          notes: item.notes || '',
+          timestamp: Number(item.timestamp) || Date.now(),
+          updatedAt: Number(item.updatedAt) || Date.now(),
+          imageBlob,
+        };
+
+        if (existing) {
+          mealToSave.id = existing.id;
+        }
+
+        await saveMeal(db, mealToSave);
+        importedCount++;
+      }
+
+      showMessage(`Successfully imported ${importedCount} meal(s)!`, {
+        type: 'info',
+        timeoutMs: 3000,
+      });
+      await loadAndRenderDashboard(db, settings, dashboardElements);
+      void handleSync();
+    } catch (e: any) {
+      console.error('[Calorie Tracker] Import failed:', e);
+      showMessage(`Import failed: ${e.message || 'JSON parsing error.'}`, { type: 'alert' });
+    } finally {
+      fileImportInput.value = '';
+    }
+  };
+
   // DOM Event bindings
+  btnImportMeals.addEventListener('click', () => {
+    fileImportInput.click();
+  });
+  fileImportInput.addEventListener('change', () => {
+    if (fileImportInput.files && fileImportInput.files[0]) {
+      void handleImportMeals(fileImportInput.files[0]);
+    }
+  });
+  btnExportMeals.addEventListener('click', () => {
+    void handleExportMeals();
+  });
   settingsToggleBtn.addEventListener('click', () => {
     settingsPanel.classList.toggle('hidden');
   });
