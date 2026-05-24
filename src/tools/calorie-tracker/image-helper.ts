@@ -61,6 +61,7 @@ export function setupImageIntake(elements: ImageIntakeElements, callbacks: Image
   const handleImageBlob = async (blob: Blob) => {
     if (!blob.type.startsWith('image/')) {
       showMessage('Only image uploads are supported.', { type: 'alert' });
+      fileInput.value = '';
       return;
     }
 
