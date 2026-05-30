@@ -15,6 +15,7 @@ import {
   deleteMeal,
   getMealById,
   getAllMeals,
+  generateShortId,
   STORE_NAME,
   type Meal,
 } from './db';
@@ -73,6 +74,25 @@ export default async function init(payload?: ToolPayload) {
   const btnDiscardEstimate = document.getElementById('btn-discard-estimate') as HTMLButtonElement;
   const btnSaveEstimate = document.getElementById('btn-save-estimate') as HTMLButtonElement;
   const btnSaveText = document.getElementById('btn-save-text') as HTMLSpanElement;
+  const editMealType = document.getElementById('edit-meal-type') as HTMLSelectElement;
+  const labelMealName = document.getElementById('label-meal-name') as HTMLSpanElement;
+
+  const setFormType = (type: 'meal' | 'activity') => {
+    editMealType.value = type;
+    if (type === 'activity') {
+      labelMealName.textContent = 'Activity Name / Description';
+      btnSaveText.textContent =
+        editingMealId !== undefined ? 'Update Activity' : 'Save & Log Activity';
+    } else {
+      labelMealName.textContent = 'Meal Description / Food Name';
+      btnSaveText.textContent =
+        editingMealId !== undefined ? 'Update Logged Meal' : 'Save & Log Meal';
+    }
+  };
+
+  editMealType.addEventListener('change', () => {
+    setFormType(editMealType.value as 'meal' | 'activity');
+  });
 
   // Dashboard Aggregation Elements
   const dashboardElements: DashboardElements = {
@@ -232,7 +252,8 @@ export default async function init(payload?: ToolPayload) {
 
       activeEstimateShortId = '';
       editingMealId = undefined;
-      btnSaveText.textContent = 'Save & Log Meal';
+      editMealType.disabled = false;
+      setFormType('meal');
 
       aiLoadingOverlay.classList.add('hidden');
       estimateFormContainer.classList.remove('hidden');
@@ -256,13 +277,19 @@ export default async function init(payload?: ToolPayload) {
     const notes = editMealNotes.value.trim();
 
     if (!foodName) {
-      showMessage('Please provide a valid meal name.', { type: 'alert' });
+      showMessage('Please provide a valid name.', { type: 'alert' });
       return;
     }
 
     try {
+      const isActivity = editMealType.value === 'activity';
+      let shortId = activeEstimateShortId;
+      if (!shortId) {
+        shortId = generateShortId(isActivity ? 'ACT' : 'MEAL');
+      }
+
       const mealLog: Omit<Meal, 'id'> & { id?: number } = {
-        shortId: activeEstimateShortId,
+        shortId,
         foodName,
         calories,
         protein,
@@ -281,10 +308,19 @@ export default async function init(payload?: ToolPayload) {
 
       await saveMeal(db, mealLog);
 
-      showMessage(editingMealId !== undefined ? 'Meal log updated!' : 'Meal log saved!', {
-        type: 'info',
-        timeoutMs: 2500,
-      });
+      showMessage(
+        editingMealId !== undefined
+          ? isActivity
+            ? 'Activity log updated!'
+            : 'Meal log updated!'
+          : isActivity
+            ? 'Activity log saved!'
+            : 'Meal log saved!',
+        {
+          type: 'info',
+          timeoutMs: 2500,
+        }
+      );
 
       discardEstimate();
       imageIntake.clearImage();
@@ -294,7 +330,7 @@ export default async function init(payload?: ToolPayload) {
       void handleSync();
     } catch (e) {
       console.error('[Calorie Tracker] Save log failed:', e);
-      showMessage('Failed to save meal log.', { type: 'alert' });
+      showMessage('Failed to save log.', { type: 'alert' });
     }
   };
 
@@ -303,6 +339,7 @@ export default async function init(payload?: ToolPayload) {
     estimateEmptyState.classList.remove('hidden');
     activeEstimateShortId = '';
     editingMealId = undefined;
+    editMealType.disabled = false;
   };
 
   // 6. Delete Log
@@ -348,7 +385,9 @@ export default async function init(payload?: ToolPayload) {
         editMealPreview.src = PLACEHOLDER_SVG;
       }
 
-      btnSaveText.textContent = 'Update Logged Meal';
+      const type = m.shortId?.startsWith('ACT-') ? 'activity' : 'meal';
+      setFormType(type);
+      editMealType.disabled = true;
       estimateEmptyState.classList.add('hidden');
       estimateFormContainer.classList.remove('hidden');
 
@@ -587,6 +626,8 @@ export default async function init(payload?: ToolPayload) {
   btnManualAdd.addEventListener('click', () => {
     editingMealId = undefined;
     activeEstimateShortId = '';
+    editMealType.disabled = false;
+    setFormType('meal');
 
     if (activeImageBlob) {
       editMealPreview.src = URL.createObjectURL(activeImageBlob);
@@ -595,7 +636,7 @@ export default async function init(payload?: ToolPayload) {
       editMealPreview.src = PLACEHOLDER_SVG;
     }
 
-    editMealName.value = 'New Meal';
+    editMealName.value = 'New Log';
     editMealCalories.value = '0';
     editMealProtein.value = '0';
     editMealCarbs.value = '0';
@@ -603,7 +644,6 @@ export default async function init(payload?: ToolPayload) {
     editMealNotes.value = '';
     confidenceBadge.textContent = 'Manual Entry';
 
-    btnSaveText.textContent = 'Save & Log Meal';
     estimateEmptyState.classList.add('hidden');
     estimateFormContainer.classList.remove('hidden');
 

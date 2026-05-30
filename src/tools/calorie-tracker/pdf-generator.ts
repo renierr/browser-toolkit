@@ -411,8 +411,8 @@ export async function generateMealPdf(meal: Meal, settings: any): Promise<void> 
         <div class="meta-tag">Verified Log (${meal.shortId})</div>
 
         <div class="nutrition-box">
-          <div class="nutrition-val">${meal.calories} kcal</div>
-          <div class="nutrition-lbl">CALORIE CONTENT &bull; Target: ${calGoal} kcal</div>
+          <div class="nutrition-val">${meal.shortId?.startsWith('ACT-') ? '-' : ''}${meal.calories} kcal</div>
+          <div class="nutrition-lbl">${meal.shortId?.startsWith('ACT-') ? 'CALORIE REDUCTION' : 'CALORIE CONTENT'} &bull; Target: ${calGoal} kcal</div>
         </div>
 
         <table class="macro-table">
@@ -482,7 +482,12 @@ export async function generateSummaryPdf(
   let totalFat = 0;
 
   for (const m of meals) {
-    totalCalories += m.calories;
+    const isActivity = m.shortId?.startsWith('ACT-');
+    if (isActivity) {
+      totalCalories -= m.calories;
+    } else {
+      totalCalories += m.calories;
+    }
     totalProtein += m.protein;
     totalCarbs += m.carbs;
     totalFat += m.fat;
@@ -531,7 +536,7 @@ export async function generateSummaryPdf(
 
             <table class="meal-macros-table">
               <tr>
-                <td style="font-weight: 800; color: #ea580c; font-size: 10pt;">Calories: ${m.calories} kcal</td>
+                <td style="font-weight: 800; color: ${m.shortId?.startsWith('ACT-') ? '#16a34a' : '#ea580c'}; font-size: 10pt;">Calories: ${m.shortId?.startsWith('ACT-') ? '-' : ''}${m.calories} kcal</td>
                 <td style="color: #16a34a; font-weight: bold;">Protein: ${m.protein}g</td>
                 <td style="color: #2563eb; font-weight: bold;">Carbs: ${m.carbs}g</td>
                 <td style="color: #d97706; font-weight: bold;">Fats: ${m.fat}g</td>

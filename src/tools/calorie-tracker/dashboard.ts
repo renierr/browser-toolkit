@@ -76,16 +76,20 @@ export function renderHistoryLogs(
         minute: '2-digit',
       });
       const dateDayStr = new Date(m.timestamp).toLocaleDateString();
+      const isActivity = m.shortId?.startsWith('ACT-');
+      const badgeHtml = isActivity
+        ? '<span class="badge badge-success badge-outline badge-xs font-bold gap-1 ml-2">Activity</span>'
+        : '';
 
       return `
       <tr class="hover:bg-base-200/50 transition-colors">
         <td>${previewHtml}</td>
         <td>
-          <div class="font-extrabold text-sm text-base-content">${m.foodName}</div>
+          <div class="font-extrabold text-sm text-base-content flex items-center">${m.foodName}${badgeHtml}</div>
           <div class="text-[10px] opacity-40 font-bold">${dateDayStr} @ ${dateStr}</div>
           ${m.notes ? `<div class="text-[11px] opacity-60 mt-0.5 line-clamp-1 italic max-w-sm">${m.notes}</div>` : ''}
         </td>
-        <td class="text-right font-black text-orange-500 text-sm">${m.calories} kcal</td>
+        <td class="text-right font-black ${isActivity ? 'text-success' : 'text-orange-500'} text-sm">${isActivity ? '-' : ''}${m.calories} kcal</td>
         <td class="text-right hidden sm:table-cell text-xs opacity-75 font-semibold">${m.protein}g</td>
         <td class="text-right hidden sm:table-cell text-xs opacity-75 font-semibold">${m.carbs}g</td>
         <td class="text-right hidden sm:table-cell text-xs opacity-75 font-semibold">${m.fat}g</td>
@@ -161,7 +165,12 @@ export async function loadAndRenderDashboard(
     let todayFat = 0;
 
     for (const m of todayMeals) {
-      todayCal += m.calories;
+      const isActivity = m.shortId?.startsWith('ACT-');
+      if (isActivity) {
+        todayCal -= m.calories;
+      } else {
+        todayCal += m.calories;
+      }
       todayProt += m.protein;
       todayCarb += m.carbs;
       todayFat += m.fat;
@@ -193,7 +202,7 @@ export async function loadAndRenderDashboard(
     }
 
     // Circle Progression SVG calculation
-    const percent = Math.min(1, todayCal / calGoal);
+    const percent = Math.max(0, Math.min(1, todayCal / calGoal));
     const dashOffset = 440 - percent * 440;
     elements.calorieCircle.style.strokeDashoffset = String(dashOffset);
 

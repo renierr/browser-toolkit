@@ -19,8 +19,8 @@ export interface Meal {
   updatedAt: number;
 }
 
-export function generateShortId(): string {
-  return 'MEAL-' + Math.random().toString(36).substring(2, 11).toUpperCase();
+export function generateShortId(prefix: 'MEAL' | 'ACT' = 'MEAL'): string {
+  return `${prefix}-` + Math.random().toString(36).substring(2, 11).toUpperCase();
 }
 
 export function openDB(): Promise<IDBDatabase> {

@@ -42,7 +42,12 @@ export function drawTrendChart(
   for (const m of meals) {
     const mealDateKey = new Date(m.timestamp).toDateString();
     if (dailyCalories[mealDateKey] !== undefined) {
-      dailyCalories[mealDateKey] += m.calories;
+      const isActivity = m.shortId?.startsWith('ACT-');
+      if (isActivity) {
+        dailyCalories[mealDateKey] -= m.calories;
+      } else {
+        dailyCalories[mealDateKey] += m.calories;
+      }
       totalLogsInTrend++;
     }
   }
@@ -54,7 +59,7 @@ export function drawTrendChart(
   }
   chartEmptyState.classList.add('hidden');
 
-  const calorieData = dateKeys.map((k) => dailyCalories[k]);
+  const calorieData = dateKeys.map((k) => Math.max(0, dailyCalories[k]));
 
   // Plot boundaries
   const padding = { top: 20, right: 15, bottom: 25, left: 35 };

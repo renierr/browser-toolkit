@@ -90,7 +90,7 @@ The formal JSON Schema (Draft-07) for the export format:
       "properties": {
         "shortId": {
           "type": "string",
-          "pattern": "^MEAL-[A-Z0-9]{9}$",
+          "pattern": "^(MEAL|ACT)-[A-Z0-9]{9}$",
           "description": "Unique stable identifier. Auto-generated if omitted."
         },
         "foodName": {
