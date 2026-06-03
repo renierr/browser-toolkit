@@ -100,15 +100,15 @@ export default function init() {
 
     card.innerHTML = `
       <div class="card-body p-4">
-        <div class="flex items-start gap-3">
+        <h4 class="font-bold truncate w-full" title="${utils.escapeHtml(drop.filename)}">
+          ${utils.escapeHtml(drop.filename)}
+        </h4>
+        <div class="flex items-start gap-3 mt-2">
           <div class="p-2 bg-base-300 rounded-lg text-primary">
             <i data-lucide="${icon}" class="w-6 h-6"></i>
           </div>
           <div class="flex-1 min-w-0">
-            <h4 class="font-bold truncate" title="${utils.escapeHtml(drop.filename)}">
-              ${utils.escapeHtml(drop.filename)}
-            </h4>
-            <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[10px] opacity-60 uppercase font-bold tracking-wider">
+            <div class="flex flex-wrap gap-x-3 gap-y-1 text-[10px] opacity-60 uppercase font-bold tracking-wider">
               <span>${sizeText}</span>
               <span class="break-all">${drop.type}</span>
               <span class="flex items-center gap-1">
