@@ -69,7 +69,15 @@ export default async function init(payload?: ToolPayload) {
   const editMealCarbs = document.getElementById('edit-meal-carbs') as HTMLInputElement;
   const editMealFat = document.getElementById('edit-meal-fat') as HTMLInputElement;
   const editMealNotes = document.getElementById('edit-meal-notes') as HTMLTextAreaElement;
+  const editMealDatetime = document.getElementById('edit-meal-datetime') as HTMLInputElement;
   const editMealPreview = document.getElementById('edit-meal-preview') as HTMLImageElement;
+
+  // Format a timestamp into a local `datetime-local` input value (YYYY-MM-DDTHH:mm)
+  const toDatetimeLocal = (ts: number): string => {
+    const d = new Date(ts);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
 
   const btnDiscardEstimate = document.getElementById('btn-discard-estimate') as HTMLButtonElement;
   const btnSaveEstimate = document.getElementById('btn-save-estimate') as HTMLButtonElement;
@@ -120,7 +128,7 @@ export default async function init(payload?: ToolPayload) {
     trendCanvas: document.getElementById('trend-chart') as HTMLCanvasElement,
     chartEmptyState: document.getElementById('chart-empty-state') as HTMLDivElement,
 
-    logsTbody: document.getElementById('logs-tbody') as HTMLTableSectionElement,
+    logsTbody: document.getElementById('logs-tbody') as HTMLElement,
     logsEmptyState: document.getElementById('logs-empty-state') as HTMLDivElement,
     historyFilterSelect: document.getElementById('history-filter-select') as HTMLSelectElement,
     historyDateFilter: document.getElementById('history-date-filter') as HTMLInputElement,
@@ -245,6 +253,7 @@ export default async function init(payload?: ToolPayload) {
       editMealCarbs.value = String(parsed.carbs);
       editMealFat.value = String(parsed.fat);
       editMealNotes.value = parsed.notes;
+      editMealDatetime.value = toDatetimeLocal(Date.now());
       confidenceBadge.textContent = `${parsed.confidence}% AI Confidence`;
 
       // Assign visual preview
@@ -281,6 +290,11 @@ export default async function init(payload?: ToolPayload) {
       return;
     }
 
+    const parsedTimestamp = editMealDatetime.value
+      ? new Date(editMealDatetime.value).getTime()
+      : NaN;
+    const timestamp = Number.isNaN(parsedTimestamp) ? Date.now() : parsedTimestamp;
+
     try {
       const isActivity = editMealType.value === 'activity';
       let shortId = activeEstimateShortId;
@@ -298,7 +312,7 @@ export default async function init(payload?: ToolPayload) {
         notes,
         confidence: 100, // User verified
         imageBlob: activeImageBlob,
-        timestamp: Date.now(),
+        timestamp,
         updatedAt: Date.now(),
       };
 
@@ -377,6 +391,7 @@ export default async function init(payload?: ToolPayload) {
       editMealCarbs.value = String(m.carbs);
       editMealFat.value = String(m.fat);
       editMealNotes.value = m.notes || '';
+      editMealDatetime.value = toDatetimeLocal(m.timestamp);
       confidenceBadge.textContent = 'User Verified';
 
       if (m.imageBlob) {
@@ -642,6 +657,7 @@ export default async function init(payload?: ToolPayload) {
     editMealCarbs.value = '0';
     editMealFat.value = '0';
     editMealNotes.value = '';
+    editMealDatetime.value = toDatetimeLocal(Date.now());
     confidenceBadge.textContent = 'Manual Entry';
 
     estimateEmptyState.classList.add('hidden');
@@ -783,9 +799,13 @@ export default async function init(payload?: ToolPayload) {
     const imgBtn = target.closest('.show-details-img');
     const pdfBtn = target.closest('.export-pdf-btn');
 
-    const el = editBtn || imgBtn;
-    if (el) {
-      const id = parseInt(el.getAttribute('data-id') || '0');
+    if (imgBtn) {
+      const img = imgBtn as HTMLImageElement;
+      if (img.getAttribute('data-has-image')) {
+        showLightbox(img.src, img.getAttribute('data-name') || '');
+      }
+    } else if (editBtn) {
+      const id = parseInt(editBtn.getAttribute('data-id') || '0');
       if (id) void handleEditLog(id);
     } else if (deleteBtn) {
       const id = parseInt(deleteBtn.getAttribute('data-id') || '0');
@@ -842,18 +862,22 @@ export default async function init(payload?: ToolPayload) {
   const lightboxCaption = document.getElementById('lightbox-caption') as HTMLParagraphElement;
   const lightboxCloseBtn = document.getElementById('lightbox-close-btn') as HTMLButtonElement;
 
-  const openLightbox = () => {
-    const url = editMealPreview.src;
-    if (!url || !activeImageBlob) return;
+  const showLightbox = (url: string, caption: string) => {
+    if (!url) return;
 
     lightboxImg.src = url;
-    lightboxCaption.textContent = editMealName.value.trim() || 'Meal Detail';
+    lightboxCaption.textContent = caption || 'Meal Detail';
 
     lightbox.classList.remove('hidden');
     // Force browser reflow to trigger transition
     lightbox.offsetHeight;
     lightbox.classList.add('opacity-100');
     lightboxImg.classList.replace('scale-95', 'scale-100');
+  };
+
+  const openLightbox = () => {
+    if (!activeImageBlob) return;
+    showLightbox(editMealPreview.src, editMealName.value.trim());
   };
 
   const closeLightbox = () => {

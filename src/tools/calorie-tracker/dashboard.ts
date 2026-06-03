@@ -25,7 +25,7 @@ export type DashboardElements = {
   trendCanvas: HTMLCanvasElement;
   chartEmptyState: HTMLDivElement;
 
-  logsTbody: HTMLTableSectionElement;
+  logsTbody: HTMLElement;
   logsEmptyState: HTMLDivElement;
   historyFilterSelect: HTMLSelectElement;
   historyDateFilter: HTMLInputElement;
@@ -69,7 +69,7 @@ export function renderHistoryLogs(
         url = URL.createObjectURL(m.imageBlob);
         activeObjectUrls.push(url);
       }
-      const previewHtml = `<img class="checkerboard-bg w-10 h-10 object-cover rounded border border-base-300 cursor-pointer hover:scale-110 active:scale-95 transition-all duration-200 show-details-img ${m.imageBlob ? '' : 'p-1 opacity-70 bg-base-200'}" data-id="${m.id}" src="${url}" alt="dish" title="Click to view details & large image" />`;
+      const previewHtml = `<img class="checkerboard-bg w-16 h-16 shrink-0 object-cover rounded-lg border border-base-300 cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200 show-details-img ${m.imageBlob ? '' : 'p-1.5 opacity-70 bg-base-200'}" data-id="${m.id}" data-name="${m.foodName}" data-has-image="${m.imageBlob ? '1' : ''}" src="${url}" alt="dish" title="Click to view full image" />`;
 
       const dateStr = new Date(m.timestamp).toLocaleTimeString(undefined, {
         hour: '2-digit',
@@ -78,35 +78,57 @@ export function renderHistoryLogs(
       const dateDayStr = new Date(m.timestamp).toLocaleDateString();
       const isActivity = m.shortId?.startsWith('ACT-');
       const badgeHtml = isActivity
-        ? '<span class="badge badge-success badge-outline badge-xs font-bold gap-1 ml-2">Activity</span>'
+        ? '<span class="badge badge-success badge-outline badge-xs font-bold gap-1 shrink-0">Activity</span>'
         : '';
 
+      const macro = (label: string, value: number, cls: string) => `
+        <div class="flex flex-col items-center rounded-md bg-base-200/50 py-1">
+          <span class="text-[10px] uppercase tracking-wide opacity-50 font-bold">${label}</span>
+          <span class="text-xs font-bold ${cls}">${value}g</span>
+        </div>`;
+
       return `
-      <tr class="hover:bg-base-200/50 transition-colors">
-        <td>${previewHtml}</td>
-        <td>
-          <div class="font-extrabold text-sm text-base-content flex items-center">${m.foodName}${badgeHtml}</div>
-          <div class="text-[10px] opacity-40 font-bold">${dateDayStr} @ ${dateStr}</div>
-          ${m.notes ? `<div class="text-[11px] opacity-60 mt-0.5 line-clamp-1 italic max-w-sm">${m.notes}</div>` : ''}
-        </td>
-        <td class="text-right font-black ${isActivity ? 'text-success' : 'text-orange-500'} text-sm">${isActivity ? '-' : ''}${m.calories} kcal</td>
-        <td class="text-right hidden sm:table-cell text-xs opacity-75 font-semibold">${m.protein}g</td>
-        <td class="text-right hidden sm:table-cell text-xs opacity-75 font-semibold">${m.carbs}g</td>
-        <td class="text-right hidden sm:table-cell text-xs opacity-75 font-semibold">${m.fat}g</td>
-        <td>
-          <div class="flex gap-1 justify-center">
-            <button class="btn btn-ghost btn-xs text-secondary export-pdf-btn" data-id="${m.id}" title="Export PDF Report">
-              <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
-            </button>
-            <button class="btn btn-ghost btn-xs edit-log-btn" data-id="${m.id}" title="Edit Log">
-              <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-            </button>
-            <button class="btn btn-ghost btn-xs text-error delete-log-btn" data-id="${m.id}" title="Delete Log">
-              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            </button>
+      <div class="flex flex-col rounded-lg border border-base-300 bg-base-100 shadow-sm hover:shadow-md hover:border-base-content/20 transition-all overflow-hidden">
+        <div class="flex items-center gap-2 px-3 pt-3 pb-2">
+          <div class="font-extrabold text-sm text-base-content truncate flex-1" title="${m.foodName}">${m.foodName}</div>
+          ${badgeHtml}
+        </div>
+        <div class="flex gap-3 px-3 pb-3">
+          ${previewHtml}
+          <div class="flex-1 min-w-0">
+            <div class="text-[10px] opacity-40 font-bold">${dateDayStr} @ ${dateStr}</div>
+            <div class="mt-1 font-black ${isActivity ? 'text-success' : 'text-orange-500'} text-lg leading-none">${isActivity ? '-' : ''}${m.calories} <span class="text-xs font-bold opacity-70">kcal</span></div>
           </div>
-        </td>
-      </tr>
+        </div>
+
+        ${
+          m.notes
+            ? `<div class="px-3 -mt-1 mb-2 text-[11px] opacity-60 italic line-clamp-2">${m.notes}</div>`
+            : ''
+        }
+
+        ${
+          isActivity
+            ? '<div class="mt-auto"></div>'
+            : `<div class="grid grid-cols-3 gap-1.5 px-3 mb-2 mt-auto">
+          ${macro('Protein', m.protein, 'text-sky-500')}
+          ${macro('Carbs', m.carbs, 'text-amber-500')}
+          ${macro('Fats', m.fat, 'text-rose-500')}
+        </div>`
+        }
+
+        <div class="flex justify-end gap-0.5 border-t border-base-200 bg-base-200/30 px-2 py-1">
+          <button class="btn btn-ghost btn-xs text-secondary export-pdf-btn" data-id="${m.id}" title="Export PDF Report">
+            <i data-lucide="file-down" class="w-3.5 h-3.5"></i>
+          </button>
+          <button class="btn btn-ghost btn-xs edit-log-btn" data-id="${m.id}" title="Edit Log">
+            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+          </button>
+          <button class="btn btn-ghost btn-xs text-error delete-log-btn" data-id="${m.id}" title="Delete Log">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
     `;
     })
     .join('');

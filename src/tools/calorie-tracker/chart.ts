@@ -21,6 +21,9 @@ export function drawTrendChart(
   const width = rect.width;
   const height = rect.height;
 
+  // Resolve theme-aware text color (canvas has no `currentColor` support)
+  const textColor = getComputedStyle(canvas).color || 'rgb(150, 150, 150)';
+
   // Build past 7 days daily map
   const dailyCalories: { [dateStr: string]: number } = {};
   const dayLabels: string[] = [];
@@ -109,12 +112,30 @@ export function drawTrendChart(
   ctx.textAlign = 'left';
   ctx.fillText('Goal', width - padding.right + 2, goalY - 6);
 
+  // Data points
+  const points = calorieData.map((v, i) => ({ x: getX(i), y: getY(v) }));
+
+  // Trace a smooth Catmull-Rom spline through the points
+  const traceSpline = () => {
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i - 1] || points[i];
+      const p1 = points[i];
+      const p2 = points[i + 1];
+      const p3 = points[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    }
+  };
+
   // 3. Draw Gradient Underneath Line
   ctx.beginPath();
   ctx.moveTo(getX(0), getY(0));
-  for (let i = 0; i < calorieData.length; i++) {
-    ctx.lineTo(getX(i), getY(calorieData[i]));
-  }
+  ctx.lineTo(points[0].x, points[0].y);
+  traceSpline();
   ctx.lineTo(getX(6), getY(0));
   ctx.closePath();
 
@@ -130,10 +151,7 @@ export function drawTrendChart(
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.beginPath();
-  ctx.moveTo(getX(0), getY(calorieData[0]));
-  for (let i = 1; i < calorieData.length; i++) {
-    ctx.lineTo(getX(i), getY(calorieData[i]));
-  }
+  traceSpline();
   ctx.stroke();
 
   // 5. Draw Dots & Value Labels
@@ -151,7 +169,7 @@ export function drawTrendChart(
 
     // Show values slightly offset
     if (calorieData[i] > 0) {
-      ctx.fillStyle = 'currentColor';
+      ctx.fillStyle = textColor;
       ctx.font = 'bold 9px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(`${calorieData[i]}`, cx, cy - 10);
