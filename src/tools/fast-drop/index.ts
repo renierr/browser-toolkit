@@ -110,7 +110,7 @@ export default function init() {
             </h4>
             <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[10px] opacity-60 uppercase font-bold tracking-wider">
               <span>${sizeText}</span>
-              <span>${drop.type}</span>
+              <span class="break-all">${drop.type}</span>
               <span class="flex items-center gap-1">
                 <i data-lucide="${
                   drop.source === 'clipboard' ? 'clipboard' : 'file-up'
