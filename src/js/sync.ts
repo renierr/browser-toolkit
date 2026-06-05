@@ -102,13 +102,14 @@ export class SyncManager {
   static async trackDeletion(
     db: IDBDatabase,
     toolId: string,
-    recordId: string | number
+    recordId: string | number,
+    updatedAt: number = Date.now()
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(SYNC_METADATA_STORE, 'readwrite');
       const store = transaction.objectStore(SYNC_METADATA_STORE);
       const key = `${toolId}:${recordId}`;
-      store.put({ key, toolId, recordId: String(recordId), deleted: true, updatedAt: Date.now() });
+      store.put({ key, toolId, recordId: String(recordId), deleted: true, updatedAt });
       transaction.oncomplete = () => resolve();
       transaction.onerror = () => reject(transaction.error);
     });
