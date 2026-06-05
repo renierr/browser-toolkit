@@ -243,6 +243,11 @@ export class SyncManager {
             delete (dataToSave as any)[primaryKey];
           }
 
+          // Ensure keyField (shortId) is populated from sRec.id
+          if (keyField) {
+            (dataToSave as any)[keyField] = sRec.id;
+          }
+
           await this.putToStore(db, storeName, dataToSave);
           pulledCount++;
         }

@@ -20,6 +20,19 @@ import type { Note } from './types.ts';
 // noinspection JSUnusedGlobalSymbols
 export default async function init() {
   const db = await openDB();
+
+  // Auto-heal notes missing a shortId
+  const allNotes = await getAllNotes(db);
+  const notesToFix = allNotes.filter((n) => !n.shortId);
+  if (notesToFix.length > 0) {
+    const transaction = db.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    for (const note of notesToFix) {
+      note.shortId = Math.random().toString(36).substring(2, 10).toUpperCase();
+      store.put(note);
+    }
+  }
+
   const noteInput = document.getElementById('note-input') as HTMLDivElement;
   const addBtn = document.getElementById('add-note-btn') as HTMLButtonElement;
   const cancelBtn = document.getElementById('cancel-edit-btn') as HTMLButtonElement;
