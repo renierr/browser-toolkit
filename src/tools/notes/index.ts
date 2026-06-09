@@ -15,11 +15,13 @@ import { exportNoteToPdf } from './pdf-utils.ts';
 import { downloadFile } from '@js/file-utils.ts';
 import { openInTool } from '@js/tool-chooser.ts';
 import { SyncManager } from '@js/sync.ts';
+import { getSettings } from '@js/settings';
 import type { Note } from './types.ts';
 
 // noinspection JSUnusedGlobalSymbols
 export default async function init() {
   const db = await openDB();
+  const globalSettings = getSettings('global');
 
   // Auto-heal notes missing a shortId
   const allNotes = await getAllNotes(db);
@@ -55,6 +57,15 @@ export default async function init() {
 
   let editingId: number | null = null;
 
+  const resolveSyncToolId = (): string => {
+    const globalUserId = globalSettings.get<string>('syncUserId', '').trim();
+    return globalUserId ? `notes-${globalUserId}` : 'notes';
+  };
+
+  const trackNoteDeletion = async (recordId: string, updatedAt: number): Promise<void> => {
+    await SyncManager.trackDeletion(db, resolveSyncToolId(), recordId, updatedAt);
+  };
+
   async function loadNotes(query = '') {
     try {
       let notes = await getAllNotes(db);
@@ -77,7 +88,9 @@ export default async function init() {
     syncBtn.classList.add('syncing');
     syncBtn.disabled = true;
     try {
-      const result = await SyncManager.sync(db, STORE_NAME, 'notes', 'shortId', { manual });
+      const result = await SyncManager.sync(db, STORE_NAME, resolveSyncToolId(), 'shortId', {
+        manual,
+      });
       if (result.pulled > 0 || result.deleted > 0) {
         await loadNotes(searchInput.value);
       }
@@ -191,6 +204,15 @@ export default async function init() {
 
   async function handleDelete(id: number) {
     try {
+      const note = await getNoteById(db, id);
+      if (note?.shortId) {
+        const deleteTime = Math.max(Date.now(), (note.updatedAt || 0) + 1);
+        try {
+          await trackNoteDeletion(note.shortId, deleteTime);
+        } catch (error) {
+          console.warn('[Notes] Failed to track deletion for sync', error);
+        }
+      }
       await deleteNote(db, id);
       if (editingId === id) resetForm();
       await loadNotes(searchInput.value);

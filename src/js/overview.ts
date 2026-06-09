@@ -34,6 +34,7 @@ export function renderOverview(): void {
   const searchInput = document.getElementById('search') as HTMLInputElement;
   const clearBtn = document.getElementById('clear-search') as HTMLButtonElement | null;
   const settings = getSettings('overview');
+  const globalSettings = getSettings('global');
   const settingsDialog = document.getElementById(
     'overview-settings-dialog'
   ) as HTMLDialogElement | null;
@@ -64,8 +65,30 @@ export function renderOverview(): void {
   const settingsContainer = document.getElementById('overview-settings');
   if (settingsContainer) {
     settings.bind(settingsContainer);
+
+    settingsContainer.querySelectorAll<HTMLElement>('[data-global-setting]').forEach((el) => {
+      const key = el.dataset.globalSetting;
+      if (!key) return;
+
+      if (el instanceof HTMLInputElement && el.type === 'checkbox') {
+        el.checked = globalSettings.get<boolean>(key, false);
+      } else if (el instanceof HTMLInputElement || el instanceof HTMLSelectElement) {
+        el.value = String(globalSettings.get<string>(key, ''));
+      }
+    });
+
     settingsContainer.addEventListener('change', (ev) => {
       const target = ev.target as HTMLElement;
+
+      const globalKey = target.dataset.globalSetting;
+      if (globalKey) {
+        if (target instanceof HTMLInputElement && target.type === 'checkbox') {
+          globalSettings.set(globalKey, target.checked);
+        } else if (target instanceof HTMLInputElement || target instanceof HTMLSelectElement) {
+          globalSettings.set(globalKey, target.value);
+        }
+      }
+
       if (target.dataset.setting === 'themeColor') {
         applyThemeColor((target as HTMLInputElement).value);
       }

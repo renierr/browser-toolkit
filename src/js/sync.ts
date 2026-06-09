@@ -141,6 +141,7 @@ export class SyncManager {
 
       const localRecords = await this.getAllFromStore<T>(db, storeName);
       const localDeletions = await this.getDeletions(db, toolId);
+      const localDeletionIds = new Set(localDeletions.map((d) => String(d.recordId)));
 
       const toPullIds: string[] = [];
       const toPush: any[] = [];
@@ -158,6 +159,11 @@ export class SyncManager {
             await this.deleteFromStore(db, storeName, (lRec as any)[primaryKey]);
             deletedCount++;
           }
+          continue;
+        }
+
+        // If record is locally marked as deleted, never pull it in same sync cycle.
+        if (localDeletionIds.has(String(sMeta.id))) {
           continue;
         }
 

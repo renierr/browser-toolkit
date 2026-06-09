@@ -83,13 +83,6 @@ export async function saveNote(
 }
 
 export async function deleteNote(db: IDBDatabase, id: number): Promise<void> {
-  // Find shortId for sync before deleting
-  const note = await getNoteById(db, id);
-  if (note?.shortId) {
-    const deleteTime = Math.max(Date.now(), (note.updatedAt || 0) + 1);
-    await SyncManager.trackDeletion(db, 'notes', note.shortId, deleteTime);
-  }
-
   return new Promise((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
