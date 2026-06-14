@@ -228,4 +228,32 @@ drop.patch('/:id/description', async (c) => {
   }
 });
 
+// Update retention
+drop.patch('/:id/retention', async (c) => {
+  const id = c.req.param('id');
+  const metadata = db.query('SELECT * FROM drops WHERE id = ?').get(id) as any;
+
+  if (!metadata) {
+    return c.json({ success: false, error: 'File not found' }, 404);
+  }
+
+  try {
+    const body = await c.req.json();
+    const retention = body.retention;
+
+    let expiresAt: number | null = null;
+    if (retention !== 'indefinite') {
+      const hours = parseInt(retention) || 24;
+      expiresAt = metadata.uploaded_at + hours * 60 * 60 * 1000;
+    }
+
+    db.query('UPDATE drops SET expires_at = ? WHERE id = ?').run(expiresAt, id);
+    return c.json({ success: true, expiresAt });
+  } catch (err) {
+    console.error('[Drop] Update retention failed:', err);
+    return c.json({ success: false, error: 'Update failed' }, 500);
+  }
+});
+
 export default drop;
+
