@@ -21,9 +21,17 @@ db.query(`
     type TEXT NOT NULL,
     source TEXT NOT NULL,
     uploaded_at INTEGER NOT NULL,
-    expires_at INTEGER
+    expires_at INTEGER,
+    description TEXT
   )
 `).run();
+
+// Migration: add description column for existing databases
+try {
+  db.query('ALTER TABLE drops ADD COLUMN description TEXT').run();
+} catch (_) {
+  // Column already exists — ignore
+}
 
 const drop = new Hono();
 
@@ -122,13 +130,13 @@ drop.post('/', async (c) => {
     }
 
     db.query(`
-      INSERT INTO drops (id, filename, size, type, source, uploaded_at, expires_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, filename, size, type, source, uploadedAt, expiresAt);
+      INSERT INTO drops (id, filename, size, type, source, uploaded_at, expires_at, description)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, filename, size, type, source, uploadedAt, expiresAt, null);
 
     return c.json({ 
       success: true, 
-      drop: { id, filename, size, type, source, uploadedAt, expiresAt } 
+      drop: { id, filename, size, type, source, uploadedAt, expiresAt, description: null }
     });
   } catch (err) {
     console.error('[Drop] Upload failed:', err);
@@ -196,6 +204,26 @@ drop.patch('/:id/keep', (c) => {
     return c.json({ success: true });
   } catch (err) {
     console.error('[Drop] Update failed:', err);
+    return c.json({ success: false, error: 'Update failed' }, 500);
+  }
+});
+
+// Update description
+drop.patch('/:id/description', async (c) => {
+  const id = c.req.param('id');
+  const metadata = db.query('SELECT * FROM drops WHERE id = ?').get(id) as any;
+
+  if (!metadata) {
+    return c.json({ success: false, error: 'File not found' }, 404);
+  }
+
+  try {
+    const body = await c.req.json();
+    const description = typeof body.description === 'string' ? body.description : '';
+    db.query('UPDATE drops SET description = ? WHERE id = ?').run(description, id);
+    return c.json({ success: true });
+  } catch (err) {
+    console.error('[Drop] Update description failed:', err);
     return c.json({ success: false, error: 'Update failed' }, 500);
   }
 });
