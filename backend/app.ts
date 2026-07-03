@@ -6,6 +6,7 @@ import networkRoutes from './routes/network';
 import syncRoutes from './routes/sync';
 import dropRoutes from './routes/drop';
 import aiRoutes from './routes/ai';
+import chiptuneRoutes from './routes/chiptune';
 import { resolveStaticRoot } from './lib/static-root';
 
 export type BackendApp = {
@@ -23,6 +24,7 @@ export function createApp(): BackendApp {
   app.route('/api/sync', syncRoutes);
   app.route('/api/drop', dropRoutes);
   app.route('/api/ai', aiRoutes);
+  app.route('/api/chiptune', chiptuneRoutes);
 
   app.use('/*', serveStatic({ root: staticRoot.root }));
 
