@@ -116,7 +116,7 @@ drop.post('/', async (c) => {
         if (done) break;
         writer.write(value);
       }
-      writer.end();
+      await writer.end();
     } else {
       await Bun.write(join(FILES_DIR, id), content);
     }
