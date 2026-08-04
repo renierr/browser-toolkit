@@ -160,11 +160,37 @@ drop.get('/:id', async (c) => {
   }
 
   const file = Bun.file(filePath);
-  
+  const range = c.req.header('Range');
+
   c.header('Content-Type', metadata.type);
+  c.header('Accept-Ranges', 'bytes');
   // Using inline so browser can preview if possible (images, pdfs)
   c.header('Content-Disposition', `inline; filename="${metadata.filename}"`);
-  
+
+  if (range) {
+    const match = /^bytes=(\d+)-(\d*)$/.exec(range);
+    if (!match) {
+      c.header('Content-Range', `bytes */${file.size}`);
+      return c.body(null, 416);
+    }
+
+    const start = Number(match[1]);
+    const end = match[2] === ''
+      ? file.size - 1
+      : Math.min(Number(match[2]), file.size - 1);
+    if (start >= file.size || start > end) {
+      c.header('Content-Range', `bytes */${file.size}`);
+      return c.body(null, 416);
+    }
+
+    const length = end - start + 1;
+    c.header('Content-Range', `bytes ${start}-${end}/${file.size}`);
+    c.header('Content-Length', length.toString());
+    return c.body(file.slice(start, end + 1).stream(), 206);
+  }
+
+  c.header('Content-Length', file.size.toString());
+
   return c.body(file.stream());
 });
 
@@ -256,4 +282,3 @@ drop.patch('/:id/retention', async (c) => {
 });
 
 export default drop;
-
