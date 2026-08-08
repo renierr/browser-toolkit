@@ -31,6 +31,27 @@ syncDb.run(`
   )
 `);
 
+syncDb.run(`
+  CREATE TABLE IF NOT EXISTS sync_changes (
+    revision INTEGER PRIMARY KEY AUTOINCREMENT,
+    tool_id TEXT NOT NULL,
+    record_id TEXT NOT NULL
+  )
+`);
+
+syncDb.run(
+  'CREATE INDEX IF NOT EXISTS idx_sync_changes_tool_revision ON sync_changes (tool_id, revision)'
+);
+
+syncDb.run(`
+  INSERT INTO sync_changes (tool_id, record_id)
+  SELECT tool_id, record_id
+  FROM sync_data
+  WHERE NOT EXISTS (SELECT 1 FROM sync_changes)
+`);
+
+const maxChangesPerTool = 100_000;
+
 // Helper to recursively extract base64-encoded blobs and save them into sync_binary as BLOB
 function extractAndStoreBlobs(toolId: string, recordId: string, obj: any): any {
   if (!obj || typeof obj !== 'object') {
@@ -134,6 +155,19 @@ export function upsertSyncRecord(
       'INSERT OR REPLACE INTO sync_data (tool_id, record_id, data, updated_at, deleted) VALUES (?, ?, ?, ?, ?)',
       [toolId, recordId, finalData, updatedAt, deleted]
     );
+    syncDb.run('INSERT INTO sync_changes (tool_id, record_id) VALUES (?, ?)', [toolId, recordId]);
+    syncDb.run(
+      `DELETE FROM sync_changes
+       WHERE tool_id = ?
+         AND revision <= COALESCE(
+           (SELECT revision FROM sync_changes
+            WHERE tool_id = ?
+            ORDER BY revision DESC
+            LIMIT 1 OFFSET ?),
+           0
+         )`,
+      [toolId, toolId, maxChangesPerTool]
+    );
     return true;
   }
   return false;
@@ -173,4 +207,64 @@ export function getSyncMetadata(toolId: string) {
     updatedAt: row.updated_at,
     deleted: Boolean(row.deleted),
   }));
+}
+
+export function getSyncMetadataSince(
+  toolId: string,
+  cursor?: string
+): { records: ReturnType<typeof getSyncMetadata>; cursor: string; full: boolean } {
+  if (cursor === undefined) {
+    return { records: getSyncMetadata(toolId), cursor: getSyncCursor(toolId), full: true };
+  }
+
+  const revision = Number(cursor);
+  if (!Number.isSafeInteger(revision) || revision < 0) {
+    return { records: getSyncMetadata(toolId), cursor: getSyncCursor(toolId), full: true };
+  }
+
+  const oldest = syncDb
+    .query('SELECT MIN(revision) AS revision FROM sync_changes WHERE tool_id = ?')
+    .get(toolId) as { revision: number | null };
+  const currentCursor = getSyncCursor(toolId);
+  if (
+    Number(cursor) > Number(currentCursor) ||
+    (oldest.revision !== null && revision < oldest.revision - 1)
+  ) {
+    return { records: getSyncMetadata(toolId), cursor: getSyncCursor(toolId), full: true };
+  }
+
+  const rows = syncDb
+    .query(
+      `SELECT data.record_id, data.updated_at, data.deleted
+       FROM sync_data AS data
+       INNER JOIN (
+         SELECT record_id, MAX(revision) AS revision
+         FROM sync_changes
+         WHERE tool_id = ? AND revision > ?
+         GROUP BY record_id
+       ) AS changes ON changes.record_id = data.record_id
+       WHERE data.tool_id = ?
+       ORDER BY changes.revision ASC`
+    )
+    .all(toolId, revision, toolId) as {
+    record_id: string;
+    updated_at: number;
+    deleted: number;
+  }[];
+  return {
+    records: rows.map((row) => ({
+      id: row.record_id,
+      updatedAt: row.updated_at,
+      deleted: Boolean(row.deleted),
+    })),
+    cursor: getSyncCursor(toolId),
+    full: false,
+  };
+}
+
+function getSyncCursor(toolId: string): string {
+  const row = syncDb
+    .query('SELECT MAX(revision) AS revision FROM sync_changes WHERE tool_id = ?')
+    .get(toolId) as { revision: number | null };
+  return String(row.revision ?? 0);
 }

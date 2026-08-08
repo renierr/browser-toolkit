@@ -681,6 +681,10 @@ You can now use it in your tool configs and templates.
 
 ---
 
+## Sync API
+
+See [Sync API](sync-api.md) for backend record synchronization and cursor metadata.
+
 ## Keeping Derived Projects Up-to-Date (Template Sync Workflow)
 
 This template supports automatic updates for derived repositories using a GitHub Actions workflow.

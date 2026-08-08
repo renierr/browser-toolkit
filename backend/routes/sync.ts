@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getSyncRecords, upsertSyncRecord, getSyncMetadata } from '../lib/sync-db';
+import { getSyncRecords, upsertSyncRecord, getSyncMetadataSince } from '../lib/sync-db';
 
 const sync = new Hono();
 
@@ -22,11 +22,11 @@ sync.get('/:toolId', (c) => {
 // Get metadata-only for all sync records of a tool
 sync.get('/:toolId/metadata', (c) => {
   const toolId = c.req.param('toolId');
-  const metadata = getSyncMetadata(toolId);
+  const metadata = getSyncMetadataSince(toolId, c.req.query('cursor'));
 
   return c.json({
     success: true,
-    records: metadata,
+    ...metadata,
   });
 });
 
