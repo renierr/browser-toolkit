@@ -50,7 +50,45 @@ syncDb.run(`
   WHERE NOT EXISTS (SELECT 1 FROM sync_changes)
 `);
 
-const maxChangesPerTool = 100_000;
+function readPositiveInteger(name: string, fallback: number): number {
+  const value = Number(Bun.env[name]);
+  return Number.isSafeInteger(value) && value > 0 ? value : fallback;
+}
+
+// Tools that sync six-figure record counts (health dashboard) need a change log
+// deep enough that a device coming back after a bulk import still resolves to an
+// incremental cursor instead of a full re-scan.
+const maxChangesPerTool = readPositiveInteger('SYNC_MAX_CHANGES_PER_TOOL', 1_000_000);
+
+// Trimming on every upsert costs an index walk of maxChangesPerTool rows each
+// time, which dominates bulk imports. Amortize it instead; the log is allowed to
+// overshoot by at most one interval.
+const changesPruneInterval = readPositiveInteger('SYNC_CHANGES_PRUNE_INTERVAL', 5_000);
+const changesSincePrune = new Map<string, number>();
+
+function recordChange(toolId: string, recordId: string): void {
+  syncDb.run('INSERT INTO sync_changes (tool_id, record_id) VALUES (?, ?)', [toolId, recordId]);
+
+  const pending = (changesSincePrune.get(toolId) ?? 0) + 1;
+  if (pending < changesPruneInterval) {
+    changesSincePrune.set(toolId, pending);
+    return;
+  }
+  changesSincePrune.set(toolId, 0);
+
+  syncDb.run(
+    `DELETE FROM sync_changes
+     WHERE tool_id = ?
+       AND revision <= COALESCE(
+         (SELECT revision FROM sync_changes
+          WHERE tool_id = ?
+          ORDER BY revision DESC
+          LIMIT 1 OFFSET ?),
+         0
+       )`,
+    [toolId, toolId, maxChangesPerTool]
+  );
+}
 
 // Helper to recursively extract base64-encoded blobs and save them into sync_binary as BLOB
 function extractAndStoreBlobs(toolId: string, recordId: string, obj: any): any {
@@ -155,19 +193,7 @@ export function upsertSyncRecord(
       'INSERT OR REPLACE INTO sync_data (tool_id, record_id, data, updated_at, deleted) VALUES (?, ?, ?, ?, ?)',
       [toolId, recordId, finalData, updatedAt, deleted]
     );
-    syncDb.run('INSERT INTO sync_changes (tool_id, record_id) VALUES (?, ?)', [toolId, recordId]);
-    syncDb.run(
-      `DELETE FROM sync_changes
-       WHERE tool_id = ?
-         AND revision <= COALESCE(
-           (SELECT revision FROM sync_changes
-            WHERE tool_id = ?
-            ORDER BY revision DESC
-            LIMIT 1 OFFSET ?),
-           0
-         )`,
-      [toolId, toolId, maxChangesPerTool]
-    );
+    recordChange(toolId, recordId);
     return true;
   }
   return false;
@@ -209,16 +235,39 @@ export function getSyncMetadata(toolId: string) {
   }));
 }
 
+type SyncMetadataResult = {
+  records: ReturnType<typeof getSyncMetadata>;
+  cursor: string;
+  full: boolean;
+  hasMore?: boolean;
+  nextCursor?: string;
+};
+
 export function getSyncMetadataSince(
   toolId: string,
-  cursor?: string
-): { records: ReturnType<typeof getSyncMetadata>; cursor: string; full: boolean } {
+  cursor?: string,
+  limit?: number
+): SyncMetadataResult {
   if (cursor === undefined) {
+    if (limit !== undefined) {
+      return getFullSyncMetadataPage(toolId, limit);
+    }
     return { records: getSyncMetadata(toolId), cursor: getSyncCursor(toolId), full: true };
+  }
+
+  const fullPage = parseFullPageCursor(cursor);
+  if (fullPage) {
+    if (limit === undefined) {
+      return { records: getSyncMetadata(toolId), cursor: getSyncCursor(toolId), full: true };
+    }
+    return getFullSyncMetadataPage(toolId, limit, fullPage);
   }
 
   const revision = Number(cursor);
   if (!Number.isSafeInteger(revision) || revision < 0) {
+    if (limit !== undefined) {
+      return getFullSyncMetadataPage(toolId, limit);
+    }
     return { records: getSyncMetadata(toolId), cursor: getSyncCursor(toolId), full: true };
   }
 
@@ -230,7 +279,14 @@ export function getSyncMetadataSince(
     Number(cursor) > Number(currentCursor) ||
     (oldest.revision !== null && revision < oldest.revision - 1)
   ) {
+    if (limit !== undefined) {
+      return getFullSyncMetadataPage(toolId, limit);
+    }
     return { records: getSyncMetadata(toolId), cursor: getSyncCursor(toolId), full: true };
+  }
+
+  if (limit !== undefined) {
+    return getSyncMetadataPage(toolId, revision, limit, false);
   }
 
   const rows = syncDb
@@ -259,6 +315,89 @@ export function getSyncMetadataSince(
     })),
     cursor: getSyncCursor(toolId),
     full: false,
+  };
+}
+
+function parseFullPageCursor(cursor: string): { snapshot: string; recordId: string } | null {
+  const match = /^full:(\d+):(.*)$/.exec(cursor);
+  return match ? { snapshot: match[1], recordId: match[2] } : null;
+}
+
+function getFullSyncMetadataPage(
+  toolId: string,
+  limit: number,
+  page?: { snapshot: string; recordId: string }
+): SyncMetadataResult {
+  const snapshot = page?.snapshot ?? getSyncCursor(toolId);
+  const rows = syncDb
+    .query(
+      `SELECT record_id, updated_at, deleted
+       FROM sync_data
+       WHERE tool_id = ? AND record_id > ?
+       ORDER BY record_id ASC
+       LIMIT ?`
+    )
+    .all(toolId, page?.recordId ?? '', limit + 1) as {
+    record_id: string;
+    updated_at: number;
+    deleted: number;
+  }[];
+  const hasMore = rows.length > limit;
+  const records = hasMore ? rows.slice(0, limit) : rows;
+  const lastRecordId = records.at(-1)?.record_id;
+
+  return {
+    records: records.map((row) => ({
+      id: row.record_id,
+      updatedAt: row.updated_at,
+      deleted: Boolean(row.deleted),
+    })),
+    cursor: snapshot,
+    full: true,
+    hasMore,
+    ...(hasMore && lastRecordId ? { nextCursor: `full:${snapshot}:${lastRecordId}` } : {}),
+  };
+}
+
+function getSyncMetadataPage(
+  toolId: string,
+  revision: number,
+  limit: number,
+  full: boolean
+): SyncMetadataResult {
+  const rows = syncDb
+    .query(
+      `SELECT data.record_id, data.updated_at, data.deleted, changes.revision
+       FROM sync_data AS data
+       INNER JOIN (
+         SELECT record_id, MAX(revision) AS revision
+         FROM sync_changes
+         WHERE tool_id = ? AND revision > ?
+         GROUP BY record_id
+       ) AS changes ON changes.record_id = data.record_id
+       WHERE data.tool_id = ?
+       ORDER BY changes.revision ASC
+       LIMIT ?`
+    )
+    .all(toolId, revision, toolId, limit + 1) as {
+    record_id: string;
+    updated_at: number;
+    deleted: number;
+    revision: number;
+  }[];
+  const hasMore = rows.length > limit;
+  const page = hasMore ? rows.slice(0, limit) : rows;
+  const lastRevision = page.at(-1)?.revision;
+
+  return {
+    records: page.map((row) => ({
+      id: row.record_id,
+      updatedAt: row.updated_at,
+      deleted: Boolean(row.deleted),
+    })),
+    cursor: String(lastRevision ?? getSyncCursor(toolId)),
+    full,
+    hasMore,
   };
 }
 
