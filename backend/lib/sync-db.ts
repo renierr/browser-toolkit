@@ -235,6 +235,85 @@ export function getSyncMetadata(toolId: string) {
   }));
 }
 
+export type SyncToolStats = {
+  toolId: string;
+  records: number;
+  deleted: number;
+  dataBytes: number;
+  binaryRecords: number;
+  binaryBytes: number;
+  lastUpdatedAt: number | null;
+};
+
+// Aggregated per tool so a client can show what it has on the server without
+// pulling any record data. `deleted` counts tombstones, which still occupy a
+// row and still travel through metadata.
+export function getSyncStats(toolId?: string): SyncToolStats[] {
+  const where = toolId ? 'WHERE tool_id = ?' : '';
+  const args = toolId ? [toolId] : [];
+
+  const dataRows = syncDb
+    .query(
+      `SELECT tool_id,
+              SUM(CASE WHEN deleted = 0 THEN 1 ELSE 0 END) AS records,
+              SUM(CASE WHEN deleted = 1 THEN 1 ELSE 0 END) AS deleted,
+              COALESCE(SUM(LENGTH(data)), 0) AS data_bytes,
+              MAX(updated_at) AS last_updated_at
+         FROM sync_data ${where}
+        GROUP BY tool_id`
+    )
+    .all(...args) as {
+    tool_id: string;
+    records: number;
+    deleted: number;
+    data_bytes: number;
+    last_updated_at: number | null;
+  }[];
+
+  const binaryRows = syncDb
+    .query(
+      `SELECT tool_id,
+              COUNT(*) AS binary_records,
+              COALESCE(SUM(LENGTH(binary_data)), 0) AS binary_bytes
+         FROM sync_binary ${where}
+        GROUP BY tool_id`
+    )
+    .all(...args) as { tool_id: string; binary_records: number; binary_bytes: number }[];
+
+  const binaryByTool = new Map(binaryRows.map((row) => [row.tool_id, row]));
+  const stats = new Map<string, SyncToolStats>();
+
+  for (const row of dataRows) {
+    const binary = binaryByTool.get(row.tool_id);
+    stats.set(row.tool_id, {
+      toolId: row.tool_id,
+      records: row.records ?? 0,
+      deleted: row.deleted ?? 0,
+      dataBytes: row.data_bytes ?? 0,
+      binaryRecords: binary?.binary_records ?? 0,
+      binaryBytes: binary?.binary_bytes ?? 0,
+      lastUpdatedAt: row.last_updated_at,
+    });
+  }
+
+  // A tool can hold blobs whose owning row was already hard-deleted, so the
+  // binary table is not simply a subset of the data table.
+  for (const row of binaryRows) {
+    if (stats.has(row.tool_id)) continue;
+    stats.set(row.tool_id, {
+      toolId: row.tool_id,
+      records: 0,
+      deleted: 0,
+      dataBytes: 0,
+      binaryRecords: row.binary_records,
+      binaryBytes: row.binary_bytes,
+      lastUpdatedAt: null,
+    });
+  }
+
+  return [...stats.values()].sort((a, b) => a.toolId.localeCompare(b.toolId));
+}
+
 type SyncMetadataResult = {
   records: ReturnType<typeof getSyncMetadata>;
   cursor: string;

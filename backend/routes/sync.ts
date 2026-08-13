@@ -1,6 +1,11 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { getSyncRecords, upsertSyncRecord, getSyncMetadataSince } from '../lib/sync-db';
+import {
+  getSyncRecords,
+  upsertSyncRecord,
+  getSyncMetadataSince,
+  getSyncStats,
+} from '../lib/sync-db';
 
 const sync = new Hono();
 
@@ -81,6 +86,26 @@ function readMetadataLimit(value: string | undefined): number | Response | undef
   }
   return limit;
 }
+
+// Storage stats per tool. Registered before /:toolId so "stats" is not read as
+// a tool id. Pass ?toolId= to narrow it to one tool.
+sync.get('/stats', (c) => {
+  const toolId = c.req.query('toolId');
+  const tools = getSyncStats(toolId && toolId.length > 0 ? toolId : undefined);
+
+  const totals = tools.reduce(
+    (acc, tool) => ({
+      records: acc.records + tool.records,
+      deleted: acc.deleted + tool.deleted,
+      dataBytes: acc.dataBytes + tool.dataBytes,
+      binaryRecords: acc.binaryRecords + tool.binaryRecords,
+      binaryBytes: acc.binaryBytes + tool.binaryBytes,
+    }),
+    { records: 0, deleted: 0, dataBytes: 0, binaryRecords: 0, binaryBytes: 0 }
+  );
+
+  return c.json({ success: true, tools, totals });
+});
 
 // Get all sync records for a tool
 sync.get('/:toolId', (c) => {
