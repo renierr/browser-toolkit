@@ -7,7 +7,7 @@ const { app, staticRoot } = createApp();
 const port = Number(process.env.PORT ?? 3000);
 const server = Bun.serve({
   port,
-  maxRequestBodySize: 1024 * 1024 * 1024,
+  maxRequestBodySize: 4 * 1024 * 1024 * 1024,
   fetch: app.fetch,
 });
 
